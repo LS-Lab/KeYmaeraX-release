@@ -496,22 +496,22 @@ trait UnifyUSCalculus {
   /** uniformRename(what,repl) renames `what` to `repl` uniformly and vice versa.
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRename(what: Variable, repl: Variable): InputTactic = ProofRuleTactics.uniformRename(what,repl)
+  def uniformRename(what: Variable, repl: Variable): BuiltInTactic = ProofRuleTactics.uniformRenameFw(what,repl)
   /** uniformRename(ur) renames `ur.what` to `ur.repl` uniformly and vice versa.
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRename(ur: URename): InputTactic = ProofRuleTactics.uniformRename(ur.what,ur.repl)
+  def uniformRename(ur: URename): BuiltInTactic = ProofRuleTactics.uniformRenameFw(ur.what,ur.repl)
 
   /** boundRename(what,repl) renames `what` to `repl` at the indicated position (or vice versa).
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
     */
-  def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRename(what,repl)
+  def boundRename(what: Variable, repl: Variable): BuiltInPositionTactic = ProofRuleTactics.boundRenameFw(what,repl)
 
   /** @see [[US()]] */
   def uniformSubstitute(subst: USubst): InputTactic = inputanon { US(subst)}
 
   @Tactic(("US", "US"), codeName = "US", conclusion = "|- S(P)", premises = "|- P")
-  def USX(S: List[SubstitutionPair]): InputTactic = inputanon { TactixLibrary.uniformSubstitute(USubst(S)) }
+  def USX(S: List[SubstitutionPair]): InputTactic = inputanon { US(USubst(S)) }
 
 
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): BuiltInPositionTactic =

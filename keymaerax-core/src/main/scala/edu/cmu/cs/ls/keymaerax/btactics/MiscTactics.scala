@@ -252,6 +252,11 @@ object Idioms {
 
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = t | TactixLibrary.nil
+  def ?(t: ProvableSig=>ProvableSig)(pr: ProvableSig): ProvableSig = try {
+    t(pr)
+  } catch {
+    case _: BelleProofSearchControl => pr
+  }
 
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
@@ -325,12 +330,19 @@ object Idioms {
 
   /** Executes t if condition is true. */
   def doIf(condition: ProvableSig => Boolean)(t: => BelleExpr): DependentTactic = doIfElse(condition)(t, nil)
+  def doIfFw(condition: ProvableSig => Boolean)(t: => ProvableSig=>ProvableSig): BuiltInTactic = doIfElseFw(condition)(t, nil.result)
 
   /** Executes t if condition is true and f otherwise. */
   def doIfElse(condition: ProvableSig => Boolean)(t: => BelleExpr, f: => BelleExpr): DependentTactic = new DependentTactic(ANON) {
     override def computeExpr(provable: ProvableSig): BelleExpr = {
       if (condition(provable)) t
       else f
+    }
+  }
+  def doIfElseFw(condition: ProvableSig => Boolean)(t: => ProvableSig=>ProvableSig, f: => ProvableSig=>ProvableSig): BuiltInTactic = new BuiltInTactic(ANON) {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (condition(provable)) t(provable)
+      else f(provable)
     }
   }
 

@@ -401,7 +401,7 @@ trait SequentCalculus {
   @Tactic("∃L",
     premises = "p(x), Γ |- Δ",
     conclusion = "∃x p(x), Γ |- Δ")
-  val existsL                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsSkolemize(pos)}
+  val existsL: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) => FOQuantifierTactics.existsSkolemize(pos).computeResult(provable) }
   private[btactics] val existsLInfo: TacticInfo = TacticInfo("existsL")
   @Tactic("∃Li",
     inputs = "f:term;;x[x]:option[variable]",
@@ -569,10 +569,11 @@ trait SequentCalculus {
     premises = "*",
     conclusion = "Γ, P |- P, Δ",
     codeName = "idWith")
-  val closeIdWith: DependentPositionTactic = anon {(pos: Position, s: Sequent) =>
+  val closeIdWith: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    val s = provable.subgoals.head
     pos.top match {
-      case p: AntePos => closeId(p, SuccPos(closeIdFound(pos, s.succ.indexOf(s(p)))))
-      case p: SuccPos => closeId(AntePos(closeIdFound(pos, s.ante.indexOf(s(p)))), p)
+      case p: AntePos => provable(Close(p, SuccPos(closeIdFound(pos, s.succ.indexOf(s(p))))), 0)
+      case p: SuccPos => provable(Close(AntePos(closeIdFound(pos, s.ante.indexOf(s(p)))), p), 0)
     }
   }
   @inline
@@ -594,14 +595,12 @@ trait SequentCalculus {
   // Maybe the interpreter is checking type equality of anonymous classes somewhere...
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ", codeName = "id")
-  val id: DependentTactic = new DependentTactic("id") {
-    override def computeExpr(provable: ProvableSig): BelleExpr = {
-      require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-      val s = provable.subgoals.head
-      s.ante.intersect(s.succ).headOption match {
-        case Some(fml) => closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
-        case None => throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
-      }
+  val id: BuiltInTactic = anon { provable: ProvableSig =>
+    require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+    val s = provable.subgoals.head
+    s.ante.intersect(s.succ).headOption match {
+      case Some(fml) => provable(Close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml))), 0)
+      case None => throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
     }
   }
 

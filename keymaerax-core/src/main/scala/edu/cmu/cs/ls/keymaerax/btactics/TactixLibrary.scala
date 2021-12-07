@@ -208,7 +208,7 @@ object TactixLibrary extends HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(SaturateTactic(id | alphaRule & (id | nil)) & (doStep(index)('R) | doStep(index)('L) | nil)))
+    SaturateTactic(OnAll(SaturateTactic(id | alphaRule) & (doStep(index)('R) | doStep(index)('L) | nil)))
   }
 
   /** Automated propositional reasoning, only keeps result if proved. */
@@ -762,7 +762,7 @@ object TactixLibrary extends HilbertCalculus
     * }}}
     * @param name The new variable to use as an abbreviation.
     * */
-  def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
+  def abbrv(name: Variable): BuiltInPositionTactic = EqualityTactics.abbrv(name)
 
   /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
   @Tactic(
@@ -787,8 +787,8 @@ object TactixLibrary extends HilbertCalculus
     *              If it points to a specific term, then only this term is rewritten.
     */
   //@todo missing AxiomInfo for tactic extraction
-  def eqL2R(eqPos: Int): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  def eqL2R(eqPos: Int): BuiltInPositionTactic = EqualityTactics.eqL2R(eqPos)
+  def eqL2R(eqPos: AntePosition): BuiltInPositionTactic = EqualityTactics.eqL2R(eqPos)
   /** eXternal wrapper for eqL2R */
   @Tactic(codeName = "L2R", longDisplayName = "Apply Equality", conclusion = "Γ, x=y, P(x) |- Q(x), Δ",
     premises = "Γ, x=y, P(y) |- Q(y), Δ")
@@ -799,33 +799,43 @@ object TactixLibrary extends HilbertCalculus
   }})
 
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side at a specific position ([[EqualityTactics.eqR2L]]). */
-  def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
-  def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  def eqR2L(eqPos: Int): BuiltInPositionTactic = EqualityTactics.eqR2L(eqPos)
+  def eqR2L(eqPos: AntePosition): BuiltInPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
   @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities", revealInternalSteps = true)
-  val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
-  def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
-    if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(fml@Equal(l, _)) =>
+  val exhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) => exhaustiveEqL2R(false)(pos).computeResult(provable) }
+  def exhaustiveEqL2R(hide: Boolean = false): BuiltInPositionTactic =
+    if (hide) anon { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveEqL2R")
+      val sequent = provable.subgoals.head
+      sequent.sub(pos) match {
+      case Some(Equal(l, _)) =>
         val lvars = StaticSemantics.freeVars(l)
-        EqualityTactics.exhaustiveEqL2R(pos) &
-          Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty))(hideL(pos, fml))
+        (provable
+          (EqualityTactics.exhaustiveEqL2R(pos).computeResult _, 0)
+          (Idioms.doIfFw(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty))(hideL(pos).computeResult).result _, 0)
+          )
       case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
-    })
+    }}
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
   @Tactic(names = "R=L all", codeName = "allR2L", longDisplayName = "Apply All Equalities Inverse", revealInternalSteps = true)
-  val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
-  def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
-    if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  val exhaustiveEqR2L: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) => exhaustiveEqR2L(false)(pos).computeResult(provable) }
+  def exhaustiveEqR2L(hide: Boolean = false): BuiltInPositionTactic =
+    if (hide) anon { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveEqR2L")
+      val sequent = provable.subgoals.head
+      sequent.sub(pos) match {
       case Some(fml@Equal(_, r)) =>
         val rvars = StaticSemantics.freeVars(r)
-        EqualityTactics.exhaustiveEqR2L(pos) &
-          Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty))(hideL(pos, fml))
+        (provable
+          (EqualityTactics.exhaustiveEqR2L(pos).computeResult _, 0)
+          (Idioms.doIfFw(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty))(hideL(pos, fml).computeResult).result _, 0)
+          )
       case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
-    })
+    }}
     else EqualityTactics.exhaustiveEqR2L
 
   /** Transform an FOL formula or term into the formula/term 'to'.
@@ -874,7 +884,7 @@ object TactixLibrary extends HilbertCalculus
   // Tactic contracts
 
   /** Assert that the given condition holds for the goal's sequent. */
-  def assertT(cond : Sequent=>Boolean, msg: => String): BelleExpr = DebuggingTactics.assert(cond, msg)
+  def assertT(cond : Sequent=>Boolean, msg: => String): BuiltInTactic = DebuggingTactics.assert(cond, msg)
   /** Assert that the sequent has the specified number of antecedent and succedent formulas, respectively. */
   def assertT(antecedents: Int, succedents: Int, msg: => String = ""): BelleExpr = DebuggingTactics.assert(antecedents, succedents, msg)
 
@@ -897,31 +907,55 @@ object TactixLibrary extends HilbertCalculus
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /** Expands absolute value using `abs(x)=y <-> (x>=0&y=x | x<=0&y=-x)`, see [[EqualityTactics.abs]] */
-  lazy val abs: DependentPositionTactic = EqualityTactics.abs
+  lazy val abs: BuiltInPositionTactic = EqualityTactics.abs
   /** Expands minimum function using `min(x,y)=z <-> (x<=y&z=x | x>=y&z=y)`, see [[EqualityTactics.minmax]] */
-  lazy val min: DependentPositionTactic = EqualityTactics.minmax
+  lazy val min: BuiltInPositionTactic = EqualityTactics.minmax
   /** Expands maximum function using `max(x,y)=z <-> (x>=y&z=x | x<=y&z=y)`, see [[EqualityTactics.minmax]] */
-  lazy val max: DependentPositionTactic = EqualityTactics.minmax
+  lazy val max: BuiltInPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  lazy val alphaRule: BelleExpr = andL('L) |
-    (orR('R) |
-      (implyR('R) |
-        (notL('L) |
-          notR('R)
-          )
-        )
-      )
+  lazy val alphaRule: BuiltInTactic = anon { provable: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(provable, "alphaRule")
+    val sequent = provable.subgoals.head
+    sequent.ante.zipWithIndex.map({
+      case (_: And, i) => Some(AndLeft(AntePos(i)))
+      case (_: Not, i) => Some(NotLeft(AntePos(i)))
+      case _ => None
+    }).find(_.isDefined) match {
+      case Some(Some(r)) => provable(r, 0)
+      case None => sequent.succ.zipWithIndex.map({
+        case (_: Or, i) => Some(OrRight(SuccPos(i)))
+        case (_: Imply, i) => Some(ImplyRight(SuccPos(i)))
+        case (_: Not, i) => Some(NotRight(SuccPos(i)))
+        case _ => None
+      }).find(_.isDefined) match {
+        case Some(Some(r)) => provable(r, 0)
+        case None => throw new TacticInapplicableFailure("Alpha rule")
+      }
+    }
+  }
 
   /** Beta rules are propositional rules that split */
-  lazy val betaRule: BelleExpr = andR('R) |
-    (orL('L) |
-      (implyL('L) |
-        (equivL('L) |
-          equivR('R)
-          )
-        )
-      )
+  lazy val betaRule: BuiltInTactic = anon { provable: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(provable, "betaRule")
+    val sequent = provable.subgoals.head
+    sequent.succ.zipWithIndex.map({
+      case (_: And, i) => Some(AndRight(SuccPos(i)))
+      case (_: Equiv, i) => Some(EquivRight(SuccPos(i)))
+      case _ => None
+    }).find(_.isDefined) match {
+      case Some(Some(r)) => provable(r, 0)
+      case None => sequent.ante.zipWithIndex.map({
+        case (_: Or, i) => Some(OrLeft(AntePos(i)))
+        case (_: Imply, i) => Some(ImplyLeft(AntePos(i)))
+        case (_: Equiv, i) => Some(EquivLeft(AntePos(i)))
+        case _ => None
+      }).find(_.isDefined) match {
+        case Some(Some(r)) => provable(r, 0)
+        case None => throw new TacticInapplicableFailure("Beta rule")
+      }
+    }
+  }
 
   /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
     * @see [[QE]] */
