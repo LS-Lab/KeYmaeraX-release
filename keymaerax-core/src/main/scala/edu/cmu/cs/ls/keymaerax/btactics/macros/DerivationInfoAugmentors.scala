@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.pt._
 
+import scala.language.implicitConversions
+
 object DerivationInfoAugmentors {
   /** Locally embed single string names into SimpleDisplayInfo. */
   implicit def displayInfo(name: String): SimpleDisplayInfo = {
@@ -27,7 +29,7 @@ object DerivationInfoAugmentors {
   }
 
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
-    def by(name: String, t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+    def by(name: String, t: (Position, Sequent) => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
@@ -38,7 +40,7 @@ object DerivationInfoAugmentors {
 
     def belleExpr: Any = di match {
       // useAt will just ask a ProvableInfo for its provable
-      case pi: ProvableInfo =>  by (di.codeName, (pos:Position, seq:Sequent) => HilbertCalculus.useAt(pi) (pos))
+      case pi: ProvableInfo =>  HilbertCalculus.useAt(pi)
       case ti: TacticInfo => ti.theExpr (())
     }
 
@@ -60,7 +62,7 @@ object DerivationInfoAugmentors {
     def provable: ProvableSig = {
       pi.theProvable match {
         case Some(provable) => provable.asInstanceOf[ProvableSig]
-        case None => {
+        case None =>
           val provable = pi match {
             case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
             case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
@@ -69,7 +71,6 @@ object DerivationInfoAugmentors {
           }
           pi.theProvable = Some(provable)
           provable
-        }
       }
     }
 
@@ -77,18 +78,17 @@ object DerivationInfoAugmentors {
     def formula: Formula = {
       pi.theFormula match {
         case Some(formula) => formula.asInstanceOf[Formula]
-        case None => {
+        case None =>
           val formula = pi match {
             case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
-            case cai: CoreAxiomInfo =>
+            case _: CoreAxiomInfo =>
               ProvableSig.axiom.get(pi.canonicalName) match {
                 case Some(fml) => fml
-                case None => throw new AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
+                case None => throw AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
               }
           }
           pi.theFormula = Some(formula)
           formula
-        }
       }
     }
   }
