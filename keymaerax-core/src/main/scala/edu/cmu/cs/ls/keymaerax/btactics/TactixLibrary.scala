@@ -914,6 +914,7 @@ object TactixLibrary extends HilbertCalculus
   lazy val max: BuiltInPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
+  @Tactic()
   lazy val alphaRule: BuiltInTactic = anon { provable: ProvableSig =>
     ProofRuleTactics.requireOneSubgoal(provable, "alphaRule")
     val sequent = provable.subgoals.head
@@ -936,6 +937,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Beta rules are propositional rules that split */
+  @Tactic()
   lazy val betaRule: BuiltInTactic = anon { provable: ProvableSig =>
     ProofRuleTactics.requireOneSubgoal(provable, "betaRule")
     val sequent = provable.subgoals.head
