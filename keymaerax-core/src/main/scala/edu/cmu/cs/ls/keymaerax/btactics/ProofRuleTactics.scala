@@ -25,6 +25,18 @@ private object ProofRuleTactics extends Logging {
   @inline private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
     if (provable.subgoals.length != 1) throw new IllFormedTacticApplicationException(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
+  @inline private[btactics] def requireAtMostOneSubgoal(provable: ProvableSig, msg: => String): Unit =
+    if (provable.subgoals.length > 1) throw new IllFormedTacticApplicationException(s"Expected at most one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+
+  /** Executes `t` on the sole subgoal (if any). */
+  @inline private[btactics] def onSoleSubgoal(provable: ProvableSig, t: Sequent=>ProvableSig, msg: => String): ProvableSig = {
+    requireAtMostOneSubgoal(provable, msg)
+    provable.subgoals.headOption match {
+      case None => provable
+      case Some(s) => t(s)
+    }
+  }
+
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "apply " + rule)
