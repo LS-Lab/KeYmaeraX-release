@@ -56,7 +56,9 @@ private object ToolTactics {
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
-  lazy val assertNoCex: BelleExpr = anon ((sequent: Sequent) => {
+  lazy val assertNoCex: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "assertNoCex")
+    val sequent = provable.subgoals.head
     val removeUscorePred: Formula => Boolean = {
       case PredOf(Function(name, _, _, _, _), _) => name.last != '_'
       case _ => true
@@ -64,17 +66,17 @@ private object ToolTactics {
     Try(findCounterExample(sequent.copy(ante = sequent.ante.filter(removeUscorePred),
                                         succ = sequent.succ.filter(removeUscorePred)).toFormula)) match {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
-      case Success(None) => skip
-      case Failure(_: ProverSetupException) => skip //@note no counterexample tool, so no counterexample
-      case Failure(_: MathematicaComputationAbortedException) => skip
+      case Success(None) => provable
+      case Failure(_: ProverSetupException) => provable //@note no counterexample tool, so no counterexample
+      case Failure(_: MathematicaComputationAbortedException) => provable
       case Failure(ex) => throw ex //@note fail with all other exceptions
     }
-  })
+  }
 
   /** Prepares a QE call with all pre-processing steps, uses `order` to form the universal closure and finishes the
     * remaining subgoals using `doQE`. */
   def prepareQE(order: List[Variable], doQE: BelleExpr): BelleExpr = {
-    val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
+    val closure = toSingleFormula & Idioms.doIf(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosure(order)(1))
 
     val expand =
       if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
@@ -258,38 +260,35 @@ private object ToolTactics {
     updm1 ++ (m2 -- m1.keySet)
   }
 
-  private def termDegs(t:Term) : Map[Variable,(Int,Int,Int)] = {
-
-    t match {
-      case v:Variable => Map((v,(1,1,1)))
-      case Neg(tt) => termDegs(tt)
-      case Plus(l,r) => merge( termDegs(l),termDegs(r),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
-      case Minus(l,r) => termDegs(Plus(l,r))
-      case Times(l,r) =>
-        val lm = termDegs(l)
-        val lmax = lm.values.map(p=>p._2).foldLeft(0)((l,r)=>math.max(l,r))
-        val rm = termDegs(r)
-        val rmax = rm.values.map(p=>p._2).foldLeft(0)((l,r)=>math.max(l,r))
-        val lmap = lm.mapValues(p=>(p._1,p._2+rmax,p._3) )
-        val rmap = rm.mapValues(p=>(p._1,p._2+lmax,p._3) ) //Updated max term degrees
-        merge(lmap,rmap,(x,y)=>x+y,(x,y)=>math.max(x,y),(x,y)=>x+y) /* The 3rd one probably isn't correct for something like x*x*x */
-      case Divide(l,r) => termDegs(Times(l,r))
-      case Power(p,n:Number) =>
-        val pm = termDegs(p)
-        //Assume integer powers
-        pm.mapValues( (p:(Int,Int,Int)) => (p._1*n.value.toInt,p._2*n.value.toInt,p._3) )
-      case FuncOf(_,tt) => termDegs(tt)
-      case Pair(l,r) => merge(termDegs(l),termDegs(r),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
-      case _ => Map[Variable,(Int,Int,Int)]()
-    }
+  private def termDegs(t:Term) : Map[Variable,(Int,Int,Int)] = t match {
+    case v:Variable => Map((v,(1,1,1)))
+    case Neg(tt) => termDegs(tt)
+    case Plus(l,r) => merge( termDegs(l),termDegs(r), math.max, math.max, _+_)
+    case Minus(l,r) => termDegs(Plus(l,r))
+    case Times(l,r) =>
+      val lm = termDegs(l)
+      val lmax = lm.values.map(_._2).foldLeft(0)(math.max)
+      val rm = termDegs(r)
+      val rmax = rm.values.map(_._2).foldLeft(0)(math.max)
+      val lmap = lm.mapValues(p => (p._1, p._2+rmax, p._3) )
+      val rmap = rm.mapValues(p => (p._1, p._2+lmax, p._3) ) //Updated max term degrees
+      merge(lmap,rmap, _+_, math.max, _+_) /* The 3rd one probably isn't correct for something like x*x*x */
+    case Divide(l,r) => termDegs(Times(l,r))
+    case Power(p,n:Number) =>
+      val pm = termDegs(p)
+      //Assume integer powers
+      pm.mapValues( (p:(Int,Int,Int)) => (p._1*n.value.toInt,p._2*n.value.toInt,p._3) )
+    case FuncOf(_,tt) => termDegs(tt)
+    case Pair(l,r) => merge(termDegs(l),termDegs(r), math.max, math.max, _+_)
+    case _ => Map[Variable,(Int,Int,Int)]()
   }
 
   //This just takes the max or sum where appropriate
   private def fmlDegs(f:Formula) : Map[Variable,(Int,Int,Int)] = {
     f match {
-      case b:BinaryCompositeFormula => merge(fmlDegs(b.left),fmlDegs(b.right),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
+      case b:BinaryCompositeFormula => merge(fmlDegs(b.left),fmlDegs(b.right), math.max, math.max, _+_)
       case u:UnaryCompositeFormula => fmlDegs(u.child)
-      case f:ComparisonFormula => merge(termDegs(f.left),termDegs(f.right),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y)
+      case f:ComparisonFormula => merge(termDegs(f.left),termDegs(f.right), math.max, math.max, _+_)
       case q:Quantified => fmlDegs(q.child) -- q.vars
       case m:Modal => fmlDegs(m.child) //QE wouldn't understand this anyway...
       case _ => Map() //todo: pred symbols?
@@ -302,20 +301,20 @@ private object ToolTactics {
     * @param x the variable x to compute the degree
     * @return the degree
     */
-  def varDegree(t:Term, x:Variable) : Int = {
+  def varDegree(t: Term, x: Variable): Int = {
     val tx = termDegs(t)
-    if(tx.contains(x)) tx(x)._1
+    if (tx.contains(x)) tx(x)._1
     else 0
   }
 
-    private def seqDegs(s:Sequent) : Map[Variable,(Int,Int,Int)] = {
-    (s.ante++s.succ).foldLeft(Map[Variable,(Int,Int,Int)]())(
-      (m:Map[Variable,(Int,Int,Int)],f:Formula) => merge(m,fmlDegs(f),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y))
+  private def seqDegs(s: Sequent): Map[Variable, (Int,Int,Int)] = {
+    (s.ante++s.succ).foldLeft(Map.empty[Variable,(Int,Int,Int)])(
+      (m: Map[Variable,(Int,Int,Int)], f: Formula) => merge(m, fmlDegs(f), math.max, math.max, _+_))
   }
 
   private def equalityOrder[T]: Ordering[T] = (_: T, _: T) => 0
 
-  private def orderHeuristic(s:Sequent,po:Ordering[Variable]) : List[Variable] = {
+  private def orderHeuristic(s: Sequent, po: Ordering[Variable]): List[Variable] = {
     val m = seqDegs(s)
     val ls = m.keySet.toList.sortWith( (x,y) => {
       val c = po.compare(x,y)
@@ -326,11 +325,11 @@ private object ToolTactics {
     ls
   }
 
-  private def orderedClosure(po:Ordering[Variable]) = new SingleGoalDependentTactic("ordered closure") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      val order = orderHeuristic(seq,po)
-      FOQuantifierTactics.universalClosure(order)(1)
-    }
+  private def orderedClosure(po: Ordering[Variable]): BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "orderedClosure")
+    val seq = provable.subgoals.head
+    val order = orderHeuristic(seq, po)
+    FOQuantifierTactics.universalClosureFw(order)(SuccPos(0)).computeResult(provable)
   }
 
   //Note: the same as fullQE except it uses computes the heuristic order in the middle
@@ -389,25 +388,58 @@ private object ToolTactics {
       case _ => Nil
     }
 
-    def applyFact(fact: Formula): BelleExpr = {
-      val subs = FormulaTools.conjuncts(fact)
-      BranchTactic(subs.map({ case Equiv(f, result) =>
-        toSingleFormula & FOQuantifierTactics.universalClosure(leadingQuantOrder(f).toList)(1) & cutLR(result)(1) <(
-          closeT | nil
-          ,
-          equivifyR(1) & commuteEquivR(1) & cut(qeFact.conclusion.succ.head) <(
-            SaturateTactic(andL('L)) & close,
-            cohideR('Rlast) & by(qeFact)
+    val optCloseT: BuiltInTactic = anon { provable: ProvableSig =>
+      provable.subgoals.head.succ.indexOf(True) match {
+        case -1 => provable
+        case i => provable(CloseTrue(SuccPos(i)), 0)
+      }
+    }
+
+    def satAndL: BuiltInTactic = anon { provable: ProvableSig =>
+      val andL = provable.subgoals.head.ante.zipWithIndex.filter({ case (_: And, _) => true case _ => false }).
+        reverseMap({ case (_, i) => AndLeft(AntePos(i)) })
+      if (andL.isEmpty) {
+        provable
+      } else {
+        (provable(andL.foldLeft(_: ProvableSig)({ (pr, r) => pr(r, 0) }), 0)
+          (satAndL.result _, 0)
           )
-      )}))
+      }
+    }
+
+    def applyFact(fact: Formula): BuiltInTactic = anon { (provable: ProvableSig) =>
+      val subs = FormulaTools.conjuncts(fact)
+      subs.map({ case Equiv(f, result) => (pr: ProvableSig) =>
+        (pr(toSingleFormula.result _, 0)
+          (FOQuantifierTactics.universalClosureFw(leadingQuantOrder(f).toList)(1).computeResult _, 0)
+          (cutLRFw(result)(1).computeResult _, 0)
+          /* show */
+          (EquivifyRight(SuccPos(0)), 1)
+          (CommuteEquivRight(SuccPos(0)), 1)
+          (Cut(qeFact.conclusion.succ.head), 1) // creates subgoals 1+2
+          (CoHideRight(SuccPos(sequent.succ.length)), 2)
+          (qeFact, 2)
+          (satAndL.result _, 1)
+          (close.result _, 1)
+          /* use */
+          (optCloseT.result _, 0)
+          )
+      }).zipWithIndex.reverse.foldLeft(provable)({ case (pr, (r, i)) => pr(r, i) })
+    }
+
+    def applySingleFact(result: Formula, fact: ProvableSig): BuiltInTactic = anon { provable: ProvableSig =>
+      (provable(cutLRFw(result)(SuccPos(0)).computeResult _, 0)
+        /* show */
+        (EquivifyRight(SuccPos(0)), 1)
+        (CommuteEquivRight(SuccPos(0)), 1)
+        (fact, 1)
+        /* use */
+        (optCloseT.result _, 0)
+        )
     }
 
     qeFact.conclusion.succ.head match {
-      case Equiv(_, result) =>
-        cutLR(result)(1) <(
-          /*use*/ closeT | skip,
-          /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
-        )
+      case Equiv(_, result) => applySingleFact(result, qeFact)
       case result: And =>
         val facts = FormulaTools.conjuncts(result)
         SaturateTactic(allR('R)) & (prop & Idioms.doIfElse(_.subgoals.size == facts.size)(
@@ -679,23 +711,29 @@ private object ToolTactics {
   })
 
   /* Hides all predicates (QE cannot handle predicate symbols) */
-  private def hidePredicates: DependentTactic = anon ((sequent: Sequent) =>
-    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
-    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-      ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-  )
+  private def hidePredicates: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "hidePredicates")
+    val sequent = provable.subgoals.head
+    (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
+      ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
+      ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) })
+  }
 
   /* Hides all predicates (QE cannot handle predicate symbols) */
-  private def hideQuantifiedFuncArgsFmls: DependentTactic = anon ((sequent: Sequent) =>
-    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
-    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-      ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-  )
+  private def hideQuantifiedFuncArgsFmls: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "hideQuantifiedFuncArgsFml")
+    val sequent = provable.subgoals.head
+    (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
+      ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
+      ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) })
+  }
 
   /** Hides all non-FOL formulas from the sequent. */
-  def hideNonFOL: DependentTactic = anon ((sequent: Sequent) =>
-    (  sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
-    ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-      ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-  )
+  def hideNonFOL: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "hideNonFOL")
+    val sequent = provable.subgoals.head
+    (    sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
+      ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
+      ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) })
+  }
 }
