@@ -122,6 +122,9 @@ trait ProvableSig {
     */
   def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig
 
+  /** Apply forward tactic `fw` at `subgoal`. */
+  def apply(fw: ProvableSig=>ProvableSig, subgoal: Subgoal): ProvableSig = apply(fw(sub(subgoal)), subgoal)
+
   /**
     * Apply a uniform substitution to a (locally sound!) Provable.
     * Substitutes both subgoals and conclusion with the same uniform substitution `subst`.

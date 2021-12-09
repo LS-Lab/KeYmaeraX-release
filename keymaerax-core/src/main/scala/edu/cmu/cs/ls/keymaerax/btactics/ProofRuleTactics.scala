@@ -22,8 +22,20 @@ private object ProofRuleTactics extends Logging {
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
-  private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
-    if(provable.subgoals.length != 1) throw new IllFormedTacticApplicationException(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+  @inline private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
+    if (provable.subgoals.length != 1) throw new IllFormedTacticApplicationException(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+
+  @inline private[btactics] def requireAtMostOneSubgoal(provable: ProvableSig, msg: => String): Unit =
+    if (provable.subgoals.length > 1) throw new IllFormedTacticApplicationException(s"Expected at most one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+
+  /** Executes `t` on the sole subgoal (if any). */
+  @inline private[btactics] def onSoleSubgoal(provable: ProvableSig, t: Sequent=>ProvableSig, msg: => String): ProvableSig = {
+    requireAtMostOneSubgoal(provable, msg)
+    provable.subgoals.headOption match {
+      case None => provable
+      case Some(s) => t(s)
+    }
+  }
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {
@@ -44,10 +56,12 @@ private object ProofRuleTactics extends Logging {
   @Tactic("UR",
     premises = "P(y) |- Q(y)",
     conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
-  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanonP {(provable: ProvableSig) =>
-      requireOneSubgoal(provable, "UniformRename(" + what + "~~>" + repl + ")")
-      provable(core.UniformRenaming(what, repl), 0)
-    }
+  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanon { uniformRenameFw(what, repl) }
+  /** Builtin forward implementation of uniformRename. */
+  private[btactics] def uniformRenameFw(what: Variable, repl: Variable): BuiltInTactic = anon { (provable: ProvableSig) =>
+    requireOneSubgoal(provable, "UniformRename(" + what + "~~>" + repl + ")")
+    provable(core.UniformRenaming(what, repl), 0)
+  }
 
   /**
     * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
@@ -66,33 +80,35 @@ private object ProofRuleTactics extends Logging {
   @Tactic("BR",
     premises = "Γ |- ∀y Q(y), Δ",
     conclusion = "Γ |- ∀x Q(x), Δ", inputs = "x:variable;;y:variable")
-  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, sequent:Sequent) =>
+  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => boundRenameFw(what, repl)(pos) }
+  def boundRenameFw(what: Variable, repl: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos:Position) =>
+    val sequent = pr.subgoals.head
     if (pos.isTopLevel)
-      topBoundRenaming(what,repl)(pos)
+      topBoundRenaming(what,repl)(pos).computeResult(pr)
     else {
       //@note contextualize
-        // [x:=f(x)]P(x)
-        import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
-        val fml = sequent.apply(pos).asInstanceOf[Formula]
-        // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
-        //@note the proof is the same for \forall x p(x) etc.
-        val brenL = core.BoundRenaming(what, repl, AntePos(0))
-        val brenR = core.BoundRenaming(what, repl, SuccPos(0))
-        val mod = brenR(fml) ensures(r => r==brenL(fml), "bound renaming for formula is independent of position")
-        // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
-        val side: ProvableSig = (ProvableSig.startProof(Equiv(mod, fml))
-          // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
-          (EquivRight(SuccPos(0)), 0)
-          // right branch  [x:=f(x)]P(x) |- [y:=f(x)]P(y)
-          (brenL, 1)
-          // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
-          (Close(AntePos(0), SuccPos(0)), 1)
-          // left branch  [y:=f(x)]P(y) |- [x:=f(x)]P(x)
-          (brenR, 0)
-          // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
-          (Close(AntePos(0), SuccPos(0)), 0)
+      // [x:=f(x)]P(x)
+      import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
+      val fml = sequent.apply(pos).asInstanceOf[Formula]
+      // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
+      //@note the proof is the same for \forall x p(x) etc.
+      val brenL = core.BoundRenaming(what, repl, AntePos(0))
+      val brenR = core.BoundRenaming(what, repl, SuccPos(0))
+      val mod = brenR(fml) ensures(r => r==brenL(fml), "bound renaming for formula is independent of position")
+      // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
+      val side: ProvableSig = (ProvableSig.startProof(Equiv(mod, fml))
+        // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
+        (EquivRight(SuccPos(0)), 0)
+        // right branch  [x:=f(x)]P(x) |- [y:=f(x)]P(y)
+        (brenL, 1)
+        // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
+        (Close(AntePos(0), SuccPos(0)), 1)
+        // left branch  [y:=f(x)]P(y) |- [x:=f(x)]P(x)
+        (brenR, 0)
+        // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
+        (Close(AntePos(0), SuccPos(0)), 0)
         )
-        TactixLibrary.CEat(side)(pos)
+      TactixLibrary.CEat(side)(pos).computeResult(pr)
     }}
 
   /** Bound renaming at a position (must point to universal quantifier or assignment). */

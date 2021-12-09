@@ -41,10 +41,10 @@ object TacticIndex {
   lazy val default: TacticIndex = new DefaultTacticIndex
 
   /** Stutter axioms used only in chase */
-  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.allStutter)
-  val allLStutterPrime: DependentPositionTactic = TactixLibrary.useAt(Ax.allStutterPrime)
-  val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.existsStutter)
-  val existsRStutterPrime: DependentPositionTactic = TactixLibrary.useAt(Ax.existsStutterPrime)
+  val allLStutter: BuiltInPositionTactic = TactixLibrary.useAt(Ax.allStutter)
+  val allLStutterPrime: BuiltInPositionTactic = TactixLibrary.useAt(Ax.allStutterPrime)
+  val existsRStutter: BuiltInPositionTactic = TactixLibrary.useAt(Ax.existsStutter)
+  val existsRStutterPrime: BuiltInPositionTactic = TactixLibrary.useAt(Ax.existsStutterPrime)
 }
 
 /**

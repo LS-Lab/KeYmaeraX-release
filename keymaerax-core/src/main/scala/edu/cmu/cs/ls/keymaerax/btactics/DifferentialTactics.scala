@@ -1962,7 +1962,7 @@ private object DifferentialTactics extends Logging {
   private lazy val maxNonnegOr = remember("max(f_(), g_())>=0<->f_()>=0 | g_()>=0".asFormula, QE & done)
 
   /** chases min/max Less/LessEqual 0 to conjunctions and disjunctions */
-  val chaseMinMaxInequalities : DependentPositionTactic = chaseCustom({
+  val chaseMinMaxInequalities : BuiltInPositionTactic = chaseCustom({
     case Greater(FuncOf(m, _), _: Number) if m == minF =>
       (minPosAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
     case GreaterEqual(FuncOf(m, _), _: Number) if m == minF =>

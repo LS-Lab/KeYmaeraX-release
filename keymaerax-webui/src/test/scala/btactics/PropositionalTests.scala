@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, IllFormedTacticApplicatio
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -48,6 +48,22 @@ class PropositionalTests extends TacticTestBase {
     proveBy(s, autoMP(-3)).subgoals.loneElement shouldBe "Y>y, X>y, P(x) ==> y<x&x<=min(X,Y)->P(x)".asSequent
   }
 
+  "equivRewriting" should "rewrite simple equivalence" in withTactics {
+    proveBy("p(x) <-> q(x) ==> p(x)".asSequent, equivRewriting(-1, 1)).subgoals.loneElement shouldBe "p(x) <-> q(x) ==> q(x)".asSequent
+    proveBy("p(x) <-> q(x), p(x) ==> ".asSequent, equivRewriting(-1, -2)).subgoals.loneElement shouldBe "p(x) <-> q(x), q(x) ==> ".asSequent
+  }
+
+  it should "rewrite with renaming" in withTactics {
+    proveBy("\\forall x (p(x) <-> q(x)) ==> p(y)".asSequent, equivRewriting(-1, 1)).subgoals.loneElement shouldBe "\\forall x (p(x) <-> q(x)) ==> q(y)".asSequent
+    proveBy("\\forall x (p(x) <-> q(x)), p(y) ==> ".asSequent, equivRewriting(-1, -2)).subgoals.loneElement shouldBe "\\forall x (p(x) <-> q(x)), q(y) ==> ".asSequent
+  }
+
+  "toSingleFormula" should "collapse a sequent into a single formula" in withTactics {
+    proveBy("a=1, b=2, c=3 ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> a=1&b=2&c=3 -> x=1|y=2".asSequent
+    proveBy(" ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> true -> x=1|y=2".asSequent
+    proveBy("a=1, b=2, c=3 ==> ".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> a=1&b=2&c=3 -> false".asSequent
+  }
+
   "implyRi" should "introduce implication from antecedent and succedent" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("y>0".asFormula)), implyRi)
     result.subgoals.loneElement shouldBe " ==> x>0 -> y>0".asSequent
@@ -60,29 +76,29 @@ class PropositionalTests extends TacticTestBase {
   }
 
   "orRi" should "introduce disjunction from succedent" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>0".asFormula, "y>0".asFormula)), orRi())
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>0".asFormula, "y>0".asFormula)), orRi)
     result.subgoals.loneElement shouldBe " ==> x>0 | y>0".asSequent
   }
 
   it should "work as two-position tactic" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("a=2".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula)),
-      orRi(SuccPos(1), SuccPos(0)))
+      orRi(keepLeft=false)(SuccPos(1), SuccPos(0)))
     result.subgoals.loneElement shouldBe "a=2 ==> x>0, b=3 | y>0".asSequent
   }
 
   "andLi" should "introduce conjunction from antecedent" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>0".asFormula), IndexedSeq()), andLi())
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>0".asFormula), IndexedSeq()), andLi)
     result.subgoals.loneElement shouldBe "x>0 & y>0 ==> ".asSequent
   }
 
   it should "work as two-position tactic" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula), IndexedSeq("a=2".asFormula)),
-      andLi(AntePos(1), AntePos(0)))
+      andLi(keepLeft=false)(AntePosition.base0(1), AntePosition.base0(0)))
     result.subgoals.loneElement shouldBe "x>0, b=3 & y>0 ==> a=2".asSequent
   }
 
   it should "keep left conjunct if asked" in withTactics {
-    val result = proveBy("y>0, b=3, x>0 ==> a=2".asSequent, andLi(AntePos(1), AntePos(0), keepLeft=true))
+    val result = proveBy("y>0, b=3, x>0 ==> a=2".asSequent, andLi(keepLeft=true)(AntePosition.base0(1), AntePosition.base0(0)))
     result.subgoals.loneElement shouldBe "b=3, x>0, b=3 & y>0 ==> a=2".asSequent
   }
 
@@ -312,8 +328,12 @@ class PropositionalTests extends TacticTestBase {
   }
 
   it should "report when trying to unpeel too far" in withTactics {
-    the [IllFormedTacticApplicationException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
-      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "Unable to execute tactic 'Prop. CMon', cause: part position .1 of term 0 may not be defined"
+    the [IllegalArgumentException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
+      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1.1.0.0.1.1, but got \\exists x (a=2->b>1&!\\forall x x>0)\n  ==>  \\exists x (a=2->b>1&!\\forall x x>1)\n(.0.1.1.0.0.1.1 points to non-existing position in sequent)"
+  }
 
+  it should "report when contexts don't match" in withTactics {
+    the [IllegalArgumentException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=3 -> z>=3)".asFormula), IndexedSeq("\\exists x (a=2 -> z>=1)".asFormula)),
+      propCMon(PosInExpr(0::1::Nil))) should have message "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1, but got \\exists x (a=3->z>=3)\n  ==>  \\exists x (a=2->z>=1)\n\\exists x (a=3->⎵) != \\exists x (a=2->⎵)"
   }
 }

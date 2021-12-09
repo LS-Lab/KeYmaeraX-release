@@ -202,11 +202,11 @@ object DebuggingTactics {
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done(None, None)
-  def done(msg: String): InputTactic = done(Some(msg), None)
-  def done(msg: String, storeLemma: Option[String]): InputTactic = done(Some(msg), storeLemma)
+  def done(msg: String): StringInputTactic = done(Some(msg), None)
+  def done(msg: String, storeLemma: Option[String]): StringInputTactic = done(Some(msg), storeLemma)
   @Tactic(("Done","done"), codeName = "done")
-  def done(msg: Option[String], lemmaName: Option[String]): InputTactic = inputanon { doneImpl(msg.getOrElse(""), lemmaName) }
-  private def doneImpl(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
+  def done(msg: Option[String], lemmaName: Option[String]): StringInputTactic = doneImpl(msg.getOrElse(""), lemmaName)
+  private def doneImpl(msg: String = "", storeLemma: Option[String] = None): StringInputTactic = new StringInputTactic("done",
       if (msg.nonEmpty && storeLemma.isDefined) msg::storeLemma.get::Nil
       else if (msg.nonEmpty) msg::Nil
       else Nil) {
@@ -252,6 +252,11 @@ object Idioms {
 
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = t | TactixLibrary.nil
+  def ?(t: ProvableSig=>ProvableSig)(pr: ProvableSig): ProvableSig = try {
+    t(pr)
+  } catch {
+    case _: BelleProofSearchControl => pr
+  }
 
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
@@ -325,12 +330,19 @@ object Idioms {
 
   /** Executes t if condition is true. */
   def doIf(condition: ProvableSig => Boolean)(t: => BelleExpr): DependentTactic = doIfElse(condition)(t, nil)
+  def doIfFw(condition: ProvableSig => Boolean)(t: => ProvableSig=>ProvableSig): BuiltInTactic = doIfElseFw(condition)(t, nil.result)
 
   /** Executes t if condition is true and f otherwise. */
   def doIfElse(condition: ProvableSig => Boolean)(t: => BelleExpr, f: => BelleExpr): DependentTactic = new DependentTactic(ANON) {
     override def computeExpr(provable: ProvableSig): BelleExpr = {
       if (condition(provable)) t
       else f
+    }
+  }
+  def doIfElseFw(condition: ProvableSig => Boolean)(t: => ProvableSig=>ProvableSig, f: => ProvableSig=>ProvableSig): BuiltInTactic = new BuiltInTactic(ANON) {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (condition(provable)) t(provable)
+      else f(provable)
     }
   }
 
@@ -348,12 +360,12 @@ object Idioms {
   /**
    * shift(shift, t) does t shifted from position p to shift(p)
    */
-  def shift(shift: PosInExpr=>PosInExpr, t: DependentPositionTactic): DependentPositionTactic = ANON by ((pos: Position, _: Sequent) =>
+  def shift[T <: BelleExpr](shift: PosInExpr=>PosInExpr, t: AtPosition[T]): DependentPositionTactic = ANON by ((pos: Position, _: Sequent) =>
     t(pos.navigate(shift(pos.inExpr))))
   /**
    * shift(child, t) does t to positions shifted by child
    */
-  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p ++ child, t)
+  def shift[T <: BelleExpr](child: PosInExpr, t: AtPosition[T]): DependentPositionTactic = shift(p => p ++ child, t)
 
   /** Map sub-positions of `pos` to Ts that fit to the expressions at those sub-positions per `trafo`. */
   def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {

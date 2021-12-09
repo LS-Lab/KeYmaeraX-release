@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 
 /**
- * Created by jdq on 3/17/14.
+ * Generic traversal functionality for expressions for pre/post/infix traversal.
  * @author Nathan Fulton
  * @author Ran Ji
  * @author Stefan Mitsch

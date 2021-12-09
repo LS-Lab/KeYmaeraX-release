@@ -711,7 +711,7 @@ class HilbertTests extends TacticTestBase {
     println(proof)
   }
 
-  lazy val intervalify: DependentPositionTactic = chaseI(3, 3, (exp: Expression) => exp match {
+  lazy val intervalify: BuiltInPositionTactic = chaseI(3, 3, (exp: Expression) => exp match {
     // base case //@todo check that right-hand side is transformed, too
     case LessEqual(_:Variable, _) => Nil
     case LessEqual(Plus(_,_), _) => Ax.intervalUpPlus :: Nil

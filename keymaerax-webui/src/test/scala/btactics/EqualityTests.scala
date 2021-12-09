@@ -173,7 +173,7 @@ class EqualityTests extends TacticTestBase {
 
   // rewriting numbers is disallowed, because otherwise we run into endless rewriting
   it should "not rewrite numbers" in withTactics {
-    a [BelleThrowable] should be thrownBy proveBy("0<5, 0=0 ==> ".asSequent, exhaustiveEqL2R(-2))
+    the [IllegalArgumentException] thrownBy proveBy("0<5, 0=0 ==> ".asSequent, exhaustiveEqL2R(-2)) should have message "requirement failed: Rewriting numbers not supported"
   }
 
   it should "not try to rewrite bound occurrences" in withTactics {
@@ -217,7 +217,7 @@ class EqualityTests extends TacticTestBase {
     proveBy("y=x ==> [x:=*;]x>y".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
       subgoals.loneElement shouldBe "==> [x_0:=*;]x_0>x".asSequent
     proveBy("y=x ==> \\forall x (x<y -> \\exists x x>y)".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
-      subgoals.loneElement shouldBe "==> \\forall x_0 (x_0<x -> \\exists x_1 x_1>x)".asSequent
+      subgoals.loneElement shouldBe "==> \\forall x_1 (x_1<x -> \\exists x_0 x_0>x)".asSequent
   }
 
   "Apply Equalities" should "rewrite all plain equalities" in withTactics {

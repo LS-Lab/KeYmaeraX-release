@@ -10,8 +10,10 @@ case class PosInBelleExpr(idxs: Seq[Int]) {
   def hd = idxs.head
 
   def apply(e: BelleExpr) = e match {
-    case e: SeqTactic => if(hd == 0) e.left else if(hd == 1) e.right else throw new PositionException(hd, e)
-    case e: EitherTactic => if(hd == 0) e.left else if(hd == 1) e.right else throw new PositionException(hd, e)
+    case SeqTactic(l :: r :: Nil) => if(hd == 0) l else if(hd == 1) r else throw new PositionException(hd, e)
+    case e: SeqTactic => if(hd == 0) e.seq.head else if(hd == 1) SeqTactic(e.seq.tail) else throw new PositionException(hd, e)
+    case EitherTactic(l :: r :: Nil) => if(hd == 0) l else if(hd == 1) r else throw new PositionException(hd, e)
+    case e: EitherTactic => if(hd == 0) e.alts.head else if(hd == 1) EitherTactic(e.alts.tail) else throw new PositionException(hd, e)
     case e: SaturateTactic => if(hd == 0) e.child else throw new PositionException(hd, e)
     case e: BranchTactic => if(hd < e.children.length) e.children(hd) else throw new PositionException(hd, e)
     case e: USubstPatternTactic => if(hd < e.options.length*2) {

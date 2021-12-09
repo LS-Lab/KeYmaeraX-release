@@ -313,6 +313,16 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "\\exists z z=a+b ==> ".asSequent
   }
 
+  it should "generalize with other formulas around" in withTactics {
+    proveBy("x=1, a+b=a+b, y=2 ==> c=3".asSequent, existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: Nil)(-2)).subgoals.
+      loneElement shouldBe "x=1, y=2, \\exists z z=a+b ==> c=3".asSequent
+  }
+
+  it should "generalize when quantified variable already exists" in withTactics {
+    proveBy("z=1, a+b=a+b, y=2 ==> z>=0".asSequent, existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: Nil)(-2)).subgoals.
+      loneElement shouldBe "z=1, y=2, \\exists z z=a+b ==> z>=0".asSequent
+  }
+
   it should "generalize all the specified occurrences of t" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: PosInExpr(1:: Nil) :: Nil)(-1))

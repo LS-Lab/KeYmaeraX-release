@@ -1476,7 +1476,7 @@ object Ax extends Logging {
       useAt(diamond, PosInExpr(1::Nil))(1, 0::1::Nil) &
         useAt(diamond, PosInExpr(1::Nil))(1, 1::Nil) &
         cut("[a_{|^@|};]p_(||) & [a_{|^@|};]!(p_(||)&q_(||)) -> [a_{|^@|};]!q_(||)".asFormula) <(
-          /* use */ SaturateTactic(alphaRule) & andLi(AntePos(1), AntePos(2)) & modusPonens(AntePos(1), AntePos(0)) & id,
+          /* use */ SaturateTactic(alphaRule) & andLi(keepLeft=false)(AntePos(1), AntePos(2)) & modusPonens(AntePos(1), AntePos(0)) & id,
           /* show */ hideR(1) &
           cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
             /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & propClose,
@@ -2187,7 +2187,7 @@ object Ax extends Logging {
       useAt(choiceb)(1, 0::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::1::Nil) &
-      equivR(1) & OnAll(SaturateTactic(alphaRule)) <(andLi() & id, orL(-1) & OnAll(notL(-1) & id))
+      equivR(1) & OnAll(SaturateTactic(alphaRule)) <(andLi & id, orL(-1) & OnAll(notL(-1) & id))
   )
 
   /**

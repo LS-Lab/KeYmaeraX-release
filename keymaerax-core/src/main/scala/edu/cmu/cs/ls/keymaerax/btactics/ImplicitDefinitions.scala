@@ -378,7 +378,7 @@ object ImplicitDefinitions {
       implyR(1) & boxd(1) & notR(1) &
         cutL(cutfml)('Llast) <(
           existsL(-2)*dim & useAt(Ax.pVd)(-2) & andL(-2) & useAt(diffadj)(-2) &
-          notL(-3) & andLi(AntePos(1),AntePos(0)) & useAt(Ax.pVd,PosInExpr(0::Nil))(-1) &
+          notL(-3) & andLi(keepLeft=false)(AntePos(1),AntePos(0)) & useAt(Ax.pVd,PosInExpr(0::Nil))(-1) &
           mond & SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id,
           cohideR('Rlast) &
           implyR(1) & barcantac & mond &

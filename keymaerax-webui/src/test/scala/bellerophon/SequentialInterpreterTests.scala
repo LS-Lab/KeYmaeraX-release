@@ -590,7 +590,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           |==> 1:  false	False$}""".stripMargin
 
     listener.calls should have size 10
-    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+    val andT@SeqTactic(andRRule :: (labelT@BranchTactic(labels)) :: Nil) = andR(1).
       computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
     listener.calls should contain theSameElementsInOrderAs(
@@ -616,7 +616,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           |  from
           |==> 1:  false	False$}""".stripMargin
 
-    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+    val andT@SeqTactic(andRRule :: (labelT@BranchTactic(labels)) :: Nil) = andR(1).
       computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
     listener.calls should have size 12
@@ -947,5 +947,36 @@ class SequentialInterpreterTests extends TacticTestBase {
     val s = "x>=0, p(x,y), q(x,y,z) ==> x>=0 & p(x,y) & q(x)".asSequent
     proveBy(s, Using(List("x>=0".asFormula), SimplifierV3.simplify(1))).subgoals.
       loneElement shouldBe "x>=0, p(x,y), q(x,y,z) ==> p(x,y) & q(x)".asSequent
+  }
+
+  "Sequential interpreter" should "execute dI proof steps instead of wasting time traversing tactics" in withMathematica { _ =>
+    val s = "x^2+y^2=1 ==> [{x'=y,y'=-x}]x^2+y^2=1".asSequent
+    var recursiveCalls = 0
+    val listener = new IOListener() {
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = {
+        println(expr.prettyString)
+        recursiveCalls += 1
+      }
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter(List(listener)))
+    val result = proveBy(s, dI()(1))
+    println(recursiveCalls + " interpreter executeTactic calls for " + result.steps + " proof steps")
+  }
+
+  it should "execute solve proof steps instead of wasting time traversing tactics" in withMathematica { _ =>
+    val s = "x=2 & a>0 ==> [{x'=v,v'=a & v>=0}]x>=2".asSequent
+    var recursiveCalls = 0
+    val listener = new IOListener() {
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = {
+        recursiveCalls += 1
+      }
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter(List(listener)))
+    val result = proveBy(s, solve(1))
+    println(recursiveCalls + " interpreter executeTactic calls for " + result.steps + " proof steps")
   }
 }
