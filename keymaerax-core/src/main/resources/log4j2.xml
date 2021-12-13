@@ -2,15 +2,15 @@
 <Configuration status="WARN">
     <Appenders>
         <Console name="ConsoleError" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg{nolookups}%n"/>
         </Console>
         <Console name="ConsolePrint" target="SYSTEM_OUT">
-            <PatternLayout pattern="%-5level %msg%n"/>
+            <PatternLayout pattern="%-5level %msg{nolookups}%n"/>
         </Console>
         <RollingFile name="TraceFile"
                      fileName="${sys:user.home}/.keymaerax/logs/keymaerax.log"
                      filePattern="${sys:user.home}/.keymaerax/logs/keymaerax-%d{MM-dd-yyyy}.log.gz">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg{nolookups}%n"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="20 MB"/>
             </Policies>
