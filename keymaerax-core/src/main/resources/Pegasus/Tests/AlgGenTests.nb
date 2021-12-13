@@ -1,0 +1,179 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.2' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      5855,        171]
+NotebookOptionsPosition[      5204,        153]
+NotebookOutlinePosition[      5592,        169]
+CellTagsIndexPosition[      5549,        166]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Makes", " ", "the", " ", "directory", " ", 
+    RowBox[{"Pegasus", "/"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"SetDirectory", "[", 
+     RowBox[{"ParentDirectory", "[", 
+      RowBox[{"NotebookDirectory", "[", "]"}], "]"}], "]"}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"Needs", "[", 
+    RowBox[{"\"\<AlgGen`\>\"", ",", 
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"Directory", "[", "]"}], ",", "\"\<AlgGen.m\>\""}], "}"}], 
+      "]"}]}], "]"}], " "}]}]], "Input",
+ InitializationCell->True,
+ CellChangeTimes->{{3.84807095570899*^9, 3.848070967852824*^9}, {
+  3.84807643414287*^9, 3.848076439485689*^9}},
+ CellLabel->"In[1]:=",ExpressionUUID->"9b5b3aac-e057-43ee-a55c-67ea192a0f77"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"vf", "=", 
+   RowBox[{"{", 
+    RowBox[{"c", ",", "s", ",", "e"}], "}"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"vars", "=", 
+   RowBox[{"{", 
+    RowBox[{"s", ",", "c", ",", "e"}], "}"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"init", "=", 
+   RowBox[{"{", 
+    RowBox[{"0", ",", "1", ",", "2"}], "}"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"FindAlgs", "[", 
+  RowBox[{"{", 
+   RowBox[{"vf", ",", "vars", ",", "init"}], "}"}], "]"}]}], "Input",
+ CellChangeTimes->{{3.848070871661839*^9, 3.8480709133242693`*^9}, {
+   3.848071057121826*^9, 3.848071062333919*^9}, {3.848072421811141*^9, 
+   3.848072430652562*^9}, {3.848072846655879*^9, 3.8480728508302183`*^9}, {
+   3.848072963953974*^9, 3.848072998975727*^9}, 3.848073035687663*^9, 
+   3.848073191398081*^9, {3.848073799342394*^9, 3.848073802822631*^9}, 
+   3.8480738532088747`*^9, {3.848073883322032*^9, 3.84807388427967*^9}, {
+   3.848074153356847*^9, 3.848074154250061*^9}, {3.8480744890417633`*^9, 
+   3.848074500240613*^9}, 3.848074870678535*^9, {3.848075150196596*^9, 
+   3.848075174067279*^9}, {3.848075479979157*^9, 3.848075594886572*^9}, {
+   3.848075681754922*^9, 3.848075721335774*^9}, {3.848075765659651*^9, 
+   3.8480757727765017`*^9}, 
+   3.848076461118986*^9},ExpressionUUID->"3b4dd3ce-e8fb-4aaa-a557-\
+9cdcf1da83d7"],
+
+Cell[BoxData[{
+ RowBox[{"A", "=", 
+  RowBox[{"Rationalize", "[", 
+   RowBox[{
+    RowBox[{"RandomReal", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "2"}], "}"}]}], "]"}], ",", "0.1"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"vf", "=", 
+   RowBox[{"A", ".", 
+    RowBox[{"{", 
+     RowBox[{"x", ",", "y"}], "}"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"vars", "=", 
+   RowBox[{"{", 
+    RowBox[{"x", ",", "y"}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"init", "=", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", 
+     RowBox[{"-", "1"}]}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"FindAlgs", "[", 
+   RowBox[{"{", 
+    RowBox[{"vf", ",", "vars", ",", "init"}], "}"}], "]"}], "//", 
+  "FullSimplify"}]}], "Input",
+ CellChangeTimes->{{3.84807620009235*^9, 3.848076214719623*^9}, {
+  3.848076260173037*^9, 3.848076281713636*^9}, {3.8480763319218397`*^9, 
+  3.848076402754958*^9}},
+ CellLabel->"In[27]:=",ExpressionUUID->"64102d52-e8ee-4b21-ade6-82e8caae41e9"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Run", " ", "at", " ", "own", " ", "risk"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"A", "=", 
+    RowBox[{"Rationalize", "[", 
+     RowBox[{
+      RowBox[{"RandomReal", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"3", ",", "3"}], "}"}]}], "]"}], ",", "0.2"}], "]"}]}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"vf", "=", 
+     RowBox[{"A", ".", 
+      RowBox[{"{", 
+       RowBox[{"x", ",", "y", ",", "z"}], "}"}]}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"vars", "=", 
+    RowBox[{"{", 
+     RowBox[{"x", ",", "y", ",", "z"}], "}"}]}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"init", "=", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "1", ",", "1"}], "}"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"FindAlgs", "[", 
+     RowBox[{"{", 
+      RowBox[{"vf", ",", "vars", ",", "init"}], "}"}], "]"}], "//", 
+    "FullSimplify"}]}]}]], "Input",
+ CellChangeTimes->{{3.8480752476393423`*^9, 3.848075280390884*^9}, {
+  3.848075846314279*^9, 3.8480758673230963`*^9}, {3.848076424990748*^9, 
+  3.8480764299666224`*^9}},ExpressionUUID->"d094a220-5ff9-40f7-89ca-\
+6e97f8f2afcf"]
+},
+WindowSize->{960, 1136},
+WindowMargins->{{Automatic, 0}, {0, Automatic}},
+FrontEndVersion->"12.3 for Linux x86 (64-bit) (July 9, 2021)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"291f556b-b1f3-45ba-8d81-86fe6d9b9f3e"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 830, 21, 91, "Input",ExpressionUUID->"9b5b3aac-e057-43ee-a55c-67ea192a0f77",
+ InitializationCell->True],
+Cell[1391, 43, 1362, 31, 97, "Input",ExpressionUUID->"3b4dd3ce-e8fb-4aaa-a557-9cdcf1da83d7"],
+Cell[2756, 76, 1133, 34, 119, "Input",ExpressionUUID->"64102d52-e8ee-4b21-ade6-82e8caae41e9"],
+Cell[3892, 112, 1308, 39, 141, "Input",ExpressionUUID->"d094a220-5ff9-40f7-89ca-6e97f8f2afcf"]
+}
+]
+*)
+
