@@ -5,11 +5,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -58,7 +60,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[AxIndex]]
     */
   @Tactic()
-  val stepAt: DependentPositionTactic = UnifyUSCalculus.stepAt(AxIndex.axiomFor)
+  val stepAt: BuiltInPositionTactic = UnifyUSCalculus.stepAt(AxIndex.axiomFor)
   //= UnifyUSCalculus.stepAt(AxIndex.axiomFor)
   //= anon {(pos:Position) => UnifyUSCalculus.stepAt(AxIndex.axiomFor)(pos)}
 
@@ -91,7 +93,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     */
     //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "∀x P |- ∀x Q")
-  lazy val monall             : BelleExpr         = anon {byUS(Ax.monallrule)}
+  lazy val monall             : BuiltInTactic         = anon { US(Ax.monallrule.provable).result _ }
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
@@ -102,7 +104,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     */
   //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "[a]P |- [a]Q")
-  lazy val monb               : BelleExpr         = anon {byUS(Ax.monbaxiom)}
+  lazy val monb               : BuiltInTactic         = anon { US(Ax.monbaxiom.provable).result _ }
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
@@ -113,7 +115,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     */
   //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "<a>P |- <a>Q")
-  lazy val mond               : BelleExpr         = anon {byUS(Ax.mondrule)}
+  lazy val mond               : BuiltInTactic         = anon { US(Ax.mondrule.provable).result _ }
 
   //
   // axioms
@@ -376,19 +378,22 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus.chase]]
     */
   @Tactic("()'", revealInternalSteps = false /* uninformative as useFor proof */)
-  lazy val derive: DependentPositionTactic = anon {(pos: Position, seq: Sequent) =>
-    val chaseNegations = anon {(pos: Position, seq: Sequent) => seq.sub(pos) match {
-      case Some(post: Formula) =>
-        val notPositions = ListBuffer.empty[PosInExpr]
-        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-          override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
-            case Not(_) if !notPositions.exists(_.isPrefixOf(p)) => notPositions.append(p); Left(None)
-            case _ => Left(None)
-          }
-        }, post)
-        notPositions.map(p => chase(pos ++ p)).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-      case _ => skip
-    }}
+  lazy val derive: DependentPositionTactic = anon {(pos: Position, _: Sequent) =>
+    val chaseNegations = anon { (provable: ProvableSig, pos: Position) =>
+      val seq = provable.subgoals.head
+      seq.sub(pos) match {
+        case Some(post: Formula) =>
+          val notPositions = ListBuffer.empty[PosInExpr]
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+              case Not(_) if !notPositions.exists(_.isPrefixOf(p)) => notPositions.append(p); Left(None)
+              case _ => Left(None)
+            }
+          }, post)
+          notPositions.map(p => chase(pos ++ p)).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) })
+        case _ => provable
+      }
+    }
 
     SaturateTactic(chaseNegations(pos) & deepChase(pos)) & anon { (seq: Sequent) => {
       seq.sub(pos) match {
@@ -423,8 +428,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
   @Tactic("[]T", conclusion = "__[a]⊤__ ↔ ⊤", displayLevel = "all")
   //@note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
-  lazy val boxTrue                : DependentPositionTactic = anon ((pos: Position) =>
-    useAt(Ax.boxTrueTrue)(pos) & (if (pos.isSucc && pos.isTopLevel) SequentCalculus.closeT else skip))
+  lazy val boxTrue                : BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    (provable
+      (useAt(Ax.boxTrueTrue)(pos).computeResult _, 0)
+      (if (pos.isSucc && pos.isTopLevel) SequentCalculus.closeT.result _ else skip.result _, 0)
+      )
+  }
 
 
   /*******************************************************************
