@@ -528,7 +528,6 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         case None => positionTactic.computeResult(provable, pos)
       }
       case l@Find(_, _, start, _, _) =>
-        require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(provable, l, new TacticInapplicableFailure("Not found: locator " + locator.prettyString + "\nof position tactic " + prettyString +
           "\ndoes not match anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
