@@ -322,14 +322,16 @@ class HilbertTests extends TacticTestBase {
     proveBy("[x:=0;]true".asFormula, HilbertCalculus.boxTrue(1)) shouldBe 'proved
     //@note boxTrue is an "unusual" axiom (no equivalence or implication) where useAt immediately forwards to "by",
     // which only works if [...]true is the only formula in the sequent
-    the [IllFormedTacticApplicationException] thrownBy proveBy("x=3 ==> [x:=0;]true".asSequent, useAt(Ax.boxTrueAxiom)(1)) should have message
-      """Unable to execute tactic 'boxTrueAxiom', cause: requirement failed: Conclusion of fact
-        |ElidingProvable(Provable(  ==>  [x:=0;]true proved))
-        |must match sole open goal in
-        |ElidingProvable(Provable(x=3
+    the [SubderivationSubstitutionException] thrownBy proveBy("x=3 ==> [x:=0;]true".asSequent, useAt(Ax.boxTrueAxiom)(1)) should have message
+      """Subderivation substitution for subgoal does not fit to the subderivation's conclusion.
+        |subderivation Provable(  ==>  [x:=0;]true proved)
+        |conclude:   ==>  [x:=0;]true
+        |expected: x=3
+        |  ==>  [x:=0;]true @0 into
+        |Provable(x=3
         |  ==>  [x:=0;]true
         |  from   x=3
-        |  ==>  [x:=0;]true))""".stripMargin
+        |  ==>  [x:=0;]true)""".stripMargin
     proveBy("x=3 ==> [x:=0;]true".asSequent, useAt(Ax.boxTrueTrue)(1)).subgoals.loneElement shouldBe "x=3 ==> true".asSequent
     proveBy("x=3 ==> [x:=0;]true".asSequent, HilbertCalculus.boxTrue(1)) shouldBe 'proved
     proveBy("==> [y:=1;][x:=0;]true".asSequent, HilbertCalculus.boxTrue(1, 1::Nil)).subgoals.loneElement shouldBe "==> [y:=1;]true".asSequent

@@ -531,7 +531,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Unable to execute tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0"))
+    response should have ('msg ("choiceb(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply\n  from\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply}"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -576,7 +576,8 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "expand prop" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: expand prop" in withDatabase { db => withMathematica { _ =>
+    //@todo expand forward tactics
     val modelContents = "ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -594,7 +595,8 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "expand auto" in withMathematica { _ => withDatabase { db =>
+  it should "FEATURE_REQUEST: expand auto" in withMathematica { _ => withDatabase { db =>
+    //@todo expand forward tactics
     val modelContents = "ProgramVariables Real x, y, z; End. Problem x>=0&y>0&z=0 -> [x:=x+y;]x>=z End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))

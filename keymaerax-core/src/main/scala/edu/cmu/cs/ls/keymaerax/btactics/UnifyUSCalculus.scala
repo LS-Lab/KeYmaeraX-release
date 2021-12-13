@@ -142,24 +142,17 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.chase]]
     * @see [[HilbertCalculus.stepAt]]
     */
-  def stepAt(axiomIndex: Expression => Option[DerivationInfo]): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) => {
-    ProofRuleTactics.requireOneSubgoal(provable, "stepAt")
-    val sequent = provable.subgoals.head
+  def stepAt(axiomIndex: Expression => Option[DerivationInfo]): DependentPositionTactic = anon { (pos: Position, sequent: Sequent) => {
+    //@e steps may create labels, which means stepAt has to be a dependent tactic at the moment
     val sub = sequent.sub(pos)
     if (sub.isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
     axiomIndex(sub.get) match {
       case Some(axiom) =>
         logger.debug("stepAt " + axiom)
-        axiom match {
-          case pi: ProvableInfo =>  HilbertCalculus.useAt(pi).computeResult(provable, pos)
-          case ti: TacticInfo => ti.theExpr (()) match {
-            case t: BuiltInTactic => t.result(provable)
-            case t: BuiltInPositionTactic => t.computeResult(provable, pos)
-            //@todo all stepAt tactics should be builtin
-            case ap: AtPosition[_] => TactixLibrary.proveBy(provable, ap(pos))
-            case expr: BelleExpr => TactixLibrary.proveBy(provable, expr)
-            case expr => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
-          }
+        axiom.belleExpr match {
+          case ap: AtPosition[_] => ap(pos)
+          case expr: BelleExpr => expr
+          case expr => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
         }
       case None => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
     }

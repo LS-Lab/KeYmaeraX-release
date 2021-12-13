@@ -589,15 +589,14 @@ class SequentialInterpreterTests extends TacticTestBase {
           |  from
           |==> 1:  false	False$}""".stripMargin
 
-    listener.calls should have size 10
+    listener.calls should have size 9
     val andT@SeqTactic(andRRule :: (labelT@BranchTactic(labels)) :: Nil) = andR(1).
       computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
     listener.calls should contain theSameElementsInOrderAs(
       "andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
       andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
-      BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
-      DebuggingTactics.error("Inapplicable close") :: Nil)
+      BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic :: Nil)
   }
 
   "Exhaustive interpreter" should "explore all branches regardless of failing ones" in withMathematica { _ =>
@@ -619,12 +618,11 @@ class SequentialInterpreterTests extends TacticTestBase {
     val andT@SeqTactic(andRRule :: (labelT@BranchTactic(labels)) :: Nil) = andR(1).
       computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
-    listener.calls should have size 12
+    listener.calls should have size 10
     listener.calls should contain theSameElementsInOrderAs(
       "andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
       andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
-      BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
-      DebuggingTactics.error("Inapplicable close") :: "close".asTactic :: ProofRuleTactics.closeTrue(1) :: Nil)
+      BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic :: "close".asTactic :: Nil)
   }
 
   it should "confirm that interpreter debug information slows down search" taggedAs SlowTest in withMathematica { _ =>

@@ -60,7 +60,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[AxIndex]]
     */
   @Tactic()
-  val stepAt: BuiltInPositionTactic = UnifyUSCalculus.stepAt(AxIndex.axiomFor)
+  val stepAt: DependentPositionTactic = UnifyUSCalculus.stepAt(AxIndex.axiomFor)
   //= UnifyUSCalculus.stepAt(AxIndex.axiomFor)
   //= anon {(pos:Position) => UnifyUSCalculus.stepAt(AxIndex.axiomFor)(pos)}
 
