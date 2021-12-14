@@ -261,13 +261,31 @@ angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($
   }
 });
 
-angular.module('keymaerax.controllers').controller('ModalMessageCtrl', function($scope, $uibModalInstance, title, message, mode) {
+angular.module('keymaerax.controllers').controller('ModalMessageCtrl', function($scope, $uibModalInstance,
+    title, message, mode, oktext, notext, canceltext) {
   $scope.title = title;
   $scope.message = message;
   $scope.mode = mode;
-  $scope.ok = function() { $uibModalInstance.close(); }
-  $scope.cancel = function() { $uibModalInstance.dismiss(); }
-});
+  switch(mode) {
+      case "ok":
+        $scope.oktext = oktext ? oktext : "OK";
+        break;
+      case "okcancel":
+        $scope.oktext = oktext ? oktext : "OK";
+        $scope.canceltext = canceltext ? canceltext: "Cancel";
+        break;
+      case "yesnocancel":
+        $scope.oktext = oktext ? oktext : "Yes";
+        $scope.notext = notext ? notext : "No";
+        $scope.canceltext = canceltext ? canceltext: "Cancel";
+        break;
+  };
+  $scope.ok = function() { $uibModalInstance.close("ok"); };
+  $scope.no = function() { $uibModalInstance.close("no"); };
+  $scope.cancel = function() { $uibModalInstance.dismiss(); };
+}).value("oktext", undefined).
+   value("notext", undefined).
+   value("canceltext", undefined);
 
 angular.module('keymaerax.controllers').controller('LoginDialogCtrl', ['$scope', '$http', '$uibModal', '$uibModalInstance', 'sessionService', function($scope, $http, $uibModal, $uibModalInstance, sessionService) {
   $scope.username = ""

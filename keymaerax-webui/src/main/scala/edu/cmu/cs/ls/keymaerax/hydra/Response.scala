@@ -19,14 +19,15 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-import java.io.{PrintWriter, StringWriter}
 
+import java.io.{PrintWriter, StringWriter}
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.{Controlled, Guarded, SwitchedSystem, Timed}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
@@ -115,8 +116,20 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
 case class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
   def getJson: JsValue = JsObject(
     "success" -> JsBoolean(modelId.isDefined),
-    "errorText"->JsString(errorText.getOrElse("")),
-    "modelId"->JsString(modelId.getOrElse("")))
+    "errorText" -> JsString(errorText.getOrElse("")),
+    "modelId" -> JsString(modelId.getOrElse("")))
+}
+
+case class ModelUpdateResponse(modelId: String, name: String, content: String, title: Option[String], description: Option[String], errorText: Option[String]) extends Response {
+  def getJson: JsValue = JsObject(
+    "success" -> JsBoolean(errorText.isEmpty),
+    "errorText" -> JsString(errorText.getOrElse("")),
+    "modelId" -> JsString(modelId),
+    "name" -> JsString(name),
+    "content" -> JsString(content),
+    "title" -> JsString(title.getOrElse("")),
+    "description" -> JsString(description.getOrElse(""))
+  )
 }
 
 class UpdateProofNameResponse(proofId: String, newName: String) extends Response {
@@ -1025,6 +1038,8 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "asciiName" -> new JsString(derivationInfo.display.asciiName),
       "codeName" -> new JsString(derivationInfo.codeName),
       "longName" -> new JsString(derivationInfo.longDisplayName),
+      "displayLevel" -> new JsString(derivationInfo.displayLevel.name),
+      "numPositionArgs" -> new JsNumber(derivationInfo.numPositionArgs),
       "derivation" -> derivation
     )
   }
@@ -1336,6 +1351,77 @@ class ListExamplesResponse(examples: List[ExamplePOJO]) extends Response {
       )
     ).toVector
   )
+}
+
+class GetTemplatesResponse(templates: List[TemplatePOJO]) extends Response {
+  def getJson: JsValue = JsArray(
+    templates.map(t =>
+      JsObject(
+        "title" -> JsString(t.title),
+        "description" -> JsString(t.description),
+        "text" -> JsString(t.text),
+        "selectRange" -> t.selectRange.map(r => JsObject(
+          "start" -> JsObject("row" -> JsNumber(r.line), "column" -> JsNumber(r.column)),
+          "end" -> JsObject("row" -> JsNumber(r.endLine), "column" -> JsNumber(r.endColumn))
+        )).getOrElse(JsNull),
+        "imageUrl" -> t.imageUrl.map(JsString(_)).getOrElse(JsNull)
+      )
+    ).toVector
+  )
+}
+
+class GetControlledStabilityTemplateResponse(code: String, switched: SwitchedSystem, specKind: List[String]) extends Response {
+  private val prg = switched.asProgram
+  private val printer = new KeYmaeraXPrettierPrinter(80)
+  private val fmls = specKind.map({
+    case s@"stability" => s -> printer(SwitchedSystems.stabilitySpec(switched)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case s@"attractivity" => s -> printer(SwitchedSystems.attractivitySpec(switched)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case s@"custom" =>
+      s -> s"""true /* todo */ ->
+              |  [ ${printer(prg).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
+              |  ]false /* todo */
+              |""".stripMargin
+  })
+  private val entries = fmls.map({ case (s, fml) =>
+    s"""ArchiveEntry "New Entry: $s"
+       |/*
+       | * Generated from hybrid automaton
+       | * ${code.linesWithSeparators.zipWithIndex.map({ case (l, i) => if (i == 0) l else " * " + l }).mkString}
+       | */
+       |
+       |Definitions
+       |  ${definitionsContent(prg)}
+       |End.
+       |
+       |ProgramVariables
+       |  ${programVariablesContent(prg)}
+       |End.
+       |
+       |Problem
+       |  $fml
+       |End.
+       |
+       |End.
+       |""".stripMargin}).mkString("\n\n")
+
+  def getJson: JsValue = JsObject(
+    "title" -> JsString(""),
+    "description" -> JsString(""),
+    "text" -> JsString(entries),
+    "selectRange" -> JsObject(),
+    "imageUrl" -> JsNull //@todo automaton SVG?
+  )
+
+  private def definitionsContent(prg: Program): String = {
+    val consts = StaticSemantics.symbols(prg) -- StaticSemantics.boundVars(prg).toSet
+    val (m, c) = consts.partition(s => switched.modeNames.contains(s.prettyString))
+    m.toList.sortBy(_.prettyString).zipWithIndex.map({ case (v, i) => v.sort.toString + " " + v.prettyString + " = " + i + ";" }).mkString("\n  ") +
+      c.map(v => v.sort.toString + " " + v.prettyString + ";").mkString("\n  ")
+  }
+
+  private def programVariablesContent(prg: Program): String = {
+    StaticSemantics.boundVars(prg).toSet[Variable].filter(_.isInstanceOf[BaseVariable]).map(v => v.sort.toString + " " + v.prettyString + ";").mkString("\n  ")
+  }
 }
 
 

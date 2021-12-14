@@ -40,13 +40,12 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     // prelaunch help without launching an extra JVM
+    Configuration.setConfiguration(FileConfiguration)
     if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
       println("KeYmaera X Prover" + " " + VERSION)
       println(KeYmaeraX.help)
       sys.exit(1)
     }
-
-    Configuration.setConfiguration(FileConfiguration)
 
     // isFirstLaunch indicates that an extra big-stack JVM still has to be launched
     val isFirstLaunch = if (args.length >= 1) {

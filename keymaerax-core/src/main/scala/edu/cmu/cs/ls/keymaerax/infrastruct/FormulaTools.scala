@@ -132,6 +132,21 @@ object FormulaTools extends Logging {
     case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
   }
 
+  /** Turns `fml` into disjunctive normal form. */
+  def disjunctiveNormalForm(fml: Formula): Formula = {
+    def distributeOrOverAnd(fml: Formula): Formula = fml match {
+      case Or(l, r) => Or(distributeOrOverAnd(l), distributeOrOverAnd(r))
+      case And(Or(ll, lr), r) => distributeOrOverAnd(Or(And(ll, r), And(lr, r)))
+      case And(l, Or(rl, rr)) => distributeOrOverAnd(Or(And(l, rl), And(l, rr)))
+      case And(l, r) =>
+        val distributed = And(distributeOrOverAnd(l), distributeOrOverAnd(r))
+        if (distributed != fml) distributeOrOverAnd(distributed)
+        else distributed
+      case f => f
+    }
+    reassociate(distributeOrOverAnd(negationNormalForm(fml)))
+  }
+
   /** Read off all atomic subformulas of `formula`.
     * Will not descend into programs to find even further atomic formulas since they are not directly subformulas.
     * @see [[negationNormalForm()]] */
@@ -248,13 +263,22 @@ object FormulaTools extends Logging {
   }
 
   /** Finds the closest parent to `pos` in `formula` that is a formula. */
-  @tailrec
-  def parentFormulaPos(pos: PosInExpr, fml: Formula): PosInExpr =
-    if (pos.pos.isEmpty) pos
-    else Augmentors.FormulaAugmentor(fml).sub(pos) match {
-      case Some(_: Formula) => pos
-      case Some(_) => parentFormulaPos(pos.parent, fml)
-    }
+  def parentFormulaPos(pos: PosInExpr, fml: Formula): PosInExpr = {
+    var result = pos
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        if (p.isPrefixOf(pos)) {
+          result = p
+          Left(None)
+        } else if (pos.isPrefixOf(p)) {
+          Left(Some(stop))
+        } else {
+          Left(None)
+        }
+      }
+    }, fml)
+    result
+  }
 
   /** Read off the set of all possible singularities coming from divisors or negative powers.
     * @example {{{

@@ -28,12 +28,19 @@ object QuizExtractor {
     val INLINE_SOL_DELIM = "____"
     val ARG_PLACEHOLDER = "\\%"
 
+    private val QUESTION_INFO1 = "qi1"
+    private val QUESTION_INFO2 = "qi2"
     private val GRADER = "grader"
     private val ARGS = "args"
-    private val KYX_SOL = "sol"
-    private val TEX_MATH_SOL = "texmathsol"
-    private val TEXT_SOL = "textsol"
-    private val LISTINGS_SOL = "listingssol"
+    private val SOL_PREFIX = "sol"
+    private val KYX_SOL_POSTFIX = "kyx"
+    private val TEX_SOL_POSTFIX = "tex"
+    private val TXT_SOL_POSTFIX = "txt"
+    private val LISTINGS_SOL_POSTFIX = "lst"
+    private val KYX_SOL = SOL_PREFIX + KYX_SOL_POSTFIX
+    private val TEX_SOL =  SOL_PREFIX + TEX_SOL_POSTFIX
+    private val TXT_SOL = SOL_PREFIX + TXT_SOL_POSTFIX
+    private val LISTINGS_SOL = SOL_PREFIX + LISTINGS_SOL_POSTFIX
     private val SOLFIN = "solfin"
     private val TEST_SOL = "testsol"
     private val NO_SOL = "nosol"
@@ -48,45 +55,60 @@ object QuizExtractor {
 
     // \solfin
     private def solfinBodyExtractor(capture: String) = """(?s)\\begin\{lstlisting}\s*(""" + capture + """.*?)\s*\\end\{lstlisting}"""
-    private val SOLFIN_BODY_EXTRACTOR = solfinBodyExtractor("")
+    private val SOLFIN_BODY_EXTRACTOR = solfinBodyExtractor(s"?<$SOLFIN>")
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\{?\s*""" + SOLFIN_BODY_EXTRACTOR + """\s*}?)"""
     private val SOLFIN_ANSWER_EXTRACTOR: Regex  = ("(?s)" + INLINE_SOL_DELIM + "\\s*" + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + "\\s*" + INLINE_SOL_DELIM).r(ANSWER)
     // \sol
     private def kyxlineExtractor(capture: String) = """\""" + KYXLINE + """\s*"(""" + capture + """[^"]+)""""
     //@note nested {} up to level 2
+    private def captureOf(s: String, post: String): String = {
+      if (s.nonEmpty && s.startsWith("?:")) s
+      else if (s.nonEmpty) s + post + ">"
+      else s
+    }
     private def nestedBracesText(capture: String) = "(" + capture + """(?:[^}{]+|\{(?:[^}{]+|\{[^}{]*})*})*)"""
     private def texMathDelimText(capture: String) = """\""" + MATH_DELIM + "(" + capture + """.+?)\""" + MATH_DELIM
-    private def solContent(capture: String) = "(?:" + kyxlineExtractor(capture) + "|" +
-      texMathDelimText(capture) + "|" + solfinBodyExtractor(capture) + "|" + nestedBracesText(capture)  + ")"
-    private val SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\s*""" + solContent("") + """\s*})"""
+    private def solContent(capture: String) = "(?:" + kyxlineExtractor(captureOf(capture, KYX_SOL_POSTFIX)) + "|" +
+      texMathDelimText(captureOf(capture, TEX_SOL_POSTFIX)) + "|" + solfinBodyExtractor(captureOf(capture, LISTINGS_SOL_POSTFIX)) + "|" + nestedBracesText(captureOf(capture, TXT_SOL_POSTFIX))  + ")"
+    private val SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*(?:\{\s*""" + solContent(s"?<$SOL_PREFIX") + """\s*})?)"""
     // \testsol
-    private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
+    private val TEST_SOL_EXTRACTOR = s"(?<$TEST_SOL>" + """(?:\\testsol\s*\{\s*""" + solContent("?:") + """}\s*))"""
     // \nosol
-    private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
+    private val NO_SOL_EXTRACTOR = s"(?<$NO_SOL>" + """(?:\\nosol\s*\{\s*""" + solContent("?:") + """}\s*))"""
     // \autog
-    private val GRADER_NAME = """(\w+)"""
+    private val GRADER_NAME = s"(?<$GRADER>" + """\w+)"""
     private def doubleQuotesString(capture: String) = """"(""" + capture + """(?:[^"\\]|\\.)*)"""" //@note double-quotes with nested escaped quotes
     private def graderArg(capture: String) = "(" + capture + """\w+)\s*=\s*""" + doubleQuotesString(capture)
     private val GRADER_ARG = graderArg("").r(ARG_NAME, ARG_VAL)
     private val GRADER_ARGS = graderArg("?:") + """(?:\s*,\s*""" + graderArg("?:") + """)*"""
-    private val GRADER_METHOD = GRADER_NAME + """\((""" + GRADER_ARGS + """)?\)"""
-    private val GRADER_EXTRACTOR = """(?:\\algog\s*\{""" + GRADER_METHOD + """})?"""
+    private val GRADER_METHOD = GRADER_NAME + """\((?<""" + ARGS + ">" + GRADER_ARGS + """)?\)"""
+    private val GRADER_EXTRACTOR = """(?:\\algog\s*\{""" + GRADER_METHOD + """})"""
 
-    private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
+    private val EXPR_LIST_SPLITTER = """\{[^{}]*}|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
 
     private val ASK_EXTRACTOR = """\\""" + QUESTION_START + """(?:.*?)"""
-    private val GROUPS: List[String] = List(KYX_SOL, TEX_MATH_SOL, LISTINGS_SOL, TEXT_SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
-    private val ALL_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + ")" + ANY_TEX_WS
-    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + ALL_SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(GROUPS:_*)
+    private val ALL_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + ")"
+    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + "(?:(.*?)(?=\\\\" + QUESTION_START + ")|(.*))").r(QUESTION_INFO1, QUESTION_INFO2)
 
     def firstFromString(rawContent: String): Option[AskQuestion] = {
       val firstMatch = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent)
-      val graderInfo = firstMatch.map(m => (
-        Option(m.group(KYX_SOL)), Option(m.group(TEX_MATH_SOL)), Option(m.group(LISTINGS_SOL)), Option(m.group(TEXT_SOL)),
-        Option(m.group(SOLFIN)), m.group(TEST_SOL), m.group(NO_SOL),
-        Option(m.group(GRADER)), Option(m.group(ARGS))))
-      graderInfo.map({ case (kyxsol, textextsol, listingssol, textsol, solfin, testsol, nosol, grader, args) =>
-        val (expectedArtifact, solArgs) = (kyxsol, textextsol, listingssol, textsol, solfin) match {
+      val qi = firstMatch.map(m => Option(m.group(QUESTION_INFO1)) match {
+        case Some(qi) => qi
+        case _ => m.group(QUESTION_INFO2)
+      })
+      val graderInfo = qi.map(s =>
+        (ALL_SOL_EXTRACTOR.r.findAllMatchIn(s).map(m => (
+          Option(m.group(KYX_SOL)), Option(m.group(TEX_SOL)), Option(m.group(LISTINGS_SOL)),
+          Option(m.group(TXT_SOL)), Option(m.group(SOLFIN)))).toList,
+        TEST_SOL_EXTRACTOR.r.findAllMatchIn(s).map(_.group(TEST_SOL)).toList,
+        NO_SOL_EXTRACTOR.r.findAllMatchIn(s).map(_.group(NO_SOL)).toList,
+        GRADER_EXTRACTOR.r.findAllMatchIn(s).map(m => (m.group(GRADER), Option(m.group(ARGS)))).toList)
+      )
+      graderInfo.map({ case (sol, testsols, nosols, grader) =>
+        assert(sol.length == 1, "Expected exactly 1 solution, but got " + sol.length + " solutions in " + rawContent)
+        assert(grader.length <= 1, "Expected at most 1 grader, but got " + grader.length + " graders in " + rawContent)
+        val (kyxsol, texsol, listingssol, txtsol, solfin) = sol.head
+        val (expectedArtifact, solArgs) = (kyxsol, texsol, listingssol, txtsol, solfin) match {
           case (Some(s), None, None, None, None) => (artifactsFromKyxString(s), Map.empty)
           case (None, Some(s), None, None, None) => (artifactsFromTexMathString(s), Map.empty)
           case (None, None, Some(s), None, None) => (ArchiveArtifact(s), Map.empty)
@@ -97,28 +119,27 @@ object QuizExtractor {
           case (None, None, None, None, Some(s)) =>
             val (question, artifact) = solfinArtifactsFromString(s)
             (artifact, Map("question" -> question))
+          case (None, None, None, None, None) => (TextArtifact(None), Map.empty)
         }
         val testSolArtifacts = expectedArtifact match {
-          case AnyOfArtifact(artifacts) => artifacts ++ artifactsFromNSolContents(testsol, "\\\\testsol")
-          case _ => expectedArtifact +: artifactsFromNSolContents(testsol, "\\\\testsol")
+          case AnyOfArtifact(artifacts) => artifacts ++ artifactsFromNSolContents(testsols, "\\testsol")
+          case _ => expectedArtifact +: artifactsFromNSolContents(testsols, "\\testsol")
         }
-        val noSolArtifacts = artifactsFromNSolContents(nosol, "\\\\nosol")
-        val graderArgs = argsFromString(args)
+        val noSolArtifacts = artifactsFromNSolContents(nosols, "\\nosol")
+        val graderArgs = argsFromString(grader.headOption.flatMap(_._2))
         val uniqueSolArgs = solArgs.filter({ case (k, _) => !graderArgs.contains(k)}) // grader arguments override solution arguments
         val firstAlgoIdx = rawContent.indexOf("\\algog")
         val untilFirstAlgo = if (firstAlgoIdx >= 0) rawContent.substring(0, firstAlgoIdx) else rawContent
         assert(firstAlgoIdx == -1
           || untilFirstAlgo.indexOf("\\ask") != untilFirstAlgo.lastIndexOf("\\ask")
-          || grader.isDefined,
+          || grader.nonEmpty,
           "Expected a grader since \\algog is defined for first question, but couldn't extract from " + rawContent)
-        AskQuestion(grader, graderArgs ++ uniqueSolArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
+        AskQuestion(grader.headOption.map(_._1), graderArgs ++ uniqueSolArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
       })
     }
 
-    private def artifactsFromNSolContents(s: String, split: String): List[Artifact] = {
-      if (s.nonEmpty) s.split(split).map(_.trim).map(_.stripPrefix("{").stripSuffix("}")).
-        filter(_.nonEmpty).toList.flatMap(artifactFromSolContent)
-      else List.empty
+    private def artifactsFromNSolContents(s: List[String], head: String): List[Artifact] = {
+      s.map(_.trim.stripPrefix(head).trim.stripPrefix("{").stripSuffix("}")).filter(_.nonEmpty).flatMap(artifactFromSolContent)
     }
 
     /** Extracts grader information (`method`, `args`) from raw content. */
@@ -131,8 +152,8 @@ object QuizExtractor {
 
     /** Translates `\sol` into an artifact. */
     def artifactFromSolContent(s: String): Option[Artifact] = {
-      val artifacts = solContent("").r(KYX_SOL, TEX_MATH_SOL, LISTINGS_SOL, TEXT_SOL).findAllMatchIn(s).
-        map(m => (Option(m.group(KYX_SOL)), Option(m.group(TEX_MATH_SOL)), Option(m.group(LISTINGS_SOL)), Option(m.group(TEXT_SOL)))).
+      val artifacts = solContent("").r(KYX_SOL, TEX_SOL, LISTINGS_SOL, TXT_SOL).findAllMatchIn(s).
+        map(m => (Option(m.group(KYX_SOL)), Option(m.group(TEX_SOL)), Option(m.group(LISTINGS_SOL)), Option(m.group(TXT_SOL)))).
         map({
           case (Some(s), None, None, None) => artifactsFromKyxString(s)
           case (None, Some(s), None, None) => artifactsFromTexMathString(s)

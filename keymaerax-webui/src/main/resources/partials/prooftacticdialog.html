@@ -1,11 +1,13 @@
 <div class="modal-header">
-    <h3 class="modal-title">{{title}}</h3>
+    <h3 class="modal-title">
+        {{title}}
+        <span class="pull-right">
+            <button class="btn btn-link" ng-click="ok()"><span class="fa fa-close"></span></button>
+        </span>
+    </h3>
 </div>
-<div class="modal-body" style="overflow: scroll">
+<div class="modal-body k4-no-padding">
     <p ng-if="message">{{message}}</p>
-    <h3>Proof Construction</h3>
-    <div hljs hljs-language="bellerophon" style="overflow: scroll" hljs-source="tactic.tacticBody"></div>
-</div>
-<div class="modal-footer">
-    <button class="btn btn-primary" ng-click="ok()">Close</button>
+    <div ui-ace="{theme:'github',mode:'bellerophon',showGutter:true,useWrapMode:true,onLoad:aceLoaded}"
+         ng-model="tactic.tacticBody" id="tacticeditor"></div>
 </div>

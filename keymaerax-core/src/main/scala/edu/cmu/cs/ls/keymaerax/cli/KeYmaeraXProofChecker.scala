@@ -82,7 +82,7 @@ object KeYmaeraXProofChecker {
     val proofStatistics = try {
       qeDurationListener.reset()
       val proofStart: Long = Platform.currentTime
-      val witness = KeYmaeraXProofChecker(timeout)(tactic)(inputSequent)
+      val witness = KeYmaeraXProofChecker(timeout, defs)(tactic)(inputSequent)
       val proofDuration = Platform.currentTime - proofStart
       val qeDuration = qeDurationListener.duration
       val proofSteps = witness.steps
@@ -370,7 +370,7 @@ object KeYmaeraXProofChecker {
 }
 
 /** Checks proves (aborting after timeout seconds) and returns the [[ProvableSig]] as a witness. */
-case class KeYmaeraXProofChecker(timeout: Long) extends (BelleExpr => Sequent => ProvableSig) {
+case class KeYmaeraXProofChecker(timeout: Long, defs: Declaration) extends (BelleExpr => Sequent => ProvableSig) {
   /** Checker that uses tactic `t`. */
   override def apply(t: BelleExpr): Sequent => ProvableSig = (s: Sequent) => {
     implicit val ec: ExecutionContext = ExecutionContext.global
@@ -378,7 +378,7 @@ case class KeYmaeraXProofChecker(timeout: Long) extends (BelleExpr => Sequent =>
       BelleInterpreter.interpreter.start()
       Await.result(
         Future {
-          TactixLibrary.proveBy(s, t)
+          TactixLibrary.proveBy(ProvableSig.startProof(s), t, defs)
         },
         if (timeout > 0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf
       )

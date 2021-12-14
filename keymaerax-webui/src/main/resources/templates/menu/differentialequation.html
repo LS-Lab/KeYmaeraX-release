@@ -7,6 +7,8 @@
                ng-click="menu.odemenu.kind='box';$event.stopPropagation();">Box</a>
             <a class="button nav-item nav-link" ng-class="{active: menu.odemenu.kind=='diamond'}"
                ng-click="menu.odemenu.kind='diamond';$event.stopPropagation();">Diamond</a>
+            <a class="button nav-item nav-link" ng-class="{active: menu.odemenu.kind=='switched'}"
+               ng-click="menu.odemenu.kind='switched';$event.stopPropagation();">Switched</a>
         </nav>
     </li>
     <li role="separator" class="divider"></li>
@@ -16,6 +18,7 @@
             name="Auto" code-name="ODE"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'||menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Solve" code-name="solve"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
@@ -93,16 +96,46 @@
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Closed Domain Refinement ..." code-name="closedRef" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='switched'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Stability CLF ..." code-name="stabilityCLF"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='switched'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Attractivity CLF ..." code-name="attractivityCLF"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='switched'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Stability State MLF ..." code-name="stabilityStateMLF"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='switched'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Attractivity State MLF ..." code-name="attractivityStateMLF"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='switched'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Stability Time MLF ..." code-name="stabilityTimeMLF"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='switched'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Attractivity Time MLF ..." code-name="attractivityTimeMLF"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider" ng-if="menu.odemenu.kind=='box'"></li>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Barrier" code-name="barrier"
+            name="Darboux" code-name="dbx"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Darboux" code-name="dbx"
+            name="Barrier" code-name="barrier"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"

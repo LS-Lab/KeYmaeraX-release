@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Region}
 
 import scala.collection.immutable.Nil
 
@@ -31,8 +31,12 @@ object DBAbstractionObj extends Logging {
 class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
 /** A tutorial/case study example. */
-class ExamplePOJO(val id: Int, val title: String, val description: String, val infoUrl: String, val url: String,
-                  val imageUrl: String, val level: Int)
+case class ExamplePOJO(id: Int, title: String, description: String, infoUrl: String, url: String,
+                       imageUrl: String, level: Int)
+
+/** A text template with optional region to select and set the cursor to on display. */
+case class TemplatePOJO(title: String, description: String, text: String, selectRange: Option[Region],
+                        imageUrl: Option[String])
 
 /**
  * Data object for models.
@@ -282,7 +286,8 @@ trait DBAbstraction {
 
   def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)
 
-  def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit
+  def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String],
+                  content: Option[String], tactic: Option[String]): Unit
 
   def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName:String): Int
 

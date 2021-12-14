@@ -507,7 +507,7 @@ class TactixLibraryTests extends TacticTestBase {
     val count = anon ((_: Position, _: Sequent) => { i=i+1; skip })
 
     failAfter(2 seconds) {
-      val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto(), count, keepQEFalse=false))
+      val result = proveBy("[{x'=1}]x>0".asFormula, autoImpl(loopauto(), count, keepQEFalse=false))
       // master uses solve after count does not make progress
       result.subgoals.loneElement shouldBe "t_>=0 ==> t_+x>0".asSequent
     }

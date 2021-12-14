@@ -12,7 +12,7 @@ import scala.collection.immutable.{Nil, Seq}
 object DBTools {
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction, codeName: String => String = s => s, additionalListeners: Seq[IOListener] = Nil)
+  def listener(db: DBAbstraction, constructGlobalProvable: Boolean = false, codeName: String => String = s => s, additionalListeners: Seq[IOListener] = Nil)
               (proofId: Int)
               (tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
     val trace = db.getExecutionSteps(proofId).sortBy(_.stepId)
@@ -23,7 +23,7 @@ object DBTools {
       case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
     }
     new TraceRecordingListener(db, proofId, parentStep,
-      globalProvable, branch, recursive = false, codeName(tacticName)) :: Nil ++ additionalListeners
+      globalProvable, branch, recursive = false, codeName(tacticName), constructGlobalProvable) :: Nil ++ additionalListeners
   }
 
 }

@@ -1,5 +1,5 @@
 <form editable-form class="k4-vertical-fill-flex" name="modelDataForm" onbeforesave="checkModelData()"
-      onaftersave="save()" shown="save.editable">
+      shown="save.editable">
 <div class="modal-header">
     <div class="row" ng-if="mode==='edit' || mode==='exercise' || mode ==='proofedit'"
          uib-popover-template="'templates/modelillustration.html'"
@@ -19,11 +19,13 @@
                 <span class="pull-right">
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelIsComplete()"
                             ng-click="save.cmd=startProof">Start proof</button>
-                    <button class="btn btn-default" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelDataForm.$visible"
+                    <button class="btn" ng-class="{'btn-primary':model.keyFile!=origModel.keyFile, 'btn-default':model.keyFile==origModel.keyFile}"
+                            type="submit" ng-if="!user.isGuest() && mode==='edit' && modelDataForm.$visible"
                             ng-click="save.cmd=refreshModels">Save</button>
                     <button class="btn btn-default" ng-if="!user.isGuest() && mode==='edit' && !modelDataForm.$visible"
                             ng-click="enableEditing()"><i class="fa fa-pencil"></i> Edit</button>
-                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
+                    <button class="btn" ng-class="{'btn-primary':model.keyFile!=origModel.keyFile, 'btn-default':model.keyFile==origModel.keyFile}"
+                            type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
                             ng-click="save.cmd=redoProof">Save</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
                             ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
@@ -31,7 +33,7 @@
                     <button class="btn btn-default" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
                             ng-click="save.cmd=delayedProveFromTactic(model.id)">Run stored tactic</button>
                     </span>
-                    <button class="btn btn-link" ng-click="modelDataForm.$cancel();cancel()"><span class="fa fa-close"></span></button>
+                    <button class="btn btn-link" ng-click="save.cmd=cancel"><span class="fa fa-close"></span></button>
                 </span>
             </h3>
         </div>

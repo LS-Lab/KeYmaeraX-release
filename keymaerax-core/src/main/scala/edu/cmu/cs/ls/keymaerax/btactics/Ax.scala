@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.ext.Z3
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
@@ -328,8 +329,8 @@ object Ax extends Logging {
   val CErule: AxiomaticRuleInfo = coreRule("CE congruence")
   @ProofRule
   val mondrule: AxiomaticRuleInfo = coreRule("<> monotone")
-  @ProofRule
-  val indrule: AxiomaticRuleInfo = coreRule("ind induction")
+  @ProofRule(conclusion = "<a*>P |- Q", premises = "P | <a>Q |- Q", displayLevel = "browse")
+  val FPrule: AxiomaticRuleInfo = coreRule("FP fixpoint")
   @ProofRule
   val conrule: AxiomaticRuleInfo = coreRule("con convergence")
 
@@ -385,24 +386,24 @@ object Ax extends Logging {
   @Axiom("DW base", conclusion = "__[{x'=f(x)&Q}]Q__", displayLevel = "internal",
     key = "", recursor = "", unifier = "surjlinear")
   val DWbase: CoreAxiomInfo = coreAxiom("DW base")
-  @Axiom("DE", conclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P",
+  @Axiom("DE", conclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P", displayLevel = "browse",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   val DE: CoreAxiomInfo = coreAxiom("DE differential effect")
-  @Axiom("DE", conclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P",
+  @Axiom("DE", conclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P", displayLevel = "browse",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   val DEs: CoreAxiomInfo = coreAxiom("DE differential effect (system)")
   /* @todo soundness requires only vectorial x in p(||) */
-  @Axiom("DI", conclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')",
+  @Axiom("DI", conclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')", displayLevel = "browse",
     key = "1.0", recursor = "*", unifier = "surjlinear")
   val DIequiv: CoreAxiomInfo = coreAxiom("DI differential invariance")
-  @Axiom("DG", conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P",
+  @Axiom("DG", conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P", displayLevel = "browse",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGa: CoreAxiomInfo = coreAxiom("DG differential ghost")
   //@todo name: why inverse instead of universal?
   @Axiom("DG inverse differential ghost", conclusion = "__[{x'=f(x)&Q}]P__↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGpp: CoreAxiomInfo = coreAxiom("DG inverse differential ghost")
-  @Axiom("DG inverse differential ghost implicational", conclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P",
+  @Axiom("DG inverse differential ghost implicational", conclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P", displayLevel = "browse",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGi: CoreAxiomInfo = coreAxiom("DG inverse differential ghost implicational")
   @Axiom("DG", conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=g()&Q}]P",
@@ -411,7 +412,7 @@ object Ax extends Logging {
   @Axiom("DGa", conclusion = "__[{x'=f(x)&Q}]P__↔∀y [{x'=f(x),y'=g()&Q}]P",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGCa: CoreAxiomInfo = coreAxiom("DG differential ghost constant all")
-  @Axiom("DS&", conclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
+  @Axiom("DS&", conclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)", displayLevel = "browse",
     key = "0", recursor = "0.1.1;0.1;*", unifier = "surjlinearpretend")
   val DS: CoreAxiomInfo = coreAxiom("DS& differential equation solution")
 
@@ -423,34 +424,33 @@ object Ax extends Logging {
   @Axiom("DX",
     key = "0", recursor = "1", unifier = "surjlinear")
   val DX: CoreAxiomInfo = coreAxiom("DX differential skip")
-  @Axiom("Dcomp", conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P", unifier = "linear")
+  @Axiom("Dcomp", conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P", displayLevel = "browse", unifier = "linear")
   val Dcomp: CoreAxiomInfo = coreAxiom("D[;] differential self compose")
   @Axiom("DIo >", unifier = "linear", conclusion = "(__[{x'=f(x)&Q}]g(x)>h(x)__↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0", recursor = "*")
   val DIogreater: CoreAxiomInfo = coreAxiom("DIo open differential invariance >")
-  @Axiom("DMP", conclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)", inputs = "R:formula",
+  @Axiom("DMP", conclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)", inputs = "R:formula", displayLevel = "browse",
     key = "1.1" /*@todo, recursor = (0::Nil)::(Nil)::Nil*/)
   val DMP: CoreAxiomInfo = coreAxiom("DMP differential modus ponens")
 
-  @Axiom("Uniq", conclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__",
+  @Axiom("Uniq", conclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__", displayLevel = "browse",
     key = "1", recursor = "0;1", unifier = "surjlinear")
   val Uniq: CoreAxiomInfo = coreAxiom("Uniq uniqueness")
   /* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
-  @Axiom("Cont", conclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__",
+  @Axiom("Cont", conclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__", displayLevel = "browse",
     key = "1", recursor = "*")
   val Cont: CoreAxiomInfo = coreAxiom("Cont continuous existence")
-  @Axiom("RI& >=", conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)",
+  @Axiom("RI& >=", conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)", displayLevel = "browse",
     key = "0", recursor = "1.1.1;1.1.0;1;0")
   val RIclosedgeq: CoreAxiomInfo = coreAxiom("RI& closed real induction >=")
-
-  @Axiom("RI&", conclusion = "__[x'=f(x)&Q]P__ ↔ TODO",
+  @Axiom("RI&", conclusion = "__[x'=f(x)&Q]P__ ↔ ∀s [t'=1,x'=f(x)&Q&(P|t=s)](t=s -> P & (<t'=1,x'=f(x)&(Q|t=s)>t!=s -> <t'=1,x'=f(x)&(P|t=s)>t!=s))",
     key = "0", recursor = "*")
   val RI: CoreAxiomInfo = coreAxiom("RI& real induction")
 
   @Axiom("IVT", conclusion = "<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z&p(t,x))→t<=z→<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t=z∧<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z∧p(t,x))", unifier = "full")
   val IVT: CoreAxiomInfo = coreAxiom("IVT")
-  @Axiom("DCC", conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)", unifier = "linear",
-    key = "1", recursor = "0")
+  @Axiom("DCC", conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)", displayLevel = "browse",
+    key = "1", recursor = "0", unifier = "linear")
   val DCC: CoreAxiomInfo = coreAxiom("DCC")
 
   /* DIFFERENTIAL AXIOMS */
@@ -509,13 +509,13 @@ object Ax extends Logging {
     key = "0", recursor = "0", unifier = "surjlinear")
   val duald: CoreAxiomInfo = coreAxiom("<d> dual")
 
-  @Axiom("VK", conclusion = "(p→__[a]p__)←[a]⊤",
+  @Axiom("VK", conclusion = "(p→__[a]p__)←[a]⊤", displayLevel = "browse",
     key = "1.1", recursor = "*", unifier = "surjlinear")
   val VK: CoreAxiomInfo = coreAxiom("VK vacuous")
-  @Axiom("[]T", conclusion = "__[a]⊤__", displayLevel = "all",
+  @Axiom("[]T axiom", conclusion = "__[a]⊤__", displayLevel = "all",
     key = "", recursor = "", unifier = "surjlinear")
-  val boxTrue: CoreAxiomInfo = coreAxiom("[]T system")
-  @Axiom("K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
+  val boxTrueAxiom: CoreAxiomInfo = coreAxiom("[]T system")
+  @Axiom("K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)", displayLevel = "all",
     key = "1", recursor = "*")
   val K: CoreAxiomInfo = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
@@ -626,7 +626,7 @@ object Ax extends Logging {
 
   lazy val boxTrueTrue: ProvableSig = TactixLibrary.proveBy(
     "[a{|^@|};]true <-> true".asFormula,
-    equivR(1) <(closeT, cohideR(1) & byUS(boxTrue)))
+    equivR(1) <(closeT, cohideR(1) & byUS(boxTrueAxiom)))
 
   lazy val impliesRightAnd: ProvableSig = TactixLibrary.proveBy(
     "(p_()->q_()) & (p_()->r_()) <-> (p_() -> q_()&r_())".asFormula,
@@ -696,6 +696,102 @@ object Ax extends Logging {
   // derived rules
 
   /**
+    * Rule "contra2".
+    * Premise !q(||) ==> !p(||)
+    * Conclusion p(||) ==> q(||)
+    * End.
+    *
+    * @derived
+    */
+  @ProofRule("contra2",  premises = "!Q |- !P", conclusion = "P |- Q")
+  lazy val contraposition2Rule: DerivedRuleInfo = derivedRuleSequent("contra2",
+    Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
+    useAt(doubleNegation, PosInExpr(1::Nil))(1) &
+      useAt(doubleNegation, PosInExpr(1::Nil))(-1) &
+      notR(1) &
+      notL(-1)
+  )
+
+  /**
+    * Rule "ind induction".
+    * Premise p(||) ==> [a;]p(||)
+    * Conclusion p(||) ==> [a*]p(||)
+    * {{{
+    *     p(x) |- [a]p(x)
+    *   --------------------- ind
+    *     p(x) |- [{a}*]p(x)
+    * }}}
+    * Interderives with FP fixpoint rule.
+    * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+    * @see Lemma 7.2 and Corollary 16.1 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+    */
+//  ("ind induction",
+//    (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
+//      Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
+  @ProofRule(conclusion = "P |- [a*]P", premises = "P |- [a]P")
+  lazy val indrule: DerivedRuleInfo = derivedRuleSequent("ind induction",
+    Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("[{a_;}*]p_(||)".asFormula)),
+    useAt(box, PosInExpr(1::Nil))(1) &
+      useAt(doubleNegation, PosInExpr(1::Nil))(-1) & notR(1) & notL(-1) &
+      byUS(FPrule) &
+      orL(-1) <(
+        closeId(-1,1)
+        ,
+        useAt(doubleNegation, PosInExpr(1::Nil))(-1) & notR(1) & notL(-1) &
+          useAt(box)(1)
+      )
+  )
+
+  /**
+    * DUPLICATE: Rule "FP fixpoint duplicate" only for documentation purposes to show that FP rule derives from ind induction rule,
+    * except with a duplicate premise.
+    * Premise p(||) | <a>q(||) ==> q(||)
+    * Conclusion <a*>p(||) ==> q(||)
+    * {{{
+    *     p(x) | <a>q(x) |- q(x)    p(x) | <a>q(x) |- q(x)
+    *   --------------------------------------------------- FP
+    *     <a*>p(x) |- q(x)
+    * }}}
+    * Interderives with ind induction rule.
+    * FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to set contraction.
+    * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+    * @see Lemma 16.11 and Corollary 16.1 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+    * @see [[FPrule]]
+    */
+  @ProofRule(conclusion = "<a*>P |- Q", premises = "P | <a>Q |- Q ;; P | <a>Q |- Q", displayLevel = "internal")
+  private[btactics] lazy val FPruleduplicate: DerivedRuleInfo = derivedRuleSequent("FP rule duplicate",
+    Sequent(immutable.IndexedSeq("<{a_;}*>p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
+    cut("<{a_;}*>q_(||)".asFormula) <(
+      /* use: */
+      hide(-1) &
+        useAt(diamond, PosInExpr(1::Nil))(-1) &
+        useAt(doubleNegation, PosInExpr(1::Nil))(1) & notL(-1) & notR(1) &
+        byUS(indrule) &
+        useAt(box, PosInExpr(1::Nil))(1) &
+        useAt(doubleNegation)(1, 0::1::Nil) &
+        notL(-1) & notR(1) &
+        cut("p_(||) | <a_;>q_(||)".asFormula) <(
+          /* use: */
+          hide(-1)
+          ,
+          /* show: */
+          orR(2) & closeId(-1,3)
+        )
+      ,
+      /* show: */
+      hide(1) &
+        byUS(mondrule) &
+        cut("p_(||) | <a_;>q_(||)".asFormula) <(
+          /* use: */
+          hide(-1)
+          ,
+          /* show: */
+          orR(2) & closeId(-1,2)
+        )
+    )
+  )
+
+  /**
     * Rule "all generalization".
     * Premise p(||)
     * Conclusion \forall x p(||)
@@ -713,7 +809,7 @@ object Ax extends Logging {
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
         byUS(monbaxiom) & hide(-1)
         ,
-        hide(1) & HilbertCalculus.boxTrue(1)
+        hide(1) & useAt(boxTrueAxiom)(1)
         )
   )
 
@@ -752,7 +848,7 @@ object Ax extends Logging {
       byUS(monbaxiom) & hide(-1)
       ,
       // show
-      hide(1) & HilbertCalculus.boxTrue(1)
+      hide(1) & useAt(boxTrueAxiom)(1)
       )
   )
 
@@ -769,7 +865,7 @@ object Ax extends Logging {
   lazy val V: DerivedAxiomInfo = derivedAxiom("V vacuous",
     Sequent(IndexedSeq(), IndexedSeq("p() -> [a{|^@|};]p()".asFormula)),
     useAt(VK, PosInExpr(1::Nil))(1) &
-    HilbertCalculus.boxTrue(1)
+    useAt(boxTrueAxiom)(1)
   )
 
   /**
@@ -1156,7 +1252,8 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("∃d","existsd"), key = "0", recursor = "*")
+  @Axiom(("∃d","existsd"), conclusion = "__¬∀x ¬P__ ↔ ∃x P", displayLevel = "all",
+    key = "0", recursor = "*", unifier = "surjlinear")
   lazy val existsDual: DerivedAxiomInfo = derivedAxiom("exists dual",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (!p_(||))) <-> \\exists x_ p_(||)".asFormula)),
     useAt(alld, PosInExpr(1::Nil))(1, 0::0::Nil) &
@@ -1315,7 +1412,7 @@ object Ax extends Logging {
     * @note almost same proof as "exists dual"
     * @Derived
     */
-  @Axiom(("[·]", "[.]"), conclusion = "__&not;&langle;a&rangle;&not;P__ ↔ &langle;a&rangle;P", displayLevel = "menu",
+  @Axiom(("[·]", "[.]"), conclusion = "__&not;&langle;a&rangle;&not;P__ ↔ [a]P", displayLevel = "menu",
     key = "0", recursor = "*", unifier = "surjlinear")
   lazy val box: DerivedAxiomInfo = derivedAxiom("[] box",
     Sequent(IndexedSeq(), IndexedSeq("(!<a_;>(!p_(||))) <-> [a_;]p_(||)".asFormula)),
@@ -1360,7 +1457,7 @@ object Ax extends Logging {
       useAt(K, PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(K, PosInExpr(1::Nil))(1) &
       useAt(proveBy("(p_() -> !(p_()&q_()) -> !q_()) <-> true".asFormula, prop))(1, 1::Nil) &
-      byUS(boxTrue) & TactixLibrary.done
+      byUS(boxTrueAxiom) & TactixLibrary.done
   )
 
   /**
@@ -1379,7 +1476,7 @@ object Ax extends Logging {
       useAt(diamond, PosInExpr(1::Nil))(1, 0::1::Nil) &
         useAt(diamond, PosInExpr(1::Nil))(1, 1::Nil) &
         cut("[a_{|^@|};]p_(||) & [a_{|^@|};]!(p_(||)&q_(||)) -> [a_{|^@|};]!q_(||)".asFormula) <(
-          /* use */ SaturateTactic(alphaRule) & andLi(AntePos(1), AntePos(2)) & modusPonens(AntePos(1), AntePos(0)) & id,
+          /* use */ SaturateTactic(alphaRule) & andLi(keepLeft=false)(AntePos(1), AntePos(2)) & modusPonens(AntePos(1), AntePos(0)) & id,
           /* show */ hideR(1) &
           cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
             /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & propClose,
@@ -1505,6 +1602,36 @@ object Ax extends Logging {
     )
 
   /**
+    * {{{Axiom "[] or left".
+    *    [a;](p(||)) -> [a;](p(||)|[a;]q(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom(("[]∨L", "[]orL"), conclusion = "[a]P->__[a](P∨Q)__", displayLevel = "browse", key = "1")
+  lazy val boxOrLeft: DerivedAxiomInfo =
+  derivedAxiom("[] or left",
+    Sequent(IndexedSeq(), IndexedSeq("[a;]p(||) -> [a;](p(||) | q(||))".asFormula)),
+    implyR(1) & monb & prop
+  )
+
+  /**
+    * {{{Axiom "[] or right".
+    *    [a;](p(||)) -> [a;](p(||)|[a;]q(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom(("[]∨R", "[]orR"), conclusion = "[a]Q->__[a](P∨Q)__", displayLevel = "browse", key = "1")
+  lazy val boxOrRight: DerivedAxiomInfo =
+  derivedAxiom("[] or right",
+    Sequent(IndexedSeq(), IndexedSeq("[a;]q(||) -> [a;](p(||) | q(||))".asFormula)),
+    implyR(1) & monb & prop
+  )
+
+  /**
     * {{{Axiom "[] conditional split".
     *    [a;](p(||)->q(||)&r(||)) <-> [a;](p(||)->q(||)) & [a;](p(||)->r(||))
     * End.
@@ -1590,7 +1717,7 @@ object Ax extends Logging {
         andR(1) <(
           useAt(diamond, PosInExpr(1::Nil))(1) & notR(1) & implyRi &
           useAt(K, PosInExpr(1::Nil))(1) &
-          useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS(boxTrue)
+          useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS(boxTrueAxiom)
           ,
           useAt(proveBy("!q_() -> (p_() -> !q_())".asFormula, prop), PosInExpr(1::Nil))(2, 1::Nil) &
           HilbertCalculus.V(2) & notR(2) & id
@@ -1641,7 +1768,8 @@ object Ax extends Logging {
     *
     * @see [[assignDual]]
     */
-  @Axiom(":=D")
+  @Axiom(("⟨:=⟩D", "<:=>D"), conclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P",
+    key = "0", recursor = "*")
   lazy val assignDual2: DerivedAxiomInfo = derivedFormula(":= assign dual 2",
     "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
     useAt(selfassignb, PosInExpr(1::Nil))(1, 0::1::Nil) &
@@ -2059,7 +2187,7 @@ object Ax extends Logging {
       useAt(choiceb)(1, 0::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::1::Nil) &
-      equivR(1) & OnAll(SaturateTactic(alphaRule)) <(andLi() & id, orL(-1) & OnAll(notL(-1) & id))
+      equivR(1) & OnAll(SaturateTactic(alphaRule)) <(andLi & id, orL(-1) & OnAll(notL(-1) & id))
   )
 
   /**
@@ -3428,7 +3556,7 @@ object Ax extends Logging {
             useAt(RIclosedgeq, PosInExpr(0::Nil))(1) & prop & HilbertCalculus.composeb(1) &
             dC("!p_(|t_|)=0".asFormula)(1) & Idioms.<(
             useAt(DW)(1) &
-              TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), nil) /* TODO: Goedel? */ &
+              TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), nil) /* TODO: Goedel? */ &
               implyR(1) &
               TactixLibrary.generalize("t_=0".asFormula)(1)& Idioms.<(cohideR(1) & assignb(1) & byUS(equalReflexive), nil) /* TODO: assignb? */ &
               implyR(1) &
@@ -3439,7 +3567,7 @@ object Ax extends Logging {
                 prop &
                 done),
               useAt(DW)(1) &
-                TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), nil) /* TODO: Goedel? */ &
+                TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), nil) /* TODO: Goedel? */ &
                 useAt(greaterEqual)(1, 1::Nil) &
                 prop &
                 done
@@ -3451,7 +3579,7 @@ object Ax extends Logging {
             useAt(diamond, PosInExpr(1::Nil))(-2) & notL(-2) &
             TactixLibrary.generalize("!p_(|t_|)<=0".asFormula)(1) & Idioms.<(id, useAt(lessEqual)(-1,0::Nil) & prop & done),
           useAt(DW)(1) &
-            TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), prop & done) /* TODO: Goedel? */)
+            TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), prop & done) /* TODO: Goedel? */)
       )
     )
 
@@ -3503,19 +3631,21 @@ object Ax extends Logging {
     *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e)'>=g*e
     * End.
     * }}}
- *
+    * Strict Darboux inequality / Grönwall inequality.
+    *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG).
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgtOpen]]
     */
   @Axiom("DBX>", conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e)'≥ge", displayLevel = "menu",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXgt: DerivedAxiomInfo =
     derivedAxiom("DBX>",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-      useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      useAt(Ax.DGpp, (us:Option[Subst])=>us.get ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3556,19 +3686,21 @@ object Ax extends Logging {
     *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e>0 -> (e)'>=g*e)
     * End.
     * }}}
- *
+    * Strict Darboux inequality / Grönwall inequality benefiting from open inequality in postcondition.
+    *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
   @Axiom("DBX> open", conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e>0→(e)'≥ge)",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
   lazy val DBXgtOpen: DerivedAxiomInfo =
     derivedAxiom("DBX> open",
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
       implyR(1) & implyR(1) &
         dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-        useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        useAt(Ax.DGpp, (us:Option[Subst])=>us.get++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3605,6 +3737,185 @@ object Ax extends Logging {
         )
     )
 
+  private val assignbexistsy = Ax.assignbexists.provable(URename("x_".asVariable,dbx_internal,semantic=true))
+  private val DBXgtz = Ax.DBXgt.provable(URename(dbx_internal,"z_".asVariable,semantic=true))
+
+  /**
+    * {{{Axiom "DBX>=".
+    *   (e>=0 -> [c&q(||)]e>=0) <- [c&q(||)](e)'>=g*e
+    * End.
+    * }}}
+    * Non-strict Darboux inequality / Grönwall inequality.
+    *
+    * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX>=", conclusion = "(e>=0 → __[x'=f(x)&Q]e>=0__) ← [x'=f(x)&Q](e)'≥ge", displayLevel = "menu",
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
+  lazy val DBXge: DerivedAxiomInfo =
+    derivedAxiom("DBX>=",
+      Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)>=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)>=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'>=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+      implyR(1) & implyR(1) &
+        dG(AtomicODE(DifferentialSymbol(dbx_internal),
+          Times(Neg(Divide("g(|y_,z_|)".asTerm, Number(BigDecimal(2)))), dbx_internal)), None)(1) &
+        useAt(Ax.DGpp, (us: Option[Subst]) => us.get ++ RenUSubst(
+          (UnitFunctional("a", Except(Variable("y_", None, Real) :: Nil), Real), Neg(Divide("g(|y_,z_|)".asTerm, Number(BigDecimal(2))))) ::
+            (UnitFunctional("b", Except(Variable("y_", None, Real) :: Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
+        cutR("\\exists y_ y_>0".asFormula)(1) < (cohideR(1) & QE, implyR(1) & existsL('Llast)) &
+        useAt(assignbexistsy, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("f_()".asTerm, dbx_internal) :: Nil))(1) &
+        useAt(selfassignby)(1) &
+        useAt(ally, PosInExpr(0 :: Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+        useAt(commaCommute)(-1) &
+        cutR("[{c{|y_,z_|},y_'=(-(g(|y_,z_|)/2))*y_+0&q(|y_,z_|)}](e(|y_,z_|)*y_^2>=0 & y_ > 0)".asFormula)(1) < (
+          TactixLibrary.boxAnd(1) & andR(1) < (
+            useAt(DI)(1) & implyR(1) & andR(1) < (
+              hideL(-4) & hideL(-1) &
+                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>=0".asFormula, "y()>0".asFormula), IndexedSeq("e()*y()^2>=0".asFormula)), QE & done)),
+              derive(1, PosInExpr(1 :: Nil)) &
+                useAt(commaCommute)(1) & useAt(DEsysy)(1) &
+                useAt(Dassignby, PosInExpr(0 :: Nil))(1, PosInExpr(1 :: Nil)) &
+                cohide2(-1, 1) & HilbertCalculus.monb &
+                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e()".asFormula), IndexedSeq("ep()*y()^2 + e()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
+            ),
+            cohideOnlyL('Llast) &
+              implyRi &
+              useAt(DBXgtz, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g(|z_|)".asTerm, "(-g(|y_,z_|)/2)".asTerm) :: Nil))(1) &
+              derive(1, PosInExpr(1 :: 0 :: Nil)) &
+              useAt(commaCommute)(1) & useAt(DEsysy)(1) &
+              G(1) & useAt(Dassignby, PosInExpr(0 :: Nil))(1) &
+              byUS(TactixLibrary.proveBy("f()+0>=f()".asFormula, QE & done))
+          ),
+          cohideR(1) & implyR(1) &
+            HilbertCalculus.monb &
+            byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>=0 & y() > 0".asFormula), IndexedSeq("e()>=0".asFormula)), QE & done))
+        )
+    )
+
+  // Some extra versions of the dbx axioms for use in implementations
+
+  private val dbxEqArith = proveBy("f_() = 0 <-> f_()>=0 & -f_()>=0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX=".
+    *   (e=0 -> [c&q(||)]e=0) <- [c&q(||)](e)'=g*e
+    * End.
+    * }}}
+    * Darboux equality
+    *
+    * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXge]]
+    */
+  @Axiom("DBX=", conclusion = "(e=0 → __[x'=f(x)&Q]e=0__) ← [x'=f(x)&Q](e)'=ge", displayLevel = "menu",
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
+  lazy val DBXeq: DerivedAxiomInfo =
+    derivedAxiom("DBX=",
+      Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+      implyR(1) & implyR(1) &
+        useAt(dbxEqArith)('Llast) & andL('Llast) &
+        useAt(dbxEqArith)(1,PosInExpr(1::Nil)) &
+        TactixLibrary.boxAnd(1) & andR(1) <(
+        hideL(-3) & exchangeL(-1,-2) & implyRi &
+          useAt(Ax.DBXge, PosInExpr(1 :: Nil))(1) & monb &
+          byUS(TactixLibrary.proveBy("f()=g() ==> f()>=g()".asSequent, QE & done)),
+        hideL(-2) & exchangeL(-1,-2) & implyRi &
+          useAt(Ax.DBXge, PosInExpr(1 :: Nil))(1) & monb &
+          derive(1,0::Nil) &
+          byUS(TactixLibrary.proveBy("f()=g()*h() ==> -f()>=g()*(-h())".asSequent, QE & done))
+      )
+    )
+
+  private val dbxLtArith = proveBy("f_() < 0 <-> -f_()>0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX> open".
+    *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e>0 -> (e)'>=g*e)
+    * End.
+    * }}}
+    * Strict Darboux inequality / Grönwall inequality benefiting from open inequality in postcondition.
+    *
+    * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX< open", conclusion = "(e<0 → __[x'=f(x)&Q]e<0__) ← [x'=f(x)&Q](e<0→(e)'<=ge)",
+    key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
+  lazy val DBXltOpen: DerivedAxiomInfo =
+  derivedAxiom("DBX< open",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)<0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)<0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) < 0 -> (e(|y_|)'<=g(|y_|)*e(|y_|)))".asFormula)),
+    implyR(1) &
+      useAt(dbxLtArith)(1,0::Nil) &
+      useAt(dbxLtArith)(1,1::1::Nil) &
+      useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) &
+      monb &
+      derive(1,1::0::Nil) &
+      byUS(TactixLibrary.proveBy("e() < 0->f()<=g()*h() ==> -e()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
+  )
+
+  private val dbxLeArith = proveBy("f_() <= 0 <-> -f_()>=0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX<=".
+    *   (e<=0 -> [c&q(||)]e<=0) <- [c&q(||)](e)'<=g*e
+    * End.
+    * }}}
+    * Non-strict Darboux inequality / Grönwall inequality.
+    *
+    * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX<=", conclusion = "(e<=0 → __[x'=f(x)&Q]e<=0__) ← [x'=f(x)&Q](e)'<=ge", displayLevel = "menu",
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
+  lazy val DBXle: DerivedAxiomInfo =
+  derivedAxiom("DBX<=",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)<=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)<=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'<=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+    implyR(1) &
+      useAt(dbxLeArith)(1,0::Nil) &
+      useAt(dbxLeArith)(1,1::1::Nil) &
+      useAt(DBXge, PosInExpr(1 :: Nil))(1) &
+      monb &
+      derive(1,0::Nil) &
+      byUS(TactixLibrary.proveBy("f()<=g()*h() ==> -f()>=g()*(-h())".asSequent, QE & done))
+  )
+
+  private val dbxNeArith = proveBy("f_() != 0 <-> f_()>0 | -f_()>0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX!= open".
+    *   (e!=0 -> [c&q(||)]e!=0) <- [c&q(||)](e!=0 -> (e)'=g*e)
+    * End.
+    * }}}
+    * Strict Darboux != benefiting from open inequality in postcondition.
+    *
+    * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX!= open", conclusion = "(e!=0 → __[x'=f(x)&Q]e!=0__) ← [x'=f(x)&Q](e!=0→(e)'=ge)",
+    key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
+  lazy val DBXneOpen: DerivedAxiomInfo =
+  derivedAxiom("DBX!= open",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)!=0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)!=0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) != 0 -> (e(|y_|)'=g(|y_|)*e(|y_|)))".asFormula)),
+    implyR(1) &
+      useAt(dbxNeArith)(1,0::Nil) &
+      useAt(dbxNeArith)(1,1::1::Nil) &
+      implyR(1) & orL('Llast) <(
+      useAt(Ax.boxOrLeft)(1) & exchangeL(-1,-2) & implyRi &
+        useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) & monb &
+        byUS(TactixLibrary.proveBy("e() != 0->f()=g() ==> e()>0 -> f()>=g()".asSequent, QE & done)),
+      useAt(Ax.boxOrRight)(1) & exchangeL(-1,-2) & implyRi &
+        useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) & monb &
+        derive(1,1::0::Nil) &
+        byUS(TactixLibrary.proveBy("e() != 0->f()=g()*h() ==> -e()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
+    )
+  )
+
+  /**
+    * Dual version of initial-value theorem.
+    */
   @Axiom("dualIVT", key="1", unifier="linear")
   lazy val dualIVT: DerivedAxiomInfo = derivedFormula("dualIVT", "[{c&q(||)}](f(||)>=z()->p(||)) <- (f(||)<=z() & [{c&q(||)}](f(||)=z()->[{c&q(||)}](f(||)>=z()->p(||))))".asFormula,
     implyR(1) & andL(-1) & useAt(box, PosInExpr(1 :: Nil))(-2) & useAt(box, PosInExpr(1 :: Nil))(1) &
@@ -3628,13 +3939,13 @@ object Ax extends Logging {
 
   @Axiom("timeCond")
   lazy val timeCond: DerivedAxiomInfo = derivedFormula("timeCond", "[{x_'=1, c{|x_|} & q(||)}](!x_ <= h() -> [{x_'=1, c{|x_|} & q(||)}](!x_ <= h()))".asFormula,
-    generalize(True)(1) & Idioms.<(useAt(boxTrue)(1),
+    generalize(True)(1) & Idioms.<(useAt(boxTrueAxiom)(1),
       implyR(1) & useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(-2) &
         useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(1, 1 :: Nil)) &
       useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(id,
       derive(1, 1 :: Nil) &
         cohideR(1) & useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
-        generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))
+        generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))
     )
   )
 
@@ -3654,13 +3965,13 @@ object Ax extends Logging {
                         DLBySubst.boxElim(1) & prop & useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) &
                           Idioms.<(id, hideL(-1) & HilbertCalculus.DC("x_>=h()".asFormula)(1) &
                             Idioms.<(
-                              useAt(DW)(1) & generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), prop & done),
+                              useAt(DW)(1) & generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), prop & done),
                               useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(
                                 hideL(-2) & useAt(Ax.equalExpand, PosInExpr(0::Nil))(-1) & andL(-1) &
                                   useAt(Ax.flipLessEqual, PosInExpr(0::Nil))(-2) & id & done,
                                 useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
                                   generalize(True)(1) &
-                                  Idioms.<(cohideR(1) & useAt(boxTrue)(1),
+                                  Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1),
                                     derive(1, 1 :: Nil) & useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))))),
                         prop & cohideR(1) & by(timeCond)
                       ),
@@ -4847,6 +5158,20 @@ object Ax extends Logging {
   lazy val minusNeg: DerivedAxiomInfo = derivedAxiom("minus neg", Sequent(IndexedSeq(), IndexedSeq("-(f_()-g_()) = g_()-f_()".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
       byUS(proveBy("\\forall y \\forall x -(x-y)=y-x".asFormula, TactixLibrary.RCF)))
+
+
+  /**
+    * {{{Axiom "neg neg".
+    *    -(-f()) = f()
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom("negNeg", unifier = "linear", key = "0", recursor = "")
+  lazy val negNeg: DerivedAxiomInfo = derivedAxiom("neg neg", Sequent(IndexedSeq(), IndexedSeq("-(-f_()) = f_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
+      byUS(proveBy("\\forall x -(-x)=x".asFormula, TactixLibrary.RCF)))
 
   /**
     * {{{Axiom "-0".

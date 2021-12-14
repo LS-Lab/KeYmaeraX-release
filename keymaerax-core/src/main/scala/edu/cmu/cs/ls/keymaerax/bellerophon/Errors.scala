@@ -91,8 +91,8 @@ class BelleUnexpectedProofStateError(message: => String, val proofState: Provabl
   * @param input The expression that we were trying to match against the given shape.
   * @param info Additional information
   */
-class UnificationException(val shape: String, val input: String, info: String = "")
-  extends BelleCriticalException("Un-Unifiable: " + shape + "\nfor:          " + input + "\n" + info) {}
+class UnificationException(val shape: String, val input: String, info: String = "", cause: Throwable = null)
+  extends BelleCriticalException("Un-Unifiable: " + shape + "\nfor:          " + input + "\n" + info, cause) {}
 
 /** Tactic requirements that failed and indicate a critical logical error in using it. */
 class TacticRequirementError(message: => String) extends BelleCriticalException(message)
@@ -121,6 +121,8 @@ class CompoundCriticalException(val left: BelleThrowable, val right: BelleThrowa
 class UnprovableAnnotatedInvariant(message: => String, cause: Throwable = null) extends BelleUserCorrectableException(message, cause)
 
 class UnexpandedDefinitionsFailure(message: => String, cause: Throwable = null) extends BelleUserCorrectableException(message, cause)
+
+class MissingLyapunovFunction(message: => String, cause: Throwable = null) extends BelleUserCorrectableException(message, cause)
 
 /** Signaling that a tactic was not applicable or did not work at the current goal.
   * BelleTacticFailures will be consumed by the BelleInterpreter which will try something else instead. */

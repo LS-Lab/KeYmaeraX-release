@@ -116,7 +116,7 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "avoid name clashes with Z3" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("a=1, a()=2 ==> a=a()".asSequent, TactixLibrary.QE) should have message
-      "QE with Z3 gives SAT. Cannot reduce the following formula to True:\ntrue->1=2\n"
+      "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n1=2\n"
     proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe 'proved
   }
 

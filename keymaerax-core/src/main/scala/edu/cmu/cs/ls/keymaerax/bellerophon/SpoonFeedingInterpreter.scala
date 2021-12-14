@@ -4,21 +4,17 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import java.util.concurrent.ExecutionException
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, TimeoutException}
-import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.util.{Failure, Success, Try}
 
 trait ExecutionContext {
@@ -51,12 +47,20 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
       // create branch indexes for elements with same parent but keep order stable (groupBy destroys order)
       val grouped = openBranchesAfterExec.map(s => DbBranchPointer(s, 0, predStep, Nil)).zipWithIndex.groupBy(_._1.parent)
       val lhm = mutable.LinkedHashMap(grouped.toSeq.sortBy(_._2.head._2): _*)
-      lhm.mapValues(elems => elems.zipWithIndex.map({ case (e, i) => e._1.copy(branch = i) })).values.flatten.toList
+      lhm.mapValues(elems => elems.zipWithIndex.map({ case (e, i) => e._1.copy(branch = i) -> e._2 })).values.flatten.
+        toList.sortBy(_._2).map(_._1)
     }
   override def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext =
+    //@see [[Provable.apply]] applies first subgoal in place, appends rest at the end
     if (this != ctx) ctx match {
-      case DbAtomPointer(id) => DbBranchPointer(parent, branch, id, List.fill(createdSubgoals)(id) ++ openBranchesAfterExec)
-      case DbBranchPointer(_, _, pc2, ob2) => DbBranchPointer(parent, branch, pc2, ob2++openBranchesAfterExec) // continue after pc2 (final step of the other branch)
+      case DbAtomPointer(id) =>
+        val newGoals = List.fill(createdSubgoals)(id)
+        if (newGoals.nonEmpty) DbBranchPointer(parent, branch, id, newGoals.head :: openBranchesAfterExec ++ newGoals.tail)
+        else DbBranchPointer(parent, branch, id, openBranchesAfterExec)
+      case DbBranchPointer(_, _, pc2, ob2) =>
+        // continue after pc2 (final step of the other branch)
+        if (ob2.nonEmpty) DbBranchPointer(parent, branch, pc2, ob2.head :: openBranchesAfterExec ++ ob2.tail)
+        else DbBranchPointer(parent, branch, pc2, openBranchesAfterExec)
     } else this
   // branch=-1 indicates the merging point after branch tactics (often points to a closed provable when the branches all close,
   // but may point to a provable of arbitrary size)
@@ -108,10 +112,10 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
     }
   }
 
-  /** Updates the labels `orig` at position `at` to include the labels `repl`. */
+  /** Updates the labels `orig` at position `at` to include the labels `repl`. Keeps original labels if `repl`==None. */
   private def updateLabels(orig: Option[List[BelleLabel]], at: Int, repl: Option[List[BelleLabel]]): Option[List[BelleLabel]] = repl match {
     case Some(l) => Some(orig.map(_.patch(at, l, 1)).getOrElse(l))
-    case None => orig.map(_.patch(at, Nil, 1))
+    case None => orig
   }
   private def updateLabels(orig: List[BelleLabel], at: Int, repl: Option[List[BelleLabel]]): List[BelleLabel] = updateLabels(Some(orig), at, repl).getOrElse(Nil)
 
@@ -120,46 +124,39 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
     if (isDead) (goal, ctx)
     else try {
       val (result, resultCtx) = tactic match {
-        // combinators
-        case SeqTactic(left, right) =>
-          val (leftResult, leftCtx) = try {
-            runTactic(left, goal, level, ctx, strict, convertPending, executePending)
-          } catch {
-            case e: BelleThrowable =>
-              if (convertPending) right match {
-                case t: StringInputTactic if t.name == "pending" =>
-                  return runTactic(DebuggingTactics.pending(BellePrettyPrinter(left) + "; " + t.inputs.head), goal, level, ctx,
-                    strict, convertPending = false, executePending = false)
-                case _ =>
-                  return runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
-                    strict, convertPending = false, executePending = false)
-              } else throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
+        case SeqTactic(s) =>
+          val nonNilSteps = s.filterNot(t => nilNames.contains(t.prettyString))
+          nonNilSteps.zipWithIndex.foldLeft((goal, ctx))({
+            case ((g, c), (t, i)) => try {
+              runTactic(t, g, level, c, strict, convertPending, executePending)
+            } catch {
+              case e: BelleThrowable =>
+                val remainder = nonNilSteps.drop(i+1)
+                if (convertPending) remainder.headOption match {
+                  case Some(pt: StringInputTactic) if pt.name == "pending" =>
+                    return runTactic(SeqTactic(DebuggingTactics.pending(BellePrettyPrinter(t) + "; " + pt.inputs.head) +: remainder.tail), g, level, c,
+                      strict, convertPending = false, executePending = false)
+                  case None =>
+                    return runTactic(DebuggingTactics.pending(BellePrettyPrinter(SeqTactic(remainder))), g, level, c,
+                      strict, convertPending = false, executePending = false)
+                } else throw e.inContext(SeqTactic(nonNilSteps.patch(i, Seq(e.context), 1)), "Failed component of ; sequential composition: " + t.prettyString)
+            }
+          })
+        case EitherTactic(s) =>
+          for ((t, i) <- s.zipWithIndex.dropRight(1)) {
+            try {
+              val result = runTactic(t, goal, level, ctx, strict, convertPending=false, executePending)
+              if (progress(goal, result._1)) return result
+            } catch {
+              case _: BelleProofSearchControl => // continue
+              case e: BelleThrowable =>
+                if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
+                  strict, convertPending = false, executePending = false)
+                else throw e.inContext(EitherTactic(s.patch(i, Seq(e.context), 1)),
+                  "Failed component of | alternative composition " + goal)
+            }
           }
-          try {
-            runTactic(right, leftResult, level, leftCtx, strict, convertPending, executePending)
-          } catch {
-            case e: BelleThrowable =>
-              throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
-          }
-        case EitherTactic(left, right) => try {
-          runTactic(left, goal, level, ctx, strict, convertPending=false, executePending)
-        } catch {
-          // critical tactic exceptions (including StackOverflowErrors) were swallowed here so far; keep for compatibility with old proofs
-          // they are caused by the deeply nested structures generated by tacticChase (unfold etc.)
-          case eleft: BelleThrowable/*BelleProofSearchControl*/ => try {
-            runTactic(right, goal, level, ctx, strict, convertPending=false, executePending)
-          } catch {
-            case eright: BelleThrowable =>
-              if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
-                strict, convertPending = false, executePending = false)
-              else throw eright.inContext(EitherTactic(eleft.context, eright.context),
-              "Failed: both left-hand side and right-hand side " + goal)
-          }
-          case eleft: BelleThrowable if convertPending =>
-            if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
-              strict, convertPending = false, executePending = false)
-            else throw eleft.inContext(tactic, "Failed: left-hand side " + goal)
-        }
+          runTactic(s.last, goal, level, ctx, strict, convertPending=false, executePending)
         case SaturateTactic(child) =>
           var result: (BelleValue, ExecutionContext) = (goal, ctx)
             def progress(o: BelleValue, n: BelleValue) = (o, n) match {
@@ -185,7 +182,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           //assert(times >= 1, "Invalid number of repetitions " + times + ", expected >= 1")
           var result: (BelleValue, ExecutionContext) = (goal, ctx)
           try {
-            result = runTactic(if (times == 1) child else SeqTactic(child, RepeatTactic(child, times - 1)),
+            result = runTactic(if (times == 1) child else SeqTactic(Seq(child, RepeatTactic(child, times - 1))),
               result._1, level, result._2, strict, convertPending, executePending)
           } catch {
             case e: BelleThrowable => throw e.inContext(RepeatTactic(e.context, times),
@@ -241,9 +238,15 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
               }
 
               val branchOpenGoals = branchResult._1 match {
-                case bdp: BelleDelayedSubstProvable =>
-                  cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bdp.p, 0, bdp.subst) }
-                  bdp.p.subgoals.size
+                case bdp: BelleDelayedSubstProvable => bdp.parent match {
+                  case Some((pp, i)) =>
+                    assertSubMatchesModuloConstification(pp, bdp.p, i, bdp.subst)
+                    cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, pp, 0, bdp.subst) }
+                    bdp.p.subgoals.size
+                  case None =>
+                    cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bdp.p, 0, bdp.subst) }
+                    bdp.p.subgoals.size
+                }
                 case BelleProvable(bp, _, _) =>
                   cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bp, 0, USubst(Nil)) }
                   bp.subgoals.size
@@ -259,17 +262,21 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
 
             val (resultProvable, mergedLabels) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel])]((p, origLabels))({
               case ((p: BelleDelayedSubstProvable, i), (provable, labels)) =>
-                (applySubDerivation(provable, i, p.p, p.subst)._2, updateLabels(labels, i, p.label))
+                // delete all labels of closed goals, even if p.label==None
+                val pl = if (p.p.subgoals.isEmpty) Some(p.label.getOrElse(List.empty)) else p.label
+                (applySubDerivation(provable, i, p.p, p.subst)._2, updateLabels(labels, i, pl))
               case ((BelleProvable(cp, cl, _), i), (provable, labels)) =>
+                // delete all labels of closed goals, even if cl==None
+                val cl2 = if (cp.subgoals.isEmpty) Some(cl.getOrElse(List.empty)) else cl
                 // provables may have expanded or not expanded definitions arbitrarily
-                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
+                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl2))
                 else try {
-                  val downSubst = UnificationMatch(provable.subgoals(i), cp.conclusion).usubst
-                  (exhaustiveSubst(provable, downSubst)(cp, i), updateLabels(labels, i, cl))
+                  val downSubst = RestrictedBiDiUnificationMatch(provable.subgoals(i), cp.conclusion).usubst
+                  (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl2))
                 } catch {
                   case _: UnificationException =>
-                    val upSubst = UnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
-                    (provable(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
+                    val upSubst = RestrictedBiDiUnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
+                    (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl2))
                 }
             })
 
@@ -302,7 +309,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             val expr = pair._2
             ty match {
               case SequentType(s) => try {
-                (UnificationMatch(s, provable.subgoals.head), expr)
+                (RestrictedBiDiUnificationMatch(s, provable.subgoals.head), expr)
               } catch {
                 // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
                 // fall back to user-provided substitution
@@ -315,7 +322,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           })
 
           //@note try user-provided last unification
-          val unification: (UnificationMatch.Subst, RenUSubst => BelleExpr) =
+          val unification: (RestrictedBiDiUnificationMatch.Subst, RenUSubst => BelleExpr) =
             if (unifications.forall(_._1.isEmpty)) unifications.last
             else unifications.filterNot(_._1.isEmpty).head
 
@@ -343,11 +350,20 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           if (provable.subgoals.length != 1)
             throw new IllFormedTacticApplicationException("Let of multiple goals is not currently supported.").inContext(tactic, "")
 
+          def subst(abbr: Expression, value: Expression): SubstitutionPair = (abbr, value) match {
+            case (FuncOf(name, arg), t: Term) =>
+              val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+              SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, dotArg))
+            case (PredOf(name, arg), f: Formula) =>
+              val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+              SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, dotArg))
+          }
+
           // flatten nested Lets into a single inner proof
           @tailrec
           def flattenLets(it: BelleExpr, substs: List[SubstitutionPair],
                           repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
-            case Let(a, v, c) => flattenLets(c, substs :+ SubstitutionPair(a, v), repls :+ v -> a)
+            case Let(a, v, c) => flattenLets(c, substs :+ subst(a, v), repls :+ v -> a)
             case t => (
               ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
               USubst(substs),
@@ -355,7 +371,12 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             )
           }
 
-          val (in: ProvableSig, us: USubst, innerMost) = flattenLets(innerTactic, SubstitutionPair(abbr, value) :: Nil, value -> abbr :: Nil)
+          //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
+          val (in: ProvableSig, us: USubst, innerMost) = try {
+            flattenLets(innerTactic, subst(abbr, value) :: Nil, value -> abbr :: Nil)
+          } catch {
+            case e: Throwable => throw new IllFormedTacticApplicationException("Unable to start inner proof in let: " + e.getMessage, e)
+          }
           logger.debug(tactic + " considers\n" + in + "\nfor outer\n" + provable)
           if (descend > 0) {
             val innerId = idProvider(in)
@@ -521,6 +542,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                           case Some((pparent, pidx)) =>
                             if (pparent == provable) p.parent
                             else if (pparent.conclusion == provable.subgoals(pidx)) Some(provable(pparent, pidx), pidx)
+                            //@todo pparent.conclusion constified subgoal need to first finish dIRule subproof to unconstify
                             else throw new NotImplementedError("Delayed substitution parent provables: missing implementation to merge " + pparent.prettyString + " with " + provable.prettyString)
                         }
                         val result = (new BelleDelayedSubstProvable(mergedProvable, resultLabels, p.defs, p.subst, parent), ctx.store(tactic))
@@ -528,7 +550,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                         result
                       case BelleProvable(innerProvable, innerLabels, defs) =>
                         val resultLabels = updateLabels(labels, 0, innerLabels)
-                        val result = (BelleProvable(provable(innerProvable, 0), resultLabels, defs), ctx.store(tactic))
+                        val result =
+                          if (innerProvable.conclusion == provable.subgoals(0)) {
+                            (BelleProvable(provable(innerProvable, 0), resultLabels, defs), ctx.store(tactic))
+                          } else {
+                            // some tactics (e.g., QE, dI) internally expand definitions
+                            val subst = RestrictedBiDiUnificationMatch(provable.subgoals(0), innerProvable.conclusion).usubst
+                            (new BelleDelayedSubstProvable(provable(subst)(innerProvable(subst), 0), resultLabels, defs, subst, None), ctx.store(tactic))
+                          }
                         runningInner = null
                         result
                     }

@@ -21,6 +21,14 @@ class StringConverter(val s: String) {
   /** Converts to an expression. */
   def asExpr: Expression = Parser(s)
 
+  /** Converts a `::` separated list of expressions. */
+  def asExprList[T <: Expression]: List[T] = {
+    def convert(elements: Array[String]): List[T] = elements.map(new StringConverter(_).asExpr.asInstanceOf[T]).toList
+    val elements = s.split("::")
+    if (elements.last.trim == "nil") convert(elements.dropRight(1))
+    else convert(elements)
+  }
+
   /** Converts to a term. */
   def asTerm: Term = Parser.parser.termParser(s)
 
@@ -66,17 +74,24 @@ class StringConverter(val s: String) {
 
   /** Converts a stringified list of substitution pairs to a declaration object. */
   def asDeclaration: Declaration = {
-    def toNameSignature(fn: Function, arg: Term, repl: Expression): (Name, Signature) = {
+    def fnPredToNameSignature(fn: Function, arg: Term, repl: Expression): (Name, Signature) = {
       val args =
         if (fn.domain == Unit) Nil
         else FormulaTools.argumentList(arg).map({ case n: NamedSymbol => Name(n.name, n.index) -> n.sort })
       Name(fn.name, fn.index) -> Signature(Some(fn.domain), fn.sort, Some(args), Some(repl), UnknownLocation)
     }
+    def prgToNameSignature(n: NamedSymbol, repl: Expression): (Name, Signature) = n match {
+      case _: ProgramConst | _: SystemConst =>
+        Name(n.name, n.index) -> Signature(None, Trafo, None, Some(repl), UnknownLocation)
+    }
 
     Declaration(s.trim.stripSuffix("nil").trim.stripSuffix("::").split("::").
         map(new StringConverter(_).asSubstitutionPair).map({
-      case SubstitutionPair(FuncOf(fn: Function, arg), repl) => toNameSignature(fn, arg, repl)
-      case SubstitutionPair(PredOf(fn: Function, arg), repl) => toNameSignature(fn, arg, repl)
+      case SubstitutionPair(FuncOf(fn: Function, arg), repl) => fnPredToNameSignature(fn, arg, repl)
+      case SubstitutionPair(PredOf(fn: Function, arg), repl) => fnPredToNameSignature(fn, arg, repl)
+      case SubstitutionPair(p: ProgramConst, repl) => prgToNameSignature(p, repl)
+      case SubstitutionPair(p: SystemConst, repl) => prgToNameSignature(p, repl)
+      case _ => throw new IllegalArgumentException("Converter currently supports functions/predicates/program+system constants")
     }).toMap)
   }
 

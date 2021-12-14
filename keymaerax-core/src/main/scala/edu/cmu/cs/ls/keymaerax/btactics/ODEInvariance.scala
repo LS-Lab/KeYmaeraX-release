@@ -100,17 +100,6 @@ object ODEInvariance {
       useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
-  //Refine or under box
-  private lazy val boxOrL =
-    remember("[{c&q(||)}]p(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
-      CMon(PosInExpr(1::Nil)) & prop,
-      namespace)
-
-  private lazy val boxOrR =
-    remember("[{c&q(||)}]r(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
-      CMon(PosInExpr(1::Nil)) & prop,
-      namespace)
-
   private lazy val fastGeqCheck =
     remember("f_() = g_() -> (f_() >=0 -> g_()>=0)".asFormula,QE,
       namespace)
@@ -567,8 +556,8 @@ object ODEInvariance {
           recRankOneTac(r))
       )
       case Or(l,r) => orL(-1)<(
-        useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
-        useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
+        useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & recRankOneTac(l),
+        useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
       case _ => (diffInd()(1) | dgDbxAuto(1) | dgBarrier(1)) & done
     })
@@ -1560,7 +1549,7 @@ object ODEInvariance {
 
   //Assume the Q progress condition is at -1
   private def lpclosedPlus(inst:Instruction) : BelleExpr =
-    SeqTactic(DebuggingTactics.debug(inst.toString(),doPrint = debugTactic),
+    SeqTactic(Seq(DebuggingTactics.debug(inst.toString(),doPrint = debugTactic),
       inst match{
         case Darboux(iseq,cofactor,pr) =>
           (if(iseq) useAt(refAbs)(1) else skip) &
@@ -1584,7 +1573,7 @@ object ODEInvariance {
             lpgeq(bound)
         case Triv() =>
           DebuggingTactics.debug("Triv",doPrint = debugTactic) &
-            closeF})
+            closeF}))
 
   //Temporary for compatibility
   //Given pr1 : a<->b , pr2 : b<->c returns provable for a<->c
@@ -1986,12 +1975,12 @@ object ODEInvariance {
     }
 
     //todo: robustness against s_, t_, fv_* appearing in model
-    val svar = BaseVariable("s_")
-    val tvar = BaseVariable("t_")
+    val svar = TacticHelper.freshNamedSymbol("s_".asVariable, seq)
+    val tvar = TacticHelper.freshNamedSymbol("t_".asVariable, seq)
 
     val atoms = AtomicODE(DifferentialSymbol(tvar),Number(1))::atomicListify(sys.ode)
     val oldnames = atoms.map(p => p.xp.x)
-    val newnames = (1 to atoms.length).map( i => BaseVariable("fv_",Some(i)))
+    val newnames = (1 to atoms.length).map( i => TacticHelper.freshNamedSymbol(BaseVariable("fv_",Some(i)),seq))
     val nameszip = oldnames zip newnames
     val ipost = Not(Imply(And(sys.constraint,Or(post,Equal(tvar,svar))) ,Imply(Equal(tvar,svar), post)))
     val renfvipost = nameszip.foldLeft(ipost : Formula)( (tt, c) => tt.replaceFree(c._1,c._2))

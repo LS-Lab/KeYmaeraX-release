@@ -13,9 +13,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
@@ -35,7 +34,7 @@ import scala.util.Try
   * elaborate documentation can be found in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
   *
   * Main search tactics that combine numerous other tactics for automation purposes include:
-  *   - [[TactixLibrary.master]] automatic proof search
+  *   - [[TactixLibrary.auto]] automatic proof search
   *   - [[TactixLibrary.autoClose]] automatic proof search if that successfully proves the given property
   *   - [[TactixLibrary.normalize]] normalize to sequent normal form
   *   - [[TactixLibrary.unfoldProgramNormalize]] normalize to sequent normal form, avoiding unnecessary branching
@@ -107,7 +106,7 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true, displayLevel = "browse")
   val step: DependentPositionTactic = doStep(sequentStepIndex)
 
   def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) =>
@@ -126,7 +125,7 @@ object TactixLibrary extends HilbertCalculus
       } ))
 
   /** Normalize to sequent form. */
-  @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true)
+  @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true, displayLevel = "browse")
   lazy val normalize: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (f: Not, true) if f.isPredicateFreeFOL => None
@@ -136,8 +135,8 @@ object TactixLibrary extends HilbertCalculus
       case (f: Imply, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, false) if f.isPredicateFreeFOL => None
-      case (_: Forall, true) => Some(TacticInfo("deepChase"))
-      case (_: Exists, false) => Some(TacticInfo("deepChase"))
+      case (_: Forall, true) => Some(deepChaseInfo)
+      case (_: Exists, false) => Some(deepChaseInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
@@ -146,7 +145,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true)
+  @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true, displayLevel = "menu")
   val unfoldProgramNormalize: BelleExpr = anon {
     //normalize(andR)
 
@@ -154,7 +153,7 @@ object TactixLibrary extends HilbertCalculus
       case (f: Not, true) if f.isPredicateFreeFOL => None
       case (f: Not, false) if f.isPredicateFreeFOL => None
       case (f: And, false) if f.isPredicateFreeFOL => None
-      case (f: Imply, true) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("autoMP"))
+      case (f: Imply, true) => if (f.isPredicateFreeFOL) None else Some(PropositionalTactics.autoMPInfo)
       case (_: Or, true) => None
       case (_: Equiv, _) => None
       case _ => sequentStepIndex(isAnte)(expr)
@@ -163,15 +162,15 @@ object TactixLibrary extends HilbertCalculus
     SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil))
   }
 
-  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true)
+  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true, displayLevel = "menu")
   def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) => chaseAt(
     (isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
-      case (_: Forall, true) => Some(TacticInfo("chase"))
-      case (_: Exists, false) => Some(TacticInfo("chase"))
-      case (_: And, false) => Some(TacticInfo("chase"))
-      case (_: Or, true) => Some(TacticInfo("chase"))
-      case (_: Imply, true) => Some(TacticInfo("chase"))
-      case (_: Equiv, _) => Some(TacticInfo("chase"))
+      case (_: Forall, true) => Some(chaseInfo)
+      case (_: Exists, false) => Some(chaseInfo)
+      case (_: And, false) => Some(chaseInfo)
+      case (_: Or, true) => Some(chaseInfo)
+      case (_: Imply, true) => Some(chaseInfo)
+      case (_: Equiv, _) => Some(chaseInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
   )(pos) }
@@ -197,32 +196,33 @@ object TactixLibrary extends HilbertCalculus
     } else chase(pos) //@todo forward index to chase
   })
 
-  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true, displayLevel = "menu")
   val prop: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (_: Forall, _) => None
       case (_: Exists, _) => None
       case (_: Diamond, _) => None
       case (_: Box, _) => None
-      case (_: Not, true) => Some(TacticInfo("notL"))
-      case (_: Not, false) => Some(TacticInfo("notR"))
+      case (_: Not, true) => Some(notLInfo)
+      case (_: Not, false) => Some(notRInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(SaturateTactic(id | alphaRule & (id | nil)) & (doStep(index)('R) | doStep(index)('L) | nil)))
+    SaturateTactic(OnAll(SaturateTactic(id | alphaRule) & (doStep(index)('R) | doStep(index)('L) | nil)))
   }
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true, displayLevel = "menu")
   val propClose: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
   val propAuto: BelleExpr = propClose
 
-  /** Master implementation with tactic `loop` for nondeterministic repetition and `odeR` for
-    * differential equations in the succedent.
-    * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
-  def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
-             keepQEFalse: Boolean): BelleExpr = anon {
+  /**
+   * Automatic proof strategy implementation, configurable with tactic `loop` for nondeterministic repetition and `odeR` for
+   * differential equations in the succedent.
+   * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
+  def autoImpl(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
+               keepQEFalse: Boolean): BelleExpr = anon {
 
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (f: Not, true) if f.isPredicateFreeFOL => None
@@ -232,8 +232,8 @@ object TactixLibrary extends HilbertCalculus
       case (f: Imply, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, false) if f.isPredicateFreeFOL => None
-      case (f: Forall, true) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("deepChase"))
-      case (f: Exists, false) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("deepChase"))
+      case (f: Forall, true) => if (f.isPredicateFreeFOL) None else Some(deepChaseInfo)
+      case (f: Exists, false) => if (f.isPredicateFreeFOL) None else Some(deepChaseInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
@@ -309,34 +309,39 @@ object TactixLibrary extends HilbertCalculus
     ))
   }
 
-  /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
-    * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
- *
-    * @see [[autoClose]] */
+  /**
+   * Automatic tactic that uses the generator `gen` to advance loop and ODE reasoning. `keepQEFalse` indicates whether or not a
+   * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
+   * @see [[autoClose]] */
+  @deprecated("Use auto instead")
   def master(gen: Generator[GenProduct] = invGenerator,
              keepQEFalse: Boolean = true): BelleExpr = auto(gen, if (keepQEFalse) None else Some(False))
 
   /**
-   * auto: tactic that tries hard to prove whatever it could.
- *
+   * Automatic proof tactic that uses the generator `gen` to advance loop and ODE reasoning.
+   * `keepQEFalse` indicates whether or not a result `false` of a QE step at the leaves is kept or
+   * undone (i.e., reverted to the QE input sequent).
    * @see [[autoClose]] */
   @Tactic(longDisplayName = "Unfold Automatically")
   def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
-    master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
+    autoImpl(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
   }
   @Tactic(names="master", codeName="master", longDisplayName = "Unfold Automatically")
+  @deprecated("Use auto instead")
   def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = auto(generator, keepQEFalse)
 
-  /** autoClose: automatically try hard to prove the current goal if that succeeds.
-    * @see [[master]] */
+  /**
+   * Automatic proof tactic that uses the default loop invariant generator to make progress with loops and insists
+   * on closing (i.e., reverts to the original input sequent if it fails to prove the goal).
+   * @see [[auto]] */
   @Tactic(longDisplayName = "Prove Automatically")
   def autoClose: DependentTactic = anons { (_: ProvableSig) =>
-    master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
+    autoImpl(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
 
-  /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
+  /** Automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
   @Tactic("explore", longDisplayName = "Explore Provability", revealInternalSteps = true)
-  def explore(gen: Generator[GenProduct]): InputTactic = inputanon {master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
+  def explore(gen: Generator[GenProduct]): InputTactic = inputanon {autoImpl(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
     case (cgen: ConfigurableGenerator[GenProduct], Some(Box(Loop(_), _))) if cgen(seq, pos).nonEmpty =>
       logger.info("Explore uses loop with annotated invariant")
       //@note bypass all other invariant generators except the annotated invariants, pass on to loop
@@ -508,13 +513,25 @@ object TactixLibrary extends HilbertCalculus
 
   // major differential equation automation
 
-  /** ODE: try to prove a property of a differential equation automatically.
+  /** ODE: prove a top-level ODE safety property using invariants Inv (as annotated by users, if available).
+    * Attempts to automatically generate suitable invariants Inv when the postcondition does not suffice.
+    * Closes all resulting subgoals or fails otherwise.
     *
+    * {{{
+    *     *                *                             *
+    *   -----------    --------------------------    ----------
+    *   G |- Inv, D    Inv |- [{x'=f(x)&q(x)}]Inv    Inv |- p(x)
+    *   --------------------------------------------------------
+    *   G |- [{x'=f(x)&q(x)}]p(x), D
+    * }}}
     * @see [[solve]]
     * @todo @see [[dC]]
     * @see [[dI]]
     * @see [[dW]]
     * @see [[dG]]
+    * @see [[odeInvariant]]
+    * @example For sequent x=1 |- [{x'=x}]x >=-1, the postcondition is not invariant but [[ODE]] proves it automatically
+    *          using e.g., x>=1 as the generated invariant.
     */
   @Tactic(longDisplayName = "ODE Auto", revealInternalSteps = true)
   lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => must({
@@ -583,26 +600,46 @@ object TactixLibrary extends HilbertCalculus
     else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos)
   })
 
-  /**
-    * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
-    * G |- P    P |- [x'=f(x)&Q]P
-    * ---------------------------
-    * G |- [x'=f(x)&Q]P
-    * (Default behavior: fast (but incomplete) version, no solving attempted)
+  /** Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].
+    * The tactic defaults to trying a quick invariance proof which may fail, but handles common cases.
+    * The complete invariance tactic is available with [[odeInvariantComplete]].
+    *
+    * {{{
+    *   *           *
+    * ---------   -----------------
+    * G |- P, D   P |- [x'=f(x)&Q]P
+    * ----------------------------
+    * G |- [x'=f(x)&Q]P, D
+    * }}}
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
     * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariantComplete]]
+    * @example For sequent x=1 |- [{x'=x}]x >=0 proves automatically since x>=0 is an invariant of the ODE and initially true.
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
-  /** Same as odeInvariant but directly reports an error when it detects that the postcondition should be invariant
-    * but is currently unprovable.
+  /** Same as [[odeInvariant]] for proving ODE invariance properties, but implements a slower, complete version of the invariance tactic.
+    * Capable of handling invariance proofs for arbitrary semialgebraic invariants P and domain Q.
+    * Completeness failure is considered a tactic bug.
+    *
+    * {{{
+    *   *           *
+    * ---------   -----------------
+    * G |- P, D   P |- [x'=f(x)&Q]P
+    * ----------------------------
+    * G |- [x'=f(x)&Q]P
+    * }}}
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
+    * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariant]]
-    */
+    * @example For sequent x = 1 |- [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0) proves automatically
+    *          by [[odeInvariantComplete]] but not [[odeInvariant]]
+    **/
   @Tactic("ODE Invariant Complete", codeName = "odeInvC",
     longDisplayName = "ODE Invariant Complete",
     premises = "*",
     conclusion = "Γ, P |- [x'=f(x)&Q]P",
-    displayLevel="browse")
+    displayLevel="menu")
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
   // more
@@ -622,23 +659,23 @@ object TactixLibrary extends HilbertCalculus
 
   // more
 
-  /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
+  /** Prove the given cut formula to hold for the modality at position and turn postcondition into `cut->post`.
     * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
     * {{{
-    *   cutShowLbl:     cutUseLbl:
+    *   Show:           Use:
     *   G |- [a]C, D    G |- [a](C->B), D
     *   ---------------------------------
     *          G |- [a]B, D
     * }}}
     *
     * @example {{{
-    *   cutShowLbl:      cutUseLbl:
+    *   Show:            Use:
     *   |- [x:=2;]x>1    |- [x:=2;](x>1 -> [y:=x;]y>1)
     *   -----------------------------------------------postCut("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
     * @example {{{
-    *   cutShowLbl:      cutUseLbl:
+    *   Show:            Use:
     *   |- [x:=2;]x>1    |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)
     *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
     *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
@@ -652,6 +689,11 @@ object TactixLibrary extends HilbertCalculus
 
   /** QE: Quantifier Elimination to decide real arithmetic (after simplifying logical transformations).
     * Applies simplifying transformations to the real arithmetic questions before solving it via [[RCF]].
+    * {{{
+    *   *
+    * ------ QE if G|-D is a provable formula of first-order real arithmetic
+    * G |- D
+    * }}}
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
@@ -660,6 +702,7 @@ object TactixLibrary extends HilbertCalculus
     else ToolTactics.timeoutQE(defs, order, tool, timeout) // non-serializable for now
   }
 
+  /** @see [[QE()]] */
   @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     new SingleGoalDependentTactic(TacticFactory.ANON) {
@@ -672,6 +715,7 @@ object TactixLibrary extends HilbertCalculus
       }
     }
   }
+  /** @see [[QE()]] */
   lazy val QE: BelleExpr = QEX(None, None)
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
@@ -704,6 +748,7 @@ object TactixLibrary extends HilbertCalculus
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Utility Tactics
+
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done: BelleExpr = DebuggingTactics.done
@@ -717,7 +762,7 @@ object TactixLibrary extends HilbertCalculus
     * }}}
     * @param name The new variable to use as an abbreviation.
     * */
-  def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
+  def abbrv(name: Variable): BuiltInPositionTactic = EqualityTactics.abbrv(name)
 
   /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
   @Tactic(
@@ -742,8 +787,8 @@ object TactixLibrary extends HilbertCalculus
     *              If it points to a specific term, then only this term is rewritten.
     */
   //@todo missing AxiomInfo for tactic extraction
-  def eqL2R(eqPos: Int): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  def eqL2R(eqPos: Int): BuiltInPositionTactic = EqualityTactics.eqL2R(eqPos)
+  def eqL2R(eqPos: AntePosition): BuiltInPositionTactic = EqualityTactics.eqL2R(eqPos)
   /** eXternal wrapper for eqL2R */
   @Tactic(codeName = "L2R", longDisplayName = "Apply Equality", conclusion = "Γ, x=y, P(x) |- Q(x), Δ",
     premises = "Γ, x=y, P(y) |- Q(y), Δ")
@@ -754,33 +799,43 @@ object TactixLibrary extends HilbertCalculus
   }})
 
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side at a specific position ([[EqualityTactics.eqR2L]]). */
-  def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
-  def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  def eqR2L(eqPos: Int): BuiltInPositionTactic = EqualityTactics.eqR2L(eqPos)
+  def eqR2L(eqPos: AntePosition): BuiltInPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
   @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities", revealInternalSteps = true)
-  val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
-  def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
-    if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(fml@Equal(l, _)) =>
+  val exhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) => exhaustiveEqL2R(false)(pos).computeResult(provable) }
+  def exhaustiveEqL2R(hide: Boolean = false): BuiltInPositionTactic =
+    if (hide) anon { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveEqL2R")
+      val sequent = provable.subgoals.head
+      sequent.sub(pos) match {
+      case Some(Equal(l, _)) =>
         val lvars = StaticSemantics.freeVars(l)
-        EqualityTactics.exhaustiveEqL2R(pos) &
-          Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty))(hideL(pos, fml))
+        (provable
+          (EqualityTactics.exhaustiveEqL2R(pos).computeResult _, 0)
+          (Idioms.doIfFw(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty))(hideL(pos).computeResult).result _, 0)
+          )
       case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
-    })
+    }}
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
   @Tactic(names = "R=L all", codeName = "allR2L", longDisplayName = "Apply All Equalities Inverse", revealInternalSteps = true)
-  val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
-  def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
-    if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  val exhaustiveEqR2L: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) => exhaustiveEqR2L(false)(pos).computeResult(provable) }
+  def exhaustiveEqR2L(hide: Boolean = false): BuiltInPositionTactic =
+    if (hide) anon { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveEqR2L")
+      val sequent = provable.subgoals.head
+      sequent.sub(pos) match {
       case Some(fml@Equal(_, r)) =>
         val rvars = StaticSemantics.freeVars(r)
-        EqualityTactics.exhaustiveEqR2L(pos) &
-          Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty))(hideL(pos, fml))
+        (provable
+          (EqualityTactics.exhaustiveEqR2L(pos).computeResult _, 0)
+          (Idioms.doIfFw(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty))(hideL(pos, fml).computeResult).result _, 0)
+          )
       case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
-    })
+    }}
     else EqualityTactics.exhaustiveEqR2L
 
   /** Transform an FOL formula or term into the formula/term 'to'.
@@ -829,7 +884,7 @@ object TactixLibrary extends HilbertCalculus
   // Tactic contracts
 
   /** Assert that the given condition holds for the goal's sequent. */
-  def assertT(cond : Sequent=>Boolean, msg: => String): BelleExpr = DebuggingTactics.assert(cond, msg)
+  def assertT(cond : Sequent=>Boolean, msg: => String): BuiltInTactic = DebuggingTactics.assert(cond, msg)
   /** Assert that the sequent has the specified number of antecedent and succedent formulas, respectively. */
   def assertT(antecedents: Int, succedents: Int, msg: => String = ""): BelleExpr = DebuggingTactics.assert(antecedents, succedents, msg)
 
@@ -852,31 +907,57 @@ object TactixLibrary extends HilbertCalculus
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /** Expands absolute value using `abs(x)=y <-> (x>=0&y=x | x<=0&y=-x)`, see [[EqualityTactics.abs]] */
-  lazy val abs: DependentPositionTactic = EqualityTactics.abs
+  lazy val abs: BuiltInPositionTactic = EqualityTactics.abs
   /** Expands minimum function using `min(x,y)=z <-> (x<=y&z=x | x>=y&z=y)`, see [[EqualityTactics.minmax]] */
-  lazy val min: DependentPositionTactic = EqualityTactics.minmax
+  lazy val min: BuiltInPositionTactic = EqualityTactics.minmax
   /** Expands maximum function using `max(x,y)=z <-> (x>=y&z=x | x<=y&z=y)`, see [[EqualityTactics.minmax]] */
-  lazy val max: DependentPositionTactic = EqualityTactics.minmax
+  lazy val max: BuiltInPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  lazy val alphaRule: BelleExpr = andL('L) |
-    (orR('R) |
-      (implyR('R) |
-        (notL('L) |
-          notR('R)
-          )
-        )
-      )
+  @Tactic()
+  lazy val alphaRule: BuiltInTactic = anon { provable: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(provable, "alphaRule")
+    val sequent = provable.subgoals.head
+    sequent.ante.zipWithIndex.map({
+      case (_: And, i) => Some(AndLeft(AntePos(i)))
+      case (_: Not, i) => Some(NotLeft(AntePos(i)))
+      case _ => None
+    }).find(_.isDefined) match {
+      case Some(Some(r)) => provable(r, 0)
+      case None => sequent.succ.zipWithIndex.map({
+        case (_: Or, i) => Some(OrRight(SuccPos(i)))
+        case (_: Imply, i) => Some(ImplyRight(SuccPos(i)))
+        case (_: Not, i) => Some(NotRight(SuccPos(i)))
+        case _ => None
+      }).find(_.isDefined) match {
+        case Some(Some(r)) => provable(r, 0)
+        case None => throw new TacticInapplicableFailure("Alpha rule")
+      }
+    }
+  }
 
   /** Beta rules are propositional rules that split */
-  lazy val betaRule: BelleExpr = andR('R) |
-    (orL('L) |
-      (implyL('L) |
-        (equivL('L) |
-          equivR('R)
-          )
-        )
-      )
+  @Tactic()
+  lazy val betaRule: BuiltInTactic = anon { provable: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(provable, "betaRule")
+    val sequent = provable.subgoals.head
+    sequent.succ.zipWithIndex.map({
+      case (_: And, i) => Some(AndRight(SuccPos(i)))
+      case (_: Equiv, i) => Some(EquivRight(SuccPos(i)))
+      case _ => None
+    }).find(_.isDefined) match {
+      case Some(Some(r)) => provable(r, 0)
+      case None => sequent.ante.zipWithIndex.map({
+        case (_: Or, i) => Some(OrLeft(AntePos(i)))
+        case (_: Imply, i) => Some(ImplyLeft(AntePos(i)))
+        case (_: Equiv, i) => Some(EquivLeft(AntePos(i)))
+        case _ => None
+      }).find(_.isDefined) match {
+        case Some(Some(r)) => provable(r, 0)
+        case None => throw new TacticInapplicableFailure("Beta rule")
+      }
+    }
+  }
 
   /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
     * @see [[QE]] */
@@ -938,9 +1019,43 @@ object TactixLibrary extends HilbertCalculus
       elseT
   )
 
+  // Generate a provable with a tactic
+
   /**
     * Prove the new goal by the given tactic, returning the resulting Provable
     *
+    * @param goal The sequent to prove by running `tactic`.
+    * @param tactic The Bellerophon tactic to run in the default interpreter on `goal`.
+    * @see [[SequentialInterpreter]]
+    * @see [[TactixLibrary.by(Provable)]]
+    * @see [[proveBy()]]
+    * @example {{{
+    *   import StringConverter._
+    *   import TactixLibrary._
+    *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
+    * }}}
+    */
+  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal), tactic)
+  /**
+    * Prove the new goal by the given tactic, returning the resulting Provable
+    *
+    * @param goal The formula to prove by running `tactic`.
+    * @param tactic The Bellerophon tactic to run in the default interpreter on `goal`.
+    * @see [[TactixLibrary.by(Provable)]]
+    * @example {{{
+    *   import StringConverter._
+    *   import TactixLibrary._
+    *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
+    * }}}
+    */
+  def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+
+  /**
+    * Prove the new goal by the given tactic, returning the resulting Provable.
+    *
+    * @param goal The Provable from which to start the proof by running `tactic` (on its subgoals).
+    * @param tactic The Bellerophon tactic to run in the default interpreter on (the premises of) `goal`.
+    * @param defs The definitions and declarations available in the current context.
     * @see [[SequentialInterpreter]]
     * @see [[TactixLibrary.by(Provable)]]
     * @see [[proveBy()]]
@@ -955,30 +1070,7 @@ object TactixLibrary extends HilbertCalculus
   }
   def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = proveBy(goal, tactic, Declaration(Map.empty))
 
-  /**
-   * Prove the new goal by the given tactic, returning the resulting Provable
-    *
-   * @see [[SequentialInterpreter]]
-   * @see [[TactixLibrary.by(Provable)]]
-   * @see [[proveBy()]]
-   * @example {{{
-   *   import StringConverter._
-   *   import TactixLibrary._
-   *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
-   * }}}
-   */
-  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal), tactic)
-  /**
-   * Prove the new goal by the given tactic, returning the resulting Provable
-    *
-   * @see [[TactixLibrary.by(Provable)]]
-   * @example {{{
-   *   import StringConverter._
-   *   import TactixLibrary._
-   *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
-   * }}}
-   */
-  def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+  // lemmas
 
   @Tactic("useLemma", codeName = "useLemma", longDisplayName = "Use Lemma")
   def useLemmaX (lemma: String, tactic: Option[String]): InputTactic = inputanon { TactixLibrary.useLemma(lemma, tactic.map(BelleParser)) }
@@ -1033,10 +1125,10 @@ object TactixLibrary extends HilbertCalculus
     val goal = USubst(recordedSubsts)(sanitize(seq.toFormula))
     // bridge additional differences not in the definitions (e.g., constant in lemma but variable in theorem)
     val subst = try {
-      Some(UnificationMatch(goal, conclusion))
+      Some(RestrictedBiDiUnificationMatch(conclusion, goal))
     } catch {
       case _: UnificationException => try {
-        Some(UnificationMatch(conclusion, goal))
+        Some(RestrictedBiDiUnificationMatch(goal, conclusion))
       } catch {
         case _: UnificationException => None
       }
@@ -1081,33 +1173,52 @@ object TactixLibrary extends HilbertCalculus
     * @param expr the expression for which a canonical tactic step is sought.
     * @see [[AxIndex]] */
   private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
-    case (True, false) => Some(TacticInfo("closeTrue"))
-    case (False, true) => Some(TacticInfo("closeFalse"))
+    case (True, false) => Some(ProofRuleTactics.closeTrueInfo)
+    case (False, true) => Some(ProofRuleTactics.closeFalseInfo)
     // prefer simplification over left-right-swaps
     case (Not(Box(_,Not(_))), _) => Some(Ax.diamond)
     case (Not(Diamond(_,Not(_))), _) => Some(Ax.box)
-    case (_: Not, true) => Some(TacticInfo("notL"))
-    case (_: Not, false) => Some(TacticInfo("notR"))
-    case (_: And, true) => Some(TacticInfo("andL"))
-    case (_: And, false) => Some(TacticInfo("andR"))
-    case (_: Or, true) => Some(TacticInfo("orL"))
-    case (_: Or, false) => Some(TacticInfo("orR"))
-    case (_: Imply, true) => Some(/* TacticInfo("autoMP") :: */ TacticInfo("implyL"))
-    case (_: Imply, false) => Some(TacticInfo("implyR"))
-    case (_: Equiv, true) => Some(TacticInfo("equivL"))
-    case (_: Equiv, false) => Some(TacticInfo("equivR"))
-    case (_: Forall, true) => Some(TacticInfo("allL"))
-    case (_: Forall, false) => Some(TacticInfo("allR"))
-    case (_: Exists, true) => Some(TacticInfo("existsL"))
-    case (_: Exists, false) => Some(TacticInfo("existsR"))
+    case (_: Not, true) => Some(notLInfo)
+    case (_: Not, false) => Some(notRInfo)
+    case (_: And, true) => Some(andLInfo)
+    case (_: And, false) => Some(andRInfo)
+    case (_: Or, true) => Some(orLInfo)
+    case (_: Or, false) => Some(orRInfo)
+    case (_: Imply, true) => Some(/* PropositionalTactics.autoMPInfo :: */ implyLInfo)
+    case (_: Imply, false) => Some(implyRInfo)
+    case (_: Equiv, true) => Some(equivLInfo)
+    case (_: Equiv, false) => Some(equivRInfo)
+    case (_: Forall, true) => Some(allLInfo)
+    case (_: Forall, false) => Some(allRInfo)
+    case (_: Exists, true) => Some(existsLInfo)
+    case (_: Exists, false) => Some(existsRInfo)
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
-  /** Solve an arithmetic goal with sum-of-squares */
-  @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
-    premises="1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
-    //    sossolve -----------
+  /** Attempt to prove a goal of universal real arithmetic goal using a sum-of-squares (SOS) proof
+    * The input (FOLR) sequent is normalized to equational form (example below)
+    * The automation searches for witnesses g_i automatically such that the contradiction
+    * 1 + sum_i g_i^2 = 0 is implied by the (normalized) antecedent equations
+    *
+    * {{{
+    *        *
+    * -----------------------------------
+    *  p=0, q*w^2-1=0, r-w^2=0 |- 1+sum_i g_i^2 = 0
+    * -----------------------------------
+    *  p=0, q*w^2-1=0, r-w^2=0 |- false
+    * -----------------------------------
+    *  p=0, q>0, r>=0  |- false
+    * -----------------------------------
+    * G_FOLR, p=0 |- q<=0, r<0, D_FOLR
+    * }}}
+    * @see Andre Platzer, Jan-David Quesel and Philipp Rummer. [[https://doi.org/10.1007/978-3-642-02959-2_35 Real world verification]]. CADE-22.
+    * @see [[QE()]]
+    * @example x >= 1 -> x > 1 | x =1 proves by SOS automatically
+    * */
+  @Tactic("sosQE", longDisplayName = "Prove arithmetic with sum-of-squares witness",
+    premises="normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
+    //    sosQE -----------
     conclusion="Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
     displayLevel="all")
-  val sossolve : BelleExpr = anon ( SOSSolve.sos() )
+  val sosQE : BelleExpr = anon ( SOSSolve.sos() )
 }

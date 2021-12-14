@@ -29,8 +29,14 @@ import scala.collection.immutable.IndexedSeq
 trait ProvableSig {
   /** The core's [[Provable]] that this object really represents. */
   val underlyingProvable : Provable = this match {
-    case TermProvable(child, pt) => child.underlyingProvable
+    case TermProvable(child, _) => child.underlyingProvable
     case ElidingProvable(provable) => provable
+  }
+
+  /** Returns a copy of this provable with the underlying provable replaced by `underlying`. */
+  def reapply(underlying: Provable): ProvableSig = this match {
+    case t: TermProvable => t.copy(provable = t.provable.reapply(underlying))
+    case e: ElidingProvable => e.copy(provable = underlying)
   }
 
   /* The number of steps performed to create this provable. */
@@ -115,6 +121,9 @@ trait ProvableSig {
     * @requires(subderivation.conclusion == subgoals(subgoal))
     */
   def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig
+
+  /** Apply forward tactic `fw` at `subgoal`. */
+  def apply(fw: ProvableSig=>ProvableSig, subgoal: Subgoal): ProvableSig = apply(fw(sub(subgoal)), subgoal)
 
   /**
     * Apply a uniform substitution to a (locally sound!) Provable.

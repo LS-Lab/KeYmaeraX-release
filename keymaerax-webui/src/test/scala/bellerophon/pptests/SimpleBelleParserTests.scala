@@ -199,6 +199,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     BelleParser(s) shouldBe (round trip t)
   }
 
+  it should "parse a tactic without list argument specified" in {
+    BelleParser("universalClosure(1)") shouldBe (round trip FOQuantifierTactics.universalClosure(List.empty)(1))
+  }
+
   it should "parse nested arguments" in {
     BelleParser("pending({`loop({`x>=0`}, 1)`})") shouldBe (round trip DebuggingTactics.pending("loop({`x>=0`}, 1)"))
     //@note new syntax needs escaping inner " for nesting
@@ -218,49 +222,39 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   "Sequential parser" should "parse e & e" in {
     val result = BelleParser("andR(1) & andR(2)").asInstanceOf[SeqTactic]
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right shouldBe TactixLibrary.andR(2)
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
     result shouldBe (round trip result)
   }
 
   it should "parse seq right-associative -- e & e & e parses to e & (e & e)" in {
     val result = BelleParser("andR(1) & andR(2) & andR(3)").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(3)
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse seq right-associative when there are a bunch of parens" in {
     val result = BelleParser("(andR(1)) & (andR(2)) & (andR(3))").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(3)
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse e & (e & e)" in {
     val result = BelleParser("andR(1) & (andR(2) & andR(3))").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(3)
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse (e & e) & e" in {
     val result = BelleParser("(andR(1) & andR(2)) & andR(3)").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.left.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
-    result.left.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
-    result.right shouldBe TactixLibrary.andR(3)
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
 
   it should "parse compositions of things that parse to partials" in {
     val tactic = BelleParser("nil & nil").asInstanceOf[SeqTactic]
     tactic shouldBe (round trip tactic)
-    tactic.left shouldBe TactixLibrary.nil
-    tactic.right shouldBe TactixLibrary.nil
+    tactic.seq should contain theSameElementsInOrderAs List(TactixLibrary.nil, TactixLibrary.nil)
   }
 
   it should "print anonymous tactics empty and reparse without them" in {
@@ -273,7 +267,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     BellePrettyPrinter(t2) shouldBe "implyR(1)"
 
     BellePrettyPrinter(TactixLibrary.assertT(_ => true, "Succeed") & TactixLibrary.assertT(_ => false, "Fail")) shouldBe ""
-    BellePrettyPrinter(implyR(1) & TactixLibrary.assertT(_ => true, "Succeed") & andL(-1)) shouldBe "(implyR(1)) ; andL(-1)"
+    BellePrettyPrinter(implyR(1) & TactixLibrary.assertT(_ => true, "Succeed") & andL(-1)) shouldBe "implyR(1) ; andL(-1)"
   }
 
   it should "parse simple assert" in {
@@ -287,56 +281,43 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "Either parser" should "parse e | e" in {
     val result = BelleParser("andR(1) | andR(2)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right shouldBe TactixLibrary.andR(2)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
   }
 
   it should "parse either right-associative -- e | e | e parses to e | (e | e)" in {
     val result = BelleParser("andR(1) | andR(2) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse either right-associative when there are a bunch of parens" in {
     val result = BelleParser("(andR(1)) | (andR(2)) | (andR(3))").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse e | (e | e)" in {
     val result = BelleParser("andR(1) | (andR(2) | andR(3))").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse (e | e) | e" in {
     val result = BelleParser("(andR(1) | andR(2)) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(1)
-    result.left.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(2)
-    result.right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse e & b | c" in {
     val result = BelleParser("andR(1) & andR(2) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
-    result.left.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
-    result.right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(SeqTactic(TactixLibrary.andR(1), TactixLibrary.andR(2)), TactixLibrary.andR(3))
   }
 
   it should "parse e | b & c" in {
     val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), SeqTactic(TactixLibrary.andR(2), TactixLibrary.andR(3)))
   }
 
   //endregion
@@ -346,8 +327,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "Branch combinator parser" should "parse e <(e,e)" in {
     val result = BelleParser("andR(1) <(andR(2), andR(3))").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), BranchTactic(Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))))
   }
 
   it should "print indented" in {
@@ -370,8 +350,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "parse e <()" in {
     val result = BelleParser("andR(1) <()").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq()
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), BranchTactic(Seq.empty))
   }
 
   it should "report an error on e <(e)" in {
@@ -384,12 +363,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "parse e & <(e,e)" in {
     val result = BelleParser("andR(1) & <(andR(1), andR(1))").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1), TactixLibrary.andR(1))
+    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), BranchTactic(Seq(TactixLibrary.andR(1), TactixLibrary.andR(1))))
   }
 
   it should "parse as case tactic when labels are present" in {
-    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
+    val result@SeqTactic(loop :: CaseTactic(children) :: Nil) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
     result shouldBe (round trip result)
     loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -418,7 +396,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse as case tactic when labels are present on nested tactics" in {
-    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))")
+    val result@SeqTactic(loop :: CaseTactic(children) :: Nil) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))")
     result shouldBe (round trip result)
     loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -429,7 +407,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse nested case tactics" in {
-    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))")
+    val result@SeqTactic(loop :: CaseTactic(children) :: Nil) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))")
     result shouldBe (round trip result)
     loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -441,9 +419,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "require case labels on all branches" in {
     the [ParseException] thrownBy BelleParser("loop(\"x>=0\",1); <(andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))") should
-      have message """1:17 Not all branches have labels
-                     |Found:    <unknown> at 1:17
-                     |Expected: <unknown>""".stripMargin
+      have message """1:19 Not all branches have labels. Please provide labels for the branches marked <missing>
+                     |  "<missing>": andL(-1),
+                     |  "Step": andL(-2),
+                     |  "Post": andL(-3)
+                     |resulting from
+                     |loop("x>=0", 1)
+                     |Found:    <missing> at 1:19
+                     |Expected: "A label":""".stripMargin
   }
 
 
@@ -460,8 +443,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "parse (e&e)*" in {
     val tactic = BelleParser("(andR(1) & andR(2))*").asInstanceOf[SaturateTactic]
     tactic shouldBe (round trip tactic)
-    tactic.child.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
-    tactic.child.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
+    tactic.child.asInstanceOf[SeqTactic].seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
   }
 
   it should "get precedence right" in {
@@ -492,8 +474,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "saturate parser" should "parse e+" in {
     val tactic = BelleParser("andR(1)+").asInstanceOf[SeqTactic]
     tactic shouldBe (round trip tactic)
-    tactic.left shouldBe TactixLibrary.andR(1)
-    tactic.right.asInstanceOf[SaturateTactic].child shouldBe TactixLibrary.andR(1)
+    tactic.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), SaturateTactic(TactixLibrary.andR(1)))
   }
 
   it should "get precedence right" in {
@@ -520,7 +501,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "bind stronger than seq. combinator" in {
     val tactic = BelleParser("andR(1) & ?(id)")
-    tactic shouldBe (round trip SeqTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
+    tactic shouldBe (round trip SeqTactic(Seq(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id))))
   }
 
   it should "bind stronger than alt. combinator" in {
@@ -598,8 +579,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse with expected precedence" in {
-    BelleParser("andL(-1) & (andR(1) partial)") shouldBe (round trip SeqTactic(TactixLibrary.andL(-1), PartialTactic(TactixLibrary.andR(1))))
-    BelleParser("andL(-1) & andR(1) partial") shouldBe (round trip PartialTactic(SeqTactic(TactixLibrary.andL(-1), TactixLibrary.andR(1))))
+    BelleParser("andL(-1) & (andR(1) partial)") shouldBe (round trip SeqTactic(Seq(TactixLibrary.andL(-1), PartialTactic(TactixLibrary.andR(1)))))
+    BelleParser("andL(-1) & andR(1) partial") shouldBe (round trip PartialTactic(SeqTactic(Seq(TactixLibrary.andL(-1), TactixLibrary.andR(1)))))
   }
 
   //endregion
@@ -930,7 +911,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
-      case SeqTactic(ExpandAll(substs), adpt: AppliedDependentPositionTactic) =>
+      case SeqTactic(ExpandAll(substs) :: (adpt: AppliedDependentPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
     }
@@ -939,14 +920,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "expand definitions in the middle of parsing only when asked to" in {
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
-      case SeqTactic(_, adpt: AppliedDependentPositionTactic) => adpt.pt should have (
+      case SeqTactic(_ :: (adpt: AppliedDependentPositionTactic) :: Nil) => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
 
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
-      case SeqTactic(ExpandAll(substs), SeqTactic(_, adpt: AppliedDependentPositionTactic)) =>
+      case SeqTactic(ExpandAll(substs) :: _ :: (adpt: AppliedDependentPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
     }
@@ -964,7 +945,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
 
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, defs, expandAll = true)) {
-      case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
+      case SeqTactic(ExpandAll(substs) :: (apt: AppliedPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Find.FindLDef("s=y".asFormula, PosInExpr.HereP, defs)
     }
@@ -982,7 +963,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
-      case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
+      case SeqTactic(ExpandAll(substs) :: (apt: AppliedPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
     }

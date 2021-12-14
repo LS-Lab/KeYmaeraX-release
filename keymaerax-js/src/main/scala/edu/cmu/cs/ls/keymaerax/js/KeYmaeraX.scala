@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.js
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, MapConfiguration}
+import edu.cmu.cs.ls.keymaerax.{Configuration, JsMapConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -14,7 +14,7 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 object KeYmaeraX {
-  Configuration.setConfiguration(MapConfiguration)
+  Configuration.setConfiguration(JsMapConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   ArchiveParser.setParser(KeYmaeraXArchiveParser)
 
@@ -108,7 +108,7 @@ object KeYmaeraX {
 
   @JSExportTopLevel("parsesAsHP")
   def parsesAsHP(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
-    case hp: Program if FormulaTools.dualFree(hp) => "Parsed OK"
+    case hp: Program if FormulaTools.literalDualFree(hp) => "Parsed OK"
     case _ => "Parsed OK, but not a hybrid program"
   })
 
@@ -141,6 +141,10 @@ object KeYmaeraX {
   def parsesAsInteger(answer: String, solution: String): Dictionary[Any] =
     parseCheck(answer, _.toInt, (_: Int) => "Parsed OK")
 
+  @JSExportTopLevel("parsesAsIntegerList")
+  def parsesAsIntegerList(answer: String, solution: String): Dictionary[Any] =
+    parseCheck(answer, _.split(",").map(_.toInt).toList, (_: List[Int]) => "Parsed OK")
+
   @JSExportTopLevel("parsesAsNumber")
   def parsesAsNumber(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
     case _: Number => "Parsed OK"
@@ -156,10 +160,13 @@ object KeYmaeraX {
       case _ => try {
         fillDictionary(check(parser(answer)), 1.0)
       } catch {
-        case ex: ParseException =>
+        case ex: ParseException => try {
           val answerLines = answer.linesWithSeparators.toList
           val info = answerLines.patch(ex.loc.line - 1, answerLines(ex.loc.line - 1).patch(ex.loc.column - 1, " ⚠ ", 0), 1).mkString("")
           fillDictionary("Parse error: " + info + "\n" + ex.getMessage, 0.0)
+        } catch {
+          case _: Throwable => fillDictionary("Parse error: " + ex.getMessage, 0.0)
+        }
         case ex: Throwable => fillDictionary("Parsing failed: " + ex.getMessage, 0.0)
       }
     }

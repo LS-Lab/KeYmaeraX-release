@@ -104,20 +104,41 @@ private[core] object AxiomBase extends Logging {
       ("<> monotone",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
           Sequent(immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
+//      /**
+//        * Rule "ind induction".
+//        * Premise p(||) ==> [a;]p(||)
+//        * Conclusion p(||) ==> [a*]p(||)
+//        * {{{
+//        *     p(x) |- [a]p(x)
+//        *   --------------------- ind
+//        *     p(x) |- [{a}*]p(x)
+//        * }}}
+//        * Interderives with FP fixpoint rule.
+//        * FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to set contraction.
+//        * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+//        * @see Lemma 7.2 and Corollary 16.1 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+//        */
+//      ("ind induction",
+//        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
+//          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /**
-        * Rule "ind induction".
-        * Premise p(||) ==> [a;]p(||)
-        * Conclusion p(||) ==> [a*]p(||)
+        * Rule "FP fixpoint".
+        * Premise p(||) | <a>q(||) ==> q(||)
+        * Conclusion <a*>p(||) ==> q(||)
         * {{{
-        *     p(x) |- [a]p(x)
-        *   --------------------- ind
-        *     p(x) |- [{a}*]p(x)
+        *     p(x) | <a>q(x) |- q(x)
+        *   ------------------------- FP
+        *     <a*>p(x) |- q(x)
         * }}}
+        * Justification: loops have a least-fixpoint semantics, so imply any other fixpoint q(x).
+        * Interderives with ind induction rule.
+        * FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to set contraction.
         * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+        * @see Lemma 16.11 and Corollary 16.1 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
         */
-      ("ind induction",
-        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
-          Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
+      ("FP fixpoint",
+        (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(Or(pany, Diamond(a, qany))), immutable.IndexedSeq(qany))),
+          Sequent(immutable.IndexedSeq(Diamond(Loop(a), pany)), immutable.IndexedSeq(qany)))),
       /**
         * Rule "con convergence".
         * Premise: x > 0, J(||) |- <a{|x|}><x:=x-1;> J(||)
@@ -255,9 +276,10 @@ private[core] object AxiomBase extends Logging {
     * @author Stefan Mitsch
     * @author Jan-David Quesel
     * @author Andre Platzer
+    * @author Yong Kiam Tan
+    * @author Fabian Immler
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
-    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]]. In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
     * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
     */
@@ -327,7 +349,7 @@ Axiom "DE differential effect (system)"
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
-/* @todo soundness requires only vectorial x in p(||) */
+/* @todo soundness requires only vectorial x in p(||). Already no primes in q(||). */
 Axiom "DI differential invariance"
   ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */

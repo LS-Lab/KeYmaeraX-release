@@ -42,8 +42,6 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
 
   it should "print e ; e ; e" in withTactics { roundTrip("nil ; nil ; nil") }
 
-  it should "print (e ; e) ; e" in withTactics { roundTrip("(nil ; nil) ; nil") }
-
   it should "print e | e" in withTactics { roundTrip("nil | nil") }
 
   "doall" should "print e ; doall(e)" in withTactics { roundTrip("andR(1) ; doall(andL(1))") }

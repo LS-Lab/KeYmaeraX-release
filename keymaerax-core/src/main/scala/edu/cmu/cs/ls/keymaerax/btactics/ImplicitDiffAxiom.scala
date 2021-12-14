@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 
 import scala.collection.immutable.List
@@ -240,7 +241,7 @@ object ImplicitDiffAxiom {
               DW(1) & G(1) & implyR(1) & andL(-1) & andL(-1) & hideL(-2) & QE,
               dR("true".asFormula)(1) <(
                 byUS(tt2),
-                cohideR(1) & boxTrue(1)
+                cohideR(1) & useAt(boxTrueAxiom)(1)
               )
             )
           )
@@ -377,7 +378,7 @@ object ImplicitDiffAxiom {
       implyR(1) & boxd(1) & notR(1) &
         cutL(cutfml)('Llast) <(
           existsL(-2)*dim & useAt(Ax.pVd)(-2) & andL(-2) & useAt(diffadj)(-2) &
-          notL(-3) & andLi(AntePos(1),AntePos(0)) & useAt(Ax.pVd,PosInExpr(0::Nil))(-1) &
+          notL(-3) & andLi(keepLeft=false)(AntePos(1),AntePos(0)) & useAt(Ax.pVd,PosInExpr(0::Nil))(-1) &
           mond & SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id,
           cohideR('Rlast) &
           implyR(1) & barcantac & mond &

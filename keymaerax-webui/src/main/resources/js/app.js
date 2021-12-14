@@ -27,6 +27,7 @@
   'keymaerax.ui.keyevents',
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.tacticeditor',
+  'keymaerax.ui.hamodeler',
   'keymaerax.ui.directives',
   'formula',
   'sequent',

@@ -47,7 +47,9 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
                 resolve: {
                   title: function() { return "Remember as default user?"; },
                   message: function() { return "Do you want to automatically login with this user in the future?"; },
-                  mode: function() { return "yesno"; }
+                  mode: function() { return "okcancel"; },
+                  oktext: function() { return "Remember"; },
+                  canceltext: function() { return "Don't remember"; }
                 }
               });
               modalInstance.result.then(

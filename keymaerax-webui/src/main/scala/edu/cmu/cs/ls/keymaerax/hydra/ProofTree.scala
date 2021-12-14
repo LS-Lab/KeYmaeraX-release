@@ -10,8 +10,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Location}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
+import edu.cmu.cs.ls.keymaerax.parser.Location
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -165,13 +165,15 @@ trait ProofTreeNode {
       val substGoal = exhaustiveSubst(goal, subst)
       val substSub = exhaustiveSubst(sub, subst)
       try {
-        val downSubst = UnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
-        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> maxExpandedSubsts(substs ++ downSubst.subsDefsInput)
+        //@note unification now returns mixed up/down substitutions; thus we substitute in both sub and goal
+        val addSubst = RestrictedBiDiUnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
+        exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
       } catch {
         case _: UnificationException =>
           try {
-            val upSubst = UnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
-            substGoal(exhaustiveSubst(substSub, upSubst), i) -> maxExpandedSubsts(substs ++ upSubst.subsDefsInput)
+            //@todo mixed unification may no longer make this fallback necessary
+            val addSubst = RestrictedBiDiUnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
+            exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
           } catch {
             case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
               //@note proof step introduced function symbols with delayed substitution,
@@ -370,7 +372,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
                          wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val listener = new TraceRecordingListener(db, proof.info.proofId, stepId, localProvable,
-      goalIdx, recursive = false, shortName)
+      goalIdx, recursive = false, shortName, constructGlobalProvable = false)
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil), proof.info.defs(db)),
       interpreter(listener::Nil))
     if (wait) {

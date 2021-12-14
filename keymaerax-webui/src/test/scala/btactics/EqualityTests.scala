@@ -173,7 +173,7 @@ class EqualityTests extends TacticTestBase {
 
   // rewriting numbers is disallowed, because otherwise we run into endless rewriting
   it should "not rewrite numbers" in withTactics {
-    a [BelleThrowable] should be thrownBy proveBy("0<5, 0=0 ==> ".asSequent, exhaustiveEqL2R(-2))
+    the [IllegalArgumentException] thrownBy proveBy("0<5, 0=0 ==> ".asSequent, exhaustiveEqL2R(-2)) should have message "requirement failed: Rewriting numbers not supported"
   }
 
   it should "not try to rewrite bound occurrences" in withTactics {
@@ -217,7 +217,7 @@ class EqualityTests extends TacticTestBase {
     proveBy("y=x ==> [x:=*;]x>y".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
       subgoals.loneElement shouldBe "==> [x_0:=*;]x_0>x".asSequent
     proveBy("y=x ==> \\forall x (x<y -> \\exists x x>y)".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
-      subgoals.loneElement shouldBe "==> \\forall x_0 (x_0<x -> \\exists x_1 x_1>x)".asSequent
+      subgoals.loneElement shouldBe "==> \\forall x_1 (x_1<x -> \\exists x_0 x_0>x)".asSequent
   }
 
   "Apply Equalities" should "rewrite all plain equalities" in withTactics {
@@ -367,6 +367,12 @@ class EqualityTests extends TacticTestBase {
       "==> \\forall x ( (x>=0 & x>=0 <-> (x>=0 | x<=0) ) | ( x<0 & -x>=0 <-> (x>=0 | x<=0) ) )".asSequent
   }
 
+  it should "find by top-level locator" in withQE { _ =>
+    val s = "a=2 & five=abs(-5) ==>".asSequent
+    proveBy(s, BelleParser(""" absExp('L=="a=2 & five=abs(-5)") """)).
+      subgoals.loneElement shouldBe "a=2&five=abs_, -5>=0&abs_=-5 | -5 < 0&abs_=-(-5) ==>".asSequent
+  }
+
   "min" should "expand min(x,y) in succedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x<=y&min_=x | x>y&min_=y ==> min_>=5".asSequent
@@ -443,6 +449,12 @@ class EqualityTests extends TacticTestBase {
   it should "expand with a term search locator" in withQE { _ =>
     val result = proveBy("y=max(x,4) ==> y>=4".asSequent, BelleParser("minmax('L=={`max(x,4)`})"))
     result.subgoals.loneElement shouldBe "y=max_, x>=4&max_=x|x < 4&max_=4 ==> y>=4".asSequent
+  }
+
+  it should "find by top-level locator" in withQE { _ =>
+    val s = "a=2 & five=max(0,5) ==>".asSequent
+    proveBy(s, BelleParser(""" minmax('L=="a=2 & five=max(0,5)") """)).
+      subgoals.loneElement shouldBe "a=2&five=max_, 0>=5&max_=0 | 0 < 5&max_=5 ==>".asSequent
   }
 
   "expandAll" should "expand abs everywhere" in withQE { _ =>

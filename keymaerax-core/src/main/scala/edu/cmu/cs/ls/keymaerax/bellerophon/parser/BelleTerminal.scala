@@ -90,15 +90,15 @@ private object USING extends BelleTerminal("using")
 private object RIGHT_ARROW extends BelleTerminal("=>")
 
 // Separation/Grouping Tokens
-private object OPEN_PAREN extends BelleTerminal("(") {
+object OPEN_PAREN extends BelleTerminal("(") {
   override def regexp: Regex = "\\(".r
 }
-private object CLOSE_PAREN extends BelleTerminal(")") {
+object CLOSE_PAREN extends BelleTerminal(")") {
   override def regexp: Regex = "\\)".r
 }
-private object COMMA extends BelleTerminal(",")
+object COMMA extends BelleTerminal(",")
 
-private object COLON extends BelleTerminal(":")
+object COLON extends BelleTerminal(":")
 
 private trait TACTIC_ARGUMENT
 

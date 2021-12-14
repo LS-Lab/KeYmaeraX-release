@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -11,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 
@@ -31,7 +33,9 @@ private object EqualityTactics {
     * }}}
     * @return The tactic.
     */
-  val exhaustiveEqL2R: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  val exhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveEqL2R")
+    val sequent = provable.subgoals.head
     //@Tactic in [[TactixLibrary]]
     require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
     sequent.sub(pos) match {
@@ -42,7 +46,8 @@ private object EqualityTactics {
 
         val freeRhs = StaticSemantics.freeVars(rhs).toSet
 
-        val renameBoundRhs = anon ((pos: Position, seq: Sequent) => {
+        val renameBoundRhs = anon { (pr: ProvableSig, pos: Position) =>
+          val seq = pr.subgoals.head
           val fml = seq(pos.top)
           var nextSymbol: Option[Variable] = None
           def createNextSymbol(v: Variable): Variable = nextSymbol match {
@@ -54,26 +59,32 @@ private object EqualityTactics {
           }
           Idioms.mapSubpositions(pos, seq, {
             case (q: Quantified, pp) if q.vars.toSet.intersect(freeRhs).nonEmpty =>
-              Some(q.vars.map(v => boundRename(v, createNextSymbol(v))(pp)).
-                reduceRightOption[BelleExpr](_ & _).getOrElse(nil))
+              Some(q.vars.map(v => ProofRuleTactics.boundRenameFw(v, createNextSymbol(v))(pp)).foldLeft(_: ProvableSig)({ case (pr, r) => pr(r.computeResult _, 0) }))
             case (Box(Assign(x, _), _), pp) if freeRhs.contains(x) =>
-              Some(boundRename(x, createNextSymbol(x))(pp))
+              Some(ProofRuleTactics.boundRenameFw(x, createNextSymbol(x))(pp).computeResult(_))
             case (Box(AssignAny(x), _), pp) if freeRhs.contains(x) =>
-              Some(boundRename(x, createNextSymbol(x))(pp))
+              Some(ProofRuleTactics.boundRenameFw(x, createNextSymbol(x))(pp).computeResult(_))
             case _ => None
-          }).reduceRightOption[BelleExpr](_ & _).getOrElse(nil)
-        })
+          }).foldLeft(pr)({ case (pr, r) => pr(r, 0) })
+        }
 
         val occurrences = sequent.zipWithPositions.filter({ case (f, p) => p != pos && f.find(lhs).isDefined })
-        occurrences.map({ case (_, p) => renameBoundRhs(p) & eqL2R(pos.checkAnte)(p) }).reduceOption[BelleExpr](_&_).getOrElse(skip)
+        occurrences.map({ case (_, p) => (pr: ProvableSig) =>
+          (pr
+            (renameBoundRhs(p).computeResult _, 0)
+            (eqL2R(pos.checkAnte)(p).computeResult _, 0)
+            )
+        }).foldLeft(provable)({ (pr, r) => pr(r, 0) })
       case Some(e) => throw new TacticInapplicableFailure("exhaustiveEqL2R only applicable to equalities l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
-  })
+  }
 
   /** @see [[TactixLibrary.eqL2R]] */
-  def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  def eqL2R(eqPos: Int): BuiltInPositionTactic = eqL2R(Position(eqPos).checkAnte)
+  def eqL2R(eqPos: AntePosition): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "eqL2R")
+    val sequent = provable.subgoals.head
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         val rhsFv = StaticSemantics.freeVars(rhs)
@@ -109,31 +120,49 @@ private object EqualityTactics {
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
         val (equivifyCommute, closeWhere) =
-          if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos))
-          else (equivifyR('Rlast), LastSucc(0))
-        cut(condEquiv) < (
-          /* use */ implyL('Llast) < (closeIdWith('Rlast), cutLR(repl)(pos) < (hide('Llast), equivifyCommute & closeIdWith(closeWhere))),
-          /* show */ cohide('Rlast) & by(Ax.constFormulaCongruence, RenUSubst(
-          (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
-            (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
-            (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl) :: Nil))
-        )
+          if (pos.isSucc) ((pr: ProvableSig) => pr(EquivifyRight(pos.checkSucc.top), 0)(CommuteEquivRight(pos.checkSucc.top), 0), Fixed(pos))
+          else ((pr: ProvableSig) => pr(EquivifyRight(SuccPos(sequent.succ.length)), 0), LastSucc(0))
+
+        val subst = RenUSubst(List(
+          (FuncOf(Function("s", None, Unit, Real), Nothing), lhs),
+          (FuncOf(Function("t", None, Unit, Real), Nothing), rhs),
+          (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl)))
+
+        (provable
+          (Cut(condEquiv), 0)
+          /* show */
+          (CoHideRight(SuccPos(sequent.succ.length)), 1)
+          (subst.toForward(Ax.constFormulaCongruence.provable), 1)
+          /* use */
+          (ImplyLeft(AntePos(sequent.ante.length)), 0)
+          (cutLRFw(repl)(pos).computeResult _, 1) // creates subgoals 1+2
+          (HideLeft(AntePos(sequent.ante.length)), 1)
+          (equivifyCommute, 2)
+          (closeIdWith(closeWhere).computeResult _, 2)
+          (closeIdWith(SuccPos(sequent.succ.length)).computeResult _, 0)
+          )
       case Some(e) => throw new TacticInapplicableFailure("eqL2R only applicable to equalities l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
-  })
+  }
 
   /** @see [[TactixLibrary.eqR2L]] */
-  def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos).checkAnte)
-  def eqR2L(eqPos: AntePosition): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  def eqR2L(eqPos: Int): BuiltInPositionTactic = eqR2L(Position(eqPos).checkAnte)
+  def eqR2L(eqPos: AntePosition): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "eqR2L")
+    val sequent = provable.subgoals.head
     require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
     sequent.sub(eqPos) match {
       case Some(Equal(lhs, rhs)) =>
-        useAt(Ax.equalCommute)(eqPos) & eqL2R(eqPos)(pos) & useAt(Ax.equalCommute)('L, Equal(rhs, lhs))
+        (provable
+          (useAt(Ax.equalCommute)(eqPos).computeResult _, 0)
+          (eqL2R(eqPos)(pos).computeResult _, 0)
+          (useAt(Ax.equalCommute)('L, Equal(rhs, lhs)).computeResult _, 0)
+          )
       case Some(e) => throw new TacticInapplicableFailure("eqR2L only applicable to equalities l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
-  })
+  }
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or uninterpreted function) */
   @Tactic(names = "L=R all atoms",
@@ -142,27 +171,32 @@ private object EqualityTactics {
     // atomAllL2R -------------------------
     conclusion="Γ(x), x=e |- Δ(e)"
   )
-  val atomExhaustiveEqL2R: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(fml@Equal(_: Variable, _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
-    case Some(fml@Equal(FuncOf(Function(_, _, _, _, None), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
+  val atomExhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "atomExhaustiveEqL2R")
+    val sequent = provable.subgoals.head
+    sequent.sub(pos) match {
+    case Some(fml@Equal(_: Variable, _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml).computeResult(provable)
+    case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml).computeResult(provable)
     case Some(e) => throw new TacticInapplicableFailure("Equality rewriting only applicable to equalities l=r, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-  })
+  }}
 
   /** Rewrites all atom equalities in the assumptions. */
   @Tactic(displayLevel = "internal")
-  val applyEqualities: DependentTactic = anon ((seq: Sequent) => {
+  val applyEqualities: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "applyEqualities")
+    val seq = provable.subgoals.head
     seq.zipAnteWithPositions.filter({
       case (Equal(v: Variable, t), _) => v != t
-      case (Equal(fn@FuncOf(Function(_, _, _, _, None), _), t), _) => fn != t
+      case (Equal(fn@FuncOf(Function(_, _, _, _, false), _), t), _) => fn != t
       case _ => false
-    }).reverseMap({ case (_, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) match {
+    }).reverseMap({ case (_, pos) => Idioms.doIfFw(_.subgoals.head(pos.checkTop) match {
           case Equal(l: Variable, r) => l != r
           case Equal(l: FuncOf, r) => l != r
           case _ => false // earlier rewriting may have rewritten LHS to non-trivial term, e.g., x=y+1, x=z+5 ~> z+5=y+1
-        })(EqualityTactics.atomExhaustiveEqL2R(pos))
-      }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-  })
+        })(EqualityTactics.atomExhaustiveEqL2R(pos).computeResult)
+      }).foldLeft(provable)({ (pr, r) => pr(r.result _, 0) })
+  }
 
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
@@ -173,19 +207,29 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  val exhaustiveEqR2L: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    //@Tactic in [[TactixLibrary]]
-    case Some(fml@Equal(lhs, rhs)) =>
-      useAt(Ax.equalCommute)(pos, fml) & exhaustiveEqL2R(pos, Equal(rhs, lhs)) & useAt(Ax.equalCommute)(pos, Equal(rhs, lhs))
-  })
+  val exhaustiveEqR2L: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "exhaustiveqR2L")
+    val sequent = provable.subgoals.head
+    sequent.sub(pos) match {
+      //@Tactic in [[TactixLibrary]]
+      case Some(fml@Equal(lhs, rhs)) =>
+        (provable
+          (useAt(Ax.equalCommute)(pos, fml).computeResult _, 0)
+          (exhaustiveEqL2R(pos, Equal(rhs, lhs)).computeResult _, 0)
+          (useAt(Ax.equalCommute)(pos, Equal(rhs, lhs)).computeResult _, 0)
+          )
+  }}
 
 
   /** @see [[TactixLibrary.abbrv()]] */
-  def abbrv(abbrvV: Variable): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(t: Term) => abbrv(t, Some(abbrvV))
+  def abbrv(abbrvV: Variable): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "abbrv")
+    val sequent = provable.subgoals.head
+    sequent.sub(pos) match {
+    case Some(t: Term) => abbrv(t, Some(abbrvV)).result(provable)
     case Some(e) => throw new TacticInapplicableFailure("Expected a term at position " + pos + ", but got " + e)
     case _ => throw new IllFormedTacticApplicationException("Position " + pos + " is undefined in sequent " + sequent)
-  })
+  }}
 
   /**
    * Abbreviates a term `t` to a variable everywhere, except in places where some free variable of `t` is bound.
@@ -203,7 +247,9 @@ private object EqualityTactics {
    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
    * @return The tactic.
    */
-  def abbrv(t: Term, abbrvV: Option[Variable]): DependentTactic = anon ((sequent: Sequent) => {
+  def abbrv(t: Term, abbrvV: Option[Variable]): BuiltInTactic = anon { provable: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(provable, "abbrv")
+    val sequent = provable.subgoals.head
     //@Tactic in [[TactixLibrary.abbrvAll]]
     require(abbrvV.isEmpty ||
       !(sequent.ante.flatMap(StaticSemantics.signature)
@@ -212,18 +258,24 @@ private object EqualityTactics {
     val v = abbrvV match {
       case Some(vv) => vv
       case None => t match {
-        case FuncOf(Function(n, _, _, sort, Some(_)), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
-        case FuncOf(Function(n, _, _, sort, None), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+        case FuncOf(Function(n, _, _, sort, true), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
+        case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
       }
     }
 
-    cut(Exists(v :: Nil, Equal(v, t))) <(
-      /* use */ existsL('Llast) & exhaustiveEqR2L('Llast),
-      /* show */ cohide('Rlast) & existsR(t)(1) & byUS(Ax.equalReflexive)
-    )
-  })
+    (provable
+      (Cut(Exists(List(v), Equal(v, t))), 0)
+      /* show */
+      (CoHideRight(SuccPos(sequent.succ.length)), 1)
+      (existsR(t)(1).computeResult _, 1)
+      (US(Ax.equalReflexive.provable).result _, 1)
+      /* use */
+      (existsL(AntePos(sequent.ante.length)).computeResult _, 0)
+      (exhaustiveEqR2L(AntePos(sequent.ante.length)).computeResult _, 0)
+      )
+  }
 
   /**
     * Abbreviates a term to a variable at a position.
@@ -281,20 +333,28 @@ private object EqualityTactics {
    * @return The tactic.
    */
   @Tactic(names = "Expand absolute value", codeName = "absExp")
-  val abs: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    //todo: should match the abs interpretation exactly
-    case (ctx, abs@FuncOf(Function(fn, None, Real, Real, Some(_)), t)) if fn == "abs" =>
+  val abs: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "abs")
+    val sequent = provable.subgoals.head
+    sequent.at(pos) match {
+    case (_, _: Formula) => mapSubpositions(pos, sequent, {
+      case (FuncOf(InterpretedSymbols.absF, _), pp) => Some(?(abs(pp).computeResult _)(_))
+      case _ => None
+    }).foldLeft(provable)({ (pr, r) => pr(r, 0) })
+    case (ctx, abs@FuncOf(fn@InterpretedSymbols.absF, t)) =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
-        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
-        val absVar = Variable(fn + "_", freshAbsIdx)
-        abbrv(abs, Some(absVar)) &
-          useAt(Ax.equalCommute)('L, Equal(absVar, abs)) &
-          useAt(Ax.abs)('L, Equal(abs, absVar))
+        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn.name + "_", sequent)
+        val absVar = Variable(fn.name + "_", freshAbsIdx)
+        (provable
+          (abbrv(abs, Some(absVar)).result _, 0)
+          (useAt(Ax.equalCommute)('L, Equal(absVar, abs)).computeResult _, 0)
+          (useAt(Ax.abs)('L, Equal(abs, absVar)).computeResult _, 0)
+          )
       } else {
-        absAt(pos)
+        absAt(pos).computeResult(provable)
       }
     case (_, e) => throw new TacticInapplicableFailure("absExp only applicable to abs(.), but got " + e.prettyString)
-  })
+  }}
 
   private lazy val absContradiction = AnonymousLemmas.remember("f()<0 & f()>=0 <-> false".asFormula, QE, namespace)
   private lazy val minContradiction = AnonymousLemmas.remember("f()>g() & f()<=g() <-> false".asFormula, QE, namespace)
@@ -302,9 +362,11 @@ private object EqualityTactics {
 
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
   @Tactic(displayLevel = "internal")
-  val absAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    //todo: should match the abs interpretation exactly
-    case Some(absTerm@FuncOf(Function(fn, None, Real, Real, Some(_)), x)) if fn == "abs" =>
+  val absAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "absAt")
+    val sequent = provable.subgoals.head
+    sequent.sub(pos) match {
+    case Some(absTerm@FuncOf(fn@InterpretedSymbols.absF, x)) =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {
@@ -314,39 +376,90 @@ private object EqualityTactics {
             And(Less(x, Number(0)), fml.replaceFree(absTerm, Neg(x))))
       }
 
-      val cohidePos = if (pos.isAnte) cohideR('Rlast) else cohideR(pos.top)
+      val cohidePos = if (pos.isAnte) CoHideRight(SuccPos(sequent.succ.length)) else CoHideRight(pos.checkSucc.top)
 
       val polarity = FormulaTools.polarityAt(sequent(pos.top), parentPos.inExpr) * (if (pos.isSucc) 1 else -1)
 
       val afterCMonPos =
         if (polarity >= 0) SuccPosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
         else AntePosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
-      val proveAbs = if (polarity >= 0) {
-        abs(afterCMonPos) & orL(-1) <(
-          orL(-2) <(
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
-            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF),
-          orL(-2) <(
-            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF,
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
-      } else {
-        abs(afterCMonPos) & orR(1) & orL(-2) <(
-          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(id),
-          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(id))
-      }
+      val proveAbs = (pr: ProvableSig) =>
+        if (polarity >= 0) {
+          /*
+          abs(afterCMonPos) & orL(-1) <(
+            orL(-2) <(
+              andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
+              andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(0), AntePos(2)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF),
+            orL(-2) <(
+              andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(2), AntePos(0)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF,
+              andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
+           */
+          (pr
+            (abs(afterCMonPos).computeResult _, 0)
+            (OrLeft(AntePos(0)), 0)
+            /* right */
+            (OrLeft(AntePos(1)), 1) // creates subgoals 1+2
+            (AndLeft(AntePos(1)), 2)
+            (eqL2R(-3)(1).computeResult _, 2)
+            (AndLeft(AntePos(0)), 2)
+            (id.result _, 2)
+            (AndLeft(AntePos(1)), 1)
+            (AndLeft(AntePos(0)), 1)
+            (andLi(keepLeft=false)(AntePos(2), AntePos(0)).computeResult _, 1)
+            (useAt(absContradiction, PosInExpr(0::Nil))(-3).computeResult _, 1)
+            (closeF.result _, 1)
+            /* left */
+            (OrLeft(AntePos(1)), 0) // creates subgoals 0+1
+            (AndLeft(AntePos(1)), 1)
+            (AndLeft(AntePos(0)), 1)
+            (andLi(keepLeft=false)(AntePos(0), AntePos(2)).computeResult _, 1)
+            (useAt(absContradiction, PosInExpr(0::Nil))(-3).computeResult _, 1)
+            (closeF.result _, 1)
+            (AndLeft(AntePos(1)), 0)
+            (eqL2R(-3)(1).computeResult _, 0)
+            (AndLeft(AntePos(0)), 0)
+            (id.result _, 0)
+            )
+        } else {
+          /*
+          abs(afterCMonPos) & orR(1) & orL(-2) <(
+            andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(id),
+            andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(id))
+           */
+          (pr
+            (abs(afterCMonPos).computeResult _, 0)
+            (OrRight(SuccPos(0)), 0)
+            (OrLeft(AntePos(1)), 0)
+            /* right */
+            (AndLeft(AntePos(1)), 1)
+            (eqL2R(-3)(-1).computeResult _, 1)
+            (AndRight(SuccPos(1)), 1)
+            (id.result _, 2)
+            (id.result _, 1)
+            /* left */
+            (AndLeft(AntePos(1)), 0)
+            (eqL2R(-3)(-1).computeResult _, 0)
+            (AndRight(SuccPos(0)), 0)
+            (id.result _, 1)
+            (id.result _, 0)
+            )
+        }
 
-      cutAt(expanded)(parentPos) <(
-        nil,
-        cohidePos & CMon(parentPos.inExpr) & implyR(1) &
-          assertT(_.at(afterCMonPos) match {
-            case (ctx, FuncOf(_, t)) => StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty
-            case _ => false
-          }, "Unable to expand " + fn + " since its argument is bound in context") &
-          proveAbs
-      )
+      (provable
+        (cutAtFw(expanded)(parentPos).computeResult _, 0)
+        /* show */
+        (cohidePos, 1)
+        (CMonFw(parentPos.inExpr).result _, 1)
+        (ImplyRight(SuccPos(0)), 1)
+        (assertT(_.at(afterCMonPos) match {
+          case (ctx, FuncOf(_, t)) => StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty
+          case _ => false
+        }, "Unable to expand " + fn + " since its argument is bound in context").result _, 1)
+        (proveAbs, 1)
+        )
     case Some(e) => throw new TacticInapplicableFailure("absAt only applicable to abs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to valid position in sequent " + sequent.prettyString)
-  })
+  }}
 
   /**
    * Expands min/max function.
@@ -358,142 +471,178 @@ private object EqualityTactics {
    * @return The tactic.
    */
   @Tactic(names = "Expand min/max")
-  val minmax: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (_, _: Formula) => mapSubpositions(pos, sequent, {
-      //todo: should match the max/min interpretation exactly
-      case (FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), _), pp) =>
-        if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name) Some(?(minmax(pp)))
-        else None
-      case _ => None
-    }).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-    //todo: should match the max/min interpretation exactly
-    case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), t: Pair))
-        if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
-      if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
-        val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
-        val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
-        abbrv(minmax, Some(minmaxVar)) &
-          useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)) &
-          (fn match {
-            case InterpretedSymbols.minF.name => useAt(Ax.min)('L, Equal(minmax, minmaxVar))
-            case InterpretedSymbols.maxF.name => useAt(Ax.max)('L, Equal(minmax, minmaxVar))
-            case _ => throw new AssertionError("Cannot happen")
-          })
-      } else {
-        minmaxAt(pos)
-      }
-    case (_, e) => throw new TacticInapplicableFailure("minmax only applicable to min/max, but got " + e.prettyString)
-  })
+  val minmax: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "minmax")
+    val sequent = provable.subgoals.head
+    sequent.at(pos) match {
+      case (_, _: Formula) => mapSubpositions(pos, sequent, {
+        case (FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), _), pp) =>
+          if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name) Some(?(minmax(pp).computeResult _)(_))
+          else None
+        case _ => None
+      }).foldLeft(provable)({ (pr, r) => pr(r, 0) })
+      case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t: Pair))
+          if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
+        if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
+          val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
+          val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
+          (provable
+            (abbrv(minmax, Some(minmaxVar)).result _, 0)
+            (useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)).computeResult _, 0)
+            (fn match {
+              case InterpretedSymbols.minF.name => useAt(Ax.min)('L, Equal(minmax, minmaxVar)).computeResult _
+              case InterpretedSymbols.maxF.name => useAt(Ax.max)('L, Equal(minmax, minmaxVar)).computeResult _
+              case _ => throw new AssertionError("Cannot happen")
+            }, 0)
+            )
+        } else {
+          minmaxAt(pos).computeResult(provable)
+        }
+      case (_, e) => throw new TacticInapplicableFailure("minmax only applicable to min/max, but got " + e.prettyString)
+    }
+  }
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
   @Tactic(displayLevel = "internal")
-  val minmaxAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    //todo: should match the max/min interpretation exactly
-    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), Pair(f, g))) if fn == "min" || fn == "max" =>
+  val minmaxAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "minmaxAt")
+    val sequent = provable.subgoals.head
+    sequent.sub(pos) match {
+    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g)))
+      if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {
-        case Some(fml: Formula) if fn == "min" =>
+        case Some(fml: Formula) if fn == InterpretedSymbols.minF.name =>
           Or(
             And(LessEqual(f, g), fml.replaceFree(minmaxTerm, f)),
             And(Greater(f, g), fml.replaceFree(minmaxTerm, g))
           )
-        case Some(fml: Formula) if fn == "max" =>
+        case Some(fml: Formula) if fn == InterpretedSymbols.maxF.name =>
           Or(
             And(GreaterEqual(f, g), fml.replaceFree(minmaxTerm, f)),
             And(Less(f, g), fml.replaceFree(minmaxTerm, g))
           )
       }
 
-      val cohidePos = if (pos.isAnte) cohideR('Rlast) else cohideR(pos.top)
+      val cohidePos = if (pos.isAnte) CoHideRight(SuccPos(sequent.succ.length)) else CoHideRight(pos.checkSucc.top)
 
       val polarity = FormulaTools.polarityAt(sequent(pos.top), parentPos.inExpr) * (if (pos.isSucc) 1 else -1)
 
-      val contradiction = if (fn == "min") minContradiction else maxContradiction
+      val contradiction = if (fn == InterpretedSymbols.minF.name) minContradiction else maxContradiction
 
       val afterCMonPos =
         if (polarity >= 0) SuccPosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
         else AntePosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
-      val proveMinMax = if (polarity >= 0) {
-        minmax(afterCMonPos) & orL(-1) <(
-          orL(-2) <(
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
-            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
-          orL(-2) <(
-            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
-      } else {
-        minmax(afterCMonPos) & orR(1) & orL(-2) <(
-          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(id),
-          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(id))
-      }
 
-      cutAt(expanded)(parentPos) <(
-        nil,
-        cohidePos & CMon(parentPos.inExpr) & implyR(1) &
-          assertT(_.at(afterCMonPos) match {
-            case (ctx, FuncOf(_, t)) => StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty
-            case _ => false
-          }, "Unable to expand " + fn + " since its arguments are bound in context") &
-          proveMinMax
-      )
+      val proveMinMax = (pr: ProvableSig) =>
+        if (polarity >= 0) {
+          /*
+          minmax(afterCMonPos) & orL(-1) <(
+            orL(-2) <(
+              andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
+              andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
+            orL(-2) <(
+              andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
+              andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
+           */
+          (pr
+            (minmax(afterCMonPos).computeResult _, 0)
+            (OrLeft(AntePos(0)), 0)
+            /* right */
+            (OrLeft(AntePos(1)), 1)
+            (AndLeft(AntePos(1)), 2)
+            (eqL2R(-3)(1).computeResult _, 2)
+            (AndLeft(AntePos(0)), 2)
+            (id.result _, 2)
+            (AndLeft(AntePos(1)), 1)
+            (AndLeft(AntePos(0)), 1)
+            (andLi(keepLeft=false)(AntePos(2), AntePos(0)).computeResult _, 1)
+            (useAt(contradiction, PosInExpr(0::Nil))(-3).computeResult _, 1)
+            (closeF.result _, 1)
+            /* left */
+            (OrLeft(AntePos(1)), 0)
+            (AndLeft(AntePos(1)), 1)
+            (AndLeft(AntePos(0)), 1)
+            (andLi(keepLeft=false)(AntePos(0), AntePos(2)).computeResult _, 1)
+            (useAt(contradiction, PosInExpr(0::Nil))(-3).computeResult _, 1)
+            (closeF.result _, 1)
+            (AndLeft(AntePos(1)), 0)
+            (eqL2R(-3)(1).computeResult _, 0)
+            (AndLeft(AntePos(0)), 0)
+            (id.result _, 0)
+            )
+        } else {
+          (pr
+            (minmax(afterCMonPos).computeResult _, 0)
+            (OrRight(SuccPos(0)), 0)
+            (OrLeft(AntePos(1)), 0)
+            /* right */
+            (AndLeft(AntePos(1)), 1)
+            (eqL2R(-3)(-1).computeResult _, 1)
+            (AndRight(SuccPos(1)), 1)
+            (id.result _, 2)
+            (id.result _, 1)
+            /* left */
+            (AndLeft(AntePos(1)), 0)
+            (eqL2R(-3)(-1).computeResult _, 0)
+            (AndRight(SuccPos(0)), 0)
+            (id.result _, 1)
+            (id.result _, 0)
+            )
+        }
+
+      (provable
+        (cutAtFw(expanded)(parentPos).computeResult _, 0)
+        /* show */
+        (cohidePos, 1)
+        (CMonFw(parentPos.inExpr).result _, 1)
+        (ImplyRight(SuccPos(0)), 1)
+        (assertT(_.at(afterCMonPos) match {
+          case (ctx, FuncOf(_, t)) => StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty
+          case _ => false
+        }, "Unable to expand " + fn + " since its arguments are bound in context").result _, 1)
+        (proveMinMax, 1)
+        )
     case Some(e) => throw new TacticInapplicableFailure("minmaxAt only applicable to min/max, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " does not point to a valid position in " + sequent.prettyString)
-  })
+  }}
 
-  private def protectPos(tac : DependentPositionTactic) : DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
-    if(sequent.sub(pos).isDefined) tac(pos)
-    else skip //todo: skip or throw a catchable failure?
-  })
-
-  /**
-   * Expands an interpreted function.
-   * @example {{{
-   *    x>=0&abs_0=x | x<0&abs_0=-x |- abs_0=5
-   *    ---------------------------------------expand(1, 0::Nil)
-   *                                |- abs<<...>>(x)=5
-   * }}}
-   * @return The tactic.
-   */
-  @Tactic(names = "Expand interpreted function at position")
-  val expand: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (ctx, t@FuncOf(f@Function(fn, None, Real, Real, Some(interp)), _)) =>
-      val freshIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
-      val freshVar = Variable(fn + "_", freshIdx)
-      abbrvAt(t,Some(freshVar))(pos) &
-        ??? //useAt(ElidingProvable(Provable.implicitFuncAxiom(f)))('L, Equal(abs, absVar))
-
-    case (_, e) => throw new TacticInapplicableFailure("expand only applicable to interpreted functions, but got " + e.prettyString)
-  })
+  private def protectPos(tac: BuiltInPositionTactic): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    val sequent = provable.subgoals.head
+    if (sequent.sub(pos).isDefined) tac(pos).computeResult(provable)
+    else provable //todo: skip or throw a catchable failure?
+  }
 
   /** Expands all special functions (abs/min/max). */
-  @Tactic(names="Expand all special functions",
-    revealInternalSteps = true)
-  val expandAll: BelleExpr = anon ((s: Sequent) => {
+  @Tactic(names="Expand all special functions")
+  val expandAll: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "expandAll")
+    val s = provable.subgoals.head
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
-        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos)))
-        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
-        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
         case _ => None
       })
     )
-    tactics.reduceOption[BelleExpr](_ & _).getOrElse(skip) &
-      Idioms.doIf(_.subgoals.exists(StaticSemantics.symbols(_).exists({
-        case  InterpretedSymbols.absF | InterpretedSymbols.minF | InterpretedSymbols.maxF => true
-        case _ => false
-      })))(onAll(expandAll))
-  })
+    (tactics.foldLeft(provable)({ (pr, r) => pr(r, 0) })
+      (Idioms.doIfFw(_.subgoals.exists(StaticSemantics.symbols(_).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false })))(expandAll.result).result _, 0)
+      )
+  }
+
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
   @Tactic(displayLevel = "internal")
-  val expandAllAt: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+  val expandAllAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "expandAllAt")
     val tactics =
-      Idioms.mapSubpositions(pos, seq, {
-        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos)))
-        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
-        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+      Idioms.mapSubpositions(pos, provable.subgoals.head, {
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
         case _ => None
       })
-    tactics.reduceOption(_ & _).getOrElse(skip)
-  })
+    tactics.foldLeft(provable)({ (pr, r) => pr(r, 0) })
+  }
 }

@@ -1,0 +1,88 @@
+<div class="modal-header">
+    <div class="row">
+        <div class="col-md-8">
+            <h4>{{template.title}}</h4>
+        </div>
+        <div class="col-md-4 float-right">
+            <span class="pull-right">
+                <button ng-class="{'btn':true,
+                    'btn-primary':model.content !== model.savedContent,
+                    'btn-default':model.content == model.savedContent,
+                    'disabled':(numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0}"
+                        ng-click="uploadContent(false)" ng-cloak>Save</button>
+                <button ng-class="{'btn':true, 'btn-default':true,
+                               'disabled': (numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0 || model.content.indexOf('__________') >= 0 || numKyxTactics(model.content)>0}"
+                        ng-click="uploadContent(true)" ng-cloak>Start Proof <span ng-if="model.content !== model.savedContent">*</span></button>
+                <button class="btn btn-link" ng-click="close()"><i class="fa fa-close fa-lg"></i></button>
+            </span>
+        </div>
+    </div>
+</div>
+<div class="modal-body modal-nofoot">
+    <div class="row" ng-if="alert.msg">
+        <div class="col-md-12">
+            <div uib-alert class="alert-danger" close="alert.msg=undefined"><pre class="bg-danger">{{alert.msg}}</pre></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <h5>
+                <span>Switching</span>
+                <span class="btn-group btn-group-toggle" data-toggle="buttons">
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='autonomous'}"
+                           ng-click="setAutomatonTemplate('autonomous')">
+                        <input type="radio" name="options" autocomplete="off" checked> Autonomous
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='timed'}"
+                           ng-click="setAutomatonTemplate('timed')">
+                        <input type="radio" name="options" autocomplete="off"> Timed
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='guarded'}"
+                           ng-click="setAutomatonTemplate('guarded')">
+                        <input type="radio" name="options" autocomplete="off"> Guarded
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='controlled'}"
+                           ng-click="setAutomatonTemplate('controlled')">
+                        <input type="radio" name="options" autocomplete="off"> Generic
+                    </label>
+                </span>
+            </h5>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <k4-hybrid-automaton-modeler theme="default"
+                                         layout="TD"
+                                         code="code"
+                                         on-change="onHAChange(code,svg)"
+                                         on-error="onHAError(error)"></k4-hybrid-automaton-modeler>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <h5>
+                <span>Specification</span>
+                <span class="btn-group btn-group-toggle" data-toggle="buttons">
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind.stability}"
+                           ng-click="toggleSpecKind('stability')">
+                        <input type="checkbox" name="options" autocomplete="off" checked> Stability
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind.attractivity}"
+                           ng-click="toggleSpecKind('attractivity')">
+                        <input type="checkbox" name="options" autocomplete="off"> Attractivity
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind.custom}"
+                           ng-click="toggleSpecKind('custom')">
+                        <input type="checkbox" name="options" autocomplete="off"> Custom
+                    </label>
+                </span>
+            </h5>
+        </div>
+    </div>
+    <div class="row k4-vertical-fill-flex">
+        <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex well well-compact">
+            <div ui-ace="{theme:'github',mode:'dl',showGutter:true,onLoad:aceLoaded,onChange:aceChanged,advanced:{showPrintMargin:false}}"
+                 ng-model="model.content" id="editor"></div>
+        </div>
+    </div>
+</div>

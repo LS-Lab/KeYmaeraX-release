@@ -37,6 +37,7 @@ object PegasusInstaller extends Logging {
         "Primitives/DiscreteAbstraction.m" ::
         "Primitives/FirstIntegrals.m" ::
         "Primitives/LinearAlgebraicInvariants.m" ::
+        "Primitives/Lyapunov.m" ::
         "Primitives/LZZ.m" ::
         "Primitives/PreservedState.m" ::
         "Primitives/Primitives.m" ::

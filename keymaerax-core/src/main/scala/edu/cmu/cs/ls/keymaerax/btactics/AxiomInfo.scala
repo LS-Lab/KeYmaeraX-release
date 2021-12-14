@@ -114,8 +114,8 @@ object DerivationInfoRegistry extends Logging {
 
 
 
-  private def useAt(pi: ProvableInfo): DependentPositionTactic = HilbertCalculus.useAt(pi)
-  private def useAt(l: Lemma): DependentPositionTactic = HilbertCalculus.useAt(l)
+  private def useAt(pi: ProvableInfo): BuiltInPositionTactic = HilbertCalculus.useAt(pi)
+  private def useAt(l: Lemma): BuiltInPositionTactic = HilbertCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
   ////////////////////////////////////////////////////////
@@ -1016,7 +1016,8 @@ object DerivationInfoRegistry extends Logging {
       (ToolTactics.getClass, ru.typeOf[ToolTactics.type]),
       (Transitivity.getClass, ru.typeOf[Transitivity.type]),
       (UnifyUSCalculus.getClass, ru.typeOf[UnifyUSCalculus.type]),
-      (ModelPlex.getClass, ru.typeOf[ModelPlex.type])
+      (ModelPlex.getClass, ru.typeOf[ModelPlex.type]),
+      (SwitchedSystems.getClass, ru.typeOf[SwitchedSystems.type])
     )
     objects.foreach({case (cl, ct) => initClass(cl, ct)})
     /* Check that the list of annotated tactics we processed matches the list of named BelleExprs which have been

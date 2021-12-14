@@ -362,7 +362,7 @@ private object DifferentialTactics extends Logging {
       diffRefineInternal(f, hide)(pos,sequent)
      })
 
-  @Tactic(names="Differential Refine",
+  @Tactic("dR", longDisplayName="Differential Refine",
     codeName="dR", // todo: rename the tactic directly
     premises="Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
@@ -387,7 +387,7 @@ private object DifferentialTactics extends Logging {
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint.
     * @see AxiomaticODESolver.inverseDiffCut
     * */
-  @Tactic(names="Inverse Differential Cut",
+  @Tactic("dCi", longDisplayName="Inverse Differential Cut",
     codeName="dCi", // todo: rename the tactic directly
     premises="Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
     conclusion="Γ |- [x'=f(x) & Q∧R]P, Δ",
@@ -1311,7 +1311,7 @@ private object DifferentialTactics extends Logging {
   private val one = Number(1)
   private val two = Number(2)
 
-  // was "dbx"
+  // TODO: needs soundness guard on cofactor
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
@@ -1328,65 +1328,42 @@ private object DifferentialTactics extends Logging {
       case e => throw new TacticInapplicableFailure(s"Not sure what to do with shape ${e.prettyString}, dgDbx requires 0 on RHS")
     }
 
-    val dbxRw = pop match {
-      case LessEqual(_,_) => dbxLeqRw
-      case GreaterEqual(_,_) => dbxGeqRw
-      case Less(_,_) => dbxLtRw
-      case Greater(_,_) => dbxGtRw
-      case Equal(_,_) => dbxEqRw
-      case NotEqual(_,_) => dbxNeqRw
+    val (dbxRw,subst) = pop match {
+      case Equal(_,_) => (Ax.DBXeq,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
+      case GreaterEqual(_,_) => (Ax.DBXge,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
+      case LessEqual(_,_) => (Ax.DBXle,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
+      case Greater(_,_) => (Ax.DBXgtOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
+      case Less(_,_) => (Ax.DBXltOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
+      case NotEqual(_,_) => (Ax.DBXneOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
       case _ =>  ??? // caught by exception in previous case match
-    }
-
-    val isOpen = property match {
-      case  _: Greater => true
-      case _: Less => true
-      case _ => false
     }
 
     //Skip ghosts if input cofactor was just 0
     //Could also do more triviality checks like -0, 0+0 etc.
     if (qco == zero) {
-      //println("dgDbx automatically used dI for trivial cofactor")
+      val isOpen = property match {
+        case  _: Greater => true
+        case _: Less => true
+        case _ => false
+      }
       if(isOpen) openDiffInd(pos) else diffInd('full)(pos)
     }
     else {
-      /** The ghost variable */
-      val gvy = TacticHelper.freshNamedSymbol("dbxy_".asVariable,seq)
-
-      /** Another ghost variable */
-      val gvz = TacticHelper.freshNamedSymbol("dbxz_".asVariable,seq)
-
-      //Construct the diff ghost y' = -qy
-      val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco), gvy))
-      //Diff ghost z' = qz/2
-      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, two), gvz))
-
-      //Postcond:
-      //For equalities, != 0 works too, but the > 0 works for >=, > as well
-      val gtz = Greater(gvy, zero)
-      val pcy = pop.reapply(Times(gvy, p), zero)
-      val pcz = Equal(Times(gvy, Power(gvz, two)), one)
-
-      DebuggingTactics.debug("Darboux postcond " + pcy.toString + " " + pcz.toString) &
-        dG(dey, None)(pos) & //Introduce the dbx ghost
-        existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
-        diffCut(gtz)(pos) < (
-          diffCut(pcy)(pos) <(
-            diffWeakenG(pos) & byUS(dbxRw)
-            ,
-            if (isOpen) openDiffInd(pos) else diffInd('full)(pos)
-          )
-          ,
-          //@note does not need Dconstify since postcondition is dbxy_>0 and ODE has dbxy_'
-          DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
-            existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
-            diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
-              <(
-              hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
-              cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
-            )
+      Dconstify(
+        useAt(dbxRw,(us: Option[Subst]) => us.get ++ subst)(pos) <(
+          QE,
+          derive(pos++ dbxRw.recursor.head) &
+          DE(pos) &
+          // todo: mostly copy-paste from dI
+          TryCatch(Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(seq, pos), classOf[SubstitutionClashException],
+            (_: SubstitutionClashException) =>
+              DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")
+          ) &
+          //@note DW after DE to keep positions easier
+          (if (hasODEDomain(seq, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
+            QE
         )
+      )(pos)
     }
   })
 
@@ -1398,11 +1375,11 @@ private object DifferentialTactics extends Logging {
     * works for both > and >= (and <, <=)
     * Soundness note: this uses a ghost that is not smooth
     */
-
   private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
   private lazy val barrierCond2: ProvableSig = remember("h_() = k_() -> max(g_()*g_(),h_()) > 0 -> f_() > 0 ->  ((-(g_()*h_())/max(g_()*g_(),h_())) * f_() + 0) * g_() + f_() * k_() >=0".asFormula,QE,namespace).fact
 
   // was named "barrieraux"
+  // TODO: Update this to use axiomatic DBX once the soundness guards are in place
   private def dgBarrierAux : DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
 
@@ -1451,7 +1428,7 @@ private object DifferentialTactics extends Logging {
     val pre = diffCut(barrierFml)(pos) < (
         skip, /* diffWeakenG faster but loses assumptions*/
         //todo: Not sure why dW sometimes fails here
-        (dW(pos) & useAt(barrierCond)(1) | diffWeakenG(pos) & useAt(barrierCond)(1, 1 :: Nil)) & timeoutQE & done
+        (dW(pos) & useAt(barrierCond)(1) | diffWeakenG(pos) & useAt(barrierCond)(1, 1 :: Nil)) & timeoutQE & DebuggingTactics.done("Attempted to prove generated Barrier " + barrierFml.prettyString + " without any assumptions, but failed to prove; try to use dC to preserve additional facts from your assumptions")
     ) &
     starter
 
@@ -1516,7 +1493,7 @@ private object DifferentialTactics extends Logging {
       )
   })
 
-  @Tactic(names="Strict Barrier Certificate",
+  @Tactic(names="Barr", longDisplayName="Strict Barrier Certificate",
     codeName="barrier", // todo: rename the tactic directly
     premises="Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
     conclusion="Γ |- [x'=f(x) & Q] p≳0, Δ",
@@ -1619,7 +1596,7 @@ private object DifferentialTactics extends Logging {
     starter & dgDbx(cofactor)(pos)
   })
 
-  @Tactic(names="Darboux (in)equalities",
+  @Tactic(longDisplayName="Darboux (in)equalities",
     premises="Γ |- p≳0 ;; Q |- p' ≳ g p",
     conclusion="Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs="g:option[term]",
@@ -1765,7 +1742,7 @@ private object DifferentialTactics extends Logging {
   /** Pieces together some ODE invariance tactics into a prover for ODE invariance:
     *
     * G |- P   P|-[x'=f(x)&Q]P
-    * ---
+    * ----------------------------
     * G |- [x'=f(x)&Q]P
     *
     * @param tryHard configures how hard the tactic tries to prove invariance in particular
@@ -1985,7 +1962,7 @@ private object DifferentialTactics extends Logging {
   private lazy val maxNonnegOr = remember("max(f_(), g_())>=0<->f_()>=0 | g_()>=0".asFormula, QE & done)
 
   /** chases min/max Less/LessEqual 0 to conjunctions and disjunctions */
-  val chaseMinMaxInequalities : DependentPositionTactic = chaseCustom({
+  val chaseMinMaxInequalities : BuiltInPositionTactic = chaseCustom({
     case Greater(FuncOf(m, _), _: Number) if m == minF =>
       (minPosAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
     case GreaterEqual(FuncOf(m, _), _: Number) if m == minF =>

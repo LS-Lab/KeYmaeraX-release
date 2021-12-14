@@ -8,13 +8,14 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SequentType, USubstPatternTactic}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import BelleLabels._
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Signature, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.IndexedSeq
@@ -47,7 +48,7 @@ private object DLBySubst {
             )) &
               hideL(-1, True)
             ,
-            hide(1) & boxTrue(1)
+            hide(1) & useAt(boxTrueAxiom)(1)
             ))::Nil)
     else
       USubstPatternTactic(
@@ -134,19 +135,26 @@ private object DLBySubst {
     conclusion = "Γ |- P, Δ",
     displayLevel = "browse"
   )
-  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (ctx, f: Formula) =>
-      val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
-      cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
-        skip,
-        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) &
+  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon { pos: Position => stutterFw(x)(pos) }
+  private[btactics] def stutterFw(x: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "stutter")
+    val sequent = pr.subgoals.head
+    sequent.at(pos) match {
+      case (ctx, f: Formula) =>
+        val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1).computeResult _) else (pos.topLevel, skip.result _)
+        (pr(cutLRFw(ctx(Box(Assign(x, x), f)))(pos).computeResult _, 0)
+          (if (hidePos.isAnte) CoHideLeft(hidePos.checkAnte.top) else CoHideRight(hidePos.checkSucc.top), 1)
+          (EquivifyRight(SuccPos(0)), 1)
+          (commute, 1)
+          (CEFw(pos.inExpr).result _, 1)
           (x match {
-            case v: BaseVariable => byUS(Ax.selfassignb.provable(URename("x_".asVariable, v, semantic=true)))
-            case DifferentialSymbol(v) => byUS(Ax.Dselfassignb.provable(URename("x_".asVariable, v, semantic=true)))
-          })
-      )
-    case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
-  })
+            case v: BaseVariable => US(Ax.selfassignb.provable(URename("x_".asVariable, v, semantic=true))).result _
+            case DifferentialSymbol(v) => US(Ax.Dselfassignb.provable(URename("x_".asVariable, v, semantic=true))).result _
+          }, 1)
+          )
+      case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
+    }
+  }
 
   /** Top-level abstraction: basis for abstraction tactic */
   val topAbstraction: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
@@ -338,7 +346,7 @@ private object DLBySubst {
           else sequent.ante.map(fml =>
             ghosts.foldLeft(fml)({ case (f, ((what, repl), _)) => SubstitutionHelper.replaceFree(f)(what, repl) })).
             flatMap(FormulaTools.conjuncts).
-            filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
+            filter(StaticSemantics.freeVars(_).intersect(aBVs.toSet).isEmpty).toList
         (constConjuncts, isGame) match {
           case (Nil, _) | (_, true) => (oldifiedC, skip, implyR(1))
           case (consts, false) => (And(consts.reduceRight(And), oldifiedC),
@@ -391,12 +399,25 @@ private object DLBySubst {
     require(pos.isTopLevel && pos.isSucc, "Tactic loop applicable only at top-level in succedent, but got position " +
       pos.prettyString + ". Please apply more proof steps until the loop is top-level or use [*] iterateb instead.")
 
-    val ov = FormulaTools.argsOf(TacticReservedSymbols.old, invariant)
+    //@note restrict to definitions that mention old(.) transitively
+    val invOldsDefs = Declaration(defs.decls.filter({ case (_, Signature(_, _, _, i, _)) =>
+      i.map(s => StaticSemantics.symbols(defs.exhaustiveSubst(s))).getOrElse(Set.empty).contains(TacticReservedSymbols.old) }))
+    val substInv = invOldsDefs.exhaustiveSubst(invariant)
+    val ov = FormulaTools.argsOf(TacticReservedSymbols.old, substInv)
     val doloop = (ghosts: List[((Term, Variable), BelleExpr)]) => {
       val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(1))
-      val oldified = SubstitutionHelper.replaceFn(TacticReservedSymbols.old, invariant, ghosts.map(_._1).toMap)
+      val oldified = SubstitutionHelper.replaceFn(TacticReservedSymbols.old, substInv, ghosts.map(_._1).toMap)
       val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
-      ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) & inputanon {(pos, sequent) => sequent.sub(pos) match {
+      val expandPrg = if (ghosts.nonEmpty) {
+        sequent.sub(pos) match {
+          case Some(Box(Loop(a), _)) =>
+            val toExpand = defs.transitiveSubstsFrom(a)
+            if (toExpand.nonEmpty) ExpandAll(toExpand)
+            else skip
+          case _ => skip
+        }
+      } else skip
+      expandPrg & ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) & inputanon {(pos, sequent) => sequent.sub(pos) match {
         case Some(Box(Loop(a), _)) =>
           if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
           else {
@@ -412,23 +433,40 @@ private object DLBySubst {
               if (consts.size > 1) And(oldified, consts.reduceRight(And))
               else if (consts.size == 1) And(oldified, consts.head)
               else And(oldified, True)
+
+            val expandInit = anon ((s: Sequent) => {
+              val toExpand = defs.transitiveSubstsFrom(s.toFormula)
+              if (toExpand.nonEmpty) ExpandAll(toExpand)
+              else skip
+            })
+            val expandPrg =
+              if (consts.flatMap(StaticSemantics.symbols).exists(_.isInstanceOf[Variable]) && StaticSemantics.boundVars(a).isInfinite) {
+                val asymbols = StaticSemantics.symbols(a)
+                ExpandAll(defs.substs.filter({
+                  case SubstitutionPair(p: ProgramConst, _) => asymbols.contains(p)
+                  case SubstitutionPair(p: SystemConst, _) => asymbols.contains(p)
+                  case _ => false
+                }))
+              }
+              else skip
+
             label(startTx) &
             cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
               /* c */ useAt(Ax.I)(pos) & andR(pos) <(
                 andR(pos) <(
                   label(replaceTxWith(initCase)),
-                  (andR(pos) <(ExpandAll(Nil) & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
+                  (andR(pos) <(expandInit & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
                     (andR(pos) <(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
-                    (if (constSuccs.nonEmpty) notR(pos) else skip) &
-                    ExpandAll(Nil) & SaturateTactic(andL('L)) & close & done),
+                    notR(pos) & SaturateTactic(andL('L)) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
                    else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
-                  andL(-1) & hideL(-1, oldified) & ExpandAll(Nil) & V(1) & close(-1, 1) & done)
+                  andL(-1) & hideL(-1, oldified) & expandPrg & V(1) & close(-1, 1) & done)
               ),
-              /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-                (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                 else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(useCase))
+              /* c -> d */
+              cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
+              andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1) &
+              label(replaceTxWith(useCase))
             )
           }
         case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
@@ -529,6 +567,18 @@ private object DLBySubst {
       skip,
       split(pos)
     )})
+
+  /** [[TactixLibrary.fp()]] */
+  def fpRule(fixpoint: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
+    require(pos.isTopLevel && pos.isAnte, "fp fixpoint only at top-level in antecedent, but got " + pos)
+    require(seq(pos) match { case Diamond(Loop(_),_) => true case _ => false }, "only applicable for <a*>p(||)")
+    label(startTx) &
+      cut(fixpoint) <(
+        label(replaceTxWith(BelleLabels.fixUseCase))
+        ,
+        cohide2(pos, SuccPosition(seq.succ.length+1/*'Rlast*/)) & byUS(Ax.FPrule) & label(replaceTxWith(BelleLabels.fixpoint))
+      )
+  }
 
   /** [[TactixLibrary.con()]] */
   @Tactic(
@@ -635,7 +685,8 @@ private object DLBySubst {
     premises =   "Γ |- [x:=e]P, Δ",
     //        iG ------------------
     conclusion = "Γ |- P, Δ",
-    inputs = "e:term;;x:option[variable]"
+    inputs = "e:term;;x:option[variable]",
+    displayLevel = "menu"
   )
   private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon (discreteGhost(e, x, assignInContext = true)(_: Position))
   /** @see [[TactixLibrary.discreteGhost]] */

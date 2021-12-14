@@ -4,11 +4,10 @@
  */
 package edu.cmu.cs.ls.keymaerax.codegen
 
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator._
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, Signature}
 
 object CGenerator {
   /** Prints a file header */
@@ -42,34 +41,6 @@ object CGenerator {
       |typedef struct verdict { int id; long double val; } verdict;
       |
       |""".stripMargin
-
-  /**
-    * Returns a set of names (excluding names in `exclude` and interpreted functions) that are immutable parameters of the
-    * expression `expr`. */
-  def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
-    StaticSemantics.symbols(expr)
-      .filter({
-        case Function("abs", None, Real, Real, Some(_)) => false
-        case Function("min" | "max", None, Tuple(Real, Real), Real, Some(_)) => false
-        case Function(name, _, Unit, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
-        case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
-        case _ => false //@note any other function or differential symbol
-      })
-
-  /** Returns a set of names whose values are chosen nondeterministically in the program `expr` (empty if `expr` is not
-    * a program). */
-  def getInputs(expr: Expression): Set[BaseVariable] = expr match {
-    case prg: Program =>
-      val inputs = scala.collection.mutable.Set[BaseVariable]()
-      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-          case AssignAny(v: BaseVariable) => inputs += v; Left(None)
-          case _ => Left(None)
-        }
-      }, prg)
-      inputs.toSet
-    case _ => Set()
-  }
 }
 
 /**
@@ -77,18 +48,86 @@ object CGenerator {
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
+class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration) extends CodeGenerator {
   /** Generate C Code for given expression using the data type cDataType throughout and the input list of variables */
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
-    generateMonitoredCtrlCCode(expr, stateVars, inputVars, fileName)
+    generateMonitoredCtrlCCode(expr, init, stateVars, inputVars, fileName)
+
+  /** The name of the monitor/control function argument representing monitor parameters. */
+  private val FUNC_PARAMS_NAME = CPrettyPrinter.PARAMS
+
+  /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
+  private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
+    case t: Variable =>
+      if (parameters.contains(t)) FUNC_PARAMS_NAME + "->"
+      else ""
+    case FuncOf(fn, Nothing) =>
+      if (parameters.contains(fn)) FUNC_PARAMS_NAME + "->"
+      else throw new CodeGenerationException("Non-posterior, non-parameter function symbol " + fn.prettyString + " is not supported")
+  }, defs)
+
+  /** Prints function definitions. */
+  private def printFuncDefs(defs: Declaration, parameters: Set[NamedSymbol]): String = {
+    //@note substs are topologically sorted, print in that order
+    defs.substs.reverse.
+      flatMap({
+        case SubstitutionPair(FuncOf(what, _), _) => Some(what)
+        case SubstitutionPair(PredOf(what, _), _) => Some(what)
+        case _ => None
+      }).map(name =>
+      defs.decls.find({ case (n, s) => Declaration.asNamedSymbol(n, s) == name }) match {
+        case Some((name, Signature(_, codomain, Some(args), interpretation, _))) =>
+          def ctype(s: Sort): String = s match {
+            case Real => "long double"
+            case Bool => "bool"
+            case _ => throw new IllegalArgumentException("Sort " + s + " not supported")
+          }
+          val cargs = args.map({ case (n, s) => s"${ctype(s)} ${n.prettyString}" }).mkString(", ")
+          //@note ensure that args don't have both . and ._0
+          assert(interpretation.forall(StaticSemantics.symbols(_).flatMap({
+            case DotTerm(_, Some(i)) => Some(i)
+            case DotTerm(_, None) => Some(0)
+            case _ => None
+          }).count(_ == 0) <= 1))
+          val argsSubst = USubst(args.zipWithIndex.flatMap({ case ((Name(n, idx), s), i) =>
+            (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
+              SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
+          val body = interpretation match {
+            case Some(i) => primitiveExprGenerator(parameters)(argsSubst(i))._2
+            case _ => PythonPrettyPrinter.numberLiteral(0.0) + " /* todo */"
+          }
+          def arguments(x: String): String = "const parameters* const " + FUNC_PARAMS_NAME + (if (x.nonEmpty) ", " + x else "")
+          s"""${ctype(codomain)} ${name.prettyString}(${arguments(cargs)}) {
+             |  return $body;
+             |}""".stripMargin
+      }).mkString("\n")
+  }
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
-  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
+  private def generateMonitoredCtrlCCode(expr: Expression, init: Formula, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
     require(names.intersect(RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " + names.intersect(RESERVED_NAMES).mkString(","))
-    val parameters = getParameters(expr, stateVars)
+    val bodyParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
+    val initParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(init), stateVars)
+    val parameters = bodyParameters ++ initParameters
 
+    def initTermContainer(expr: Expression, params: Set[NamedSymbol]): String = expr match {
+      case t: Variable if  params.contains(t) => FUNC_PARAMS_NAME + "->"
+      case t: Variable if !params.contains(t) => "init->"
+      case FuncOf(fn, Nothing) if  params.contains(fn) => FUNC_PARAMS_NAME + "->"
+      case _ => throw new CodeGenerationException("Unsupported symbol " + expr.prettyString + " found in initial conditions " + init.prettyString)
+    }
+
+    val initGen = new SimpleMonitorGenerator('resist, defs, CPrettyPrinter, initTermContainer)
+    val (_, initBody) = initGen(init, stateVars, inputVars, fileName)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
+
+    val initCheck =
+      s"""verdict checkInit(const state* const init, const parameters* const $FUNC_PARAMS_NAME) {
+         |  bool initOk = ${initBody.linesWithSeparators.map("    " + _).mkString.stripPrefix("    ")};
+         |  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
+         |  return result;
+         |}""".stripMargin
 
     (printHeader(fileName) +
       INCLUDE_STATEMENTS +
@@ -96,7 +135,11 @@ class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      bodyDefs, bodyBody)
+      printFuncDefs(defs, parameters) + "\n" +
+      initCheck + "\n" +
+      bodyDefs
+      ,
+      bodyBody)
   }
 
   private val RESERVED_NAMES = Set("main", "Main")

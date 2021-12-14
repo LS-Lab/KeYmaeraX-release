@@ -13,6 +13,11 @@
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
             name="<i class='fa fa-asterisk'></i> Identity" code-name="id" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <li><a ng-click="toggleUseAllFmls()"
+           uib-tooltip="Hide/Unhide All" tooltip-placement="left" tooltip-popup-delay="500">
+        <i class="fa" ng-class="{'fa-eye':areAllFmlsUsed(),'fa-eye-slash':!areAllFmlsUsed()}"> Hide/Unhide All</i>
+    </a>
+    </li>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"

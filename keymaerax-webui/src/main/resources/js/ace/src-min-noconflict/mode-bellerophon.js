@@ -6,11 +6,18 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var BellerophonHighlightRules = function() {
 
-    //@todo
+    //@todo generate from tactic annotations
     var keywords = (
-    "auto|unfold|prop|"+
-    "andL|andR|orL|orR|implyL|implyR|equivL|equivR|"+
-    "composeb|assignb|choiceb|loop"
+    "auto|unfold|propClose|simplify|"+
+    "expandAll|absExp|minmax|expandAllDefs|expand|"+
+    "prop|cut|id|andL|andR|orL|orR|implyL|implyR|equivL|equivR|notL|notR|closeT|closeF|commuteEquivR|commuteEquivL"+
+    "allR|allL|allLkeep|existsR|existsL|allRi|existsLi|allLmon|existsRmon"+
+    "chase|assignb|assignEquality|assignbDual|randomb|testb|choiceb|composeb|iterateb|loop|boxAnd|GV|MR|barcan|boxd|discreteGhost"+
+    "assignd|assigndEquality|assigndDual|randomd|testd|choiced|composed|iterated|con|diamondOr|diamondd"+
+    "ODE|solve|dW|dWplus|dIRule|dIClose|dC|dG|dR|odeInvC|barrier|dbx|diffInvariant|dCi|dGi|diffUnpackEvolDomain|domainStuck|splitWeakInequality"+
+    "dV|kDomainDiamond|dDR|compatCut|odeUnify|gEx|closedRef|dDX"+
+    "QE|smartQE|sosQE|pQE|intervalArithmetic|intervalCutTerms"+
+    "hideL|hideR"
     );
 
     var builtinConstants = ("'R|'L|'_");

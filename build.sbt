@@ -47,7 +47,8 @@ lazy val root = (project in file("."))
   .settings(
     name := "KeYmaeraX",
     assemblyJarName := "keymaerax-" + version.value + ".jar",
-    scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none"
+    scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none",
+    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(macros)
   )
   .settings(keymaeraxFullAssemblySettings: _*)
   .aggregate(macros, core, keymaerax)

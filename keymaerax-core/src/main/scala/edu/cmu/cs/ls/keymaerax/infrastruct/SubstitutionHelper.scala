@@ -93,7 +93,7 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
       case (x: Variable, _) => x
 //      case d: DifferentialSymbol if d == what => repl
 //      case d: DifferentialSymbol if d != what => d
-      case (d: Differential, Some(repl)) => repl
+      case (_: Differential, Some(repl)) => repl
       case (d: Differential, None) => d
       case (FuncOf(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty =>
         requireAdmissible(u, StaticSemantics(repl), repl, t)
@@ -104,7 +104,7 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
       case (x: AtomicTerm, _) => x
       case (Pair(l, r), None) => Pair(usubst(o, u, l), usubst(o, u, r))
       case (Pair(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
-      case (_, Some(repl)) if !u.intersect(StaticSemantics(t)).isEmpty => t
+      case (_, Some(_)) if !u.intersect(StaticSemantics(t)).isEmpty => t
       case _ => throw UnknownOperatorException("Not implemented yet", t)
     }
   }
@@ -184,6 +184,6 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
   @inline private def requireAdmissible(taboo: SetLattice[Variable], frees: SetLattice[Variable], e: Expression, context: Expression): Unit = {
     val clashes = taboo.intersect(frees)
     if (!clashes.isEmpty)
-      throw new SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
+      throw SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
   }
 }

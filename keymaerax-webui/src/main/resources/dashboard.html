@@ -47,7 +47,7 @@
             <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#mainnavbar">
                 <span class="fa fa-bars"></span>
             </button>
-<!--            <a class="navbar-brand" href="http://keymaeraX.org/">KeYmaera X</a>-->
+<!--            <a class="navbar-brand" href="https://keymaeraX.org/">KeYmaera X</a>-->
         </div>
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="mainnavbar">
@@ -84,18 +84,19 @@
                     <ul class="dropdown-menu" role="menu">
                         <!--<li><a href="#">Examples</a></li>-->
                         <li><a ng-click="showOverlayHelp()"><i class="fa fa-question-circle"></i> Quick Usage Help</a></li>
+                        <li><a target="_blank" href="https://keymaeraX.org/Xtutorial.html"><i class="fa fa-info-circle"></i> KeYmaera&#160;X Tutorial</a></li>
                         <li><a target="_blank" href="http://video.keymaeraX.org/"><i class="fa fa-info-circle"></i> User Videos</a></li>
-                        <li><a href="http://keymaeraX.org/Xtutorial.html"><i class="fa fa-info-circle"></i> KeYmaera&#160;X Tutorial</a></li>
+                        <li><a target="_blank" href="https://video.lfcps.org/"><i class="fa fa-info-circle"></i> Logic Videos</a></li>
                         <!--<li><a ng-click="startIntro();"><i class="fa fa-question-circle"></i> Step-by-step help</a></li>-->
                         <li><a href="dashboard.html?#/usage"><i class="fa fa-info-circle"></i> Using KeYmaera&#160;X UI</a></li>
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/syntax"><i class="fa fa-info-circle"></i> Syntax and Semantics</a></li>
-                        <li><a target="_blank" href="http://keymaerax.org/KeYmaeraX-sheet.pdf"><i class="fa fa-info-circle"></i> Cheat Sheet</a></li>
+                        <li><a target="_blank" href="https://keymaerax.org/KeYmaeraX-sheet.pdf"><i class="fa fa-info-circle"></i> Cheat Sheet</a></li>
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
                         <li class="divider"></li>
                         <li><a ng-click="extractdb()" ng-show="systemInfo.isLocal"><i class="fa fa-archive"></i> Extract Database</a></li>
-                        <li><a target="_blank" href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download KeYmaera&#160;X</a></li>
+                        <li><a target="_blank" href="https://keymaeraX.org/"><i class="fa fa-download"></i> Download KeYmaera&#160;X</a></li>
                     </ul>
                 </li>
                 <li class="nav-item">
@@ -137,7 +138,7 @@
 <div ng-controller="ServerInfoCtrl">
     <div class="alert alert-warning" role="alert" ng-if="!upToDate && versionInfoAvailable" ng-cloak>
         <button type="button" class="close" data-dismiss="alert">&times;</button>
-        <span class="text-warning"><b>Update:</b> version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a>.</span>
+        <span class="text-warning"><b>Update:</b> version {{latestVersion}} is now available from <a target="blank_" href="https://keymaeraX.org/">KeYmaeraX.org</a>.</span>
     </div>
 </div>
 
@@ -150,7 +151,7 @@
 <div class="footer" ng-controller="ServerInfoCtrl">
     <div class="container">
         <p class="text-muted k4-server-info">KeYmaera&#160;X {{keymaeraXVersion}}
-            <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a target="_blank" class="text-danger" href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
+            <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a target="_blank" class="text-danger" target="blank_" href="https://keymaeraX.org/">KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(no network).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest).</span>
             <i class="fa fa-copyright"></i> Carnegie Mellon University, <a href="https://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a> 2014-2021</p>
@@ -193,6 +194,7 @@
 <script src="/js/ace/src-min-noconflict/ace.js"></script>
 <script src="/js/ace/ui-ace.min.js"></script>
 <script src="/js/app.js"></script>
+<script src="/js/mermaid/mermaid.min.js"></script>
 <!-- Load services -->
 <script src="/js/services/services.js"></script>
 <script src="/js/services/sequentproofservice.js"></script>
@@ -254,6 +256,7 @@
 <script src="js/keymaera-ui/axiomkeyselector.js"></script>
 <script src="js/keymaera-ui/tacticmenuentry.js"></script>
 <script src="js/keymaera-ui/prooflist.js"></script>
+<script src="js/keymaera-ui/hamodeler.js"></script>
 
 <script>hljs.initHighlightingOnLoad();</script>
 

@@ -8,7 +8,6 @@ import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 /**
  * Tests automatic
@@ -212,6 +211,11 @@ class ToolTacticsTests extends TacticTestBase {
 
   "Edit" should "transform when special function abbrv is not used" in withQE { _ =>
     proveBy("x>=0".asFormula, edit("x>=1".asFormula)(1)).subgoals.loneElement shouldBe "==> x>=1".asSequent
+  }
+
+  it should "transform top-level with interpreted functions" in withQE { _ =>
+    proveBy("x>5 ==> abs(x)>=0".asSequent, edit("x>=0".asFormula)(1)).subgoals.loneElement shouldBe "x>5 ==> x>=0".asSequent
+    proveBy("x>5, y>2 ==> abs(x)+abs(y)+abs(x*y)>=0".asSequent, edit("x+y+x*y>=0".asFormula)(1)).subgoals.loneElement shouldBe "x>5, y>2 ==> x+y+x*y>=0".asSequent
   }
 
   it should "abbreviate" in withQE { _ =>

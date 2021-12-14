@@ -280,6 +280,13 @@ class SimplifierV3Tests extends TacticTestBase {
     )(1)).subgoals.loneElement shouldBe "==> 0=1 -> f(0,1)>=0".asSequent
   }
 
+  it should "not fail when predicates unify with true/false of some simplification axioms" in withMathematica { _ =>
+    //@note p(x) unifies with F_() and q(x) unifies with true in F_()->true, but applying substitution to F_()->true
+    //      does not result in original p(x)->q(x)
+    val s = "x>=0 -> (p(x)->q(x)), x>=0 ==> ".asSequent
+    proveBy(s, SimplifierV3.simplify(-1)).subgoals.loneElement shouldBe "p(x) -> q(x), x>=0 ==> ".asSequent
+  }
+
   "Normalizer" should "do some normalization" in withMathematica { _ =>
     val fml = "x*y=0 & (! x>=5 & y < 0 -> !(x>0 | 1+z>f+g+1.0))".asFormula
 

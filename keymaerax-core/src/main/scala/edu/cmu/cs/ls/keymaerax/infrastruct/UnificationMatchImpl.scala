@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 
 import scala.collection.immutable.{List, Nil}
 import scala.util.Try
@@ -78,12 +79,24 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
   protected override def unifies2(s1:Formula, s2:Formula, t1:Formula, t2:Formula): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try {
-      compose(unify(Subst(u1)(s2), t2), u1)
+      compose(unify(Subst(u1)(s2), t2), u1) //@note fails on x=1, p(x)
     } catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
-        val u2 = unify(s2, t2)
-        compose(unify(t1, Subst(u2)(s1)), u2)
+        try {
+          logger.trace("      try converse since " + e.getMessage)
+          compose(unify(t2, Subst(u1)(s2)), u1)
+        } catch {
+          case e: ProverException =>
+            logger.trace("      try next converse since " + e.getMessage)
+            val u2 = unify(s2, t2)
+            try {
+              compose(unify(t1, Subst(u2)(s1)), u2)
+            } catch {
+              case e: ProverException =>
+                logger.trace("      try final converse since " + e.getMessage)
+                compose(unify(Subst(u2)(s1), t1), u2)
+            }
+        }
     }
   }
   protected override def unifies2(s1:Program, s2:Program, t1:Program, t2:Program): List[SubstRepl] = {
@@ -209,7 +222,11 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
 
   protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     if (true)
-      Subst(us)
+      try {
+        Subst(us)
+      } catch {
+        case ex: Throwable => throw new UnificationException(e1.prettyString, e2.prettyString, "Invalid substitution computed", ex)
+      }
     else {
       val ren = MultiRename(RenUSubst.renamingPartOnly(us))
       Subst(us.map(sp =>
@@ -220,6 +237,103 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
           sp
       ))
     }
+  }
+}
+
+object RestrictedBiDiUnificationMatch extends RestrictedBiDiUnificationMatch
+class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
+  override protected def unify(e1: Term, e2: Term): List[SubstRepl] = e1 match {
+    case _: Number => e2 match {case Number(_) => if (e1==e2) id else ununifiable(e1,e2) case _: DotTerm | _: FuncOf => unify(e2,e1) case _ => ununifiable(e1,e2)}
+    // homomorphic cases
+    case Neg(t)          => e2 match {case Neg(t2)          => unify(t,t2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Differential(t) => e2 match {case Differential(t2) => unify(t,t2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    // case o: BinaryCompositeTerm => e2 match {case o2: BinaryCompositeTerm if o2.reapply==o.reapply => unify(o.left,o.right, o2.left,o2.right) case _ => ununifiable(e1,e2)}
+    case Plus  (l, r) => e2 match {case Plus  (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Minus (l, r) => e2 match {case Minus (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Times (l, r) => e2 match {case Times (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Divide(l, r) => e2 match {case Divide(l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Power (l, r) => e2 match {case Power (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    // unofficial
+    case Pair  (l, r) => e2 match {case Pair  (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+
+    // default
+    case _ => super.unify(e1, e2)
+  }
+
+  override protected def unify(e1: Formula, e2: Formula): List[SubstRepl] = e1 match {
+    // homomorphic base cases
+    case Equal       (l, r) => e2 match {case Equal       (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case NotEqual    (l, r) => e2 match {case NotEqual    (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case GreaterEqual(l, r) => e2 match {case GreaterEqual(l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Greater     (l, r) => e2 match {case Greater     (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case LessEqual   (l, r) => e2 match {case LessEqual   (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Less        (l, r) => e2 match {case Less        (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // homomorphic cases
+    case Not(g)      => e2 match {case Not(g2)      => unify(g,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case And  (l, r) => e2 match {case And  (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Or   (l, r) => e2 match {case Or   (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Imply(l, r) => e2 match {case Imply(l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Equiv(l, r) => e2 match {case Equiv(l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // NOTE DifferentialFormula in analogy to Differential
+    case DifferentialFormula(g) => e2 match {case DifferentialFormula(g2) => unify(g,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // pseudo-homomorphic cases
+    //@todo join should be enough for the two unifiers in this case after they have been applied to the other side
+    case Forall(vars, g) if vars.length==1 => e2 match {case Forall(v2,g2) if v2.length==1 => unifies2(vars.head,g, v2.head,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Exists(vars, g) if vars.length==1 => e2 match {case Exists(v2,g2) if v2.length==1 => unifies2(vars.head,g, v2.head,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // homomorphic cases
+    case Box    (a, p)   => e2 match {case Box    (a2,p2) => unifies2(a,p, a2,p2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unifies2(a,p, a2,p2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // default implementation
+    case _ => super.unify(e1, e2)
+  }
+
+  override protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] =
+    if (x1==e2) id else e2 match {
+      case v: Variable => unifier(x1,v)
+      case fn: FuncOf => unifier(fn,x1)
+      case _ => ununifiable(x1,e2)}
+
+  override protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
+    case Assign(x, t)             => e2 match {case Assign(x2,t2)    => unifies2(x,t, x2,t2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case AssignAny(x)             => e2 match {case AssignAny(x2)    => unify(x,x2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Test(f)                  => e2 match {case Test(f2)         => unify(f,f2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case ODESystem(a, h)          => e2 match {case ODESystem(a2,h2) => unifies2(a,h, a2,h2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Choice(a, b)             => e2 match {case Choice(a2,b2)    => unifies2(a,b, a2,b2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Compose(a, b)            => e2 match {case Compose(a2,b2)   => unifies2(a,b, a2,b2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Loop(a)                  => e2 match {case Loop(a2)         => unify(a,a2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Dual(a)                  => e2 match {case Dual(a2)         => unify(a,a2) case _: ProgramConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case _ => super.unify(e1, e2)
+  }
+
+  override protected def unifyApplicationOf(F: (Function, Term) => Expression, f: Function, t: Term, e2: Expression): List[SubstRepl] = {
+    val dt = coloredDotsTerm(t.sort)
+
+    val uInv0 = unify(dt, t).map(_.swap.asInstanceOf[(Term, Term)]).toMap
+    val e2repl = SubstitutionHelper.replacesFree(e2)(uInv0.get)
+    val diff = StaticSemantics.symbols(dt) -- StaticSemantics.symbols(e2repl)
+
+    val uInv1: Map[Term, Term] =
+      if (diff.size == 1) {
+        // 1 argument not mentioned verbatim, see if e2 has a single number to match with
+        val nums = scala.collection.mutable.ListBuffer.empty[Number]
+        ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+            case n: Number => nums += n; Left(None)
+            case _ => Left(None)
+          }
+        }, e2)
+        if (nums.distinct.size == 1) {
+          val unmatched = uInv0.find(_._2 == diff.head).get
+          Map(nums.head -> unmatched._2)
+        } else Map.empty
+      } else Map.empty
+
+    unifier(F(f, dt), SubstitutionHelper.replacesFree(e2repl)(uInv1.get))
   }
 }
 

@@ -42,11 +42,13 @@ import scala.collection.immutable._
 import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator, CodeGenerator, PythonGenerator, PythonMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.{Controlled, Guarded, StateDependent, SwitchedSystem, Timed}
+import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.parser.{Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
@@ -974,57 +976,57 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     //@note Learner's mode Level=0, Industry mode Level=1
-    val examples =
-    new ExamplePOJO(6, "Textbook",
-      "LFCPS 2018 Textbook",
-      "",
-      "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
-      "/examples/tutorials/lfcps-examples.png", 0) ::
-    new ExamplePOJO(6, "MOD19",
-      "Marktoberdorf 2019 Tutorial Examples",
-      //"/keymaerax-projects/lfcps-turorial/README.md",
-      "",
-      "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-    new ExamplePOJO(5, "POPL 2019 Tutorial",
-      "Programming CPS With Proofs",
-      //"/keymaerax-projects/popltutorial/README.md",
-      "",
-      "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-      new ExamplePOJO(4, "DLDS",
-        "Dynamic Logic for Dynamical Systems Examples",
+    val examples = List(
+      ExamplePOJO(6, "Textbook",
+        "LFCPS 2018 Textbook Examples",
+        "",
+        "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
+        "/examples/tutorials/lfcps-examples.png", 0),
+      ExamplePOJO(6, "MOD19",
+        "Marktoberdorf 2019 Tutorial Examples",
+        //"/keymaerax-projects/lfcps-turorial/README.md",
+        "",
+        "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(5, "POPL 2019 Tutorial",
+        "Programming CPS With Proofs",
+        //"/keymaerax-projects/popltutorial/README.md",
+        "",
+        "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(4, "DLDS",
+        "Dynamic Logic for Dynamical Systems Marktoberdorf 2017",
         //"/keymaerax-projects/dlds/README.md",
         "",
         "classpath:/keymaerax-projects/dlds/dlds.kya",
-        "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-      new ExamplePOJO(0, "STTT Tutorial",
-        "Automated stop sign braking for cars",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(0, "STTT Tutorial",
+        "Collection of tutorial examples",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/sttt/sttt.kyx",
-        "/examples/tutorials/sttt/sttt.png", 1) ::
-      new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
-        "Proving ODEs",
+        "/examples/tutorials/sttt/sttt.png", 1),
+      ExamplePOJO(1, "CPSWeek 2016 Tutorial",
+        "Modeling and Proving ODEs",
         "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
         "classpath:/examples/tutorials/cpsweek/cpsweek.kyx",
-        "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-      new ExamplePOJO(2, "FM 2016 Tutorial",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(2, "FM 2016 Tutorial",
         "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/fm/fm.kyx",
-        "/examples/tutorials/fm/fm.png", 1) ::
-      new ExamplePOJO(3, "Beginner's Tutorial",
+        "/examples/tutorials/fm/fm.png", 1),
+      ExamplePOJO(3, "Beginner's Tutorial",
         "Feature Tour Tutorial",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/basic/basictutorial.kyx",
-        "/examples/tutorials/fm/fm.png", 0) ::
+        "/examples/tutorials/fm/fm.png", 0),
 //        new ExamplePOJO(3, "POPL 2019 Tutorial",
 //          "Programming CPS With Proofs",
 //          //"/keymaerax-projects/popltutorial/README.md",
 //          "",
 //          "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-//          "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-        Nil
+//          "/examples/tutorials/cpsweek/cpsweek.png", 1)
+    )
 
     db.getUser(userId) match {
       case Some(user) => new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
@@ -1034,6 +1036,185 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
   }
 }
 
+class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val templates = List(
+      TemplatePOJO("Plain", "A plain dL formula",
+        """ArchiveEntry "New Entry"
+          |
+          |Problem
+          |  /* fill in dL formula here */
+          |End.
+          |End.""".stripMargin,
+        Some(new Region(3, 2, 3, 31)),
+        None
+      ),
+      TemplatePOJO(
+        "Structured", "Archive with definitions",
+        """ArchiveEntry "New Entry"
+          |
+          |Definitions
+          |  /* A constant with arbitrary value, constrained in predicate p */
+          |  /* Real any; */
+          |
+          |  /* The constant 2 */
+          |  /* Real two = 2; */
+          |
+          |  /* An uninterpreted function */
+          |  /* Real f(Real x, Real y); */
+          |
+          |  /* Function x^2 */
+          |  /* Real sq(Real x) = x^two; */
+          |
+          |  /* Predicate x<=y */
+          |  /* Bool leq(Real x, Real y) <-> x<=y; */
+          |
+          |  /* Predicate p uses other definitions */
+          |  /* Bool p(Real x) <-> any>=two & leq(x,two); */
+          |
+          |  /* Hybrid programs */
+          |  /* HP increment ::= { x:=x+1; }; */
+          |  /* HP ode ::= { {x'=sq(x) & leq(x,two) } }; */
+          |  /* HP system ::= { { increment; ode; }* }; */
+          |End.
+          |
+          |ProgramVariables
+          |  /* Real x; */
+          |End.
+          |
+          |Problem
+          |  /* fill in dL formula here */
+          |  /* p(x) -> [system;]leq(x,any) */
+          |End.
+          |
+          |/* Optional tactic to prove the problem */
+          |/*
+          |Tactic "Proof"
+          |implyR('R=="p(x)->[system{|^@|};]leq(x,any())");
+          |expand "system";
+          |loop("leq(x,two())", 'R=="[{increment{|^@|};ode{|^@|};}*]leq(x,any())"); <(
+          |  "Init":
+          |    propClose,
+          |  "Post":
+          |    QE,
+          |  "Step":
+          |    composeb('R=="[increment{|^@|};ode{|^@|};]x<=2");
+          |    expandAllDefs;
+          |    unfold;
+          |    ODE('R=="[{x'=x^2&x<=2}]x<=2")
+          |)
+          |End.
+          |*/
+          |End.""".stripMargin,
+        Some(new Region(33, 2, 33, 35)),
+        None
+      )
+    )
+
+    db.getUser(userId) match {
+      case Some(_) => new GetTemplatesResponse(templates) :: Nil
+      case None => new ErrorResponse("Unable to retrieve templates. Unknown user " + userId) :: Nil
+    }
+
+  }
+}
+
+class CreateControlledStabilityTemplateRequest(userId: String, code: String, switchingKind: String, specKind: List[String],
+                                               vertices: JsArray, subGraphs: JsArray, transitions: JsArray) extends UserRequest(userId, _ => true) with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val mode = "mode".asVariable
+    def modeOf(s: String): Term = FuncOf(Function(s, None, Unit, Real), Nothing)
+
+    val transitionsByVertex = transitions.elements.toList.map(_.asJsObject).map(t => {
+      val ttext = t.fields("text").convertTo[String]
+      (t.fields("start").convertTo[String],
+        (t.fields("end").convertTo[String], if (ttext.isEmpty) Test(True) else Parser.parser.programParser(ttext)))
+    }).groupBy(_._1).map({ case (k, v) => k -> v.map(_._2) })
+
+    val subgraphIds = subGraphs.elements.map(_.asJsObject).map(s => s.fields("id").convertTo[String])
+    val modes = vertices.elements.map(_.asJsObject).filter(v => !subgraphIds.contains(v.fields("id").convertTo[String]))
+
+    val (odes, init) = modes.map(m => {
+      val mid = m.fields("id").convertTo[String]
+      val prg = m.fields("text").convertTo[String].trim match {
+        case "" => Test(True)
+        case s => Parser.parser.programParser("{" + s + "}")
+      }
+      (mid, prg, transitionsByVertex.getOrElse(mid, List.empty))
+    }).toList.
+      //@note ignore subgraphs and other nodes without ODEs
+      filter({ case (_, prg, _) => !StaticSemantics.freeVars(prg).isInfinite }).
+      partition(_._2.isInstanceOf[ODESystem])
+
+    if (init.length <= 1) {
+      val initPrg = init.headOption.flatMap({ case (n, prg, _) =>
+        val initTransitions = transitionsByVertex(n).flatMap({
+          case (d, Test(True)) =>
+            if (odes.exists(_._1 == d)) Some(Test(Equal(mode, modeOf(d))))
+            else None
+          case (d, tp) =>
+            if (odes.exists(_._1 == d)) Some(Compose(Test(Equal(mode, modeOf(d))), tp))
+            else Some(tp)
+        }).reduceRightOption(Choice)
+        prg match {
+          case Test(True) => initTransitions
+          case _ => Some(initTransitions.map(Compose(prg, _)).getOrElse(prg))
+        }
+      })
+      val c: SwitchedSystem = switchingKind match {
+        case "autonomous" => StateDependent(odes.map({ case (_, o: ODESystem, _) => o }))
+        case "timed" =>
+          if (init.nonEmpty) {
+            throw new IllegalArgumentException("Initialization not supported in timed switching template")
+          } else {
+            val time = subgraphIds.find(_.startsWith("Timed")).flatMap(_.split(":").toList match {
+              case _ :: t :: Nil => Some(t)
+              case _ => None
+            }).getOrElse("t_").asVariable
+
+            val modes = odes.map({ case (n, ODESystem(ode, q), transitions) =>
+              val tBound = q match {
+                case True => None
+                case LessEqual(l, r) if l == time => Some(r)
+                case _ => throw new IllegalArgumentException("Only time guards of the shape " + time + "<=T allowed as evolution domain constraints in timed switching template")
+              }
+              val boundedTransitions = transitions.map({
+                case (d, Test(True)) => (d, None)
+                case (d, Test(GreaterEqual(l, r))) if l == time => (d, Some(r))
+                case (_, _) => throw new IllegalArgumentException("Only time guards of the shape " + time + ">=T allowed on transitions in timed switching template")
+              })
+              (n, ode, tBound, boundedTransitions)
+            })
+
+            Timed(modes, "mode".asVariable, time)
+          }
+        case "guarded" =>
+          if (init.nonEmpty) {
+            throw new IllegalArgumentException("Initialization not supported in guarded switching template")
+          } else {
+            val modes = odes.map({ case (n, o: ODESystem, transitions) =>
+              val guardedTransitions = transitions.map({
+                case (d, Test(p)) => (d, p)
+                case (_, _) => throw new IllegalArgumentException("Only tests allowed on transitions in guarded mode")
+              })
+              (n, o, guardedTransitions)
+            })
+            Guarded(modes, "mode".asVariable)
+          }
+        case "controlled" => Controlled(initPrg, odes.map({ case (n, o: ODESystem, t) => (n, o, t) }), mode)
+      }
+      List(new GetControlledStabilityTemplateResponse(code, c, specKind))
+    } else {
+      List(new ErrorResponse("At most 1 initialization node expected, but got nodes " + init.map(_._1).mkString(",")))
+    }
+  }
+
+  private def flattenAssignments(prg: Program): List[Assign] = prg match {
+    case a: Assign => List(a)
+    case Compose(a, b) => flattenAssignments(a) ++ flattenAssignments(b)
+    case _ => throw new IllegalArgumentException("Unsupported program in hybrid automaton guard; expected guard of the shape ?Q;x_0:=e_0;x_1:=e_1;...;x_n:=e_n;, but got " + prg.prettyString)
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Models
@@ -1048,17 +1229,24 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
     val modelInfo = db.getModel(modelId)
     if (db.getProofsForModel(modelId).forall(_.stepCount == 0)) {
       if (ArchiveParser.isExercise(content)) {
-        db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
-        BooleanResponse(flag = true) :: Nil
+        db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content), None)
+        ModelUpdateResponse(modelId, name, content, emptyToOption(title), emptyToOption(description), None) :: Nil
       } else try {
         ArchiveParser.parse(content) match {
           case e :: Nil =>
-            db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(e.problemContent))
-            BooleanResponse(flag = true) :: Nil
+            db.updateModel(modelId.toInt, e.name, e.info.get("Title"), e.info.get("Description"),
+              emptyToOption(e.fileContent), e.tactics.headOption.map(_._2))
+            ModelUpdateResponse(modelId, e.name, e.problemContent, e.info.get("Title"), e.info.get("Description"), None) :: Nil
           case e => new ErrorResponse("Expected a single entry, but got " + e.size) :: Nil
         }
       } catch {
-        case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+        case e: ParseException =>
+          val nameFinder = """(?:Theorem|Lemma|ArchiveEntry|Exercise)\s*"([^"]*)"""".r("name")
+          val entryName = nameFinder.findFirstMatchIn(content).map(_.group("name")).getOrElse("<anonymous>")
+          db.updateModel(modelId.toInt, entryName, emptyToOption(modelInfo.title), emptyToOption(modelInfo.description),
+            emptyToOption(content), modelInfo.tactic)
+          ModelUpdateResponse(modelId, entryName, content, emptyToOption(modelInfo.title),
+            emptyToOption(modelInfo.description), Some(e.msg)) :: Nil
       }
     } else new ErrorResponse("Unable to update model " + modelId + " because it has " + modelInfo.numAllProofSteps + " proof steps") :: Nil
   }
@@ -1089,7 +1277,14 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
         "\nModel import may have failed because of model name clashed. Try renaming the failed models in the archive to names that do not yet exist in your model list.")
     } catch {
       //@todo adapt parse error positions (are relative to problem inside entry)
-      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+      case e: ParseException =>
+        val nameFinder = """(?:Theorem|Lemma|ArchiveEntry|Exercise)\s*"([^"]*)"""".r("name")
+        val entryName = nameFinder.findFirstMatchIn(archiveText).map(_.group("name")).getOrElse("<anonymous>")
+        val entry = TutorialEntry(entryName, archiveText, None, None, None, List.empty)
+        DatabasePopulator.importModel(db, userId, prove=false)(entry) match {
+          case Left((_, id)) => ModelUploadResponse(Some(id.toString), Some(e.getMessage)) :: Nil
+          case _ => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+        }
     }
   }
 }
@@ -1113,8 +1308,9 @@ class DeleteAllModelsRequest(db: DBAbstraction, userId: String) extends UserRequ
 
 class DeleteModelProofStepsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
-    val deletedSteps = db.getProofsForModel(modelId).map(p => db.deleteProofSteps(p.proofId)).sum
-    BooleanResponse(deletedSteps > 0) :: Nil
+    val modelProofs = db.getProofsForModel(modelId)
+    val deleted = modelProofs.map(p => (p.stepCount, db.deleteProofSteps(p.proofId)))
+    BooleanResponse(deleted.forall({ case (hadSteps, deletedSteps) => hadSteps == deletedSteps })) :: Nil
   }
 }
 
@@ -1180,10 +1376,10 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   }
 
   private def createController(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = modelFml match {
-    case Imply(_, Box(prg, _)) => conditionKind match {
+    case Imply(init, Box(prg, _)) => conditionKind match {
       case "dL" => new ModelPlexArtifactResponse(model, extractController(prg)) :: Nil
       case "C" =>
-        val controller = (new CGenerator(new CControllerGenerator()))(prg, vars, CGenerator.getInputs(prg))
+        val controller = (new CGenerator(new CControllerGenerator(model.defs), init, model.defs))(prg, vars, CodeGenerator.getInputs(prg))
         val code =
           s"""${controller._1}
            |${controller._2}
@@ -1208,8 +1404,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   }
 
   private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
-    case Imply(_, Box(prg, _)) =>
-      createMonitorCondition(modelFml, stateVars, Map.empty) match {
+    case Imply(init, Box(prg, _)) =>
+      createMonitorCondition(modelFml, stateVars, ListMap.empty) match {
         case Left((monitorConjecture, monitorCond, _)) =>
           def fresh(v: Variable, postfix: String): Variable = BaseVariable(v.name + postfix, v.index, v.sort)
 
@@ -1221,10 +1417,10 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               val sandbox = Compose(ctrl, Choice(Test(monitorCond), Compose(Test(Not(monitorCond)), fallback)))
               new ModelPlexSandboxResponse(model, monitorConjecture, sandbox) :: Nil
             case "C" =>
-              val ctrlInputs = CGenerator.getInputs(monitorCond)
-              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(monitorCond, stateVars, ctrlInputs, "Monitor")
-              val inputs = CGenerator.getInputs(prg)
-              val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
+              val ctrlInputs = CodeGenerator.getInputs(monitorCond)
+              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, model.defs), init, model.defs))(monitorCond, stateVars, ctrlInputs, "Monitor")
+              val inputs = CodeGenerator.getInputs(prg)
+              val fallbackCode = new CControllerGenerator(model.defs)(prg, stateVars, inputs)
               val declarations = ctrlMonitorCode._1.trim
               val monitorCode = ctrlMonitorCode._2.trim
 
@@ -1263,11 +1459,13 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   /** Synthesizes a ModelPlex monitor formula over variables `vars` from the model `modelFml`.
     * Returns the monitor conjecture together with the synthesized monitor, or an error. */
   private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable],
-                                     unobservable: Map[Variable, Option[Formula]]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
+                                     unobservable: ListMap[NamedSymbol, Option[Formula]]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
 
     val mx = ModelPlex.mxSynthesize(monitorKind) &
-      ModelPlex.mxAutoInstantiate(assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify)) &
+      //@todo unobservable symbols tactic argument not yet serializable
+      //ModelPlex.mxAutoInstantiate(assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify)) &
+      ModelPlex.mxAutoInstantiate(assumptions) &
       ModelPlex.mxFormatShape(monitorShape)
 
     val monitorCond = try {
@@ -1283,8 +1481,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   }
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
-    val Imply(_, Box(prg, _)) = modelFml
-    createMonitorCondition(modelFml, vars, Map.empty) match {
+    val Imply(init, Box(prg, _)) = modelFml
+    createMonitorCondition(modelFml, vars, ListMap.empty) match {
       case Left((modelplexConjecture, monitorFml, synthesizeTactic)) =>
         conditionKind match {
           case "dL" =>
@@ -1299,8 +1497,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               Nil, Map.empty)
             new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
-            val inputs = CGenerator.getInputs(prg)
-            val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)
+            val inputs = CodeGenerator.getInputs(prg)
+            val monitor = (new CGenerator(new CMonitorGenerator('resist, model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
             val code =
               s"""${monitor._1}
                  |${monitor._2}
@@ -1319,6 +1517,14 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                  |""".stripMargin
 
             new ModelPlexCCodeResponse(model, code) :: Nil
+          case "Python" =>
+            val inputs = CodeGenerator.getInputs(prg)
+            val monitor = (new PythonGenerator(new PythonMonitorGenerator('min, model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
+            val code =
+              s"""${monitor._1}
+                 |${monitor._2}""".stripMargin
+
+            new ModelPlexCCodeResponse(model, code) :: Nil
         }
       case Right(e) => e :: Nil
     }
@@ -1333,8 +1539,8 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
     val model = db.getModel(modelId)
     val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
-    val unobservable = Map.empty[Variable, Option[Formula]]
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars, unobservable)
+    val unobservable = ListMap.empty[NamedSymbol, Option[Formula]]
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars, unobservable)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -1770,6 +1976,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val proofSession = session(proofId).asInstanceOf[ProofSession]
+        //@note add a copy of parent proof session under local proof ID to allow stepping deeper into tactics
+        session += localProofId.toString -> proofSession.copy(proofId = localProofId.toString)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, proofSession.defs,
           RequestHelper.listenerFactory(db, proofSession),
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
@@ -1869,8 +2077,7 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   }
 }
 
-class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String,
-                               axiomId: Option[String])
+class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, axiomId: Option[String])
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val infos = axiomId match {
@@ -1878,7 +2085,6 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
         val di = Try(DerivationInfo.ofCodeName(aid)).toOption
         di.map(info => (info, UIIndex.comfortOf(aid))).toList
       case None => DerivationInfo.allInfo.
-        filter({case (_, di) => di.displayLevel != 'internal}).
         map({case (_, di) => (di, UIIndex.comfortOf(di.codeName))}).toList
     }
     ApplicableAxiomsResponse(infos, Map.empty, topLevel=true) :: Nil
@@ -2197,6 +2403,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val values = Parser.parseExpressionList(value).map(_.prettyString)
         if (values.isEmpty) value
         else "\"" + values.mkString("::") + "::nil\""
+      case BelleTermInput(value, Some(ListArg(_: TermArg))) =>
+        val values = Parser.parseExpressionList(value).map(_.prettyString)
+        if (values.isEmpty) value
+        else "\"" + values.mkString("::") + "::nil\""
       case BelleTermInput(value, Some(_:StringArg)) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) =>
         "\"" + Parser.parseExpressionList(value).map(_.prettyString).mkString("::") + "::nil\""
@@ -2389,8 +2599,16 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(_) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
         val proofSession = session(proofId).asInstanceOf[ProofSession]
+
+        import TacticInfoJsonProtocol._
+        val tacticText = try {
+          t.parseJson.convertTo[TacticInfo].tacticText
+        } catch {
+          case _: ParsingException => t //@note backwards compatibility with database tactics not in JSON
+        }
+
         //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
-        val tactic = BelleParser.parseBackwardsCompatible(t, proofSession.defs)
+        val tactic = BelleParser.parseBackwardsCompatible(tacticText, proofSession.defs)
 
         def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
@@ -3026,7 +3244,7 @@ object RequestHelper {
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
   def listenerFactory(db: DBAbstraction, session: ProofSession)(proofId: Int)(tacticName: String, parentInTrace: Int,
                                                                               branch: Int): Seq[IOListener] = {
-    DBTools.listener(db, (tn: String) => {
+    DBTools.listener(db, constructGlobalProvable = false, (tn: String) => {
       val codeName = tn.split("\\(").head
       Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName, session)).getOrElse(tn)
     })(proofId)(tacticName, parentInTrace, branch)

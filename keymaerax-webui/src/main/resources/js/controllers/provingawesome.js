@@ -125,9 +125,11 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               controller: 'ModalMessageCtrl',
               size: 'md',
               resolve: {
-                title: function() { return "Prove lemmas"; },
+                title: function() { return "Check lemmas?"; },
                 message: function() { return "The proof uses " + usedLemmas.length + " unproved lemmas; do you want to check them now?"; },
-                mode: function() { return "yesno"; }
+                mode: function() { return "okcancel"; },
+                oktext: function() { return "Check"; },
+                canceltext: function () { return "Don't check"; }
               }
             });
 
@@ -879,6 +881,16 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       return 'rulehelp.html';
     }
 
+    $scope.toggleUseAllFmls = function() {
+      var node = sequentProofData.proofTree.node(sequentProofData.agenda.selectedId());
+      if (node) sequentProofData.formulas.toggleUseAllFmls(node.getSequent());
+    }
+
+    $scope.areAllFmlsUsed = function() {
+      var node = sequentProofData.proofTree.node(sequentProofData.agenda.selectedId());
+      return node ? sequentProofData.formulas.areAllFmlsUsed(node.getSequent()) : true;
+    }
+
     $scope.simulate = function() {
       $uibModal.open({
         templateUrl: 'templates/simulator.html',
@@ -1068,7 +1080,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.taskLabels = function(nodeId) {
-      return $scope.prooftree.node(nodeId).labels.map(function (l) { return trimTo(l, 10); }).join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
+      return $scope.prooftree.node(nodeId).labels.map(function (l) { return $scope.trimTo(l, 10); }).join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
     }
 
     $scope.saveTaskName = function(newName, oldName) {
@@ -1099,6 +1111,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         templateUrl: 'partials/modeldialog.html',
         controller: 'ModelDialogCtrl',
         size: 'fullscreen',
+        backdrop: 'static',
+        keyboard: false,
         resolve: {
           userid: function() { return $scope.userId; },
           modelid: function() { return modelId; },

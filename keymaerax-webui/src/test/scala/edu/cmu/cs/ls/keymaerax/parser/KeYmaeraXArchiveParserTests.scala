@@ -1734,7 +1734,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     inside (entry2.tactics) {
-      case (name, text, SeqTactic(ExpandAll(substs), lemma)) :: Nil =>
+      case (name, text, SeqTactic(ExpandAll(substs) :: lemma :: Nil)) :: Nil =>
         name shouldBe "Proof Entry 2"
         text shouldBe "useLemma({`Entry 1`})"
         substs should contain theSameElementsAs entry2.defs.substs

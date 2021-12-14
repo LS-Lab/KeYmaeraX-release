@@ -292,7 +292,7 @@ object PolynomialArithV2Helpers {
   def anyR(name: String) = UnitFunctional(name, AnyArg, Real)
 
   // @note: exposing private methods, only for tests
-  def usePrvAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic = useAt(fact, key)
+  def usePrvAt(fact: ProvableSig, key: PosInExpr): BuiltInPositionTactic = useAt(fact, key)
   def usePrvFor(fact: ProvableSig, key: PosInExpr): ForwardPositionTactic = useFor(fact, key)
 
   def substAny(s: String, t: Term) = USubst(Seq(SubstitutionPair(anyR(s), t)))

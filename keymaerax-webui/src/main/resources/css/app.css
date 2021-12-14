@@ -101,6 +101,14 @@ output {
   text-overflow: ellipsis;
 }
 
+.k4-copy-clipboard {
+  position: relative;
+  top: 1.5ex;
+  right: 2.5em;
+  margin-left: -20px;
+  margin-right: -20px;
+}
+
 .navbar {
   min-height: 30px;
 }
@@ -400,6 +408,12 @@ del {
   background: transparent;
   display: inline;
 }
+.k4-formula-collapsed {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
 .k4-functional {
@@ -636,9 +650,48 @@ del {
   word-wrap: break-word;
 }
 
-.k4-tactic-diff {
+.k4-tactic-todo-icon::before {
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+.k4-tactic-todo::after {
+  content: "\f040"; /* fontawesome pencil */
+  color: gray;
+  font-family: FontAwesome;
+  right: -1em;
   position: absolute;
-  border-bottom: 1px dashed;
+  top: 0;
+}
+
+.ace_gutter-cell.ace_breakpoint {
+  color: transparent; /* hide line number */
+  border-radius: 20px 0px 0px 20px;
+  box-shadow: 0px 0px 1px 1px green inset;
+}
+
+.ace_gutter-cell.ace_breakpoint::before {
+  content: "\f04b"; /* fontawesome play */
+  font-family: FontAwesome;
+  color: black;
+  margin-left: -.7em;
+}
+
+.k4-tactic-todo-active {
+  position: absolute;
+  border-bottom: 1px solid green;
+  border-right: 1px solid green;
+  border-top: 1px solid green;
+  border-left: 5px solid green;
+}
+
+.k4-tactic-todo {
+  position: absolute;
+  border: 1px solid gray;
+  border-radius: 2px;
 }
 
 .k4-no-padding {
@@ -707,6 +760,7 @@ del {
   position: absolute;
   top: calc(50% - 70px);
   left: calc(50% - 50px);
+  z-index: 2000;
 }
 
 .tactic-spinner {
@@ -715,6 +769,7 @@ del {
   position: absolute;
   top: calc(10% - 20px);
   left: calc(50% - 25px);
+  z-index: 2000;
 }
 
 .spinner-double-bounce1, .spinner-double-bounce2 {
@@ -727,7 +782,7 @@ del {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 10;
+  z-index: 2010;
 
   -webkit-animation: spinner-bounce 2.0s infinite ease-in-out;
   animation: spinner-bounce 2.0s infinite ease-in-out;
@@ -759,7 +814,7 @@ del {
   width: calc(100% + 10px);
   height: calc(100% + 30px);
   position: absolute;
-  z-index: 5;
+  z-index: 2005;
   margin: -20px -20px;
   border-radius: 3px;
 }
@@ -770,7 +825,7 @@ del {
   width: calc(100% + 10px);
   height: calc(100% + 30px);
   position: absolute;
-  z-index: 5;
+  z-index: 2005;
   margin: -20px -20px;
   border-radius: 3px;
 }
@@ -781,7 +836,7 @@ del {
   width: calc(100% + 10px);
   height: 150px; /*calc(100% + 30px);*/
   position: absolute;
-  z-index: 7;
+  z-index: 2007;
   margin: -20px -20px;
   border-radius: 3px;
 }
@@ -792,7 +847,7 @@ del {
   top: calc(50% + 45px);
   left: calc(50% - 100px);
   color: var(--lsmainback);
-  z-index: 10;
+  z-index: 2010;
 }
 
 .tactic-spinner-please-wait {
@@ -801,7 +856,7 @@ del {
   top: calc(10% + 25px);
   width: calc(100% + 10px);
   color: var(--lsmainback);
-  z-index: 10;
+  z-index: 2010;
 }
 
 .tactic-spinner-progresslist {
@@ -955,6 +1010,10 @@ del {
 .k4-half-screenheight {
   height: calc(50vh);
 }
+.k4-screenheight-40 {
+  height: calc(40vh);
+  overflow: scroll;
+}
 /* first uib-tabset div */
 .k4-vertical-fill > div {
   height: 100%;
@@ -998,6 +1057,22 @@ del {
   color: var(--lsmain);
   display: inline-block;
   white-space: nowrap;
+}
+
+.k4-sequent-antecedent > ul:last-child {
+  margin: 0px;
+}
+
+.k4-sequent-antecedent > ul:last-child li {
+  list-style-type: none;
+  padding: 0 0 0 0;
+  margin: 0 0 0 0;
+  text-align: left;
+  width: 0.5em;
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
 .k4-sequentRulePremise {

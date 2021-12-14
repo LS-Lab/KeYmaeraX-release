@@ -1,6 +1,6 @@
 angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
-  .directive('k4TacticEditor', ['$http', 'derivationInfos', 'Textcomplete', 'sequentProofData',
-      function($http, derivationInfos, /*Textcomplete,*/ sequentProofData) {
+  .directive('k4TacticEditor', ['$http', '$uibModal', 'derivationInfos', 'Textcomplete', 'sequentProofData',
+      function($http, $uibModal, derivationInfos, /*Textcomplete,*/ sequentProofData) {
     return {
         restrict: 'AE',
         scope: {
@@ -13,98 +13,238 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
         controller: ['$scope','sequentProofData', function($scope, sequentProofData) {
           $scope.aceEditor = undefined;
           $scope.tactic = sequentProofData.tactic;
-          $scope.tacticChanges = [];
+          $scope.agenda = sequentProofData.agenda;
           $scope.tacticExecPopover = {
             tactic: undefined
+          }
+          $scope.edit = {
+            activeMarker: undefined,
+            todoMarkers: []
           }
 
           $scope.createSnapshot = function(doc) {
             if (!$scope.tactic.snapshot) $scope.tactic.snapshot = doc.getAllLines();
           }
 
-          $scope.aceLoaded = function(editor) {
-            $scope.aceEditor = editor;
-            editor.on("mousemove", function(e) {
-              var hovered = $scope.tacticChanges.filter(function(v) {
-                var p = e.getDocumentPosition()
-                return v.range.contains(p.row, p.column);
-              });
-              if (hovered.length > 0) {
-                $scope.tacticExecPopover.tactic = hovered[0];
-              } else {
-                $scope.tacticExecPopover.tactic = undefined;
+          $scope.resetActiveEdit = function() {
+            if ($scope.edit.activeMarker) {
+              $scope.aceEditor.getSession().removeMarker($scope.edit.activeMarker.active);
+              $scope.aceEditor.getSession().clearBreakpoint($scope.edit.activeMarker.range.start.row);
+              $scope.aceEditor.getSession().addMarker($scope.edit.activeMarker.marker);
+            }
+            $scope.edit.activeMarker = undefined;
+          }
+
+          $scope.askSaveTacticChanges = function(nodeId) {
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Want to save your changes?"; },
+                message: function() { return "Saving runs the tactic and returns new subgoals, if any"; },
+                mode: function() { return "yesnocancel"; },
+                yestext: function() { return "Save" },
+                notext: function() { return "Don't save" }
               }
             });
-            editor.on("click", function(e) {
-              if (e.domEvent.altKey || e.domEvent.shiftKey) {
-                var clicked = $scope.tacticChanges.filter(function(v) {
-                  var p = e.getDocumentPosition();
-                  return v.range.contains(p.row, p.column);
-                });
-                if (clicked.length > 0 && e.domEvent.altKey) {
-                  $scope.executeTactic(clicked[0], false);
-                } else if (clicked.length > 0 && e.domEvent.shiftKey) {
-                  $scope.executeTactic(clicked[0], true);
+
+            modalInstance.result.then(
+              function(result) {
+                if (result == "ok") {
+                  // yes: execute tactic, but don't change tab
+                  var editRange = $scope.edit.activeMarker.range;
+                  var doc = $scope.aceEditor.getSession().getDocument();
+                  var tactic = { text: doc.getTextRange(editRange) };
+                  $scope.executeTactic(tactic, false);
+                } else {
+                  // no: discard tactic changes if there are any and change tab
+                  $scope.tactic.tacticText = $scope.tactic.snapshot;
+                  $scope.onNodeSelected({nodeId: nodeId});
                 }
+              },
+              function() {
+                // cancel: set cursor back to end of editing range, stay on tab
+                if ($scope.edit.activeMarker) {
+                  var endPos = $scope.edit.activeMarker.range.end.getPosition();
+                  $scope.aceEditor.moveCursorToPosition(endPos);
+                  $scope.aceEditor.getSelection().clearSelection();
+                }
+              }
+            );
+          }
+
+          $scope.changeTab = function(nodeId) {
+            if ($scope.edit.activeMarker) {
+              var doc = $scope.aceEditor.getSession().getDocument();
+              if (doc.getTextRange($scope.edit.activeMarker.range) != "todo") {
+                $scope.askSaveTacticChanges(nodeId);
               } else {
-                var p = e.getDocumentPosition();
-                var nodeId = $scope.tactic.nodeIdAtLoc(p.row, p.column);
                 $scope.onNodeSelected({nodeId: nodeId});
               }
+            } else {
+              $scope.onNodeSelected({nodeId: nodeId});
+            }
+          }
+
+          $scope.aceLoaded = function(editor) {
+            $scope.aceEditor = editor;
+            editor.on("guttermousedown", function(e) {
+              var target = e.domEvent.target;
+              if (target.className.indexOf("ace_gutter-cell") == -1) return;
+              if (!editor.isFocused()) return;
+
+              //@note css buttons are approximately left/right of gutter half
+              //var stepwise = e.clientX <= target.getBoundingClientRect().left + target.getBoundingClientRect().width/2;
+              var stepwise = false; //@note stepwise execution sometimes computes subgoal indices wrong, avoid for now
+
+              var doc = editor.getSession().getDocument();
+              var activeRange = $scope.edit.activeMarker ? $scope.edit.activeMarker.range : undefined;
+              if (activeRange) {
+                var tactic = { text: doc.getTextRange(activeRange) };
+                if (tactic.text.length > 0) $scope.executeTactic(tactic, stepwise);
+              }
+              e.stop();
             });
-            editor.on("mouseout", function(e) {
-              $scope.tacticExecPopover.tactic = undefined;
-            });
-            editor.on("focus", function(e) {
-              var nodeLoc = $scope.tactic.locOfNode($scope.nodeId);
-              if (nodeLoc) $scope.aceEditor.moveCursorTo(nodeLoc.endLine, nodeLoc.endColumn);
+            editor.on("click", function(e) {
+              var p = e.getDocumentPosition();
+              var activeRange = $scope.edit.activeMarker ? $scope.edit.activeMarker.range : undefined;
+              if (activeRange && activeRange.start.row <= p.row && p.row <= activeRange.end.row) {
+                e.preventDefault();
+                e.stopPropagation();
+              } else {
+                var nodeId = $scope.edit.activeMarker ?
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column, $scope.edit.activeMarker.range) :
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column);
+                if (nodeId && nodeId != $scope.nodeId) {
+                  if (sequentProofData.agenda.contains(nodeId)) {
+                    // change tab
+                    $scope.changeTab(nodeId);
+                  } else {
+                    // inspect some proof state without changing tab
+                    $scope.onNodeSelected({nodeId: nodeId});
+                  }
+                }
+              }
             });
             editor.getSelection().on("changeCursor", function(e) {
               var p = editor.getSelection().getCursor();
-              var nodeId = $scope.tactic.nodeIdAtLoc(p.row, p.column);
-              $scope.onNodeSelected({nodeId: nodeId});
+              var nodeId = $scope.edit.activeMarker ?
+                $scope.tactic.nodeIdAtLoc(p.row, p.column, $scope.edit.activeMarker.range) :
+                $scope.tactic.nodeIdAtLoc(p.row, p.column);
+              if (nodeId) {
+                var doc = editor.getSession().getDocument();
+                if (nodeId != $scope.nodeId && $scope.agenda.contains(nodeId)) {
+                  $scope.changeTab(nodeId);
+                } else if (nodeId != $scope.nodeId) {
+                  $scope.onNodeSelected({nodeId: nodeId});
+                } else if (!$scope.edit.activeMarker) {
+                  $scope.edit.todoMarkers.filter(function(e) {
+                    if (e.range.contains(p.row, p.column)) {
+                      $scope.edit.activeMarker = e;
+                      editor.getSession().removeMarker(e.marker);
+                      $scope.edit.activeMarker.active = editor.getSession().addMarker($scope.edit.activeMarker.range, "k4-tactic-todo-active", "fullLine", true);
+                      editor.getSession().setBreakpoint($scope.edit.activeMarker.range.start.row);
+                    }
+                  });
+                }
+              }
             });
             // fold markers are annotations
             editor.getSession().on("changeAnnotation", function(e) {
               $scope.aceEditor.getSession().foldAll(); // but foldAll only folds multiline folds
             });
-            editor.focus();
+            editor.commands.on("exec", function(e) {
+              if (e.command.readOnly) {
+                // key navigation
+              } else {
+                // typing
+                var range = editor.selection.getRange();
+                var doc = editor.getSession().getDocument();
+                if ($scope.edit.activeMarker) {
+                  // editing between the anchors created on unfinished tactics is allowed, but not outside
+                  if (!$scope.edit.activeMarker.range.containsRange(range)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                } else {
+                  //@todo delete selected area = prune (but after a yes/no dialog confirmation); for now: prevent
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }
+            });
+          }
+
+          $scope.allIndicesOfTodo = function(text) {
+            var regex = /todo/gi;
+            var result;
+            var indices = [];
+            while (result = regex.exec(text)) {
+              indices.push(result.index);
+            }
+            return indices;
           }
 
           $scope.aceChanged = function(delta) {
-            for (i = 0; i < $scope.tacticChanges.length; i++) {
-              $scope.aceEditor.getSession().removeMarker($scope.tacticChanges[i].marker);
-            }
-            $scope.tacticChanges = [];
-            var doc = $scope.aceEditor.getSession().getDocument();
+            var session = $scope.aceEditor.getSession();
+            var doc = session.getDocument();
 
-            var dmp = new diff_match_patch();
-            var diff = dmp.diff_main($scope.tactic.snapshot, doc.getValue());
+            if (delta.length > 0 && delta[0] && delta[0].action == "remove" && delta[0].lines.length > 1) {
+              if (delta[0].lines.every(function(l) { return l === ''; })) {
+                if ($scope.edit.activeMarker &&
+                      ($scope.edit.activeMarker.range.start.row > $scope.edit.activeMarker.range.end.row ||
+                       $scope.edit.activeMarker.range.start.row == $scope.edit.activeMarker.range.end.row &&
+                       $scope.edit.activeMarker.range.start.column > $scope.edit.activeMarker.range.end.column)) {
+                  // disallow deleting before marker start
+                  $scope.aceEditor.session.doc.revertDeltas([delta[0]]);
+                }
+                // otherwise ignore delete newline
+              } else {
+                //@note multi-line remove happens when a tactic is executed or undone, we recalculate markers on upcoming insert
+                if ($scope.edit.activeMarker) $scope.resetActiveEdit();
+                $.each($scope.edit.todoMarkers, function(i, e) {
+                  session.removeMarker(e.marker);
+                });
+                $scope.edit.todoMarkers = [];
+              }
+            } else if (delta[0].action == "insert" &&
+                       delta[0].lines.length === doc.getAllLines().length &&
+                       delta[0].lines.every(function(e,i) { return e === doc.getAllLines()[i]; } )) {
+              // mark all occurrences of unfinished tactics
+              var todoIndices = $scope.allIndicesOfTodo(doc.getValue());
+              if ($scope.edit.todoMarkers.length == 0) {
+                $.each(todoIndices, function(i,e) {
+                  var pos = doc.indexToPosition(e);
+                  var range = new ace.Range();
+                  range.start = pos;
+                  range.end = doc.createAnchor(pos.row, pos.column + "todo".length);
+                  var marker = session.addMarker(range, "k4-tactic-todo-icon k4-tactic-todo", "text", true);
+                  $scope.edit.todoMarkers.push({ range: range, marker: marker });
+                });
+              }
 
-            var offset = 0;
-            for (i = 0; i < diff.length; i++) {
-              var diffText = diff[i][1];
-              switch (diff[i][0]) {
-                case -1: // deleted: ignore (caused by undo, but also when deleting text)
-                  break;
-                case 0: // unchanged
-                  offset += diffText.length;
-                  break;
-                case 1: // added
-                  //@todo somewhere in ace editor API this functionality must be available
-                  var start = doc.indexToPosition(offset);
-                  var lines = diffText.split(doc.getNewLineCharacter());
-                  var end = {
-                    row: start.row + lines.length-1,
-                    column: lines[lines.length-1].length + (lines.length == 1 ? start.column : 0)
-                  };
-                  var diffRange = ace.Range.fromPoints(start, end);
-                  var marker = $scope.aceEditor.getSession().addMarker(diffRange, "k4-tactic-diff", "text", true);
-                  $scope.tacticChanges.push({ text: diffText, range: diffRange, marker: marker });
-                  offset += diffText.length;
-                  break;
+              // select current tab
+              if (!$scope.edit.activeMarker) {
+                var nodeLoc = $scope.tactic.locOfNode($scope.nodeId);
+                if (nodeLoc) {
+                  $scope.aceEditor.focus();
+                  $scope.aceEditor.moveCursorTo(nodeLoc.line, nodeLoc.column);
+                  $scope.aceEditor.getSelection().setSelectionRange(
+                    new ace.Range(nodeLoc.line, nodeLoc.column, nodeLoc.endLine, nodeLoc.endColumn), true);
+                }
+              } else {
+                var p = $scope.aceEditor.getCursorPosition();
+                var nodeId = $scope.edit.activeMarker ?
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column, $scope.edit.activeMarker.range) :
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column);
+                if (nodeId && nodeId != $scope.nodeId && sequentProofData.agenda.contains(nodeId)) {
+                  $scope.changeTab(nodeId);
+                }
               }
             }
+            // update the marker rendering
+            $scope.aceEditor.renderer.updateFull();
           }
 
           $scope.executeTactic = function(tactic, stepwise) {

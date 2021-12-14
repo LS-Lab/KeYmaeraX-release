@@ -1,11 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core.{Ensures, FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ProvableHelper, RestrictedBiDiUnificationMatch, UnificationTools}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.annotation.tailrec
 import scala.util.Try
 
 /**
@@ -35,6 +36,24 @@ trait Interpreter {
   /** Registered listeners. */
   def listeners: scala.collection.immutable.Seq[IOListener]
 
+  /** Names of nil tactics. */
+  protected lazy val nilNames = List(TactixLibrary.nil.prettyString, TactixLibrary.todo.prettyString, TactixLibrary.skip.prettyString)
+
+  /** Compares provables ignoring labels. */
+  protected def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
+    case (BelleProvable(pPrev, _, _), BelleProvable(pCurr, _, _)) => pCurr != pPrev
+    case _ => curr != prev
+  }
+
+  /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
+  protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration): USubst =
+    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, defs)
+
+
+  /** Applies substitutions `s` to provable `p` exhaustively. */
+  protected def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig =
+    p.reapply(ProvableHelper.exhaustiveSubst(p.underlyingProvable, s))
+
   /**
     * Replaces the nth subgoal of `original` with the remaining subgoals of `subderivation`.
     *
@@ -56,9 +75,9 @@ trait Interpreter {
         val substOrig = exhaustiveSubst(original, subst)
         val substSubDeriv = exhaustiveSubst(subderivation, subst)
         //@todo may no longer need unification now that inner sequential interpreter returns delayed substitutions
-        val unified = Try(UnificationMatch(substSubDeriv.conclusion, substOrig.subgoals(n))).toEither match {
+        val unified = Try(RestrictedBiDiUnificationMatch(substSubDeriv.conclusion, substOrig.subgoals(n))).toEither match {
           case Left(_) =>
-            Try(UnificationMatch(substOrig.subgoals(n), substSubDeriv.conclusion)).toEither match {
+            Try(RestrictedBiDiUnificationMatch(substOrig.subgoals(n), substSubDeriv.conclusion)).toEither match {
               case Left(ex) => throw ex
               case Right(s) => s
             }
@@ -97,7 +116,7 @@ trait Interpreter {
     * modulo constification renaming that is assumed to be applied in the future. Constification renaming requires
     * `parent` to have exactly one single subgoal. */
   protected def assertSubMatchesModuloConstification(parent: ProvableSig, sub: ProvableSig, n: Int, subst: USubst): Unit = {
-    if (exhaustiveSubst(parent, subst).subgoals(n) != Try(exhaustiveSubst(sub, subst)).toOption.getOrElse(sub).conclusion &&
+    if (ProvableHelper.exhaustiveSubst(parent.underlyingProvable, subst).subgoals(n) != Try(ProvableHelper.exhaustiveSubst(sub.underlyingProvable, subst)).toOption.getOrElse(sub.underlyingProvable).conclusion &&
         !subMatchesModuloConstification(parent.subgoals(n), sub.conclusion, subst)) {
       throw new BelleUnexpectedProofStateError(s"Subgoal #$n of the original provable (${parent.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${sub.conclusion}}),\nbut is not despite substitution $subst", sub.underlyingProvable)
     }
@@ -122,15 +141,6 @@ trait Interpreter {
       val backSubstSubConclusion = constifications.foldRight(sub)({ case ((fn, v), s) => s.replaceAll(fn, v) })
       parent == backSubstSubConclusion
     } else true
-  }
-
-
-    /** Applies substitutions `s` to provable `p` exhaustively. */
-  @tailrec
-  protected final def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
-    val substituted = p(s)
-    if (substituted != p) exhaustiveSubst(substituted, s)
-    else substituted
   }
 }
 

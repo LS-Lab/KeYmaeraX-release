@@ -210,13 +210,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     /** The tactic model */
     tactic: {
       tacticText: "",
-      nodesByLocation: undefined,
+      nodesByLocation: [],
       snapshot: undefined,
       verbose: true,
 
       fetch: function(userId, proofId) {
         var theTactic = this;
-        theTactic.synced = false;
         $http.get('proofs/user/' + userId + '/' + proofId + '/extract/' + (theTactic.verbose ? "verbose" : "succinct")).then(function (response) {
           theTactic.snapshot = response.data.tacticText;
           theTactic.tacticText = response.data.tacticText;
@@ -227,9 +226,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         });
       },
 
-      nodeIdAtLoc: function(line, column) {
+      nodeIdAtLoc: function(line, column, offset) {
         var nodesAtLoc = $.grep(this.nodesByLocation, function(v) {
-          return v.loc.line <= line && line <= v.loc.endLine && v.loc.column <= column && column <= v.loc.endColumn;
+          if (offset && v.loc.line >= offset.start.row) {
+            var lines = offset.end.row-offset.start.row;
+            return v.loc.line+lines <= line && line <= v.loc.endLine+lines;
+          } else return v.loc.line <= line && line <= v.loc.endLine;
         });
         return nodesAtLoc.length > 0 ? nodesAtLoc[0].node : undefined;
       },
@@ -254,6 +256,24 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       selectedIndicesIn: function(sequent) {
         return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.id; }).
         concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.id; }));
+      },
+      areAllFmlsUsed: function(sequent) {
+        if (sequent) {
+          var anteUsed = sequent.ante ? $.grep(sequent.ante, function(e, i) { return e.use; }) : [];
+          var succUsed = sequent.succ;
+          if (anteUsed.length == (sequent.ante ? sequent.ante.length : 0)) {
+            succUsed = sequent.succ ? $.grep(sequent.succ, function(e, i) { return e.use; }) : [];
+          }
+          return anteUsed.length == (sequent.ante ? sequent.ante.length : 0) &&
+                 succUsed.length == (sequent.succ ? sequent.succ.length : 0);
+        } else return true;
+      },
+      toggleUseAllFmls: function(sequent) {
+        if (sequent) {
+          var use = !this.areAllFmlsUsed(sequent);
+          $.map(sequent.ante, function(e, i) { e.use = use; return e; });
+          $.map(sequent.succ, function(e, i) { e.use = use; return e; });
+        }
       },
       mode: 'prove',
       stickyEdit: false

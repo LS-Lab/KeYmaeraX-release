@@ -311,8 +311,31 @@ class HilbertTests extends TacticTestBase {
 
   it should "use Barcan" in withTactics {
     proveBy("[x:=2;]\\forall y y<=x".asFormula, useAt(Ax.barcan)(1)).subgoals.loneElement shouldBe "==> \\forall y [x:=2;]y<=x".asSequent
-    the [IllFormedTacticApplicationException] thrownBy proveBy("[x:=2;]\\forall x x<=3".asFormula, useAt(Ax.barcan)(1)) should
-      have message "Unable to execute tactic 'barcan', cause: Core requirement failed: Space-compatible substitution expected: (a{|^@x_|};~>x_:=2;)"
+    the [InapplicableUnificationKeyFailure] thrownBy proveBy("[x:=2;]\\forall x x<=3".asFormula, useAt(Ax.barcan)(1)) should
+      have message """Axiom barcan [a{|^@x_|};]\forall x_ p(||)<->\forall x_ [a{|^@x_|};]p(||) cannot be applied: The shape of
+                     |  expression               [x:=2;]\forall x x<=3
+                     |  does not match axiom key [a{|^@x_|};]\forall x_ p(||)""".stripMargin
+  }
+
+  it should "use box true" in withTactics {
+    proveBy("[x:=0;]true".asFormula, useAt(Ax.boxTrueAxiom)(1)) shouldBe 'proved
+    proveBy("[x:=0;]true".asFormula, HilbertCalculus.boxTrue(1)) shouldBe 'proved
+    //@note boxTrue is an "unusual" axiom (no equivalence or implication) where useAt immediately forwards to "by",
+    // which only works if [...]true is the only formula in the sequent
+    the [SubderivationSubstitutionException] thrownBy proveBy("x=3 ==> [x:=0;]true".asSequent, useAt(Ax.boxTrueAxiom)(1)) should have message
+      """Subderivation substitution for subgoal does not fit to the subderivation's conclusion.
+        |subderivation Provable(  ==>  [x:=0;]true proved)
+        |conclude:   ==>  [x:=0;]true
+        |expected: x=3
+        |  ==>  [x:=0;]true @0 into
+        |Provable(x=3
+        |  ==>  [x:=0;]true
+        |  from   x=3
+        |  ==>  [x:=0;]true)""".stripMargin
+    proveBy("x=3 ==> [x:=0;]true".asSequent, useAt(Ax.boxTrueTrue)(1)).subgoals.loneElement shouldBe "x=3 ==> true".asSequent
+    proveBy("x=3 ==> [x:=0;]true".asSequent, HilbertCalculus.boxTrue(1)) shouldBe 'proved
+    proveBy("==> [y:=1;][x:=0;]true".asSequent, HilbertCalculus.boxTrue(1, 1::Nil)).subgoals.loneElement shouldBe "==> [y:=1;]true".asSequent
+    proveBy("[x:=0;]true ==> ".asSequent, HilbertCalculus.boxTrue(-1)).subgoals.loneElement shouldBe "true ==>".asSequent
   }
 
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {
@@ -619,19 +642,19 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in withTactics {
-    useFor(Ax.dDX, PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
+    useFor(Ax.dDX, PosInExpr(0::Nil))(SuccPosition(1, 1::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{c}>x=y".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in withTactics {
-    useFor(Ax.dDX)(SuccPosition(1, (0::1::Nil))) (
+    useFor(Ax.dDX)(SuccPosition(1, 0::1::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in withTactics {
-    useFor(Ax.dDX)(SuccPosition(1, (0::1::Nil))) (
+    useFor(Ax.dDX)(SuccPosition(1, 0::1::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
@@ -690,7 +713,7 @@ class HilbertTests extends TacticTestBase {
     println(proof)
   }
 
-  lazy val intervalify: DependentPositionTactic = chaseI(3, 3, (exp: Expression) => exp match {
+  lazy val intervalify: BuiltInPositionTactic = chaseI(3, 3, (exp: Expression) => exp match {
     // base case //@todo check that right-hand side is transformed, too
     case LessEqual(_:Variable, _) => Nil
     case LessEqual(Plus(_,_), _) => Ax.intervalUpPlus :: Nil

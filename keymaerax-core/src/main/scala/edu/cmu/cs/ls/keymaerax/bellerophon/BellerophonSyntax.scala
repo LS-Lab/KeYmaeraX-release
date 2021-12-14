@@ -90,10 +90,10 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
     * @note Equivalent to {{{a & Idioms.<(b,c)}}} */
   //@deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
-  def <(children: BelleExpr*): BelleExpr = SeqTactic(this, BranchTactic(children))
-  def switch(children: (BelleLabel, BelleExpr)*): BelleExpr = SeqTactic(this, CaseTactic(children))
+  def <(children: BelleExpr*): BelleExpr = SeqTactic(Seq(this, BranchTactic(children)))
+  def switch(children: (BelleLabel, BelleExpr)*): BelleExpr = SeqTactic(Seq(this, CaseTactic(children)))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
-  def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(this, USubstPatternTactic(p))
+  def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(Seq(this, USubstPatternTactic(p)))
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 
   override def toString: String = prettyString
@@ -124,9 +124,39 @@ trait NamedBelleExpr extends BelleExpr {
 // basic tactic combinators
 
 /** `left ; right` sequential composition executes `right` on the output of `left`, failing if either fail. */
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ";" + right.prettyString + ")" }
+object SeqTactic {
+  def apply(t1: BelleExpr, t2: BelleExpr): BelleExpr = (t1, t2) match {
+    case (SeqTactic(s1), SeqTactic(s2)) => SeqTactic(s1++s2)
+    case (SeqTactic(s1), _) => SeqTactic(s1 :+ t2)
+    case (_, SeqTactic(s2)) => SeqTactic(t1 +: s2)
+    case _ => SeqTactic(Seq(t1, t2))
+  }
+  def apply(seq: Seq[BelleExpr]): BelleExpr = {
+    if (seq.size > 1) new SeqTactic(seq)
+    else seq.headOption.getOrElse(TactixLibrary.nil)
+  }
+}
+case class SeqTactic(seq: Seq[BelleExpr]) extends BelleExpr {
+  assert(seq.size > 1, "Sequential composition needs at least 2 elements")
+  override def prettyString: String = "(" + seq.map(_.prettyString).mkString(";") + ")"
+}
 /** `left | right` alternative composition executes `right` if applying `left` fails, failing if both fail. */
-case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
+object EitherTactic {
+  def apply(t1: BelleExpr, t2: BelleExpr): BelleExpr = (t1, t2) match {
+    case (EitherTactic(s1), EitherTactic(s2)) => EitherTactic(s1++s2)
+    case (EitherTactic(s1), _) => EitherTactic(s1 :+ t2)
+    case (_, EitherTactic(s2)) => EitherTactic(t1 +: s2)
+    case _ => EitherTactic(Seq(t1, t2))
+  }
+  def apply(alts: Seq[BelleExpr]): BelleExpr = {
+    if (alts.size > 1) new EitherTactic(alts)
+    else alts.headOption.getOrElse(TactixLibrary.nil)
+  }
+}
+case class EitherTactic(alts: Seq[BelleExpr]) extends BelleExpr {
+  assert(alts.size > 1, "Alternative composition needs at least 2 elements")
+  override def prettyString: String = "(" + alts.map(_.prettyString).mkString("|") + ")"
+}
 /** `left || right` alternative composition executes both `left` and `right` simultaneously and succeeds with the first success, failing if both fail. */
 case class ParallelTactic(expr: List[BelleExpr]) extends BelleExpr { override def prettyString: String = "(" + expr.map(_.prettyString).mkString("||") + ")" }
 //@note saturate and repeat tactic fully parenthesize for parser
@@ -498,9 +528,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         case None => positionTactic.computeResult(provable, pos)
       }
       case l@Find(_, _, start, _, _) =>
-        require(start.isTopLevel, "Start position must be top-level in sequent")
-        tryAllAfter(provable, l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
+        tryAllAfter(provable, l, new TacticInapplicableFailure("Not found: locator " + locator.prettyString + "\nof position tactic " + prettyString +
+          "\ndoes not match anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
       case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
     }
@@ -516,14 +545,20 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   private def tryAllAfter(provable: ProvableSig, locator: Find, cause: => BelleThrowable): ProvableSig = {
     if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
+      /** Left: definitely known to be applicable, Right: unknown to be applicable but worth a try; None: inapplicable. */
       @tailrec
-      def toPos(locator: Find): Option[Position] = {
+      def toPos(locator: Find): Option[Either[Position, Position]] = {
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
           locator.toPosition(provable) match {
             case Some(pos) =>
               provable.subgoals(locator.goal).sub(pos) match {
-                case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
-                case _ => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact, locator.defs))
+                case Some(expr) =>
+                  TacticIndex.default.isApplicable(expr, this) match {
+                    case Some(true) => Some(Left(pos))
+                    case Some(false) => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact, locator.defs))
+                    case None => Some(Right(pos))
+                  }
+                case None => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact, locator.defs))
               }
             case None => None
           }
@@ -532,7 +567,9 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         }
       }
       toPos(locator) match {
-        case Some(pos) =>
+        case Some(Left(pos)) =>
+          positionTactic.computeResult(provable, pos)
+        case Some(Right(pos)) =>
           try {
             positionTactic.computeResult(provable, pos)
           } catch {
@@ -679,8 +716,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         case None => pt.factory(pos).computeExpr(BelleProvable(provable, labels, defs))
       }
       case l@Find(_, _, start, _, _) =>
-        tryAllAfter(l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
+        tryAllAfter(l, new TacticInapplicableFailure("Not found: locator " + locator.prettyString + "\nof position tactic " + prettyString +
+          "\ndoes not match anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => pt.factory(AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub))
       case LastSucc(goal, sub) => pt.factory(SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub))
     }
@@ -728,12 +765,17 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
       if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
         @tailrec
-        def toPos(locator: Find): Option[Position] = {
+        def toPos(locator: Find): Option[Either[Position, Position]] = {
           if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
             locator.toPosition(provable) match {
               case Some(pos) =>
                 provable.subgoals(locator.goal).sub(pos) match {
-                  case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
+                  case Some(expr) =>
+                    TacticIndex.default.isApplicable(expr, this) match {
+                      case Some(true) => Some(Left(pos))
+                      case Some(false) => toPos(locator.copy(start = pos.topLevel.advanceIndex(1)))
+                      case None => Some(Right(pos))
+                    }
                   case _ => toPos(locator.copy(start = pos.topLevel.advanceIndex(1)))
                 }
               case None => None
@@ -743,7 +785,10 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           }
         }
         toPos(locator) match {
-          case Some(pos) => pt.factory(pos) | tryAllAfter(locator.copy(start = pos.topLevel.advanceIndex(1)), cause)
+          case Some(Left(pos)) =>
+            pt.factory(pos)
+          case Some(Right(pos)) =>
+            pt.factory(pos) | tryAllAfter(locator.copy(start = pos.topLevel.advanceIndex(1)), cause)
           case _ => throw cause
         }
       } else if (cause == null) {
@@ -904,6 +949,7 @@ class BelleDelayedSubstProvable(override val p: ProvableSig,
                                 override val label: Option[List[BelleLabel]],
                                 override val defs: Declaration,
                                 val subst: USubst,
+                                //@todo parent needs to be a list of provables and substs to support nested constifications etc., or complete data structure refactoring to emulate goals that close later with subproofs
                                 val parent: Option[(ProvableSig, Int)]) extends BelleProvable(p, label, defs) {
   assert(parent.isEmpty || parent.get._2 < parent.get._1.subgoals.size, "Subgoal index points outside provable: " + parent.get._1.subgoals)
   override def toString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
@@ -1027,6 +1073,7 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
     case sl: BelleSubLabel => BelleSubLabel(parent.append(sl.parent), sl.label)
     case BelleStartTxLabel | BelleRollbackTxLabel => BelleLabelTx(this, None)
+    case _ => BelleSubLabel(this, l.label)
   }
 }
 

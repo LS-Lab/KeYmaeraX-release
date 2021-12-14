@@ -3,6 +3,8 @@
   * See LICENSE.txt for the conditions of this license.
   */
 package edu.cmu.cs.ls.keymaerax.codegen
+import edu.cmu.cs.ls.keymaerax.codegen.CPrettyPrinter.{CURR, PARAMS, PRE}
+import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Sort}
 
 /**
   * C expressions.
@@ -16,7 +18,15 @@ trait CExpression {
 trait CTerm extends CExpression {}
 trait CFormula extends CExpression {}
 trait CProgram extends CExpression {}
+trait CComment {
+  val comment: String
+}
 
+case class CTermComment(comment: String) extends CTerm with CComment {}
+case class CFormulaComment(comment: String) extends CFormula with CComment {}
+case class CProgramComment(comment: String) extends CProgram with CComment {}
+
+case object CNothing extends CTerm {}
 case class CNumber(n: BigDecimal) extends CTerm {}
 case class CVariable(name: String) extends CTerm {}
 case class CUnaryFunction(name: String, arg: CTerm) extends CTerm {}
@@ -33,6 +43,7 @@ case class CMin(l: CTerm, r: CTerm) extends CTerm {}
 case class CMax(l: CTerm, r: CTerm) extends CTerm {}
 case class CAbs(c: CTerm) extends CTerm {}
 
+case class CPredicate(name: String, arg: CTerm) extends CFormula {}
 case class CLess(l: CTerm, r: CTerm) extends CFormula {}
 case class CLessEqual(l: CTerm, r: CTerm) extends CFormula {}
 case class CEqual(l: CTerm, r: CTerm) extends CFormula {}
@@ -56,9 +67,21 @@ object CNoop extends CProgram
 
 
 /** Prints C expressions. */
-object CPrettyPrinter extends (CExpression => (String, String)) {
-  var printer: (CExpression => (String, String)) = new CExpressionPlainPrettyPrinter(printDebugOut = false)
+object CPrettyPrinter extends CodePrettyPrinter {
+  val CURR = "curr"
+  val PARAMS = "params"
+  val PRE = "pre"
+
+  var printer: CExpression => (String, String) = new CExpressionPlainPrettyPrinter(printDebugOut = false)
+
+  /** @inheritdoc */
   override def apply(e: CExpression): (String, String) = printer(e)
+
+  /** @inheritdoc */
+  override def nameIdentifier(s: NamedSymbol): String = CFormulaTermGenerator.nameIdentifier(s)
+
+  /** @inheritdoc */
+  override def printSort(s: Sort): String = CFormulaTermGenerator.printSort(s)
 }
 
 /** Prints expressions in plain C. */
@@ -76,22 +99,22 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |verdict OrLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |verdict OrLeft${uniqueName(l)}(state $PRE, state $CURR, const parameters* const $PARAMS) {
          |  ${print(l)}
          |}
          |
-         |verdict OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |verdict OrRight${uniqueName(r)}(state $PRE, state $CURR, const parameters* const $PARAMS) {
          |  ${print(r)}
          |}""".stripMargin
     case CAndProgram(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |verdict AndLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |verdict AndLeft${uniqueName(l)}(state $PRE, state $CURR, const parameters* const $PARAMS) {
          |  ${print(l)}
          |}
          |
-         |verdict AndRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |verdict AndRight${uniqueName(r)}(state $PRE, state $CURR, const parameters* const $PARAMS) {
          |  ${print(r)}
          |}""".stripMargin
     case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
@@ -108,10 +131,12 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
   //@todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
+    case CNothing => "???"
     case CNumber(n) if n>=0 => longDoubleLiteral(n)
     case CNumber(n) if n<0 => "(" + longDoubleLiteral(n) + ")"
     case CVariable(n) => n
-    case CUnaryFunction(n, arg) => n + "(" + print(arg) + ")"
+    case CUnaryFunction(n, CNothing) => n + "(" + PARAMS + ")"
+    case CUnaryFunction(n, arg) => n + "(" + PARAMS + "," + print(arg) + ")"
     case CPair(l, r) => print(l) + "," + print(r)
     case CNeg(c) => "-(" + print(c) + ")"
     case CPlus(l, r) => "(" + print(l) + ")+(" + print(r) + ")"
@@ -130,6 +155,8 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CMax(l, r) => "fmaxl(" + print(l) + ", " + print(r) + ")"
     case CAbs(c) => "fabsl(" + print(c) + ")"
 
+    case CPredicate(n, CNothing) => n + "(" + PARAMS + ")"
+    case CPredicate(n, arg) => n + "(" + PARAMS + "," + print(arg) + ")"
     case CLess(l, r) => print(l) + " < " + print(r)
     case CLessEqual(l, r) => print(l) + " <= " + print(r)
     case CEqual(l, r) => print(l) + " == " + print(r)
@@ -139,6 +166,8 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CNot(c) => "!(" + print(c) + ")"
     case CAnd(l, r) => "(" + print(l) + ") && (" + print(r) + ")"
     case COr(l, r) => "(" + print(l) + ") || (" + print(r) + ")"
+
+    case comment: CComment => "/*" + comment.comment + "*/"
 
     case CTrue => "1.0L"
     case CFalse => "-1.0L"
@@ -150,29 +179,29 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
       else s"verdict result = { .id=$id, .val=${print(retVal)} }; return result;"
     case COrProgram(l, r) /* if kind=="boolean" */ =>
       if (printDebugOut)
-        s"""verdict leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
-         |verdict rightDist = OrRight${uniqueName(r)}(pre,curr,params);
+        s"""verdict leftDist = OrLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
+         |verdict rightDist = OrRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
          |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
          |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
          |verdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
       else
-        s"""verdict leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
-         |verdict rightDist = OrRight${uniqueName(r)}(pre,curr,params);
+        s"""verdict leftDist = OrLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
+         |verdict rightDist = OrRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
          |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
          |verdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
     case CAndProgram(l, r) /* if kind=="boolean" */ =>
       if (printDebugOut)
-        s"""verdict leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
-         |verdict rightDist = AndRight${uniqueName(r)}(pre,curr,params);
+        s"""verdict leftDist = AndLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
+         |verdict rightDist = AndRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
          |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
          |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
          |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
       else
-        s"""verdict leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
-         |verdict rightDist = AndRight${uniqueName(r)}(pre,curr,params);
+        s"""verdict leftDist = AndLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
+         |verdict rightDist = AndRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
          |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
          |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin

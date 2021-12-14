@@ -65,6 +65,10 @@ object ReflectiveExpressionBuilder extends Logging {
       case e: TypedFunc[Option[Variable], _] if e.argType.tpe <:< typeTag[Option[Variable]].tpe => fillOptions(e(None))
       case e: TypedFunc[Option[String], _]   if e.argType.tpe <:< typeTag[Option[String]].tpe   => fillOptions(e(None))
       case e: TypedFunc[Option[PosInExpr], _] if e.argType.tpe <:< typeTag[Option[PosInExpr]].tpe => fillOptions(e(None))
+      case e: TypedFunc[List[Formula], _]    if e.argType.tpe <:< typeTag[List[Formula]].tpe => fillOptions(e(List.empty))
+      case e: TypedFunc[List[Term], _]       if e.argType.tpe <:< typeTag[List[Term]].tpe => fillOptions(e(List.empty))
+      case e: TypedFunc[List[Variable], _]   if e.argType.tpe <:< typeTag[List[Variable]].tpe => fillOptions(e(List.empty))
+      case e: TypedFunc[List[String], _]     if e.argType.tpe <:< typeTag[List[String]].tpe => fillOptions(e(List.empty))
       case e => e
     }
 

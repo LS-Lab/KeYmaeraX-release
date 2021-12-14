@@ -5,10 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, Find, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Program, Real, SubstitutionPair, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
@@ -1299,7 +1300,9 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Proof 1", "implyR(1) & QE", implyR(1) & QE) :: ("Proof 2", "implyR('R)", implyR('R)) :: Nil
+    entry.tactics should contain theSameElementsInOrderAs List(
+      ("Proof 1", "implyR(1) & QE", implyR(1) & QE),
+      ("Proof 2", "implyR('R)", implyR(Find(0, None, SuccPosition.base0(0), exact=true, entry.defs))))
     entry.info shouldBe empty
   }
 
@@ -1848,7 +1851,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma(\"Entry 1\")",
-      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
+      TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
@@ -2745,7 +2748,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         | Definitions R f() = 5!=7; End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:22 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 5!=7
+    ) should have message """2:22 Expected a Term but got the Formula 5!=7
                             |Found:    5!=7 at 2:22 to 2:25
                             |Expected: Term""".stripMargin
   }
@@ -2774,7 +2777,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         | Definitions B p() <-> 5+7; End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:24 Impossible elaboration: Operator PSEUDO$ expects a Formula as argument but got the Term 5+7
+    ) should have message """2:24 Expected a Formula but got the Term 5+7
                             |Found:    5+7 at 2:24 to 2:26
                             |Expected: Formula""".stripMargin
   }

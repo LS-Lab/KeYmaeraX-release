@@ -26,6 +26,7 @@ object UIIndex {
     * Disregard tactics that require input. */
   def theStepAt(expr: Expression, pos: Option[Position], sequent: Option[Sequent], substs: List[SubstitutionPair]): Option[DerivationInfo] = expr match {
     case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
+    case Diamond(Loop(_), _) => None //@note: analogous to [*] iterate
     case _ => allStepsAt(expr, pos, sequent, substs).find(_.inputs.forall(_.isInstanceOf[OptionArg]))
   }
 
@@ -83,7 +84,7 @@ object UIIndex {
             case _ => alwaysApplicable
           }
         "derive" :: tactics
-      case Box(a, True) if isTop && isSucc && FormulaTools.dualFree(a) => "[]T system" :: Nil
+      case Box(a, True) if FormulaTools.dualFree(a) => "boxTrue" :: Nil
 
       case Box(a, post) =>
         val maybeSplit = post match {
@@ -131,6 +132,8 @@ object UIIndex {
             else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
             s"""expand "$name"""" :: rules
+          case SystemConst(name, _) if substs.exists({ case SubstitutionPair(SystemConst(wn, _), _) => wn == name case _ => false }) =>
+            s"""expand "$name"""" :: rules
           case _ => rules
         }
 
@@ -145,7 +148,13 @@ object UIIndex {
           case _: Compose => "<;> compose" :: rules
           case _: Choice => "<++> choice" :: rules
           case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
-          case _: Loop => "con" +: maybeSplit :+ "<*> iterate"
+          case _: Loop => if (isTop) {
+            if (isSucc)
+              "con" +: maybeSplit :+ "<*> iterate"
+            else
+              "fp" +: maybeSplit :+ "<*> iterate"
+          } else
+            "<*> iterate" +: maybeSplit
           case ODESystem(_, _) =>
             if (pos.forall(_.isSucc)) {
               if (pos.forall(_.isTopLevel)) ("dV" :: "solve" :: "kDomainDiamond" :: "dDR" :: "compatCut":: "gEx" :: Nil)

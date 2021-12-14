@@ -23,6 +23,12 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     firstTime: false
   }
 
+  //@see hpmodels.js (duplicate)
+  $scope.templates = [];
+  $http.get("templates/user/" + sessionService.getUser() + "/all").then(function(response) {
+      $scope.templates = response.data;
+  });
+
   $scope.showOverlayHelp = function() {
     $('body').chardinJs('start');
   }
@@ -51,7 +57,12 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     $uibModal.open({
       templateUrl: 'templates/modeluploaddialog.html',
       controller: 'ModelUploadCtrl',
-      size: 'fullscreen'
+      size: 'fullscreen',
+      backdrop: 'static',
+      keyboard: false,
+      resolve: {
+        template: function() { return $scope.templates[0]; }
+      }
     });
   };
 

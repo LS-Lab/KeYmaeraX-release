@@ -157,7 +157,7 @@ In this model <var>x</var> is the position of the car, <var>v</var> the velocity
 
         <h3 id="Example">Example</h3>
         <p>
-        This is an example of a <code>.kyx</code> model file that can be loaded into KeYmaera&#160;X.
+        This is an example of a <code>.kyx</code> model file that can be loaded into KeYmaera&#160;X:
         </p>
 
 <code><pre>
@@ -181,6 +181,34 @@ Problem           /* The differential dynamic logic formula to prove */
       {x' = v, v' = a & v >= 0}        /* differential equation system in v>=0 */
     }* @invariant(v >= 0)              /* loop repeats transitions */
   ] v >= 0                             /* satisfies safety/postcondition */
+End.
+</pre></code>
+
+        <p>
+        This is a similar example of a <code>.kyx</code> model file that can be loaded into KeYmaera&#160;X, which is using definitions of predicate symbols and subprograms:
+      </p>
+<code><pre>
+Definitions       /* function symbols cannot change their value during any HP  */
+  Real A = 5;     /* real-valued maximum acceleration constant is defined as 5 */
+  Real B;         /* real-valued maximum braking constant is arbitrary         */
+  Bool safe(Real v) &lt;-> v>=0;           /* predicate of v for safety condition */
+  HP   accel        ::= {?v&lt;=5; a:=A;}; /* subprogram for acceleration a:=A    */
+End.
+
+ProgramVariables  /* program variables may change their value over time */
+  Real x, v;      /* real-valued position and velocity of a simple car  */
+  Real a;         /* current acceleration chosen by the car controller  */
+End.
+
+Problem                           /* differential dynamic logic conjecture  */
+    safe(v) & A>0 & B>0           /* initial condition where system starts  */
+  ->                              /* implies                                */
+  [                               /* all runs of hybrid program in [...]    */
+    {                             /* braces {} for grouping HPs             */
+      {accel; ++ a:=0; ++ a:=-B;} /* nondeterministic choice acceleration a */
+      {x'=v, v'=a & v>=0}         /* differential equation system in domain */
+    }* @invariant(v>=0)           /* loop repeats, @invariant contract      */
+  ] safe(v)                       /* safety/postcondition after HP          */
 End.
 </pre></code>
     </div>

@@ -315,6 +315,73 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     Parser("{{x'=v}}^@") shouldBe Parser("{x'=v}^@")
   }
 
+  it should "parse program constants" in {
+    Parser("a;") shouldBe ProgramConst("a")
+    Parser("a{|^@|};") shouldBe SystemConst("a")
+    Parser("{a;b;}*") shouldBe Loop(Compose(ProgramConst("a"), ProgramConst("b")))
+    Parser("{a;{d;}*b;{c;}*}*") shouldBe Loop(Compose(ProgramConst("a"), Compose(Loop(ProgramConst("d")),
+      Compose(ProgramConst("b"), Loop(ProgramConst("c"))))))
+    Parser("{a;{d;}*b;{{c}}*}*") shouldBe Loop(Compose(ProgramConst("a"), Compose(Loop(ProgramConst("d")),
+      Compose(ProgramConst("b"), Loop(ODESystem(DifferentialProgramConst("c")))))))
+  }
+
+  it should "generate legible error messages for program consts" in {
+    the [ParseException] thrownBy Parser("{a;b}*") should have message
+      """1:6 Syntax error. Expression b is not a program: change to b; for a program constant, or to {b} for a differential program constant.
+        |Found:    * at 1:6
+        |Expected: """.stripMargin
+
+    the [ParseException] thrownBy Parser("{a;{d;}*b;{c}*}*") should have message
+      """1:12 Unexpected token cannot be parsed
+        |Found:    {c}* at 1:12 to 1:14
+        |Expected: {c;}* (loop of program constant)
+        |      or: {{c}}* (loop of differential program constant)""".stripMargin
+
+    the [ParseException] thrownBy Parser("{a;{c;}*b}*") should have message
+      """1:11 Syntax error. Expression b is not a program: change to b; for a program constant, or to {b} for a differential program constant.
+        |Found:    * at 1:11
+        |Expected: """.stripMargin
+
+    the [ParseException] thrownBy Parser("(A1 & A2) -> {sys} B1 & B2") should have message
+      """1:15 Unexpected token cannot be parsed
+        |Found:    {sys} at 1:15 to 1:17
+        |Expected: [{sys}]
+        |      or: <{sys}>""".stripMargin
+
+    //@note {sys} is an ODESystem with differential program constant sys and doesn't require ;
+    the [ParseException] thrownBy Parser("A1;{sys}B1") should have message
+      """1:11 Unexpected token cannot be parsed
+        |Found:    <EOF> at 1:11 to EOF$
+        |Expected: ;""".stripMargin
+
+    //@todo not great yet
+    // parsing fails on &, but
+    // parser l. 730ff case r :+ Expr(t1, sl) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2, el)
+    // needs to be permissive to support implicit parentheses (e.g., allows stack "p>0 & q" because "<=4" might follow)
+    // and additionally elaboration of term A1 to a predicate happens only after the right-hand side of -> is a formula
+    the [ParseException] thrownBy Parser("(A1 -> {sys} B1) & (A2 -> {sys} B2)") should have message
+      """1:18 Operator -> at 1:5 to 1:6 may connect non-matching kinds: A1->{sys} (Term->Program)
+        |Found:    & at 1:18
+        |Expected: """.stripMargin
+
+    the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should have message
+      """1:7 Unexpected token cannot be parsed
+        |Found:    ] at 1:7
+        |Expected: ;""".stripMargin
+
+    the [ParseException] thrownBy Parser("[sense;][ctrl;plant]x>y") should have message
+      """1:20 Unexpected token cannot be parsed
+        |Found:    ] at 1:20
+        |Expected: ;""".stripMargin
+  }
+
+  it should "now swallow parse exceptions when parsing sequents" in {
+    the [ParseException] thrownBy "==> [x'=:=2*y;][y':=-4*x;]4*(2*x*x')+2*(2*y*y')=0".asSequent should have message
+      """1:5 Missing right-hand side x'=
+        |Found:    := at 1:5 to 1:6
+        |Expected: $$$T""".stripMargin
+  }
+
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
     Parser("r_0 > 0") should be (Greater(Variable("r", Some(0), Real), Number(0)))
   }
@@ -471,8 +538,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
                      |Found:    ( at 1:2
                      |Expected: """.stripMargin
     the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
-      have message """1:6 Impossible elaboration: Operator COMMA$ expects a Term as argument but got the Formula x>=2
-                     |Found:    , at 1:6
+      have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
+                     |Found:    , at 1:12 to EOF$
                      |Expected: Term""".stripMargin
   }
 
@@ -601,7 +668,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "complain about sort mismatches" in {
     val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """1:20 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 3>2
+      """1:20 Expected a Term but got the Formula 3>2
         |Found:    (3>2) at 1:20 to 1:24
         |Expected: Term""".stripMargin
   }

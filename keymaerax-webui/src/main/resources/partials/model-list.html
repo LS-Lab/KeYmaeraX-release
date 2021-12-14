@@ -46,31 +46,69 @@
     </div>
     <div class="panel-body">
         <div class="row">
-            <div class="col-md-6" id="modelupload"
+            <div class="col-md-6 k4-screenheight-40" id="modelupload"
                  data-intro="Click to write models and import .kyx model and proof archive files."
                  data-position="bottom">
-                <button class="btn btn-default" ng-click="openNewModelDialog()">New Model...</button>
-            </div>
-            <div class="col-md-2"></div>
-            <div class="col-md-4" id="modeltutorialimport"
-                 ng-if="examples.length > 0" ng-cloak
-                 data-intro="Click 'Import' to add tutorials to your models overview."
-                 data-position="bottom">
-                <div style="margin-bottom: 10px"> <!-- So that carousel doesn't overlap overlay help -->
-                <div uib-carousel active="activeTutorialSlide">
-                    <div uib-slide ng-repeat="repo in examples" index="$index">
-                        <img ng-src="{{repo.image}}" style="margin:auto;max-width:100%;">
-                        <div class="k4-examples-carousel-caption">
-                            <h4>{{repo.title}} <button class="btn btn-default"
-                                                       ng-click="importRepo(repo.url)">Import</button></h4>
-                            <p>{{repo.description}}
-                                <small><a ng-if="repo.infoUrl && repo.infoUrl.length > 0"
-                                          ng-href="{{repo.infoUrl}}">Details...</a></small>
-                            </p>
+                <div class="container">
+                    <div class="well well-sm">
+                        <strong>Templates</strong>
+                    </div>
+                    <div id="templates" class="row">
+                        <div class="item col-xs-3 col-lg-3" ng-repeat="template in templates" index="$index">
+                            <div class="thumbnail clearfix">
+                                <img ng-src="{{template.imageUrl}}" style="margin:auto;max-width:100%;"/>
+                                <div class="caption">
+                                    <h5>{{template.title}}</h5>
+                                    <p>{{template.description}}</p>
+                                    <div>
+                                        <a class="btn btn-success" ng-click="openNewModelDialog(template)">New Model...</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="item col-xs-3 col-lg-3">
+                            <div class="thumbnail clearfix">
+                                <div class="caption">
+                                    <h5>Switched Systems</h5>
+                                    <p>(Asymptotic) stability</p>
+                                    <div>
+                                        <a class="btn btn-success" ng-click="openControlledStabilityModelTemplateDialog()">New Model...</a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                </div>
+            </div>
+
+            <div class="col-md-6 k4-screenheight-40" id="modeltutorialimport"
+                 ng-if="examples.length > 0" ng-cloak
+                 data-intro="Click 'Import' to add tutorials to your models overview."
+                 data-position="bottom">
+                    <div class="container">
+                        <div class="well well-sm">
+                            <strong>Examples</strong>
+                        </div>
+                        <div id="examples" class="row">
+                            <div class="item col-xs-3 col-lg-3" ng-repeat="repo in examples" index="$index">
+                                <div class="thumbnail clearfix">
+                                    <img ng-src="{{repo.image}}" style="margin:auto;max-width:100%;"/>
+                                    <div class="caption">
+                                        <h5>{{repo.title}}</h5>
+                                        <p>
+                                            {{repo.description}}
+                                            <small ng-if="repo.infoUrl && repo.infoUrl.length > 0">
+                                                <a ng-href="{{repo.infoUrl}}">Details...</a>
+                                            </small>
+                                        </p>
+                                        <div>
+                                            <a class="btn btn-success" ng-click="importRepo(repo.url)">Import</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
             </div>
     </div>
 
@@ -128,7 +166,7 @@
                 </div>
             </td>
             <td class="k4-abbreviate"><button class="btn btn-link" ng-if="model.hasTactic"
-                                              ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></button></td>
+                                              ng-click="openTactic(model.id)">Browse</button></td>
             <td ng-if="$first" ng-model="model" id="modelactions"
                 data-intro="Start new proofs, generate monitor code, synthesize test cases, and download .kyx models and proofs."
                 data-position="bottom">

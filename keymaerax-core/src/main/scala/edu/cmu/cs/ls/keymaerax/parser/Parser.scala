@@ -82,11 +82,7 @@ trait Parser extends (String => Expression) {
 
 object Parser extends (String => Expression) {
   /* @note mutable state for switching out the default parser. */
-  private[this] var p: Parser = Configuration.getString(Configuration.Keys.PARSER) match {
-    case Some("KeYmaeraXParser") | None => KeYmaeraXParser.parser
-    case Some("DLParser") => DLParser
-    case Some(parserId) => throw new IllegalArgumentException("Unknown parser " + parserId + "; please use one of DLParser or KeYmaeraXParser")
-  }
+  private[this] var p: Parser = ParserInit.fromConfig()
 
   /** The parser that is presently used per default. */
   def parser: Parser = p
