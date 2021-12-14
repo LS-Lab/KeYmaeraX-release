@@ -1130,7 +1130,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     def replaceOrExpand[T <: Expression](expr: T): T = ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case fn@FuncOf(f@Function(n, i, d, _, false), args) if d != Unit =>
+        case fn@FuncOf(f@Function(n, i, d, _, None), args) if d != Unit =>
           if (StaticSemantics.freeVars(args).intersect(bv).isEmpty) {
             //@note can abbreviate, fn does not depend on any of the quantified variables
             if (!vars.contains(fn)) {

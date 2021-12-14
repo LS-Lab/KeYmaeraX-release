@@ -176,7 +176,7 @@ private object EqualityTactics {
     val sequent = provable.subgoals.head
     sequent.sub(pos) match {
     case Some(fml@Equal(_: Variable, _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml).computeResult(provable)
-    case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml).computeResult(provable)
+    case Some(fml@Equal(FuncOf(Function(_, _, _, _, None), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml).computeResult(provable)
     case Some(e) => throw new TacticInapplicableFailure("Equality rewriting only applicable to equalities l=r, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   }}
@@ -188,7 +188,7 @@ private object EqualityTactics {
     val seq = provable.subgoals.head
     seq.zipAnteWithPositions.filter({
       case (Equal(v: Variable, t), _) => v != t
-      case (Equal(fn@FuncOf(Function(_, _, _, _, false), _), t), _) => fn != t
+      case (Equal(fn@FuncOf(Function(_, _, _, _, None), _), t), _) => fn != t
       case _ => false
     }).reverseMap({ case (_, pos) => Idioms.doIfFw(_.subgoals.head(pos.checkTop) match {
           case Equal(l: Variable, r) => l != r
@@ -258,8 +258,8 @@ private object EqualityTactics {
     val v = abbrvV match {
       case Some(vv) => vv
       case None => t match {
-        case FuncOf(Function(n, _, _, sort, true), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
-        case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+        case FuncOf(Function(n, _, _, sort, Some(_)), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
+        case FuncOf(Function(n, _, _, sort, None), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
       }
@@ -476,12 +476,14 @@ private object EqualityTactics {
     val sequent = provable.subgoals.head
     sequent.at(pos) match {
       case (_, _: Formula) => mapSubpositions(pos, sequent, {
-        case (FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), _), pp) =>
+        //todo: should match the max/min interpretation exactly
+        case (FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), _), pp) =>
           if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name) Some(?(minmax(pp).computeResult _)(_))
           else None
         case _ => None
       }).foldLeft(provable)({ (pr, r) => pr(r, 0) })
-      case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t: Pair))
+      //todo: should match the max/min interpretation exactly
+      case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), t: Pair))
           if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
         if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
           val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
@@ -507,7 +509,8 @@ private object EqualityTactics {
     ProofRuleTactics.requireOneSubgoal(provable, "minmaxAt")
     val sequent = provable.subgoals.head
     sequent.sub(pos) match {
-    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g)))
+    //todo: should match the max/min interpretation exactly
+    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), Pair(f, g)))
       if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
@@ -628,7 +631,9 @@ private object EqualityTactics {
       })
     )
     (tactics.foldLeft(provable)({ (pr, r) => pr(r, 0) })
-      (Idioms.doIfFw(_.subgoals.exists(StaticSemantics.symbols(_).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false })))(expandAll.result).result _, 0)
+      (Idioms.doIfFw(_.subgoals.exists(StaticSemantics.symbols(_).exists({
+        case InterpretedSymbols.absF | InterpretedSymbols.minF | InterpretedSymbols.maxF => true
+        case _ => false })))(expandAll.result).result _, 0)
       )
   }
 

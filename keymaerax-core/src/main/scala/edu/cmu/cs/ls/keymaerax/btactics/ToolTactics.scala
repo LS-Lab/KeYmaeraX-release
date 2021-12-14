@@ -211,7 +211,7 @@ private object ToolTactics {
 
   /** Returns all sub-terms of `fml` that are uninterpreted functions. */
   private def uninterpretedFuncsOf(fml: Formula): List[Term] = matchingTermsOf(fml, {
-    case f@FuncOf(Function(_, _, domain, _, false), _) => domain != Unit
+    case f@FuncOf(Function(_, _, domain, _, None), _) => domain != Unit
     case _ => false
   })
 
