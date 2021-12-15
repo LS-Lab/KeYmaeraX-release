@@ -171,6 +171,36 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |Expected: <unique name>""".stripMargin
   }
 
+  it should "detect unclosed comments (1)" in {
+    val input =
+      """Theorem "A"
+        |ProgramVariables Real x; End.
+        |/* An unclosed comment
+        |Problem x>=1 -> x>=0 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:1 Misplaced problem block: problem expected before tactics
+        |Found:    / at 3:1
+        |Expected: Problem""".stripMargin
+  }
+
+  it should "detect unclosed comments (2)" in {
+    val input =
+      """Theorem "A"
+        |ProgramVariables Real x; End.
+        |/*@todo An unclosed comment
+        |Problem x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:3 Lexer 3:3 Lexer does not recognize input at 3:3 to EOF$ in `
+        |@todo An unclosed comment
+        |Problem x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0 End.
+        |End.
+        |` beginning with character `@`=64
+        |Found:    @... at 3:3 to EOF$
+        |Expected: <unknown>""".stripMargin
+  }
+
   it should "complain when variable and function have same name (2)" in {
     val input =
       """ArchiveEntry "Entry 1"
