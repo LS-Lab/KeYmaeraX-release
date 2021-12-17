@@ -181,6 +181,24 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
+  it should "join on numbers" in {
+    RestrictedBiDiUnificationMatch(
+      "==> 1=1, x=1*2, x=y*2".asSequent,
+      "==> f()=f(), p(x,f()), p(x,y)".asSequent
+    ).usubst shouldBe USubst(List(SubstitutionPair("f()".asTerm, "1".asTerm), SubstitutionPair("p(._0, ._1)".asFormula, "._0=._1*2".asFormula)))
+    RestrictedBiDiUnificationMatch(
+      "==> 1=1, x=y*2, x=1*2".asSequent,
+      "==> f()=f(), p(x,y), p(x,f())".asSequent
+    ).usubst shouldBe USubst(List(SubstitutionPair("f()".asTerm, "1".asTerm), SubstitutionPair("p(._0, ._1)".asFormula, "._0=._1*2".asFormula)))
+  }
+
+  it should "FEATURE_REQUEST: join on numbers (2)" taggedAs TodoTest in {
+    RestrictedBiDiUnificationMatch(
+      "==> x=1*2, x=y*2".asSequent,
+      "==> p(x,f()), p(x,y)".asSequent
+    ).usubst shouldBe USubst(List(SubstitutionPair("f()".asTerm, "1".asTerm), SubstitutionPair("p(._0, ._1)".asFormula, "._0=._1*2".asFormula)))
+  }
+
   "Unification formulas" should "unify p() with x^2+y>=0" in {
     shouldUnify("p()".asFormula, "x^2+y>=0".asFormula, USubst(
       SubstitutionPair("p()".asFormula, "x^2+y>=0".asFormula) :: Nil))

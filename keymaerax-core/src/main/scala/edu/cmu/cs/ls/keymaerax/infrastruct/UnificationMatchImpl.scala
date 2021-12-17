@@ -335,6 +335,34 @@ class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
 
     unifier(F(f, dt), SubstitutionHelper.replacesFree(e2repl)(uInv1.get))
   }
+
+  override def join(s: List[(Expression, Expression)], t: List[(Expression, Expression)]): List[(Expression, Expression)] = {
+    var j = t
+    for (el <- s) {
+      t.find(sp => sp._1 == el._1) match {
+        case Some(sp) =>
+          if (sp._2 != el._2) {
+            val repl = try {
+              val m = this(sp._2, el._2)
+              if (m.subsDefsInput.nonEmpty) {
+                if (m(sp._2) != sp._2) Some(el -> sp)
+                else Some(sp -> el)
+              } else None
+            } catch {
+              case _: UnificationException => None
+            }
+            repl match {
+              case Some((what, repl)) => j = j.map({ case e if e==what => repl case x => x})
+              case None => throw new UnificationException("<unifier> " + Subst(s).toString(), "<unifier> " + Subst(t).toString())
+            }
+          }
+          // else skip since same already present in t and therefore also in j
+        case None =>
+          j = el :: j
+      }
+    }
+    j
+  }
 }
 
 
