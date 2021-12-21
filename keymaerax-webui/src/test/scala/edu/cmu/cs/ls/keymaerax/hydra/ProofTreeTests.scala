@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleTopLevelLabel, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, Let, TacticInapplicableFailure}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, Let, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
@@ -30,7 +30,7 @@ class ProofTreeTests extends TacticTestBase {
     tree.root.children shouldBe empty
     tree.root.goal shouldBe tree.openGoals.head.goal
     tree.locate("()").get.goal shouldBe tree.root.goal
-    tree.tactic shouldBe nil
+    tree.tactic shouldBe todo
   }}
 
   "Tactic execution" should "create a tree with one open goal from implyR" in withDatabase { db =>
@@ -57,7 +57,7 @@ class ProofTreeTests extends TacticTestBase {
     tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     tree.root.provable.subgoals.loneElement shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
 
-    tree.tactic shouldBe implyR('R, "x>0 -> x>0".asFormula)
+    tree.tactic shouldBe implyR('R, "x>0 -> x>0".asFormula) & todo
   }
 
   it should "create a proved tree from QE" in withDatabase { db => withMathematica { _ =>
@@ -207,7 +207,7 @@ class ProofTreeTests extends TacticTestBase {
     p.subgoals(0) shouldBe g2.goal.get
     p.subgoals(1) shouldBe g1.goal.get
 
-    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> implyR('R, "x>0->x>0".asFormula), BelleLabels.cutShow -> nil)
+    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> (implyR('R, "x>0->x>0".asFormula) & todo), BelleLabels.cutShow -> todo)
   }
 
   "Tactic suggestion" should "return single-pos tactics" in withTactics { withDatabase { db =>
@@ -338,7 +338,7 @@ class ProofTreeTests extends TacticTestBase {
     tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
     tree.openGoals.head.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
-    tree.tactic shouldBe nil
+    tree.tactic shouldBe todo
   }
 
   it should "prune only one subgoal of a cut" in withDatabase { db =>
@@ -368,7 +368,7 @@ class ProofTreeTests extends TacticTestBase {
     tree.openGoals should have size 2
     tree.openGoals(0).goal shouldBe Some(Sequent(IndexedSeq("y=37".asFormula), IndexedSeq("x>0->x>0".asFormula)))
     tree.openGoals(1).goal shouldBe g1.goal
-    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> nil, BelleLabels.cutShow -> nil)
+    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> todo, BelleLabels.cutShow -> todo)
   }
 
   private def checkTree(db: DBAbstraction, proofId: Int, tactic: BelleExpr, expected: Sequent,
