@@ -15,7 +15,7 @@ object ODEToInterpreted {
    *      {e:=1;} {e'=e}
    * into the form needed for `convert` (used by the parser).
    */
-  def fromProgram(system: Program, t: Variable = Variable("t")): Seq[Function] =
+  def fromProgram(system: Program, t: Variable = Variable("t_")): Seq[Function] =
     system match {
       case Compose(assgns, ODESystem(ode, True)) =>
         def unfoldAssgns(x: Program): Map[Variable, Term] = x match {
@@ -62,9 +62,9 @@ object ODEToInterpreted {
    * @param system seq of (function, differential, initial value)
    * @param tVar the time variable used in input differentials
    * @param t0 initial time
-   * @return
+   * @return List of implicitly defined functions by the system of ODEs from the given initial time
    */
-  def fromSystem(system: Seq[(Variable, Term, Term)], tVar: Variable = Variable("t"), t0: Term = Number(0)): Seq[Function] = {
+  def fromSystem(system: Seq[(Variable, Term, Term)], tVar: Variable, t0: Term): Seq[Function] = {
     assert(system.nonEmpty)
     assert(system.map(_._1).distinct == system.map(_._1)) // Input variables are all distinct
     assert(system.forall{case(_,diff,init) =>
@@ -88,7 +88,7 @@ object ODEToInterpreted {
         AtomicODE(DifferentialSymbol(tVar),Neg(Number(1)))
       ).reduce[DifferentialProgram](DifferentialProduct(_,_)))
 
-    val goal = system.map{case(v,_,i) => Equal(v, i)}.reduceRight(And)
+    val goal = And(Equal(tVar,t0),system.map{case(v,_,i) => Equal(v, i)}.reduceRight(And))
 
     system.map{case(v,_,_) =>
       val otherVars = system.map(_._1).filter(_ != v)

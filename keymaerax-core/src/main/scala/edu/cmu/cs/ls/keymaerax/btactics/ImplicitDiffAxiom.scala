@@ -621,4 +621,104 @@ object ImplicitDiffAxiom {
     sss
   }
 
+  // Derive initial value axiom for an interpreted function g
+  // The interpretation must have the expected shape:
+  // . = g(.0) <-> <{x_1:=*; x_0:=.; t:=.0;} {x'=-f(x), t'=-(1) ++ x'=f(x), t'=1} > (init values)
+  def deriveInitCond(f : Function) : ProvableSig = {
+
+    require(f.interp.isDefined)
+
+    val (assgn,inits) = f.interp.get match {
+      case Diamond(Compose(assgn,Choice(_,ODESystem(ode,True))),inits) => (assgn,inits)
+      case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ f.interp.get)
+    }
+
+    val m = FormulaTools.conjuncts(inits).map( fml =>
+      fml match {
+        case Equal(x:Variable,i) => (x,i)
+        case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ f.interp.get)
+      }
+    ).toMap
+
+    def listifyAssignments(p:Program) : List[AtomicProgram] = p match{
+      case Compose(l,r) => listifyAssignments(l) ++ listifyAssignments(r)
+      case a : AtomicProgram => List(a)
+      case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ f.interp.get)
+    }
+
+    val assgnList = listifyAssignments(assgn)
+
+    val arbs = assgnList.dropRight(2).map(p => m(p.asInstanceOf[AssignAny].x))
+    val t0 = m(assgnList.last.asInstanceOf[Assign].x)
+    val x0 = m(assgnList.dropRight(1).last.asInstanceOf[Assign].x)
+
+    val ax = ElidingProvable(Provable.implicitFuncAxiom(f))
+
+    val pr = proveBy(
+      Equal(FuncOf(f,t0),x0),
+      commuteEqual(1) & useAt(ax)(1) & chase(1) &
+      arbs.foldLeft(skip:BelleExpr)((tac,trm) => tac & existsR(trm)(1)) &
+      allR(1) & implyR(1) &
+      allR(1) & implyR(1) & orR(1) & hideR(1) & ODELiveness.dDX(1) & prop
+    )
+
+    pr
+  }
+
+  lazy val forallFwdBack : Lemma =
+    remember("\\forall x P(x) <-> \\forall x (x = x0 -> [{x'=1}++{x'=-1}]P(x))".asFormula,
+      equivR(1) <(
+        allR(1) & implyR(1) & abstractionb(1) & id,
+        allR(1) & boundRename(Variable("x"),Variable("y"))(-1) &
+          cut("\\exists y y = x0".asFormula) <(
+            existsL(-2) & allL(-1) & implyL(-1) <(
+              id,
+              cut("x = x0 | x > x0 | x < x0".asFormula) <(
+                orL(-3) <(
+                  choiceb(-1) & andL(-1) & useAt(Ax.DX)(-3) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & prop, //QE,
+                  orL(-3) <(
+                    cut("<{y'=1}>P(x)".asFormula) <(
+                      cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
+                      hideR(1) & cutR("<{y'=1}>y=x".asFormula)(1) <(
+                        hideL(-1) & ODELiveness.kDomainDiamond("y>=x".asFormula)(1) <(
+                          ODELiveness.dV(None)(1) & QE,
+                          ODEInvariance.dCClosure(1) <(
+                            QE,
+                            dW(1) & QE
+                          )
+                        ),
+                        useAt(Ax.Kd,PosInExpr(1::Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-3) & monb &
+                          implyR(1) & exhaustiveEqL2R(-2) & prop
+                      )
+                    ),
+                    cut("<{y'=-1}>P(x)".asFormula) <(
+                      cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
+                      hideR(1) & cutR("<{y'=-1}>y=x".asFormula)(1) <(
+                        hideL(-1) & ODELiveness.kDomainDiamond("y<=x".asFormula)(1) <(
+                          ODELiveness.dV(None)(1) & QE,
+                          ODEInvariance.dCClosure(1) <(
+                            QE,
+                            dW(1) & QE
+                          )
+                        ),
+                        useAt(Ax.Kd,PosInExpr(1::Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-4) & monb &
+                          implyR(1) & exhaustiveEqL2R(-2) & prop
+                      )
+                    ),
+                  ),
+                ),
+                cohideR(2) & QE
+              )
+            ),
+            cohideR(2) & QE
+          )
+      ),
+    namespace
+  )
+
+  lazy val forallFwdBackDirect : Lemma =
+    remember("\\forall x (x = x0 -> [{x'=1}++{x'=-1}]P(x)) -> P(x)".asFormula,
+      useAt(forallFwdBack,PosInExpr(1::Nil))(1,0::Nil) & implyR(1) & allL(-1) & prop,
+      namespace
+    )
 }
