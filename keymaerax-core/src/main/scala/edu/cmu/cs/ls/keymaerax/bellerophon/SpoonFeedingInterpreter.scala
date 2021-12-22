@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
@@ -260,23 +260,20 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
               case Some(l) => l
             }
 
-            val (resultProvable, mergedLabels) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel])]((p, origLabels))({
-              case ((p: BelleDelayedSubstProvable, i), (provable, labels)) =>
+            val (resultProvable, mergedLabels, _) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel], List[SubstitutionPair])]((p, origLabels, List.empty))({
+              case ((p: BelleDelayedSubstProvable, i), (provable, labels, substs)) =>
                 // delete all labels of closed goals, even if p.label==None
                 val pl = if (p.p.subgoals.isEmpty) Some(p.label.getOrElse(List.empty)) else p.label
-                (applySubDerivation(provable, i, p.p, p.subst)._2, updateLabels(labels, i, pl))
-              case ((BelleProvable(cp, cl, _), i), (provable, labels)) =>
+                val combinedSubsts = combineSubsts(List(p.subst, USubst(substs)))
+                (applySubDerivation(provable, i, p.p, combinedSubsts)._2, updateLabels(labels, i, pl), combinedSubsts.subsDefsInput.toList)
+              case ((BelleProvable(cp, cl, _), i), (provable, labels, substs)) =>
                 // delete all labels of closed goals, even if cl==None
                 val cl2 = if (cp.subgoals.isEmpty) Some(cl.getOrElse(List.empty)) else cl
                 // provables may have expanded or not expanded definitions arbitrarily
-                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl2))
-                else try {
-                  val downSubst = RestrictedBiDiUnificationMatch(provable.subgoals(i), cp.conclusion).usubst
-                  (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl2))
-                } catch {
-                  case _: UnificationException =>
-                    val upSubst = RestrictedBiDiUnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
-                    (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl2))
+                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl2), substs)
+                else {
+                  val (p, s) = applySub(provable, cp, i, defs)
+                  (p, updateLabels(labels, i, cl2), combineSubsts(List(s, USubst(substs))).subsDefsInput.toList)
                 }
             })
 
@@ -287,7 +284,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             val rp = if (substs.isEmpty) goal match {
               case dp: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(resultProvable, resultLabels, defs, dp.subst, dp.parent)
               case _: BelleProvable => BelleProvable(resultProvable, resultLabels, defs)
-            } else new BelleDelayedSubstProvable(resultProvable, resultLabels, defs, substs.reduce(_++_),
+            } else new BelleDelayedSubstProvable(resultProvable, resultLabels, defs, combineSubsts(substs),
               goal match { case dp: BelleDelayedSubstProvable => dp.parent case _ => None })
             (rp, resultCtx.closeBranch())
           case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(tactic, "")
@@ -555,8 +552,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                             (BelleProvable(provable(innerProvable, 0), resultLabels, defs), ctx.store(tactic))
                           } else {
                             // some tactics (e.g., QE, dI) internally expand definitions
-                            val subst = RestrictedBiDiUnificationMatch(provable.subgoals(0), innerProvable.conclusion).usubst
-                            (new BelleDelayedSubstProvable(provable(subst)(innerProvable(subst), 0), resultLabels, defs, subst, None), ctx.store(tactic))
+                            val (p, substs) = applySub(provable, innerProvable, 0, defs)
+                            (new BelleDelayedSubstProvable(p, resultLabels, defs, substs, None), ctx.store(tactic))
                           }
                         runningInner = null
                         result
@@ -576,6 +573,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                       val numSteps = (newCtx, resultCtx) match {
                         case (DbAtomPointer(i), DbAtomPointer(j)) => j-i
                         case (DbBranchPointer(_, _, i, Nil), DbAtomPointer(j)) => j-i
+                        case (DbBranchPointer(_, _, i, Nil), DbBranchPointer(_, _, j, Nil)) => j-i
                         case (DbAtomPointer(i), _: DbBranchPointer) => ???
                       }
                       if (p.subgoals.size != provable.subgoals.size) (bp, dbp.copy(predStep = predStep + numSteps, openBranchesAfterExec = openBranchesAfterExec.dropRight(1)))
@@ -640,5 +638,33 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
   override def kill(): Unit = /* cannot stop if synchronized */{
     isDead = true
     if (runningInner != null) runningInner.kill()
+  }
+
+  /** Applies `sub` to subgoal `i` of `goal`. Expands definitions `defs` and substitutions found by unification prior
+   * to merging provables, if necessary. Returns the merged provable and the applied substitutions. */
+  private def applySub(goal: ProvableSig, sub: ProvableSig, i: Int, defs: Declaration): (ProvableSig, USubst) = {
+    val allSymbols = StaticSemantics.symbols(goal.subgoals(i)) ++ StaticSemantics.symbols(sub.conclusion)
+    val symbols = allSymbols -- StaticSemantics.symbols(goal.subgoals(i)).intersect(StaticSemantics.symbols(sub.conclusion))
+    val defSubsts = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
+    val substGoal = exhaustiveSubst(goal, defSubsts)
+    val substSub = exhaustiveSubst(sub, defSubsts)
+    if (substGoal.subgoals(i) == substSub.conclusion) (substGoal(substSub, i), defSubsts)
+    else {
+      if (substGoal != goal || substSub != sub) applySub(substGoal, substSub, i, defs) match { case (p, s) => (p, defSubsts ++ s) }
+      else {
+        val proofSubsts = RestrictedBiDiUnificationMatch(substGoal.subgoals(i), substSub.conclusion).usubst
+        (exhaustiveSubst(substGoal, proofSubsts)(exhaustiveSubst(substSub, proofSubsts), i), defSubsts ++ proofSubsts)
+      }
+    }
+  }
+
+  /** Combines `substs` into a single combined substitution. */
+  private def combineSubsts(substs: List[USubst]): USubst = {
+    if (substs.size == 1) substs.head
+    else {
+      val ts = combineSubsts(substs.tail).subsDefsInput
+      val hs = substs.head.subsDefsInput
+      USubst(hs ++ ts.filterNot(sp => hs.exists(_.what == sp.what)))
+    }
   }
 }

@@ -71,23 +71,8 @@ trait Interpreter {
     assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
     val (substParent, substChild) =
       if (original.subgoals(n) == subderivation.conclusion) (original, subderivation)
-      else if (subderivation.isProved) {
-        val substOrig = exhaustiveSubst(original, subst)
-        val substSubDeriv = exhaustiveSubst(subderivation, subst)
-        //@todo may no longer need unification now that inner sequential interpreter returns delayed substitutions
-        val unified = Try(RestrictedBiDiUnificationMatch(substSubDeriv.conclusion, substOrig.subgoals(n))).toEither match {
-          case Left(_) =>
-            Try(RestrictedBiDiUnificationMatch(substOrig.subgoals(n), substSubDeriv.conclusion)).toEither match {
-              case Left(ex) => throw ex
-              case Right(s) => s
-            }
-          case Right(s) => s
-        }
-        val substSubderivation = exhaustiveSubst(substSubDeriv, unified.usubst)
-        (substOrig, substSubderivation)
-      } else {
-        (exhaustiveSubst(original, subst), subderivation)
-      }
+      else if (subderivation.isProved) (exhaustiveSubst(original, subst), exhaustiveSubst(subderivation, subst))
+      else (exhaustiveSubst(original, subst), subderivation)
     if (substParent.subgoals(n) == substChild.conclusion) {
       val merged = substParent(substChild, n)
       val nextIdx = if (substChild.isProved) n else n + 1
