@@ -132,11 +132,11 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             } catch {
               case e: BelleThrowable =>
                 val remainder = nonNilSteps.drop(i+1)
-                if (convertPending) remainder.headOption match {
-                  case Some(pt: StringInputTactic) if pt.name == "pending" =>
+                if (convertPending && remainder.nonEmpty) remainder.head match {
+                  case pt: StringInputTactic if pt.name == "pending" =>
                     return runTactic(SeqTactic(DebuggingTactics.pending(BellePrettyPrinter(t) + "; " + pt.inputs.head) +: remainder.tail), g, level, c,
                       strict, convertPending = false, executePending = false)
-                  case None =>
+                  case _ =>
                     return runTactic(DebuggingTactics.pending(BellePrettyPrinter(SeqTactic(remainder))), g, level, c,
                       strict, convertPending = false, executePending = false)
                 } else throw e.inContext(SeqTactic(nonNilSteps.patch(i, Seq(e.context), 1)), "Failed component of ; sequential composition: " + t.prettyString)
