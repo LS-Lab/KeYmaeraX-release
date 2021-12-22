@@ -648,7 +648,7 @@ object SimplifierV3 {
   }
 
   lazy val defaultFaxs: formulaIndex = composeIndex(baseIndex,boolIndex,cmpIndex)
-  lazy val defaultTaxs: termIndex = composeIndex(arithGroundIndex,arithBaseIndex)
+  lazy val defaultTaxs: termIndex = composeIndex(composeIndex(arithGroundIndex,arithBaseIndex),arithSpecialIndex)
 
   //Allow the user to directly specify a list of theorems for rewriting
   private def thWrapper(ths: List[ProvableSig]) : (formulaIndex,termIndex) = {
@@ -859,6 +859,22 @@ object SimplifierV3 {
         if (pr.isProved) List(pr)
         else List()
       case _ => List()
+    }
+  }
+
+  /** TODO: PURELY EXPERIMENTAL HACK. DO NOT MERGE.
+    *
+    * Map of (implicit) functions to simplification axiom(s) for their definition
+    */
+  val implFuncSimps: scala.collection.mutable.Map[Function, List[ProvableSig]] = scala.collection.mutable.Map.empty
+
+  def arithSpecialIndex(t:Term, ctx: context = emptyCtx) : List[ProvableSig] = {
+    t match {
+      case FuncOf(f,_) => implFuncSimps.get(f) match {
+          case Some(ls) => ls
+          case None => Nil
+        }
+      case _ => Nil
     }
   }
 

@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -372,6 +373,30 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * Derive by proof
     *******************************************************************/
 
+
+  /** fullChaseCustom: extends chaseCustom by adding customized rewrites on top of existing AxiomIndex rewrites  */
+  private def fullChaseCustom(keys: Expression=>List[(ProvableSig,PosInExpr, List[PosInExpr])]): BuiltInPositionTactic = {
+    def keysAug (e:Expression) : List[(ProvableSig,PosInExpr, List[PosInExpr])] = {
+      val axs = AxIndex.verboseAxiomsFor(e)
+      axs.map(p => {
+        val (l,r) = AxIndex.axiomIndex(p)
+        (p.provable,l,r)
+      }) ++ keys(e)
+    }
+
+    chaseCustom(keysAug)
+  }
+
+  // special version of chase for derive including user-defined functions
+  private val deriveChase: DependentPositionTactic = anon {(pos:Position) => (ExpandAll(Nil) & must(fullChaseCustom(e =>
+    e match {
+      case Differential(FuncOf(f,_)) =>
+        if(AxIndex.implFuncDiffs.contains(f))
+          AxIndex.implFuncDiffs(f)
+        else List()
+      case _ => List()
+    })(pos))) | nil}
+
   /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof)
     * to get rid of the differential operators.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
@@ -395,7 +420,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       }
     }
 
-    SaturateTactic(chaseNegations(pos) & deepChase(pos)) & anon { (seq: Sequent) => {
+    SaturateTactic(chaseNegations(pos) & deriveChase(pos)) & anon { (seq: Sequent) => {
       seq.sub(pos) match {
         case Some(e: Expression) =>
           val dvarPositions = ListBuffer.empty[PosInExpr]

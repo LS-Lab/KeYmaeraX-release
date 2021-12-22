@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 
 import scala.collection.immutable.List
@@ -484,7 +485,7 @@ object ImplicitDiffAxiom {
 
     // Canonicalize the shape of the implicit definition
     val canonPr = canonicalize(ode,fs)
-    println("Canonicalized: ", canonPr)
+    // println("Canonicalized: ", canonPr)
 
     // Set up for partial derivatives
 
@@ -666,14 +667,14 @@ object ImplicitDiffAxiom {
   }
 
   lazy val forallFwdBack : Lemma =
-    remember("\\forall x P(x) <-> \\forall x (x = x0 -> [{x'=1}++{x'=-1}]P(x))".asFormula,
+    remember("\\forall x P(x) <-> \\forall x (x = f() -> [{x'=1}++{x'=-1}]P(x))".asFormula,
       equivR(1) <(
         allR(1) & implyR(1) & abstractionb(1) & id,
         allR(1) & boundRename(Variable("x"),Variable("y"))(-1) &
-          cut("\\exists y y = x0".asFormula) <(
+          cut("\\exists y y = f()".asFormula) <(
             existsL(-2) & allL(-1) & implyL(-1) <(
               id,
-              cut("x = x0 | x > x0 | x < x0".asFormula) <(
+              cut("x = f() | x > f() | x < f()".asFormula) <(
                 orL(-3) <(
                   choiceb(-1) & andL(-1) & useAt(Ax.DX)(-3) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & prop, //QE,
                   orL(-3) <(
@@ -717,8 +718,40 @@ object ImplicitDiffAxiom {
   )
 
   lazy val forallFwdBackDirect : Lemma =
-    remember("\\forall x (x = x0 -> [{x'=1}++{x'=-1}]P(x)) -> P(x)".asFormula,
+    remember("\\forall x (x = f() -> [{x'=1}++{x'=-1}]P(x)) -> P(x)".asFormula,
       useAt(forallFwdBack,PosInExpr(1::Nil))(1,0::Nil) & implyR(1) & allL(-1) & prop,
       namespace
     )
+
+  // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
+  // todo: decide what to pass as arguments
+  def propDiffUnfold(v:Variable, t0: Term) : DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
+    require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
+
+    val fml = seq.sub(pos) match {
+      case Some(e:Formula) => e
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val interp = StaticSemantics.signature(fml)
+//    val fv = StaticSemantics.freeVars(fml)
+//    if(fv.isInfinite || fv.isEmpty) throw new IllFormedTacticApplicationException("Unable to expand free var set: " + fv.toString)
+//    val v = fv.toSet.toList.head
+//
+//    //todo: Pass as parameter? or read off from interpreted functions or something else?
+//    val t0 = Number(0)
+
+    val expAx = forallFwdBackDirect.fact(URename(v,Variable("x")))(USubst(List(SubstitutionPair("f()".asTerm, t0))))
+
+    println(interp)
+
+    useAt(expAx,PosInExpr(1::Nil))(pos) &
+    allR(pos) & implyR(pos) &
+    // Makes subsequent ODE proofs easier by proving the postcondition already true initially
+    cutR(fml)(pos) <(
+      exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
+      implyR(pos) &
+      choiceb(pos) & andR(pos)
+    )
+  })
 }

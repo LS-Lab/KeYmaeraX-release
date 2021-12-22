@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, AxiomaticRuleInfo, CoreAxiomInfo, DerivationInfo, DerivedAxiomInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * Central Axiom Indexing data structures for canonical proof strategies, including
@@ -26,11 +27,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, AxiomaticRuleInfo, Co
 object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
 
   /**
-    * PURELY EXPERIMENTAL HACK. DO NOT MERGE.
+    * TODO: PURELY EXPERIMENTAL HACK. DO NOT MERGE.
     *
     * Map of (implicit) functions to the relevant differential axiom for their definition
     */
-  val implFuncDiffs: scala.collection.mutable.Map[Function, AxiomInfo] =
+  val implFuncDiffs: scala.collection.mutable.Map[Function, List[(ProvableSig,PosInExpr, List[PosInExpr])]] =
     scala.collection.mutable.Map.empty
 
   /** lookup canonical axioms or tactics for an expression (index) */
@@ -83,7 +84,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
         case _: Power => Ax.Dpower :: Nil
         case FuncOf(_, Nothing) => Ax.Dconst :: Nil
         case FuncOf(f,_) => implFuncDiffs.get(f) match {
-          case Some(value) => value :: Nil
+          case Some(value) => Nil
           case None => Nil
         }
         case _ => Nil

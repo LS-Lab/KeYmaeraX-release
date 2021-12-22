@@ -1351,7 +1351,7 @@ private object DifferentialTactics extends Logging {
     else {
       Dconstify(
         useAt(dbxRw,(us: Option[Subst]) => us.get ++ subst)(pos) <(
-          QE,
+          ?(id | QE),
           derive(pos++ dbxRw.recursor.head) &
           DE(pos) &
           // todo: mostly copy-paste from dI

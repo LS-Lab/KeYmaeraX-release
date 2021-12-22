@@ -2422,9 +2422,9 @@ trait UnifyUSCalculus {
     doChase(de,pos)
   }
 
-  /** chaseCustom: Unrestricted form of chaseFor, where AxiomIndex is not built in,
+  /** chaseCustom: Unrestricted form of chase where AxiomIndex is not built in,
     * i.e. it takes keys of the form Expression => List[(Provable,PosInExpr, List[PosInExpr])]
-    * This allows customised rewriting
+    * This allows customized rewriting using provables derived at runtime
     */
   def chaseCustom(keys: Expression=>List[(ProvableSig,PosInExpr, List[PosInExpr])]): BuiltInPositionTactic = chaseFor2Back("chaseCustom", chaseCustomFor(keys))
 
