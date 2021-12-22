@@ -176,11 +176,37 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
         dC("y >= 0".asFormula)(1) <(
           dI('diffInd)(1) <(id,
             // this is just to test deriving. the proof doesn't work right away, but would work if we separately proved exp(y^2)>=0 as a cut (or diff cut)
-            // the resulting goal is exp(y^2)*2y >= 0
+            // then the resulting goal is exp(y^2)*2y >= 0
             Dassignb(1) & skip
           ),
           hideL(-2) & ODE(1)
         ),
+        skip
+      )
+    )
+    println(pr)
+
+    // todo: parsing
+    pr.subgoals.length shouldBe 2
+  }
+
+  it should "manual proof with weird subexpression" in withMathematica { _ =>
+
+    val exp = InterpretedSymbols.expF
+    val init = deriveInitCond(exp)
+    val diff = ImplicitDiffAxiom.deriveDiffAxiom(List(exp)).head
+
+    // Manually register the differential axiom so that "derive" picks it up automatically
+    val info = (diff,PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
+    AxIndex.implFuncDiffs += (exp -> (info::Nil))
+    // Manually register the initial value axiom so that the simplifier picks it up automatically
+    SimplifierV3.implFuncSimps += (exp -> (init::Nil))
+
+    // exp(y+g(x)) > 0
+    val pr = proveBy(Greater(FuncOf(exp,"y+g(x)".asTerm),Number(0)),
+      propDiffUnfold("y+g(x)".asTerm, Number(0))(1) <(
+        SimplifierV3.simplify(1) & QE, //prove from initial conditions
+        skip,
         skip
       )
     )
@@ -239,14 +265,62 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
     val pr = proveBy(Equal(Plus(Power(FuncOf(sin,"z".asTerm),Number(2)),Power(FuncOf(cos,"z".asTerm),Number(2))), Number(1)),
       propDiffUnfold(Variable("z"), Number(0))(1) <(
         SimplifierV3.simplify(1) & closeT,
-        dI('diffInd)(1) <(id, Dassignb(1) & SimplifierV3.simplify(1)), //todo: needs function abstraction in QE
-        dI('diffInd)(1) <(id, Dassignb(1) & SimplifierV3.simplify(1)), //todo: needs function abstraction in QE
+        dI('diffInd)(1) <(id, Dassignb(1) &
+          abbreviateInterpretedFuncs & QE),
+        dI('diffInd)(1) <(id, Dassignb(1)  &
+          abbreviateInterpretedFuncs & QE)
       )
     )
     println(pr)
 
-    // todo: parsing
-    pr.subgoals.length shouldBe 2
+    pr shouldBe 'proved
+  }
+
+  it should "multivariate manual proof sin/cos 2" in withMathematica { _ =>
+
+    val sin = InterpretedSymbols.sinF
+    val cos = InterpretedSymbols.cosF
+    val init1 = deriveInitCond(sin)
+    val init2 = deriveInitCond(cos)
+    val diff = ImplicitDiffAxiom.deriveDiffAxiom(List(sin,cos))
+
+    // Manually register the differential axiom so that "derive" picks it up automatically
+    val info1 = (diff(0),PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
+    AxIndex.implFuncDiffs += (sin -> (info1::Nil))
+
+    val info2 = (diff(1),PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
+    AxIndex.implFuncDiffs += (cos -> (info2::Nil))
+
+    // Manually register the initial value axiom so that the simplifier picks it up automatically
+    SimplifierV3.implFuncSimps += (sin -> (init1::Nil))
+    SimplifierV3.implFuncSimps += (cos -> (init2::Nil))
+
+    val x = Variable("x")
+    val y = Variable("y")
+    val sinx=FuncOf(sin,x)
+    val siny=FuncOf(sin,y)
+    val cosx=FuncOf(cos,x)
+    val cosy=FuncOf(cos,y)
+
+    // sin(x+y) = sin(x)cos(y)+cos(x)sin(y)
+    // cos(x+y) = cos(x)cos(y)-sin(x)sin(y)
+    val pr = proveBy(
+      And(
+        Equal(
+          FuncOf(sin,Plus(x,y)),
+          Plus(Times(sinx,cosy),Times(cosx,siny))
+        ),
+        Equal(
+          FuncOf(cos,Plus(x,y)),
+          Minus(Times(cosx,cosy),Times(sinx,siny))
+        )
+      ),
+      propDiffUnfold(Variable("x"), Number(0))(1) <(
+        SimplifierV3.simplify(1) & closeT,
+        skip, //todo: should prove with dgvdbx
+        skip
+      ))
+    println(pr)
   }
 
 

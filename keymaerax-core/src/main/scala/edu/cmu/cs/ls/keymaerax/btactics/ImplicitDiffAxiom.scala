@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 
 import scala.collection.immutable.List
@@ -718,14 +719,14 @@ object ImplicitDiffAxiom {
   )
 
   lazy val forallFwdBackDirect : Lemma =
-    remember("\\forall x (x = f() -> [{x'=1}++{x'=-1}]P(x)) -> P(x)".asFormula,
-      useAt(forallFwdBack,PosInExpr(1::Nil))(1,0::Nil) & implyR(1) & allL(-1) & prop,
+    remember("\\forall x_ (x_ = f() -> [{x_'=1}++{x_'=-1}]P(x_)) -> P(g())".asFormula,
+      useAt(forallFwdBack,PosInExpr(1::Nil))(1,0::Nil) & implyR(1) & allL("g()".asTerm)(-1) & prop,
       namespace
     )
 
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
   // todo: decide what to pass as arguments
-  def propDiffUnfold(v:Variable, t0: Term) : DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
+  def propDiffUnfold(v:Term, t0: Term) : DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
 
     val fml = seq.sub(pos) match {
@@ -733,25 +734,52 @@ object ImplicitDiffAxiom {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val interp = StaticSemantics.signature(fml)
-//    val fv = StaticSemantics.freeVars(fml)
-//    if(fv.isInfinite || fv.isEmpty) throw new IllFormedTacticApplicationException("Unable to expand free var set: " + fv.toString)
-//    val v = fv.toSet.toList.head
-//
-//    //todo: Pass as parameter? or read off from interpreted functions or something else?
-//    val t0 = Number(0)
+    // Convenience rename if we happen to find a variable
+    val targetVar = v match {
+      case vv: Variable => vv
+      case _ => Variable("x_")
+    }
 
-    val expAx = forallFwdBackDirect.fact(URename(v,Variable("x")))(USubst(List(SubstitutionPair("f()".asTerm, t0))))
-
-    println(interp)
+    val expAx = forallFwdBackDirect.fact(URename(targetVar,Variable("x_")))(USubst(List(SubstitutionPair("f()".asTerm, t0),SubstitutionPair("g()".asTerm, v))))
 
     useAt(expAx,PosInExpr(1::Nil))(pos) &
     allR(pos) & implyR(pos) &
     // Makes subsequent ODE proofs easier by proving the postcondition already true initially
-    cutR(fml)(pos) <(
+    cutR(fml.replaceFree(v, targetVar))(pos) <(
       exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
       implyR(pos) &
       choiceb(pos) & andR(pos)
     )
   })
+
+  //todo: copied below from ToolTactics for experimentation -- probably should just add it there
+  // However, there is a problem re-parsing cached lemmas at the moment, so not added for now
+
+  /** Returns all sub-terms of `fml` that pass `matcher`. */
+  private def matchingTermsOf(fml: Formula, matcher: Term=>Boolean): List[Term] = {
+    val result = scala.collection.mutable.ListBuffer.empty[Term]
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
+        if (matcher(e)) result += e
+        Left(None)
+      }
+    }, fml)
+    result.toList
+  }
+
+  /** Returns all sub-terms of `fml` that are interpreted functions. */
+  private def interpretedFuncsOf(fml: Formula): List[Term] = matchingTermsOf(fml, {
+    case f@FuncOf(Function(_, _, domain, _, Some(_)), _) => true
+    case _ => false
+  })
+
+  /** Abbreviates interpreted functions to variables.
+    * todo: This currently abbreviates every interpreted function but we may want to filter out those that have known
+    * mappings in the target QE tool
+    * */
+  val abbreviateInterpretedFuncs = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
+    flatMap(interpretedFuncsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
+    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  )
+
 }
