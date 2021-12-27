@@ -247,7 +247,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
            size: 'md',
            resolve: {
              title: function() { return "Syntax error"; },
-             message: function() { return "The model has syntax errors, please fix before starting a proof."; },
+             message: function() { return "The model has syntax errors, please fix before starting a proof: " + errorText; },
              mode: function() { return "ok"; }
            }
          });
