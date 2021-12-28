@@ -101,6 +101,12 @@ private object LBARB   extends Terminal("{|") {
 private object RBARB   extends Terminal("|}") {
   override def regexp: Regex = """\|\}""".r
 }
+private object LDDIA   extends Terminal("<<") {
+  override def regexp: Regex = """\<\<""".r
+}
+private object RDDIA   extends Terminal(">>") {
+  override def regexp: Regex = """\>\>""".r
+}
 private object LBOX    extends Terminal("[") {
   override def regexp: Regex = """\[""".r
 }
@@ -590,6 +596,8 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     RBOX.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RBOX, loc))),
     LBARB.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LBARB, loc))),
     RBARB.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RBARB, loc))),
+    LDDIA.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LDDIA, loc))),
+    RDDIA.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RDDIA, loc))),
     LBRACE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LBRACE, loc))),
     RBRACE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RBRACE, loc))),
 

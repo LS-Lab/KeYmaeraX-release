@@ -437,7 +437,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       // ordinary identifiers outside quantifiers disambiguate to predicate/function/predicational versus variable
       case r :+ Token(IDENT(name, idx), loc) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la == LPAREN || la == LBRACE || la == PRIME || la == LBANANA || la == LBARB) shift(st) else reduce(st, 1, Variable(name, idx, Real), loc, r)
+        if (la == LPAREN || la == LBRACE || la == PRIME || la == LBANANA || la == LBARB || la == LDDIA) shift(st) else reduce(st, 1, Variable(name, idx, Real), loc, r)
 
       // function/predicate symbols arity 0
       case r :+ Token(tok: IDENT, sl) :+ Token(LPAREN, _) :+ Token(RPAREN, el) =>
@@ -511,6 +511,16 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 4, tok, t1, sl.spanTo(el), r)
 
+      // interpreted function with arity 0
+      case r :+ Token(tok: IDENT, sl) :+ Token(LDDIA, _) :+ Expr(f1: Formula, _) :+ Token(RDDIA, _) :+ Token(LPAREN, _) :+ Token(RPAREN, el) =>
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
+        reduceFuncInterp(st, 6, tok, f1, Nothing, sl.spanTo(el), r)
+
+      // interpreted function with arity > 0
+      case r :+ Token(tok: IDENT, sl) :+ Token(LDDIA, _) :+ Expr(f1: Formula, _) :+ Token(RDDIA, _) :+ Token(LPAREN, _) :+ Expr(t1: Term, _) :+ Token(RPAREN, el) =>
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
+        reduceFuncInterp(st, 7, tok, f1, t1, sl.spanTo(el), r)
+
       // function/predicate symbols arity>0: special elaboration case for misclassified t() as formula
       case r :+ Token(tok: IDENT, sl) :+ (optok@Token(LPAREN, _)) :+ Expr(t1: Formula, _) :+ Token(RPAREN, el) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
@@ -548,6 +558,15 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         //assert(isNoQuantifier(r), "Quantifier stack items handled above")
         if (firstFormula(la)) shift(st) else error(st, List(FIRSTFORMULA))
 
+      case _ :+ Token(_: IDENT, _) :+ Token(LDDIA, _) =>
+        //assert(isNoQuantifier(r), "Quantifier stack items handled above")
+        if (firstFormula(la)) shift(st) else error(st, List(FIRSTFORMULA))
+
+      case _ :+ Token(_: IDENT, _) :+ Token(LDDIA, _) :+ Expr(_: Formula, _) =>
+        if (la == RDDIA) shift(st) else ???
+
+      case _ :+ Token(_: IDENT, _) :+ Token(LDDIA, _) :+ Expr(_: Formula, _) :+ Token(RDDIA, el) =>
+        if (la == LPAREN) shift(st) else ???
 
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
       case r :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
@@ -738,7 +757,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
           else {
             //@todo op(st, la) : Potential problem: st is not the right parser state for la
             //@todo if statementSemicolon then the missing SEMI causes incorrect predictions of operator precedence ++ versus ;
-            if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
+            if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX || la==RDDIA
               || (la==RDIA /*|| la==RDIA*/) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
               || la!=LBRACE &&
               (optok<op(st, la, List(t2.kind, ExpressionKind))
@@ -1078,6 +1097,11 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     else error(st, List(BINARYTERMOP,BINARYFORMULAOP,RPAREN,MORE))
   }
 
+  private def reduceFuncInterp(st: ParseState, consuming: Int, name: IDENT, interp: Formula, arg:Term, loc: Location, remainder: Stack[Item]): ParseState = {
+    val ParseState(_, Token(la, _) :: _) = st
+    reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real, Some(interp)),arg), loc, remainder)
+  }
+
   // FIRST lookahead sets
 
   /** Is la the beginning of a new expression? */
@@ -1101,6 +1125,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
     la==SEMI /* from tests */ ||
     la==RBRACE /* from predicationals */ ||
+    la==RDDIA /* from implicit function def */ ||
     la==COMMA /* from invariant annotations */ ||
     la==PRIME || la==EOF
 
@@ -1155,7 +1180,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def followsIdentifier(la: Terminal): Boolean = followsTerm(la) ||
     la==LPAREN || la==PRIME ||
     la==ASSIGN || la==ASSIGNANY || la==EOF || firstFormula(la) /* from \exists x ... */ ||
-    la==LBANANA || la==LBARB
+    la==LBANANA || la==LBARB || la==LDDIA
 
 
   // parser actions

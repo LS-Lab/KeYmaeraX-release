@@ -325,6 +325,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       Compose(ProgramConst("b"), Loop(ODESystem(DifferentialProgramConst("c")))))))
   }
 
+  it should "parse implicit functions" in {
+    Parser("exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(x)") shouldBe FuncOf(InterpretedSymbols.expF,Variable("x"))
+    Parser("exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>( (x+exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y)) )") shouldBe FuncOf(InterpretedSymbols.expF,Plus(Variable("x"),FuncOf(InterpretedSymbols.expF,Variable("y"))))
+  }
+
   it should "generate legible error messages for program consts" in {
     the [ParseException] thrownBy Parser("{a;b}*") should have message
       """1:6 Syntax error. Expression b is not a program: change to b; for a program constant, or to {b} for a differential program constant.
