@@ -83,10 +83,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
         case _: Divide => Ax.Dquotient :: Nil
         case _: Power => Ax.Dpower :: Nil
         case FuncOf(_, Nothing) => Ax.Dconst :: Nil
-        case FuncOf(f,_) => implFuncDiffs.get(f) match {
-          case Some(value) => Nil
-          case None => Nil
-        }
+        case FuncOf(f,_) => ImplicitAx.getDiffAx(f).toList
         case _ => Nil
       }
 

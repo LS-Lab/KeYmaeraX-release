@@ -140,7 +140,7 @@ class ImplicitFunctionTests extends TacticTestBase {
   "differential defs" should "prove exp differential axiom" in withMathematica { _ =>
     import InterpretedSymbols.expF
 
-    val diffAx = ImplicitDiffAxiom.deriveDiffAxiom(List(expF)).head
+    val diffAx = ImplicitAx.deriveDiffAxiom(List(expF)).head
 
     val prob = Equal(Differential(FuncOf(expF,"x".asVariable)),
                       Times(FuncOf(expF,"x".asVariable),Differential("x".asVariable)))

@@ -2,13 +2,15 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.ImplicitDiffAxiom._
+import edu.cmu.cs.ls.keymaerax.btactics.ImplicitAx._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import DerivationInfoAugmentors._
 
-class ImplicitDiffAxiomTests extends TacticTestBase {
+class ImplicitAxTests extends TacticTestBase {
 
   "compose" should "lift partial to diff axiom" in withMathematica { _ =>
 
@@ -157,27 +159,50 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
     ax3 shouldBe 'proved
   }
 
+  "derivedaxiominfo" should "derive and store diff ax 1" in withMathematica { _ =>
+
+    val exp = InterpretedSymbols.expF
+    val diff = deriveDiffAxiomReg(List(exp)).head
+
+    getDiffAx(exp).isDefined shouldBe true
+    getDiffAx(exp).get.provable shouldBe diff
+  }
+
+  it should "derive and store diff ax 2" in withMathematica { _ =>
+
+    val sin = InterpretedSymbols.sinF
+    val cos = InterpretedSymbols.cosF
+    val diff = ImplicitAx.deriveDiffAxiom(List(sin,cos))
+    val dsin = diff(0)
+    val dcos = diff(1)
+
+    registerDiffAx(sin,dsin)
+    registerDiffAx(cos,dcos)
+
+    getDiffAx(sin).isDefined shouldBe true
+    getDiffAx(sin).get.provable shouldBe dsin
+    getDiffAx(cos).isDefined shouldBe true
+    getDiffAx(cos).get.provable shouldBe dcos
+  }
+
   "property" should "manual proof" in withMathematica { _ =>
 
     val exp = InterpretedSymbols.expF
     val init = deriveInitCond(exp)
-    val diff = ImplicitDiffAxiom.deriveDiffAxiom(List(exp)).head
+    deriveDiffAxiomReg(List(exp))
 
-    // Manually register the differential axiom so that "derive" picks it up automatically
-    val info = (diff,PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
-    AxIndex.implFuncDiffs += (exp -> (info::Nil))
     // Manually register the initial value axiom so that the simplifier picks it up automatically
     SimplifierV3.implFuncSimps += (exp -> (init::Nil))
 
     // exp(y^2) >= 1
     val pr = proveBy(GreaterEqual(FuncOf(exp,Power(Variable("y"),Number(2))),Number(1)),
       propDiffUnfold(Variable("y"), Number(0))(1) <(
-        SimplifierV3.simplify(1) & closeT, //prove from initial conditions
+        SimplifierV3.simplify(1) & QE, //prove from initial conditions
         dC("y >= 0".asFormula)(1) <(
           dI('diffInd)(1) <(id,
             // this is just to test deriving. the proof doesn't work right away, but would work if we separately proved exp(y^2)>=0 as a cut (or diff cut)
             // then the resulting goal is exp(y^2)*2y >= 0
-            Dassignb(1) & skip
+            Dassignb(1) & cohideR(1)
           ),
           hideL(-2) & ODE(1)
         ),
@@ -185,20 +210,17 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
       )
     )
     println(pr)
-
-    // todo: parsing
     pr.subgoals.length shouldBe 2
+    pr.subgoals(0) shouldBe "==>  exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y^2)*(2*y^(2-1)*1)>=0".asSequent
+    pr.subgoals(1) shouldBe "y=0, exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y^2)>=1  ==>  [{y'=(-1)}]exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y^2)>=1".asSequent
   }
 
   it should "manual proof with weird subexpression" in withMathematica { _ =>
 
     val exp = InterpretedSymbols.expF
     val init = deriveInitCond(exp)
-    val diff = ImplicitDiffAxiom.deriveDiffAxiom(List(exp)).head
+    deriveDiffAxiomReg(List(exp))
 
-    // Manually register the differential axiom so that "derive" picks it up automatically
-    val info = (diff,PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
-    AxIndex.implFuncDiffs += (exp -> (info::Nil))
     // Manually register the initial value axiom so that the simplifier picks it up automatically
     SimplifierV3.implFuncSimps += (exp -> (init::Nil))
 
@@ -206,8 +228,8 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
     val pr = proveBy(Greater(FuncOf(exp,"y+g(x)".asTerm),Number(0)),
       propDiffUnfold("y+g(x)".asTerm, Number(0))(1) <(
         SimplifierV3.simplify(1) & QE, //prove from initial conditions
-        skip,
-        skip
+        skip, //todo: use dbx
+        skip  //todo: use dbx
       )
     )
     println(pr)
@@ -220,11 +242,8 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
 
     val exp = InterpretedSymbols.expF
     val init = deriveInitCond(exp)
-    val diff = ImplicitDiffAxiom.deriveDiffAxiom(List(exp)).head
+    deriveDiffAxiomReg(List(exp))
 
-    // Manually register the differential axiom so that "derive" picks it up automatically
-    val info = (diff,PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
-    AxIndex.implFuncDiffs += (exp -> (info::Nil))
     // Manually register the initial value axiom so that the simplifier picks it up automatically
     SimplifierV3.implFuncSimps += (exp -> (init::Nil))
 
@@ -248,14 +267,7 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
     val cos = InterpretedSymbols.cosF
     val init1 = deriveInitCond(sin)
     val init2 = deriveInitCond(cos)
-    val diff = ImplicitDiffAxiom.deriveDiffAxiom(List(sin,cos))
-
-    // Manually register the differential axiom so that "derive" picks it up automatically
-    val info1 = (diff(0),PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
-    AxIndex.implFuncDiffs += (sin -> (info1::Nil))
-
-    val info2 = (diff(1),PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
-    AxIndex.implFuncDiffs += (cos -> (info2::Nil))
+    deriveDiffAxiomReg(List(sin,cos))
 
     // Manually register the initial value axiom so that the simplifier picks it up automatically
     SimplifierV3.implFuncSimps += (sin -> (init1::Nil))
@@ -282,14 +294,7 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
     val cos = InterpretedSymbols.cosF
     val init1 = deriveInitCond(sin)
     val init2 = deriveInitCond(cos)
-    val diff = ImplicitDiffAxiom.deriveDiffAxiom(List(sin,cos))
-
-    // Manually register the differential axiom so that "derive" picks it up automatically
-    val info1 = (diff(0),PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
-    AxIndex.implFuncDiffs += (sin -> (info1::Nil))
-
-    val info2 = (diff(1),PosInExpr(0::Nil),PosInExpr(1::Nil)::Nil)
-    AxIndex.implFuncDiffs += (cos -> (info2::Nil))
+    deriveDiffAxiomReg(List(sin,cos))
 
     // Manually register the initial value axiom so that the simplifier picks it up automatically
     SimplifierV3.implFuncSimps += (sin -> (init1::Nil))

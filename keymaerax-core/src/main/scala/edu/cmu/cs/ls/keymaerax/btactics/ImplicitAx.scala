@@ -12,19 +12,59 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 
 import scala.collection.immutable.List
 
 
-/**
-  * Implements tactics to derive differential axioms from implicit definitions
+/** Derives axioms from implicit (differential) definitionss
   */
 
-object ImplicitDiffAxiom {
+object ImplicitAx {
 
-  private val namespace = "implicitdiffax"
+  private val namespace = "implicitax"
+
+  // TODO: figure out when to populate the following maps
+  /** Dynamically populated databases of axioms for implicit functions
+    * */
+
+  // Default differential axioms
+  private val implicitDiffAx: scala.collection.mutable.Map[Function, ProvableInfo] =
+    scala.collection.mutable.Map.empty
+
+  // Other default axioms for the simplifier/chase
+  // these must be of the form, e.g., f(...) = ...
+  private val implicitSimpAx: scala.collection.mutable.Map[Function, List[ProvableInfo]] =
+    scala.collection.mutable.Map.empty
+
+  def registerDiffAx(f: Function, p:ProvableSig) : Unit = {
+    assert(!implicitDiffAx.contains(f))
+
+    val name = f.name+"'"
+    val codename = "D"+f.name
+    val info = new DerivedAxiomInfo(name,
+      AxiomDisplayInfo(SimpleDisplayInfo(name,name), "displayFormula"),
+      codename,
+      name,
+      'surlinear,
+      {case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
+      'internal,
+      List(0),
+      List(List(1))
+    )
+    val lem = DerivationInfo.registerR( Ax.derivedAxiomFromFact(name,
+      p.conclusion.succ(0),
+      p,
+      Some(codename)
+    ), info)
+    implicitDiffAx += (f -> lem)
+  }
+
+  def getDiffAx(f: Function) : Option[ProvableInfo] = {
+    implicitDiffAx.get(f)
+  }
 
   // Prove the partial derivative -> compose axiom
   lazy val DcomposeFull : Lemma = {
@@ -564,6 +604,14 @@ object ImplicitDiffAxiom {
       sp(u.toForward(pr))
     })
     axs
+  }
+
+  def deriveDiffAxiomReg(fs : List[Function]) : List[ProvableInfo] = {
+    val axs = deriveDiffAxiom(fs)
+
+    (fs zip axs).foreach(fax=>registerDiffAx(fax._1,fax._2))
+
+    fs.map(getDiffAx(_).get)
   }
 
   // Split |- A & B into |- A, |- B
