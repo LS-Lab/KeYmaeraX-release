@@ -4,7 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.core.{Provable, StaticSemantics, USubst}
+import edu.cmu.cs.ls.keymaerax.core.{Provable, StaticSemantics, SubstitutionPair, USubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ProvableHelper.exhaustiveSubst
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 object UnificationTools {
@@ -12,11 +13,16 @@ object UnificationTools {
   def collectSubst(goal: Provable, i: Int, sub: Provable, defs: Declaration): USubst = {
     if (goal.subgoals(i) == sub.conclusion) USubst(List.empty)
     else {
-      val unifSubstSymbols = RestrictedBiDiUnificationMatch(goal.subgoals(i), sub.conclusion).usubst.subsDefsInput.
-        map(_.what).flatMap(StaticSemantics.symbols).toSet
-      val subst = USubst(defs.substs.filter(s => unifSubstSymbols.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
-      if (subst.subsDefsInput.nonEmpty) subst ++ collectSubst(goal(subst), i, sub(subst), defs)
-      else subst
+      val symbols = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
+      val substs = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
+      val substGoal = exhaustiveSubst(goal, substs)
+      val substSub = exhaustiveSubst(sub, substs)
+      if (symbols.isEmpty) assert(substGoal.subgoals(i) == substSub.conclusion, "No difference in symbols, but subderivation\n  " + substSub.conclusion.prettyString + "  does not fit goal\n  " + substGoal.subgoals(i).prettyString)
+      if (substGoal.subgoals(i) == substSub.conclusion) substs
+      else {
+        if (substs.subsDefsInput.nonEmpty) substs ++ collectSubst(substGoal, i, substSub, defs) // expand nested definitions
+        else substs ++ RestrictedBiDiUnificationMatch(substGoal.subgoals(i), substSub.conclusion).usubst
+      }
     }
   }
 }

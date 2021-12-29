@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, Position, RenUSubst, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Location
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
@@ -169,8 +169,7 @@ trait ProofTreeNode {
     if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
     else {
       val allSubsts = (proof.substs ++ proof.proofSubsts).distinct
-      val allSymbols = StaticSemantics.symbols(goal.subgoals(i)) ++ StaticSemantics.symbols(sub.conclusion)
-      val symbols = allSymbols -- StaticSemantics.symbols(goal.subgoals(i)).intersect(StaticSemantics.symbols(sub.conclusion))
+      val symbols = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
       val substs = USubst(allSubsts.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
       val substGoal = exhaustiveSubst(goal, substs)
       val substSub = exhaustiveSubst(sub, substs)
