@@ -99,7 +99,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((parent, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
         case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
           val substs = subderivation match {
-            case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+            case p: BelleDelayedSubstProvable => csubsts ++ p.subst ++ collectSubst(cp, cidx, subderivation.p, defs)
             //@note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
             case _ => csubsts ++ collectSubst(cp, cidx, subderivation.p, defs)
           }
