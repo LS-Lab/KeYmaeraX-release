@@ -443,4 +443,19 @@ object FormulaTools extends Logging {
     case x :: xs => Exists(List(x), quantifyExists(xs, fml))
   }
 
+  /** Difference between symbols in `f` and `g`. */
+  def symbolsDiff(f: Formula, g: Formula): Set[NamedSymbol] = {
+    if (f == g) Set.empty[NamedSymbol]
+    else {
+      val fs = StaticSemantics.symbols(f)
+      val gs = StaticSemantics.symbols(g)
+      (fs ++ gs) -- fs.intersect(gs)
+    }
+  }
+
+  /** Union of pairwise symbol difference in `fs` and `gs`. */
+  def symbolsDiff(fs: Seq[Formula], gs: Seq[Formula]): Set[NamedSymbol] = {
+    fs.zip(gs).map({ case (f, g) => symbolsDiff(f, g) }).reduce(_ ++ _)
+  }
+
 }
