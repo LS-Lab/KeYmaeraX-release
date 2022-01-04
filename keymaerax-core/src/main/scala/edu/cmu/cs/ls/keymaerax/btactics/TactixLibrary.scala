@@ -5,9 +5,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.smartHide
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{dgDbx, dgDbxAuto}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -656,6 +658,18 @@ object TactixLibrary extends HilbertCalculus
     conclusion = "Γ |- [x'=f(x)&R](P -> Q)"
   )
   val dCC: DependentPositionTactic = DifferentialTactics.dCC
+
+  @Tactic(longDisplayName="Darboux (in)equalities",
+    premises="Γ |- p≳0 ;; Q |- p' ≳ g p",
+    conclusion="Γ |- [x'=f(x) & Q]p≳0, Δ",
+    inputs="g:option[term]",
+    displayLevel="browse")
+  def dbx(g : Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ({ pos: Position =>
+    g match {
+      case None => dgDbxAuto(pos)
+      case Some(cof) => dgDbx(cof)(pos)
+    }
+  })
 
   // more
 

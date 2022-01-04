@@ -79,7 +79,7 @@ class ImplicitAxTests extends TacticTestBase {
 
     axs.length shouldBe 1
     axs(0) shouldBe 'proved
-    //todo: parsing axs(0).conclusion shouldBe "==> (exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(g(|t_|)))'=exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(g(|t_|))*(g(|t_|))'".asSequent
+    axs(0).conclusion shouldBe "==>  (exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(g(|t_|)))'=exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(g(|t_|))*(g(|t_|))'".asSequent
   }
 
   it should "derive differential axiom 2" in withMathematica { _ =>
@@ -93,7 +93,8 @@ class ImplicitAxTests extends TacticTestBase {
     axs.length shouldBe 2
     axs(0) shouldBe 'proved
     axs(1) shouldBe 'proved
-    // todo parsing
+    axs(0).conclusion shouldBe "==>  (sin<<<{cos:=*;sin:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(t_=0&sin=0&cos=1)>>(g(|t_|)))'=cos<<<{sin:=*;cos:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(t_=0&sin=0&cos=1)>>(g(|t_|))*(g(|t_|))'".asSequent
+    axs(1).conclusion shouldBe "==>  (cos<<<{sin:=*;cos:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(t_=0&sin=0&cos=1)>>(g(|t_|)))'=(-sin<<<{cos:=*;sin:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(t_=0&sin=0&cos=1)>>(g(|t_|)))*(g(|t_|))'".asSequent
   }
 
   it should "derive differential axiom 3" in withMathematica { _ =>
@@ -113,6 +114,9 @@ class ImplicitAxTests extends TacticTestBase {
     axs(1) shouldBe 'proved
     axs(2) shouldBe 'proved
 
+    axs(0).conclusion shouldBe "==>  (f1<<<{b:=*;c:=*;a:=._0;t:=._1;}{{a'=-(b+5),b'=-c*a,c'=-a^2,t'=-(1)}++{a'=b+5,b'=c*a,c'=a^2,t'=1}}>(t=0&a=0&b=0&c=0)>>(g(|t_|)))'=(f2<<<{a:=*;c:=*;b:=._0;t:=._1;}{{a'=-(b+5),b'=-c*a,c'=-a^2,t'=-(1)}++{a'=b+5,b'=c*a,c'=a^2,t'=1}}>(t=0&a=0&b=0&c=0)>>(g(|t_|))+5)*(g(|t_|))'".asSequent
+    axs(1).conclusion shouldBe "==>  (f2<<<{a:=*;c:=*;b:=._0;t:=._1;}{{a'=-(b+5),b'=-c*a,c'=-a^2,t'=-(1)}++{a'=b+5,b'=c*a,c'=a^2,t'=1}}>(t=0&a=0&b=0&c=0)>>(g(|t_|)))'=f3<<<{b:=*;a:=*;c:=._0;t:=._1;}{{a'=-(b+5),b'=-c*a,c'=-a^2,t'=-(1)}++{a'=b+5,b'=c*a,c'=a^2,t'=1}}>(t=0&a=0&b=0&c=0)>>(g(|t_|))*f1<<<{b:=*;c:=*;a:=._0;t:=._1;}{{a'=-(b+5),b'=-c*a,c'=-a^2,t'=-(1)}++{a'=b+5,b'=c*a,c'=a^2,t'=1}}>(t=0&a=0&b=0&c=0)>>(g(|t_|))*(g(|t_|))'".asSequent
+    axs(2).conclusion shouldBe "==>  (f3<<<{b:=*;a:=*;c:=._0;t:=._1;}{{a'=-(b+5),b'=-c*a,c'=-a^2,t'=-(1)}++{a'=b+5,b'=c*a,c'=a^2,t'=1}}>(t=0&a=0&b=0&c=0)>>(g(|t_|)))'=f1<<<{b:=*;c:=*;a:=._0;t:=._1;}{{a'=-(b+5),b'=-c*a,c'=-a^2,t'=-(1)}++{a'=b+5,b'=c*a,c'=a^2,t'=1}}>(t=0&a=0&b=0&c=0)>>(g(|t_|))^2*(g(|t_|))'".asSequent
   }
 
   it should "derive differential axiom with time" in withMathematica { _ =>
@@ -185,7 +189,27 @@ class ImplicitAxTests extends TacticTestBase {
     getDiffAx(cos).get.provable shouldBe dcos
   }
 
-  "property" should "manual proof" in withMathematica { _ =>
+  "property" should "prove exp non-negative" in withMathematica { _ =>
+
+    val exp = InterpretedSymbols.expF
+    val init = deriveInitCond(exp)
+    deriveDiffAxiomReg(List(exp))
+
+    // Manually register the initial value axiom so that the simplifier picks it up automatically
+    SimplifierV3.implFuncSimps += (exp -> (init::Nil))
+
+    val pr = proveBy(Greater(FuncOf(exp,"f()".asTerm),Number(0)),
+      propDiffUnfold("f()".asTerm, Number(0))(1) <(
+        SimplifierV3.simplify(1) & QE,
+        dbx(Some(Number(1)))(1),
+        dbx(Some(Number(-1)))(1)
+      ))
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "manual proof" in withMathematica { _ =>
 
     val exp = InterpretedSymbols.expF
     val init = deriveInitCond(exp)
@@ -211,8 +235,8 @@ class ImplicitAxTests extends TacticTestBase {
     )
     println(pr)
     pr.subgoals.length shouldBe 2
-    pr.subgoals(0) shouldBe "==>  exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y^2)*(2*y^(2-1)*1)>=0".asSequent
-    pr.subgoals(1) shouldBe "y=0, exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y^2)>=1  ==>  [{y'=(-1)}]exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y^2)>=1".asSequent
+    pr.subgoals(0) shouldBe "==>  exp<< <{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1) >>(y^2)*(2*y^(2-1)*1)>=0".asSequent
+    pr.subgoals(1) shouldBe "y=0, exp<< <{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1) >>(y^2)>=1  ==>  [{y'=(-1)}]exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y^2)>=1".asSequent
   }
 
   it should "manual proof with weird subexpression" in withMathematica { _ =>
@@ -228,14 +252,12 @@ class ImplicitAxTests extends TacticTestBase {
     val pr = proveBy(Greater(FuncOf(exp,"y+g(x)".asTerm),Number(0)),
       propDiffUnfold("y+g(x)".asTerm, Number(0))(1) <(
         SimplifierV3.simplify(1) & QE, //prove from initial conditions
-        skip, //todo: use dbx
-        skip  //todo: use dbx
+        dbx(Some(Number(1)))(1),
+        dbx(Some(Number(-1)))(1)
       )
     )
     println(pr)
-
-    // todo: parsing
-    pr.subgoals.length shouldBe 2
+    pr shouldBe 'proved
   }
 
   it should "multivariate manual proof" in withMathematica { _ =>
@@ -251,14 +273,12 @@ class ImplicitAxTests extends TacticTestBase {
     val pr = proveBy(Equal(FuncOf(exp,"x+y".asTerm),Times(FuncOf(exp,"x".asTerm),FuncOf(exp,"y".asTerm))),
       propDiffUnfold(Variable("x"), Number(0))(1) <(
         SimplifierV3.simplify(1) & closeT,
-        skip, //todo needs dbx to work with function abstraction in QE
-        skip
+        dbx(None)(1),
+        dbx(None)(1)
       )
     )
     println(pr)
-
-    // todo: parsing
-    pr.subgoals.length shouldBe 2
+    pr shouldBe 'proved
   }
 
   it should "multivariate manual proof sin/cos" in withMathematica { _ =>
@@ -273,14 +293,11 @@ class ImplicitAxTests extends TacticTestBase {
     SimplifierV3.implFuncSimps += (sin -> (init1::Nil))
     SimplifierV3.implFuncSimps += (cos -> (init2::Nil))
 
-    // exp(x+y) = exp(x)exp(y)
     val pr = proveBy(Equal(Plus(Power(FuncOf(sin,"z".asTerm),Number(2)),Power(FuncOf(cos,"z".asTerm),Number(2))), Number(1)),
       propDiffUnfold(Variable("z"), Number(0))(1) <(
         SimplifierV3.simplify(1) & closeT,
-        dI('diffInd)(1) <(id, Dassignb(1) &
-          abbreviateInterpretedFuncs & QE),
-        dI('diffInd)(1) <(id, Dassignb(1)  &
-          abbreviateInterpretedFuncs & QE)
+        dI('full)(1),
+        dI('diffInd)(1) <(id, Dassignb(1) & QE)
       )
     )
     println(pr)
@@ -307,6 +324,14 @@ class ImplicitAxTests extends TacticTestBase {
     val cosx=FuncOf(cos,x)
     val cosy=FuncOf(cos,y)
 
+    val p1 =
+      Minus(FuncOf(sin,Plus(x,y)),Plus(Times(sinx,cosy),Times(cosx,siny)))
+    val p2 =
+      Minus(FuncOf(cos,Plus(x,y)), Minus(Times(cosx,cosy),Times(sinx,siny)))
+
+    val G = List(List(Number(0),Number(1)),List(Number(-1),Number(0)))
+    val Gn = List(List(Number(0),Number(-1)),List(Number(1),Number(0)))
+
     // sin(x+y) = sin(x)cos(y)+cos(x)sin(y)
     // cos(x+y) = cos(x)cos(y)-sin(x)sin(y)
     val pr = proveBy(
@@ -322,10 +347,12 @@ class ImplicitAxTests extends TacticTestBase {
       ),
       propDiffUnfold(Variable("x"), Number(0))(1) <(
         SimplifierV3.simplify(1) & closeT,
-        skip, //todo: should prove with dgvdbx
-        skip
+        ODEInvariance.dgVdbx(G,p1::p2::Nil)(1) & DW(1) & TactixLibrary.G(1) & QE,
+        ODEInvariance.dgVdbx(Gn,p1::p2::Nil)(1) & DW(1) & TactixLibrary.G(1) & QE
       ))
     println(pr)
+
+    pr shouldBe 'proved
   }
 
 

@@ -815,19 +815,4 @@ object ImplicitAx {
     result.toList
   }
 
-  /** Returns all sub-terms of `fml` that are interpreted functions. */
-  private def interpretedFuncsOf(fml: Formula): List[Term] = matchingTermsOf(fml, {
-    case f@FuncOf(Function(_, _, domain, _, Some(_)), _) => true
-    case _ => false
-  })
-
-  /** Abbreviates interpreted functions to variables.
-    * todo: This currently abbreviates every interpreted function but we may want to filter out those that have known
-    * mappings in the target QE tool
-    * */
-  val abbreviateInterpretedFuncs = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
-    flatMap(interpretedFuncsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
-    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-  )
-
 }

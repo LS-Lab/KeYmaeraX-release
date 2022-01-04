@@ -90,8 +90,8 @@ private object ToolTactics {
         Idioms.doIf(!_.isProved)(
           close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
             // if
-            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-              abbreviateUninterpretedFuncs & closure & doQE
+            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & // expand &
+              abbreviateInterpretedFuncs & abbreviateUninterpretedFuncs & closure & doQE
             ,
             // else
             anon { (s: Sequent) =>
@@ -103,8 +103,8 @@ private object ToolTactics {
                 }
               hidePredicates & hideQuantifiedFuncArgsFmls &
                 assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-                abbreviateUninterpretedFuncs & closure &
+                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & // expand &
+                abbreviateInterpretedFuncs & abbreviateUninterpretedFuncs & closure &
                 Idioms.doIf(_ => doQE != nil)(
                   doQE & done | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg) }
                 )
@@ -202,28 +202,34 @@ private object ToolTactics {
     hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
   })
 
-  /** Returns all sub-terms of `fml` that are differentials are differential symbols. */
-  private def differentialsOf(fml: Formula): List[Term] = matchingTermsOf(fml, {
+  /** Returns all sub-terms of expression `e` that are differentials or differential symbols. */
+  private def differentialsOf(e: Expression): List[Term] = matchingTermsOf(e, {
     case _: Differential => true
     case _: DifferentialSymbol => true
     case _ => false
   })
 
-  /** Returns all sub-terms of `fml` that are uninterpreted functions. */
-  private def uninterpretedFuncsOf(fml: Formula): List[Term] = matchingTermsOf(fml, {
+  /** Returns all sub-terms of expression `e` that are uninterpreted functions. */
+  private def uninterpretedFuncsOf(e: Expression): List[Term] = matchingTermsOf(e, {
     case f@FuncOf(Function(_, _, domain, _, None), _) => domain != Unit
     case _ => false
   })
 
+  /** Returns all sub-terms of `fml` that are interpreted functions. */
+  def interpretedFuncsOf(e: Expression): List[Term] = matchingTermsOf(e, {
+    case f@FuncOf(Function(_, _, domain, _, Some(_)), _) => true
+    case _ => false
+  })
+
   /** Returns all sub-terms of `fml` that pass `matcher`. */
-  private def matchingTermsOf(fml: Formula, matcher: Term=>Boolean): List[Term] = {
+  private def matchingTermsOf(e: Expression, matcher: Term=>Boolean): List[Term] = {
     val result = scala.collection.mutable.ListBuffer.empty[Term]
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
         if (matcher(e)) result += e
         Left(None)
       }
-    }, fml)
+    }, e)
     result.toList
   }
 
@@ -236,6 +242,12 @@ private object ToolTactics {
   /** Abbreviates uninterpreted functions with arity>0 to variables. */
   private val abbreviateUninterpretedFuncs = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
     flatMap(uninterpretedFuncsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
+    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  )
+
+  /** Abbreviates interpreted functions to variables. */
+  private val abbreviateInterpretedFuncs = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
+    flatMap(interpretedFuncsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
     reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
   )
 

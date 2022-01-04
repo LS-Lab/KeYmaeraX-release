@@ -1126,7 +1126,8 @@ object SimplifierV3 {
     t match {
       case v:BaseVariable => List()
       case n:Number => List()
-      case FuncOf(_,Nothing) => List()
+      case FuncOf(f,Nothing) if !f.interp.isDefined => List()
+      case FuncOf(f,_) if f.interp.isDefined => List()
       case Neg(_) => List()
       case Plus(_,_) => List()
       case Minus(_,_) => List()

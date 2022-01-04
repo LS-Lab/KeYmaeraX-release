@@ -1510,9 +1510,20 @@ private object DifferentialTactics extends Logging {
                                  property: ComparisonFormula, strict:Boolean=true): (ProvableSig,Term,Term) = {
 
     val p = property.left
-    val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
+    val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, None)
+
+    val interp = (ToolTactics.interpretedFuncsOf(lie)++ToolTactics.interpretedFuncsOf(p)++ToolTactics.interpretedFuncsOf(dom)).distinct
+    val renvar = "x_"
+    val renvari = (0 to interp.length).map( i => Variable(renvar,Some(i)))
+    val renames = interp zip renvari
+    val lieren = renames.foldRight(lie)( (e,t) => t.replaceAll(e._1,e._2))
+    val pren = renames.foldRight(p)( (e,t) => t.replaceAll(e._1,e._2))
+    val domren = renames.foldRight(dom)( (e,t) => t.replaceAll(e._1,e._2))
+
     // p' = q p + r
-    val (q,r) = domQuoRem(lie,p,dom)
+    val (qpre,rpre) = domQuoRem(lieren,pren,domren)
+    val q = renames.foldRight(qpre)( (e,t) => t.replaceAll(e._1,e._2))
+    val r = renames.foldRight(rpre)( (e,t) => t.replaceAll(e._1,e._2))
 
     //The sign of the remainder for a Darboux argument
     //e.g., tests r >= 0 for p'>=gp (Darboux inequality)
@@ -1594,18 +1605,6 @@ private object DifferentialTactics extends Logging {
     }
 
     starter & dgDbx(cofactor)(pos)
-  })
-
-  @Tactic(longDisplayName="Darboux (in)equalities",
-    premises="Γ |- p≳0 ;; Q |- p' ≳ g p",
-    conclusion="Γ |- [x'=f(x) & Q]p≳0, Δ",
-    inputs="g:option[term]",
-    displayLevel="browse")
-  def dbx(g : Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ({ pos: Position =>
-    g match {
-      case None => dgDbxAuto(pos)
-      case Some(cof) => dgDbx(cof)(pos)
-    }
   })
 
   /** @see [[TactixLibrary.DGauto]]
