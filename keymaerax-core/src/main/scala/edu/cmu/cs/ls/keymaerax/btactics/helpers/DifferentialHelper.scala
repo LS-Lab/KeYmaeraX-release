@@ -11,7 +11,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, PosInExpr, UnificationMatch}
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
@@ -417,8 +419,16 @@ object DifferentialHelper {
         Plus(derive(l,odes),derive(r,odes))
       case Minus(l,r) => // (l-r)' = l'-r'
         Minus(derive(l,odes),derive(r,odes))
-      case FuncOf(_,Nothing) =>
-        Number(0)
+      case FuncOf(f,Nothing) if !f.interp.isDefined => Number(0)
+      case FuncOf(f,arg) if f.interp.isDefined => {
+        val concl = ImplicitAx.getDiffAx(f).get.provable.conclusion.succ(0)
+        // (_)' = _ * (_)'
+        val lhs = concl.sub(PosInExpr(0::0::Nil)).get
+        val rhsL = concl.sub(PosInExpr(1::0::Nil)).get.asInstanceOf[Term]
+        val rhsR = concl.sub(PosInExpr(1::1::0::Nil)).get.asInstanceOf[Term]
+        val u = UnificationMatch(lhs,t)
+        Times(u(rhsL),derive(u(rhsR),odes))
+      }
       //case FuncOf(_,args) =>
       //  //note: this handles both
       //  // (c())'=0 and

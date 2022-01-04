@@ -1510,6 +1510,7 @@ private object DifferentialTactics extends Logging {
                                  property: ComparisonFormula, strict:Boolean=true): (ProvableSig,Term,Term) = {
 
     val p = property.left
+    //todo: call with normal simplification tool instead of None
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, None)
 
     val interp = (ToolTactics.interpretedFuncsOf(lie)++ToolTactics.interpretedFuncsOf(p)++ToolTactics.interpretedFuncsOf(dom)).distinct
@@ -1522,8 +1523,8 @@ private object DifferentialTactics extends Logging {
 
     // p' = q p + r
     val (qpre,rpre) = domQuoRem(lieren,pren,domren)
-    val q = renames.foldRight(qpre)( (e,t) => t.replaceAll(e._1,e._2))
-    val r = renames.foldRight(rpre)( (e,t) => t.replaceAll(e._1,e._2))
+    val q = renames.foldRight(qpre)( (e,t) => t.replaceAll(e._2,e._1))
+    val r = renames.foldRight(rpre)( (e,t) => t.replaceAll(e._2,e._1))
 
     //The sign of the remainder for a Darboux argument
     //e.g., tests r >= 0 for p'>=gp (Darboux inequality)

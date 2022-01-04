@@ -818,22 +818,51 @@ object ODEInvariance {
       case None => throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
       case Some(t) => t
     }
+
+    def absGroebnerBasis(e: List[Term]) : List[Term] = {
+
+      val interp = (e.flatMap(ToolTactics.interpretedFuncsOf(_))).distinct
+      val renvar = "x_"
+      val renvari = (0 to interp.length).map( i => Variable(renvar,Some(i)))
+      val renames = interp zip renvari
+      val eren = e.map( ee => renames.foldRight(ee)( (e,t) => t.replaceAll(e._1,e._2)) )
+      val a = algTool.groebnerBasis(eren)
+
+      a.map( aa => renames.foldRight(aa)( (e,t) => t.replaceAll(e._2,e._1)))
+    }
+
+    def absPolynomialReduce(p: Term, gb: List[Term]) : (List[Term],Term) = {
+
+      val interp = (gb.flatMap(ToolTactics.interpretedFuncsOf(_))++ToolTactics.interpretedFuncsOf(p)).distinct
+      val renvar = "x_"
+      val renvari = (0 to interp.length).map( i => Variable(renvar,Some(i)))
+      val renames = interp zip renvari
+      val pren = renames.foldRight(p)( (e,t) => t.replaceAll(e._1,e._2))
+      val gbren = gb.map( ee => renames.foldRight(ee)( (e,t) => t.replaceAll(e._1,e._2)) )
+      val (a,b) = algTool.polynomialReduce(pren, gbren)
+
+
+      (a.map( aa => renames.foldRight(aa)( (e,t) => t.replaceAll(e._2,e._1))),
+        renames.foldRight(b)( (e,t) => t.replaceAll(e._2,e._1)))
+    }
+
     try {
-      var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
+      var gb = absGroebnerBasis(polys ++ domainEqualities(ode.constraint))
       var rank = 1
       //remainder after each round of polynomial reduction
       var remaining = polys
 
       while (true) {
-        val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-        val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+        //todo: call with normal simplification tool instead of None
+        val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, None))
+        val quos = lies.map(p => absPolynomialReduce(p, gb))
         remaining = quos.map(_._2).filterNot(_ == Number(0))
         if (remaining.isEmpty) {
-          val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-          val cofactors = gblies.map(p => algTool.polynomialReduce(p, gb))
+          val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, None))
+          val cofactors = gblies.map(p => absPolynomialReduce(p, gb))
           return (rank, gb, cofactors.map(_._1))
         }
-        gb = algTool.groebnerBasis(remaining ++ gb)
+        gb = absGroebnerBasis(remaining ++ gb)
         rank += 1
       }
       (0, List(), List())
@@ -931,6 +960,7 @@ object ODEInvariance {
     val lie = replaceODEfree(sump,liePre,ode)
     val dpPre = dot_prod(matvec_prod(Gco,ps),ps)
     val dp = replaceODEfree(sump,dpPre,ode)
+
     if(lie == Number(0))
       dC(cutp)(pos) <( skip, diffInd('full)(pos))
 
@@ -957,9 +987,12 @@ object ODEInvariance {
                 // TODO: The next 3 steps do not work with Dconstify
                 //useAt(leftMultId)(pos++PosInExpr(0::Nil)) &
                 //useAt(pr,PosInExpr(1::Nil))(pos) &
-                //DebuggingTactics.debug("First Vdbx QE",true) &
-                //p=0 must be true initially
-                QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
+                // DebuggingTactics.debug("First Vdbx QE",true) &
+                // p=0 must be true initially
+
+                // TODO: Apply equalities and simplify?
+                SaturateTactic(exhaustiveEqL2R(true)('L)) & SimplifierV3.simplify(pos) &
+                  QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
                 ,
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
@@ -1045,7 +1078,7 @@ object ODEInvariance {
     }
     val (r,groebner,cofactors) = rank(sys,polys)
 
-    //println(r,groebner,cofactors)
+    // println(r,groebner,cofactors)
 
     diffUnpackEvolutionDomainInitially(pos) &
       DebuggingTactics.debug("dgVdbx",debugTactic) &

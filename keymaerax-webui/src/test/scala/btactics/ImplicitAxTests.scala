@@ -355,5 +355,72 @@ class ImplicitAxTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "multivariate manual proof sin/cos auto" in withMathematica { _ =>
+
+    val sin = InterpretedSymbols.sinF
+    val cos = InterpretedSymbols.cosF
+    val init1 = deriveInitCond(sin)
+    val init2 = deriveInitCond(cos)
+    deriveDiffAxiomReg(List(sin,cos))
+
+    // Manually register the initial value axiom so that the simplifier picks it up automatically
+    SimplifierV3.implFuncSimps += (sin -> (init1::Nil))
+    SimplifierV3.implFuncSimps += (cos -> (init2::Nil))
+
+    val x = Variable("x")
+    val y = Variable("y")
+    val sinx=FuncOf(sin,x)
+    val siny=FuncOf(sin,y)
+    val cosx=FuncOf(cos,x)
+    val cosy=FuncOf(cos,y)
+
+    // sin(x+y) = sin(x)cos(y)+cos(x)sin(y)
+    // cos(x+y) = cos(x)cos(y)-sin(x)sin(y) automatically generated
+    val pr = proveBy(
+        Equal(
+          FuncOf(sin,Plus(x,y)),
+          Plus(Times(sinx,cosy),Times(cosx,siny))
+        ),
+      propDiffUnfold(Variable("x"), Number(0))(1) <(
+        SimplifierV3.simplify(1) & closeT,
+        ODEInvariance.dRI(1),
+        ODEInvariance.dRI(1)
+      ))
+    println(pr)
+
+    pr shouldBe 'proved
+  }
+
+  it should "multivariate manual proof sin/cos auto 2" in withMathematica { _ =>
+
+    val sin = InterpretedSymbols.sinF
+    val cos = InterpretedSymbols.cosF
+    val init1 = deriveInitCond(sin)
+    val init2 = deriveInitCond(cos)
+    deriveDiffAxiomReg(List(sin,cos))
+
+    // Manually register the initial value axiom so that the simplifier picks it up automatically
+    SimplifierV3.implFuncSimps += (sin -> (init1::Nil))
+    SimplifierV3.implFuncSimps += (cos -> (init2::Nil))
+
+    val x = Variable("x")
+    val sinx=FuncOf(sin,x)
+    val cosx=FuncOf(cos,x)
+
+    // sin(2*x) = 2*sin(x)*cos(x)
+    val pr = proveBy(
+      Equal(
+        FuncOf(sin,Times(Number(2),x)),
+        Times(Number(2),Times(sinx,cosx))
+      ),
+      propDiffUnfold(Variable("x"), Number(0))(1) <(
+        SimplifierV3.simplify(1) & closeT,
+        ODEInvariance.dRI(1),
+        ODEInvariance.dRI(1)
+      ))
+    println(pr)
+
+    pr shouldBe 'proved
+  }
 
 }
