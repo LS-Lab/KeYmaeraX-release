@@ -63,11 +63,9 @@ trait Interpreter {
     * @return A tuple of:
     *         * Indicator whether `original` and `subderivation` were merged.
     *         * A new provable that is identical to `original`, except that the nth subgoal is replaced with the
-    *           remaining subgoals of `subderivation`; and
-    *         * The next index for the interpreter to continue, n if `subderivation` is proved (i.e., all later
-    *           subgoals move up by 1), or (n+1) if subderivation is not proved.
+    *           remaining subgoals of `subderivation`.
     */
-  protected def applySubDerivation(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: USubst): (Boolean, ProvableSig, Int) = {
+  protected def applySubDerivation(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: USubst): (Boolean, ProvableSig) = {
     assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
     val (substParent, substChild) =
       if (original.subgoals(n) == subderivation.conclusion) (original, subderivation)
@@ -75,16 +73,14 @@ trait Interpreter {
       else (exhaustiveSubst(original, subst), subderivation)
     if (substParent.subgoals(n) == substChild.conclusion) {
       val merged = substParent(substChild, n)
-      val nextIdx = if (substChild.isProved) n else n + 1
-      (true, merged, nextIdx)
+      (true, merged)
     } else {
       assertSubMatchesModuloConstification(substParent, subderivation, n, subst)
       //@todo substParent may have more subgoals than subderivation
-      (false, subderivation, if (substChild.isProved) n else n + 1)
+      (false, subderivation)
     }
   } ensures(r => r match {
-    case (rmerged: Boolean, rp: ProvableSig, rn: Int) =>
-      (rn == n || rn == n+1) &&
+    case (rmerged: Boolean, rp: ProvableSig) =>
       ((!rmerged && rp==subderivation) ||
        ( rmerged && exhaustiveSubst(rp, subst).conclusion == exhaustiveSubst(original, subst).conclusion &&
          (if (subderivation.isProved) {

@@ -394,7 +394,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             runningInner(tactic, BelleProvable(provable.sub(0), lbl, defs)) match {
               case p: BelleDelayedSubstProvable =>
                 val r = applySubDerivation(provable, 0, p.p, p.subst) match {
-                  case (true, mergedProvable, _) => (new BelleDelayedSubstProvable(mergedProvable, lbl, defs, p.subst, p.parent), ctx.store(tactic))
+                  case (true, mergedProvable) => (new BelleDelayedSubstProvable(mergedProvable, lbl, defs, p.subst, p.parent), ctx.store(tactic))
                 }
                 runningInner = null
                 r
@@ -533,7 +533,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     runningInner(tactic, BelleProvable(provable.sub(0), labels, defs)) match {
                       case p: BelleDelayedSubstProvable =>
                         val resultLabels = updateLabels(labels, 0, p.label)
-                        val (wasMerged, mergedProvable, _) = applySubDerivation(provable, 0, p.p, p.subst)
+                        val (wasMerged, mergedProvable) = applySubDerivation(provable, 0, p.p, p.subst)
                         val parent = p.parent match {
                           case None => if (!wasMerged) Some(provable -> 0) else None
                           case Some((pparent, pidx)) =>

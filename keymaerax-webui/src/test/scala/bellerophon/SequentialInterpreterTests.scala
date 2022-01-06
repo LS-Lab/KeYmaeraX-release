@@ -118,11 +118,11 @@ class SequentialInterpreterTests extends TacticTestBase {
     val result = proveBy("(a=0&b=1 -> c=2) & (d=3 -> e=4) & (f=5&g=6 -> h=7) -> i=8".asFormula,
       implyR('R) & SaturateTactic(andL('L)) & SaturateTactic(onAll(implyL('Llike, "p_()&q_()->r_()".asFormula)))
     )
-    result.subgoals should have size 4
-    result.subgoals(0) shouldBe "d=3->e=4 ==> i=8, a=0&b=1, f=5&g=6".asSequent
-    result.subgoals(1) shouldBe "c=2, d=3->e=4 ==> i=8, f=5&g=6".asSequent
-    result.subgoals(2) shouldBe "d=3->e=4, h=7 ==> i=8, a=0&b=1".asSequent
-    result.subgoals(3) shouldBe "c=2, d=3->e=4, h=7 ==> i=8".asSequent
+    result.subgoals should contain theSameElementsInOrderAs List(
+      "d=3->e=4 ==> i=8, a=0&b=1, f=5&g=6".asSequent,
+      "c=2, d=3->e=4 ==> i=8, f=5&g=6".asSequent,
+      "c=2, d=3->e=4, h=7 ==> i=8".asSequent,
+      "d=3->e=4, h=7 ==> i=8, a=0&b=1".asSequent)
   }
 
   it should "fail inapplicable builtin-rules with legible error messages" in withMathematica { _ =>
