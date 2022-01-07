@@ -423,4 +423,27 @@ class ImplicitAxTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "prove example with no semialgebraic invariant" in withMathematica { _ =>
+
+    val exp = InterpretedSymbols.expF
+    val init = deriveInitCond(exp)
+    deriveDiffAxiomReg(List(exp))
+
+    // Manually register the initial value axiom so that the simplifier picks it up automatically
+    SimplifierV3.implFuncSimps += (exp -> (init::Nil))
+
+    val diffcut = LessEqual("x".asVariable, FuncOf(exp,"t^2-t".asTerm))
+
+    val pr = proveBy("t=0&x<=1 -> [{x'=x*(2*t-1),t'=1}](t=1->x<=1)".asFormula,
+      implyR(1) & andL(-1) &
+      dC(diffcut)(1) <(
+        DW(1) & G(1) & implyR(1) & implyR(1) & exhaustiveEqL2R(-2) & SimplifierV3.simplify(-1) & close,
+        dbx(None)(1) & exhaustiveEqL2R(-1) & SimplifierV3.simplify(1) & QE
+      )
+    )
+    println(pr)
+
+    pr shouldBe 'proved
+  }
+
 }
