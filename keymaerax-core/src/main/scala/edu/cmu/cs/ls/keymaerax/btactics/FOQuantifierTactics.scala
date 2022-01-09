@@ -151,10 +151,12 @@ protected object FOQuantifierTactics {
       case (_, Exists(vars, _)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
         useAt(Ax.existse)(pos).computeResult(pr)
       case (_, Exists(vars, qf)) if instance.isDefined &&
+        !StaticSemantics.freeVars(qf).isInfinite && //@note useAt internal renaming introduces x_ which would clash
+        StaticSemantics.freeVars(qf).intersect(StaticSemantics.freeVars(instance.get)).isEmpty &&
         StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
-        (quantified.isEmpty || vars.contains(quantified.get))  =>
+        (quantified.isEmpty || vars.contains(quantified.get)) =>
         //@todo assumes any USubstAboveURen
-        useAt(Ax.existsGeneralize, PosInExpr(1::Nil),  (uso: Option[Subst]) => uso match {
+        useAt(Ax.existsGeneralize, PosInExpr(1 :: Nil), (uso: Option[Subst]) => uso match {
           case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil)
           case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         })(pos).computeResult(pr)
@@ -167,7 +169,7 @@ protected object FOQuantifierTactics {
         val p = exists(qf)
 
         val (v, assign, assignPreprocess, subst) = t match {
-          case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
+          case vinst: Variable if !StaticSemantics.freeVars(p).contains(vinst) =>
             (vinst,Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), ProofRuleTactics.boundRenameFw(x, vinst)(pos).computeResult _,
               RenUSubst( ("f()".asTerm, vinst) :: ("p_(.)".asFormula, Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))) :: Nil))
           case _ =>
@@ -247,7 +249,7 @@ protected object FOQuantifierTactics {
         val unexpandedSymbols = StaticSemantics.symbols(p).
           filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false }).
           map(_.prettyString).mkString(",")
-        throw new UnexpandedDefinitionsFailure("Skolemization not possible because formula " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
+        throw new UnexpandedDefinitionsFailure("Skolemization not possible because bound variables " + xs.map(_.prettyString).mkString(",") + " are not fresh in the sequent; also unable to rename, because formula " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please hide all assumptions mentioning " + xs.map(_.prettyString).mkString("x") + ", or expand definitions first.")
       }
       //@todo bound renaming of x' not supported
       if (StaticSemantics.freeVars(p).symbols.intersect(xs.map(DifferentialSymbol).toSet[Variable]).nonEmpty) {

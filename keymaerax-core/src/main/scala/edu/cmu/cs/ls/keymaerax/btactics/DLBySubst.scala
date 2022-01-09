@@ -247,7 +247,7 @@ private object DLBySubst {
   private[btactics] val assignEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
-    case Some(Box(Assign(x, _), p)) =>
+    case Some(Box(Assign(x, e), p)) =>
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       val rename = x match {
         case v: BaseVariable =>
@@ -258,30 +258,37 @@ private object DLBySubst {
           else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
       }
 
-      if (StaticSemantics.freeVars(p).isInfinite) {
-        val unexpandedSymbols = StaticSemantics.symbols(p).
-          filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false })
-        unexpandedSymbols.map(n => Expand(n, None)).reduceRight[BelleExpr](_ & _) & assignEquality(pos)
+      val skolemize =
+        if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
+        else ident
+
+      if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
+        if (StaticSemantics.freeVars(e).contains(x)) {
+          // case [x:=x+1;][prg;]
+          val unexpandedSymbols = StaticSemantics.symbols(p).
+            filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false })
+          unexpandedSymbols.map(n => Expand(n, None)).reduceRight[BelleExpr](_ & _) & assignEquality(pos)
+        } else {
+          // case [x:=y;][prg;]
+          useAt(rename)(pos) & skolemize
+        }
       } else {
         if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
-          // bound renaming not possible when
-          useAt(rename)(pos) &
-            (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) & eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
-            else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast) & eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length - 1))
+          useAt(rename)(pos) & skolemize &
+            (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
+            else if (pos.isTopLevel && pos.isAnte) eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length - 1))
             else ident)
         } else {
           //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
           x match {
             case _: BaseVariable =>
-              val y = TacticHelper.freshNamedSymbol(x, sequent)
-              ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
-                (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-                else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-                else ident)
-            case _: DifferentialSymbol => useAt(rename)(pos) &
-              (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-              else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-              else ident)
+              if (StaticSemantics.freeVars(p).isInfinite) useAt(rename)(pos) & skolemize
+              else {
+                val y = TacticHelper.freshNamedSymbol(x, sequent)
+                ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) & skolemize
+              }
+            case _: DifferentialSymbol => useAt(rename)(pos) & skolemize
           }
         }
       }

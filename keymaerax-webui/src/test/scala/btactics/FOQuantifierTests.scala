@@ -292,12 +292,24 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x=y, z=1  ==>  z_0!=1, y!=1, [{z'=1&true}]x=z".asSequent
   }
 
-  it should "FEATURE_REQUEST: instantiate in the presence of space exceptions" taggedAs TodoTest in withTactics {
-    val result = proveBy("z=1 ==> \\exists y [{y'=f(|y|)^2, z' = g(|y|), a'=h(||)}]y>=0".asSequent,
-      existsR("z+1".asTerm)(1)
-    )
-    println(result)
-    result.subgoals.loneElement shouldBe "z=1, y=z+1  ==>  [{y'=f(|y|)^2,z'=g(|y|),a'=h(||)&true}]y>=0".asSequent
+  it should "instantiate in the presence of space exceptions" in withTactics {
+    proveBy("z=1 ==> \\exists y [y:=f(|y|)^2;]y>=0".asSequent, existsR("z+1".asTerm)(1)).subgoals.
+      loneElement shouldBe "z=1, y=z+1  ==> [y:=f(|y|)^2;]y>=0".asSequent
+  }
+
+  it should "instantiate in the presence of space exceptions in ODEs" in withTactics {
+    proveBy("z=1 ==> \\exists y [{y'=f(|y|)^2, z' = g(|y|), a'=h(||)}]y>=0".asSequent, existsR("z+1".asTerm)(1)).
+      subgoals.loneElement shouldBe "z=1, y=z+1  ==>  [{y'=f(|y|)^2,z'=g(|y|),a'=h(||)&true}]y>=0".asSequent
+  }
+
+  it should "instantiate in the presence of program constants" in withTactics {
+    proveBy("==> \\exists y [?y>=0;prg;]y>=0".asSequent, existsR("z".asTerm)(1)).subgoals.
+      loneElement shouldBe "y=z ==> [?y>=0;prg;]y>=0".asSequent
+  }
+
+  it should "instantiate in the presence of program constants in loops" in withTactics {
+    proveBy("==> \\exists y [{?y>=0;prg;}*]y>=0".asSequent, existsR("c()".asTerm)(1)).subgoals.
+      loneElement shouldBe "y=c() ==> [{?y>=0;prg;}*]y>=0".asSequent
   }
 
   it should "FEATURE_REQUEST: instantiate in the presence of space exceptions with self reference" taggedAs TodoTest in withTactics {
@@ -523,7 +535,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "give advice on program constant formula" in withTactics {
     the [UnexpandedDefinitionsFailure] thrownBy proveBy("x=0 ==> \\forall x (x=2 -> [ode;]x>=0)".asSequent, allSkolemize(1)) should
-      have message "Skolemization not possible because formula x=2->[ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+      have message "Skolemization not possible because bound variables x are not fresh in the sequent; also unable to rename, because formula x=2->[ode;]x>=0 contains unexpanded symbols ode;. Please hide all assumptions mentioning x, or expand definitions first."
   }
 
   it should "work in the presence of differential symbols and differentials" in withTactics {
