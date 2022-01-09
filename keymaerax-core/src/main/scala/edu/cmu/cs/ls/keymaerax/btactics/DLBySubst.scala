@@ -532,18 +532,21 @@ private object DLBySubst {
     //  loopRule -----------------------------------
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ"
   )
-  def loopRule(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
+  def loopRule(J: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
-    require(seq(pos) match { case Box(Loop(_),_) => true case _ => false }, "only applicable for [a*]p(||)")
-    label(startTx) &
-    cutR(invariant)(pos.checkSucc.top) <(
-      label(replaceTxWith(BelleLabels.initCase)),
-        cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
-          byUS(Ax.indrule) & label(replaceTxWith(BelleLabels.indStep))
-          ,
-          label(replaceTxWith(BelleLabels.useCase))
+    seq.sub(pos) match {
+      case Some(Box(Loop(a),_)) =>
+        label(startTx) &
+        cutR(J)(pos.checkSucc.top) <(
+          label(replaceTxWith(BelleLabels.initCase)),
+          cohide(pos) & implyR(1) & generalize(J, isGame = !FormulaTools.dualFree(a))(1) <(
+            byUS(Ax.indrule) & label(replaceTxWith(BelleLabels.indStep))
+            ,
+            label(replaceTxWith(BelleLabels.useCase))
+          )
         )
-      )
+      case _ => throw new IllegalArgumentException("requirement failed: only applicable for [a*]p(||)")
+    }
   }
 
   /** @see [[TactixLibrary.throughout]] */
