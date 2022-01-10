@@ -110,11 +110,13 @@ locstr="
     expr$ = -dB$-epslb;
 
     if ~isempty(dom$)
+        dsum=0;
         for i=1:length(dom$)
-          [prog,DP$(i)] = sossosvar(prog,monvec);
+          [prog,DP${i}] = sossosvar(prog,monvec);
+          dsum = dsum + DP${i}*dom$(i);
         end
 
-        prog = sosineq(prog, expr$ -DP$*dom$);
+        prog = sosineq(prog, expr$ -dsum);
     else
         prog = sosineq(prog, expr$);
     end
@@ -140,7 +142,7 @@ vars = "<>MmaToMatlab[allvars]<>";
 
 minDeg = 1;
 maxDeg = 2;
-eps=0.00001;
+eps=0.000001;
 minfeas=0.1;
 
 for d = minDeg : maxDeg
@@ -220,10 +222,12 @@ tempstr="
 
 	if ~isempty(G$1to$2)
 	    % SOSes for each barrier in domain
+        dsum=0;
 	    for i=1:length(G$1to$2)
-	      [prog,DP$1to$2(i)] = sossosvar(prog,monvec);
+	      [prog,DP$1to$2{i}] = sossosvar(prog,monvec);
+          dsum = dsum + DP$1to$2{i}*G$1to$2(i);
 	    end
-	    prog = sosineq(prog, expr$1to$2 -DP$1to$2*G$1to$2);
+	    prog = sosineq(prog, expr$1to$2 - dsum);
 	else
 	    prog = sosineq(prog, expr$1to$2);
     end
@@ -240,10 +244,12 @@ locstr="
 
     if ~isempty(dom$)
         for i=1:length(dom$)
-          [prog,DP$(i)] = sossosvar(prog,monvec);
+          dsum=0;
+          [prog,DP${i}] = sossosvar(prog,monvec);
+          dsum = dsum + DP${i}*dom$(i);
         end
 
-        prog = sosineq(prog, expr$ -DP$*dom$);
+        prog = sosineq(prog, expr$ -dsum);
     else
         prog = sosineq(prog, expr$);
     end
@@ -286,7 +292,7 @@ vars = "<>MmaToMatlab[allvars]<>";
 
 minDeg = 1;
 maxDeg = 2;
-eps=0.00001;
+eps=0.0001;
 minfeas=0.1;
 
 for d = minDeg : maxDeg
