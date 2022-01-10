@@ -290,9 +290,10 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     case Expand(n, s) => v match {
       case BelleProvable(_, _, defs) =>
         val subst = defs.substs.find(_.what match {
-          case FuncOf(fn, _) => fn == n
-          case PredOf(fn, _) => fn == n
-          case PredicationalOf(fn, _) => fn == n
+          case FuncOf(fn, _) => fn.name == n.name && fn.index == n.index
+          case PredOf(fn, _) => fn.name == n.name && fn.index == n.index
+          case PredicationalOf(fn, _) => fn.name == n.name && fn.index == n.index
+          case fn: NamedSymbol => fn.name == n.name && fn.index == n.index
           case fn => fn == n
         }) match {
           case Some(pd) => s match {
