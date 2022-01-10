@@ -190,7 +190,7 @@ for deg = mindeg : maxdeg
         monvec = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:deg}),monheu);
         monvec2 = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:sosdeg}),monheu2);
     end
-    % monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
+
     for i = 1 : length(lambdas)
         lambda = lambdas(i);
         fprintf('Trying lambda: \\n');
@@ -203,22 +203,26 @@ for deg = mindeg : maxdeg
             [prog,B] = sospolyvar(prog,monvec);
 
             % SOS coefficients for each barrier in init
+            isum=0;
             for i=1:init_dim
-              [prog,IP(i)] = sossosvar(prog,monvec2);
+              [prog,IP{i}] = sossosvar(prog,monvec2);
+              isum = isum+IP{i}*inits(i);
             end
 
             % Constrain barrier to be <= 0 on all inits
             % Note: could assume domain constraint here too
-            prog = sosineq(prog, -IP*inits - B);
+            prog = sosineq(prog, -isum - B);
 
             % SOSes for the unsafe states
+            fsum=0;
             for i=1:unsafe_dim
-              [prog,FP(i)] = sossosvar(prog,monvec2);
+              [prog,FP{i}] = sossosvar(prog,monvec2);
+              fsum = fsum+FP{i}*unsafes(i);
             end
 
             % Constrain barrier to be > 0 on all unsafe
             % Note: could assume domain constraint here too
-            prog = sosineq(prog, B - FP*unsafes - eps);
+            prog = sosineq(prog, B - fsum - eps);
 
             % Lie derivatives for each component
             dB = 0*vars(1);
@@ -237,10 +241,12 @@ for deg = mindeg : maxdeg
 			% expr = lambda * B - dB;
             if dom_dim > 0
                 % SOSes for each barrier in domain
+                dsum=0;
                 for i=1:dom_dim
-                  [prog,DP(i)] = sossosvar(prog,monvec2);
+                  [prog,DP{i}] = sossosvar(prog,monvec2);
+                  dsum = dsum+DP{i}*dom(i);
                 end
-                prog = sosineq(prog, expr -DP*dom);
+                prog = sosineq(prog, expr-dsum);
             else
                 prog = sosineq(prog, expr);
             end
@@ -269,7 +275,7 @@ B2 = 0
 
 sosprog=StringReplace[sosprog,{"`"->"backtick","$"->"dollar"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
-(*Print[sosprog];*)
+Print[sosprog];
 res =MATLink`MEvaluate@barrierscript;
 (*Print[res];*)
 lines=StringSplit[res,{"B2"~~___~~"=", "break"}];
@@ -345,6 +351,7 @@ for deg = mindeg : maxdeg
     monvec = vertcat(monomials(vars,0:1:deg),monheu);
     monvecs = vertcat(monomials(vars,0:1:floor(deg/2)),monheu);
     monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2);
+
     for i = 1 : numrand
 
         split = rand(1,barrier_dim);
@@ -420,7 +427,7 @@ B2 = 0
 ";
 sosprog=StringReplace[sosprog,{"`"->"backtick"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
-(*Print[sosprog]*);
+Print[sosprog];
 res=MATLink`MEvaluate@barrierscript;
 lines=Map[StringReplace[StringDelete[First[#],"\n" | "\r" |" "|"="],{"e-"->"*10^-", "backtick"->"`"}]&,StringCases[StringSplit[res,"B2"][[2;;-1]],"="~~___]];
 B=N[lines//ToExpression//Expand, DEFAULTPRECISION];
@@ -444,7 +451,7 @@ BTemplate[deg_Integer?NonNegative,vars_List]:=Catch[Module[{monBas,templateCoeff
 monBas=Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^deg , vars, "DegreeLexicographic"]];
 (* Create a template polynomial with symbolic coefficients *)
 templateCoeffs=Table[Unique["COEFF"], {i,Length[monBas]}];
-template=Evaluate[templateCoeffs.monBas];
+template=Evaluate[templateCoeffs . monBas];
 Throw[template]
 ]]
 
