@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.core.{Provable, StaticSemantics, SubstitutionPair, USubst}
+import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Provable, StaticSemantics, SubstitutionPair, USubst}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ProvableHelper.exhaustiveSubst
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
@@ -13,7 +13,7 @@ object UnificationTools {
   def collectSubst(goal: Provable, i: Int, sub: Provable, defs: Declaration): USubst = {
     if (goal.subgoals(i) == sub.conclusion) USubst(List.empty)
     else {
-      val symbols = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
+      val symbols = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)._3
       val substs = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
       val substGoal = exhaustiveSubst(goal, substs)
       val substSub = exhaustiveSubst(sub, substs)

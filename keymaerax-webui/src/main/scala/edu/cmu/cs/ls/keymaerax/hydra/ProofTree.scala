@@ -169,7 +169,7 @@ trait ProofTreeNode {
     if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
     else {
       val allSubsts = (proof.substs ++ proof.proofSubsts).distinct
-      val symbols = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
+      val symbols = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)._3
       val substs = USubst(allSubsts.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
       val substGoal = exhaustiveSubst(goal, substs)
       val substSub = exhaustiveSubst(sub, substs)

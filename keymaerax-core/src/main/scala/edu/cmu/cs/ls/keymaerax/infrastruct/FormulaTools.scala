@@ -443,19 +443,21 @@ object FormulaTools extends Logging {
     case x :: xs => Exists(List(x), quantifyExists(xs, fml))
   }
 
-  /** Difference between symbols in `f` and `g`. */
-  def symbolsDiff(f: Formula, g: Formula): Set[NamedSymbol] = {
-    if (f == g) Set.empty[NamedSymbol]
+  /** Difference between symbols in `f` and `g`, returns a tuple of: symbols of f not in g, symbols of g not in f, their union */
+  def symbolsDiff(f: Formula, g: Formula): (Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol]) = {
+    if (f == g) (Set.empty[NamedSymbol], Set.empty[NamedSymbol], Set.empty[NamedSymbol])
     else {
       val fs = StaticSemantics.symbols(f)
       val gs = StaticSemantics.symbols(g)
-      (fs ++ gs) -- fs.intersect(gs)
+      (fs -- gs, gs -- fs, (fs ++ gs) -- fs.intersect(gs))
     }
   }
 
-  /** Union of pairwise symbol difference in `fs` and `gs`. */
-  def symbolsDiff(fs: Seq[Formula], gs: Seq[Formula]): Set[NamedSymbol] = {
-    fs.zip(gs).map({ case (f, g) => symbolsDiff(f, g) }).reduce(_ ++ _)
+  /** Union of pairwise symbol difference in `fs` and `gs`, returns a tuple of: symbols of fs not in gs, symbols of gs not in fs, their union */
+  def symbolsDiff(fs: Seq[Formula], gs: Seq[Formula]): (Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol]) = {
+    fs.zip(gs).map({ case (f, g) => symbolsDiff(f, g) }).reduce[(Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol])]({
+      case ((a1, b1, c1), (a2, b2, c2)) => (a1++a2, b1++b2, c1++c2)
+    })
   }
 
 }
