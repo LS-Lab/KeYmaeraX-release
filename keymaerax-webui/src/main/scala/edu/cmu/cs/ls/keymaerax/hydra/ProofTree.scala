@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, Position, RenUSubst, RestrictedBiDiUnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, Position, RenUSubst, RestrictedBiDiUnificationMatch, UnificationTools}
 import edu.cmu.cs.ls.keymaerax.parser.Location
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
@@ -148,7 +148,6 @@ trait ProofTreeNode {
   // internals
 
   /** Applies derivation `sub` to subgoal  `i` of `goal`. Expands substitutions if necessary before applying `sub`. */
-  @tailrec
   private def applySub(goal: ProvableSig, sub: ProvableSig, i: Int): ProvableSig = {
     /** Apply sub to goal.
      * @note sub may originate from a lemma that was proved with expanded definitions, find expanded substitutions.
@@ -169,25 +168,14 @@ trait ProofTreeNode {
     if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
     else {
       val allSubsts = (proof.substs ++ proof.proofSubsts).distinct
-      val symbols = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)._3
-      val substs = USubst(allSubsts.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
-      val substGoal = exhaustiveSubst(goal, substs)
-      val substSub = exhaustiveSubst(sub, substs)
-      if (symbols.isEmpty) assert(substGoal.subgoals(i) == substSub.conclusion, "No difference in symbols, but subderivation\n  " + substSub.conclusion.prettyString + "  does not fit goal\n  " + substGoal.subgoals(i).prettyString)
-      if (substGoal.subgoals(i) == substSub.conclusion) substGoal(substSub, i)
-      else {
-        if (substs.subsDefsInput.nonEmpty) applySub(substGoal, substSub, i) // expand nested definitions
-        else {
-          val unifiedSubst = RestrictedBiDiUnificationMatch(substGoal.subgoals(i), substSub.conclusion).usubst
-          try {
-            exhaustiveSubst(substGoal, unifiedSubst)(exhaustiveSubst(substSub, unifiedSubst), i)
-          } catch {
-            case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
-              //@note proof step introduced function symbols with delayed substitution,
-              // but may not yet be done and so back-substitution fails
-              substGoal
-          }
-        }
+      val substs = UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, allSubsts)
+      try {
+        exhaustiveSubst(goal, substs)(exhaustiveSubst(sub, substs), i)
+      } catch {
+        case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
+          //@note proof step introduced function symbols with delayed substitution,
+          // but may not yet be done and so back-substitution fails
+          goal
       }
     }
   }

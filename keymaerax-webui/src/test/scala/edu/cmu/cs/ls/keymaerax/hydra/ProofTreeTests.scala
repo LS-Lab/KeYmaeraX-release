@@ -710,7 +710,7 @@ class ProofTreeTests extends TacticTestBase {
     }
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
+    tree.tacticString(new VerbatimTraceToTacticConverter)
 
     val medianDuration = median(durations.toList)
     val averageDuration = durations.sum/numStepsPerProof
