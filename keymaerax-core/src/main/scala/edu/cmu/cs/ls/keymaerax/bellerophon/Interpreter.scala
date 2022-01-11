@@ -47,7 +47,7 @@ trait Interpreter {
 
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
   protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration): USubst =
-    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, defs)
+    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, defs.substs)
 
 
   /** Applies substitutions `s` to provable `p` exhaustively. */
