@@ -246,9 +246,16 @@ private object ToolTactics {
   )
 
   /** Abbreviates interpreted functions to variables. */
-  private val abbreviateInterpretedFuncs = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
-    flatMap(interpretedFuncsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
-    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  private val abbreviateInterpretedFuncs = anon ((seq: Sequent) => {
+    val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct
+
+    if(interpreted.nonEmpty) {
+      // Automatically apply simplifications when there are interpreted functions
+      SimplifierV3.fullSimplify & interpreted.map(abbrvAll(_, None) & hideL('Llast)).
+        reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+    }
+    else skip
+  }
   )
 
   def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE(Declaration(Map.empty), List.empty)(qeTool)

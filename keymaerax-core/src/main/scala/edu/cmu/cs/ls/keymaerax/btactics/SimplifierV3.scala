@@ -866,12 +866,11 @@ object SimplifierV3 {
     *
     * Map of (implicit) functions to simplification axiom(s) for their definition
     */
-  val implFuncSimps: scala.collection.mutable.Map[Function, List[ProvableSig]] = scala.collection.mutable.Map.empty
-
   def arithSpecialIndex(t:Term, ctx: context = emptyCtx) : List[ProvableSig] = {
     t match {
-      case FuncOf(f,_) => implFuncSimps.get(f) match {
-          case Some(ls) => ls
+      case FuncOf(f,_) if f.interpreted =>
+        ImplicitAx.getInitAx(f) match {
+          case Some(ls) => ls.provable::Nil
           case None => Nil
         }
       case _ => Nil

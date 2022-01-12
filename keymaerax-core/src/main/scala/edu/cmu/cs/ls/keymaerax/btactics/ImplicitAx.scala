@@ -26,24 +26,15 @@ object ImplicitAx {
 
   private val namespace = "implicitax"
 
-  // TODO: figure out when to populate the following maps
-  /** Dynamically populated databases of axioms for implicit functions
-    * */
+  private def canonicalDiffAxName(f: Function) : String = {
+    // todo: how to use directory structure?
+    "D"+f.name
+  }
 
-  // Default differential axioms
-  private val implicitDiffAx: scala.collection.mutable.Map[Function, ProvableInfo] =
-    scala.collection.mutable.Map.empty
-
-  // Other default axioms for the simplifier/chase
-  // these must be of the form, e.g., f(...) = ...
-  private val implicitSimpAx: scala.collection.mutable.Map[Function, List[ProvableInfo]] =
-    scala.collection.mutable.Map.empty
-
-  def registerDiffAx(f: Function, p:ProvableSig) : Unit = {
-    assert(!implicitDiffAx.contains(f))
-
-    val name = f.name+"'"
-    val codename = "D"+f.name
+  private def registerDiffAx(f: Function, p:ProvableSig) : Unit = {
+    println("Registering differential axiom: ",f,p)
+    val name = canonicalDiffAxName(f)
+    val codename = name
     val info = new DerivedAxiomInfo(name,
       AxiomDisplayInfo(SimpleDisplayInfo(name,name), "displayFormula"),
       codename,
@@ -54,16 +45,67 @@ object ImplicitAx {
       List(0),
       List(List(1))
     )
-    val lem = DerivationInfo.registerR( Ax.derivedAxiomFromFact(name,
+    DerivationInfo.registerR( Ax.derivedAxiomFromFact(name,
       p.conclusion.succ(0),
       p,
       Some(codename)
     ), info)
-    implicitDiffAx += (f -> lem)
   }
 
+  // todo: for efficiency initialize ProvableInfo with pre-proved differential axioms
   def getDiffAx(f: Function) : Option[ProvableInfo] = {
-    implicitDiffAx.get(f)
+    try {
+      Some(ProvableInfo(canonicalDiffAxName(f)))
+    }
+    catch {
+      case e:AxiomNotFoundException => {
+        val fpr = deriveDiffAxiomSing(f)
+        // todo: return None if not derived?
+        fpr.foreach(f => registerDiffAx(f._1,f._2))
+        getDiffAx(f)
+      }
+    }
+  }
+
+  private def canonicalInitAxName(f: Function) : String = {
+    // todo: how to use directory structure?
+    "I"+f.name
+  }
+
+  private def registerInitAx(f: Function, p:ProvableSig) : Unit = {
+    println("Registering initial condition axiom: ",f,p)
+    val name = canonicalInitAxName(f)
+    val codename = name
+    val info = new DerivedAxiomInfo(name,
+      AxiomDisplayInfo(SimpleDisplayInfo(name,name), "displayFormula"),
+      codename,
+      name,
+      'surlinear,
+      {case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
+      'internal,
+      List(0),
+      List(List(1))
+    )
+    DerivationInfo.registerR( Ax.derivedAxiomFromFact(name,
+      p.conclusion.succ(0),
+      p,
+      Some(codename)
+    ), info)
+  }
+
+  // todo: for efficiency initialize ProvableInfo with pre-proved differential axioms
+  def getInitAx(f: Function) : Option[ProvableInfo] = {
+    try {
+      Some(ProvableInfo(canonicalInitAxName(f)))
+    }
+    catch {
+      case e:AxiomNotFoundException => {
+        val pr = deriveInitAxiom(f)
+        // todo: return None if not derived?
+        registerInitAx(f,pr)
+        getInitAx(f)
+      }
+    }
   }
 
   // Prove the partial derivative -> compose axiom
@@ -508,9 +550,10 @@ object ImplicitAx {
      )
   }
 
-  // Derive differential axioms for list of interpreted functions g
-  // The interpretation for each function must have the expected shape:
-  // . = g(.0) <-> <{x_1:=*; x_0:=.; t:=.0;} {x'=-f(x), t'=-(1) ++ x'=f(x), t'=1} > Init
+  /**  Derive differential axioms for list of interpreted functions fs
+    *  The interpretation for each function must have the expected shape:
+    *  . = g(.0) <-> <{x_1:=*; x_0:=.; t:=.0;} {x'=-f(x), t'=-(1) ++ x'=f(x), t'=1} > Init
+    */
   def deriveDiffAxiom(fs : List[Function]) : List[ProvableSig] = {
 
     val dim = fs.length
@@ -606,12 +649,48 @@ object ImplicitAx {
     axs
   }
 
-  def deriveDiffAxiomReg(fs : List[Function]) : List[ProvableInfo] = {
-    val axs = deriveDiffAxiom(fs)
+  private def listifyCompose(p:Program) : List[AtomicProgram] = p match{
+    case Compose(l,r) => listifyCompose(l) ++ listifyCompose(r)
+    case a : AtomicProgram => List(a)
+    case _ => throw new IllegalArgumentException("Unable to flatten program to a list of atomic programs: "+ p)
+  }
 
-    (fs zip axs).foreach(fax=>registerDiffAx(fax._1,fax._2))
+  /** Same as deriveDiffAxiom but generates the list of simultaneously defined functions by guessing names
+    *
+    * @param f an interpreted function with differential equations
+    * @return list of proved differential axioms
+    */
+  def deriveDiffAxiomSing(f : Function) : List[(Function,ProvableSig)] = {
 
-    fs.map(getDiffAx(_).get)
+    require(f.interp.isDefined)
+
+    val (assgn,q,r) = f.interp.get match {
+      case Diamond(Compose(p,q),r) => (p,q,r)
+      case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ f.interp.get)
+    }
+
+    val assgnList = listifyCompose(assgn)
+
+    val arbs = assgnList.dropRight(2).map(p => p.asInstanceOf[AssignAny].x)
+    val t0 = assgnList.last.asInstanceOf[Assign].x
+    val x0 = assgnList.dropRight(1).last.asInstanceOf[Assign].x
+
+    val temp = Variable("temp_")
+
+    // Function name must match the guessed name
+    require(f.name == x0.name)
+
+    val names = x0::arbs
+    val assgnraw = assgn.replaceAll(x0,temp)
+    // Repeatedly swap other names in place of x0 for other functions in the chain
+    // TODO: does this match the order of assignments generated by ODEToInterpreted?
+    val swaps = names.map( a => {
+      val assgn = assgnraw.replaceAll(a, x0).replaceAll(temp, a)
+      val interp = Diamond(Compose(assgn, q), r)
+      Function(a.name, None, f.domain, f.sort, Some(interp))
+    })
+
+    swaps zip deriveDiffAxiom(swaps)
   }
 
   // Split |- A & B into |- A, |- B
@@ -674,8 +753,7 @@ object ImplicitAx {
   // Derive initial value axiom for an interpreted function g
   // The interpretation must have the expected shape:
   // . = g(.0) <-> <{x_1:=*; x_0:=.; t:=.0;} {x'=-f(x), t'=-(1) ++ x'=f(x), t'=1} > (init values)
-  def deriveInitCond(f : Function) : ProvableSig = {
-
+  def deriveInitAxiom(f : Function) : ProvableSig = {
     require(f.interp.isDefined)
 
     val (assgn,inits) = f.interp.get match {
@@ -690,13 +768,7 @@ object ImplicitAx {
       }
     ).toMap
 
-    def listifyAssignments(p:Program) : List[AtomicProgram] = p match{
-      case Compose(l,r) => listifyAssignments(l) ++ listifyAssignments(r)
-      case a : AtomicProgram => List(a)
-      case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ f.interp.get)
-    }
-
-    val assgnList = listifyAssignments(assgn)
+    val assgnList = listifyCompose(assgn)
 
     val arbs = assgnList.dropRight(2).map(p => m(p.asInstanceOf[AssignAny].x))
     val t0 = m(assgnList.last.asInstanceOf[Assign].x)
@@ -799,20 +871,5 @@ object ImplicitAx {
       choiceb(pos) & andR(pos)
     )
   })
-
-  //todo: copied below from ToolTactics for experimentation -- probably should just add it there
-  // However, there is a problem re-parsing cached lemmas at the moment, so not added for now
-
-  /** Returns all sub-terms of `fml` that pass `matcher`. */
-  private def matchingTermsOf(fml: Formula, matcher: Term=>Boolean): List[Term] = {
-    val result = scala.collection.mutable.ListBuffer.empty[Term]
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
-        if (matcher(e)) result += e
-        Left(None)
-      }
-    }, fml)
-    result.toList
-  }
 
 }

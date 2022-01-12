@@ -990,9 +990,7 @@ object ODEInvariance {
                 // DebuggingTactics.debug("First Vdbx QE",true) &
                 // p=0 must be true initially
 
-                // TODO: Apply equalities and simplify?
-                SaturateTactic(exhaustiveEqL2R(true)('L)) & SimplifierV3.simplify(pos) &
-                  QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
+                QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
                 ,
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
