@@ -563,10 +563,11 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (firstFormula(la)) shift(st) else error(st, List(FIRSTFORMULA))
 
       case _ :+ Token(_: IDENT, _) :+ Token(LDDIA, _) :+ Expr(_: Formula, _) =>
-        if (la == RDDIA) shift(st) else ???
+        if (followsFormula(la)) shift(st)
+        else error(st, List(FOLLOWSFORMULA))
 
       case _ :+ Token(_: IDENT, _) :+ Token(LDDIA, _) :+ Expr(_: Formula, _) :+ Token(RDDIA, el) =>
-        if (la == LPAREN) shift(st) else ???
+        if (la == LPAREN) shift(st) else error(st, List(LPAREN))
 
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
       case r :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
@@ -782,8 +783,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case r :+ (optok1@Token(tok:OPERATOR,sl)) :+ Expr(t1, el) if op(st, tok, List(t1.kind)).assoc==PrefixFormat =>
         assume(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "expected unary prefix operator\nin " + s)
         val optok = op(st, tok, List(t1.kind))
-        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
-          || (la == RDIA || la == RDIA) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
+        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX || la==RDDIA
+          || (la == RDIA /*|| la==RDIA*/) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
           || optok <= op(st, la, List(t1.kind,ExpressionKind))) {
           //|| followsTerm(la))
           //@note By operator precedence, will only elaborate if need be, i.e. unless lookahead says shifting will get the right type
