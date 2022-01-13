@@ -1,14 +1,13 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.ImplicitAx._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import DerivationInfoAugmentors._
 
 class ImplicitAxTests extends TacticTestBase {
 
@@ -201,6 +200,15 @@ class ImplicitAxTests extends TacticTestBase {
     dcos.get.provable shouldBe 'proved
   }
 
+  it should "diff ax fail gracefully" in withMathematica { _ =>
+
+    val fake = Function("fake",None, Real, Real,interp = Some(True))
+    println(fake)
+
+    val dfake = getDiffAx(fake)
+    dfake shouldBe None
+  }
+
   it should "derive and store init ax 1" in withMathematica { _ =>
     val exp = InterpretedSymbols.expF
     val dexp = getInitAx(exp)
@@ -223,6 +231,15 @@ class ImplicitAxTests extends TacticTestBase {
     dsin.get.provable shouldBe 'proved
     dcos.isDefined shouldBe true
     dcos.get.provable shouldBe 'proved
+  }
+
+  it should "init ax fail gracefully" in withMathematica { _ =>
+
+    val fake = Function("fake",None, Real, Real,interp = Some(True))
+    println(fake)
+
+    val dfake = getInitAx(fake)
+    dfake shouldBe None
   }
 
   "property" should "prove exp non-negative" in withMathematica { _ =>
