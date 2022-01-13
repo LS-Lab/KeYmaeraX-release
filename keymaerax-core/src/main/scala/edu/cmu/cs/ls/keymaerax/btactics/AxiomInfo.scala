@@ -1008,6 +1008,7 @@ object DerivationInfoRegistry extends Logging {
       (IntervalArithmeticV2.getClass, ru.typeOf[IntervalArithmeticV2.type]),
       (ODEInvariance.getClass, ru.typeOf[ODEInvariance.type]),
       (ODELiveness.getClass, ru.typeOf[ODELiveness.type]),
+      (ImplicitAx.getClass, ru.typeOf[ImplicitAx.type]),
       (PropositionalTactics.getClass, ru.typeOf[PropositionalTactics.type]),
       (ProofRuleTactics.getClass, ru.typeOf[ProofRuleTactics.type]),
       (SequentCalculus.getClass, ru.typeOf[SequentCalculus.type]),

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
@@ -862,11 +862,17 @@ object ImplicitAx {
 
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
   // todo: decide what to pass as arguments
-  def propDiffUnfold(v:Term, t0: Term) : DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
+
+  @Tactic(names="propDiffUnfold",
+    codeName="propDiffUnfold",
+    premises="Γ |- P(t0), Δ ;; Γ, v=t0 |- [v'=1]P(v), Δ ;; Γ, v=t0 |- [v'=-1]P(v), Δ",
+    conclusion="Γ |- P(v), Δ",
+    displayLevel="browse")
+  def propDiffUnfold(v:Term, t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
 
     val fml = seq.sub(pos) match {
-      case Some(e:Formula) => e
+      case Some(e: Formula) => e
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
@@ -876,16 +882,16 @@ object ImplicitAx {
       case _ => Variable("x_")
     }
 
-    val expAx = forallFwdBackDirect.fact(URename(targetVar,Variable("x_")))(USubst(List(SubstitutionPair("f()".asTerm, t0),SubstitutionPair("g()".asTerm, v))))
+    val expAx = forallFwdBackDirect.fact(URename(targetVar, Variable("x_")))(USubst(List(SubstitutionPair("f()".asTerm, t0), SubstitutionPair("g()".asTerm, v))))
 
-    useAt(expAx,PosInExpr(1::Nil))(pos) &
-    allR(pos) & implyR(pos) &
-    // Makes subsequent ODE proofs easier by proving the postcondition already true initially
-    cutR(fml.replaceFree(v, targetVar))(pos) <(
-      exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
-      implyR(pos) &
-      choiceb(pos) & andR(pos)
-    )
-  })
+    useAt(expAx, PosInExpr(1 :: Nil))(pos) &
+      allR(pos) & implyR(pos) &
+      // Makes subsequent ODE proofs easier by proving the postcondition already true initially
+      cutR(fml.replaceFree(v, targetVar))(pos) < (
+        exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
+        implyR(pos) &
+          choiceb(pos) & andR(pos)
+      )
+  }}
 
 }
