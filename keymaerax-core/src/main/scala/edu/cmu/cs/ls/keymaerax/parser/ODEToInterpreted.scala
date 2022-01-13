@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{And, Assign, AssignAny, AtomicODE, AtomicProgram, Choice, Compose, CompositeProgram, Diamond, Differential, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, DifferentialSymbol, DotTerm, Equal, FuncOf, Function, Neg, Number, ODESystem, Program, Real, SetLattice, StaticSemantics, Term, True, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
+import edu.cmu.cs.ls.keymaerax.core.{And, Assign, AssignAny, AtomicODE, Choice, Compose, Diamond, DifferentialProduct, DifferentialProgram, DifferentialSymbol, DotTerm, Equal, Function, Neg, Number, ODESystem, Program, Real, SetLattice, StaticSemantics, Term, True, Variable}
 
 import scala.collection.immutable.Seq
 

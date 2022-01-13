@@ -4,27 +4,26 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{And, AtomicODE, Choice, Diamond, DifferentialProduct, DifferentialProgramConst, DifferentialSymbol, DotTerm, Equal, Exists, FuncOf, Function, GreaterEqual, Less, Neg, Number, Or, Real, Times, Tuple, Variable}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
+import edu.cmu.cs.ls.keymaerax.core.{Function, Real, Tuple}
 
 import scala.collection.immutable.Vector
 
 /** List of built-in interpreted function symbols. */
 object InterpretedSymbols {
   val maxF: Function = Function("max", None, Tuple(Real, Real), Real,
-    interp = Some("(._1 < ._2 & ._0 = ._2) | (._1 >= ._2 & ._0 = ._1)".asFormula))
+    interp = Some(Parser.parser.formulaParser("(._1 < ._2 & ._0 = ._2) | (._1 >= ._2 & ._0 = ._1)")))
 
   val minF: Function = Function("min", None, Tuple(Real, Real), Real,
-    interp = Some("(._1 < ._2 & ._0 = ._1) | (._1 >= ._2 & ._0 = ._2)".asFormula))
+    interp = Some(Parser.parser.formulaParser("(._1 < ._2 & ._0 = ._1) | (._1 >= ._2 & ._0 = ._2)")))
 
   val absF: Function = Function("abs", None, Real, Real,
-    interp = Some("(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)".asFormula))
+    interp = Some(Parser.parser.formulaParser("(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)")))
 
-  val expF: Function = ODEToInterpreted.fromProgram("{exp:=1;}; {exp'=exp}".asProgram).head
+  val expF: Function = ODEToInterpreted.fromProgram(Parser.parser.programParser("{exp:=1;}; {exp'=exp}")).head
 
   val (sinF, cosF) = {
     val fns = ODEToInterpreted.fromProgram(
-      "{sin:=0;cos:=1;}; {sin'=cos, cos'=-sin}".asProgram)
+      Parser.parser.programParser("{sin:=0;cos:=1;}; {sin'=cos, cos'=-sin}"))
     (fns(0), fns(1))
   }
 
