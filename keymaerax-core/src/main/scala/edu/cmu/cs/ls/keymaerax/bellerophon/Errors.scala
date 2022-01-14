@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{Expression, False, NamedSymbol, Provable, ProverException, Sequent}
+import org.apache.commons.lang3.StringUtils
 
 /**
  * KeYmaera X Tactic Exceptions.
@@ -38,7 +39,8 @@ abstract class BelleThrowable(message: => String, cause: Throwable = null) exten
   /** Read the message describing what went wrong. */
   override def getMessage: String = message
 
-  override def toString: String = getMessage() + "\n" + super.toString + "\nin " + tacticContext
+  override def toString: String = getMessage() + "\n" + super.toString + "\nin " +
+    StringUtils.abbreviate(tacticContext.toString, 1000)
 }
 
 
