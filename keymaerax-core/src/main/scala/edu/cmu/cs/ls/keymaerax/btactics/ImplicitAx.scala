@@ -50,7 +50,6 @@ object ImplicitAx {
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
     val rhs = uninterpretFunctions(fml.sub(PosInExpr(1::Nil)).get).toString
 
-    println("__"+lhs+"__ = "+rhs)
     val info = new DerivedAxiomInfo(name,
       AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ = "+rhs),
       codename,
@@ -106,7 +105,6 @@ object ImplicitAx {
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
     val rhs = uninterpretFunctions(fml.sub(PosInExpr(1::Nil)).get).toString
 
-    println("__"+lhs+"__ = "+rhs)
     val info = new DerivedAxiomInfo(name,
       AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ = "+rhs),
       codename,

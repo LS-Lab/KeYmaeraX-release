@@ -78,11 +78,12 @@ private object ToolTactics {
   def prepareQE(order: List[Variable], doQE: BelleExpr): BelleExpr = {
     val closure = toSingleFormula & Idioms.doIf(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosure(order)(1))
 
-    val expand =
-      if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
-      else EqualityTactics.expandAll &
-        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, Some(_)) => true case _ => false }),
-          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
+    // Expands abs/min/max
+    val expand = EqualityTactics.expandAll
+//      if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
+//      else EqualityTactics.expandAll &
+//        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, Some(_)) => true case _ => false }),
+//          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
     Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
       assertT(_.isFOL, "QE on FOL only") &
@@ -90,7 +91,7 @@ private object ToolTactics {
         Idioms.doIf(!_.isProved)(
           close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
             // if
-            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & // expand &
+            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
               abbreviateInterpretedFuncs & abbreviateUninterpretedFuncs & closure & doQE
             ,
             // else
@@ -103,7 +104,7 @@ private object ToolTactics {
                 }
               hidePredicates & hideQuantifiedFuncArgsFmls &
                 assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & // expand &
+                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
                 abbreviateInterpretedFuncs & abbreviateUninterpretedFuncs & closure &
                 Idioms.doIf(_ => doQE != nil)(
                   doQE & done | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg) }
