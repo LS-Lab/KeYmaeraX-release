@@ -26,6 +26,16 @@ object ImplicitAx {
 
   private val namespace = "implicitax"
 
+  // Replace interpreted functions with uninterpreted ones for display purposes
+  private def uninterpretFunctions(e:Expression) : Expression = {
+    ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case FuncOf(f,e) if f.interpreted => Right(FuncOf(f.copy(interp = None),e))
+        case e => Right(e)
+      }
+    }, e).get
+  }
+
   private def canonicalDiffAxName(f: Function) : String = {
     // todo: how to use directory structure?
     "D"+f.name
@@ -35,8 +45,14 @@ object ImplicitAx {
     println("Registering differential axiom: ",f,p)
     val name = canonicalDiffAxName(f)
     val codename = name
+
+    val fml = p.conclusion.succ(0) // ==> (f(x))' = ...
+    val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
+    val rhs = uninterpretFunctions(fml.sub(PosInExpr(1::Nil)).get).toString
+
+    println("__"+lhs+"__ = "+rhs)
     val info = new DerivedAxiomInfo(name,
-      AxiomDisplayInfo(SimpleDisplayInfo(name,name), "displayFormula"),
+      AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ = "+rhs),
       codename,
       name,
       'surlinear,
@@ -85,8 +101,14 @@ object ImplicitAx {
     println("Registering initial condition axiom: ",f,p)
     val name = canonicalInitAxName(f)
     val codename = name
+
+    val fml = p.conclusion.succ(0) // ==> f(0) = ...
+    val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
+    val rhs = uninterpretFunctions(fml.sub(PosInExpr(1::Nil)).get).toString
+
+    println("__"+lhs+"__ = "+rhs)
     val info = new DerivedAxiomInfo(name,
-      AxiomDisplayInfo(SimpleDisplayInfo(name,name), "displayFormula"),
+      AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ = "+rhs),
       codename,
       name,
       'surlinear,
