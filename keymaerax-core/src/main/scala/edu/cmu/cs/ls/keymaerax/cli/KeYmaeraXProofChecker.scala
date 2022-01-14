@@ -9,7 +9,6 @@ import java.net.URLEncoder
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
 import java.util.concurrent.TimeUnit
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, DependentTactic, IOListeners, LazySequentialInterpreter, TacticStatistics}
@@ -108,13 +107,18 @@ object KeYmaeraXProofChecker {
 
         val lemma = outputFileName match {
           case Some(_) =>
-            val lemma = Lemma(witness, evidence, Some(name))
+            val lemma = Lemma(witness, evidence, Some("user" + java.io.File.separator + name))
             //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
             assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
             assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.underlyingProvable, lemma.evidence),
               "reparse of printed lemma is not original lemma")
             Some(lemma)
           case None => None
+        }
+
+        lemma match {
+          case Some(l) => LemmaDBFactory.lemmaDB.add(l)
+          case None => // nothing to do
         }
 
         pw match {
@@ -258,17 +262,10 @@ object KeYmaeraXProofChecker {
           writer.write(source)
           writer.close()
         case (_, None) => ()
-        case (_: TermProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
+        case (_: TermProvable, None) => assert(assertion=false, "Proof term output path specified but proof did not contain proof term")
       }
     }
 
-    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
-      case DependentTactic("QE") => true
-      case DependentTactic("smartQE") => true
-      case _ => false
-    })
-
-    val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
     val tacticString = readTactic(options, entry.defs)
     val reqTacticName = options.get('tacticName)
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
@@ -344,16 +341,16 @@ object KeYmaeraXProofChecker {
       val path = Paths.get(fileName).toAbsolutePath
       val dir = path.getParent
       val pattern = path.getFileName
+      val files: ListBuffer[Path] = new ListBuffer[Path]()
       val finder = new SimpleFileVisitor[Path] {
         private val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
-        val files: ListBuffer[Path] = new ListBuffer[Path]()
         override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
           if (matcher.matches(file.getFileName)) files.append(file)
           FileVisitResult.CONTINUE
         }
       }
       Files.walkFileTree(dir, finder)
-      finder.files.toList
+      files.toList
     }
   }
 
