@@ -137,6 +137,13 @@ object IOListeners {
           start = System.currentTimeMillis()
           printer.print(BellePrettyPrinter(e) + "... ")
           if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
+        case Using(_, c) => c match {
+          case e: NamedBelleExpr /*if e.getClass == executionStack.head._1.getClass*/ =>
+            start = System.currentTimeMillis()
+            printer.print(BellePrettyPrinter(e) + "... ")
+            if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
+          case _ =>
+        }
         case _ =>
       }
     }
@@ -175,6 +182,11 @@ object IOListeners {
           case _: AppliedPositionTactic => printer.println("done (" + status + ")")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
             printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
+          case Using(_, c) => c match {
+            case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
+              printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
+            case _ =>
+          }
           case n: NamedBelleExpr if !n.isInternal => printer.println(n.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
           case _ =>
         }
