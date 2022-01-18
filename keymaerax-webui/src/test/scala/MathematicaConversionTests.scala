@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 
-import java.math.BigDecimal
+import java.math.{BigDecimal, BigInteger}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{BaseKeYmaeraMathematicaBridge, JLinkMathematicaLink, UncheckedBaseK2MConverter, UncheckedBaseM2KConverter}
@@ -320,6 +320,22 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     KeYmaeraToMathematica("Max(x,y)".asTerm) shouldBe makeExpr(new MExpr(Expr.SYMBOL, "kyx`Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
     KeYmaeraToMathematica("max(x,y)".asTerm) shouldBe makeExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
     a [CoreException] should be thrownBy KeYmaeraToMathematica(FuncOf(Function(InterpretedSymbols.maxF.name, None, Tuple(Real, Tuple(Real, Real)), Real, InterpretedSymbols.maxF.interp), Pair(Variable("x"), Pair(Variable("y"), Variable("z")))))
+  }
+
+  it should "convert special constants from Mathematica that are representable in KeYmaeraX" in {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+
+    KeYmaeraToMathematica("exp(1)".asTerm) shouldBe makeExpr(new MExpr(Expr.SYMBOL, "Exp"), Array[MExpr](new Expr(BigInteger.valueOf(1))))
+    KeYmaeraToMathematica(FuncOf(InterpretedSymbols.E, Nothing)) shouldBe (new MExpr(Expr.SYMBOL, "E"))
+    MathematicaToKeYmaera(
+      makeExpr(new MExpr(Expr.SYMBOL, "Exp"), Array[MExpr](new Expr(BigInteger.valueOf(1))))
+    ) shouldBe "exp(1)".asTerm
+    ml.run(KeYmaeraToMathematica("exp(1)".asTerm))._2 shouldBe (FuncOf(InterpretedSymbols.E, Nothing))
+
+    KeYmaeraToMathematica("sin(x)".asTerm) shouldBe makeExpr(new MExpr(Expr.SYMBOL, "Sin"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
+    KeYmaeraToMathematica(FuncOf(InterpretedSymbols.PI, Nothing)) shouldBe (new MExpr(Expr.SYMBOL, "Pi"))
+    ml.run(KeYmaeraToMathematica(FuncOf(InterpretedSymbols.sinF, FuncOf(InterpretedSymbols.PI, Nothing))))._2 shouldBe Number(0)
+    ml.run(KeYmaeraToMathematica(FuncOf(InterpretedSymbols.cosF, Times(Number(2), FuncOf(InterpretedSymbols.PI, Nothing)))))._2 shouldBe Number(1)
   }
 
   it should "convert decimal to rational" in {

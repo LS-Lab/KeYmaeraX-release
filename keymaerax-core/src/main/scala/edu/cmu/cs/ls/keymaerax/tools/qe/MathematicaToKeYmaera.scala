@@ -86,12 +86,14 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.mapply.applies(e)) convertAtomicTerm(e)
 
     //todo: more cases for converting interpreted symbols, possibly make this more generic
-    else if (MathematicaOpSpec.interpretedSymbols.exists(_.applies(e))) convertAtomicTerm(e)
-    else if (MathematicaOpSpec.lExpConst.applies(e)) FuncOf(InterpretedSymbols.expF, Number(1))
+    else if (MathematicaOpSpec.interpretedSymbols.exists(_._1.applies(e))) convertAtomicTerm(e)
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
     else throw ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
-  } ensures(r => StaticSemantics.symbols(r).forall({case fn@Function(_, _, _, _, Some(_)) => MathematicaConversion.interpretedSymbols.contains(fn) case _ => true}), "Interpreted functions must have expected domain and sort for conversion of " + e)
+  } ensures(r => StaticSemantics.symbols(r).forall({
+    case fn@Function(_, _, _, _, Some(_)) => MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn)
+    case _ => true
+  }), "Interpreted functions must have expected domain and sort for conversion of " + e)
 
   /** Converts an unary expression. */
   private def convertUnary[T<:Expression](e: MExpr, op: T=>T): T = {
@@ -150,8 +152,9 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   }
 
   /** Converts an atomic term (either interpreted/uninterpreted function symbol or variable). */
-  protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
-    case Some(fn) => convertFunction(fn, e.args)
+  protected def convertAtomicTerm(e: MExpr): KExpr =
+    MathematicaOpSpec.interpretedSymbols.find(_._1.applies(e)) match {
+    case Some((_,fn)) => convertFunction(fn, e.args)
     case None =>
       //@note insists on [[MathematicaNameConversion.NAMESPACE_PREFIX]] to avoid clash with Mathematica names
       MathematicaNameConversion.toKeYmaera(e) match {

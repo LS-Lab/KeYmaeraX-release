@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr, interpretedSymbols}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaNameConversion._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
@@ -39,7 +39,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
     insist(convertInterpretedSymbols || StaticSemantics.symbols(e).forall({case Function(_, _, _, _, interp) => interp.isEmpty case _ => true}),
       "Interpreted functions not allowed in soundness-critical conversion to Mathematica")
-    insist(StaticSemantics.symbols(e).forall({case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.contains(fn) case _ => true}),
+    insist(StaticSemantics.symbols(e).forall({case fn@Function(_, _, _, _, Some(_)) => MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn) case _ => true}),
       "Interpreted functions must have known conversion to Mathematica")
     insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
 
@@ -65,10 +65,11 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     t match {
       //@note Uninterpreted functions are mapped to namespace kyx` to avoid clashes with any interpreted names
       case FuncOf(fn, child) =>
-        if (interpretedSymbols.contains(fn)) // If there is a Mathematica function available here
-          interpretedSymbols(fn)(convertFunctionArgs(child))
-        else {
-          MathematicaOpSpec.func(fn, convertFunctionArgs(child))
+        // If there is a Mathematica function available here
+        MathematicaOpSpec.interpretedSymbols.find(_._2 == fn) match {
+          case Some((op: InterpretedMathOpSpec,_)) => op(convertFunctionArgs(child))
+          case Some((op: LiteralMathOpSpec,_)) => op.op
+          case None => MathematicaOpSpec.func(fn, convertFunctionArgs(child))
         }
       case Neg(c) => MathematicaOpSpec.neg(convertTerm(c))
       case Plus(l, r) => MathematicaOpSpec.plus(convertTerm(l), convertTerm(r))

@@ -70,7 +70,7 @@ case class NameMathOpSpec(k2m: (NamedSymbol, Array[Expr]) => Expr, applies: Expr
 }
 
 /** Interpreted functions. */
-case class InterpretedMathOpSpec(op: Expr, fn: Function) extends MathematicaOpSpec {
+case class InterpretedMathOpSpec(op: Expr) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with head `op` and arguments `args`. */
   def apply(args: Array[Expr]): Expr = makeExpr(op, args)
   /** @inheritdoc */
@@ -142,16 +142,16 @@ object MathematicaOpSpec {
     override def applies(e: Expr): Boolean = super.applies(e) && MathematicaNameConversion.isConvertibleName(e.args.head)
   }
 
-  def interpretedSymbols = List(
-    InterpretedMathOpSpec(symbol("RealAbs"), InterpretedSymbols.absF),
-    InterpretedMathOpSpec(symbol("Min"), InterpretedSymbols.minF),
-    InterpretedMathOpSpec(symbol("Max"), InterpretedSymbols.maxF),
-    InterpretedMathOpSpec(symbol("Exp"), InterpretedSymbols.expF),
-    InterpretedMathOpSpec(symbol("Sin"), InterpretedSymbols.sinF),
-    InterpretedMathOpSpec(symbol("Cos"), InterpretedSymbols.cosF)
+  def interpretedSymbols: List[(MathematicaOpSpec, Function)] = List(
+    InterpretedMathOpSpec(symbol("Abs")) -> InterpretedSymbols.absF,
+    InterpretedMathOpSpec(symbol("Min")) -> InterpretedSymbols.minF,
+    InterpretedMathOpSpec(symbol("Max")) -> InterpretedSymbols.maxF,
+    InterpretedMathOpSpec(symbol("Exp")) -> InterpretedSymbols.expF,
+    InterpretedMathOpSpec(symbol("Sin")) -> InterpretedSymbols.sinF,
+    InterpretedMathOpSpec(symbol("Cos")) -> InterpretedSymbols.cosF,
+    LiteralMathOpSpec(symbol("E")) -> InterpretedSymbols.E,
+    LiteralMathOpSpec(symbol("Pi")) -> InterpretedSymbols.PI
   )
-
-  def lExpConst = LiteralMathOpSpec(symbol("E"))
 
   def variable: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {

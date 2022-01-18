@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, interpretedSymbols, _}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
@@ -800,8 +800,8 @@ private class DiffUncheckedM2KConverter extends UncheckedBaseM2KConverter {
     } else super.convert(e)
   }
 
-  protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
-    case Some(fn) => convertFunction(fn, e.args())
+  protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.find(_._1.applies(e)) match {
+    case Some((_, fn)) => convertFunction(fn, e.args())
     case None =>
       toKeYmaera(e) match {
         case fn: Function =>

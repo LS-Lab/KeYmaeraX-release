@@ -32,10 +32,6 @@ object MathematicaConversion {
     */
   def importResult[T](e: MExpr, conversion: MExpr => T): T = try { conversion(e) } finally { e.dispose() }
 
-  /** Interpreted symbols. */
-  val interpretedSymbols: Map[Function, InterpretedMathOpSpec] =
-    MathematicaOpSpec.interpretedSymbols.map(i => i.fn -> i).toMap
-
   /** Returns true if `e` is aborted, false otherwise. */
   def isAborted(e: MExpr): Boolean = e == MathematicaOpSpec.aborted.op || e == MathematicaOpSpec.abort.op
   /** Returns true if `e` failed, false otherwise. */
@@ -62,11 +58,6 @@ trait M2KConverter[T] extends (MExpr => T) {
   /** Convert without contract checking */
   private[tools] def convert(e: MExpr): T
 
-  /** Interpreted symbols. */
-  def interpretedSymbols: Map[InterpretedMathOpSpec, Function] = MathematicaConversion.interpretedSymbols.map(_.swap)
-
-  /** Looks up an interpreted symbol by its Mathematica expression. */
-  def interpretedSymbols(e: MExpr): Option[Function] = interpretedSymbols.keys.find(_.applies(e)).map(interpretedSymbols)
 }
 
 /**

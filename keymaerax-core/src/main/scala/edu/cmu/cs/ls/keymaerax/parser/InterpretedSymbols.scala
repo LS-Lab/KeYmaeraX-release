@@ -4,9 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Function, Real, Tuple}
-
-import scala.collection.immutable.Vector
+import edu.cmu.cs.ls.keymaerax.core.{And, DotTerm, Equal, Forall, FuncOf, Function, Greater, Imply, Number, Real, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 
 /** List of built-in interpreted function symbols. */
 object InterpretedSymbols {
@@ -21,11 +20,23 @@ object InterpretedSymbols {
 
   val expF: Function = ODEToInterpreted.fromProgram(Parser.parser.programParser("{exp:=1;}; {exp'=exp}")).head
 
+  // Define E as exp(1)
+  val E = Function("e",None,Unit,Real,interp = Some(Equal(DotTerm(idx=Some(0)),FuncOf(expF,Number(1)))))
+
   val (sinF, cosF) = {
     val fns = ODEToInterpreted.fromProgram(
       Parser.parser.programParser("{sin:=0;cos:=1;}; {sin'=cos, cos'=-sin}"))
     (fns(0), fns(1))
   }
+
+  // Define PI as unique y s.t. y > 0 & sin(y) = 0 & forall 0 < x < y, sin(x) > 0
+  val PI: Function = Function("pi",None,Unit,Real,interp = Some(
+    And( "._0 > 0".asFormula,
+    And( Equal(FuncOf(sinF,DotTerm(idx=Some(0))), Number(0)),
+         Forall("x".asVariable :: Nil, Imply("0 < x & x < y".asFormula,
+          Greater(FuncOf(sinF,"x".asVariable),Number(0))
+         ))
+    ))))
 
   /** The interpreted function symbols. */
   val symbols: List[Function] = List(
