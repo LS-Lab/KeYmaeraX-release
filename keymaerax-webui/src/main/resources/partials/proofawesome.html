@@ -272,11 +272,11 @@
                                 <div class="col-sm-2" ng-if="taskExplanation.selection=='Tactic'">
                                     <div class="btn-group-sm k4-nobreak">
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
-                                               uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic)"
+                                               uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic), toggle between explicit search tactic style and positional tactic style"
                                                tooltip-placement="auto top">
                                             Tactic
                                             <i class="fa" ng-class="{'fa-toggle-on': sequentProofData.tactic.verbose, 'fa-toggle-off': !sequentProofData.tactic.verbose}"
-                                               ng-click="toggleTacticVerbosity()" uib-tooltop="Succinct or verbose tactic"></i>
+                                               ng-click="toggleTacticVerbosity()"></i>
                                         </label>
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
                                                uib-btn-radio="'Rule'" uib-tooltip="Display the last proof rule, which produced the current conjecture"
