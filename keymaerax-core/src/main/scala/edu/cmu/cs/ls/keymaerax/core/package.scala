@@ -195,6 +195,9 @@ package object core {
   /** KeYmaera X core kernel version number */
   val VERSION: String = Version.VERSION
 
+  /** The encoding used for storing lemmas and other artifacts. */
+  val ENCODING: String = "ISO-8859-1"
+
   /** The uniform substitution type to use */
   type USubst = USubstOne
   /** USubst factory method, forwards to constructor. */

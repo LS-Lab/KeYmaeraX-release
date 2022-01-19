@@ -329,7 +329,7 @@ object KeYmaeraXProofChecker {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
-        val source = scala.io.Source.fromFile(fileName, "ISO-8859-1")
+        val source = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
         try {
           Some(BelleParser(source.mkString))
         } finally {
