@@ -629,28 +629,44 @@ object Provable {
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(diffAdj)), immutable.IndexedSeq())
   }
 
-  def implicitFuncAxiom (f: Function): Provable = {
-    //TODO: should check that
-    // f well defined and continuous
+  /** Existence-guarded axiom schema for interpreted functions, schematic in the function
+    *
+    * {{{
+    *   *
+    *   --- (with proof of |- \\exists x_ P(x_,._1,...,._n))
+    *   |- ._0 = f<< P(._0,._1,...,._n) >>(._1,...,._n) <-> P(.0,._1,...,._n)
+    * }}}
+    *
+    * @param f the interpreted function
+    * @param pr the existence proof
+    */
+  final def implicitFunc(f: Function, pr: Provable): Provable = {
+    insist(f.interpreted, "Function must be interpreted.")
 
-    assert(f.interp.isDefined)
+    //todo: syntactic guard on the shape of interp for smoothness
+    // isODE(interp)
 
-    def dotTermForSort (s: Sort, idx: Int): Term =
-      s match {
-        case Tuple(left, right) =>
-          Pair(DotTerm(left, Some(idx)), dotTermForSort(right, idx+1))
-        case s => DotTerm(s, Some(idx))
-      }
+    // P(._0,._1,...,._n)
+    val interp = f.interp.get
+    val dim = f.realDomainDim.get
+
+    val x = BaseVariable("x_")
+    // The dot term argument for f's sort (guaranteed to be right-associated)
+    val dotArg = if(dim == 0) Nothing else (1 to dim).map( i => DotTerm(Real,Some(i))).reduceRight(Pair)
+
+    // The result dot ._0
+    val xdot = DotTerm(Real,Some(0))
+    // Substitution ._0 ~> x_
+    val subst = USubst( immutable.Seq(SubstitutionPair(DotTerm(Real,Some(0)),x)) )
+    // Existence guard \\exists x_ P(x_,._1,...,._n)
+    val guardSeq = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Exists(x::Nil, subst(interp))))
+
+    insist(pr.isProved && pr.conclusion == guardSeq, "Supplied provable must prove existence.")
 
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(
-      Equiv(
-        Equal(
-          DotTerm(f.sort, Some(0)),
-          FuncOf(f, dotTermForSort(f.domain, 1))
-        ),
-        f.interp.get
-      )
-    )),immutable.IndexedSeq.empty[Sequent])
+      // ._0 = f<< P(._0,._1,...,._n) >>(.) <-> P(.0,._1,...,._n)
+      Equiv(Equal(DotTerm(f.sort, Some(0)), FuncOf(f, dotArg)), f.interp.get)
+      )),immutable.IndexedSeq.empty[Sequent])
   }
 
   /**
