@@ -59,6 +59,35 @@ class ExpressionTests extends FlatSpec with Matchers {
     Pair(Number(5),Number(7)).reapply(Number(-2),Number(-7)) shouldBe Pair(Number(-2),Number(-7))
   }
 
+  it should "refuse ill-formed interpreted functions" in {
+    // Interpreted function with incorrect codomain
+    a [CoreException] shouldBe thrownBy (Function("bad", None, Tuple(Real, Real), Bool, interp = Some(True)))
+
+    // Interpreted function with incorrect domain
+    a [CoreException] shouldBe thrownBy (Function("bad", None, Bool, Bool, interp = Some(True)))
+
+    // Interpreted function with ill-formed domain
+    a [CoreException] shouldBe thrownBy (Function("bad", None, Tuple(Real,Unit), Bool, interp = Some(True)))
+
+    // Interpreted function with free variables in interpretation
+    a [CoreException] shouldBe thrownBy (Function("bad", None, Real, Real, interp = Some(Greater(Variable("x"),Number(0)))))
+
+    // Interpreted function with free uninterpreted functions in interpretation
+    a [CoreException] shouldBe thrownBy (Function("bad", None, Real, Real, interp = Some(Greater(FuncOf(Function("f", None, Unit, Real),Nothing),Number(0)))))
+
+    // Interpreted function with too many dots in interpretation
+    a [CoreException] shouldBe thrownBy (Function("bad", None, Unit, Real, interp = Some(Greater(DotTerm(Real,Some(5)),Number(0)))))
+  }
+
+  it should "accept well-formed interpreted functions" in {
+    // f() = 0
+    val f = Function("f", None, Unit, Real, interp = Some(Equal(DotTerm(Real,Some(0)),Number(0))))
+    // g(x) = x
+    val g = Function("g", None, Real, Real, interp = Some(Equal(DotTerm(Real,Some(0)),DotTerm(Real,Some(1)))))
+    // h(x) = f + g(x)
+    val h = Function("h", None, Real, Real, interp = Some(Equal(DotTerm(Real,Some(0)), Plus(FuncOf(f,Nothing),FuncOf(g,DotTerm(Real,Some(1)))))))
+  }
+
   "Kinds" should "have expected strings" taggedAs(CoverageTest) in  {
     (ExpressionKind :: TermKind :: FormulaKind :: ProgramKind :: DifferentialProgramKind :: FunctionKind :: Nil).
       forall(k => k.toString + "Kind$" == k.getClass.getSimpleName) shouldBe true

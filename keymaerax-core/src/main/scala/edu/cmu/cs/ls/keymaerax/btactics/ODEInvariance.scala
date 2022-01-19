@@ -2030,7 +2030,7 @@ object ODEInvariance {
 
     val barcantac =
       (0 to atoms.length-1).map( List.fill(_)(0)).foldLeft(skip:BelleExpr)( (p,t) =>
-        useAt(dBarcan)(1,t) & p
+        useAt(Ax.dBarcan)(1,t) & p
       )
 
     val existstac = oldnames.foldLeft(skip:BelleExpr) ( (p,t) =>
@@ -2252,19 +2252,13 @@ object ODEInvariance {
   private val imp_and = remember("(r() -> p() & q()) <-> ((r() -> p()) & (r() -> q()))".asFormula,prop)
   private val not_imp = remember("!(p() -> q()) <-> (p() & !q())".asFormula,prop)
 
-  //todo: move to Ax.scala
-  private [btactics] lazy val dBarcan = remember("\\exists x_ <a{|^@x_|};>p(||) <-> <a{|^@x_|};>\\exists x_ p(||)".asFormula,
-    diamondd(1,1::Nil) &
-    diamondd(1,0::0::Nil) &
-    useAt(Ax.existsDual,PosInExpr(1::Nil))(1,0::Nil) &
-    useAt(Ax.doubleNegation)(1,0::0::0::Nil) &
-    useAt(Ax.notExists)(1,1::0::1::Nil) & //@todo substitution clash
-    useAt(Ax.barcan)(1,1::0::Nil) &
-    byUS(Ax.equivReflexive)
-  )
 
-  private def getDiffAdjInst(odels:List[AtomicODE]) : ProvableSig = {
-
+  /** Get the correct instantiation of diff adjoints from a list of atomic ODEs
+    *
+    * @param odels the list of atomic ODEs
+    * @return the instantiated axiom
+    */
+  def getDiffAdjInst(odels:List[AtomicODE]) : ProvableSig = {
     val dim = odels.length
     val diffadj = Provable.diffAdjoint(dim)
 
