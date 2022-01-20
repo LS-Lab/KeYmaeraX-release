@@ -196,7 +196,7 @@ package object core {
   val VERSION: String = Version.VERSION
 
   /** The encoding used for storing lemmas and other artifacts. */
-  val ENCODING: String = "ISO-8859-1"
+  val ENCODING: String = "UTF-8"
 
   /** The uniform substitution type to use */
   type USubst = USubstOne
