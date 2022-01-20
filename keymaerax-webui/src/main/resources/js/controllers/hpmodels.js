@@ -581,7 +581,7 @@ angular.module('keymaerax.controllers').filter("unique", function() {
 });
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
-    function ($scope, $route, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, proofid, mode) {
+    function ($scope, $route, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, proofid, mode, spinnerService) {
   $scope.mode = mode;
   $scope.proofId = proofid;
   $scope.model = undefined;         // model with edits
@@ -720,6 +720,19 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
           }
         });
       });
+  }
+
+  //@see proofs.js proveFromTactic
+  $scope.proveFromTactic = function() {
+    return function() {
+      spinnerService.show('modelListProofLoadingSpinner');
+      var uri     = 'models/users/' + userid + '/model/' + $scope.model.id + '/createTacticProof'
+      $http.post(uri, {}).success(function(data) {
+        $uibModalInstance.close();
+        var proofId = data.id;
+        $location.path('proofs/' + proofId);
+      }).finally(function() { spinnerService.hide('modelListProofLoadingSpinner'); });
+    }
   }
 
   $scope.redoProof = function() {

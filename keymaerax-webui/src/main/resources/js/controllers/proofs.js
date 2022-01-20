@@ -34,7 +34,7 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
     });
   };
 
-  /** Creates a new proof from the model's tactic (if any). */
+  /** Creates a new proof from the model's tactic (if any). @see hpmodels.proveFromTactic */
   $scope.proveFromTactic = function(modelId) {
     spinnerService.show('modelListProofLoadingSpinner');
     var uri     = 'models/users/' + sessionService.getUser() + '/model/' + modelId + '/createTacticProof'
