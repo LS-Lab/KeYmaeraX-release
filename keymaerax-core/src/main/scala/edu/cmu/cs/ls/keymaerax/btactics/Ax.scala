@@ -1899,6 +1899,27 @@ object Ax extends Logging {
   )
 
   /**
+    * {{{Axiom "\\exists& exists or"
+    *  (\exists x_ (p_(x_) |  q_(x_))) <-> (\exists x_ p_(x_) | \exists x_ q_(x_))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom("∃∨")
+  lazy val existsOr: DerivedAxiomInfo =
+  derivedAxiom("\\exists| exists or",
+    Sequent(IndexedSeq(), IndexedSeq("(\\exists x_ (p_(x_) |  q_(x_))) <-> (\\exists x_ p_(x_) | \\exists x_ q_(x_))".asFormula)),
+    equivR(1) <(
+      existsL(-1) & orR(1) & existsR(1) & existsR(2) & prop,
+      orL(-1) <(
+        existsL(-1) & existsR(1) & prop,
+        existsL(-1) & existsR(1) & prop
+      )
+    )
+  )
+
+  /**
     * {{{Axiom "\\forall-> forall implies".
     *  \forall x_ p_(||) -> \forall x_ (q_(||) -> p_(||))
     * End.
@@ -6230,5 +6251,28 @@ object Ax extends Logging {
       useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & useAt(Ax.diamond, PosInExpr(1::Nil))(1) &
         notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & close
     )
+  )
+
+  /* ODEInvariance */
+
+  /**
+    * {{{
+    *   Axiom "Kd diamond modus ponens".
+    *     [a{|^@|};](p(||)->q(||)) -> (<a{|^@|};>p(||) -> <a{|^@|};>q(||))
+    *   End.
+    * }}}
+    */
+
+  @Axiom("D Barcan", conclusion = "∃x<a>p(x)__ ↔ <a>∃x p(x) (x∉a)", displayLevel = "all",
+    key = "0", recursor = "0", unifier = "surjlinear")
+  lazy val dBarcan: DerivedAxiomInfo = derivedAxiom("D Barcan",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ <a{|^@x_|};>p(||) <-> <a{|^@x_|};>\\exists x_ p(||)".asFormula)),
+    diamondd(1,1::Nil) &
+      diamondd(1,0::0::Nil) &
+      useAt(Ax.existsDual,PosInExpr(1::Nil))(1,0::Nil) &
+      useAt(Ax.doubleNegation)(1,0::0::0::Nil) &
+      useAt(Ax.notExists)(1,1::0::1::Nil) &
+      useAt(Ax.barcan)(1,1::0::Nil) &
+      byUS(Ax.equivReflexive)
   )
 }

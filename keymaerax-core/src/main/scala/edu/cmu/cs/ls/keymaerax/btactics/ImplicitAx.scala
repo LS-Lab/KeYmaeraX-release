@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance.dBarcan
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -339,7 +338,7 @@ object ImplicitAx {
     remember("f(|x_|) > 0 & t_ = g() -> \\exists x_ ( x_ - g() > 0 & [{t_'=1,c{|x_|}}](x_-t_>0 -> f(|x_|)>=0) )".asFormula,
       implyR(1) &
         cutL("<{t_'=1,c{|x_|}&f(|x_|)>=0}>\\exists x_ (t_=x_ & x_ - g() > 0)".asFormula)(-1) <(
-          useAt(ODEInvariance.dBarcan,PosInExpr(1::Nil))(-1) &
+          useAt(Ax.dBarcan,PosInExpr(1::Nil))(-1) &
             existsL(-1) & existsR(1) &  useAt(Ax.pVd, PosInExpr(1::Nil))(-1) & andL(-1) &
             andR(1) <(
               id,
@@ -484,7 +483,7 @@ object ImplicitAx {
 
     val barcantac =
       (0 to dim-1).map( List.fill(_)(0)).foldLeft(skip:BelleExpr)( (p,t) =>
-        useAt(dBarcan)(1,t) & p
+        useAt(Ax.dBarcan)(1,t) & p
       )
 
     val extac = xLHS.foldLeft(skip:BelleExpr)((t,v) => existsR(v)(1) & t)
@@ -759,7 +758,7 @@ object ImplicitAx {
     val timevar = "t_".asVariable
     val xLHS = (1 to fs.length).map(i => BaseVariable("z_", Some(i)))
 
-    val axs = fs.map( f => Provable.implicitFuncAxiom(f))
+    val axs = fs.map( f => deriveDef(f))
 
     val vpairs = (xLHS.toList :+ timevar) zip odeLHS
 
@@ -780,7 +779,7 @@ object ImplicitAx {
           case Diamond(Compose(_,_),_) => List(Ax.composed)
           case Diamond(Choice(_,_),_) => List(Ax.choiced)
           case _ => List()
-        },(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(ElidingProvable(s))
+        },(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(s)
     ).toList
 
     sss
@@ -810,7 +809,7 @@ object ImplicitAx {
     val t0 = m(assgnList.last.asInstanceOf[Assign].x)
     val x0 = m(assgnList.dropRight(1).last.asInstanceOf[Assign].x)
 
-    val ax = ElidingProvable(Provable.implicitFuncAxiom(f))
+    val ax = deriveDef(f)
 
     val pr = proveBy(
       Equal(FuncOf(f,t0),x0),
@@ -914,4 +913,111 @@ object ImplicitAx {
       )
   }}
 
+  // Hack version of generalize to work for diamond
+  private def generalized(f : Formula) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
+    require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
+
+    val fml = seq.sub(pos) match {
+      case Some(Diamond(e,post)) => Diamond(e,f)
+      case _ => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    cutR(fml)(pos) <(skip, cohideR(pos) & implyR(1) & mond)
+  }}
+
+  private val tEx1 = remember("y()>=t__0  ==>  <{t__0'=--(1)}>y()=t__0".asSequent,
+    ODELiveness.kDomainDiamond("t__0 > y()".asFormula)(1) <(
+      cohideR(1) & solve(1) & QE,
+      ODE(1)
+    ),
+    namespace
+  )
+
+  private val tEx2 = remember("y()<=t__0  ==>  <{t__0'=-(1)}>y()=t__0".asSequent,
+    ODELiveness.kDomainDiamond("t__0 < y()".asFormula)(1) <(
+      cohideR(1) & solve(1) & QE,
+      ODE(1)
+    ),
+    namespace
+  )
+
+  // Derive the defining axiom for a function
+  def deriveDef(f : Function) : ProvableSig = {
+
+    // P(._0,._1,...,._n)
+    val interp = f.interp.get
+    val x = BaseVariable("x_")
+    // For convenience, replace dot terms with a function symbol
+    val y = "y()".asTerm
+    val xdot = DotTerm(Real,Some(0))
+    // The substitution ._0 ~> x_
+    val subst = USubst(SubstitutionPair(DotTerm(Real,Some(0)),x) :: Nil)
+    val subst1 = USubst(SubstitutionPair(DotTerm(Real,Some(1)),y) :: Nil)
+
+    val (ode1,ode2,inits) = f.interp.get match {
+      case Diamond(Compose(assgn,Choice(ODESystem(ode1,True),ODESystem(ode2,True))),inits) => (ode1,ode2,inits)
+      case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ f.interp.get)
+    }
+
+    val m = FormulaTools.conjuncts(inits).map( fml =>
+      fml match {
+        case Equal(x:Variable,i) => (x,i)
+        case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ f.interp.get)
+      }
+    )
+
+    val abbrevs = m.zipWithIndex.map( (xii) =>  {
+      val xi = xii._1
+      val i = xii._2
+      val pos = if(i == m.length-1) 0::1::List.fill(i)(1) else 0::1::List.fill(i)(1)++(0::Nil)
+      val x0 = Variable(xi._1.name,Some(0))
+      cutR(Exists(x0::Nil, Equal(x0,xi._2)))(1) <(
+        cohideR(1) & QE,
+        implyR(1) & existsL('Llast) & eqR2L(-(i+1))(1,pos)
+      ) : BelleExpr
+    }).reduce( _ & _ )
+
+    // todo: default
+    val tvar = Variable("t_",Some(0))
+    val split = Or(GreaterEqual(y,tvar), LessEqual(y,tvar))
+
+    val diffadj1 = ODEInvariance.getDiffAdjInst(DifferentialProduct.listify(ode1).map(_.asInstanceOf[AtomicODE]))
+    val diffadj2 = ODEInvariance.getDiffAdjInst(DifferentialProduct.listify(ode2).map(_.asInstanceOf[AtomicODE]))
+
+    val barcantac = (0 to m.length-2).reverse.map(i => useAt(Ax.dBarcan,PosInExpr(0::Nil))(1,List.fill(i)(0)):BelleExpr).reduceRight(_ & _)
+
+    val pr = proveBy(Exists(x::Nil, subst1(subst(interp))),
+      abbrevs &
+      composed(1,0::Nil) &
+      choiced(1,0::1::Nil) &
+      diamondOr(1,0::Nil) &
+      useAt(Ax.existsOr)(1) &
+      cutR(split)(1) <(
+        cohideR(1) & QE,
+        implyR(1) & orR(1) & orL('Llast) <(
+          hideR(2) & useAt(diffadj1)(1,0::1::Nil) &
+          chase(1,0::Nil) &
+          barcantac &
+          generalized(Equal(y,tvar))(1) <(
+            //todo: could make an entry point here for users
+            ODELiveness.odeReduce(strict=true,Nil)(1) &
+              (hideL(-1) * (m.length)) & by(tEx1),
+            QE
+          )
+          ,
+          hideR(1) & useAt(diffadj2)(1,0::1::Nil) &
+          chase(1,0::Nil) &
+          barcantac &
+          generalized(Equal(y,tvar))(1) <(
+            //todo: could make an entry point here for users
+            ODELiveness.odeReduce(strict=true,Nil)(1) &
+              (hideL(-1) * (m.length))& by(tEx2),
+            QE
+          )
+        )
+      )
+    )
+    val pr2 = proveBy(Exists(x::Nil, subst(interp)), byUS(pr)).underlyingProvable
+    ElidingProvable(Provable.implicitFunc(f,pr2))
+  }
 }

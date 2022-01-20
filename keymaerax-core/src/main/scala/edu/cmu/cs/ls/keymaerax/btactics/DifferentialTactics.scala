@@ -1351,7 +1351,7 @@ private object DifferentialTactics extends Logging {
     else {
       Dconstify(
         useAt(dbxRw,(us: Option[Subst]) => us.get ++ subst)(pos) <(
-          ?(id | QE & done),
+          ?(id | timeoutQE & done),
           derive(pos++ dbxRw.recursor.head) &
           DE(pos) &
           // todo: mostly copy-paste from dI
@@ -1360,8 +1360,8 @@ private object DifferentialTactics extends Logging {
               DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")
           ) &
           //@note DW after DE to keep positions easier
-          (if (hasODEDomain(seq, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
-            QE
+          (if (hasODEDomain(seq, pos)) DW('Rlast) else skip) & abstractionb('Rlast) &
+            ? (ToolTactics.hideNonFOL & timeoutQE & done)
         )
       )(pos)
     }

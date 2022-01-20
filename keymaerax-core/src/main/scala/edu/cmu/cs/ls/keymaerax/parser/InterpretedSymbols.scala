@@ -33,7 +33,7 @@ object InterpretedSymbols {
   val PI: Function = Function("pi",None,Unit,Real,interp = Some(
     And( "._0 > 0".asFormula,
     And( Equal(FuncOf(sinF,DotTerm(idx=Some(0))), Number(0)),
-         Forall("x".asVariable :: Nil, Imply("0 < x & x < y".asFormula,
+         Forall("x".asVariable :: Nil, Imply("0 < x & x < ._0".asFormula,
           Greater(FuncOf(sinF,"x".asVariable),Number(0))
          ))
     ))))

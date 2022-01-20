@@ -6,10 +6,49 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, KeYmaeraXArchiveParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 class ImplicitAxTests extends TacticTestBase {
+
+  "definitions" should "derive defining axiom" in withMathematica { _ =>
+    val exp = InterpretedSymbols.expF
+    val ax = deriveDef(exp)
+    ax shouldBe 'proved
+    ax.conclusion shouldBe "==> ._0=exp<< <{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=1&t_=0) >>(._1)<-><{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=1&t_=0)".asSequent
+  }
+
+  it should "derive defining axiom 2" in withMathematica { _ =>
+    val sin = InterpretedSymbols.sinF
+    val cos = InterpretedSymbols.cosF
+    val ax1 = deriveDef(sin)
+    val ax2 = deriveDef(cos)
+    ax1 shouldBe 'proved
+    ax2 shouldBe 'proved
+    println(ax1)
+    println(ax2)
+    ax1.conclusion shouldBe "==>  ._0=sin<< <{cos:=*;sin:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(sin=0&cos=1&t_=0) >>(._1)<-><{cos:=*;sin:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(sin=0&cos=1&t_=0)".asSequent
+    ax2.conclusion shouldBe "==>  ._0=cos<< <{sin:=*;cos:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(sin=0&cos=1&t_=0) >>(._1)<-><{sin:=*;cos:=._0;t_:=._1;}{{sin'=-cos,cos'=--sin,t_'=-(1)}++{sin'=cos,cos'=-sin,t_'=1}}>(sin=0&cos=1&t_=0)".asSequent
+  }
+
+  it should "derive defining axiom 3" in withMathematica { _ =>
+    val tanh = Function("tanh",None,Real,Real,Some("<{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(tanh=0&t_=0)".asFormula))
+
+    val ax = deriveDef(tanh)
+    ax shouldBe 'proved
+    println(ax)
+    ax.conclusion shouldBe "==>  ._0=tanh<< <{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(tanh=0&t_=0) >>(._1)<-><{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(tanh=0&t_=0)".asSequent
+  }
+
+//  it should "derive defining axiom 4" in withMathematica { _ =>
+//    // note: this already requires the rest of the proofs to work
+//    val exp = Function("ee",None,Real,Real,Some("<{ee:=._0;t_:=._1;}{{ee'=-exp(t_)*ee,t_'=-(1)}++{ee'=exp(t_)*ee,t_'=1}}>(ee=1&t_=0)".asFormula))
+//
+//    val ax = deriveDef(exp)
+//    ax shouldBe 'proved
+//    println(ax)
+//    ax.conclusion shouldBe "==>  ._0=tanh<< <{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(tanh=0&t_=0) >>(._1)<-><{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(tanh=0&t_=0)".asSequent
+//  }
 
   "compose" should "lift partial to diff axiom" in withMathematica { _ =>
 
@@ -438,6 +477,33 @@ class ImplicitAxTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+  }
+
+  it should "foo" in withMathematica { _ =>
+    val fml = " tanh<< <{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(t_=0&tanh=0) >>(-x) = -tanh<< <{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(t_=0&tanh=0) >>(x)".asFormula
+
+    val pr = proveBy(fml,
+      propDiffUnfold(Variable("x"), Number(0))(1) <(
+        QE,
+        ODE(1),
+        ODE(1)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "foo2" in withMathematica { _ =>
+    val fml = "tanh<< <{tanh:=._0;t_:=._1;}{{tanh'=-(1-tanh^2),t_'=-(1)}++{tanh'=1-tanh^2,t_'=1}}>(t_=0&tanh=0) >>(lambda()*x)^2 <= 1".asFormula
+
+    val pr = proveBy(fml,
+      propDiffUnfold(Variable("x"), Number(0))(1) <(
+        QE,
+        ODE(1),
+        ODE(1)
+      )
+    )
+    println(pr)
   }
 
 }
