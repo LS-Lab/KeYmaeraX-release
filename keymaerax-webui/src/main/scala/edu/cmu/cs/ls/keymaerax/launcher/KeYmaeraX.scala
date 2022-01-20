@@ -23,7 +23,6 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBTools, DbProofTree, Verba
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{ENC, parse}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
 import scala.util.Random
@@ -31,7 +30,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import org.apache.commons.lang3.StringUtils
 
-import scala.collection.immutable.{List, Nil, Seq}
+import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
 import resource._
 
@@ -361,9 +360,9 @@ object KeYmaeraX {
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
-    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx, "ISO-8859-1")).apply(_.mkString)
-    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
-    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
+    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString)
+    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString))
+    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString))
     val inputFormula: Formula = ArchiveParser.parseAsFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }

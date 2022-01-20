@@ -533,6 +533,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
           case Token(END_BLOCK, _) :: Token(PERIOD, endLoc) :: _ => endLoc
           case Token(END_BLOCK, endLoc) :: _ => endLoc
         }
+        if (belleExprBlock.isEmpty) throw ParseException("Empty tactics block, please enter a tactic or \"todo\"", nameLoc, "<nothing>", "tactic or \"todo\"")
         val tacticText = slice(text, nameLoc.end.spanTo(belleExprBlock.last.loc.end)).stripPrefix("\"").stripPrefix(".").trim
         ParseState(r :+ tactics :+ Tactic(name, tacticText, blockLoc.spanTo(blockEndLoc), currLoc), remainder)
       case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _, _)) if la == END_BLOCK => shift(st)

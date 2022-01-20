@@ -291,7 +291,7 @@ object KeYmaeraX {
   }
 
   private def parseBelleTactic(fileName: String): Boolean = {
-    val source = scala.io.Source.fromFile(fileName, "ISO-8859-1")
+    val source = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
     try {
       BelleParser(source.getLines().mkString("\n"))
       println("Parsed file successfully")

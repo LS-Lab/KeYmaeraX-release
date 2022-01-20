@@ -22,9 +22,11 @@ object TacticStatistics {
     case SaturateTactic(c) => size(c) + 1
     case RepeatTactic(c, _) => size(c) + 1
     case BranchTactic(c) => c.map(size).sum + 1
+    case CaseTactic(c) => c.map(_._2).map(size).sum + 1
     case OnAll(c) => size(c) + 1
     case Let(_, _, c) => size(c) + 1
     case DefTactic(_, c) => size(c)
+    case Using(_, c) => size(c)
     case _ => 1
   }
 
@@ -35,9 +37,11 @@ object TacticStatistics {
     case SaturateTactic(c) => size(c)
     case RepeatTactic(c, _) => size(c)
     case BranchTactic(c) => c.map(size).sum
+    case CaseTactic(c) => c.map(_._2).map(size).sum
     case OnAll(c) => size(c)
     case Let(_, _, c) => size(c)
     case DefTactic(_, c) => size(c)
+    case Using(_, c) => size(c)
     case _ => 1
   }
 

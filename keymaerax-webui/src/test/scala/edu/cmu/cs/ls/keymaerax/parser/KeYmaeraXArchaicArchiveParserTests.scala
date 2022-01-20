@@ -3042,5 +3042,19 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |Expected: function with arguments""".stripMargin
   }
 
+  it should "report empty tactics as error" in {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Undeclared variable"
+        |  ProgramVariables Real x; End.
+        |  Problem x^2+y^2>=0 End.
+        |  Tactic "Empty" End.
+        |End.
+        |
+        |""".stripMargin) should have message
+        """4:10 Empty tactics block, please enter a tactic or "todo"
+          |Found:    <nothing> at 4:10 to 4:16
+          |Expected: tactic or "todo"""".stripMargin
+  }
+
 
 }

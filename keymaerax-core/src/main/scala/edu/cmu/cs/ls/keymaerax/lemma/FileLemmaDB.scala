@@ -31,9 +31,6 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   /** The configured cache path (@todo needs to by lazy? or could be made class val?) */
   private lazy val cachePath = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
 
-  /** The file encoding used to read/write lemma files. */
-  private val ENC = "ISO-8859-1"
-
   /** Matches special characters in lemma names that might be problematic in file names (typically: whitespace, :, .). */
   private val SANITIZE_REGEX = "[^\\w\\-" + Pattern.quote(File.separator) + "]"
 
@@ -53,7 +50,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
 
   /** Reads the file `f` into a string. */
   private def read(f: File): String = {
-    val src = scala.io.Source.fromFile(f, ENC)
+    val src = scala.io.Source.fromFile(f, edu.cmu.cs.ls.keymaerax.core.ENCODING)
     try {
       src.mkString
     } finally {
@@ -63,7 +60,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
 
   /** Writes `text` to the file `f`. */
   private def write(f: File, text: String): Unit = {
-    val w = new PrintWriter(f, ENC)
+    val w = new PrintWriter(f, edu.cmu.cs.ls.keymaerax.core.ENCODING)
     try {
       w.write(text)
     } finally {

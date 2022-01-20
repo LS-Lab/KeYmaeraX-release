@@ -182,7 +182,7 @@ class VerbatimTraceToTacticConverter extends TraceToTacticConverter {
     if (subgoals.isEmpty) (thisTactic, Map.empty)
     else if (subgoals.size == 1) (sequentialTactic(thisTactic, subgoals.head._1), Map.empty)
     else (sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + OPEN_PAREN.img + NEWLINE +
-      indent + subgoals.map(_._1).mkString(COMMA + NEWLINE + indent) + NEWLINE + indent + CLOSE_PAREN.img), Map.empty)
+      indent + subgoals.map(_._1).mkString(COMMA.img + NEWLINE + indent) + NEWLINE + indent + CLOSE_PAREN.img), Map.empty)
   }
   
   private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {

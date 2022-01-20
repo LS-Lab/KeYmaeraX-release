@@ -86,13 +86,13 @@ object DatabasePopulator extends Logging {
   def loadResource(url: String): String =
     if (url.startsWith("classpath:")) {
       val resource = getClass.getResourceAsStream(url.substring("classpath:".length))
-      if (resource != null) io.Source.fromInputStream(resource, "ISO-8859-1").mkString
+      if (resource != null) io.Source.fromInputStream(resource, edu.cmu.cs.ls.keymaerax.core.ENCODING).mkString
       else if (url.startsWith("classpath:/keymaerax-projects")) loadResource(GITHUB_PROJECTS_RAW_PATH + url.substring("classpath:/keymaerax-projects".length))
       else throw new Exception(s"Example '$url' neither included in build nor available in projects repository")
     } else if (url.startsWith("file://")) {
-      resource.managed(io.Source.fromFile(url.stripPrefix("file://"), "ISO-8859-1")).apply(_.mkString)
+      resource.managed(io.Source.fromFile(url.stripPrefix("file://"), edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString)
     } else {
-        resource.managed(io.Source.fromURL(url, "ISO-8859-1")).apply(_.mkString)
+        resource.managed(io.Source.fromURL(url, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString)
     }
 
   /** Imports a model with info into the database; optionally records a proof obtained using `tactic`.
