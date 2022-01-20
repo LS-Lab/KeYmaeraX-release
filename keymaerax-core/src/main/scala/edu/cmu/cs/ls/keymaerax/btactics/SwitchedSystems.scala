@@ -845,7 +845,12 @@ object SwitchedSystems {
 
     val vp = Vp match {
       case Nil => ToolProvider.lyapunovTool() match {
-        case Some(t) => t.genMLF(ss.odes, guardedTransitionMap(ss))
+        case Some(t) => {
+          val res = t.genMLF(ss.odes, guardedTransitionMap(ss))
+          if (res.nonEmpty) res
+          else
+            throw new MissingLyapunovFunction("Vp not provided, tried to generate automatically but failed; please provide Vp manually")
+        }
         case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide Vp manually")
       }
       case _ => Vp
@@ -1349,7 +1354,12 @@ object SwitchedSystems {
 
     val vp = Vp match {
       case Nil => ToolProvider.lyapunovTool() match {
-        case Some(t) => t.genMLF(ss.odes, guardedTransitionMap(ss))
+        case Some(t) => {
+          val res = t.genMLF(ss.odes, guardedTransitionMap(ss))
+          if (res.nonEmpty) res
+          else
+            throw new MissingLyapunovFunction("Vp not provided, tried to generate automatically but failed; please provide Vp manually")
+        }
         case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide Vp manually")
       }
       case _ => Vp
@@ -2279,7 +2289,5 @@ object SwitchedSystems {
       )
 
   })
-
-
 
 }
