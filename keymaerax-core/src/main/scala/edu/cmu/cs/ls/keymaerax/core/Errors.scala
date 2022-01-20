@@ -9,6 +9,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.core
 
+import org.apache.commons.lang3.StringUtils
+
 /**
   * KeYmaera X Prover Exceptions.
   */
@@ -35,7 +37,7 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
     this
   }
 
-  override def toString: String = super.getMessage + getContext
+  override def toString: String = super.getMessage + StringUtils.abbreviate(getContext, 1000)
 
 }
 

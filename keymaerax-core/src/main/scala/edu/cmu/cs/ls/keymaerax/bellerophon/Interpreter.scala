@@ -70,7 +70,9 @@ trait Interpreter {
     val (substParent, substChild) =
       if (original.subgoals(n) == subderivation.conclusion) (original, subderivation)
       else if (subderivation.isProved) (exhaustiveSubst(original, subst), exhaustiveSubst(subderivation, subst))
-      else (exhaustiveSubst(original, subst), subderivation)
+      else (exhaustiveSubst(original, subst), exhaustiveSubst(subderivation,
+        // expand definitions but do not replace constification (subderivation not yet proved so cannot replace f() with f)
+        USubst(subst.subsDefsInput.filter({ case SubstitutionPair(FuncOf(_, Nothing), _: Variable) => false case _ => true  }))))
     if (substParent.subgoals(n) == substChild.conclusion) {
       val merged = substParent(substChild, n)
       (true, merged)
