@@ -85,7 +85,7 @@ vfs=Map[#[[1]]&,systems];
 domains=Map[ExtractPolys[#[[3]]]&,systems];
 dim=Length[allvars];
 
-Print["Domains: ",domains];
+(*Print["Domains: ",domains];*)
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
@@ -107,7 +107,8 @@ locstr="
       dB$ = dB$+diff(B,vars(i))*field$(i);
     end
 
-    expr$ = -dB$-epslb;
+    expr$ = -dB$;
+    % expr$ = -dB$-epslb;
 
     if ~isempty(dom$)
         dsum=0;
@@ -127,14 +128,19 @@ For[i=1,i<=Length[vfsstr],i++,
 	constrstr=constrstr<>StringReplace[locstr,{"$"->MmaToMatlab[i]}]
 ];
 
+
 sosprog="
 % CLF
 
 clear;
 % Inputs from Mathematica
 % Variables
-pvar "<>StringRiffle[Map[MmaToMatlab, allvars], " "]<>";
+pvar "<>StringRiffle[Map[MmaToMatlab, allvars], " "]<>" dummy;
 vars = "<>MmaToMatlab[allvars]<>";
+
+% Work around a bug in SOSTOOLS/Sedumi    
+varsd = vars;
+varsd(end+1)=dummy;
 
 % Problem specification
 % The vector fields and domains
@@ -148,6 +154,11 @@ minfeas=0.1;
 for d = minDeg : maxDeg
 	deg = 2*d;
     monvec = vertcat(monomials(vars,1:1:deg));
+
+	% Work around a bug in SOSTOOLS/Sedumi    
+    monvecd = monvec;
+    monvecd(end+1) = dummy;
+
     epslb = 0*vars(1);
     for i = 1:length(vars)
         for j = 1:deg/2
@@ -155,10 +166,10 @@ for d = minDeg : maxDeg
         end
     end
 
-    prog = sosprogram(vars);
+    prog = sosprogram(varsd);
 
     % Template for the CLF B
-    [prog,B] = sospolyvar(prog,monvec);
+    [prog,B] = sospolyvar(prog,monvecd);
 
     % Constraint B >= 0
     prog = sosineq(prog, B-epslb);
@@ -240,7 +251,8 @@ locstr="
       dB$ = dB$+diff(B$,vars(i))*field$(i);
     end
 
-    expr$ = -dB$-epslb;
+    expr$ = -dB$;
+    % expr$ = -dB$-epslb;
 
     if ~isempty(dom$)
         for i=1:length(dom$)
@@ -269,7 +281,7 @@ For[i=1,i<=Length[transitions],i++,
 mlfstr="";
 For[i=1,i<=Length[vfsstr],i++,
 	mlfstr=mlfstr<>"
-	[prog,B"<>MmaToMatlab[i]<>"] = sospolyvar(prog,monvec);
+	[prog,B"<>MmaToMatlab[i]<>"] = sospolyvar(prog,monvecd);
 	prog = sosineq(prog, B"<>MmaToMatlab[i]<>"-epslb);"];
 
 solstr="";
@@ -284,7 +296,12 @@ clear;
 % Inputs from Mathematica
 % Variables
 pvar "<>StringRiffle[Map[MmaToMatlab, allvars], " "]<>";
+pvar dummy;
 vars = "<>MmaToMatlab[allvars]<>";
+
+% Work around a bug in SOSTOOLS/Sedumi    
+varsd = vars;
+varsd(end+1)=dummy;
 
 % Problem specification
 % The vector fields and domains
@@ -292,12 +309,17 @@ vars = "<>MmaToMatlab[allvars]<>";
 
 minDeg = 1;
 maxDeg = 2;
-eps=0.0001;
+eps=0.00001;
 minfeas=0.1;
 
 for d = minDeg : maxDeg
 	deg = 2*d;
     monvec = vertcat(monomials(vars,1:1:deg));
+
+	% Work around a bug in SOSTOOLS/Sedumi    
+    monvecd = monvec;
+    monvecd(end+1) = dummy;
+
     epslb = 0*vars(1);
     for i = 1:length(vars)
         for j = 1:deg/2
@@ -305,7 +327,7 @@ for d = minDeg : maxDeg
         end
     end
 
-    prog = sosprogram(vars);
+    prog = sosprogram(varsd);
 
     % Template for the MLF B"<>mlfstr<>"
 
