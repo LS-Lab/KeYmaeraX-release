@@ -89,6 +89,10 @@ dim=Length[allvars];
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
+If[Not[link===Null],
+	Print["Unable to open MATLAB/MATlink."];
+	Return[{}];
+];
 
 vfsstr=Map[MmaToMatlab[#]&,vfs];
 fieldstr= "";
@@ -200,7 +204,7 @@ Return[B];
 GenMLF[systems_List, transitions_List,opts:OptionsPattern[]]:=Catch[Module[
 {sosprog,link,allvars,vfs,vfsstr,domains,normdom,dim,
 origsubs,i,fieldstr,domainsstr,domstr,locstr,constrstr,script,res,lines,B,mlfstr,solstr,tind,
-tempstr,guardstr,},
+tempstr,guardstr},
 
 Print["Attempting to generate MLFs with SOS Programming"];
 
@@ -215,6 +219,10 @@ Print["Transitions: ",tind];
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
+If[Not[link===Null],
+	Print["Unable to open MATLAB/MATlink."];
+	Return[{}];
+];
 
 vfsstr=Map[MmaToMatlab[#]&,vfs];
 fieldstr= "";
