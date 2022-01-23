@@ -105,15 +105,17 @@ RUN wget https://account.wolfram.com/download/public/wolfram-engine/desktop/LINU
 WORKDIR /home/${USER_NAME}/
 # avoid caching git clone by adding the latest commit SHA to the container
 ADD https://api.github.com/repos/LS-Lab/KeYmaeraX-release/git/refs/heads/master kyx-version.json
-RUN git clone --depth 1 https://github.com/LS-Lab/KeYmaeraX-release.git
+RUN git clone -n https://github.com/LS-Lab/KeYmaeraX-release.git
 ADD https://api.github.com/repos/LS-Lab/KeYmaeraX-projects/git/refs/heads/master projects-version.json
 WORKDIR /home/${USER_NAME}/KeYmaeraX-release/keymaerax-webui/src/main/resources/
 RUN git clone --depth 1 https://github.com/LS-Lab/KeYmaeraX-projects.git
 
-# Build KeYmaera X
+# Build KeYmaera X at commit c877dd070548b2dec7ceb7c27a17d2e90f5ffe16
 WORKDIR /home/${USER_NAME}/KeYmaeraX-release/
+RUN git checkout c877dd070548b2dec7ceb7c27a17d2e90f5ffe16
 RUN ls ${WOLFRAM_ENGINE_PATH} > weversion.txt
 RUN bash -l -c "echo \"mathematica.jlink.path=${WOLFRAM_ENGINE_PATH}/"'$(<weversion.txt)/SystemFiles/Links/JLink/JLink.jar" > local.properties'
+ENV SBT_OPTS="-XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -Xmx4G"
 RUN sbt clean assembly
 RUN cp keymaerax-webui/target/scala-2.12/KeYmaeraX*.jar /home/${USER_NAME}/keymaerax.jar
 
@@ -122,10 +124,6 @@ WORKDIR /home/${USER_NAME}/
 RUN wget http://download.matlink.org/MATLink.zip && \
   mkdir -p .WolframEngine/Applications/ && \
   unzip MATLink.zip -d .WolframEngine/Applications/
-
-# Add Wolfram Engine to the path
-#ENV PATH="${WOLFRAM_ENGINE_PATH}/"'$(<weversion.txt)/Executables/:'"$PATH"
-ENV PATH="${WOLFRAM_ENGINE_PATH}/13.0/Executables:$PATH"
 
 # Install MATLink dependencies
 RUN sudo apt-get --yes update && \
@@ -137,6 +135,10 @@ RUN sudo apt-get --yes update && \
   sudo apt-get clean && \
   sudo apt-get autoremove && \
   sudo rm -rf /var/lib/apt/lists/*
+
+# Export Wolfram Engine version for dockersetup.sh and path for dockerrun.sh
+RUN ls ${WOLFRAM_ENGINE_PATH} > weversion.txt
+RUN bash -l -c "echo \"${WOLFRAM_ENGINE_PATH}/"'$(<weversion.txt)/Executables" > wepath.txt'
 
 # Set final working directory
 WORKDIR /home/${USER_NAME}/
