@@ -1028,12 +1028,14 @@ object ImplicitAx {
       ) : BelleExpr
     }).reduce( _ & _ )
 
-    // todo: default
-    val tvar = Variable("t_",Some(0))
+    val ode1ls = DifferentialProduct.listify(ode1).map(_.asInstanceOf[AtomicODE])
+    val ode2ls = DifferentialProduct.listify(ode2).map(_.asInstanceOf[AtomicODE])
+
+    val tvar = Variable(ode1ls.last.xp.x.name,Some(0))
     val split = Or(GreaterEqual(y,tvar), LessEqual(y,tvar))
 
-    val diffadj1 = ODEInvariance.getDiffAdjInst(DifferentialProduct.listify(ode1).map(_.asInstanceOf[AtomicODE]))
-    val diffadj2 = ODEInvariance.getDiffAdjInst(DifferentialProduct.listify(ode2).map(_.asInstanceOf[AtomicODE]))
+    val diffadj1 = ODEInvariance.getDiffAdjInst(ode1ls)
+    val diffadj2 = ODEInvariance.getDiffAdjInst(ode2ls)
 
     val barcantac = (0 to m.length-2).reverse.map(i => useAt(Ax.dBarcan,PosInExpr(0::Nil))(1,List.fill(i)(0)):BelleExpr).reduceRight(_ & _)
 
