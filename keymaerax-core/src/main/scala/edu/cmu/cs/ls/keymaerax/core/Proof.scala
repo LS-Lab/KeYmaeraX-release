@@ -631,12 +631,18 @@ object Provable {
 
   private def isODEInterp(interp: Formula) : Unit = {
 
+    def noFreeVars(e : Expression) : Boolean = StaticSemantics.freeVars(e).isEmpty
+    def noUninterpretedSymbols(e : Expression) : Boolean = StaticSemantics.signature(e).filter( f => f match {
+      case f:Function if f.interpreted => false // by data structure invariant, f is a valid interpreted function symbol
+      case _ => true
+    }).isEmpty
+
     // Check the shape of initial condition and extract the equalities x=x0&t=t0
-    // Right-hand sides of initial conditions must be numeric
-    def checkInit( f : Formula ) : List[(BaseVariable,Number)] = {
+    // Right-hand sides of initial conditions must have no free variables nor uninterpreted symbols
+    def checkInit( f : Formula ) : List[BaseVariable] = {
       f match {
-        case And(Equal(v : BaseVariable, n:Number), rest) => (v,n)::checkInit(rest)
-        case Equal(v : BaseVariable,n : Number) => (v,n)::Nil
+        case And(Equal(v : BaseVariable, e), rest) if noFreeVars(e) && noUninterpretedSymbols(e) => v::checkInit(rest)
+        case Equal(v : BaseVariable, e) if noFreeVars(e) && noUninterpretedSymbols(e) => v::Nil
         case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
       }
     }
@@ -654,15 +660,14 @@ object Provable {
       case Diamond(Compose(assgn, Choice(ODESystem(odeB,True),ODESystem(odeF,True))), init ) => {
 
         val inits = checkInit(init)
-        val vars = inits.map(_._1)
 
-        insist(vars.toSet.size == vars.size, "Exactly one initial condition allowed per variable.")
+        insist(inits.toSet.size == inits.size, "Exactly one initial condition allowed per variable.")
 
         val assgns = checkAssign(assgn)
 
         insist(assgns.toSet.size == assgns.size, "Exactly one assignment allowed per variable.")
 
-        insist(assgns.toSet == vars.toSet, "Variables in initial condition and assignment must match.")
+        insist(assgns.toSet == inits.toSet, "Variables in initial condition and assignment must match.")
 
         // The ODEs must be atomic by data structure invariant on interpreted functions
         val odeFs = DifferentialProduct.listify(odeF).map(_.asInstanceOf[AtomicODE])
@@ -672,10 +677,13 @@ object Provable {
         insist(odeFs.map(ode => ode.copy(e=Neg(ode.e))) == odeBs, "Forward ODEs must match backward ODEs.")
 
         // Check that the variables match initial conditions
-        insist(odeFs.map(ode => ode.xp.x).toSet == vars.toSet, "Variables in ODEs must match variables in initial conditions.")
+        insist(odeFs.map(ode => ode.xp.x).toSet == inits.toSet, "Variables in ODEs must match variables in initial conditions.")
 
         // Check that the last ODE is a time variable
         insist(odeFs.last.e == Number(1), "Last ODE must be a clock ODE t'=1.")
+
+        // Check that the forward ODE does not mention uninterpreted symbols (in particular, no ._0 and ._1)
+        insist(noUninterpretedSymbols(odeF), "No uninterpreted symbols in ODE RHS.")
       }
       case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
     }
