@@ -1510,8 +1510,7 @@ private object DifferentialTactics extends Logging {
                                  property: ComparisonFormula, strict:Boolean=true): (ProvableSig,Term,Term) = {
 
     val p = property.left
-    //todo: call with normal simplification tool instead of None
-    val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, None)
+    val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
 
     val interp = (ToolTactics.interpretedFuncsOf(lie)++ToolTactics.interpretedFuncsOf(p)++ToolTactics.interpretedFuncsOf(dom)).distinct
     val renvar = "x_"

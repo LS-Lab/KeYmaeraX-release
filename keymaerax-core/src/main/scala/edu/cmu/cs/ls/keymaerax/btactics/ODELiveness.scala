@@ -61,7 +61,7 @@ object ODELiveness {
     }
 
     // the system matrix "A"
-    val amat = rhs.map(t => simplifiedJacobian(t,lhsvar,tool))
+    val amat = rhs.map(t => simplifiedJacobian(t, lhsvar, tool))
 
     // ensure that "A" is actually linear
     val amatfree = amat.flatten.map( t => StaticSemantics.freeVars(t))
@@ -355,6 +355,7 @@ object ODELiveness {
 
     val goal = ddg.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
     val pre = ddg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
+
 
     val pr = proveBy(goal,
       cutR(pre)(1)

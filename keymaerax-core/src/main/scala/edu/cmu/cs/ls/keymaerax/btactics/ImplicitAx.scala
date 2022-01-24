@@ -121,7 +121,6 @@ object ImplicitAx {
     ), info)
   }
 
-  // todo: for efficiency initialize ProvableInfo with pre-proved differential axioms
   def getInitAx(f: Function) : Option[ProvableInfo] = {
     try {
       Some(ProvableInfo(canonicalInitAxName(f)))
@@ -132,6 +131,58 @@ object ImplicitAx {
           val pr = deriveInitAxiom(f)
           registerInitAx(f,pr)
           getInitAx(f)
+        }
+        catch {
+          case e:IllegalArgumentException => {
+            // println(e.getMessage)
+            None
+          }
+        }
+      }
+    }
+  }
+
+  private def canonicalDefAxName(f: Function) : String = {
+    // todo: how to use directory structure?
+    "def"+f.name
+  }
+
+  private def registerDefAx(f: Function, p:ProvableSig) : Unit = {
+    println("Registering defining axiom: ",f,p)
+    val name = canonicalDefAxName(f)
+    val codename = name
+
+    val fml = p.conclusion.succ(0) // ==> ._0 = f(._1 <-> ...
+    val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
+    val rhs = fml.sub(PosInExpr(1::Nil)).get.toString
+
+    val info = new DerivedAxiomInfo(name,
+      AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ <-> "+rhs),
+      codename,
+      name,
+      'surlinear,
+      {case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
+      'internal,
+      List(0),
+      List(List(1))
+    )
+    DerivationInfo.registerR( Ax.derivedAxiomFromFact(name,
+      p.conclusion.succ(0),
+      p,
+      Some(codename)
+    ), info)
+  }
+
+  def getDefAx(f: Function) : Option[ProvableInfo] = {
+    try {
+      Some(ProvableInfo(canonicalDefAxName(f)))
+    }
+    catch {
+      case e:AxiomNotFoundException => {
+        try {
+          val pr = deriveDefAxiom(f)
+          registerDefAx(f,pr)
+          getDefAx(f)
         }
         catch {
           case e:IllegalArgumentException => {
@@ -758,7 +809,7 @@ object ImplicitAx {
     val timevar = "t_".asVariable
     val xLHS = (1 to fs.length).map(i => BaseVariable("z_", Some(i)))
 
-    val axs = fs.map( f => deriveDef(f))
+    val axs = fs.map( f => deriveDefAxiom(f))
 
     val vpairs = (xLHS.toList :+ timevar) zip odeLHS
 
@@ -809,7 +860,7 @@ object ImplicitAx {
     val t0 = m(assgnList.last.asInstanceOf[Assign].x)
     val x0 = m(assgnList.dropRight(1).last.asInstanceOf[Assign].x)
 
-    val ax = deriveDef(f)
+    val ax = deriveDefAxiom(f)
 
     val pr = proveBy(
       Equal(FuncOf(f,t0),x0),
@@ -942,7 +993,7 @@ object ImplicitAx {
   )
 
   // Derive the defining axiom for a function
-  def deriveDef(f : Function) : ProvableSig = {
+  private def deriveDefAxiom(f : Function) : ProvableSig = {
 
     // P(._0,._1,...,._n)
     val interp = f.interp.get

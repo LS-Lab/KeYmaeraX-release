@@ -853,12 +853,11 @@ object ODEInvariance {
       var remaining = polys
 
       while (true) {
-        //todo: call with normal simplification tool instead of None
-        val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, None))
+        val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
         val quos = lies.map(p => absPolynomialReduce(p, gb))
         remaining = quos.map(_._2).filterNot(_ == Number(0))
         if (remaining.isEmpty) {
-          val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, None))
+          val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
           val cofactors = gblies.map(p => absPolynomialReduce(p, gb))
           return (rank, gb, cofactors.map(_._1))
         }
