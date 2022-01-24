@@ -629,6 +629,58 @@ object Provable {
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(diffAdj)), immutable.IndexedSeq())
   }
 
+  private def isODEInterp(interp: Formula) : Unit = {
+
+    // Check the shape of initial condition and extract the equalities x=x0&t=t0
+    // Right-hand sides of initial conditions must be numeric
+    def checkInit( f : Formula ) : List[(BaseVariable,Number)] = {
+      f match {
+        case And(Equal(v : BaseVariable, n:Number), rest) => (v,n)::checkInit(rest)
+        case Equal(v : BaseVariable,n : Number) => (v,n)::Nil
+        case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
+      }
+    }
+
+    // Check the shape of the assignment block x:=*;y:=._0;t:=._1
+    def checkAssign( p : Program ) : List[BaseVariable] = {
+      p match {
+        case Compose(AssignAny(v : BaseVariable),rest) => v::checkAssign(rest)
+        case Compose(Assign(v:BaseVariable,DotTerm(Real,Some(0))),Assign(t:BaseVariable,DotTerm(Real,Some(1)))) => v::t::Nil
+        case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
+      }
+    }
+
+    interp match {
+      case Diamond(Compose(assgn, Choice(ODESystem(odeB,True),ODESystem(odeF,True))), init ) => {
+
+        val inits = checkInit(init)
+        val vars = inits.map(_._1)
+
+        insist(vars.toSet.size == vars.size, "Exactly one initial condition allowed per variable.")
+
+        val assgns = checkAssign(assgn)
+
+        insist(assgns.toSet.size == assgns.size, "Exactly one assignment allowed per variable.")
+
+        insist(assgns.toSet == vars.toSet, "Variables in initial condition and assignment must match.")
+
+        // The ODEs must be atomic by data structure invariant on interpreted functions
+        val odeFs = DifferentialProduct.listify(odeF).map(_.asInstanceOf[AtomicODE])
+        val odeBs = DifferentialProduct.listify(odeB).map(_.asInstanceOf[AtomicODE])
+
+        // Check that the forward ODE matches the reversed ODE
+        insist(odeFs.map(ode => ode.copy(e=Neg(ode.e))) == odeBs, "Forward ODEs must match backward ODEs.")
+
+        // Check that the variables match initial conditions
+        insist(odeFs.map(ode => ode.xp.x).toSet == vars.toSet, "Variables in ODEs must match variables in initial conditions.")
+
+        // Check that the last ODE is a time variable
+        insist(odeFs.last.e == Number(1), "Last ODE must be a clock ODE t'=1.")
+      }
+      case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
+    }
+  }
+
   /** Existence-guarded axiom schema for interpreted functions, schematic in the function
     *
     * {{{
@@ -643,11 +695,12 @@ object Provable {
   final def implicitFunc(f: Function, pr: Provable): Provable = {
     insist(f.interpreted, "Function must be interpreted.")
 
-    //todo: syntactic guard on the shape of interp for smoothness
-    // isODE(interp)
-
     // P(._0,._1,...,._n)
     val interp = f.interp.get
+
+    //Syntactic guard on the shape of interp for smoothness
+    isODEInterp(interp)
+
     val dim = f.realDomainDim.get
 
     val x = BaseVariable("x_")
