@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleLabel, BelleTopLevelLabel}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 
 /**
@@ -74,21 +75,28 @@ class StringConverter(val s: String) {
 
   /** Converts a stringified list of substitution pairs to a declaration object. */
   def asDeclaration: Declaration = {
-    def fnPredToNameSignature(fn: Function, arg: Term, repl: Expression): (Name, Signature) = {
+    def fnPredToNameSignature(fn: Function, arg: Term, repl: Expression, sp: List[SubstitutionPair]): (Name, Signature) = {
       val args =
         if (fn.domain == Unit) Nil
         else FormulaTools.argumentList(arg).map({ case n: NamedSymbol => Name(n.name, n.index) -> n.sort })
-      Name(fn.name, fn.index) -> Signature(Some(fn.domain), fn.sort, Some(args), Some(repl), UnknownLocation)
+      val elabRepl = repl.elaborateToFunctions(sp.flatMap({
+        case SubstitutionPair(FuncOf(pn, _), _) => Some(pn)
+        case SubstitutionPair(PredOf(pn, _), _) => Some(pn)
+        case _ => None
+      }).toSet)
+      Name(fn.name, fn.index) -> Signature(Some(fn.domain), elabRepl.sort, Some(args), Some(elabRepl), UnknownLocation)
     }
     def prgToNameSignature(n: NamedSymbol, repl: Expression): (Name, Signature) = n match {
       case _: ProgramConst | _: SystemConst =>
         Name(n.name, n.index) -> Signature(None, Trafo, None, Some(repl), UnknownLocation)
     }
 
-    Declaration(s.trim.stripSuffix("nil").trim.stripSuffix("::").split("::").
-        map(new StringConverter(_).asSubstitutionPair).map({
-      case SubstitutionPair(FuncOf(fn: Function, arg), repl) => fnPredToNameSignature(fn, arg, repl)
-      case SubstitutionPair(PredOf(fn: Function, arg), repl) => fnPredToNameSignature(fn, arg, repl)
+    val sp = s.trim.stripSuffix("nil").trim.stripSuffix("::").split("::").
+      map(new StringConverter(_).asSubstitutionPair).toList
+
+    Declaration(sp.map({
+      case SubstitutionPair(FuncOf(fn: Function, arg), repl) => fnPredToNameSignature(fn, arg, repl, sp)
+      case SubstitutionPair(PredOf(fn: Function, arg), repl) => fnPredToNameSignature(fn, arg, repl, sp)
       case SubstitutionPair(p: ProgramConst, repl) => prgToNameSignature(p, repl)
       case SubstitutionPair(p: SystemConst, repl) => prgToNameSignature(p, repl)
       case _ => throw new IllegalArgumentException("Converter currently supports functions/predicates/program+system constants")

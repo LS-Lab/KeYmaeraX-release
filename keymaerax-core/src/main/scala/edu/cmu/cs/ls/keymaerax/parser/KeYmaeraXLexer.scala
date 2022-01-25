@@ -716,9 +716,9 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
         lexPrefix match {
           case Some(Left(lexed)) => next = Left(lexed._1, lexed._2, lexed._3)
           case Some(Right(lexed)) => next = Right(lexed)
-          case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +
+          case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s.substring(0, Math.min(50, s.length)) +
             //@note getNumericValue instead of toInt returns more reliable result but not supported in Scala.js
-            "\n` beginning with character `" + s(0) + "`=" + s(0).toInt, loc).inInput(s)
+            "\n` beginning with character `" + s(0) + "`=" + s(0).toInt, loc, s(0) + "...").inInput(s)
         }
       }
     }

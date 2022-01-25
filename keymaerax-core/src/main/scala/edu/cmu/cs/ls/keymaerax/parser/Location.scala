@@ -32,15 +32,15 @@ sealed trait Location extends Serializable {
     case UnknownLocation => throw new IllegalArgumentException("Cannot compare adjacency with unknown regions: " + this + " compared to " + other)
   }
 
-  def spanTo(other: Location) = Region(this.begin.line, this.begin.column, other.begin.line, other.begin.column)
+  def spanTo(other: Location): Region = Region(this.begin.line, this.begin.column, other.begin.line, other.begin.column)
 }
 
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
-  def begin = this
-  def end = this
-  def line = -1
-  def column = -1
+  def begin: Location = this
+  def end: Location = this
+  def line: Int = -1
+  def column: Int = -1
   def addLines(numLines: Int): Location = this
   def --(other: Location): Location = this
 }
@@ -49,8 +49,8 @@ object UnknownLocation extends Location {
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   require(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
-  def begin = Region(line, column, line, column)
-  def end = Region(endLine, endColumn, endLine, endColumn)
+  def begin: Location = Region(line, column, line, column)
+  def end: Location = Region(endLine, endColumn, endLine, endColumn)
   def --(other: Location): Location = other match {
     case os: Region => Region(line, column, os.endLine, os.endColumn)
     case _: SuffixRegion => this
@@ -58,7 +58,7 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
   }
   def addLines(numLines: Int): Location = Region(line + numLines, column, endLine + numLines, endColumn)
 
-  override def toString = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
+  override def toString: String = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
 }
 
 object Region {
@@ -71,9 +71,9 @@ object Region {
   * @param column The ending line.
   */
 case class SuffixRegion(line: Int, column: Int) extends Location {
-  def begin = Region(line, column, line, column)
-  def end = UnknownLocation
-  def --(other: Location) = this
+  def begin: Location = Region(line, column, line, column)
+  def end: Location = UnknownLocation
+  def --(other: Location): Location = this
   def addLines(numLines: Int): Location = SuffixRegion(line + numLines, column)
-  override def toString = line + ":" + column + " to " + EOF
+  override def toString: String = line + ":" + column + " to " + EOF
 }

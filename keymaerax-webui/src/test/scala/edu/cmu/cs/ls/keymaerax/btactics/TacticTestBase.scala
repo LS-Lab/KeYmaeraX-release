@@ -139,6 +139,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = mathematicaProvider.synchronized {
+    println("with timeout: " + timeout + "s")
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
     val common = Map(
       Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,

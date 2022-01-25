@@ -132,8 +132,8 @@ object ParseException {
 }
 
 object LexException {
-  def apply(msg: String, loc: Location): ParseException =
-    new ParseException("Lexer " + msg, loc, "<unknown>", "<unknown>", "", "")
+  def apply(msg: String, loc: Location, found: String = "<unknown>"): ParseException =
+    new ParseException("Lexer " + msg, loc, found, "<unknown>", "", "")
 }
 
 //@todo something like case class LexException(msg: String, loc: Location) extends ParseException

@@ -185,7 +185,7 @@ object CourseMain {
 
   private def parseTacticFileOrFail(v: ArgValue): BelleExpr = {
     val fileName = fileExistsOrFail(v)
-    val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
+    val bigString = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING).mkString
     try {
       BelleParser.parseWithInvGen(bigString, Some(FixedGenerator[GenProduct](Nil)))
     } catch {
@@ -198,7 +198,7 @@ object CourseMain {
 
   private def parseArchiveFileOrfail(v: ArgValue) : List[ParsedArchiveEntry] = {
     val fileName = fileExistsOrFail(v)
-    val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
+    val bigString = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING).mkString
     try {
       edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.parse(bigString)
     }
@@ -220,7 +220,7 @@ object CourseMain {
 
   private def parseProblemFileOrFail(v: ArgValue) : Formula = {
     val fileName = fileExistsOrFail(v)
-    val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
+    val bigString = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING).mkString
     try {
       val fml = edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.parseAsFormula(bigString)
       println(s"Problem file ${fileName} parsed successfully.")

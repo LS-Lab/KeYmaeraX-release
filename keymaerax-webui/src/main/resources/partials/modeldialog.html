@@ -29,10 +29,8 @@
                             ng-click="save.cmd=redoProof">Save</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
                             ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
-                    <span ng-controller="ModelProofCreateCtrl">
                     <button class="btn btn-default" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
-                            ng-click="save.cmd=delayedProveFromTactic(model.id)">Run stored tactic</button>
-                    </span>
+                            ng-click="save.cmd=proveFromTactic()">Run stored tactic</button>
                     <button class="btn btn-link" ng-click="save.cmd=cancel"><span class="fa fa-close"></span></button>
                 </span>
             </h3>

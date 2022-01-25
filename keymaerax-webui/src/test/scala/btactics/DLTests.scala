@@ -296,6 +296,13 @@ class DLTests extends TacticTestBase {
       subgoals.loneElement shouldBe "x_0=1, [x_0:=2;]x_0=2, x=3 ==> x>0, [x_0:=5;]x_0>6, x_0=7".asSequent
   }
 
+  it should "not rename on undefined program constants" in withTactics {
+    proveBy("[x:=y;][prg;]x>=y".asFormula, DLBySubst.assignEquality(1)).subgoals.
+      loneElement shouldBe "x=y ==> [prg;]x>=y".asSequent
+    the [UnexpandedDefinitionsFailure] thrownBy proveBy("x=1 ==> [x:=y;][prg;]x>=y".asSequent, DLBySubst.assignEquality(1)) should
+      have message "Skolemization not possible because bound variables x are not fresh in the sequent; also unable to rename, because formula x=y->[prg;]x>=y contains unexpanded symbols prg;. Please hide all assumptions mentioning x, or expand definitions first."
+  }
+
   it should "give advice on program constant postcondition" in withTactics {
     the [IllFormedTacticApplicationException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
       DLBySubst.assignEquality(1)) should have message "Unknown symbol ode;: neither file definitions nor proof definitions provide information how to expand"

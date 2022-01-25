@@ -93,37 +93,32 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     //@todo preserve labels from parent p (turn new labels into sublabels)
     //@todo combine result defs?
 
-    //@note The cidx is threaded through to keep track of indexes changing, which can occur when a subgoal
-    // is replaced with 0 new subgoals (also means: drop labels).
-    val (combinedResult, _, combinedLabels, combinedSubsts) = {
-      results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((parent, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
-        case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
+    //@note when a subgoal is closed = replaced with 0 new subgoals: drop labels
+    val (combinedResult, combinedLabels, combinedSubsts) = {
+      results.zipWithIndex.reverse.foldLeft[(ProvableSig, Option[List[BelleLabel]], USubst)]((parent, None, USubst(scala.collection.immutable.Seq.empty)))({
+        case ((cp: ProvableSig, clabels: Option[List[BelleLabel]], csubsts: USubst), (subderivation: BelleProvable, cidx: Int)) =>
           val substs = subderivation match {
-            case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+            case p: BelleDelayedSubstProvable => csubsts ++ p.subst ++ collectSubst(cp, cidx, subderivation.p, defs)
             //@note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
             case _ => csubsts ++ collectSubst(cp, cidx, subderivation.p, defs)
           }
-          val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+          val (_, combinedProvable) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
           //@todo want to keep names of cp abbreviated instead of substituted
           val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
-            case (Some(origLabels), Some(newLabels)) =>
-              if (newLabels.isEmpty) Some(origLabels)
-              else {
-                val l :: rest = newLabels
-                Some(origLabels.patch(cidx, List(l), 0) ++ rest)
-              }
-            case (Some(origLabels), None) =>
-              val labels = createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.length)
-              if (labels.isEmpty) Some(origLabels)
-              else {
+            case (Some(origLabels), newLabels) =>
+              val labels = newLabels.getOrElse(createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.length))
+              if (labels.isEmpty) {
+                if (origLabels.size == combinedProvable.subgoals.size) Some(origLabels)
+                else Some(origLabels.patch(cidx, List.empty, 1)) // goal cidx was closed, remove label
+              } else {
                 val l :: rest = labels
-                Some(origLabels.patch(cidx, List(l), 0) ++ rest)
+                Some(origLabels.patch(cidx, List(l), 1) ++ rest)
               }
             case (None, Some(newLabels)) =>
               Some(createLabels(None, 0, cidx) ++ newLabels)
             case (None, None) => None
           }
-          (combinedProvable, nextIdx, combinedLabels, substs)
+          (combinedProvable, combinedLabels, substs)
       })
     }
     //@todo delayed parent?
@@ -295,9 +290,10 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     case Expand(n, s) => v match {
       case BelleProvable(_, _, defs) =>
         val subst = defs.substs.find(_.what match {
-          case FuncOf(fn, _) => fn == n
-          case PredOf(fn, _) => fn == n
-          case PredicationalOf(fn, _) => fn == n
+          case FuncOf(fn, _) => fn.name == n.name && fn.index == n.index
+          case PredOf(fn, _) => fn.name == n.name && fn.index == n.index
+          case PredicationalOf(fn, _) => fn.name == n.name && fn.index == n.index
+          case fn: NamedSymbol => fn.name == n.name && fn.index == n.index
           case fn => fn == n
         }) match {
           case Some(pd) => s match {

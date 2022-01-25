@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, Position, RenUSubst, RestrictedBiDiUnificationMatch, UnificationTools}
 import edu.cmu.cs.ls.keymaerax.parser.Location
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
@@ -147,55 +147,36 @@ trait ProofTreeNode {
 
   // internals
 
-  /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
-    * Returns `goal` if `sub` is not applicable at `i`. */
-  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]): (ProvableSig, List[SubstitutionPair]) = {
-    /** Returns a list of non-duplicate substitution pairs with the most expanded replacements (least remaining definitions to expand). */
-    def maxExpandedSubsts(s: List[SubstitutionPair]): List[SubstitutionPair] = s.groupBy(_.what).map({ case (_, substs) =>
-      if (substs.size > 1) substs.map(s => s -> StaticSemantics.signature(s.repl)).minBy(_._2.size)._1
-      else substs.head
-    }).toList
+  /** Applies derivation `sub` to subgoal  `i` of `goal`. Expands substitutions if necessary before applying `sub`. */
+  private def applySub(goal: ProvableSig, sub: ProvableSig, i: Int): ProvableSig = {
+    /** Apply sub to goal.
+     * @note sub may originate from a lemma that was proved with expanded definitions, find expanded substitutions.
+     *       both may have applied partial substitutions separately, e.g., goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
+     */
+//    @tailrec
+//    def applySub(goal: ProvableSig, sub: ProvableSig): ProvableSig = {
+//      val allSubsts = (proof.substs ++ proof.proofSubsts).distinct
+//      val allSymbols = StaticSemantics.symbols(goal.subgoals(i)) ++ StaticSemantics.symbols(sub.conclusion)
+//      val symbols = allSymbols -- StaticSemantics.symbols(goal.subgoals(i)).intersect(StaticSemantics.symbols(sub.conclusion))
+//      val substs = USubst(allSubsts.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
+//      val substGoal = exhaustiveSubst(goal, substs)
+//      val substSub = exhaustiveSubst(sub, substs)
+//      if (substGoal.subgoals(i) == substSub.conclusion) substGoal(substSub, i)
+//      else applySub(substGoal, substSub)
+//    }
 
-    /** Unify goal with sub-conclusion to find missing substitutions.
-      * @note sub may originate from a lemma that was proved with expanded definitions; find by unification,
-      *       but can't just unify goal with sub, since both may have applied partial substitutions separately, e.g.,
-      *       may have goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
-      */
-    def unificationSubst(goal: ProvableSig, sub: ProvableSig, subst: USubst): (ProvableSig, List[SubstitutionPair]) = {
-      val substGoal = exhaustiveSubst(goal, subst)
-      val substSub = exhaustiveSubst(sub, subst)
+    if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
+    else {
+      val allSubsts = (proof.substs ++ proof.proofSubsts).distinct
+      val substs = UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, allSubsts)
       try {
-        //@note unification now returns mixed up/down substitutions; thus we substitute in both sub and goal
-        val addSubst = RestrictedBiDiUnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
-        exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
+        exhaustiveSubst(goal, substs)(exhaustiveSubst(sub, substs), i)
       } catch {
-        case _: UnificationException =>
-          try {
-            //@todo mixed unification may no longer make this fallback necessary
-            val addSubst = RestrictedBiDiUnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
-            exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
-          } catch {
-            case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
-              //@note proof step introduced function symbols with delayed substitution,
-              // but may not yet be done and so back-substitution fails
-              substGoal -> subst.subsDefsInput.toList
-          }
+        case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
+          //@note proof step introduced function symbols with delayed substitution,
+          // but may not yet be done and so back-substitution fails
+          goal
       }
-    }
-
-    if (goal.subgoals(i) == sub.conclusion) goal(sub, i) -> substs
-    else if (substs.nonEmpty) {
-      // apply only substitutions for difference between goal and sub
-      val goalSig = StaticSemantics.signature(goal.subgoals(i)) ++ substs.flatMap(s => StaticSemantics.signature(s.repl))
-      val subSig = StaticSemantics.signature(sub.conclusion)
-      val sigDiff = goalSig -- subSig
-      val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
-      // `applicableSubsts` may contain duplicate `what` if subgoals expanded to different extent; use the most expanded one
-      val minSubsts = maxExpandedSubsts(applicableSubsts)
-      val subst = RenUSubst(minSubsts.map(sp => sp.what -> sp.repl)).usubst
-      unificationSubst(goal, sub, subst)
-    } else {
-      unificationSubst(goal, sub, USubst(Nil))
     }
   }
 
@@ -205,13 +186,13 @@ trait ProofTreeNode {
   /** Merges all descendent provables into the local provable. */
   private lazy val theProvable: ProvableSig = {
     if (localProvable.isProved) localProvable
-    else (applyWithSubst(localProvable, _: ProvableSig, goalIdx, _: List[SubstitutionPair])._1).tupled(mergedDescendentProvable)
+    else applySub(localProvable, mergedDescendentProvable, goalIdx)
   }
 
   /** Creates intermediate provables for all descendents of the shape mergable into the local provable's subgoal. */
-  private lazy val mergedDescendentProvable: (ProvableSig, List[SubstitutionPair]) = {
-    if (localProvable.isProved) localProvable -> Nil
-    else if (children.isEmpty) localProvable.sub(goalIdx) -> Nil //@note if no followup proof step happened, then return stuttering proof step
+  private lazy val mergedDescendentProvable: ProvableSig = {
+    if (localProvable.isProved) localProvable
+    else if (children.isEmpty) localProvable.sub(goalIdx) //@note if no followup proof step happened, then return stuttering proof step
     else {
       // the provable representing our proof step is the localProvable stored in all children (for lookup performance)
       // myProvable := obtain the unique localProvable that all children agree on, because they are off to prove its respective subgoals
@@ -223,13 +204,9 @@ trait ProofTreeNode {
       // if they cannot be merged verbatim, merge by delayed substitution;
       // if they cannot be merged (backsubstitution failed, see SequentialInterpreter Let): keep global
       if (myProvable.isProved) {
-        val substs = children.flatMap(c => c.mergedDescendentProvable._2 ++ makerSubst(c.maker))
-        myProvable -> substs
-      } else children.map(c => (c.mergedDescendentProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
-        val ms = makerSubst(subMaker)
-        val preSubsts = globalSubsts ++ subSubsts
-        val substs = (preSubsts ++ ms).distinct
-        applyWithSubst(global, sub, i, substs)
+        myProvable
+      } else children.map(_.mergedDescendentProvable).zipWithIndex.foldRight(myProvable)({ case ((sub, i), global) =>
+        applySub(global, sub, i)
       })
     }
   }

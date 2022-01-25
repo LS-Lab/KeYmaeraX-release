@@ -236,7 +236,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val postEqs = unobservableStateVars.keys.
         foldRight[Formula](vars.map(v => Equal(postVar(v), v)).
           reduceRight(And))((v, f) => Exists(postVar(v)::Nil, f))
-      val estimator = unobservableStateVars.
+      val estimator = unobservable.
         filter(_._2.isDefined).map({ case (_, Some(e)) => e }).
         reduceRightOption(And).getOrElse(True)
       val varConjectureBody = if (estimator == True) Diamond(prg, postEqs) else And(estimator, Diamond(prg, postEqs))
@@ -1143,11 +1143,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
             Right(vars(fn))
           } else {
             //@note expand fn to expose dependency on quantified variables
-            val repl = replaceOrExpand(defs.substs.find(s => s.what match {
+            defs.substs.find(s => s.what match {
               case FuncOf(wfn, _) => wfn == f
               case _ => false
-            }).map(sp => USubst(List(sp))(fn)).getOrElse(fn))
-            Right(repl)
+            }) match {
+              case None => ???
+              case Some(d) => Right(replaceOrExpand(USubst(List(d))(fn)))
+            }
           }
         case _ => Left(None)
       }
@@ -1257,11 +1259,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case Function(n, i, _, s, _) => Variable(n, i, s)
     })
     // was "Optimization 1 with instance search at"
+    val (ctx, quant) = sequent.at(pos)
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if polarityInSeq(sequent, pos) > 0 && StaticSemantics.freeVars(phi).intersect(vars.toSet).isEmpty =>
         useAt(Ax.existsV)(pos) & simplifier.map(_(pos)).getOrElse(skip)
       case Some(Exists(vars, And(Equal(l, r), q))) if polarityInSeq(sequent, pos) > 0 && vars.contains(l) &&
-        unobservableVars.intersect(vars).isEmpty && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(r)).isEmpty =>
+        (unobservableVars ++ unobservableVars.map(postVar)).intersect(vars).isEmpty && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(r)).isEmpty =>
         // case from deterministic assignments
         val equality: Option[(Variable, Term)] = Some(l.asInstanceOf[BaseVariable] -> r)
         optimizationOneAt(unobservableVars, equality, postVar)(pos) & simplifier.map(_(pos)).getOrElse(skip)
@@ -1327,11 +1330,16 @@ object ModelPlex extends ModelPlexTrait with Logging {
         }
         val equality: Option[Term] = postEquality match {
           case Some(_) if unobservableVars.intersect(vars).isEmpty => postEquality
-          case _ if unobservableVars.intersect(vars).nonEmpty =>
-            synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet ++ Set(v, NAMED_POST_VAR(v))).isEmpty)
-          case _ if unobservableVars.intersect(vars).isEmpty =>
-            synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet).isEmpty)
+          case _ =>
+            if (unobservableVars.intersect(vars).nonEmpty) {
+              //@note existential quantifier of an unobservable variable, e.g., \exists x ..., can instantiate x with terms that mention neither x nor xpost
+              synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet ++ Set(v, NAMED_POST_VAR(v))).isEmpty)
+            } else {
+              //@note existential quantifier of anything else; includes unobservable post variable e.g., \exists x .... \exists xpost ..., can instantiate xpost with anything observable or quantified unobservable
+              synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet -- StaticSemantics.boundVars(ctx(False)).toSet).isEmpty)
+            }
         }
+        //@note unobservable-post synonym is allowed to mention other unobservable variables, e.g. \exists x ... \exists xpost xpost=x+y*t
         if (StaticSemantics.boundVars(phi).intersect(equality.map(StaticSemantics.freeVars).getOrElse(SetLattice.bottom)).isEmpty) {
           optimizationOneAt(unobservableVars, equality.map(v -> _), postVar)(pos) & simplifier.map(_(pos)).getOrElse(skip)
         } else nil
@@ -1350,7 +1358,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           if (StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(repl)).isEmpty) existsR(what, repl)(pos)
           else throw new IllFormedTacticApplicationException("Unable to instantiate because instance " +
             repl.prettyString + " is bound in " + q.prettyString)
-        case None if unobservable.intersect(vars).isEmpty =>
+        case None if (unobservable ++ unobservable.map(postVar)).intersect(vars).isEmpty =>
           // existential quantifier from non-deterministic assignment
           require(vars.size == 1)
           val (v, post) = vars.map(v => (v, postVar(v))).head
@@ -1362,7 +1370,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         case Some((what, repl)) =>
           if (StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(repl)).isEmpty) allL(what, repl)(pos)
           else throw new IllFormedTacticApplicationException("Unable to instantiate because instance " + repl.prettyString + " is bound in " + q.prettyString)
-        case None if unobservable.intersect(vars).isEmpty =>
+        case None if (unobservable ++ unobservable.map(postVar)).intersect(vars).isEmpty =>
           require(vars.size == 1)
           val (v, post) = vars.map(v => (v, postVar(v))).head
           if (StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(post)).isEmpty) allL(v, post)(pos)

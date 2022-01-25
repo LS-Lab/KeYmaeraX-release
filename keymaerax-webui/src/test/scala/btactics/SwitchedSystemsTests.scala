@@ -650,6 +650,18 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
+  it should "be robust to mode expansion" in withMathematica { _ =>
+    val v1 = "17.9*x1^2-2*0.89*x1*x2+179*x2^2".asTerm
+    val v2 = "739*x1^2-2*38.1*x1*x2+91.8*x2^2".asTerm
+
+    val pr = proveBy(" ==>  \\forall eps (eps>0->\\exists del (del>0&\\forall x1 \\forall x2 (x1^2+x2^2 < del^2->[{mode:=0;++mode:=1;}{{?mode=0;{?(-10)*x1-x2=0;mode:=1;++mode:=mode;}++?mode=1;{?2*x1-x2=0;mode:=0;++mode:=mode;}}{?mode=0;{x1'=-x1-100*x2,x2'=10*x1-x2}++?mode=1;{x1'=x1+10*x2,x2'=(-100)*x1+x2&(-10)*x1-x2>=0&2*x1-x2>=0}}}*]x1^2+x2^2 < eps^2)))".asSequent,
+      proveStabilityStateMLF(v1::v2::Nil)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
 
     val ode1 = ODESystem("x'=-1".asDifferentialProgram, "x > 0".asFormula)

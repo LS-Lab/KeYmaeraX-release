@@ -108,8 +108,16 @@ object SwitchedSystems {
     }
   }
 
+  private val defprefix = "_DEFAULT_"
+  private def defaultName(n : Number) : String = {
+    defprefix+n.toString
+  }
+
   private def mkMode(name:String) : Term = {
-    FuncOf(Function(name, None, Unit, Real), Nothing)
+    if(name.startsWith(defprefix)) {
+      Number(name.drop(defprefix.length).toInt)
+    }
+    else FuncOf(Function(name, None, Unit, Real), Nothing)
   }
 
   def stateDependentFromProgram(p: Program, topt :Option[Variable]): StateDependent = {
@@ -237,7 +245,10 @@ object SwitchedSystems {
       throw new IllegalArgumentException("Unable to parse initializer for controlled switching at: "+init)
 
     //todo: more precise check needed here
-    val rhs = assigns.map(f=> f.e.asInstanceOf[FuncOf].func.name)
+    val rhs = assigns.map(f=> f.e match {
+      case FuncOf(f,Nothing) => f.name
+      case n:Number => defaultName(n)
+    })
     (ctrl.head, rhs, initR)
   }
 
@@ -245,19 +256,21 @@ object SwitchedSystems {
     val choices = choiceList(plant)
 
     val uvfo = choices.map( c => c match {
-      case Compose(Test(Equal(uv:Variable, FuncOf(f, Nothing))), o: ODESystem) => (uv,f,o)
+      case Compose(Test(Equal(uv:Variable, FuncOf(f, Nothing))), o: ODESystem) => (uv,f.name,o)
+      case Compose(Test(Equal(uv:Variable, n :Number)), o: ODESystem) => (uv,defaultName(n),o)
       case _ => throw new IllegalArgumentException("Unable to parse plant for controlled switching at: "+ c)
     }
     )
 
-    (uvfo.head._1,uvfo.map(_._2.name),uvfo.map(_._3))
+    (uvfo.head._1,uvfo.map(_._2),uvfo.map(_._3))
   }
 
   private def parseCtrl(ctrl : Program) : (Variable, List[String],List[List[(String,Program)]]) = {
     val choices = choiceList(ctrl)
 
     val uvfo = choices.map( c => c match {
-      case Compose(Test(Equal(uv:Variable, FuncOf(f, Nothing))), o) => (uv,f,o)
+      case Compose(Test(Equal(uv:Variable, FuncOf(f, Nothing))), o) => (uv,f.name,o)
+      case Compose(Test(Equal(uv:Variable, n :Number)), o) => (uv,defaultName(n),o)
       case _ => throw new IllegalArgumentException("Unable to parse ctrl for controlled switching at: "+ c)
     }
     )
@@ -265,15 +278,15 @@ object SwitchedSystems {
     val transitions = uvfo.map( f => {
       val tchoices = choiceList(f._3).dropRight(1)
       tchoices.map( tc => tc match {
-        case Compose( prog, Assign(_:Variable, FuncOf(f, Nothing)) ) =>
-          (f.name, prog)
+        case Compose( prog, Assign(_:Variable, FuncOf(f, Nothing)) ) => (f.name, prog)
+        case Compose( prog, Assign(_:Variable, n :Number) ) => (defaultName(n), prog)
         case _ => throw new IllegalArgumentException("Unable to parse ctrl for controlled switching at: "+ tc)
       })
       }
     )
 
 
-    (uvfo.head._1,uvfo.map(_._2.name),transitions)
+    (uvfo.head._1,uvfo.map(_._2),transitions)
   }
 
   def controlledFromProgram(p : Program, topt:Option[Variable]) : Controlled = {
@@ -283,10 +296,8 @@ object SwitchedSystems {
         val (u2, modes2, odes) = parsePlant(plant)
         val (u3, modes3, transitions) = parseCtrl(ctrl)
 
-        // todo: more consistency checks
-        // println(u1,modes1,initopt)
-        // println(u2,modes2,odes)
-        // println(u3,modes3,transitions)
+        require( u1==u2 && u2==u3, "Mode variable mismatch: "+ u1 + " "+ u2+ " "+u3)
+        require( modes1==modes2 && modes2==modes3, "Mode labels mismatch: "+ modes1 + " "+ modes2+ " "+modes3)
 
         Controlled(initopt, (modes1,stripTimer(odes,topt),transitions).zipped.toList, u1)
       }
@@ -379,7 +390,7 @@ object SwitchedSystems {
     try { guardedFromProgram(p, topt) } catch{ case e: IllegalArgumentException =>
     try { timedFromProgram(p, topt) } catch{ case e: IllegalArgumentException =>
     try { controlledFromProgram(p, topt) } catch{ case e: IllegalArgumentException =>
-      throw new IllegalArgumentException("Unable to parse program as switched system: " + p)
+      throw new IllegalArgumentException("Unable to parse program as switched system: " + p + " Last error: "+e.getMessage)
     }}}}
   }
 
@@ -845,7 +856,12 @@ object SwitchedSystems {
 
     val vp = Vp match {
       case Nil => ToolProvider.lyapunovTool() match {
-        case Some(t) => t.genMLF(ss.odes, guardedTransitionMap(ss))
+        case Some(t) => {
+          val res = t.genMLF(ss.odes, guardedTransitionMap(ss))
+          if (res.nonEmpty) res
+          else
+            throw new MissingLyapunovFunction("Vp not provided, tried to generate automatically but failed; please provide Vp manually")
+        }
         case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide Vp manually")
       }
       case _ => Vp
@@ -1349,7 +1365,12 @@ object SwitchedSystems {
 
     val vp = Vp match {
       case Nil => ToolProvider.lyapunovTool() match {
-        case Some(t) => t.genMLF(ss.odes, guardedTransitionMap(ss))
+        case Some(t) => {
+          val res = t.genMLF(ss.odes, guardedTransitionMap(ss))
+          if (res.nonEmpty) res
+          else
+            throw new MissingLyapunovFunction("Vp not provided, tried to generate automatically but failed; please provide Vp manually")
+        }
         case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide Vp manually")
       }
       case _ => Vp
@@ -2279,7 +2300,5 @@ object SwitchedSystems {
       )
 
   })
-
-
 
 }

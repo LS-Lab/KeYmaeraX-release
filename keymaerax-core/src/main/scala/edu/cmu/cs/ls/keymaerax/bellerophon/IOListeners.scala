@@ -6,8 +6,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.io.PrintStream
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
@@ -92,6 +92,7 @@ object IOListeners {
 
   /** Prints tactic progress to the console. */
   class PrintProgressListener(t: BelleExpr, stepInto: List[String] = Nil, printer: PrintStream = Console.out) extends IOListener() {
+    private lazy val nilNames = List(TactixLibrary.nil.prettyString, TactixLibrary.todo.prettyString, TactixLibrary.skip.prettyString)
     private var executionStack = (t->0) :: Nil // branch index =0 except for BranchTactic
     private var start = System.currentTimeMillis()
 
@@ -104,12 +105,29 @@ object IOListeners {
       //@todo recursive calls to same tactic may pop from stack prematurely (master? ODE?)
       if (stepInto(executionStack.head._1) && !expr.eq(executionStack.head._1)) executionStack = (expr->0) +: executionStack
       if (executionStack.nonEmpty && expr.eq(executionStack.head._1)) expr match {
-        case SeqTactic(l :: _) => executionStack = (l->0) +: executionStack
+        case SeqTactic(s) =>
+          val nonNilSteps = s.filterNot(t => nilNames.contains(t.prettyString))
+          executionStack = nonNilSteps.reverse.foldLeft(executionStack)({ case (stack, t) => (t->0) +: stack })
+        case CaseTactic(children) => input match {
+          case BelleProvable(p, Some(labels), _) =>
+            //@see [[BelleBaseInterpreter]]
+            if (p.subgoals.size != labels.size) throw new BelleUnexpectedProofStateError("Number of labels does not match number of subgoals, got\nlabels  " + labels.map(_.prettyString).mkString("\n  ") + "\nfor " + p.prettyString, p.underlyingProvable)
+            if (children.size != labels.size) throw new IllFormedTacticApplicationException("Number of cases does not match number of subgoals, got\ncases\n  " + children.map(_._1.prettyString).mkString("\n  ") + "\nfor\n  " + labels.map(_.prettyString).mkString("\n  "))
+            def getBranchTactic(l: BelleLabel): BelleExpr = children.filter(c => l.endsWith(c._1)).toList match {
+              case c :: Nil => c._2
+              case Nil => throw new IllFormedTacticApplicationException("No case for branch " + l.prettyString)
+              case c => throw new IllFormedTacticApplicationException("Multiple labels apply to branch " + l.prettyString + "; please disambiguate cases " + c.map(_._1.prettyString).mkString("::"))
+            }
+            val branchTactics = labels.map(getBranchTactic)
+            executionStack = branchTactics.map(_ -> 0) ++ executionStack
+        }
         case BranchTactic(b) if b.nonEmpty =>
           executionStack = (b.head->0) +: executionStack
         case SaturateTactic(e) => executionStack = (e->0) +: executionStack
         case RepeatTactic(e, i) => executionStack = List.fill(i)(e->0) ++ executionStack
-        case EitherTactic(l :: _) => executionStack = (l->0) +: executionStack
+        case EitherTactic(l :: _) =>
+          //@todo change to fit BelleBaseInterpreter.EitherTactic execution
+          executionStack = (l->0) +: executionStack
         case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e->0) +: executionStack
         case e: AppliedPositionTactic => printer.print(BellePrettyPrinter(e) + "... ")
         case e: NamedBelleExpr if e.isInternal => // always step into internal tactics
@@ -119,6 +137,13 @@ object IOListeners {
           start = System.currentTimeMillis()
           printer.print(BellePrettyPrinter(e) + "... ")
           if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
+        case Using(_, c) => c match {
+          case e: NamedBelleExpr /*if e.getClass == executionStack.head._1.getClass*/ =>
+            start = System.currentTimeMillis()
+            printer.print(BellePrettyPrinter(e) + "... ")
+            if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
+          case _ =>
+        }
         case _ =>
       }
     }
@@ -131,32 +156,6 @@ object IOListeners {
           case (n: NamedBelleExpr, _) => !n.isInternal && n.name != "done"
           case _ => false
         }).map(_._1.asInstanceOf[NamedBelleExpr])
-
-        val parentContinues: List[NamedBelleExpr] = executionStack.headOption match {
-          case Some((SeqTactic(l :: r :: Nil), _)) if expr.eq(l) =>
-            executionStack = (r->0) +: executionStack
-            parent(executionStack.tail)
-          case Some((SeqTactic(l :: r), _)) if expr.eq(l) =>
-            executionStack = (SeqTactic(r)->0) +: executionStack
-            parent(executionStack.tail)
-          case Some((bt@BranchTactic(b), i)) if i+1 < b.size =>
-            executionStack = (b(i+1)->0) +: (bt->(i+1)) +: executionStack.tail
-            parent(executionStack.tail.tail)
-          case Some((SaturateTactic(e), _)) => output match {
-            // SaturateTactic always succeeds, but will noop if inner failed
-            case Left(outValue) if outValue != input =>
-              executionStack = (e->0) +: executionStack
-              parent(executionStack.tail)
-            case _ => Nil
-          }
-          case Some((EitherTactic(l :: r :: Nil), _)) if expr.eq(l) && output.isRight =>
-            executionStack = (r->0) +: executionStack
-            parent(executionStack.tail)
-          case Some((EitherTactic(l :: r), _)) if expr.eq(l) =>
-            executionStack = (EitherTactic(r)->0) +: executionStack
-            parent(executionStack.tail)
-          case _ => Nil
-        }
 
         val status = output match {
           case Left(BelleProvable(p, _, _)) =>
@@ -178,14 +177,19 @@ object IOListeners {
 
         expr match {
           case ApplyDefTactic(DefTactic(name, _)) => printer.println(name + " done (" + status + ")")
+          case Expand(name, _) => printer.println("Expanding " + name + " done (" + status + ")")
+          case ExpandAll(_) => printer.println("Expanding all definitions done (" + status + ")")
           case _: AppliedPositionTactic => printer.println("done (" + status + ")")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
             printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
+          case Using(_, c) => c match {
+            case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
+              printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
+            case _ =>
+          }
           case n: NamedBelleExpr if !n.isInternal => printer.println(n.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
           case _ =>
         }
-
-        if (parentContinues.nonEmpty) println("continuing " + parentContinues.reverse.map(_.name).mkString(" > ") + "...")
       } else if (executionStack.nonEmpty && stepInto(executionStack.head._1)) {
         val popTo = executionStack.indexWhere(_._1.eq(expr))
         //@todo fix root cause of wrong stack

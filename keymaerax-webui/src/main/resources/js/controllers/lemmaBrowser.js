@@ -39,10 +39,10 @@ angular.module('keymaerax.controllers').controller('LemmaBrowserCtrl',
       var tactic = lemma.useLemmaTac ? (lemma.useLemmaTac != "custom" ? lemma.useLemmaTac : lemma.customTac) : undefined;
       var input = [{ type: "string", param: "lemma", value: lemma.name},
                    { type: "string", param: "tactic", value: tactic }];
-      $scope.applyInputTactic(formulaId, "useLemma", input);
+      $uibModalInstance.close({formulaId: formulaId, tacticId: "useLemma", input: input});
     } else {
       var input = [{ type: "string", param: "lemma", value: lemma.name}];
-      $scope.applyInputTactic(formulaId, "useLemma", input);
+      $uibModalInstance.close({formulaId: formulaId, tacticId: "useLemma", input: input});
     }
   }
 

@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
+import edu.cmu.cs.ls.keymaerax.Configuration
+
 import javax.swing.{JLabel, JOptionPane}
 import java.awt.GraphicsEnvironment._
 import java.awt.Desktop._
@@ -22,8 +24,10 @@ object SystemWebBrowser {
         JOptionPane.showMessageDialog(null, new JLabel(s"""<html>Point your browser to <a href="$location">$location</a></html>"""))
       } else if (!isHeadless) {
         JOptionPane.showMessageDialog(null, new JLabel(s"""<html>Point your browser to <a href="$location">$location</a></html>"""))
+      } else if (Configuration.getBoolean(Configuration.Keys.IS_DOCKER).getOrElse(false)) {
+        println(s"Point your browser to http://localhost:" + Configuration(Configuration.Keys.PORT))
       } else {
-        println(s"Launching server in headless mode.\nPoint your browser to $location")
+        println(s"Point your browser to $location")
       }
     } catch {
       case _: java.awt.HeadlessException =>

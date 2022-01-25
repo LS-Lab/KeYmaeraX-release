@@ -25,7 +25,7 @@ case class Declaration(decls: Map[Name, Signature]) {
       // except named arguments and dots, elaborate all symbols to functions for topSort because topSort uses signature
       val taboo = args.map(_.filter({ case (Name("\\cdot", _), _) => false case _ => true }).
         map({ case (Name(n, i), sort) => Function(n, i, Unit, sort) }).toSet).getOrElse(Set.empty)
-      (name, sig.copy(interpretation = interpretation.map(elaborateToFunctions(_, taboo))))
+      (name, sig.copy(interpretation = interpretation.map(i => elaborateToSystemConsts(elaborateToFunctions(i, taboo)))))
   })).map((declAsSubstitutionPair _).tupled)
 
   /** Returns the substitutions reachable transitively from symbols `s`. */
@@ -40,12 +40,16 @@ case class Declaration(decls: Map[Name, Signature]) {
   lazy val subst: USubst = USubst(substs)
 
   /** Declared names and signatures as [[NamedSymbol]]. */
-  lazy val asNamedSymbols: List[NamedSymbol] = decls.map(Declaration.asNamedSymbol _ tupled).toList
+  lazy val asNamedSymbols: List[NamedSymbol] = {
+    topSort(decls).reverseMap(decl => Declaration.asNamedSymbol(decl._1,
+      decl._2.copy(interpretation = decl._2.interpretation.map(elaborateToSystemConsts))))
+  }
 
   /** Topologically sorts the names in `decls`. */
   private def topSort(decls: Map[Name, Signature]): List[(Name, Signature)] = {
-    val sortedNames = DependencyAnalysis.dfs[Name](decls.map({ case (name, Signature(_, _, _, repl, _)) =>
-      name -> repl.map(StaticSemantics.signature).map(_.map(ns => Name(ns.name, ns.index))).getOrElse(Set.empty) }))
+    val adjacencyMap = decls.map({ case (name, Signature(_, _, _, repl, _)) =>
+      name -> repl.map(StaticSemantics.signature).map(_.map(ns => Name(ns.name, ns.index))).getOrElse(Set.empty) })
+    val sortedNames = DependencyAnalysis.dfs[Name](adjacencyMap)
     decls.toList.sortBy(s => sortedNames.indexOf(s._1))
   }
 

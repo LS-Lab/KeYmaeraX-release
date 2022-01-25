@@ -9,7 +9,6 @@ import java.net.URLEncoder
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
 import java.util.concurrent.TimeUnit
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, DependentTactic, IOListeners, LazySequentialInterpreter, TacticStatistics}
@@ -36,24 +35,25 @@ object KeYmaeraXProofChecker {
   /** Common proof statistics utilities. */
   object ProofStatistics {
     /** Prints the CSV header. */
-    def csvHeader: String = "Name,Tactic,Status,Timeout,Duration,QE duration,Proof steps,Tactic size"
+    def csvHeader: String = "Name,Tactic,Status,Timeout,Duration,QE duration,RCF duration,Proof steps,Tactic size"
   }
   /** Collects proof statistics. */
   case class ProofStatistics(name: String, tacticName: String, status: String, witness: Option[ProvableSig],
-                             timeout: Long, duration: Long, qeDuration: Long, proofSteps: Int, tacticSize: Int) {
+                             timeout: Long, duration: Long, qeDuration: Long, rcfDuration: Long,
+                             proofSteps: Int, tacticSize: Int) {
     /** Prints a statistics summary string. */
     def summary: String =
       s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
          |Duration [ms]: $duration
-         |QE [ms]: $qeDuration
+         |QE [ms]: $qeDuration, RCF [ms]: $rcfDuration
          |Proof steps: $proofSteps
          |Tactic size: $tacticSize""".stripMargin
 
     /** Short single-line summary. */
-    override def toString: String = s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout[s],duration=$duration[ms],qe=$qeDuration[ms],steps=$proofSteps"
+    override def toString: String = s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout[s],duration=$duration[ms],qe=$qeDuration[ms],rcf=$rcfDuration,steps=$proofSteps"
 
     /** Prints in CSV format. */
-    def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$proofSteps,$tacticSize"
+    def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$rcfDuration,$proofSteps,$tacticSize"
   }
 
   /** Proves a single entry */
@@ -67,24 +67,31 @@ object KeYmaeraXProofChecker {
     sanitized.map(File(_)).foreach(_.parent.createDirectory())
     val pw = sanitized.map(new PrintWriter(_))
 
-    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
+    val rcfDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
       case DependentTactic("_rcf") => true
+      case _ => false
+    })
+
+    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
+      case DependentTactic("_QE") => true
       case _ => false
     })
 
     val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
     val origInterpreter = BelleInterpreter.interpreter
     val listeners =
-      if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
-      else qeDurationListener :: Nil
+      if (verbose) qeDurationListener :: rcfDurationListener :: new PrintProgressListener(tactic) :: Nil
+      else qeDurationListener :: rcfDurationListener :: Nil
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(origInterpreter.listeners ++ listeners))
 
     val proofStatistics = try {
       qeDurationListener.reset()
+      rcfDurationListener.reset()
       val proofStart: Long = Platform.currentTime
       val witness = KeYmaeraXProofChecker(timeout, defs)(tactic)(inputSequent)
       val proofDuration = Platform.currentTime - proofStart
       val qeDuration = qeDurationListener.duration
+      val rcfDuration = rcfDurationListener.duration
       val proofSteps = witness.steps
       val tacticSize = TacticStatistics.size(tactic)
 
@@ -108,13 +115,18 @@ object KeYmaeraXProofChecker {
 
         val lemma = outputFileName match {
           case Some(_) =>
-            val lemma = Lemma(witness, evidence, Some(name))
+            val lemma = Lemma(witness, evidence, Some("user" + java.io.File.separator + name))
             //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
             assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
             assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.underlyingProvable, lemma.evidence),
               "reparse of printed lemma is not original lemma")
             Some(lemma)
           case None => None
+        }
+
+        lemma match {
+          case Some(l) => LemmaDBFactory.lemmaDB.add(l)
+          case None => // nothing to do
         }
 
         pw match {
@@ -128,7 +140,7 @@ object KeYmaeraXProofChecker {
           // don't save proof as lemma since no outputFileName
         }
 
-        ProofStatistics(name, tacticName, "proved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
+        ProofStatistics(name, tacticName, "proved", Some(witness), timeout, proofDuration, qeDuration, rcfDuration, proofSteps, tacticSize)
       } else {
         // prove did not work
         assert(!witness.isProved)
@@ -136,9 +148,9 @@ object KeYmaeraXProofChecker {
         deleteOutput(pw, outputFileName)
 
         if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
-          ProofStatistics(name, tacticName, "unfinished (cex)", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
+          ProofStatistics(name, tacticName, "unfinished (cex)", Some(witness), timeout, proofDuration, qeDuration, rcfDuration, proofSteps, tacticSize)
         } else {
-          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
+          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, proofDuration, qeDuration, rcfDuration, proofSteps, tacticSize)
         }
       }
     } catch {
@@ -146,13 +158,13 @@ object KeYmaeraXProofChecker {
         BelleInterpreter.kill()
         deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
-        ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1)
+        ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1, -1)
       case ex: Throwable =>
         BelleInterpreter.kill()
         deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
         ex.printStackTrace()
-        ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1)
+        ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1, -1)
     } finally {
       BelleInterpreter.setInterpreter(origInterpreter)
     }
@@ -258,17 +270,10 @@ object KeYmaeraXProofChecker {
           writer.write(source)
           writer.close()
         case (_, None) => ()
-        case (_: TermProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
+        case (_: TermProvable, None) => assert(assertion=false, "Proof term output path specified but proof did not contain proof term")
       }
     }
 
-    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
-      case DependentTactic("QE") => true
-      case DependentTactic("smartQE") => true
-      case _ => false
-    })
-
-    val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
     val tacticString = readTactic(options, entry.defs)
     val reqTacticName = options.get('tacticName)
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
@@ -289,7 +294,7 @@ object KeYmaeraXProofChecker {
     println("Proving " + path + "#" + entry.name + " ...")
     if (t.isEmpty) {
       println("Unknown tactic " + reqTacticName + ", skipping entry")
-      ProofStatistics(entry.name, reqTacticName.getOrElse("auto").toString, "skipped", None, timeout, -1, -1, -1, -1) :: Nil
+      ProofStatistics(entry.name, reqTacticName.getOrElse("auto").toString, "skipped", None, timeout, -1, -1, -1, -1, -1) :: Nil
     } else {
       t.zipWithIndex.map({ case ((tacticName, _, tactic), i) =>
 
@@ -324,7 +329,7 @@ object KeYmaeraXProofChecker {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
-        val source = scala.io.Source.fromFile(fileName, "ISO-8859-1")
+        val source = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
         try {
           Some(BelleParser(source.mkString))
         } finally {
@@ -344,16 +349,16 @@ object KeYmaeraXProofChecker {
       val path = Paths.get(fileName).toAbsolutePath
       val dir = path.getParent
       val pattern = path.getFileName
+      val files: ListBuffer[Path] = new ListBuffer[Path]()
       val finder = new SimpleFileVisitor[Path] {
         private val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
-        val files: ListBuffer[Path] = new ListBuffer[Path]()
         override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
           if (matcher.matches(file.getFileName)) files.append(file)
           FileVisitResult.CONTINUE
         }
       }
       Files.walkFileTree(dir, finder)
-      finder.files.toList
+      files.toList
     }
   }
 

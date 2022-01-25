@@ -171,6 +171,36 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |Expected: <unique name>""".stripMargin
   }
 
+  it should "detect unclosed comments (1)" in {
+    val input =
+      """Theorem "A"
+        |ProgramVariables Real x; End.
+        |/* An unclosed comment
+        |Problem x>=1 -> x>=0 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:1 Misplaced problem block: problem expected before tactics
+        |Found:    / at 3:1
+        |Expected: Problem""".stripMargin
+  }
+
+  it should "detect unclosed comments (2)" in {
+    val input =
+      """Theorem "A"
+        |ProgramVariables Real x; End.
+        |/*@todo An unclosed comment
+        |Problem x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:3 Lexer 3:3 Lexer does not recognize input at 3:3 to EOF$ in `
+        |@todo An unclosed comment
+        |Problem x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0 End.
+        |End.
+        |` beginning with character `@`=64
+        |Found:    @... at 3:3 to EOF$
+        |Expected: <unknown>""".stripMargin
+  }
+
   it should "complain when variable and function have same name (2)" in {
     val input =
       """ArchiveEntry "Entry 1"
@@ -3010,6 +3040,20 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       """<somewhere> type analysis: Test: x declared as a variable of sort Real but used as a function with arguments.
         |Found:    no arguments at <somewhere>
         |Expected: function with arguments""".stripMargin
+  }
+
+  it should "report empty tactics as error" in {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Undeclared variable"
+        |  ProgramVariables Real x; End.
+        |  Problem x^2+y^2>=0 End.
+        |  Tactic "Empty" End.
+        |End.
+        |
+        |""".stripMargin) should have message
+        """4:10 Empty tactics block, please enter a tactic or "todo"
+          |Found:    <nothing> at 4:10 to 4:16
+          |Expected: tactic or "todo"""".stripMargin
   }
 
 

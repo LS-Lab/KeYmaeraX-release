@@ -210,7 +210,7 @@ object TactixLibrary extends HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(SaturateTactic(id | alphaRule) & (doStep(index)('R) | doStep(index)('L) | nil)))
+    SaturateTactic(OnAll(SaturateTactic(Idioms.doIf(!_.isProved)(id | alphaRule)) & (doStep(index)('R) | doStep(index)('L) | nil)))
   }
 
   /** Automated propositional reasoning, only keeps result if proved. */

@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, Region}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
+import scala.collection.immutable.StringOps
 import scala.util.Try
 
 trait TraceToTacticConverter {
@@ -25,7 +26,7 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
 
   private def makeLocNodeMap(maker: String, node: ProofTreeNode): Map[Location, ProofTreeNode] = {
     if (maker.nonEmpty) {
-      val makerLines = maker.lines.toList
+      val makerLines = (maker: StringOps).lines.toList
       val makerRegion = Region(0, 0, makerLines.length - 1, makerLines.last.length)
       Map[Location, ProofTreeNode](makerRegion -> node)
     } else Map.empty
@@ -63,8 +64,8 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
         val (lines, locs) = subgoalTactics.zip(minimize(labels)).foldLeft[(String, Map[Location, ProofTreeNode])](("", Map.empty))({
           case ((rtext, rloc), ((ttext, tloc), label)) =>
             val indented = indent + INDENT_INCREMENT + "\"" + label.prettyString + "\"" + COLON.img + NEWLINE +
-              ttext.linesWithSeparators.map(INDENT_INCREMENT + _).mkString
-            val newLoc = shift(tloc, rtext.lines.length + 1, INDENT_INCREMENT.length)
+              (ttext: StringOps).linesWithSeparators.map(INDENT_INCREMENT + _).mkString
+            val newLoc = shift(tloc, (rtext : StringOps).lines.length + 1, INDENT_INCREMENT.length)
             (rtext + indented + COMMA.img + NEWLINE, rloc ++ newLoc)
         })
         // first line has 1 indent less because sequentialTactic will add it
@@ -101,7 +102,7 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
   private def sequentialTactic(ts1: (String, Map[Location, ProofTreeNode]),
                                ts2: (String, Map[Location, ProofTreeNode]),
                                indent: String, sep: String = SEQ_COMBINATOR.img): (String, Map[Location, ProofTreeNode]) = {
-    val (ts1t, ts2t) = if (ts2._1.lines.length <= 1) (ts1._1.trim, ts2._1.trim) else (ts1._1.trim, ts2._1.stripPrefix(indent))
+    val (ts1t, ts2t) = if ((ts2._1: StringOps).lines.length <= 1) (ts1._1.trim, ts2._1.trim) else (ts1._1.trim, ts2._1.stripPrefix(indent))
     //@note ts2 location columns are already correct, but indent prefix is temporarily stripped, so add indent prefix back in but shift by 0 columns
     (ts1t, ts2t) match {
       case (EMPTY_TACTIC | EMPTY_BRANCHES, EMPTY_TACTIC | EMPTY_BRANCHES) => (EMPTY_TACTIC, Map.empty)
@@ -109,7 +110,7 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
       case (EMPTY_TACTIC | EMPTY_BRANCHES, _) => (indent + ts2t, shift(ts2._2, 0, 0))
       case _ =>
         (indent + ts1t + sep + NEWLINE + indent + ts2t,
-        shift(ts1._2, 0, indent.length) ++ shift(ts2._2, ts1t.lines.length, 0))
+        shift(ts1._2, 0, indent.length) ++ shift(ts2._2, (ts1t: StringOps).lines.length, 0))
     }
   }
 
@@ -181,7 +182,7 @@ class VerbatimTraceToTacticConverter extends TraceToTacticConverter {
     if (subgoals.isEmpty) (thisTactic, Map.empty)
     else if (subgoals.size == 1) (sequentialTactic(thisTactic, subgoals.head._1), Map.empty)
     else (sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + OPEN_PAREN.img + NEWLINE +
-      indent + subgoals.map(_._1).mkString(COMMA + NEWLINE + indent) + NEWLINE + indent + CLOSE_PAREN.img), Map.empty)
+      indent + subgoals.map(_._1).mkString(COMMA.img + NEWLINE + indent) + NEWLINE + indent + CLOSE_PAREN.img), Map.empty)
   }
   
   private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {

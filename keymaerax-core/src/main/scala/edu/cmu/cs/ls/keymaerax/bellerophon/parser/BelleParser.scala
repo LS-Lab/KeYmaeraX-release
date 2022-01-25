@@ -57,8 +57,8 @@ object BelleParser extends TacticParser with Logging {
   /** Parses `t` backwards-compatible with definitions `defs` expanded in tactic arguments depending on
     * whether `t` expands symbols or uses substitutions explicitly or not. */
   def parseBackwardsCompatible(t: String, defs: Declaration): BelleExpr =
-    if (tacticExpandsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, defs)
-    else if (tacticSubstsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, defs)
+    if (!Configuration.getBoolean(Configuration.Keys.TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY).getOrElse(false)
+      || tacticExpandsDefsExplicitly(t) || tacticSubstsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, defs)
     else parseWithInvGen(t, None, defs, expandAll=true) // backwards compatibility
 
   /** Parses the string `s` as a Bellerophon tactic. Uses optional invariant generator `g` and definitions `defs` to
@@ -396,8 +396,7 @@ object BelleParser extends TacticParser with Logging {
           defs.substs.find(sp => sp.what match {
             case PredOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
             case FuncOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
-            case ProgramConst(n, _) => n == x.name
-            case SystemConst(n, _) => n == x.name
+            case n: NamedSymbol => n.name == x.name && n.index == x.index
           }) match {
             case Some(s) => ParserState(r :+ ParsedBelleExpr(Expand(x, s), loc.spanTo(identLoc), None), tail)
             case None => throw BelleParseException(s"Expression definition not found: '${x.prettyString}'", st)

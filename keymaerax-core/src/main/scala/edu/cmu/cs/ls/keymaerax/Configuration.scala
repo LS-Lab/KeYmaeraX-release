@@ -20,6 +20,7 @@ trait Configuration {
     val GUEST_USER = "GUEST_USER"
     val HOST = "HOST"
     val IS_HOSTED = "IS_HOSTED"
+    val IS_DOCKER = "IS_DOCKER"
     val DEFAULT_USER = "DEFAULT_USER"
     val USE_DEFAULT_USER = "USE_DEFAULT_USER"
     val JKS = "JKS"
