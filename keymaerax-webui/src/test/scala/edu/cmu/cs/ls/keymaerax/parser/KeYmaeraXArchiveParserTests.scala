@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, ReflectiveExpressionBuilder, SeqTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Function, Greater, Number, Pair, Plus, PredOf, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Equal, FuncOf, Function, Greater, Number, Pair, Plus, Power, PredOf, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
 import org.scalatest.LoneElement._
@@ -24,7 +24,7 @@ import testHelper.KeYmaeraXTestTags.TodoTest
   * @author Andre Platzer
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
-  private val parser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
+  private val parser = KeYmaeraXArchiveParser
 
   private def parse(input: String): List[ParsedArchiveEntry] =
     parser.parse(input)
@@ -173,13 +173,31 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse implicit function definition" in {
+  it should "parse implicit ODE function definition" in {
+    val (sin1, cos1) = {
+      val fns = ODEToInterpreted.fromProgram(
+        Parser.parser.programParser("{{sin1:=0;cos1:=1;t:=0;}; {t'=1, sin1'=cos1, cos1'=-sin1}}"), "t".asVariable)
+      (fns(0), fns(1))
+    }
+
+    val tanh = {
+      val fns = ODEToInterpreted.fromProgram(
+        Parser.parser.programParser("{{tanh:=0; x:=0;}; {tanh'=1-tanh^2,x'=1}}"), "x".asVariable)
+      fns(0)
+    }
+
+
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | ImplicitDefinitions Real cos(Real x) ':= sin(x) * (x)'; Real sin(Real x) ':= -cos(x) * (x)'; End.
+        | Definitions
+        |   implicit Real sin1(Real t), cos1(Real t) '=
+        |     {{sin1:=0; cos1:=1; t:=0;}; {t'=1, sin1'=cos1, cos1'=-sin1}};
+        |   implicit Real tanh(Real x) '=
+        |     {{tanh:=0; x:=0;}; {tanh'=1-tanh^2,x'=1}};
+        | End.
         | ProgramVariables Real y; End.
-        | Problem (sin(y))^2 + (cos(y))^2 = 1 End.
+        | Problem (sin1(y))^2 + (cos1(y))^2 = 1 End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -187,37 +205,29 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("cos", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), None, UnknownLocation),
-        Name("sin", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), None, UnknownLocation),
+        Name("cos1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Some(FuncOf(cos1, DotTerm())), UnknownLocation),
+        Name("sin1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Some(FuncOf(sin1, DotTerm())), UnknownLocation),
+        Name("tanh", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), Some(FuncOf(tanh, DotTerm())), UnknownLocation),
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "(sin(y))^2 + (cos(y))^2 = 1".asFormula
+    entry.model shouldBe ("sin1(y)^2+cos1(y)^2=1".asFormula)
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse implicit function multi-variate definitions" in {
+  it should "fail to parse implicit function multi-variate definitions" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | ImplicitDefinitions Real saddle(Real x, Real y) ':= (x*x - y*y)'; End.
+        | Definitions
+        |   implicit Real saddle(Real x, Real y) '= {saddle:=0;x:=0;y:=0;}{x'=1,y'=1,saddle=2x-2y};
+        | End.
         | ProgramVariables Real x; End.
         | Problem saddle(0,0) = 0 -> saddle(x,0) = x*x End.
         |End.
       """.stripMargin
-    val entry = parse(input).loneElement
-    entry.name shouldBe "Entry 1"
-    entry.kind shouldBe "theorem"
-    entry.defs should beDecl(
-      Declaration(Map(
-        Name("saddle", None) -> Signature(Some(Tuple(Real,Real)), Real, Some(List((Name("x",None),Real), (Name("y",None),Real))), None, UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
-      )))
-    entry.model shouldBe "saddle(0,0) = 0 -> saddle(x,0) = x*x".asFormula
-    entry.tactics shouldBe empty
-    entry.info shouldBe empty
-    entry.fileContent shouldBe input.trim()
+    assertThrows[ParseException](parse(input))
   }
 
   it should "parse simple nullary predicate definition" in {

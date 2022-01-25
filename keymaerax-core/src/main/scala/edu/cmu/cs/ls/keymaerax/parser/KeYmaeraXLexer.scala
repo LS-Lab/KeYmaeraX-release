@@ -286,6 +286,7 @@ private object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables")
 private object VARIABLES_BLOCK extends Terminal("Variables") //used in axioms file...
 private object PROBLEM_BLOCK extends Terminal("Problem")
 private object TACTIC_BLOCK extends Terminal("Tactic")
+private object IMPLICIT extends Terminal ("implicit")
 //@todo the following R, B, T, P etc should be lexed as identifiers. Adapt code to make them disappear.
 //@todo the following should all be removed or at most used as val REAL = Terminal("R")
 private object REAL extends Terminal("$$$R")
@@ -510,6 +511,10 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     VARIABLES_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
       case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, VARIABLES_BLOCK, loc))
       case _ => throw new Exception("Variables. should only occur when processing files.")
+    }),
+    IMPLICIT.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, IMPLICIT, loc))
+      case _ => throw new Exception("IMPLICIT symbol declaration should only occur when processing files.")
     }),
     BOOL.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
       case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, BOOL, loc))

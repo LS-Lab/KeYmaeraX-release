@@ -158,7 +158,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 //      list.filter({case (id,sig) => sig._3.isEmpty}).toMap,
 //      list.filter({case (id,sig) => sig._3.isDefined}).toMap)
 
-  /** `sort name(sort1 arg1, sorg2 arg2);` declaration or
+  /** `implicit Real name1(Real arg1, Real arg2), name2(Real arg1, Real arg2) '= term;` ODE function definition or
+    * `sort name(sort1 arg1, sorg2 arg2);` declaration or
     * `sort name(sort1 arg1, sorg2 arg2) = term;` function definition or
     * `Bool name(sort1 arg1, sorg2 arg2) <-> formula;` predicate definition or
     * `HP name ::= program;` program definition. */
@@ -231,13 +232,13 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** implicit ...
    *
-   *  implicit Real sin(Real t), cos(Real t) :='
+   *  implicit Real sin(Real t), cos(Real t) '=
    *    {sin:=0; cos:=1; t:=0; {t'=1, sin'=cos, cos'=-sin}};
    *
-   *  implicit Real xsq(Real t) :='
+   *  implicit Real xsq(Real t) '=
    *    {{xsq:=0; t:=0;}; {xsq'=2t,t'=1}};
    *
-   *  implicit Real abs(Real x) := y <->
+   *  implicit Real abs(Real x) = y <->
    *    x < 0 & y = -x | x >= 0 & y = x;
    *
    *  Note that implicitly defined functions can be given directly
@@ -253,7 +254,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     ))
 
   def implicitDefODE[_: P]: P[List[(Name,Signature)]] = P(
-    (declPartList ~ ":='" ~/ NoCut(program))
+    (declPartList ~ "'=" ~/ NoCut(program))
       .map{case (sigs, prog) =>
         if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
           throw ParseException("Implicit ODE declarations can only declare real-valued " +
@@ -289,7 +290,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   )
 
   def implicitDefInterp[_: P]: P[(Name,Signature)] = P(
-    (declPart ~ ":=" ~ ident ~ "<->" ~ formula)
+    (declPart ~ "=" ~ ident ~ "<->" ~ formula)
       .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, form) =>
         val formAfterSubstitutions = vars.zipWithIndex.foldLeft (
           // Replace res with DotTerm(0)
@@ -343,7 +344,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def program[_: P]: P[Program] = expParser.program
 
   /** odeprogram: Parses an ode system from [[expParser]]. */
-  def odeprogram[_: P]: P[Program] = expParser.odeprogram
+  def odeprogram[_: P]: P[ODESystem] = expParser.odeprogram
 
   def tactic[_: P]: P[BelleExpr] = tacticParser.tactic
 }

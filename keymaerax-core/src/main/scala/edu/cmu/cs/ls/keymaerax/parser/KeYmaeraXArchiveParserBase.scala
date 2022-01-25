@@ -12,9 +12,10 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{declarationsOf, elaborate}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
+import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted.FromProgramException
 
 import scala.annotation.tailrec
-import scala.collection.immutable.StringOps
+import scala.collection.immutable.{List, StringOps}
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -129,6 +130,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case Right(_) => SetLattice.allVars //@note definition is an exercise, do not yet know which variables may occur
     }
   }
+  private[parser] case class ImplicitFuncFam(funcs: List[FuncPredDef]) extends ArchiveItem
   private[parser] case class FuncPredDef(override val name: String, override val index: Option[Int], sort: Sort,
                                          signature: List[NamedSymbol],
                                          override val definition: Either[Option[Expression], List[Token]],
@@ -330,9 +332,11 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) => la match {
         case PERIOD => reduce(shift(st), 1, Bottom, r :+ defs :+ defsBlock)
         case END_BLOCK => shift(st)
+        case IMPLICIT => reduce(shift(st), 1, Bottom :+ ImplicitFuncFam(Nil), r :+ defs :+ defsBlock)
         case _ if isReal(la) || isBool(la) || isProgram(la) => shift(st)
         case _ => throw ParseException("Unexpected definition", st,
           Expected.ExpectTerminal(END_BLOCK) ::
+            Expected.ExpectTerminal(IMPLICIT) ::
             Expected.ExpectTerminal(IDENT("Real")) ::
             Expected.ExpectTerminal(IDENT("Bool")) ::
             Expected.ExpectTerminal(IDENT("HP")) :: Nil)
@@ -341,6 +345,119 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
         case PERIOD => reduce(shift(st), 3, Bottom, r :+ defs)
         case _ => throw ParseException("Missing definitions delimiter", st, Expected.ExpectTerminal(PERIOD) :: Nil)
       }
+      // Start: Implicit ODE function definition
+      case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: ImplicitFuncFam) =>
+        la match {
+          case _ if isReal(la) => shift(st)
+          case _ => throw ParseException("Unexpected sort for implicit function", st,
+            Expected.ExpectTerminal(IDENT("Real")) :: Nil)
+        }
+      case r @ (_ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: ImplicitFuncFam)) :+ Token(sort,_) if isReal(sort) =>
+        la match {
+          case _: IDENT => shift(st)
+          case _ => throw ParseException("Expected identifier for function", st, Nil)
+        }
+      case r :+ (defs: Definitions) :+ (defsBlock @ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (iff: ImplicitFuncFam) :+ Token(sort,startLoc) :+ Token(IDENT(name, index),endLoc) if isReal(sort) =>
+        la match {
+          case LPAREN =>
+            (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+              case Some(d) => throw ParseException.duplicateSymbolError(name, index, endLoc, d.loc)
+              case None => reduce(st, 2, Bottom :+ FuncPredDef(name, index, Real, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock :+ iff)
+            }
+          case _ => throw ParseException("Implicit definitions must be functions", st,
+            Expected.ExpectTerminal(LPAREN) :: Nil)
+        }
+      case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: ImplicitFuncFam) :+ (_: FuncPredDef) if la == LPAREN =>
+        shift(st)
+      case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: ImplicitFuncFam) :+ (_: FuncPredDef) :+ Token(LPAREN, _) =>
+        la match {
+          case RPAREN => shift(st)
+          case x if isReal(x) => shift(st)
+          case _ => throw ParseException("Unexpected token", st,
+            Expected.ExpectTerminal(RPAREN) ::
+              Expected.ExpectTerminal(IDENT("Real")) :: Nil)
+        }
+      case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: ImplicitFuncFam) :+ (_: FuncPredDef) :+ Token(LPAREN, _) :+ Token(sort, _) if isReal(sort) =>
+        la match {
+          case _: IDENT => shift(st)
+          case _ => throw ParseException("Expected identifier for function argument", st, Nil)
+        }
+      case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (iff: ImplicitFuncFam) :+ (next: FuncPredDef) :+ (lpar@Token(LPAREN, _)) :+ Token(sort, _) :+ Token(IDENT(name, index), endLoc) if isReal(sort) =>
+        la match {
+          case COMMA => shift(st)
+          case _ =>
+            reduce(st, 4, Bottom :+ FuncPredDef(next.name, next.index, next.sort, next.signature :+ Variable(name, index), next.definition, next.loc.spanTo(endLoc.end)) :+ lpar,
+              r :+ defs :+ defsBlock :+ iff)
+        }
+      case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (iff: ImplicitFuncFam) :+ (next: FuncPredDef) :+ (lpar@Token(LPAREN, _)) :+ Token(sort, _) :+ Token(IDENT(name, index), _) :+ Token(COMMA, endLoc) if isReal(sort) =>
+        reduce(st, 5, Bottom :+ FuncPredDef(next.name, next.index, next.sort, next.signature :+ Variable(name, index), next.definition, next.loc.spanTo(endLoc.end)) :+ lpar,
+          r :+ defs :+ defsBlock :+ iff)
+      case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (iff: ImplicitFuncFam) :+ (next: FuncPredDef) :+ Token(LPAREN, _) :+ Token(RPAREN, endLoc) =>
+        reduce(st, 3, Bottom :+ next.extendLocation(endLoc.end), r :+ defs :+ defsBlock :+ iff)
+      case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ ImplicitFuncFam(fns) :+ (next: FuncPredDef) =>
+        la match {
+          case COMMA =>
+            reduce(shift(st), 3, Bottom :+ ImplicitFuncFam(next :: fns) :+ Token(IDENT("Real")), r :+ defs :+ defsBlock)
+          case PRIME =>
+            shift(st)
+          case _ => throw ParseException("Unexpected token", st, Nil)
+        }
+      case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ ImplicitFuncFam(fns) :+ (next: FuncPredDef) :+ Token(PRIME, _) =>
+        la match {
+          case EQ =>
+            val (term: Either[Option[Program], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.programTokenParser)
+            val prog: Program = term match {
+              case Left(Some(prog)) => prog
+              case _ => throw ParseException("Expected a program of the form {initial condition}; {differentials}", st, Nil)
+            }
+
+            val sigs = (next :: fns).reverse
+
+            sigs.foreach(s =>
+              if (InterpretedSymbols.byName.contains((s.name, s.index)))
+                throw ParseException("Re-definition of interpreted symbol " + s.name + " not allowed; please use a different name for your definition.",
+                  s.loc.spanTo(endLoc), s.name, "A name != " + s.name)
+            )
+
+            if (sigs.exists(_.signature.size != 1))
+              throw ParseException("Implicit ODE declarations must be functions of one variable.")
+
+            val t = next.signature.head
+
+            if (sigs.exists(_.signature.head != t))
+              throw ParseException("Implicit ODE declarations must be functions of one variable.")
+
+            val nameSet = sigs.map(s => Name(s.name, s.index)).toSet
+
+            if (nameSet.size != sigs.size)
+              throw ParseException("Tried declaring same function twice in an implicit ODE definition")
+
+            val interpFuncs = try {
+              ODEToInterpreted.fromProgram(prog,Variable(t.name,t.index))
+            } catch {
+              case FromProgramException(s) =>
+                throw ParseException("Failed to interpret implicit definition by ODE: " + s, st, Nil)
+            }
+
+            val funcDefs = sigs.map{s =>
+              val f = interpFuncs.find(f => f.name == s.name && f.index == s.index) match {
+                case Some(f) => f
+                case None =>
+                  throw ParseException("Symbol " + s.name + " not defined by supplied ODE", s.loc.spanTo(endLoc))
+              }
+              s.copy(definition = Left(Some(FuncOf(f, Variable(t.name, t.index)))))
+            }
+
+            val st2 = ParseState(r :+ Definitions(defs.defs ++ funcDefs, defs.vars) :+ defsBlock, remainder)
+
+            remainder match {
+              case Token(SEMI,_) :: _ => reduce(shift(st2), 1, Bottom, r :+ Definitions(defs.defs ++ funcDefs, defs.vars) :+ defsBlock)
+              case _ => throw ParseException("Expected semicolon after implicit definition", st2,
+                Expected.ExpectTerminal(SEMI) :: Nil)
+            }
+          case _ => throw ParseException("Unexpected token in function definition", st, Expected.ExpectTerminal(EQ) :: Nil)
+        }
+      // End: Implicit ODE function definition
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(sort, _) if (isReal(sort) || isBool(sort) || isProgram(sort)) && la.isInstanceOf[IDENT] => shift(st)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isReal(sort) =>
         (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
