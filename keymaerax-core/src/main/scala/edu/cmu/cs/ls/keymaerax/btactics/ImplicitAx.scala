@@ -35,15 +35,14 @@ object ImplicitAx {
     }, e).get
   }
 
-  private def canonicalDiffAxName(f: Function) : String = {
+  private def canonicalDiffAxName(f: Function) : (String, String) = {
     // todo: how to use directory structure?
-    "D"+f.name
+    ("D"+f.name,"D"+f.name+f.interp.get.toString.hashCode.abs)
   }
 
   private def registerDiffAx(f: Function, p:ProvableSig) : Unit = {
     println("Registering differential axiom: ",f,p)
-    val name = canonicalDiffAxName(f)
-    val codename = name
+    val (name,codename) = canonicalDiffAxName(f)
 
     val fml = p.conclusion.succ(0) // ==> (f(x))' = ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
@@ -69,7 +68,17 @@ object ImplicitAx {
   // todo: for efficiency initialize ProvableInfo with pre-proved differential axioms
   def getDiffAx(f: Function) : Option[ProvableInfo] = {
     try {
-      Some(ProvableInfo(canonicalDiffAxName(f)))
+      val name = canonicalDiffAxName(f)._1
+      val res = ProvableInfo(name)
+
+      val lhs = res.provable.conclusion.succ(0).sub(PosInExpr(0::0::Nil)) match {
+        case Some(e:FuncOf) => e
+        case _ => throw new IllegalArgumentException("Unexpected axiom with name "+name+" found in database.")
+      }
+
+      // Guard against multiple definitions with same name in a single session
+      if(lhs.func == f) Some(res)
+      else throw new IllegalArgumentException("Duplicate function names with different interpretations used in same session.")
     }
     catch {
       case e:AxiomNotFoundException => {
@@ -90,15 +99,14 @@ object ImplicitAx {
     }
   }
 
-  private def canonicalInitAxName(f: Function) : String = {
+  private def canonicalInitAxName(f: Function) : (String, String) = {
     // todo: how to use directory structure?
-    "I"+f.name
+    ("I"+f.name,"I"+f.name+f.interp.get.toString.hashCode.abs)
   }
 
   private def registerInitAx(f: Function, p:ProvableSig) : Unit = {
     println("Registering initial condition axiom: ",f,p)
-    val name = canonicalInitAxName(f)
-    val codename = name
+    val (name,codename) = canonicalInitAxName(f)
 
     val fml = p.conclusion.succ(0) // ==> f(0) = ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
@@ -123,7 +131,17 @@ object ImplicitAx {
 
   def getInitAx(f: Function) : Option[ProvableInfo] = {
     try {
-      Some(ProvableInfo(canonicalInitAxName(f)))
+      val name = canonicalInitAxName(f)._1
+      val res = ProvableInfo(name)
+
+      val lhs = res.provable.conclusion.succ(0).sub(PosInExpr(0::Nil)) match {
+        case Some(e:FuncOf) => e
+        case _ => throw new IllegalArgumentException("Unexpected axiom with name "+name+" found in database.")
+      }
+
+      // Guard against multiple definitions with same name in a single session
+      if(lhs.func == f) Some(res)
+      else throw new IllegalArgumentException("Duplicate function names with different interpretations used in same session.")
     }
     catch {
       case e:AxiomNotFoundException => {
@@ -142,15 +160,14 @@ object ImplicitAx {
     }
   }
 
-  private def canonicalDefAxName(f: Function) : String = {
+  private def canonicalDefAxName(f: Function) : (String, String) = {
     // todo: how to use directory structure?
-    "def"+f.name
+    ("def"+f.name,"def"+f.name+f.interp.get.toString.hashCode.abs)
   }
 
   private def registerDefAx(f: Function, p:ProvableSig) : Unit = {
     println("Registering defining axiom: ",f,p)
-    val name = canonicalDefAxName(f)
-    val codename = name
+    val (name,codename) = canonicalDefAxName(f)
 
     val fml = p.conclusion.succ(0) // ==> ._0 = f(._1 <-> ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
@@ -175,7 +192,17 @@ object ImplicitAx {
 
   def getDefAx(f: Function) : Option[ProvableInfo] = {
     try {
-      Some(ProvableInfo(canonicalDefAxName(f)))
+      val name = canonicalDefAxName(f)._1
+      val res = ProvableInfo(name)
+
+      val lhs = res.provable.conclusion.succ(0).sub(PosInExpr(0::1::Nil)) match {
+        case Some(e:FuncOf) => e
+        case _ => throw new IllegalArgumentException("Unexpected axiom with name "+name+" found in database.")
+      }
+
+      // Guard against multiple definitions with same name in a single session
+      if(lhs.func == f) Some(res)
+      else throw new IllegalArgumentException("Duplicate function names with different interpretations used in same session.")
     }
     catch {
       case e:AxiomNotFoundException => {

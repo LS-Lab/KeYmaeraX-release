@@ -15,7 +15,7 @@ class ImplicitAxTests extends TacticTestBase {
     val ax = getDefAx(exp)
 
     ax.isDefined shouldBe true
-    ax.get.provable.conclusion shouldBe "==> ._0=exp<< <{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=1&t_=0) >>(._1)<-><{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=1&t_=0)".asSequent
+    ax.get.provable.conclusion shouldBe "==> ._0=exp<< <{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=1&t_=0)>>(._1)<-><{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=1&t_=0)".asSequent
   }
 
   it should "derive defining axiom 2" in withMathematica { _ =>
@@ -44,6 +44,17 @@ class ImplicitAxTests extends TacticTestBase {
     val exp = Function("ee",None,Real,Real,Some("<{ee:=._0;t_:=._1;}{{ee'=-exp(t_)*ee,t_'=-(1)}++{ee'=exp(t_)*ee,t_'=1}}>(ee=1&t_=0)".asFormula))
 
     val ax = getDefAx(exp)
+
+    ax.isDefined shouldBe true
+    println(ax.get.provable.conclusion)
+  }
+
+  it should "derive defining axiom 5" in withMathematica { _ =>
+    // note: this already requires the rest of the proofs to work
+    val exp = Function("eee",None,Real,Real,Some("<{eee:=._0;t_:=._1;}{{eee'=-eee*exp(t_^2),t_'=-(1)}++{eee'=eee*exp(t_^2),t_'=1}}>(eee=sin(1+cos(2))&t_=sin(0))".asFormula))
+    val exp2 = Function("eee",None,Real,Real,Some("<{eee:=._0;t_:=._1;}{{eee'=-eee*exp(t_),t_'=-(1)}++{eee'=eee*exp(t_),t_'=1}}>(eee=sin(1+cos(2))&t_=sin(0))".asFormula))
+
+    val ax = getDefAx(exp) //defeee.alp
 
     ax.isDefined shouldBe true
     println(ax.get.provable.conclusion)
@@ -246,7 +257,6 @@ class ImplicitAxTests extends TacticTestBase {
     val dfake = getDiffAx(fake)
     dfake shouldBe None
   }
-
   it should "derive and store init ax 1" in withMathematica { _ =>
     val exp = InterpretedSymbols.expF
     val dexp = getInitAx(exp)
@@ -278,6 +288,30 @@ class ImplicitAxTests extends TacticTestBase {
 
     val dfake = getInitAx(fake)
     dfake shouldBe None
+  }
+
+  it should "detect multiple definitions with same function name 1" in withMathematica { _ =>
+    val exp = InterpretedSymbols.expF
+    val exp2 = Function("exp",None,Real,Real,Some("<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=2&t_=0)".asFormula))
+    val dexp = getDiffAx(exp)
+
+    the [Exception] thrownBy getDiffAx(exp2) should have message "Duplicate function names with different interpretations used in same session."
+  }
+
+  it should "detect multiple definitions with same function name 2" in withMathematica { _ =>
+    val exp = InterpretedSymbols.expF
+    val exp2 = Function("exp",None,Real,Real,Some("<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=2&t_=0)".asFormula))
+    val dexp = getInitAx(exp)
+
+    the [Exception] thrownBy getInitAx(exp2) should have message "Duplicate function names with different interpretations used in same session."
+  }
+
+  it should "detect multiple definitions with same function name 3" in withMathematica { _ =>
+    val exp = InterpretedSymbols.expF
+    val exp2 = Function("exp",None,Real,Real,Some("<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(exp=2&t_=0)".asFormula))
+    val dexp = getDefAx(exp)
+
+    the [Exception] thrownBy getDefAx(exp2) should have message "Duplicate function names with different interpretations used in same session."
   }
 
   "property" should "prove exp non-negative" in withMathematica { _ =>
