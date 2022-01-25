@@ -30,23 +30,6 @@ class ImplicitFunctionTests extends TacticTestBase {
 
   private def parse (input: String) = parser.parse(input).loneElement
 
-  "implicit fn oracle" should "return correct axiom for abs" in {
-    val absAxiom = Provable.implicitFuncAxiom(InterpretedSymbols.absF)
-    absAxiom.conclusion shouldBe Sequent(Vector[Formula](), Vector(Equiv(
-      Equal(DotTerm(idx=Some(0)),FuncOf(InterpretedSymbols.absF, DotTerm(idx=Some(1)))),
-      "._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1".asFormula
-    )))
-  }
-
-  it should "return correct axiom for max" in {
-    val maxAxiom = Provable.implicitFuncAxiom(InterpretedSymbols.maxF)
-    maxAxiom.conclusion shouldBe Sequent(Vector[Formula](), Vector(Equiv(
-      Equal(DotTerm(idx=Some(0)),
-        FuncOf(InterpretedSymbols.maxF, Pair(DotTerm(idx=Some(1)),DotTerm(idx=Some(2))))),
-      "._1 < ._2 & ._0 = ._2 | ._1 >= ._2 & ._0 = ._1".asFormula
-    )))
-  }
-
   "DLArchiveParser" should "parse built-in interpreted functions correctly" in {
     val input =
       """ArchiveEntry "entry1"
@@ -124,18 +107,6 @@ class ImplicitFunctionTests extends TacticTestBase {
 
   }
 
-  "implicit fn axioms" should "substitute against an abbreviation" in withMathematica { _ =>
-    val prob = GreaterEqual(FuncOf(InterpretedSymbols.absF,"x".asVariable),Number(0))
-
-    val pvble = proveBy(prob,
-      abbrvAll(FuncOf(InterpretedSymbols.absF,Variable("x")),None)
-        & useAt(ElidingProvable(Provable.implicitFuncAxiom(InterpretedSymbols.absF)))(-1)
-        & QE
-    )
-
-    pvble shouldBe 'proved
-  }
-
   "differential defs" should "prove exp differential axiom" in withMathematica { _ =>
     import InterpretedSymbols.expF
 
@@ -155,25 +126,6 @@ class ImplicitFunctionTests extends TacticTestBase {
 
     val pvble = proveBy(problem,
       skip //TODO
-    )
-
-    pvble shouldBe 'proved
-  }
-
-  it should "prove simple trig lemmas in dL" in withMathematica { _ =>
-    import InterpretedSymbols.{sinF, cosF}
-
-    println(sinF)
-
-    val prob = Equal(Plus(Power(FuncOf(sinF,"x".asVariable),Number(2)),
-                          Power(FuncOf(cosF,"x".asVariable),Number(2))),
-                      Number(1))
-    val pvble = proveBy(prob,
-      abbrvAll(FuncOf(sinF,"x".asVariable),None)
-      & abbrvAll(FuncOf(cosF,"x".asVariable),None)
-      & useAt(ElidingProvable(Provable.implicitFuncAxiom(sinF)))(-1)
-      & useAt(ElidingProvable(Provable.implicitFuncAxiom(cosF)))(-2)
-      //TODO
     )
 
     pvble shouldBe 'proved

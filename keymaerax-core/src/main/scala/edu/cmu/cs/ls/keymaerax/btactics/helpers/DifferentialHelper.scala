@@ -370,7 +370,16 @@ object DifferentialHelper {
   def simpWithTool(tool: Option[SimplificationTool],t:Term) : Term = {
     tool match {
       case None => termSimp(t,emptyCtx,defaultTaxs)._1
-      case Some(tl) => tl.simplify(t,List())
+      case Some(tl) => {
+        val interp = ToolTactics.interpretedFuncsOf(t).distinct
+        val renvar = "x_"
+        val renvari = (0 to interp.length).map( i => Variable(renvar,Some(i)))
+        val renames = interp zip renvari
+        val tren = renames.foldRight(t)( (e,t) => t.replaceAll(e._1,e._2))
+        val a = tl.simplify(tren,List())
+
+        renames.foldRight(a)( (e,t) => t.replaceAll(e._2,e._1))
+      }
     }
   }
 

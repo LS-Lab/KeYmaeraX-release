@@ -87,7 +87,7 @@ object ODEToInterpreted {
         AtomicODE(DifferentialSymbol(tVar),Neg(Number(1)))
       ).reduce[DifferentialProgram](DifferentialProduct(_,_)))
 
-    val goal = And(Equal(tVar,t0),system.map{case(v,_,i) => Equal(v, i)}.reduceRight(And))
+    val goal = (system.map{case(v,_,i) => Equal(v, i)}:+Equal(tVar,t0)).reduceRight(And)
 
     system.map{case(v,_,_) =>
       val otherVars = system.map(_._1).filter(_ != v)

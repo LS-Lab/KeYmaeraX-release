@@ -260,7 +260,8 @@ object StaticSemantics {
     *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
     *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
     * }}}
-    * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
+    * @note Soundness-critical in data structure invariant for interpreted functions
+    * @note Not soundness-critical for substitution since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term     => signature(t)
@@ -273,6 +274,7 @@ object StaticSemantics {
   /**
     * The signature of a term, i.e., set of (non-logical) function/functional symbols occurring in it.
     * Disregarding number literals.
+    * @note Soundness-critical in data structure invariant for interpreted functions
     * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
@@ -301,6 +303,7 @@ object StaticSemantics {
   /**
     * The signature of a formula, i.e., set of (non-logical) function, predicate, predicational, and atomic program
     * symbols occurring in it.
+    * @note Soundness-critical in data structure invariant for interpreted functions
     * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(formula: Formula): immutable.Set[NamedSymbol] = formula match {
@@ -340,6 +343,7 @@ object StaticSemantics {
   /**
     * The signature of a program, i.e., set of function, predicate, and atomic program
     * symbols occurring in it.
+    * @note Soundness-critical in data structure invariant for interpreted functions
     * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(program: Program): immutable.Set[NamedSymbol] = program match {

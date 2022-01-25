@@ -296,10 +296,6 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interp: Option[Formula] = None)
     extends NamedSymbol {
   final val kind: Kind = FunctionKind
-  //TODO: check that interp has no free variables and that dot terms are correct sorts
-  // and that function is smooth and that it is unique ???
-
-  // TODO: Q for andre: what constraints are there on functions in dL?
 
   override def fullString: String = {
     val typeAnnotated = asString + ":" + domain + "->" + sort
@@ -317,7 +313,35 @@ case class Function(name: String, index: Option[Int] = None, domain: Sort, sort:
     }
   }
 
-  def interpreted = interp.nonEmpty
+  val interpreted : Boolean = interp.nonEmpty
+
+  // Returns Some(n) if the sort is a right-associated Real domain of dimension n
+  private def realDomain(s : Sort) : Option[Int] = {
+    s match {
+      case Tuple(Real, rest) => realDomain(rest).map(_ + 1)
+      case Real => Some(1)
+      case Unit => Some(0)
+      case _ => None
+    }
+  }
+
+  // Dimension of the domain interpreted as a Real domain
+  val realDomainDim : Option[Int] = realDomain(domain)
+
+  if(interpreted) {
+    insist(sort == Real, "Interpreted function codomain must be Real.")
+    insist(realDomainDim.isDefined, "Interpreted function domain must be Real(s).")
+
+    insist(StaticSemantics.freeVars(interp.get).isEmpty, "Function interpretation must not mention free variables: " + interp.get)
+    val validDots = (0 to realDomainDim.get).map(i => DotTerm(Real, Some(i)))
+    val signature = StaticSemantics.signature(interp.get).filter( f => f match {
+      case f:Function if f.interpreted => false // by data structure invariant, f is a valid interpreted function symbol
+      case _ => true
+    })
+    insist(signature.subsetOf(validDots.toSet),
+      "Function interpretation can only mention uninterpreted dots: " + validDots + " but got: "+ signature)
+  }
+
 }
 
 /** •: Placeholder for terms in uniform substitutions of given sort. Reserved nullary function symbols

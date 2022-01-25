@@ -629,28 +629,105 @@ object Provable {
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(diffAdj)), immutable.IndexedSeq())
   }
 
-  def implicitFuncAxiom (f: Function): Provable = {
-    //TODO: should check that
-    // f well defined and continuous
+  private def isODEInterp(interp: Formula) : Unit = {
 
-    assert(f.interp.isDefined)
+    def noFreeVars(e : Expression) : Boolean = StaticSemantics.freeVars(e).isEmpty
+    def noUninterpretedSymbols(e : Expression) : Boolean = StaticSemantics.signature(e).filter( f => f match {
+      case f:Function if f.interpreted => false // by data structure invariant, f is a valid interpreted function symbol
+      case _ => true
+    }).isEmpty
 
-    def dotTermForSort (s: Sort, idx: Int): Term =
-      s match {
-        case Tuple(left, right) =>
-          Pair(DotTerm(left, Some(idx)), dotTermForSort(right, idx+1))
-        case s => DotTerm(s, Some(idx))
+    // Check the shape of initial condition and extract the equalities x=x0&t=t0
+    // Right-hand sides of initial conditions must have no free variables nor uninterpreted symbols
+    def checkInit( f : Formula ) : List[BaseVariable] = {
+      f match {
+        case And(Equal(v : BaseVariable, e), rest) if noFreeVars(e) && noUninterpretedSymbols(e) => v::checkInit(rest)
+        case Equal(v : BaseVariable, e) if noFreeVars(e) && noUninterpretedSymbols(e) => v::Nil
+        case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
       }
+    }
+
+    // Check the shape of the assignment block x:=*;y:=._0;t:=._1
+    def checkAssign( p : Program ) : List[BaseVariable] = {
+      p match {
+        case Compose(AssignAny(v : BaseVariable),rest) => v::checkAssign(rest)
+        case Compose(Assign(v:BaseVariable,DotTerm(Real,Some(0))),Assign(t:BaseVariable,DotTerm(Real,Some(1)))) => v::t::Nil
+        case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
+      }
+    }
+
+    interp match {
+      case Diamond(Compose(assgn, Choice(ODESystem(odeB,True),ODESystem(odeF,True))), init ) => {
+
+        val inits = checkInit(init)
+
+        insist(inits.toSet.size == inits.size, "Exactly one initial condition allowed per variable.")
+
+        val assgns = checkAssign(assgn)
+
+        insist(assgns.toSet.size == assgns.size, "Exactly one assignment allowed per variable.")
+
+        insist(assgns.toSet == inits.toSet, "Variables in initial condition and assignment must match.")
+
+        // The ODEs must be atomic by data structure invariant on interpreted functions
+        val odeFs = DifferentialProduct.listify(odeF).map(_.asInstanceOf[AtomicODE])
+        val odeBs = DifferentialProduct.listify(odeB).map(_.asInstanceOf[AtomicODE])
+
+        // Check that the forward ODE matches the reversed ODE
+        insist(odeFs.map(ode => ode.copy(e=Neg(ode.e))) == odeBs, "Forward ODEs must match backward ODEs.")
+
+        // Check that the variables match initial conditions
+        insist(odeFs.map(ode => ode.xp.x).toSet == inits.toSet, "Variables in ODEs must match variables in initial conditions.")
+
+        // Check that the last ODE is a time variable
+        insist(odeFs.last.e == Number(1), "Last ODE must be a clock ODE t'=1.")
+
+        // Check that the forward ODE does not mention uninterpreted symbols (in particular, no ._0 and ._1)
+        insist(noUninterpretedSymbols(odeF), "No uninterpreted symbols in ODE RHS.")
+      }
+      case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
+    }
+  }
+
+  /** Existence-guarded axiom schema for interpreted functions, schematic in the function
+    *
+    * {{{
+    *   *
+    *   --- (with proof of |- \\exists x_ P(x_,._1,...,._n))
+    *   |- ._0 = f<< P(._0,._1,...,._n) >>(._1,...,._n) <-> P(.0,._1,...,._n)
+    * }}}
+    *
+    * @param f the interpreted function
+    * @param pr the existence proof
+    */
+  final def implicitFunc(f: Function, pr: Provable): Provable = {
+    insist(f.interpreted, "Function must be interpreted.")
+
+    // P(._0,._1,...,._n)
+    val interp = f.interp.get
+
+    //Syntactic guard on the shape of interp for smoothness
+    isODEInterp(interp)
+
+    val dim = f.realDomainDim.get
+
+    val x = BaseVariable("x_")
+    // The dot term argument for f's sort (guaranteed to be right-associated)
+    val dotArg = if(dim == 0) Nothing else (1 to dim).map( i => DotTerm(Real,Some(i))).reduceRight(Pair)
+
+    // The result dot ._0
+    val xdot = DotTerm(Real,Some(0))
+    // Substitution ._0 ~> x_
+    val subst = USubst( immutable.Seq(SubstitutionPair(DotTerm(Real,Some(0)),x)) )
+    // Existence guard \\exists x_ P(x_,._1,...,._n)
+    val guardSeq = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Exists(x::Nil, subst(interp))))
+
+    insist(pr.isProved && pr.conclusion == guardSeq, "Supplied provable must prove existence.")
 
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(
-      Equiv(
-        Equal(
-          DotTerm(f.sort, Some(0)),
-          FuncOf(f, dotTermForSort(f.domain, 1))
-        ),
-        f.interp.get
-      )
-    )),immutable.IndexedSeq.empty[Sequent])
+      // ._0 = f<< P(._0,._1,...,._n) >>(.) <-> P(.0,._1,...,._n)
+      Equiv(Equal(DotTerm(f.sort, Some(0)), FuncOf(f, dotArg)), f.interp.get)
+      )),immutable.IndexedSeq.empty[Sequent])
   }
 
   /**
