@@ -898,69 +898,74 @@ object ImplicitAx {
   }
 
   lazy val forallFwdBack : Lemma =
-    remember("\\forall x P(x) <-> \\forall x (x = f() -> [{x'=1}++{x'=-1}]P(x))".asFormula,
-      equivR(1) <(
-        allR(1) & implyR(1) & abstractionb(1) & id,
-        allR(1) & boundRename(Variable("x"),Variable("y"))(-1) &
-          cut("\\exists y y = f()".asFormula) <(
-            existsL(-2) & allL(-1) & implyL(-1) <(
-              id,
-              cut("x = f() | x > f() | x < f()".asFormula) <(
+    remember("\\forall x_ (x_ = f() -> [{x_'=1 & x_ <= g()}++{x_'=-1 & g() <= x_}]P(x_)) -> P(g())".asFormula,
+      implyR(1) & boundRename(Variable("x_"),Variable("y"))(-1) &
+        cut("\\exists y y = f()".asFormula) <(
+          existsL(-2) &
+            allL(-1) & implyL(-1) <(
+            id,
+            cut("g() = f() | g() > f() | g() < f()".asFormula) <(
+              orL(-3) <(
+                choiceb(-1) & andL(-1) & useAt(Ax.DX)(-3) & exhaustiveEqL2R(-2) & exhaustiveEqL2R(-1) & implyL(-3) <( cohideR(2) & QE, id ),
                 orL(-3) <(
-                  choiceb(-1) & andL(-1) & useAt(Ax.DX)(-3) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & prop, //QE,
-                  orL(-3) <(
-                    cut("<{y'=1}>P(x)".asFormula) <(
-                      cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
-                      hideR(1) & cutR("<{y'=1}>y=x".asFormula)(1) <(
-                        hideL(-1) & ODELiveness.kDomainDiamond("y>=x".asFormula)(1) <(
-                          ODELiveness.dV(None)(1) & QE,
-                          ODEInvariance.dCClosure(1) <(
-                            QE,
-                            dW(1) & QE
-                          )
+                  cut("<{y'=1 & y <= g()}>P(g())".asFormula) <(
+                    cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
+                    hideR(1) & cutR("<{y'=1 & y <= g()}>y=g()".asFormula)(1) <(
+                      hideL(-1) &
+                        ODELiveness.closedRef(True)(1)<(
+                          ODELiveness.kDomainDiamond("y>=g()".asFormula)(1) <(
+                            ODELiveness.dV(None)(1) & QE,
+                            ODEInvariance.dCClosure(1) <(
+                              QE,
+                              dW(1) & QE
+                            )
+                          ),
+                          QE
+                          ,
+                          ODE(1)
                         ),
-                        useAt(Ax.Kd,PosInExpr(1::Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-3) & monb &
-                          implyR(1) & exhaustiveEqL2R(-2) & prop
-                      )
-                    ),
-                    cut("<{y'=-1}>P(x)".asFormula) <(
-                      cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
-                      hideR(1) & cutR("<{y'=-1}>y=x".asFormula)(1) <(
-                        hideL(-1) & ODELiveness.kDomainDiamond("y<=x".asFormula)(1) <(
-                          ODELiveness.dV(None)(1) & QE,
-                          ODEInvariance.dCClosure(1) <(
-                            QE,
-                            dW(1) & QE
-                          )
-                        ),
-                        useAt(Ax.Kd,PosInExpr(1::Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-4) & monb &
-                          implyR(1) & exhaustiveEqL2R(-2) & prop
-                      )
-                    ),
+                      useAt(Ax.Kd,PosInExpr(1::Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-3) & monb &
+                        implyR(1) & exhaustiveEqL2R(-2) & prop
+                    )
                   ),
-                ),
-                cohideR(2) & QE
-              )
-            ),
-            cohideR(2) & QE
-          )
-      ),
+                  cut("<{y'=-1 & g() <= y}>P(g())".asFormula) <(
+                    cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
+                    hideR(1) & cutR("<{y'=-1 & g() <= y}>y=g()".asFormula)(1) <(
+                      hideL(-1) &
+                        ODELiveness.closedRef(True)(1)<(
+                          ODELiveness.kDomainDiamond("g() >= y".asFormula)(1) <(
+                            ODELiveness.dV(None)(1) & QE,
+                            ODEInvariance.dCClosure(1) <(
+                              QE,
+                              dW(1) & QE
+                            )
+                          ),
+                          QE
+                          ,
+                          ODE(1)
+                        ),
+                      useAt(Ax.Kd,PosInExpr(1::Nil))(1) & choiceb(-1) & andL(-1) & cohideOnlyL(-4) & monb &
+                        implyR(1) & exhaustiveEqL2R(-2) & prop
+                    )
+                  )
+                )
+              ),
+              cohideR(2) & QE
+            )
+          ),
+          cohideR(2) & QE
+        ),
     namespace
   )
 
-  lazy val forallFwdBackDirect : Lemma =
-    remember("\\forall x_ (x_ = f() -> [{x_'=1}++{x_'=-1}]P(x_)) -> P(g())".asFormula,
-      useAt(forallFwdBack,PosInExpr(1::Nil))(1,0::Nil) & implyR(1) & allL("g()".asTerm)(-1) & prop,
-      namespace
-    )
 
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
   @Tactic(names="diffUnfold",
     codeName="diffUnfold",
-    premises="Γ |- P(t0), Δ ;; Γ, v=t0 |- [v'=1]P(v), Δ ;; Γ, v=t0 |- [v'=-1]P(v), Δ",
-    conclusion="Γ |- P(v), Δ",
+    premises="v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=-1 & v0<=v]P(v)",
+    conclusion="Γ |- P(v0), Δ",
     displayLevel="browse")
-  def diffUnfold(v:Term, t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
+  def diffUnfold(v0:Term, t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
 
     val fml = seq.sub(pos) match {
@@ -969,17 +974,14 @@ object ImplicitAx {
     }
 
     // Convenience rename if we happen to find a variable
-    val targetVar = v match {
-      case vv: Variable => vv
-      case _ => Variable("x_")
-    }
+    val targetVar =  TacticHelper.freshNamedSymbol("v".asVariable, seq)
 
-    val expAx = forallFwdBackDirect.fact(URename(targetVar, Variable("x_")))(USubst(List(SubstitutionPair("f()".asTerm, t0), SubstitutionPair("g()".asTerm, v))))
+    val expAx = forallFwdBack.fact(URename(targetVar, Variable("x_")))(USubst(List(SubstitutionPair("f()".asTerm, t0), SubstitutionPair("g()".asTerm, v0))))
 
     useAt(expAx, PosInExpr(1 :: Nil))(pos) &
       allR(pos) & implyR(pos) &
       // Makes subsequent ODE proofs easier by proving the postcondition already true initially
-      cutR(fml.replaceFree(v, targetVar))(pos) < (
+      cutR(fml.replaceFree(v0, targetVar))(pos) < (
         exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
         implyR(pos) &
           choiceb(pos) & andR(pos)

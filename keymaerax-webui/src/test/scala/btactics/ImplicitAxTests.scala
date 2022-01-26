@@ -284,7 +284,21 @@ class ImplicitAxTests extends TacticTestBase {
     the [Exception] thrownBy getDefAx(exp2) should have message "Duplicate function names with different interpretations used in same session."
   }
 
-  "property" should "prove exp non-negative" in withMathematica { _ =>
+  "diff unfold" should "diff unfold both directions" in withMathematica { _ =>
+    val exp = InterpretedSymbols.expF
+
+    val pr = proveBy(Greater(FuncOf(exp,"f()".asTerm),Number(0)),
+      diffUnfold("f()".asTerm, "g()".asTerm)(1)
+    )
+
+    println(pr)
+    pr.subgoals.length shouldBe 3
+    pr.subgoals(0) shouldBe "==>  exp(g())>0".asSequent
+    pr.subgoals(1) shouldBe "v=g(), exp(v)>0  ==>  [{v'=1 & v <= f()}]exp(v)>0".asSequent
+    pr.subgoals(2) shouldBe "v=g(), exp(v)>0  ==>  [{v'=(-1) & f() <= v}]exp(v)>0".asSequent
+  }
+
+  it should "prove exp non-negative" in withMathematica { _ =>
     val exp = InterpretedSymbols.expF
 
     val pr = proveBy(Greater(FuncOf(exp,"f()".asTerm),Number(0)),
@@ -298,28 +312,21 @@ class ImplicitAxTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "manual proof" in withMathematica { _ =>
+  it should "prove exp > 1" in withMathematica { _ =>
     val exp = InterpretedSymbols.expF
 
-    // exp(y^2) >= 1
-    val pr = proveBy(GreaterEqual(FuncOf(exp,Power(Variable("y"),Number(2))),Number(1)),
-      diffUnfold(Variable("y"), Number(0))(1) <(
-        QE, //prove from initial conditions
-        dC("y >= 0".asFormula)(1) <(
-          dI('diffInd)(1) <(id,
-            // this is just to test deriving. the proof doesn't work right away, but would work if we separately proved exp(y^2)>=0 as a cut (or diff cut)
-            // then the resulting goal is exp(y^2)*2y >= 0
-            Dassignb(1) & cohideR(1)
-          ),
-          hideL(-2) & ODE(1)
-        ),
-        skip
-      )
-    )
+    val pr = proveBy(GreaterEqual(FuncOf(exp,"x^2".asTerm),Number(1)),
+      diffUnfold("x^2".asTerm, Number(0))(1) <(
+        QE,
+        ODE(1),
+        dC("v=0".asFormula)(1) <(
+          ODE(1),
+          ODE(1)
+        )
+      ))
+
     println(pr)
-    pr.subgoals.length shouldBe 2
-    pr.subgoals(0) shouldBe "==>  exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(y^2)*(2*y^(2-1)*1)>=0".asSequent
-    pr.subgoals(1) shouldBe "y=0, exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(y^2)>=1  ==>  [{y'=(-1)}]exp<<<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0)>>(y^2)>=1".asSequent
+    pr shouldBe 'proved
   }
 
   it should "manual proof with weird subexpression" in withMathematica { _ =>
@@ -377,15 +384,18 @@ class ImplicitAxTests extends TacticTestBase {
 
     val x = Variable("x")
     val y = Variable("y")
+    val v = Variable("v")
     val sinx=FuncOf(sin,x)
     val siny=FuncOf(sin,y)
     val cosx=FuncOf(cos,x)
     val cosy=FuncOf(cos,y)
+    val sinv=FuncOf(sin,v)
+    val cosv=FuncOf(cos,v)
 
     val p1 =
-      Minus(FuncOf(sin,Plus(x,y)),Plus(Times(sinx,cosy),Times(cosx,siny)))
+      Minus(FuncOf(sin,Plus(v,y)),Plus(Times(sinv,cosy),Times(cosv,siny)))
     val p2 =
-      Minus(FuncOf(cos,Plus(x,y)), Minus(Times(cosx,cosy),Times(sinx,siny)))
+      Minus(FuncOf(cos,Plus(v,y)), Minus(Times(cosv,cosy),Times(sinv,siny)))
 
     val G = List(List(Number(0),Number(1)),List(Number(-1),Number(0)))
     val Gn = List(List(Number(0),Number(-1)),List(Number(1),Number(0)))
