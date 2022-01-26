@@ -14,28 +14,37 @@ object ODEToInterpreted {
    *      {e:=1;} {e'=e}
    * into the form needed for `convert` (used by the parser).
    */
-  def fromProgram(system: Program, t: Variable = Variable("t_")): Seq[Function] =
+  def fromProgram(system: Program, t: Variable): Seq[Function] =
     system match {
       case Compose(assgns, ODESystem(ode, True)) =>
         def unfoldAssgns(x: Program): Map[Variable, Term] = x match {
           case Assign(v,e) => Map(v -> e)
           case Compose(l,r) => unfoldAssgns(l) ++ unfoldAssgns(r)
-          case _ => throw FromProgramException("Left side of compose not made of assignments!")
+          case _ => throw FromProgramException("Unable to unfold initial conditions to a list of assignments.")
         }
+
         def unfoldODE(x: DifferentialProgram): Map[Variable, Term] = x match {
           case AtomicODE(DifferentialSymbol(v),e) => Map(v -> e)
           case DifferentialProduct(l,r) => unfoldODE(l) ++ unfoldODE(r)
+          case _ => throw FromProgramException("Unable to unfold ODEs to a list of atomic ODEs.")
         }
+
         val assgnMap = unfoldAssgns(assgns)
         val odeMap = unfoldODE(ode)
 
-        val t0 = assgnMap.getOrElse(t, Number(0))
-
-        if (odeMap.contains(t) && odeMap(t) != Number(1)) {
-          throw FromProgramException("Time differentially explicitly given, yet is not 1.")
+        // Time ODE defaults to initial time 0
+        val t0 = assgnMap.get(t) match{
+          case None => Number(0)
+          case Some(tt) =>
+            if(!odeMap.contains(t))
+              throw FromProgramException("ODE for time must be specified in ODEs when initial time is explicitly given.")
+            if (odeMap(t) != Number(1)) {
+              throw FromProgramException("Time ODE must have RHS 1.")
+            }
+            tt
         }
 
-        fromSystem(assgnMap.toIndexedSeq.map { case (v, init) =>
+        fromSystem((assgnMap.-(t)).toIndexedSeq.map { case (v, init) =>
           (v, odeMap(v), init)
         }, t, t0)
 
@@ -68,7 +77,7 @@ object ODEToInterpreted {
     assert(system.map(_._1).distinct == system.map(_._1)) // Input variables are all distinct
     assert(system.forall{case(_,diff,init) =>
       StaticSemantics.freeVars(init).isEmpty && // Init should be constant
-      StaticSemantics.freeVars(diff).subsetOf(SetLattice(system.map(_._1))) // Diff should be free only in input variables
+      StaticSemantics.freeVars(diff).subsetOf(SetLattice(system.map(_._1))) // ODEs should be free only in input variables
     })
 
     val forwardODE = ODESystem((

@@ -17,14 +17,14 @@ object InterpretedSymbols {
   val absF: Function = Function("abs", None, Real, Real,
     interp = Some(Parser.parser.formulaParser("(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)")))
 
-  val expF: Function = ODEToInterpreted.fromProgram(Parser.parser.programParser("{exp:=1;}; {exp'=exp}")).head
+  val expF: Function = ODEToInterpreted.fromProgram(Parser.parser.programParser("{exp:=1;}; {exp'=exp}"), Variable("t")).head
 
   // Define E as exp(1)
   val E: Function = Function("e",None,Unit,Real,interp = Some(Equal(DotTerm(idx=Some(0)),FuncOf(expF,Number(1)))))
 
   val (sinF, cosF) = {
     val fns = ODEToInterpreted.fromProgram(
-      Parser.parser.programParser("{sin:=0;cos:=1;}; {sin'=cos, cos'=-sin}"))
+      Parser.parser.programParser("{sin:=0;cos:=1;}; {sin'=cos, cos'=-sin}"), Variable("t"))
     (fns(0), fns(1))
   }
 
