@@ -962,7 +962,7 @@ object ImplicitAx {
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
   @Tactic(names="diffUnfold",
     codeName="diffUnfold",
-    premises="v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=-1 & v0<=v]P(v)",
+    premises="Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=-1 & v0<=v]P(v)",
     conclusion="Γ |- P(v0), Δ",
     displayLevel="browse")
   def diffUnfold(v0:Term, t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
