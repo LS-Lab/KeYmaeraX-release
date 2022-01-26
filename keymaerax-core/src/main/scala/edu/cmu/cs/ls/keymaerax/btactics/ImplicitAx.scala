@@ -91,8 +91,7 @@ object ImplicitAx {
         }
         catch {
           case e:IllegalArgumentException => {
-            //println(e.getMessage)
-            None
+            throw new IllegalArgumentException("Unable to derive diff axiom for: "+f)
           }
         }
       }
@@ -152,8 +151,7 @@ object ImplicitAx {
         }
         catch {
           case e:IllegalArgumentException => {
-            // println(e.getMessage)
-            None
+            throw new IllegalArgumentException("Unable to derive init axiom for: "+f)
           }
         }
       }
@@ -213,8 +211,7 @@ object ImplicitAx {
         }
         catch {
           case e:IllegalArgumentException => {
-            // println(e.getMessage)
-            None
+            throw new IllegalArgumentException("Unable to derive def axiom for: "+f)
           }
         }
       }
@@ -958,14 +955,12 @@ object ImplicitAx {
     )
 
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
-  // todo: decide what to pass as arguments
-
-  @Tactic(names="propDiffUnfold",
-    codeName="propDiffUnfold",
+  @Tactic(names="diffUnfold",
+    codeName="diffUnfold",
     premises="Γ |- P(t0), Δ ;; Γ, v=t0 |- [v'=1]P(v), Δ ;; Γ, v=t0 |- [v'=-1]P(v), Δ",
     conclusion="Γ |- P(v), Δ",
     displayLevel="browse")
-  def propDiffUnfold(v:Term, t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
+  def diffUnfold(v:Term, t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
 
     val fml = seq.sub(pos) match {
@@ -1081,7 +1076,8 @@ object ImplicitAx {
           generalized(Equal(y,tvar))(1) <(
             //todo: could make an entry point here for users
             ODELiveness.odeReduce(strict=true,Nil)(1) &
-              (hideL(-1) * (m.length)) & by(tEx1),
+              (hideL(-1) * (m.length)) &
+              byUS(tEx1),
             QE
           )
           ,
@@ -1091,12 +1087,14 @@ object ImplicitAx {
           generalized(Equal(y,tvar))(1) <(
             //todo: could make an entry point here for users
             ODELiveness.odeReduce(strict=true,Nil)(1) &
-              (hideL(-1) * (m.length))& by(tEx2),
+              (hideL(-1) * (m.length))&
+              byUS(tEx2),
             QE
           )
         )
       )
     )
+
     val pr2 = proveBy(Exists(x::Nil, subst(interp)), byUS(pr)).underlyingProvable
     ElidingProvable(Provable.implicitFunc(f,pr2))
   }
