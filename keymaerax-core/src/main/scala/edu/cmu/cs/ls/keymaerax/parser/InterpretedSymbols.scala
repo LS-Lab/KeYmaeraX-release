@@ -37,8 +37,8 @@ object InterpretedSymbols {
          ))
     ))))
 
-  /** The interpreted function symbols. */
-  val symbols: List[Function] = List(
+  /** The builtin interpreted function symbols. */
+  val builtin: List[Function] = List(
     absF,
     minF,
     maxF,
@@ -48,5 +48,5 @@ object InterpretedSymbols {
   ) ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
 
   /** The interpreted symbols by name. */
-  val byName: Map[(String, Option[Int]),Function] = symbols.map(f => (f.name, f.index) -> f).toMap
+  val byName: Map[(String, Option[Int]),Function] = builtin.map(f => (f.name, f.index) -> f).toMap
 }

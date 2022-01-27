@@ -356,7 +356,7 @@ object ArchiveParser extends ArchiveParser {
       map({ case (n, (symbols, loc)) => n ->
         (symbols.
           filter(s => !elaboratedDefs.decls.contains(Name(s.name, s.index))).
-          filterNot(InterpretedSymbols.symbols.contains).
+          filterNot(InterpretedSymbols.builtin.contains).
           filterNot(TacticReservedSymbols.symbols.contains), loc) }).
       filter({ case (_, (s, _)) => s.nonEmpty })
     if (undeclaredUses.nonEmpty) {

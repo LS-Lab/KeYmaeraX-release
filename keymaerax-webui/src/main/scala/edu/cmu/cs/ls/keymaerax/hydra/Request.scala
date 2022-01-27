@@ -3049,7 +3049,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
     val model = db.getModel(tree.info.modelId.get)
 
     def getLemmas(tactic: String): List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = {
-      val lemmaFinder = """useLemma\(\"([^\"]*)\"""".r
+      val lemmaFinder = """useLemma\("([^"]*)"""".r
       val lemmaNames = lemmaFinder.findAllMatchIn(tactic).map(m => m.group(1))
       val lemmaModels = lemmaNames.map(n => n -> db.getModelList(userId).find(n == _.name))
       val lemmas = lemmaModels.map(m => m._1 -> (m._2 match {
@@ -3263,7 +3263,10 @@ object RequestHelper {
       })
       case _ => false
     })
-    val undefinedSymbols = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns -- InterpretedSymbols.symbols
+    val undefinedSymbols = symbols.filter({
+      case Function(_, _, _, _, Some(_)) => false
+      case _ => true
+    }).filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
     val nodeFml = node.children.flatMap(_.localProvable.subgoals.map(_.toFormula)).reduceRightOption(And).getOrElse(True)
     val collectedArgs = ArchiveParser.declarationsOf(nodeFml, Some(undefinedSymbols))
 
