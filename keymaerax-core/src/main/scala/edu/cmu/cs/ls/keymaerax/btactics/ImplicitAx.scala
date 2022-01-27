@@ -988,6 +988,41 @@ object ImplicitAx {
       )
   }}
 
+  lazy val existsFwdBack : Lemma =
+    remember("<{v_'=1}>P(v_) | <{v_'=-1}>P(v_) -> \\exists x_ P(x_)".asFormula,
+      implyR(1) & useAt(Ax.choiced,PosInExpr(1::Nil))(-1) &
+        diamondd(-1) & notL(-1) & abstractionb(2) &
+        allR(2) & existsR("v_".asTerm)(1) & prop,
+      namespace
+    )
+
+  // Diamond version of diffUnfold for existentials
+  @Tactic(names="diffUnfoldD",
+    codeName="diffUnfoldD",
+    premises="Γ, v=t0 |- <v'=1>P(v) ∨ <v'=-1> P(v), Δ ",
+    conclusion="Γ |- ∃v P(v), Δ",
+    displayLevel="browse")
+  def diffUnfoldD(t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
+    require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")
+
+    val (v,fml) = seq.sub(pos) match {
+      case Some(Exists(v::Nil,e)) => (v,e)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+      case _ =>  throw new IllFormedTacticApplicationException("Position " + pos + " must point to an existential formula but got: " + seq.prettyString)
+    }
+
+    // Convenience rename if we happen to find a variable
+    val targetVar =  TacticHelper.freshNamedSymbol("v".asVariable, seq)
+
+    val expAx = existsFwdBack.fact(URename(targetVar, Variable("v_")))
+
+    cutR(Exists(targetVar::Nil,Equal(targetVar,t0)))(pos) <(
+      cohideR('Rlast) & existsR(t0)(1) & byUS(Ax.equalReflexive),
+      implyR(pos) & existsL('Llast) & useAt(expAx,PosInExpr(1::Nil))(pos)
+    )
+
+  }}
+
   // Hack version of generalize to work for diamond
   private def generalized(f : Formula) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "differential equation unfolding only at top-level succedent")

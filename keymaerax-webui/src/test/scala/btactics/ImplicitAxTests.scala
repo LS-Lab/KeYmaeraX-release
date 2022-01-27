@@ -507,4 +507,18 @@ class ImplicitAxTests extends TacticTestBase {
     ), entry.defs) shouldBe 'proved
   }
 
+  it should "diff unfold D existentials" in withMathematica { _ =>
+    
+    val pr = proveBy("k > 0 -> \\exists x ( x >= l & exp(-x) < k )".asFormula,
+      implyR(1) &
+      diffUnfoldD("l".asTerm)(1) & orR(1) & hideR(2) &
+      ODELiveness.kDomainDiamond("exp(-v) < k".asFormula)(1) <(
+        ODELiveness.dV("k".asTerm)(1),
+        ODE(1)
+      )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
 }
