@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, InterpretedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 class ImplicitAxTests extends TacticTestBase {
@@ -490,6 +490,21 @@ class ImplicitAxTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+  }
+
+  it should "expand abbreviations of interpreted symbols in ODE" in withMathematica { _ =>
+    val entry = ArchiveParser(
+      """ArchiveEntry "exp"
+        |Definitions implicit Real e(Real t) '= {{e:=1;t:=2;}; {e'=-e,t'=1}}; End.
+        |ProgramVariables Real x; End.
+        |Problem e(x) > 0 End.
+        |End.
+        |""".stripMargin).head
+    proveBy(entry.sequent, ImplicitAx.diffUnfold(Variable("x"), Number(2))(1) <(
+      QE,
+      ODE(1),
+      ODE(1)
+    ), entry.defs) shouldBe 'proved
   }
 
 }

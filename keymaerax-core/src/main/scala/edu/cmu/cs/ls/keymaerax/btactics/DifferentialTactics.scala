@@ -1192,7 +1192,7 @@ private object DifferentialTactics extends Logging {
     }
   })
 
-  lazy val mathematicaODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+  lazy val mathematicaODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent, defs: Declaration) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     def odeWithInvgen(sys: ODESystem, generator: Generator[GenProduct],
@@ -1219,7 +1219,7 @@ private object DifferentialTactics extends Logging {
         })(pos ++ PosInExpr(0 :: Nil))
     )
 
-    seq.sub(pos) match {
+    val ode = seq.sub(pos) match {
       case Some(b@Box(sys@ODESystem(_, q), _)) =>
         if (StaticSemantics.symbols(q).exists(_.name == ODEInvariance.nilpotentSolveTimeVar.name)) {
           diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
@@ -1251,6 +1251,11 @@ private object DifferentialTactics extends Logging {
       case Some(e) => throw new TacticInapplicableFailure("ODE automation only applicable to box ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
+
+    // expand abbreviations of interpreted symbols
+    val interpreted = defs.substs.filter(_.repl match { case FuncOf(Function(_, _, _, _, Some(_)), _) => true case _ => false })
+    if (interpreted.nonEmpty) ExpandAll(interpreted) & ode
+    else ode
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
