@@ -408,29 +408,29 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
             val (term: Either[Option[Program], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.programTokenParser)
             val prog: Program = term match {
               case Left(Some(prog)) => prog
-              case _ => throw ParseException("Expected a program of the form {initial condition}; {differentials}", st, Nil)
+              case _ => throw ParseException("Expected a program of the form {initial condition}; {differential equations} for implicit definition.", st, Nil)
             }
 
             val sigs = (next :: fns).reverse
 
             sigs.foreach(s =>
               if (InterpretedSymbols.byName.contains((s.name, s.index)))
-                throw ParseException("Re-definition of interpreted symbol " + s.name + " not allowed; please use a different name for your definition.",
-                  s.loc.spanTo(endLoc), s.name, "A name != " + s.name)
+                throw ParseException("Re-definition of builtin interpreted symbol " + s.name + " not allowed; please use a different name for your definition.",
+                  s.loc.spanTo(endLoc), s.name, "name != " + s.name)
             )
 
             if (sigs.exists(_.signature.size != 1))
-              throw ParseException("Implicit ODE declarations must be functions of one variable.")
+              throw ParseException("Implicit ODE declarations must be functions of one variable.",st , Nil)
 
             val t = next.signature.head
 
             if (sigs.exists(_.signature.head != t))
-              throw ParseException("Implicit ODE declarations must be functions of one variable.")
+              throw ParseException("Implicit ODE declarations must be functions of one variable.",st , Nil)
 
             val nameSet = sigs.map(s => Name(s.name, s.index)).toSet
 
             if (nameSet.size != sigs.size)
-              throw ParseException("Tried declaring same function twice in an implicit ODE definition")
+              throw ParseException("Tried declaring same function twice in an implicit ODE definition",st , Nil)
 
             val interpFuncs = try {
               ODEToInterpreted.fromProgram(prog,Variable(t.name,t.index))

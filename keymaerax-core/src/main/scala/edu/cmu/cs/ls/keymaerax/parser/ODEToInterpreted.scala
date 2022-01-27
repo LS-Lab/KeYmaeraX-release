@@ -14,28 +14,42 @@ object ODEToInterpreted {
    *      {e:=1;} {e'=e}
    * into the form needed for `convert` (used by the parser).
    */
-  def fromProgram(system: Program, t: Variable = Variable("t_")): Seq[Function] =
+  def fromProgram(system: Program, t: Variable): Seq[Function] =
     system match {
       case Compose(assgns, ODESystem(ode, True)) =>
         def unfoldAssgns(x: Program): Map[Variable, Term] = x match {
           case Assign(v,e) => Map(v -> e)
           case Compose(l,r) => unfoldAssgns(l) ++ unfoldAssgns(r)
-          case _ => throw FromProgramException("Left side of compose not made of assignments!")
+          case _ => throw FromProgramException("Unable to unfold initial conditions to a list of assignments.")
         }
+
         def unfoldODE(x: DifferentialProgram): Map[Variable, Term] = x match {
           case AtomicODE(DifferentialSymbol(v),e) => Map(v -> e)
           case DifferentialProduct(l,r) => unfoldODE(l) ++ unfoldODE(r)
+          case _ => throw FromProgramException("Unable to unfold ODEs to a list of atomic ODEs.")
         }
+
         val assgnMap = unfoldAssgns(assgns)
         val odeMap = unfoldODE(ode)
 
-        val t0 = assgnMap.getOrElse(t, Number(0))
+        if(assgnMap.contains(t) != odeMap.contains(t))
+          throw FromProgramException("ODE and initial condition for "+t+" must be both given explicitly or both omitted.")
 
-        if (odeMap.contains(t) && odeMap(t) != Number(1)) {
-          throw FromProgramException("Time differentially explicitly given, yet is not 1.")
+        // Time ODE defaults to initial time 0
+        val t0 = assgnMap.get(t) match{
+          case None => {
+            if(odeMap.values.exists( e => StaticSemantics.freeVars(e).contains(t)))
+              throw FromProgramException("Time-dependent ODEs must have time variables explicit in initial condition and ODEs.")
+            Number(0)
+          }
+          case Some(tt) =>
+            if (odeMap(t) != Number(1)) {
+              throw FromProgramException("Time ODE must have RHS 1.")
+            }
+            tt
         }
 
-        fromSystem(assgnMap.toIndexedSeq.map { case (v, init) =>
+        fromSystem((assgnMap.-(t)).toIndexedSeq.map { case (v, init) =>
           (v, odeMap(v), init)
         }, t, t0)
 
@@ -64,30 +78,32 @@ object ODEToInterpreted {
    * @return List of implicitly defined functions by the system of ODEs from the given initial time
    */
   def fromSystem(system: Seq[(Variable, Term, Term)], tVar: Variable, t0: Term): Seq[Function] = {
-    assert(system.nonEmpty)
-    assert(system.map(_._1).distinct == system.map(_._1)) // Input variables are all distinct
-    assert(system.forall{case(_,diff,init) =>
+    require(system.nonEmpty, "Must define at least one function.")
+
+    val syst = system :+ (tVar, Number(1), t0)
+
+    val vars = syst.map(_._1)
+    require(vars.toSet.size == vars.size, "Function names must be distinct.")
+
+    require(syst.forall{case(_,diff,init) =>
       StaticSemantics.freeVars(init).isEmpty && // Init should be constant
-      StaticSemantics.freeVars(diff).subsetOf(SetLattice(system.map(_._1))) // Diff should be free only in input variables
-    })
+      StaticSemantics.freeVars(diff).subsetOf(SetLattice(syst.map(_._1))) // ODEs should be free only in input variables
+    }, "Initial condition must not mention free variables and ODEs must not mention additional free variables.")
 
-    val forwardODE = ODESystem((
+    val forwardODE = ODESystem(
       // ODE variable differentials
-      system.map{case(v, diff, _) =>
+      syst.map{case(v, diff, _) =>
         AtomicODE(DifferentialSymbol(v),diff)
-      } :+ // Time variable diff
-        AtomicODE(DifferentialSymbol(tVar),Number(1))
-      ).reduce[DifferentialProgram](DifferentialProduct(_,_)))
+      }
+      .reduce[DifferentialProgram](DifferentialProduct(_,_)))
 
-    val backwardODE = ODESystem((
+    val backwardODE = ODESystem(
       // ODE variable diffs
-      system.map{case(v, diff, _) =>
+      syst.map{case(v, diff, _) =>
         AtomicODE(DifferentialSymbol(v),Neg(diff))
-      } :+ // Time variable diff
-        AtomicODE(DifferentialSymbol(tVar),Neg(Number(1)))
-      ).reduce[DifferentialProgram](DifferentialProduct(_,_)))
+      }.reduce[DifferentialProgram](DifferentialProduct(_,_)))
 
-    val goal = (system.map{case(v,_,i) => Equal(v, i)}:+Equal(tVar,t0)).reduceRight(And)
+    val goal = syst.map{case(v,_,i) => Equal(v, i)}.reduceRight(And)
 
     system.map{case(v,_,_) =>
       val otherVars = system.map(_._1).filter(_ != v)

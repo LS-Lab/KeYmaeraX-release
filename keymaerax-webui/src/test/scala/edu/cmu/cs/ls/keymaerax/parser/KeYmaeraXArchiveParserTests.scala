@@ -173,7 +173,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse implicit ODE function definition" in {
+  "implicit definitions" should "parse implicit ODE function definition" in {
     val (sin1, cos1) = {
       val fns = ODEToInterpreted.fromProgram(
         Parser.parser.programParser("{{sin1:=0;cos1:=1;t:=0;}; {t'=1, sin1'=cos1, cos1'=-sin1}}"), "t".asVariable)
@@ -192,9 +192,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |ArchiveEntry "Entry 1"
         | Definitions
         |   implicit Real sin1(Real t), cos1(Real t) '=
-        |     {{sin1:=0; cos1:=1; t:=0;}; {t'=1, sin1'=cos1, cos1'=-sin1}};
+        |     {{sin1:=0; t:=0; cos1:=1;}; {t'=1, sin1'=cos1, cos1'=-sin1}};
         |   implicit Real tanh(Real x) '=
-        |     {{tanh:=0; x:=0;}; {tanh'=1-tanh^2,x'=1}};
+        |     {{tanh:=0;}; {tanh'=1-tanh^2}};
         | End.
         | ProgramVariables Real y; End.
         | Problem (sin1(y))^2 + (cos1(y))^2 = 1 End.
@@ -214,6 +214,52 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
+  }
+
+  it should "disallow redefinition of builtins" in {
+
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   implicit Real exp(Real t) '=
+        |     {{exp:=1;}; {exp'=exp}};
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp(y) > 0 End.
+        |End.
+      """.stripMargin
+    assertThrows[ParseException](parse(input))
+  }
+
+  it should "allow explicit initial times" in {
+
+    val exp1 = {
+      val fns = ODEToInterpreted.fromProgram(
+        Parser.parser.programParser("{{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}}"), "s".asVariable)
+      fns(0)
+    }
+
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   implicit Real exp1(Real s) '=
+        |     {{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}};
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp1(y) > 0 End.
+        |End.
+      """.stripMargin
+
+    val entry = parse(input).loneElement
+    println(entry.defs)
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("exp1",None) ->
+          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=(-2)) >>(.)".asTerm), UnknownLocation),
+        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+      )))
   }
 
   it should "fail to parse implicit function multi-variate definitions" in {
