@@ -982,7 +982,7 @@ object ImplicitAx {
       allR(pos) & implyR(pos) &
       // Makes subsequent ODE proofs easier by proving the postcondition already true initially
       cutR(fml.replaceFree(v0, targetVar))(pos) < (
-        exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
+        label(BelleLabels.initCase) & exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
         implyR(pos) &
           choiceb(pos) & andR(pos)
       )
