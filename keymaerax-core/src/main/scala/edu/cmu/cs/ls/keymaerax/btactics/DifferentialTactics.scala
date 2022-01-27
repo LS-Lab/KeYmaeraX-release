@@ -1958,6 +1958,18 @@ private object DifferentialTactics extends Logging {
     result
   }
 
+  /** Flattens a formula to a list of its top-level conjunctions */
+  def flattenDisjunctions(f: Formula): List[Formula] = {
+    var result: List[Formula] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+        case Or(l, r) => result = result ++ flattenDisjunctions(l) ++ flattenDisjunctions(r); Left(Some(ExpressionTraversal.stop))
+        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+      }
+    }, f)
+    result
+  }
+
   // TODO: these Lemmas are just the symmetric versions of some DerivedAxioms.
   // Using PosInExpr(1::Nil) as key in chaseCustom does not seem to work.
   private lazy val minPosAnd = remember("min(f_(), g_())>0<->f_()>0 & g_()>0".asFormula, QE & done)

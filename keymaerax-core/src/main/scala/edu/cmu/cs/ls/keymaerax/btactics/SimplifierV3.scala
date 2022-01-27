@@ -1169,6 +1169,7 @@ object SimplifierV3 {
   private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
   private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
   private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() > 0 | g_() - f_() > 0 ".asFormula,QE,namespace).fact
+  private lazy val neqNorm2: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0".asFormula,QE,namespace).fact
 
   // Additional formulas for specialized normalizers
   private lazy val trueGeqNorm:ProvableSig = remember("true<->1>=0".asFormula,QE,namespace).fact
@@ -1215,6 +1216,16 @@ object SimplifierV3 {
       case True => List(trueEqNorm)
       case False => List(falseEqNorm)
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
+    }
+  }
+  // Recursively normalize =s and !=s
+  private def disAlgNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match {
+      case Equal(l,r) => if (r == Number(0)) List() else List(eqNorm)
+      case NotEqual(l,r) => List(neqNorm2)
+      case And(l,r) =>  Nil
+      case Or(l,r) =>  Nil
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of =s or !=s comparisons)")
     }
   }
 
@@ -1291,6 +1302,7 @@ object SimplifierV3 {
   val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
   val algNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(algNormalizeIndex)(_)
   val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
+  val disAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(disAlgNormalizeIndex)(_)
   val semiAlgNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex, checkTerms= false)(_)
   val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
   val maxMinGeqNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex, checkTerms= false)(_)

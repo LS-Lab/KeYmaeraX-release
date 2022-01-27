@@ -988,7 +988,6 @@ object ODEInvariance {
                 //useAt(pr,PosInExpr(1::Nil))(pos) &
                 // DebuggingTactics.debug("First Vdbx QE",true) &
                 // p=0 must be true initially
-
                 QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
                 ,
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
@@ -1082,6 +1081,42 @@ object ODEInvariance {
       dgVdbx(cofactors,groebner)(pos) &
       DebuggingTactics.debug("Final QE",debugTactic) &
       cohideR(pos) & DW(1) & G(1) & QE
+  })
+
+  // todo: this needs a better tactic interface
+  @Tactic(names="Vectorial Darboux (auto)",
+    premises="Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
+    conclusion="Γ |- [x'=f(x) & Q}]p!=0, Δ",
+    displayLevel="browse")
+  val dgVdbxAuto : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("dgVdbxAuto: position " + pos + " must point to a top-level succedent position")
+
+    val (sys, post) = seq.sub(pos) match {
+      case Some(Box(sys: ODESystem, post)) => (sys, post)
+      case Some(e) => throw new TacticInapplicableFailure("dgVdbxAuto only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val (f2, _) = try {
+      disAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to (dis)equational set", ex)
+    }
+
+    val (polys,negate) = {
+      val conjs = flattenConjunctions(f2)
+      val disjs = flattenDisjunctions(f2)
+      if(conjs.forall(f => f.isInstanceOf[Equal]))
+        (conjs.map(_.asInstanceOf[Equal].left),false)
+      else
+      if(disjs.forall(f => f.isInstanceOf[NotEqual]))
+        (disjs.map(_.asInstanceOf[NotEqual].left),true)
+      else throw new TacticInapplicableFailure("Unable to normalize postcondition")
+    }
+    val (r,groebner,cofactors) = rank(sys,polys)
+
+    dgVdbx(cofactors,groebner, negate)(pos)
   })
 
   private val cauchy_schwartz_lem = remember("b()>=0 & c()>=0 & a()*a() <= b()*c() -> (a()+u()*v())*(a()+u()*v()) <= (b()+u()*u())*(c()+v()*v())".asFormula,QE).fact
