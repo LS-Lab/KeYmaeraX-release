@@ -14,13 +14,15 @@ sealed trait DisplayInfo {
 /** Render as a UI name and a plain text ASCII name. */
 case class SimpleDisplayInfo(override val name: String, override val asciiName: String) extends DisplayInfo
 /** Render a rule with a name as a conclusion and list of premises. */
-case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay]) extends DisplayInfo {
+case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises: List[SequentDisplay],
+                           inputGenerator: String) extends DisplayInfo {
   override def name: String = names.name
   override def asciiName: String = names.asciiName
 }
 /** Render a tactic either top-level as rule with a name as a conclusion and list of premises, or in context with a different conclusion and list of premises. */
-case class TacticDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay],
-                           ctxConclusion: SequentDisplay, ctxPremises:List[SequentDisplay]) extends DisplayInfo {
+case class TacticDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises: List[SequentDisplay],
+                             ctxConclusion: SequentDisplay, ctxPremises: List[SequentDisplay],
+                             inputGenerator: String) extends DisplayInfo {
   override def name: String = names.name
   override def asciiName: String = names.asciiName
 }

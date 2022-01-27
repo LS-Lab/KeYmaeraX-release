@@ -88,8 +88,8 @@ class RuleImpl (val c: whitebox.Context) {
       val premises = parseSequents(premisesString)(c)
       val conclusionOpt = if(conclusionString == "") None else Some(parseSequent(conclusionString)(c))
       val displayInfo = (simpleDisplay, premises, conclusionOpt) match {
-        case (sd, Nil, None) => simpleDisplay
-        case (sd, p, Some(c)) => RuleDisplayInfo(sd, c, p)
+        case (_, Nil, None) => simpleDisplay
+        case (sd, p, Some(c)) => RuleDisplayInfo(sd, c, p, "")
         case _ => c.abort(c.enclosingPosition, "Expected both premises and conclusion")
       }
       val longDisplayName = paramMap("longDisplayName")  match {
