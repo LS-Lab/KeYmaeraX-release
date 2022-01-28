@@ -191,6 +191,23 @@ class ImplicitAxTests extends TacticTestBase {
     axs(1)._2.conclusion shouldBe "==>  (cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|t_|)))'=(-sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|t_|)))*(g(|t_|))'".asSequent
   }
 
+  it should "derive differential axiom from single reorder" in withMathematica { _ =>
+
+    val sin = InterpretedSymbols.sinF
+    val cos = InterpretedSymbols.cosF
+    val axs = deriveDiffAxiomSing(cos)
+
+    println(axs)
+
+    axs.length shouldBe 2
+    axs(0)._1 shouldBe sin
+    axs(1)._1 shouldBe cos
+    axs(0)._2 shouldBe 'proved
+    axs(1)._2 shouldBe 'proved
+    axs(0)._2.conclusion shouldBe "==>  (sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|t_|)))'=cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|t_|))*(g(|t_|))'".asSequent
+    axs(1)._2.conclusion shouldBe "==>  (cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|t_|)))'=(-sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|t_|)))*(g(|t_|))'".asSequent
+  }
+
   "init" should "derive initial condition" in withMathematica { _ =>
 
     val exp = InterpretedSymbols.expF
