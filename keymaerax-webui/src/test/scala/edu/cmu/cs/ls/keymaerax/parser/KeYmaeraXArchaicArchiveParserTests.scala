@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, Find, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Program, Real, SubstitutionPair, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, FuncOf, GreaterEqual, Number, Program, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
@@ -194,8 +194,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     the [ParseException] thrownBy parse(input) should have message
       """3:3 Lexer 3:3 Lexer does not recognize input at 3:3 to EOF$ in `
         |@todo An unclosed comment
-        |Problem x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0 End.
-        |End.
+        |Problem x>=2 -> [{x:=x+1
         |` beginning with character `@`=64
         |Found:    @... at 3:3 to EOF$
         |Expected: <unknown>""".stripMargin
@@ -2419,6 +2418,15 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     the [ParseException] thrownBy parse(input) should have message ""
   }
 
+  it should "not complain about undeclared builtin interpreted functions" in {
+    parse(
+      """ArchiveEntry "Builtin interpreted"
+        |ProgramVariables Real x; End.
+        |Problem exp(x)>=0 End.
+        |End.
+        |""".stripMargin).loneElement.model shouldBe GreaterEqual(FuncOf(InterpretedSymbols.expF, Variable("x")), Number(0))
+  }
+
   "Archive parser error message" should "report an invalid meta info key" in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
@@ -2558,6 +2566,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     ) should have message """3:2 Unexpected definition
                             |Found:    Problem at 3:2 to 3:8
                             |Expected: End
+                            |      or: implicit
                             |      or: Real
                             |      or: Bool
                             |      or: HP""".stripMargin
@@ -2648,6 +2657,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     ) should have message """2:31 Unexpected definition
                             |Found:    <EOF> at 2:31 to EOF$
                             |Expected: End
+                            |      or: implicit
                             |      or: Real
                             |      or: Bool
                             |      or: HP""".stripMargin
