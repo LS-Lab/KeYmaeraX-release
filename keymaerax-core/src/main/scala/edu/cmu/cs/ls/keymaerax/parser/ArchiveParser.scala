@@ -301,9 +301,15 @@ object ArchiveParser extends ArchiveParser {
 
   private[parser] object BuiltinDefinitions {
     val defs: Declaration =
-      Declaration(Map(Name("abs", None) -> Signature(Some(Real), Real, Some(List((Name("\\cdot", None), Real))), None, UnknownLocation))) ++
-      Declaration(Map(Name("min", None) -> Signature(Some(Tuple(Real, Real)), Real, Some(List((Name("\\cdot", Some(0)), Real), (Name("\\cdot", Some(1)), Real))), None, UnknownLocation))) ++
-      Declaration(Map(Name("max", None) -> Signature(Some(Tuple(Real, Real)), Real, Some(List((Name("\\cdot", Some(0)), Real), (Name("\\cdot", Some(1)), Real))), None, UnknownLocation)))
+      InterpretedSymbols.builtin.map( f => {
+        require(f.interpreted, "InterpretedSymbols should be interpreted but got: "+f)
+        val dots = (1 to f.realDomainDim.get).map(i => (Name("\\cdot", Some(i)), Real : Sort)).toList
+
+        Declaration(
+          Map(Name(f.name, None) -> Signature(Some(f.domain), f.sort, Some(dots), f.interp, UnknownLocation))
+        )
+      }
+      ).reduce(_ ++ _)
   }
 
   private[parser] object BuiltinAnnotationDefinitions {
