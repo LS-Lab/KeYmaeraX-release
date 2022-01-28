@@ -156,10 +156,9 @@ object KeYmaeraXArchivePrinter {
     val defs = decl.decls.filter(_._2.domain.isDefined)
 
     val printedDecls = symbols.filter(s => !defs.keySet.contains(Name(s.name, s.index))).map({
-      case Function(name, idx, domain, sort, _) =>
-        if (!decl.decls.contains(Name(name, idx)) && !InterpretedSymbols.byName.contains((name, idx))) {
-          s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
-        } else ""
+      case Function(name, idx, domain, sort, None) =>
+        if (!decl.decls.contains(Name(name, idx))) s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
+        else ""
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 
