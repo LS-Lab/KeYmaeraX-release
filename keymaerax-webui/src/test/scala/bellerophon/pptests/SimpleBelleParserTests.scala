@@ -1014,4 +1014,23 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   //endregion
+
+  //region interpreted functions
+
+  "Interpreted function" should "be parsed as arguments in cuts" in {
+    "cut(\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")".asTactic should (
+      be (cut("exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1".asFormula))
+        and (print as "cut(\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")")
+        and (reparse fromPrint))
+  }
+
+  it should "be parsed in position locators" in {
+    "hideR('R==\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")".asTactic should (
+      be (hideR(Find.FindRPlain("exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1".asFormula)))
+        and (print as "hideR('R==\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")")
+        and (reparse fromPrint)
+    )
+  }
+
+  //endregion
 }
