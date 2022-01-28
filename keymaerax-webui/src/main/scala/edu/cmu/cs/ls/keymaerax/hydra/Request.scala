@@ -2313,7 +2313,8 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
     sortMismatch match {
       case None =>
-        val symbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols + Function("old", None, Real, Real)
+        val allowedSymbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols ++
+          InterpretedSymbols.symbols ++ TacticReservedSymbols.symbols
         val paramFV: Set[NamedSymbol] = {
           //@note function/predicate/system/game symbols are proof parameters if they are not declared in the input
           elaborated.flatMap({
@@ -2327,11 +2328,11 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
         val (hintFresh, allowedFresh) = arg match {
           case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
-          case _ => (paramFV -- symbols, arg.allowsFresh) //@todo would need other inputs to check
+          case _ => (paramFV -- allowedSymbols, arg.allowsFresh) //@todo would need other inputs to check
         }
 
         if (hintFresh.size > allowedFresh.size) {
-          val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
+          val fnVarMismatch = hintFresh.map(fn => fn -> allowedSymbols.find(s => s.name == fn.name && s.index == fn.index)).
             filter(_._2.isDefined)
           if (fnVarMismatch.isEmpty) {
             BooleanResponse(flag = false, Some("argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
