@@ -608,7 +608,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
       val preservedSubstResult = goal match {
         case p: BelleDelayedSubstProvable => result match {
           case fp: BelleDelayedSubstProvable =>
-            assert(p.parent.isEmpty || exhaustiveSubst(p.parent.get._1, p.subst ++ fp.subst) == exhaustiveSubst(fp.parent.get._1, p.subst ++ fp.subst),
+            assert(p.parent.isEmpty || fp.parent.isEmpty || exhaustiveSubst(p.parent.get._1, p.subst ++ fp.subst) == exhaustiveSubst(fp.parent.get._1, p.subst ++ fp.subst),
               "Delayed substitution parents disagree")
             new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst ++ fp.subst, fp.parent)
           case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst, p.parent)

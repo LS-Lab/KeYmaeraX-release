@@ -4,8 +4,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, DifferentialEquationCalculus, Idioms, SimplifierV3, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Function, Real, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Function, Real, Tuple, USubst, Unit}
 import edu.cmu.cs.ls.keymaerax.hydra._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -2641,6 +2642,38 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     // it can't until constification is backsubstituted)
     interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
       case p: BelleDelayedSubstProvable => p.p.subgoals should contain theSameElementsInOrderAs List()
+    }
+  }}
+
+  it should "support interpreted functions in expandAllDefs" in withMathematica { _ => withDatabase { db =>
+    val entry = ArchiveParser(
+      """ArchiveEntry "Implicit interpreted function definition"
+        |Definitions
+        |implicit Real tanh(Real t) '= {{tanh:=0;}; {tanh'=1-tanh^2}}; Real tau; Real lambda;
+        |End.
+        |ProgramVariables Real x,y,old; End.
+        |Problem
+        |tau()>0 & t=0 & x^2+y^2=old & old>0
+        |  ->  [{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}]exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*old^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau()))-(x^2+y^2)^(1/2)>=0
+        |End.
+        |Tactic "Steps"
+        |unfold;
+        |dbx("(-1)/tau()", 1); /* causes a delayed substitution step, has a "delayed" parent */
+        |expandAllDefs         /* creates a child delayed substitution provable, does not have a "delayed" parent */
+        |End.
+        |End.
+        |""".stripMargin).head
+
+    val proofId = db.createProof(entry.fileContent)
+    val interpreter = registerInterpreter(
+      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs,
+        listener(db.db, constructGlobalProvable = false),
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    interpreter(entry.tactics.head._3, BelleProvable.withDefs(ProvableSig.startProof(entry.sequent), entry.defs)) match {
+      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe
+        """tau()>0, t=0, x^2+y^2=old(), old()>0
+          |  ==>  \forall t \forall x \forall y (true&x^2+y^2>0->exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*(-((1*tau()-t*0)/tau()^2))*old()^(1/2)+2*tau()*(0-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*(-((1*tau()-t*0)/tau()^2)))-1/2*(x^2+y^2)^(1/2-1)*(2*x^(2-1)*(-x/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)-tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y))+2*y^(2-1)*(-y/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y)))>=(-1)/tau()*(exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*old()^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau()))-(x^2+y^2)^(1/2)))
+          |""".stripMargin.asSequent
     }
   }}
 }
