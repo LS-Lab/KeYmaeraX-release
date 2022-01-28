@@ -5,11 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettierPrinter, KeYmaeraXWeightedPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
+import org.typelevel.paiges.Doc
 
 /** Prints HTML tags and HTML operators. */
 trait HTMLPrinter {
@@ -73,6 +74,24 @@ trait HTMLPrinter {
   }
 }
 
+class UIAbbreviatingKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter {
+  protected override def pp(q: PosInExpr, term: Term): String = term match {
+    case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
+    case FuncOf(Function(n, i, _, _, Some(_)), arg) => emit(q, n + i.map("_" + _).getOrElse("") + "(" + pp(q++0, arg) + ")")
+    case FuncOf(f, Nothing) => emit(q, f.asString + "()")
+    case _ => super.pp(q, term)
+  }
+}
+
+class UIAbbreviatingKeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrettierPrinter(margin) {
+  override def docOf(term: Term): Doc = term match {
+    case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => Doc.text(n + i.map("_" + _).getOrElse("") + "()")
+    case FuncOf(Function(n, i, _, _, Some(_)), c: Pair)     => (Doc.text(n + i.map("_" + _).getOrElse("")) + Doc.lineBreak + docOf(c)).grouped
+    case FuncOf(Function(n, i, _, _, Some(_)), c)           => (Doc.text(n + i.map("_" + _).getOrElse("")) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
+    case _ => super.docOf(term)
+  }
+}
+
 object UIKeYmaeraXPrettyPrinter extends HTMLPrinter {
   /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */
   def apply(topId: String, plainText: Boolean): Expression=>String = new UIKeYmaeraXPrettyPrinter(topId, plainText)
@@ -82,7 +101,7 @@ object UIKeYmaeraXPrettyPrinter extends HTMLPrinter {
   * User-interface pretty printer for KeYmaera X syntax.
   * @author Andre Platzer
   */
-class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extends KeYmaeraXWeightedPrettyPrinter {
+class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extends UIAbbreviatingKeYmaeraXPrettyPrinter {
   import UIKeYmaeraXPrettyPrinter._
   private def htmlSpan(c: String, body: String): String = htmlElement("span", body, Some(c))
 
@@ -151,7 +170,6 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   }
 
   protected override def pp(q: PosInExpr, term: Term): String = term match {
-    case FuncOf(f, Nothing) => emit(q, f.asString + "()")
     case t: Power => emit(q, wrapLeft(t, pp(q++0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" +
       wrapRight(t, pp(q++1, t.right)) + s"$HTML_OPEN/sup$HTML_CLOSE")
     case _ => super.pp(q, term)

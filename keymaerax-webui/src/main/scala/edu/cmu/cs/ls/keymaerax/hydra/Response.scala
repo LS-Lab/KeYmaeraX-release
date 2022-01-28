@@ -600,6 +600,8 @@ object Helpers {
     override def print(next: String): String = next
   }
 
+  private val exprPrinter = new UIAbbreviatingKeYmaeraXPrettyPrinter
+
   def sequentJson(sequent: Sequent, marginLeft: Int, marginRight: Int): JsValue = {
     def fmlsJson(isAnte: Boolean, fmls: IndexedSeq[Formula]): JsValue = {
       JsArray(fmls.zipWithIndex.map { case (fml, i) =>
@@ -609,7 +611,7 @@ object Helpers {
         val idx = if (isAnte) (-i)-1 else i+1
         val fmlString = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=true)(fml))
 
-        val format = new KeYmaeraXPrettierPrinter(if (isAnte) marginLeft else marginRight)(fml)
+        val format = new UIAbbreviatingKeYmaeraXPrettierPrinter(if (isAnte) marginLeft else marginRight)(fml)
         val fmlJson = printJson(PosInExpr(), fml, HtmlPrettyPrintFormatProvider(format))(Position(idx), fml)
         JsObject(
           "id" -> JsString(idx.toString),
@@ -717,27 +719,27 @@ object Helpers {
 
     expr match {
       case f: ComparisonFormula =>
-        print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp))
-      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, expr.prettyString,
-        print("(", fp) :: print(g.prettyString, fp) :: print(")", fp) :: op(expr, fp) :: Nil)
-      case f: Quantified => print(q, "formula", hasStep, isEditable, expr.prettyString,
-        op(f, fp) :: print(f.vars.map(_.prettyString).mkString(","), fp) :: Nil ++ wrapChild(f, printJson(q ++ 0, f.child, fp), fp))
-      case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString,
+        print(q, "formula", hasStep, isEditable, exprPrinter(expr), wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp))
+      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, exprPrinter(expr),
+        print("(", fp) :: print(exprPrinter(g), fp) :: print(")", fp) :: op(expr, fp) :: Nil)
+      case f: Quantified => print(q, "formula", hasStep, isEditable, exprPrinter(expr),
+        op(f, fp) :: print(f.vars.map(exprPrinter(_)).mkString(","), fp) :: Nil ++ wrapChild(f, printJson(q ++ 0, f.child, fp), fp))
+      case f: Box => print(q, "formula", hasStep, isEditable, exprPrinter(expr),
         print("[", fp, "mod-open")::printJson(q ++ 0, f.program, fp) :: print("]", fp, "mod-close") :: Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp))
-      case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString,
+      case f: Diamond => print(q, "formula", hasStep, isEditable, exprPrinter(expr),
         print("<", fp, "mod-open") :: printJson(q ++ 0, f.program, fp) :: print(">", fp, "mod-close") :: Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp))
-      case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString,
+      case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, exprPrinter(expr),
         op(f, fp) +: wrapChild(f, printJson(q ++ 0, f.child, fp), fp))
-      case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString, fp) :: Nil)
-      case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString,
+      case _: AtomicFormula => print(q, "formula", hasStep, isEditable, exprPrinter(expr), print(exprPrinter(expr), fp) :: Nil)
+      case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, exprPrinter(expr),
         wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp))
-      case p: Program => print(q, "program", hasStep=false, isEditable=false, expr.prettyString, printPrgJson(q, p, fp))
-      case d: Differential => print(q, expr.prettyString, "term", fp)
-      case t@Neg(Number(_)) => print(q, "term", hasStep, isEditable, expr.prettyString, op(t, fp) +: (print("(", fp)::printJson(q ++ 0, t.child, fp)::print(")", fp)::Nil))
-      case t: UnaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString, op(t, fp) +: wrapChild(t, printJson(q ++ 0, t.child, fp), fp))
-      case t: BinaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString,
+      case p: Program => print(q, "program", hasStep=false, isEditable=false, exprPrinter(expr), printPrgJson(q, p, fp))
+      case _: Differential => print(q, exprPrinter(expr), "term", fp)
+      case t@Neg(Number(_)) => print(q, "term", hasStep, isEditable, exprPrinter(expr), op(t, fp) +: (print("(", fp)::printJson(q ++ 0, t.child, fp)::print(")", fp)::Nil))
+      case t: UnaryCompositeTerm => print(q, "term", hasStep, isEditable, exprPrinter(expr), op(t, fp) +: wrapChild(t, printJson(q ++ 0, t.child, fp), fp))
+      case t: BinaryCompositeTerm => print(q, "term", hasStep, isEditable, exprPrinter(expr),
         wrapLeft(t, printJson(q ++ 0, t.left, fp), fp) ++ (op(t, fp)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right, fp), fp))
-      case _ => print(q, expr.prettyString, "term", fp)
+      case _ => print(q, exprPrinter(expr), "term", fp)
     }
   }
 
@@ -752,7 +754,7 @@ object Helpers {
     case ODESystem(ode, f) if f == True => print("{", fp, "prg-open")::printJson(q ++ 0, ode, fp)::print("}", fp, "prg-close")::Nil
     case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp, "topop")::printJson(q ++ 1, e, fp)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp, "topop")::printJson(q ++ 1, t.right, fp)::Nil
-    case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
+    case c: DifferentialProgramConst => print(exprPrinter(c), fp)::Nil
     case c: ProgramConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
     case c: SystemConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
   }
@@ -768,7 +770,7 @@ object Helpers {
     case ODESystem(ode, f) if f == True => print("{", fp, "prg-open")::printJson(q ++ 0, ode, fp)::print("}", fp, "prg-close")::Nil
     case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp)::printJson(q ++ 1, e, fp)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp)::printJson(q ++ 1, t.right, fp)::Nil
-    case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
+    case c: DifferentialProgramConst => print(exprPrinter(c), fp)::Nil
     case c: ProgramConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
     case c: SystemConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
   }
