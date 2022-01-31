@@ -44,7 +44,8 @@ object InterpretedSymbols {
     maxF,
     expF,
     sinF,
-    cosF
+    cosF,
+    PI
   ) ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
 
   /** The interpreted symbols by name. */

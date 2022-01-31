@@ -1621,6 +1621,27 @@ object ODELiveness {
     }
   }
 
+  /** Wrapper around vDG for display.
+    */
+  @Tactic(names="vDG",
+    longDisplayName="Affine Vectorial Differential Ghost",
+    premises="Γ |- [ghost, x'=f(x) & Q]P, Δ",
+    conclusion="Γ |- [{x'=f(x) & Q}]P, Δ",
+    displayLevel="browse",
+    inputs = "ghost:expression")
+  def vDG(ghost: Expression) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
+    ghost match {
+      case Equal(l: DifferentialSymbol, r) =>
+        ODELiveness.vDG(AtomicODE(l, r))(pos)
+      case dp: DifferentialProgram =>
+        ODELiveness.vDG(dp)(pos)
+      case ODESystem(dp, _) =>
+        ODELiveness.vDG(dp)(pos)
+      case _ =>
+        throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + ghost.prettyString)
+    }
+  }
+
   /** dDDG rule
     *
     * G |- [ghosts, ODE] (||ghosts||)' <= L ||ghosts|| + M

@@ -698,9 +698,14 @@ object ODEInvariance {
           val right = Times(freeAtoms.map(f => Times(Number(2),
             Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, None), f.xp.x)), f.e)): Term).reduce(Plus), Minus(t, d))
 
+          // todo: not quite right: need to mimic what "old" does more carefully
+          val equals = freeAtoms.map(f => Equal(f.xp.x, Variable(f.xp.x.name,Some(0)))).reduceRight(And)
+
           //dC with old(.) moves the formula to the last position
           dC(LessEqual(left, right))(pos) < (
-            dW('Rlast) & QE & done,
+            dW('Rlast) & cutR(equals)(1) <(
+              QE & done,
+              QE),
             diffInd('full)('Rlast)
           )
       }
@@ -847,7 +852,7 @@ object ODEInvariance {
     }
 
     try {
-      var gb = absGroebnerBasis(polys ++ domainEqualities(ode.constraint))
+      var gb = absGroebnerBasis(polys ++ domainEqualities(ode.constraint,false))
       var rank = 1
       //remainder after each round of polynomial reduction
       var remaining = polys
@@ -2181,7 +2186,7 @@ object ODEInvariance {
       useAt(imp_and,PosInExpr(0::Nil))(pos++PosInExpr(1::Nil)) & boxAnd(pos) & andR(pos) <(
       cutR(Or(Equal(tvar,svar),NotEqual(svar,tvar)))(pos) <(
         cohideR(pos) & QE,
-        //implyR moves succedent to 'Rlast
+          //implyR moves succedent to 'Rlast
         implyR(pos) & orL('Llast) <(
           //initial branch
           useAt(Ax.DCC, PosInExpr(1::Nil))('Rlast) & andR('Rlast)<(
