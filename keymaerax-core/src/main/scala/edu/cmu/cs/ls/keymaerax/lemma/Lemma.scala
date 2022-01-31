@@ -53,21 +53,21 @@ object Lemma {
 
   /** Parses a lemma from its string representation (without consistency checking). */
   private def fromStringInternal(lemma: String): Lemma = {
-    val (name, provable, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
+    val (storedName, provable, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
     val fact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        TermProvable(ElidingProvable(provable), name match { case Some(n) =>
-          DerivedAxiomInfo.allInfo.get(n) match {
+        TermProvable(ElidingProvable(provable), storedName match { case Some(n) =>
+          DerivedAxiomInfo.allInfoByStoredName.get(n) match {
             case Some(info) => AxiomTerm(info.canonicalName)
             case None =>
               if (DerivedRuleInfo.allInfo.contains(n)) RuleTerm(n)
-              else NoProof()
+              else NoProof
           }
         case None => FOLRConstant(provable.conclusion.succ.head) })
       } else {
         ElidingProvable(provable)
       }
-    Lemma(fact, evidence, name) //@todo also load proof terms.
+    Lemma(fact, evidence, storedName) //@todo also load proof terms.
   }
 
   /** Returns true if `evidence` contains version evidence, false otherwise. */
