@@ -92,7 +92,8 @@ object ImplicitAx {
         }
         catch {
           case e:IllegalArgumentException => {
-            throw new IllegalArgumentException("Unable to derive diff axiom for: "+f)
+            None
+            // throw new IllegalArgumentException("Unable to derive diff axiom for: "+f)
           }
         }
       }
@@ -152,7 +153,7 @@ object ImplicitAx {
         }
         catch {
           case e:IllegalArgumentException => {
-            throw new IllegalArgumentException("Unable to derive init axiom for: "+f)
+            None //throw new IllegalArgumentException("Unable to derive init axiom for: "+f)
           }
         }
       }
@@ -212,7 +213,7 @@ object ImplicitAx {
         }
         catch {
           case e:IllegalArgumentException => {
-            throw new IllegalArgumentException("Unable to derive def axiom for: "+f)
+            None //throw new IllegalArgumentException("Unable to derive def axiom for: "+f)
           }
         }
       }
