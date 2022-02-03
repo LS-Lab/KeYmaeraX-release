@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec
 
 import scala.annotation.tailrec
 import scala.math.Ordering.Implicits._
@@ -218,7 +219,9 @@ private object ToolTactics {
 
   /** Returns all sub-terms of `fml` that are interpreted functions. */
   def interpretedFuncsOf(e: Expression): List[Term] = matchingTermsOf(e, {
-    case f@FuncOf(Function(_, _, domain, _, Some(_)), _) => true
+    case FuncOf(fn@Function(_, _, _, _, Some(_)), _) =>
+      Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false) &&
+      !MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn)
     case _ => false
   })
 
