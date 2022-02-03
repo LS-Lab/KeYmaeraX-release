@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic}
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXOmitInterpretationPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.slf4j.LoggerFactory
@@ -724,7 +724,7 @@ object TacticFactory {
   /** Creates labels for a core tactic that produces 2 subgoals. @note: not hooked into the annotation macros framework. */
   @inline def corelabelledby[S <: Expression, T <: Expression](name: String, rule: Either[CoreLeftTactic, CoreRightTactic],
       unapply: S => Option[(T, T)], pos: Position, seq: Sequent,
-      labels: (T, T) => (String, String) = (s: T, t: T) => (s.prettyString, t.prettyString)): BelleExpr =
+      labels: (T, T) => (String, String) = (s: T, t: T) => (KeYmaeraXOmitInterpretationPrettyPrinter(s), KeYmaeraXOmitInterpretationPrettyPrinter(t))): BelleExpr =
     if (pos.isTopLevel) {
       try {
         seq.sub(pos.checkTop).flatMap(f => unapply(f.asInstanceOf[S])) match {

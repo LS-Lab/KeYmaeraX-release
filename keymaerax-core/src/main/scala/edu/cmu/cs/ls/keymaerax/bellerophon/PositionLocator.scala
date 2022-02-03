@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Sequent, Term}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXOmitInterpretationPrettyPrinter}
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -32,17 +32,18 @@ sealed trait PositionLocator {
 
 object PositionLocator {
   import edu.cmu.cs.ls.keymaerax.core._
+  private val exprPP = new KeYmaeraXOmitInterpretationPrettyPrinter
   /** #-placeholder expression and regex for matching left/right placeholder; forces parentheses by non-default associativity. */
   def placeholder(e: Expression): (Expression, String, String) = e match {
     case f: Formula =>
       val h = PredOf(Function("h_", None, Unit, Bool), Nothing)
-      (And(And(h, f), h), Regex.quote("(" + h.prettyString + "&"), Regex.quote(")&" + h.prettyString))
+      (And(And(h, f), h), Regex.quote("(" + exprPP(h) + "&"), Regex.quote(")&" + exprPP(h)))
     case t: Term =>
       val h = FuncOf(Function("h_", None, Unit, Real), Nothing)
-      (Plus(h, Plus(t, h)), Regex.quote(h.prettyString + "+("), Regex.quote("+" + h.prettyString + ")"))
+      (Plus(h, Plus(t, h)), Regex.quote(exprPP(h) + "+("), Regex.quote("+" + exprPP(h) + ")"))
     case p: Program =>
       val h = ProgramConst("h_")
-      (Compose(Compose(h, p), h), Regex.quote("{" + h.prettyString), Regex.quote("}" + h.prettyString))
+      (Compose(Compose(h, p), h), Regex.quote("{" + exprPP(h)), Regex.quote("}" + exprPP(h)))
   }
 
   /** Replaces `#` in `s` with parentheses/braces per `kind`. */
@@ -56,10 +57,10 @@ object PositionLocator {
 
   def withMarkers(e: Expression, pos: PosInExpr): String = {
     import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-    if (pos == HereP) e.prettyString
+    if (pos == HereP) exprPP(e)
     else {
       val (ph, left, right) = placeholder(e.sub(pos).getOrElse(throw new IllegalArgumentException("Sub-position " + pos.prettyString + " does not exist in " + e.prettyString)))
-      e.replaceAt(pos, ph).prettyString.
+      exprPP(e.replaceAt(pos, ph)).
         replaceAll(left, "#").
         replaceAll(right, "#").
         replaceAll("\\(#(.+)#\\)", "#$1#").
