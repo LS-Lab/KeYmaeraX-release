@@ -3029,7 +3029,7 @@ object ArchiveEntryPrinter {
   }
 
   private def replaceInfo(entry: ParsedArchiveEntry, entryName: String, tactics: List[(String, String)]): ParsedArchiveEntry = {
-    entry.copy(name = entryName, tactics = tactics.map(e => (e._1, e._2, TactixLibrary.skip)))
+    entry.copy(name = entryName, tactics = tactics.map(e => (e._1, RequestHelper.tacticString(e._2), TactixLibrary.skip)))
   }
 }
 
@@ -3282,16 +3282,17 @@ object RequestHelper {
       invSupplier = mergedInvSupplier)
   }
 
-  def tacticString(proofInfo: ProofPOJO): String = {
-    val text = proofInfo.tactic.getOrElse("/* no tactic recorded */")
+  def tacticString(proofInfo: ProofPOJO): String = tacticString(proofInfo.tactic.getOrElse("/* no tactic recorded */"))
+
+  def tacticString(s: String): String = {
     try {
-      text.parseJson match {
+      s.parseJson match {
         case JsObject(fields) if fields.contains("tacticText") => fields("tacticText").asInstanceOf[JsString].value
         case JsString(s) => s
         case _ => "/* no tactic recorded */"
       }
     } catch {
-      case _: ParsingException => text //@note backwards-compatibility with database content that's not JSON
+      case _: ParsingException => s //@note backwards-compatibility with database content that's not JSON
     }
   }
 
