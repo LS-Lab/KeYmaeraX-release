@@ -120,6 +120,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/usedLemmas').then(function(response) {
           var usedLemmas = response.data.lemmas
           if (usedLemmas.length > 0) {
+            spinnerService.hide('tacticExecutionSpinner')
             var modalInstance = $uibModal.open({
               templateUrl: 'templates/modalMessageTemplate.html',
               controller: 'ModalMessageCtrl',
@@ -338,13 +339,19 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         .catch(function(error) { $scope.runningTask.future.reject(error); });
     },
     stop: function() {
-      $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + $scope.runningTask.taskId + '/stop')
-        .then(function(response) {
-          if ($scope.runningTask.future) $scope.runningTask.future.reject('stopped');
-        })
-        .catch(function(err) {
-          if ($scope.runningTask.future) $scope.runningTask.future.reject(err);
-        });
+      if ($scope.runningTask.proofId && $scope.runningTask.nodeId && $scope.runningTask.taskId) {
+        $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + $scope.runningTask.taskId + '/stop')
+          .then(function(response) {
+            if ($scope.runningTask.future) $scope.runningTask.future.reject('stopped');
+          })
+          .catch(function(err) {
+            if ($scope.runningTask.future) $scope.runningTask.future.reject(err);
+          });
+      } else if ($scope.runningTask.future) {
+        $scope.runningTask.future.reject('stopped'); //@note future closes spinner
+      } else {
+        spinnerService.hide('tacticExecutionSpinner');
+      }
     }
   }
 
@@ -465,9 +472,15 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
         .catch(function(error) { $scope.runningTask.future.reject(error); });
     },
     stop: function() {
-      $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + $scope.runningTask.taskId + '/stop')
-        .then(function(response) { $scope.runningTask.future.reject('stopped'); })
-        .catch(function(err) { $scope.runningTask.future.reject(err); });
+      if ($scope.runningTask.proofId && $scope.runningTask.nodeId && $scope.runningTask.taskId) {
+        $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + $scope.runningTask.taskId + '/stop')
+          .then(function(response) { $scope.runningTask.future.reject('stopped'); })
+          .catch(function(err) { $scope.runningTask.future.reject(err); });
+      } else if ($scope.runningTask.future) {
+        $scope.runningTask.future.reject('stopped'); //@note future closes spinner
+      } else {
+        spinnerService.hide('tacticExecutionSpinner');
+      }
     }
   }
 });

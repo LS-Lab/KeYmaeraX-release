@@ -128,7 +128,9 @@ abstract class UserModelRequest(db: DBAbstraction, userId: String, modelId: Stri
 
 abstract class UserProofRequest(db: DBAbstraction, userId: String, proofId: String)
   //@todo faster query for existence
-  extends UserRequest(userId, (id: String) => db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(id, proofId)) {
+  extends UserRequest(userId, (id: String) =>
+    Try(proofId.toInt).toOption.isDefined && (db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(id, proofId))
+  ) {
   override final def resultingResponses(): List[Response] = {
     Try(proofId.toInt).toOption match {
       case Some(_) => doResultingResponses()
