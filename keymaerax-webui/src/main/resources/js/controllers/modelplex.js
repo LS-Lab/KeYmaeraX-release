@@ -128,6 +128,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
         userid: function() { return $scope.userId; },
         modelid: function() { return modelId; },
         proofid: function() { return undefined; },
+        closeOnSave: function() { return false; },
         mode: function() { return Models.getModel(modelId).isExercise ? 'exercise' : 'edit'; }
       }
     });

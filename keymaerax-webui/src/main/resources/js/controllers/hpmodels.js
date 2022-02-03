@@ -378,6 +378,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
         userid: function() { return $scope.userId; },
         modelid: function() { return modelId; },
         proofid: function() { return undefined; },
+        closeOnSave: function() { return false; },
         mode: function() { return Models.getModel(modelId).isExercise ? 'exercise' : 'edit'; }
       }
     });
@@ -581,9 +582,10 @@ angular.module('keymaerax.controllers').filter("unique", function() {
 });
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
-    function ($scope, $route, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, proofid, mode, spinnerService) {
+    function ($scope, $route, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, proofid, closeOnSave, mode, spinnerService) {
   $scope.mode = mode;
   $scope.proofId = proofid;
+  $scope.closeOnSave = closeOnSave;
   $scope.model = undefined;         // model with edits
   $scope.origModel = undefined;     // original model from database
   $scope.save = {
@@ -668,6 +670,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     } else {
       if ($scope.save.cmd) {
         if ($scope.save.editor) $scope.save.editor.setReadOnly(true);
+        if ($scope.closeOnSave) $uibModalInstance.close();
         $scope.save.cmd();
       }
       return true;
@@ -692,6 +695,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
       }
       $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
       if ($scope.save.editor) $scope.save.editor.setReadOnly(true);
+      if ($scope.closeOnSave) $uibModalInstance.close();
       $scope.save.cmd();
     })
     .catch(function(err) {

@@ -1130,7 +1130,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           userid: function() { return $scope.userId; },
           modelid: function() { return modelId; },
           mode: function() { return 'proofedit'; },
-          proofid: function() { return $scope.proofId; }
+          proofid: function() { return $scope.proofId; },
+          closeOnSave: function() { return true; }
         }
       });
     }
