@@ -428,9 +428,12 @@ object DifferentialHelper {
         Plus(derive(l,odes),derive(r,odes))
       case Minus(l,r) => // (l-r)' = l'-r'
         Minus(derive(l,odes),derive(r,odes))
-      case FuncOf(f,Nothing) if !f.interp.isDefined => Number(0)
+      case FuncOf(f,Nothing) => Number(0)
       case FuncOf(f,arg) if f.interp.isDefined => {
-        val concl = ImplicitAx.getDiffAx(f).get.provable.conclusion.succ(0)
+        val dAx = ImplicitAx.getDiffAx(f)
+        if(dAx.isEmpty)
+          throw new IllegalArgumentException("Unable to derive: "+t)
+        val concl = dAx.get.provable.conclusion.succ(0)
         // (_)' = _ * (_)'
         val lhs = concl.sub(PosInExpr(0::0::Nil)).get
         val rhsL = concl.sub(PosInExpr(1::0::Nil)).get.asInstanceOf[Term]

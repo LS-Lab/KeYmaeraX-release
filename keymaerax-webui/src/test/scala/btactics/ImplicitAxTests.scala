@@ -243,7 +243,7 @@ class ImplicitAxTests extends TacticTestBase {
     val fake = Function("fake",None, Real, Real,interp = Some(True))
     println(fake)
 
-    the [Exception] thrownBy getDiffAx(fake) should have message "Unable to derive diff axiom for: fake<< true >>"
+    getDiffAx(fake) shouldBe None
   }
   it should "derive and store init ax 1" in withMathematica { _ =>
     val exp = InterpretedSymbols.expF
@@ -274,7 +274,7 @@ class ImplicitAxTests extends TacticTestBase {
     val fake = Function("fake",None, Real, Real,interp = Some(True))
     println(fake)
 
-    the [Exception] thrownBy getInitAx(fake) should have message "Unable to derive init axiom for: fake<< true >>"
+    getInitAx(fake) shouldBe None
   }
 
   it should "detect multiple definitions with same function name 1" in withMathematica { _ =>
@@ -537,5 +537,13 @@ class ImplicitAxTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+  }
+
+  it should "bar" in withMathematica { _=>
+
+    val pr = proveBy("cos(pi()/2) = 0".asFormula,
+      RCF
+    )
+    println(pr)
   }
 }
