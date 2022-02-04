@@ -415,7 +415,10 @@ object DerivedAxiomInfo {
   }
 
   def toStoredName(codeName: String): String = codeName.toLowerCase
+  /** All registered derived axiom info by code name. */
   def allInfo: Map[String, DerivedAxiomInfo] = DerivationInfo._derivedAxiomInfo
+  /** All registered derived axiom info by stored name. */
+  def allInfoByStoredName: Map[String, StorableInfo] = DerivationInfo._byStoredName
 }
 
 // axiomatic proof rules

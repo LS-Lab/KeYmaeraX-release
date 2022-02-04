@@ -127,18 +127,20 @@ object AnnotationCommon {
     import c.universe._
     di match {
       case SimpleDisplayInfo(name, asciiName) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SimpleDisplayInfo(${literal(name)}, ${literal(asciiName)})"""
-      case RuleDisplayInfo(names, conclusion, premises)  =>
+      case RuleDisplayInfo(names, conclusion, premises, inputGenerator)  =>
         val namesTree = convDI(names)
         val conclusionTree = convSD(conclusion)
         val premiseTrees = premises.map((sd: SequentDisplay) => convSD(sd))
-        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo(${namesTree}, $conclusionTree, $premiseTrees)"""
-      case TacticDisplayInfo(names, conclusion, premises, ctxConclusion, ctxPremises)  =>
+        val inputGeneratorTree = literal(inputGenerator)
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo($namesTree, $conclusionTree, $premiseTrees, $inputGeneratorTree)"""
+      case TacticDisplayInfo(names, conclusion, premises, ctxConclusion, ctxPremises, inputGenerator)  =>
         val namesTree = convDI(names)
         val conclusionTree = convSD(conclusion)
         val premiseTrees = premises.map((sd: SequentDisplay) => convSD(sd))
         val ctxConclusionTree = convSD(ctxConclusion)
         val ctxPremiseTrees = ctxPremises.map((sd: SequentDisplay) => convSD(sd))
-        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TacticDisplayInfo(${namesTree}, $conclusionTree, $premiseTrees, $ctxConclusionTree, $ctxPremiseTrees)"""
+        val inputGeneratorTree = literal(inputGenerator)
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TacticDisplayInfo($namesTree, $conclusionTree, $premiseTrees, $ctxConclusionTree, $ctxPremiseTrees, $inputGeneratorTree)"""
       case AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
       case InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) =>

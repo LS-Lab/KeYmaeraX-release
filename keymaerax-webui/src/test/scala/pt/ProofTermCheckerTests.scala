@@ -1,11 +1,9 @@
 package edu.cmu.cs.ls.pt
 
 import java.io.PrintWriter
-
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -13,9 +11,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 import testHelper.KeYmaeraXTestTags.TodoTest
-
-import scala.collection.immutable
-import scala.io.Source
 
 /**
  * Tests of the proof term checker <strike>from</strike> inspired by
@@ -25,11 +20,11 @@ import scala.io.Source
  * @author Brandon Bohrer
  */
 class ProofTermCheckerTests extends TacticTestBase {
-  private def proves(cert : ProvableSig, f : Formula) = {
+  private def proves(cert: ProvableSig, f: Formula) = {
     val s = cert.conclusion
-    s.succ.length == 1 && s.ante.length == 0 && s.succ.last.equals(f) && cert.isProved
+    s.succ.length == 1 && s.ante.isEmpty && s.succ.last.equals(f) && cert.isProved
   }
-  private def debugCert(cert: ProvableSig) = println(cert.subgoals.mkString("\n --- \n"))
+
 /*
   "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" in {
     val label = "[:=] assign"
@@ -43,10 +38,10 @@ class ProofTermCheckerTests extends TacticTestBase {
     proves(checkResult, f) shouldBe true
   }
 */
-  private def checkIfPT(p:ProvableSig,f:Formula):Unit = {
+  private def checkIfPT(p: ProvableSig, f: Formula): Unit = {
     p match {
-      case _ : ElidingProvable => ()
-      case TermProvable(ps,pt) =>
+      case _: ElidingProvable => ()
+      case TermProvable(_, pt) =>
         val checkResult = ProofChecker(pt)
         proves(checkResult, f) shouldBe true
     }
@@ -63,22 +58,76 @@ class ProofTermCheckerTests extends TacticTestBase {
     checkIfPT(tacticResult,f)
   }
 
-  it should "work for prop tautologies" in withMathematica(_ => {
+  it should "work for prop tautologies with manual proof" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val f = "A() -> A()".asFormula
     val provable = TermProvable.startProof(f)
-    val t = TactixLibrary.implyR(1) & TactixLibrary.close(-1,1)
-
-    val tacticResult = proveBy(provable, t)
+    val tacticResult = proveBy(provable, TactixLibrary.implyR(1) & TactixLibrary.close(-1,1))
     println(tacticResult)
-    checkIfPT(tacticResult,f)
-  })
+    checkIfPT(tacticResult, f)
+  }}
 
-  it should "work for monoCars" in withMathematica(_ => {
+  it should "work for prop tautologies with propClose" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "A() -> A()".asFormula
+    val provable = TermProvable.startProof(f)
+    val tacticResult = proveBy(provable, TactixLibrary.propClose)
+    println(tacticResult)
+    checkIfPT(tacticResult, f)
+  }}
+
+  it should "FEATURE_REQUEST: work for monoCars" taggedAs TodoTest in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val fml =
-    "velLead >= velCtrl & velCtrl >= 0 &  A() > 0 &  B() > 0 &  posLead >= posCtrl & T() > 0     ->      [{{      {?((velLead-velCtrl) >= T()*(A()+B())); accCtrl := A(); }        ++        accCtrl:= -B();}        ;      {accLead := A() ;++ accLead := -B(); };        t := 0;      { velCtrl' = accCtrl, velLead' = accLead, posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t < T() & velCtrl>= 0 & velLead >= 0}      }*@invariant(velLead >= velCtrl & velCtrl >= 0 & posLead >= posCtrl)     ]posLead >= posCtrl".asFormula
-    val tac = BelleParser("  unfold ; loop({`velLead>=velCtrl&velCtrl>=0&posLead>=posCtrl`}, 1) ; <(\n  unfold,\n  unfold,\n  unfold ; <(\n    dC({`velLead>=velCtrl`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold,\n        dI(1)\n        ),\n      dI(1)\n      ),\n    dC({`velLead>=velCtrl`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold,\n        dI(1)\n        ),\n      dI(1)\n      ),\n    dC({`velLead-velCtrl>=(A()+B())*(T()-t)`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold ; QE,\n        dI(1)\n        ),\n      dI(1)\n      ),\n    dC({`velLead>=velCtrl`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold,\n        dI(1)\n        ),\n      dI(1)\n      )\n    )\n  )")
+      """velLead >= velCtrl & velCtrl >= 0 &  A() > 0 &  B() > 0 &  posLead >= posCtrl & T() > 0
+        |->
+        |[{
+        |  {   ?((velLead-velCtrl) >= T()*(A()+B())); accCtrl := A();
+        |   ++ accCtrl:= -B();
+        |  };
+        |  {   accLead := A() ;
+        |   ++ accLead := -B(); };
+        |  t := 0;
+        |  { velCtrl' = accCtrl, velLead' = accLead, posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t < T() & velCtrl>= 0 & velLead >= 0}
+        | }*@invariant(velLead >= velCtrl & velCtrl >= 0 & posLead >= posCtrl)
+        |]posLead >= posCtrl
+        |""".stripMargin.asFormula
+    val tac = BelleParser(
+      """unfold ; loop("velLead>=velCtrl&velCtrl>=0&posLead>=posCtrl", 1) ; <(
+        |  propClose,
+        |  propClose,
+        |  unfold ; <(
+        |    dC("velLead>=velCtrl", 1) ; <(
+        |      dC("posLead>=posCtrl", 1) ; <(
+        |        dW(1) ; propClose,
+        |        dI(1)
+        |        ),
+        |      dI(1)
+        |      ),
+        |    dC("velLead>=velCtrl", 1) ; <(
+        |      dC("posLead>=posCtrl", 1) ; <(
+        |        dW(1) ; propClose,
+        |        dI(1)
+        |        ),
+        |      dI(1)
+        |      ),
+        |    dC("velLead>=velCtrl", 1) ; <(
+        |      dC("posLead>=posCtrl", 1) ; <(
+        |        dW(1) ; propClose,
+        |        dI(1)
+        |        ),
+        |      dI(1)
+        |      ),
+        |    dC("velLead-velCtrl>=(A()+B())*(T()-t)", 1) ; <(
+        |      dC("posLead>=posCtrl", 1) ; <(
+        |        dW(1) ; unfold ; QE,
+        |        dI(1)
+        |        ),
+        |      dI(1)
+        |      )
+        |    )
+        |  )
+        |""".stripMargin)
     val provable = ProvableSig.startProof(fml)
     val tacticResult = proveBy(provable,tac)
+    println(tacticResult)
     tacticResult match {
       case pr:TermProvable =>
         val size = pr.pt.numCons
@@ -92,6 +141,8 @@ class ProofTermCheckerTests extends TacticTestBase {
         println("Rules: " + rules + "\n\n\n")
         println("Arithmetic Goals: " + goals + "\n\n\n")
         println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
+
+        //@todo uniform renaming in Isabelle
         val conv = new IsabelleConverter(pr.pt)
         //val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
         val source = conv.sexp
@@ -100,17 +151,40 @@ class ProofTermCheckerTests extends TacticTestBase {
         writer.close()
       case _ => ()
     }
-    println(tacticResult)
+  }}
 
-  })
-
-  it should "work for double velCar" in withMathematica(_ => {
-    val velCar2Fml = "    xc<=xl & V>=0\n -> [\n      {\n        {?(xl-xc)>=V*ep; vc:=V; ++ vc:=0;};\n        {vl := V; ++ vl:=0;}\n        t := 0;\n        {xl'=vl, xc'=vc, t'=1 & t<=ep}\n      }*@invariant(xc<=xl)\n    ] xc <= xl".asFormula
-    val tac = BelleParser("  unfold ; loop({`xc<=xl`}, 1) ; <(\n  unfold,\n  unfold,\n  unfold ; <(\n    dI(1),\n    dI(1),\n    dC({`xl-xc>=V*(ep-t)`}, 1) ; <(\n      dW(1) ; unfold ; master,\n      dI(1)\n      ),\n    dI(1)\n    )\n  )")
+  it should "FEATURE_REQUEST: work for double velCar" taggedAs TodoTest in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val velCar2Fml =
+      """    xc<=xl & V>=0
+        | -> [
+        |      {
+        |        {?(xl-xc)>=V*ep; vc:=V; ++ vc:=0;};
+        |        {vl := V; ++ vl:=0;}
+        |        t := 0;
+        |        {xl'=vl, xc'=vc, t'=1 & t<=ep}
+        |      }*@invariant(xc<=xl)
+        |    ] xc <= xl
+        |""".stripMargin.asFormula
+    val tac = BelleParser(
+      """unfold ; loop("xc<=xl", 1) ; <(
+        |  propClose,
+        |  propClose,
+        |  unfold ; <(
+        |    dI(1),
+        |    dI(1),
+        |    dI(1),
+        |    dC("xl-xc>=V*(ep-t)", 1) ; <(
+        |      dW(1) ; QE,
+        |      dI(1)
+        |      )
+        |    )
+        |  )
+        |""".stripMargin)
     val provable = ProvableSig.startProof(velCar2Fml)
     val tacticResult = proveBy(provable,tac)
+    println(tacticResult)
     tacticResult match {
-      case pr:TermProvable =>
+      case pr: TermProvable =>
         val size = pr.pt.numCons
         val bytes = pr.pt.bytesEstimate
         val axioms = pr.pt.axiomsUsed
@@ -122,6 +196,8 @@ class ProofTermCheckerTests extends TacticTestBase {
         println("Rules: " + rules + "\n\n\n")
         println("Arithmetic Goals: " + goals + "\n\n\n")
         println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
+
+        //@todo uniform renaming in Isabelle
         val conv = new IsabelleConverter(pr.pt)
         //val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
         val source = conv.sexp
@@ -130,10 +206,9 @@ class ProofTermCheckerTests extends TacticTestBase {
         writer.close()
       case _ => ()
     }
-    println(tacticResult)
-  })
+  }}
 
-  it should "work for ETCS dI-ified proof" in withMathematica (_ => {
+  it should "FEATURE_REQUEST: work for ETCS dI-ified proof" taggedAs TodoTest in withMathematica (_ => {
     val fml = "    v^2<=2*b()*(m-x) & v>=0  & A()>=0 & b()>0-> [{{?(2*b()*(m-x) >= v^2+(A()+b())*(A()*ep()^2+2*ep()*v)); a:=A(); ++ a:=-b(); } t := 0;{x'=v, v'=a, t'=1 & v>=0 & t<=ep()}}*@invariant(v^2<=2*b()*(m-x))] x <= m".asFormula
     val tac = BelleParser("implyR(1) ; loop({`v^2<=2*b()*(m-x)`}, 1) ; <(closeId, QE,composeb(1) ; choiceb(1) ;andR(1) ; <(composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; dC({`2*b()*(m-x)>=v^2+(A()+b())*(A()*(ep()-t)^2+2*(ep()-t)*v)`}, 1) ; <(dW(1) ; QE,dI(1)), assignb(1) ; composeb(1) ; assignb(1) ; dI(1)))")
     val provable = ProvableSig.startProof(fml)
@@ -158,25 +233,25 @@ class ProofTermCheckerTests extends TacticTestBase {
         println(tacticResult)
   })
 
-  "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" in withMathematica (_ => {
+  "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val zEz : Formula = "0=0".asFormula
     val certificate = ProofChecker(FOLRConstant(zEz), Some(zEz))
     proves(certificate, zEz) shouldBe true
-  })
+  }}
 
-  it should "check j_{x^2 = 0 <-> x = 0} : x^2 = 0 <-> x = 0" in withMathematica(_ => {
+  it should "check j_{x^2 = 0 <-> x = 0} : x^2 = 0 <-> x = 0" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val f = "x^2 = 0 <-> x = 0".asFormula
     val certificate = ProofChecker(FOLRConstant(f), Some(f))
     proves(certificate, f) shouldBe true
-  })
+  }}
 
-  "Isabelle converter" should "convert simple FOLR certificate" in withMathematica(_ => {
+  "Isabelle converter" should "convert simple FOLR certificate" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val f = "x*x = 0 <-> x = 0".asFormula
     val pt = FOLRConstant(f)
     val conv = new IsabelleConverter(pt)
     val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
     println(source)
-  })
+  }}
 
   it should "convert simple axiom usage" ignore withMathematica(_ => {
     val label = "[:=] assign"
@@ -191,7 +266,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     }
   })
 
-  it should "convert prop tautologies" in withMathematica(_ => {
+  it should "convert prop tautologies" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val f = "A() -> A()".asFormula
     val provable = TermProvable.startProof(f)
     val t = TactixLibrary.implyR(1) & TactixLibrary.close(-1,1)
@@ -203,7 +278,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         println(source)
       case _  =>
     }
-  })
+  }}
 
   it should "FEATURE_REQUEST: convert leaderfollower" taggedAs TodoTest in withMathematica(_ => {
     //@note TermProvable throws DebugMeException on unfold (swallowed by interpreter, since unfold executes optional chase steps)
@@ -313,7 +388,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     }
   })
 
-  it should "work for Lab2 dI-ified proof version 2" in withZ3 (_ => {
+  it should "FEATURE_REQUEST: work for Lab2 dI-ified proof version 2" taggedAs TodoTest in withZ3 (_ => {
     val lab2Fml=
     ("( A()>=0 & B()>0 & T()>=0 ) &" +
         "( velLead>=0 & velCtrl>=0 & (posLead-posCtrl)*2*B()>=velCtrl*velCtrl-velLead*velLead & posLead>=posCtrl ) ->" +

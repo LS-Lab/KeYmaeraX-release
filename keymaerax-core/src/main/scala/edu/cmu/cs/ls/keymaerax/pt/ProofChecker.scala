@@ -36,15 +36,11 @@ object ProofChecker {
     *
     * @todo could remove phi except no more contract then
    */
-  def apply(e: ProofTerm, phi: Option[Formula] = None) : ProvableSig = {
+  def apply(e: ProofTerm, phi: Option[Formula] = None): ProvableSig = {
     val result : ProvableSig =
       e match {
-        case FOLRConstant(f) => {
-          val node = proofNode(f)
-          proveBy(node, QE & done)
-        }
-
-        case AxiomTerm(axiomName) => {
+        case FOLRConstant(f) => proveBy(proofNode(f), QE & done)
+        case AxiomTerm(axiomName) =>
           try {
             val info = ProvableInfo.ofStoredName(axiomName)
             val axiomFml = info.provable.conclusion
@@ -55,85 +51,22 @@ object ProofChecker {
             ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), info.canonicalName))
           } catch {
             // If derived axioms didn't do it, try core axioms too
-            case e:Exception =>
+            case _: Exception =>
               val axiomFml = AxiomInfo(axiomName).provable.conclusion
               val node = proofNode(axiomFml)
               ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
           }
-        }
-
-        case RuleApplication(child, ruleName, subgoal, sequentPositions, expArgs) =>
-          val ps:ProvableSig = apply(child)
-          def pos(i:Int):SeqPos = sequentPositions(i)
-          def apos(i:Int):AntePos = sequentPositions(i).asInstanceOf[AntePos]
-          def spos(i:Int):SuccPos = sequentPositions(i).asInstanceOf[SuccPos]
-          def f(i:Int):Formula = expArgs(i).asInstanceOf[Formula]
-          def v(i:Int):Variable = expArgs(i).asInstanceOf[Variable]
-          def pr(r:Rule):ProvableSig = ps(r, subgoal)
-          val res =
-          ruleName match {
-            case "Close" => pr(Close(apos(0),spos(1)))
-            case "CoHide2"  => pr(CoHide2(apos(0),spos(1)))
-            case "cut Right" => pr(CutRight(f(0),spos(0)))
-            case "Imply Right"=> pr(ImplyRight(spos(0)))
-            case "And Right"=> pr(AndRight(spos(0)))
-            case "CoHideRight" => pr(CoHideRight(spos(0)))
-            case "CommuteEquivRight" => pr(CommuteEquivRight(spos(0)))
-            case "EquivifyRight" => pr(EquivifyRight(spos(0)))
-            case "Equiv Right" => pr(EquivRight(spos(0)))
-            case "Not Right" => pr(NotRight(spos(0)))
-            case "CloseTrue" => pr(CloseTrue(spos(0)))
-            case "HideRight" => pr(HideRight(spos(0)))
-            case "Or Right"=> pr(OrRight(spos(0)))
-
-            case "Or Left" => pr(OrLeft(apos(0)))
-            case "And Left" => pr(AndLeft(apos(0)))
-            case "HideLeft" => pr(HideLeft(apos(0)))
-            case "cut Left" => pr(CutLeft(f(0),apos(0)))
-            case "Imply Left"=> pr(ImplyLeft(apos(0)))
-            case "Not Left" => pr(NotLeft(apos(0)))
-            case "Equiv Left" => pr(EquivLeft(apos(0)))
-            case "CloseFalse" => pr(CloseFalse(apos(0)))
-
-            case "Bound Renaming" => pr(BoundRenaming(v(0),v(1),pos(0)))
-            case "Uniform Renaming" => pr(UniformRenaming(v(0),v(1)))
-            case "Skolemize" => pr(Skolemize(pos(0)))
-            case "cut" => pr(Cut(f(0)))
-
-            case name => throw ProofCheckException("Unsupported rule \"" + name + "\" found during proof replay")
-          }
-          res
-
+        case RuleApplication(child, rule, subgoal) => apply(child)(rule, subgoal)
         case RuleTerm(name) =>
-          if(ProvableSig.rules.contains(name))
-            ProvableSig.rules(name)
-         else
-            ProvableInfo.ofStoredName(name).asInstanceOf[DerivedRuleInfo].provable
-
-        case ForwardNewConsequenceTerm(child, con, rule) =>
-          val pschild = apply(child)
-          pschild(con,rule)
-
-        case ProlongationTerm(child, pro) =>
-          val pschild = apply(child)
-          val pspro = apply(pro)
-          pschild(pspro)
-
-        case Sub(child,sub,i) =>
-          val pschild = apply(child)
-          val pssub = apply(sub)
-          val res = pschild(pssub,i)
-          res
-
-        case StartProof(goal) =>
-          val res =  ProvableSig.startProof(goal)
-          res
-
-        case NoProof() => throw ProofCheckException("Tried to check proof of " + phi + ", but it has NoProof()")
-
-        case UsubstProvableTerm(child, sub) =>
-          val pschild = apply(child)
-          pschild(sub)
+          if (ProvableSig.rules.contains(name)) ProvableSig.rules(name)
+          else ProvableInfo.ofStoredName(name).asInstanceOf[DerivedRuleInfo].provable
+        case ForwardNewConsequenceTerm(child, con, rule) => apply(child)(con, rule)
+        case ProlongationTerm(child, pro) => apply(child)(apply(pro))
+        case Sub(child, sub, i) => apply(child)(apply(sub), i)
+        case StartProof(goal) => ProvableSig.startProof(goal)
+        case UsubstProvableTerm(child, sub) => apply(child)(sub)
+        case URenameTerm(child, ren) => apply(child)(ren)
+        case NoProof => throw ProofCheckException("Tried to check proof of " + phi + ", but it has NoProof")
       }
 
     result

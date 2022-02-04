@@ -7,9 +7,10 @@
   */
 package edu.cmu.cs.ls.keymaerax.lemma
 
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivedAxiomInfo, DerivedRuleInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
-import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{AxiomTerm, ElidingProvable, NoProof, ProvableSig, RuleTerm, TermProvable}
 
 /**
   * Common Lemma Database implemented from string-based storage primitives.
@@ -30,7 +31,17 @@ abstract class LemmaDBBase extends LemmaDB {
   final override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
     readLemmas(ids).map(_.map(Lemma.fromString)).map(_.map(lemma =>
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
+        val term = lemma.name match {
+          case Some(n) =>
+            DerivedAxiomInfo.allInfoByStoredName.get(n) match {
+              case Some(info) => AxiomTerm(info.canonicalName)
+              case None =>
+                if (DerivedRuleInfo.allInfo.contains(n)) RuleTerm(n)
+                else NoProof
+            }
+          case None => NoProof
+        }
+        Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), term), lemma.evidence, lemma.name)
       } else {
         lemma
       }
@@ -96,7 +107,10 @@ abstract class LemmaDBBase extends LemmaDB {
 
   /** Returns the lemma with a [[TermProvable]] in place of `lemma.fact` if proof terms are enable. Returns the lemma unmodified otherwise. */
   private def proofTermLemma(lemma: Lemma): Lemma = {
-    if (ProvableSig.PROOF_TERMS_ENABLED) Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
+    if (ProvableSig.PROOF_TERMS_ENABLED) {
+      //@todo QE cache
+      Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof), lemma.evidence, lemma.name)
+    }
     else lemma
   } ensures(r => r.name == lemma.name && r.evidence == lemma.evidence && r.fact.underlyingProvable == lemma.fact.underlyingProvable)
 }

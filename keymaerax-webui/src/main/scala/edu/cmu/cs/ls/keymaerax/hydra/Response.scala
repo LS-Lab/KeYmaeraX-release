@@ -1006,7 +1006,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
    json
   }
 
-  def ruleJson(info: DerivationInfo, conclusion: SequentDisplay, premises: List[SequentDisplay]): JsObject = {
+  def ruleJson(info: DerivationInfo, conclusion: SequentDisplay, premises: List[SequentDisplay], inputGenerator: Option[String]): JsObject = {
     val conclusionJson = sequentJson(conclusion)
     val premisesJson = JsArray(premises.map(sequentJson):_*)
     JsObject(
@@ -1015,6 +1015,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "conclusion" -> conclusionJson,
       "premise" -> premisesJson,
       "input" -> inputsJson(info.inputs),
+      "inputGenerator" -> inputGenerator.map(JsString(_)).getOrElse(JsNull),
       "help" -> helpJson(info.codeName)
     )
   }
@@ -1026,10 +1027,10 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
         case (_, _: SimpleDisplayInfo) => tacticJson(info)
         case (pi: DerivationInfo, _: AxiomDisplayInfo) => axiomJson(pi)
         case (pi: DerivationInfo, _: InputAxiomDisplayInfo) => axiomJson(pi) //@todo usually those have tactics with RuleDisplayInfo
-        case (_, RuleDisplayInfo(_, conclusion, premises)) => ruleJson(info, conclusion, premises)
-        case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem)) =>
-          if (topLevel) ruleJson(info, conclusion, premises)
-          else ruleJson(info, ctxConc, ctxPrem)
+        case (_, RuleDisplayInfo(_, conclusion, premises, inputGenerator)) => ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
+        case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem, inputGenerator)) =>
+          if (topLevel) ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
+          else ruleJson(info, ctxConc, ctxPrem, if (inputGenerator.isEmpty) None else Some(inputGenerator))
         case (_, _: AxiomDisplayInfo | _: InputAxiomDisplayInfo) =>
           throw new IllegalArgumentException(s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo")
       }

@@ -462,59 +462,26 @@ object TermProvable {
   * @author Brandon Bohrer
   */
 case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig with Logging {
+  /** @inheritdoc */
   override val conclusion: Sequent = provable.conclusion
+
+  /** @inheritdoc */
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
 
+  /** @inheritdoc */
   override def proved: Sequent = provable.proved
 
+  /** @inheritdoc */
   override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = {
-    //@todo do a total pattern match on all rules in the core and produce individualized proof terms for each of them.
-    //This is necessary because we need positions where the rule should be applied within the *sequent* in addition to subgoal,
-    //which is the position within the *provable*. Alternatively a subtype heirarchy for Rule would do the trick...
-    val (sequentPositions,expArgs) = rule match {
-      case Close(ante,succ) => (ante :: succ :: Nil, Nil)
-      case CoHide2(ante, succ)  => (ante :: succ :: Nil, Nil)
-      case CutRight(fml, succ) => (succ :: Nil, fml:: Nil)
-      case ImplyRight(succ) => (succ :: Nil, Nil)
-      case AndRight(succ) => (succ :: Nil, Nil)
-      case CoHideRight(succ) => (succ :: Nil, Nil)
-      case CommuteEquivRight(succ) => (succ :: Nil, Nil)
-      case EquivifyRight(succ) => (succ :: Nil, Nil)
-      case EquivRight(succ) => (succ :: Nil, Nil)
-      case NotRight(succ) => (succ :: Nil, Nil)
-      case CloseTrue(succ) => (succ :: Nil, Nil)
-      case HideRight(succ) => (succ :: Nil, Nil)
-      case OrRight(succ) => (succ :: Nil, Nil)
-
-      case OrLeft(ante) => (ante :: Nil, Nil)
-      case AndLeft(ante) => (ante :: Nil, Nil)
-      case HideLeft(ante) => (ante :: Nil, Nil)
-      case CutLeft(fml,ante) => (ante :: Nil, fml :: Nil)
-      case ImplyLeft(ante) => (ante :: Nil, Nil)
-      case NotLeft(ante) => (ante :: Nil, Nil)
-      case EquivLeft(ante) => (ante :: Nil, Nil)
-      case CloseFalse(ante) => (ante :: Nil, Nil)
-
-      case BoundRenaming(what, repl, seq:SeqPos) => (seq :: Nil, what :: repl :: Nil)
-      case Skolemize(seq:SeqPos) => (seq :: Nil, Nil)
-
-      case UniformRenaming(what, repl) => (Nil, what :: repl :: Nil)
-      case Cut(fml) => (Nil, fml :: Nil)
-
-      case _ =>
-        throw new Exception(s"TermProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
-    }
-    TermProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal, sequentPositions,expArgs))
+    TermProvable(provable(rule, subgoal), RuleApplication(pt, rule, subgoal))
   }
 
-
-  // @TODO: This makes no sense needs new proof term class probably
+  /** @inheritdoc */
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
     subderivation match {
-      case TermProvable (subProvable, subPT) => {
+      case TermProvable(subProvable, subPT) =>
         val thePt = Sub(pt, subPT, subgoal)
         TermProvable(ElidingProvable(underlyingProvable(subProvable.underlyingProvable,subgoal)), thePt)
-      }
 
       case subprovable: ProvableSig => {
         //Find an axiom or rule with the same name.
@@ -534,7 +501,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
         } else if (derivedAxiom.isDefined) {
           val term = Sub(pt, AxiomTerm(derivedAxiom.get.codeName), subgoal)
           logger.trace("derivedaxiom codename: " + derivedAxiom.get.codeName)
-          val axiomPT = TermProvable(ElidingProvable(derivedAxiom.get.provable.underlyingProvable), term)
+          TermProvable(ElidingProvable(derivedAxiom.get.provable.underlyingProvable), term) // assert that found axiom would work
           TermProvable(provable(subprovable, subgoal), term)
         }
         //And ditto for rules.
@@ -544,7 +511,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
           TermProvable(provable(subProvable, subgoal), thePt)
         } else if (derivedRule.isDefined) {
           val term = Sub(pt, RuleTerm(derivedRule.get.codeName), subgoal)
-          val axiomPT = TermProvable(ElidingProvable(derivedRule.get.provable.underlyingProvable), term)
+          TermProvable(ElidingProvable(derivedRule.get.provable.underlyingProvable), term) // assert that found rule would work
           TermProvable(provable(subprovable, subgoal), term)
         }
         else {
@@ -558,32 +525,36 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
 
   class DebugMeException extends Exception {}
 
-  override def apply(subst: USubst): ProvableSig = {
-    TermProvable(provable(subst), UsubstProvableTerm(pt, subst))
-  }
+  /** @inheritdoc */
+  override def apply(subst: USubst): ProvableSig = TermProvable(provable(subst), UsubstProvableTerm(pt, subst))
 
-  //@todo implement
-  override def apply(ren: URename): ProvableSig = ???
+  /** @inheritdoc */
+  override def apply(ren: URename): ProvableSig = TermProvable(provable(ren), URenameTerm(pt, ren))
 
+  /** @inheritdoc */
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig =
     TermProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))
 
+  /** @inheritdoc */
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
     case prolongationProof: TermProvable =>
       TermProvable(provable(prolongationProof), ProlongationTerm(pt, prolongationProof.pt))
     case subProvable: ProvableSig =>
       /* @TODO: Arguable this should just not be allowed and represents a bug elsewhere */
-      TermProvable(ElidingProvable(provable.underlyingProvable(subProvable.underlyingProvable)), ProlongationTerm(pt, NoProof()))
+      TermProvable(ElidingProvable(provable.underlyingProvable(subProvable.underlyingProvable)), ProlongationTerm(pt, NoProof))
   }
 
-  override def sub(subgoal: Subgoal): ProvableSig =
-    TermProvable(provable.sub(subgoal), NoProof())
+  /** @inheritdoc */
+  override def sub(subgoal: Subgoal): ProvableSig = TermProvable(provable.sub(subgoal), StartProof(provable.subgoals(subgoal)))
 
+  /** @inheritdoc */
   lazy val axioms: immutable.Map[String, ProvableSig] = TermProvable.axioms
 
+  /** @inheritdoc */
   lazy val rules: immutable.Map[String, ProvableSig] = TermProvable.rules
 
-  def startProof(goal : Sequent): ProvableSig = {
+  /** @inheritdoc */
+  def startProof(goal: Sequent): ProvableSig = {
     val sym = StaticSemantics.signature(goal)
     if(sym.exists({case _:UnitFunctional => true case _ => false})) {
       val 2 = 1 + 1
@@ -592,24 +563,19 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
     TermProvable.startProof(goal)
   }
 
-  def startProof(goal : Formula): ProvableSig = {
-    val sym = StaticSemantics.signature(goal)
-    if (sym.exists({ case _: UnitFunctional => true case _ => false })) {
-      val 2 = 1 + 1
-      ???
-    }
-    TermProvable.startProof(goal)
-  }
+  /** @inheritdoc */
+  def startProof(goal: Formula): ProvableSig = startProof(Sequent(IndexedSeq(), IndexedSeq(goal)))
 
-  def proveArithmetic(t: QETool, f: Formula): ProvableSig =
-    TermProvable.proveArithmetic(t,f)
+  /** @inheritdoc */
+  def proveArithmetic(t: QETool, f: Formula): ProvableSig = TermProvable.proveArithmetic(t,f)
 
-  def proveArithmeticLemma(t: QETool, f: Formula): Lemma =
-    TermProvable.proveArithmeticLemma(t,f)
+  /** @inheritdoc */
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma = TermProvable.proveArithmeticLemma(t,f)
 
-
+  /** @inheritdoc */
   override def toString: String = s"TermProvable(${provable.toString}, ${pt.toString})"
 
+  /** @inheritdoc */
   override def prettyString: String = s"TermProvable(${provable.prettyString}, ${pt.prettyString})"
 }
 

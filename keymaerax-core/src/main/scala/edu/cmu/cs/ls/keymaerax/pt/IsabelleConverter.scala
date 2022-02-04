@@ -193,11 +193,12 @@ object IDMap extends Logging {
     }
   }
 
+  def ofURename(ren: URename, acc: IDMap): IDMap = ???
+
   def ofProofTerm(pt:ProofTerm, acc:IDMap):IDMap = {
     pt match {
       case FOLRConstant(f) => ofFormula(f,acc)
-      case RuleApplication(child, ruleName, subgoal, sequentPositions, expArgs) =>
-        expArgs.foldLeft(ofProofTerm(child,acc))((acc,exp) => ofExp(exp,acc))
+      case r@RuleApplication(child, _, _) => r.args.foldLeft(ofProofTerm(child,acc))((acc,exp) => ofExp(exp,acc))
       case RuleTerm(name: String) =>
         val r : Provable =
           try { Provable.rules(name) }
@@ -223,7 +224,8 @@ object IDMap extends Logging {
         ofSequent(phi,acc)
       case Sub(child:ProofTerm, sub:ProofTerm, idx: Int) =>
         ofProofTerm(child,ofProofTerm(sub,acc))
-      case NoProof() => throw ConversionException("Found subterm with NoProof()")
+      case URenameTerm(child, ren) => ofProofTerm(child, ???)
+      case NoProof => throw ConversionException("Found subterm with NoProof")
     }
   }
 }
@@ -775,7 +777,7 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
 
   private def isDiffFormulaChase(pt:ProofTerm):Boolean = {
     pt match {
-      case Sub(Sub(RuleApplication(StartProof(reflFml),cutRightName/*"cut Right"*/,_,_,_),
+      case Sub(Sub(RuleApplication(StartProof(reflFml), _/*"cut Right"*/, _),
            ForwardNewConsequenceTerm(
            ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(geqPrimeName/*">=' derive >="*/),_),
                                                       UsubstProvableTerm(RuleTerm(ceName/*"CE Equiv"*/),_)),_,_:EquivifyRight),_,_:CoHideRight),_),
@@ -783,7 +785,7 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
       =>
         val 2 = 1 + 1
         true
-      case Sub(Sub(RuleApplication(StartProof(reflFml), cutRightName /*"cut Right"*/ , _, _, _),
+      case Sub(Sub(RuleApplication(StartProof(reflFml), _/*"cut Right"*/ , _),
       ForwardNewConsequenceTerm(
       ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(geqPrimeName /*">=' derive >="*/), _),
       UsubstProvableTerm(RuleTerm(ceName /*"CE Equiv"*/), _)), _, _), _, _), _),
@@ -799,7 +801,7 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
   // case IADIGeq() => b0("ADIGeq")
   private def translateDiffFormulaChase(pt:ProofTerm):Ipt = {
     pt match {
-      case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
+      case Sub(Sub(RuleApplication(StartProof(reflFml), _: CutRight, _),
           ForwardNewConsequenceTerm(
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(">=' derive >="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
@@ -809,14 +811,14 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
 /*      case Sub(Sub(RuleApplication(StartProof(reflFml),"cut Right",_,_,_),
           ForwardNewConsequenceTerm(
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(<=' derive <=),USubst{(f(||)~>x), (g(||)~>m()-V()*(ep()-t))}),UsubstProvableTerm(RuleTerm(CE congruence),USubst{(ctx_{⎵}~>⎵<->(x<=m()-V()*(ep()-t))'), (p_(||)~>(x<=m()-V()*(ep()-t))'), (q_(||)~>(x)'<=(m()-V()*(ep()-t))')})),  ==>  ((x<=m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))')->((x)'<=(m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))'),EquivifyRight at 1),  ==>  ((x<=m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))')->((x)'<=(m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))'),CoHideRight at 1),1),UsubstProvableTerm(AxiomTerm(<-> reflexive),USubst{(p_()~>(x<=m()-V()*(ep()-t))')}),0)*/
-      case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
+      case Sub(Sub(RuleApplication(StartProof(reflFml), _: CutRight, _),
           ForwardNewConsequenceTerm(
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("<=' derive <="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
             logger.trace(reflFml+"\n\n\n"+equivReflSubst)
             ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
-      case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
+      case Sub(Sub(RuleApplication(StartProof(reflFml), _: CutRight, _),
       ForwardNewConsequenceTerm(
       ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("=' derive ="), _),
       UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
@@ -832,10 +834,10 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
   private def isDiffEffectSysInstance(pt:ProofTerm):Boolean = {
     pt match {
         // todo: symmetried version too
-      case UsubstProvableTerm(AxiomTerm("DE differential effect (system)"), sub) => true
+      case UsubstProvableTerm(AxiomTerm("DE differential effect (system)"), _) => true
       // symmetric version of DEsys
       // @todo might not be right
-      case UsubstProvableTerm(Sub(RuleApplication(StartProof(seq),a,b,c,d),e,f),sub) if seqNeedsDefun(seq)=>
+      case UsubstProvableTerm(Sub(RuleApplication(StartProof(seq), _, _), _, _), _) if seqNeedsDefun(seq)=>
         true
       case _ => false
     }
@@ -852,13 +854,13 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
         IPrUSubst(axTerm,subst)
       // symmetric version of DEsys
       // @todo might not be right
-      case UsubstProvableTerm(Sub(RuleApplication(StartProof(seq),a,b,c,d),e,f),sub) if seqNeedsDefun(seq)=>
+      case UsubstProvableTerm(Sub(RuleApplication(StartProof(seq), rule, subgoal),e,f),sub) if seqNeedsDefun(seq)=>
         //val axTerm =  IAx(Iaxiom("DE differential effect (system)"))
         val defun = true
         val depred = false
         val space = INBSpace("i1")
         val subst = apply(sub, defun = defun, depred = depred, space)
-        val child = apply(Sub(RuleApplication(StartProof(seq),a,b,c,d),e,f))
+        val child = apply(Sub(RuleApplication(StartProof(seq), rule, subgoal),e,f))
         //val ruleApp = IRuleApplication(apply(StartProof(seq),NonSubst()),apply())
         IPrUSubst(child,subst)
       case _ =>
@@ -892,7 +894,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
 
   private def translateDiffTermChase(pttt: ProofTerm):Ipt = {
     pttt match {
-      case RuleApplication(Sub(a,Sub(b,UsubstProvableTerm(AxiomTerm("DI differential invariant"),sub),c),d),e,f,g,h)    =>
+      case rp@RuleApplication(Sub(a,Sub(b,UsubstProvableTerm(AxiomTerm("DI differential invariant"),sub),c),d), rule , subgoal)    =>
         val csym = DifferentialProgramConst("c")
         val cc:DifferentialProgram = sub(csym)
         val psym = UnitPredicational("p",AnyArg)
@@ -917,7 +919,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
             val result = IPrUSubst(IRuleApplication(IStart(instSeq), ruleApp,0),smallApp)
             val foo = ProofChecker(pttt)
             logger.trace("Thesubst >=: ************" + bigSubst + "\n******************")
-            IRuleApplication(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
+            IRuleApplication(ISub(apply(a),ISub(apply(b),result,c),d),apply(rule.name, rp.positions, rp.args),subgoal)
           /*case LessEqual(r,l) =>
             val fsym = UnitFunctional("f", AnyArg, Real)
             val gsym = UnitFunctional("g", AnyArg, Real)
@@ -947,7 +949,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
 
   private def isDiffTermChase(pt:ProofTerm):Boolean = {
     pt match {
-      case RuleApplication(Sub(a,Sub(b,UsubstProvableTerm(AxiomTerm("DI differential invariant"),sub),c),d),e,f,g,h) => true
+      case RuleApplication(Sub(a,Sub(b,UsubstProvableTerm(AxiomTerm("DI differential invariant"),_),_),_),_,_) => true
       case _ => false
     }
   }
@@ -962,7 +964,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
       case AxiomTerm("' linear") => true
       case AxiomTerm("-' derive minus") => true
         // commuted DESys... yechh
-      case Sub(RuleApplication(StartProof(seq),_,_,_,_),_,_) if seqNeedsDefun(seq)=>
+      case Sub(RuleApplication(StartProof(seq),_,_),_,_) if seqNeedsDefun(seq)=>
         true
       case AxiomTerm(n) => /*println("Normal ax: " + pt); */false
       case _ => false
@@ -974,7 +976,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
   //    case AxiomTerm("DE differential effect (system)") => true
       case AxiomTerm("DI differential invariant") => false //true
       // commuted DESys... yechh
-      case Sub(RuleApplication(StartProof(seq),_,_,_,_),_,_) if seqNeedsDepred(seq)=>
+      case Sub(RuleApplication(StartProof(seq),_,_),_,_) if seqNeedsDepred(seq)=>
         false//true
       case AxiomTerm(n) => /*println("Normal ax: " + pt); */false
       case _ => false
@@ -994,8 +996,8 @@ private def or(p:Iformula,q:Iformula):Iformula = {
         case FOLRConstant(f) => IFOLRConstant(apply(f,NonSubst()))
         case RuleTerm(name) => IAxRule(IaxiomaticRule(name))
         case AxiomTerm(name) => IAx(Iaxiom(name))
-        case RuleApplication(child, name, sub, seqPos, expArgs) =>
-          IRuleApplication(apply(child), apply(name, seqPos, expArgs), sub)
+        case r@RuleApplication(child, rule, sub) =>
+          IRuleApplication(apply(child), apply(rule.name, r.positions, r.args), sub)
         case UsubstProvableTerm(child, subst) =>
           val defun = axiomNeedsDefunctionalization(child)
           val depred = axiomNeedsDepredicationalization(child)
@@ -1028,7 +1030,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
             logger.trace("Interesting startproof: " + sm3)
           }
           IStart(apply(seq,sm3))
-        case NoProof() => throw ConversionException("Encountered unproven subproof")
+        case NoProof => throw ConversionException("Encountered unproven subproof")
       }
     }
   }

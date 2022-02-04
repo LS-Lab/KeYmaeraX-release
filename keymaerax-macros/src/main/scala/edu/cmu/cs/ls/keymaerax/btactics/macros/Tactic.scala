@@ -94,7 +94,8 @@ class Tactic(val names: Any = false, /* false is a sigil value, user value shoul
              val displayLevel: String = "internal",
              val needsGenerator: Boolean = false,
              val revealInternalSteps: Boolean = false,
-             val inputs:String = ""
+             val inputs: String = "",
+             val inputGenerator: String = ""
            ) extends StaticAnnotation {
     // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says Tactic.impl is the macro body
     def macroTransform(annottees: Any*): Any = macro TacticImpl.apply
@@ -144,12 +145,19 @@ class TacticImpl(val c: blackbox.Context) {
         "contextConclusion" -> Literal(Constant("")),
         "displayLevel" -> Literal(Constant("internal")),
         "revealInternalSteps" -> Literal(Constant(false)),
-        "inputs" -> Literal(Constant(""))
+        "inputs" -> Literal(Constant("")),
+        "inputGenerator" -> Literal(Constant(""))
       )
       val (idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-      val (inputString, displayLevel, premisesString, conclusionString, contextPremisesString, contextConclusionString, revealInternal) =
-        (getLiteral(paramMap("inputs")), getLiteral(paramMap("displayLevel")), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
-          getLiteral(paramMap("contextPremises")), getLiteral(paramMap("contextConclusion")), getBoolLiteral(paramMap("revealInternalSteps")))
+      val (inputString, displayLevel, premisesString, conclusionString, contextPremisesString, contextConclusionString, revealInternal, inputGenerator) =
+        (getLiteral(paramMap("inputs")),
+          getLiteral(paramMap("displayLevel")),
+          getLiteral(paramMap("premises")),
+          getLiteral(paramMap("conclusion")),
+          getLiteral(paramMap("contextPremises")),
+          getLiteral(paramMap("contextConclusion")),
+          getBoolLiteral(paramMap("revealInternalSteps")),
+          getLiteral(paramMap("inputGenerator")))
       val inputs: List[ArgInfo] = parseAIs(inputString)(c)
       val codeName: String = paramMap("codeName") match {
         case Literal(Constant("")) => tn.decodedName.toString
@@ -176,11 +184,11 @@ class TacticImpl(val c: blackbox.Context) {
         case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
         case (ins, prem, concl, "", "") if concl != "" && prem != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
-          RuleDisplayInfo(simpleDisplay, conc, prem)
+          RuleDisplayInfo(simpleDisplay, conc, prem, inputGenerator)
         case (ins, prem, concl, ctxPrem, ctxConcl) if concl != "" && prem != "" && ctxPrem != "" && ctxConcl != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
           val (ctxPrem, ctxConc) = (parseSequents(contextPremisesString)(c), parseSequent(contextConclusionString)(c))
-          TacticDisplayInfo(simpleDisplay, conc, prem, ctxConc, ctxPrem)
+          TacticDisplayInfo(simpleDisplay, conc, prem, ctxConc, ctxPrem, inputGenerator)
         //case (_::_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
@@ -446,9 +454,9 @@ class TacticImpl(val c: blackbox.Context) {
       else {
         args.find((ai: ArgInfo) => {
           display match {
-            case (_: AxiomDisplayInfo) | (_: SimpleDisplayInfo) => true
-            case InputAxiomDisplayInfo(names, displayFormula, _input) => !displayFormula.contains(ai.name)
-            case RuleDisplayInfo(sd, conc, prem) => !(sdContains(conc, ai.name) || prem.exists(sd => sdContains(sd, ai.name)))
+            case _: AxiomDisplayInfo | _: SimpleDisplayInfo => true
+            case InputAxiomDisplayInfo(_, displayFormula, _) => !displayFormula.contains(ai.name)
+            case RuleDisplayInfo(_, conc, prem, _) => !(sdContains(conc, ai.name) || prem.exists(sd => sdContains(sd, ai.name)))
           }
         })
       }

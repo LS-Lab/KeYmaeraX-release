@@ -128,7 +128,9 @@ abstract class UserModelRequest(db: DBAbstraction, userId: String, modelId: Stri
 
 abstract class UserProofRequest(db: DBAbstraction, userId: String, proofId: String)
   //@todo faster query for existence
-  extends UserRequest(userId, (id: String) => db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(id, proofId)) {
+  extends UserRequest(userId, (id: String) =>
+    Try(proofId.toInt).toOption.isDefined && (db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(id, proofId))
+  ) {
   override final def resultingResponses(): List[Response] = {
     Try(proofId.toInt).toOption match {
       case Some(_) => doResultingResponses()
@@ -2315,7 +2317,8 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
     sortMismatch match {
       case None =>
-        val symbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols + Function("old", None, Real, Real)
+        val allowedSymbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols ++
+          InterpretedSymbols.symbols ++ TacticReservedSymbols.symbols
         val paramFV: Set[NamedSymbol] = {
           //@note function/predicate/system/game symbols are proof parameters if they are not declared in the input
           elaborated.flatMap({
@@ -2329,11 +2332,11 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
         val (hintFresh, allowedFresh) = arg match {
           case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
-          case _ => (paramFV -- symbols, arg.allowsFresh) //@todo would need other inputs to check
+          case _ => (paramFV -- allowedSymbols, arg.allowsFresh) //@todo would need other inputs to check
         }
 
         if (hintFresh.size > allowedFresh.size) {
-          val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
+          val fnVarMismatch = hintFresh.map(fn => fn -> allowedSymbols.find(s => s.name == fn.name && s.index == fn.index)).
             filter(_._2.isDefined)
           if (fnVarMismatch.isEmpty) {
             BooleanResponse(flag = false, Some("argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
@@ -3030,7 +3033,7 @@ object ArchiveEntryPrinter {
   }
 
   private def replaceInfo(entry: ParsedArchiveEntry, entryName: String, tactics: List[(String, String)]): ParsedArchiveEntry = {
-    entry.copy(name = entryName, tactics = tactics.map(e => (e._1, e._2, TactixLibrary.skip)))
+    entry.copy(name = entryName, tactics = tactics.map(e => (e._1, RequestHelper.tacticString(e._2), TactixLibrary.skip)))
   }
 }
 
@@ -3286,16 +3289,17 @@ object RequestHelper {
       invSupplier = mergedInvSupplier)
   }
 
-  def tacticString(proofInfo: ProofPOJO): String = {
-    val text = proofInfo.tactic.getOrElse("/* no tactic recorded */")
+  def tacticString(proofInfo: ProofPOJO): String = tacticString(proofInfo.tactic.getOrElse("/* no tactic recorded */"))
+
+  def tacticString(s: String): String = {
     try {
-      text.parseJson match {
+      s.parseJson match {
         case JsObject(fields) if fields.contains("tacticText") => fields("tacticText").asInstanceOf[JsString].value
         case JsString(s) => s
         case _ => "/* no tactic recorded */"
       }
     } catch {
-      case _: ParsingException => text //@note backwards-compatibility with database content that's not JSON
+      case _: ParsingException => s //@note backwards-compatibility with database content that's not JSON
     }
   }
 

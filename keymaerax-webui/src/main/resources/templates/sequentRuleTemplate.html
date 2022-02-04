@@ -24,9 +24,12 @@
                                         <span ng-if="readOnly || (premise.isClosed && antePart.isInput && antePart.value() === undefined)">{{antePart.placeholder}}</span>
                                         <span ng-if="!readOnly && !premise.isClosed && antePart.isInput" class="popover-wrapper">
                                             <a href="#" id="{{antePart.text}}" class="k4-axiomtactic-input"
-                                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
-                                              editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
-                                              e-required>{{antePart.placeholder}}</a>
+                                               e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
+                                               e-uib-typeahead="inp.text as inp for inp in generateInputs()"
+                                               e-typeahead-min-length="0"
+                                               e-typeahead-template-url="invariantTemplate.html"
+                                               editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
+                                               e-required>{{antePart.placeholder}}</a>
                                         </span>
                                     </span>
                                     {{$last ? '' : ','}}
@@ -41,9 +44,13 @@
                                         <span ng-if="readOnly || (premise.isClosed && succPart.isInput && succPart.value() === undefined)">{{succPart.placeholder}}</span>
                                         <span ng-if="!readOnly && !premise.isClosed && succPart.isInput" class="popover-wrapper">
                                             <a href="#" id="{{succPart.text}}" class="k4-axiomtactic-input"
-                                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
-                                              editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
-                                              e-required>{{succPart.placeholder}}</a>
+                                               e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
+                                               e-uib-typeahead="inp.text as inp for inp in generateInputs()"
+                                               e-typeahead-min-length="0"
+                                               e-typeahead-template-url="invariantTemplate.html"
+                                               editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
+                                               e-required>{{succPart.placeholder}}</a>
+                                            <span ng-show="isLoading" class="fa fa-spin fa-spinner"></span>
                                         </span>
                                     </span>
                                     {{$last ? '' : ','}}
@@ -94,3 +101,13 @@
         </div>
     </div>
 </div>
+
+<script type="text/ng-template" id="invariantTemplate.html">
+    <a>
+        <span ng-if="match.label">
+            <span>{{match.label.text}}</span>
+            &nbsp;<code class="pull-right">{{match.label.method | odeTactic}}</code>
+        </span>
+        <span ng-if="!match.label" ng-bind-html="uibTypeaheadHighlight:query"></span>
+    </a>
+</script>

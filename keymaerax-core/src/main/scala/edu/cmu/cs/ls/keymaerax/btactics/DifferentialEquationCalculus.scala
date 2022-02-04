@@ -118,6 +118,7 @@ trait DifferentialEquationCalculus {
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( [x'=f(x) & Q∧R]P ), Δ ;; Γ |- C( [x'=f(x) & Q]R ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
+    inputGenerator = "pegasusCandidates",
     revealInternalSteps = true)
   def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position ) => DifferentialTactics.diffCut(R)(pos)}
 

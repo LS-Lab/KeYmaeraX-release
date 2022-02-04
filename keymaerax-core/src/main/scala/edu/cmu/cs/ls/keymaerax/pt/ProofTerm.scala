@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * @author Nathan Fulton
  * @author Brandon Bohrer         
  */
-sealed abstract class ProofTerm() {
+sealed abstract class ProofTerm {
 
   /* HACK: Code elsewhere uses equality tests on ProvableSigs under the assumption that equality depends only on the conclusion and subgoals.
   * we make this more true by considering all proofterms equal to each other.
@@ -18,7 +18,7 @@ sealed abstract class ProofTerm() {
   * */
   override def equals(other:Any): Boolean = {
     other match {
-      case pt: ProofTerm => true
+      case _: ProofTerm => true
       case _ => false
     }
   }
@@ -31,13 +31,14 @@ sealed abstract class ProofTerm() {
       case _: FOLRConstant => 1
       case _: AxiomTerm => 1
       case _: RuleTerm => 1
-      case _: NoProof => 1
+      case NoProof => 1
       case UsubstProvableTerm(child, _) => child.numCons + 1
-      case RuleApplication(child, _, _, _, _) => child.numCons + 1
+      case RuleApplication(child, _, _) => child.numCons + 1
       case ProlongationTerm(child, pro) => child.numCons + pro.numCons + 1
       case ForwardNewConsequenceTerm(child, _, _) => child.numCons + 1
+      case URenameTerm(child, _) => child.numCons + 1
       case Sub(child, sub, _) => child.numCons + sub.numCons + 1
-      case StartProof(phi) => 1
+      case _: StartProof => 1
     }
   }
 
@@ -45,12 +46,13 @@ sealed abstract class ProofTerm() {
   def axiomsUsed:Set[String] = {
     this match {
       case AxiomTerm(name) => Set(name)
-      case _ : FOLRConstant => Set()
-      case _ : RuleTerm => Set()
-      case _ : NoProof => Set()
-      case _ : StartProof => Set()
+      case _ : FOLRConstant => Set.empty
+      case _ : RuleTerm => Set.empty
+      case NoProof => Set.empty
+      case _ : StartProof => Set.empty
+      case _: URenameTerm => Set.empty
       case UsubstProvableTerm(child, _) => child.axiomsUsed
-      case RuleApplication(child, _, _, _, _) => child.axiomsUsed
+      case RuleApplication(child, _, _) => child.axiomsUsed
       case ProlongationTerm(child, pro) => child.axiomsUsed ++ pro.axiomsUsed
       case ForwardNewConsequenceTerm(child, _, _) => child.axiomsUsed
       case Sub(child, sub, _) => child.axiomsUsed ++ sub.axiomsUsed
@@ -59,14 +61,15 @@ sealed abstract class ProofTerm() {
   }
 
   // All rules that appear in the proof
-  def rulesUsed:Set[String] = {
+  def rulesUsed: Set[String] = {
     this match {
       case RuleTerm(name) => Set(name)
-      case RuleApplication(child, name, _, _, _) => child.rulesUsed ++ Set(name)
-      case _ : AxiomTerm => Set()
-      case _ : FOLRConstant => Set()
-      case _ : NoProof => Set()
-      case _ : StartProof => Set()
+      case RuleApplication(child, rule, _) => child.rulesUsed + rule.name
+      case _ : AxiomTerm => Set.empty
+      case _ : FOLRConstant => Set.empty
+      case NoProof => Set.empty
+      case _ : StartProof => Set.empty
+      case _: URenameTerm => Set.empty
       case UsubstProvableTerm(child, _) => child.rulesUsed
       case ProlongationTerm(child, pro) => child.rulesUsed ++ pro.rulesUsed
       case ForwardNewConsequenceTerm(child, _, _) => child.rulesUsed
@@ -79,14 +82,15 @@ sealed abstract class ProofTerm() {
   def arithmeticGoals:Set[Formula] = {
     this match {
       case FOLRConstant(f) => Set(f)
-      case _ : RuleTerm => Set()
-      case _ : AxiomTerm => Set()
-      case _ : NoProof => Set()
-      case _ : StartProof => Set()
+      case _ : RuleTerm => Set.empty
+      case _ : AxiomTerm => Set.empty
+      case NoProof => Set.empty
+      case _ : StartProof => Set.empty
+      case _: URenameTerm => Set.empty
       case UsubstProvableTerm(child, _) => child.arithmeticGoals
       case ProlongationTerm(child, pro) => child.arithmeticGoals ++ pro.arithmeticGoals
       case ForwardNewConsequenceTerm(child, _, _) => child.arithmeticGoals
-      case RuleApplication(child, name, _, _, _) => child.arithmeticGoals
+      case RuleApplication(child, _, _) => child.arithmeticGoals
       case Sub(child, sub, _) => child.arithmeticGoals ++ sub.arithmeticGoals
     }
   }
@@ -99,15 +103,15 @@ sealed abstract class ProofTerm() {
       case e : UnaryComposite => 2*wordSize + expBytesEstimate(e.child)
       case e : BinaryComposite => 3*wordSize + expBytesEstimate(e.left) + expBytesEstimate(e.right)
       case e : ApplicationOf => 3*wordSize + 6*wordSize + expBytesEstimate(e.child)//function is six or so words?
-      case ns : NamedSymbol => 3*wordSize //also poor estimate
+      case _ : NamedSymbol => 3*wordSize //also poor estimate
       case q : Quantified => 3*wordSize + expBytesEstimate(q.child) //also poor estimate
       case m : Modal => 3*wordSize + expBytesEstimate(m.child) + expBytesEstimate(m.program)
-      case ode : ODESystem => 3*wordSize + expBytesEstimate(ode.constraint) + expBytesEstimate(ode.ode)
+      case o : ODESystem => 3*wordSize + expBytesEstimate(o.constraint) + expBytesEstimate(o.ode)
     }
   }
 
   private def subBytesEstimate(subst: USubst):Int = {
-    subst.subsDefsInput.foldLeft(0)((acc,pair) =>acc + expBytesEstimate(pair.what) + expBytesEstimate(pair.repl))
+    subst.subsDefsInput.foldLeft(0)((acc,pair) => acc + expBytesEstimate(pair.what) + expBytesEstimate(pair.repl))
   }
 
   private def sequentBytesEstimate(sequent: Sequent):Int = {
@@ -121,7 +125,7 @@ sealed abstract class ProofTerm() {
 
   private val intSizeEstimate = 2*wordSize
 
-  private def seqBytesEstimate[T](s:Seq[T]):Int = {
+  private def seqBytesEstimate[T](s: Seq[T]):Int = {
     (2 + s.length)*wordSize
   }
 
@@ -131,13 +135,14 @@ sealed abstract class ProofTerm() {
       case FOLRConstant(f) => expBytesEstimate(f) + 2*wordSize // over-estimates due to structure sharing
       case RuleTerm(_) => 2*wordSize // Assume names are interned
       case AxiomTerm(_) => 2*wordSize
-      case _ : NoProof => wordSize
+      case NoProof => wordSize
       case StartProof(seq) => 2*wordSize + sequentBytesEstimate(seq)
       case UsubstProvableTerm(child, sub) => 3*wordSize + child.bytesEstimate + subBytesEstimate(sub)
       case ProlongationTerm(child, pro) => 3*wordSize + child.bytesEstimate + pro.bytesEstimate
       case ForwardNewConsequenceTerm(child, con, rule) => 4*wordSize + child.bytesEstimate + sequentBytesEstimate(con) + ruleBytesEstimate(rule)
-      case RuleApplication(child,name,subgoal,poses, expArgs) => 6*wordSize + child.bytesEstimate + intSizeEstimate + seqBytesEstimate(poses) + seqBytesEstimate(expArgs)
-      case Sub(child, sub, i) => 4*wordSize + child.bytesEstimate + sub.bytesEstimate + intSizeEstimate
+      case r@RuleApplication(child, _, _) => 6*wordSize + child.bytesEstimate + intSizeEstimate + seqBytesEstimate(r.positions) + seqBytesEstimate(r.args)
+      case URenameTerm(child, ren) => child.bytesEstimate + seqBytesEstimate(List(ren.what, ren.repl)) //@todo
+      case Sub(child, sub, _) => 4*wordSize + child.bytesEstimate + sub.bytesEstimate + intSizeEstimate
     }
   }
 }
@@ -145,7 +150,45 @@ sealed abstract class ProofTerm() {
 case class FOLRConstant(f : Formula) extends ProofTerm
 
 /** Witness for rule application. */
-case class RuleApplication(child: ProofTerm, ruleName: String, subgoal: Int, sequentPositions: Seq[SeqPos], expArgs:Seq[Expression]) extends ProofTerm //@todo add to theory.
+case class RuleApplication(child: ProofTerm, rule: Rule, subgoal: Int) extends ProofTerm {
+  val (positions: List[SeqPos], args: List[Expression]) = rule match {
+    //@todo do a total pattern match on all rules in the core and produce individualized proof terms for each of them.
+    //This is necessary because we need positions where the rule should be applied within the *sequent* in addition to subgoal,
+    //which is the position within the *provable*. Alternatively a subtype heirarchy for Rule would do the trick...
+    case Close(ante,succ)        => (List(ante, succ), List.empty)
+    case CoHide2(ante, succ)     => (List(ante, succ), List.empty)
+    case CutRight(fml, succ)     => (List(succ), List(fml))
+    case ImplyRight(succ)        => (List(succ), List.empty)
+    case AndRight(succ)          => (List(succ), List.empty)
+    case CoHideRight(succ)       => (List(succ), List.empty)
+    case CommuteEquivRight(succ) => (List(succ), List.empty)
+    case EquivifyRight(succ)     => (List(succ), List.empty)
+    case EquivRight(succ)        => (List(succ), List.empty)
+    case NotRight(succ)          => (List(succ), List.empty)
+    case CloseTrue(succ)         => (List(succ), List.empty)
+    case HideRight(succ)         => (List(succ), List.empty)
+    case OrRight(succ)           => (List(succ), List.empty)
+
+    case OrLeft(ante)      => (List(ante), List.empty)
+    case AndLeft(ante)     => (List(ante), List.empty)
+    case HideLeft(ante)    => (List(ante), List.empty)
+    case CutLeft(fml,ante) => (List(ante), List(fml))
+    case ImplyLeft(ante)   => (List(ante), List.empty)
+    case NotLeft(ante)     => (List(ante), List.empty)
+    case EquivLeft(ante)   => (List(ante), List.empty)
+    case CloseFalse(ante)  => (List(ante), List.empty)
+
+    case BoundRenaming(what, repl, seq: SeqPos) => (List(seq), List(what, repl))
+    case UniformRenaming(what, repl)            => (List.empty, List(what, repl))
+    case Skolemize(seq: SeqPos)                 => (List(seq), List.empty)
+    case Cut(fml)                               => (List.empty, List(fml))
+
+    case _ =>
+      throw new Exception(s"TermProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
+  }
+}
+
+//@todo add to theory.
 /* @todo: could unify RuleTerm and AxiomTerm */
 case class RuleTerm(name: String) extends ProofTerm
 
@@ -153,13 +196,14 @@ case class UsubstProvableTerm(child: ProofTerm, substitution: USubst) extends Pr
 
 case class AxiomTerm(name: String) extends ProofTerm
 
-
 case class ForwardNewConsequenceTerm(child: ProofTerm, newConsequence: Sequent, rule: Rule) extends ProofTerm
 
 case class ProlongationTerm(child: ProofTerm, prolongation: ProofTerm) extends ProofTerm
 
 case class StartProof(phi:Sequent) extends ProofTerm
 
-case class NoProof() extends ProofTerm
+case object NoProof extends ProofTerm
 
-case class Sub(child:ProofTerm, sub:ProofTerm, idx: Int) extends ProofTerm
+case class URenameTerm(child: ProofTerm, ren: URename) extends ProofTerm
+
+case class Sub(child: ProofTerm, sub: ProofTerm, idx: Int) extends ProofTerm
