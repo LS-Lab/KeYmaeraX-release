@@ -556,3 +556,16 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
   override def stringify(e: Expression): String = super.stringify(e)
 }
+
+/** A pretty printer that omits the interpretations of interpreted functions. */
+object KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXOmitInterpretationPrettyPrinter
+
+/** A pretty printer that omits the interpretations of interpreted functions. */
+class KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXPrecedencePrinter {
+  protected override def pp(q: PosInExpr, term: Term): String = term match {
+    case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
+    case FuncOf(Function(n, i, _, _, Some(_)), arg) => emit(q, n + i.map("_" + _).getOrElse("") + "(" + pp(q++0, arg) + ")")
+    case FuncOf(f, Nothing) => emit(q, f.asString + "()")
+    case _ => super.pp(q, term)
+  }
+}

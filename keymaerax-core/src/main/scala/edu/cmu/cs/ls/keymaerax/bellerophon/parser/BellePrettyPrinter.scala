@@ -5,7 +5,7 @@ import BelleOpSpec.op
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{DOUBLE_COLON, DOUBLE_QUOTE, EMPTY_ARGS, EMPTY_BRANCHES, EMPTY_TACTIC, LIST_END, NEWLINE, SPACE, TAB, TODO_TACTIC}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.TacticInfo
 import edu.cmu.cs.ls.keymaerax.core.{Equal, Expression, Formula, Term}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXOmitInterpretationPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 
@@ -19,6 +19,9 @@ import scala.util.Try
   */
 object BellePrettyPrinter extends (BelleExpr => String) {
   override def apply(e: BelleExpr): String = pp(e, 0)
+
+  /** Pretty-printer for expressions. */
+  private val exprPP = new KeYmaeraXOmitInterpretationPrettyPrinter
 
   private def sanitizeUnary(t: String, op: String): String = t match {
     case EMPTY_TACTIC | EMPTY_BRANCHES => EMPTY_TACTIC
@@ -110,7 +113,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case _: SeqTactic | _: EitherTactic | _: RepeatTactic | _: CaseTactic | _: ParallelTactic | _: SaturateTactic
                | _: Using | _: BranchTactic => OPEN_PAREN.img + pp(t, indent) + CLOSE_PAREN.img
           case _ => pp(t, indent)
-        }) + SPACE + USING.img + SPACE + DOUBLE_QUOTE + es.mkString(SPACE + DOUBLE_COLON + SPACE) + (if (es.isEmpty) LIST_END else if (es.size == 1) "" else SPACE + DOUBLE_COLON + SPACE + LIST_END) + DOUBLE_QUOTE
+        }) + SPACE + USING.img + SPACE + DOUBLE_QUOTE + es.map(KeYmaeraXOmitInterpretationPrettyPrinter).mkString(SPACE + DOUBLE_COLON + SPACE) + (if (es.isEmpty) LIST_END else if (es.size == 1) "" else SPACE + DOUBLE_COLON + SPACE + LIST_END) + DOUBLE_QUOTE
         case _ => throw PrinterException(s"Do not know how to pretty-print $e")
       }
     }
@@ -132,7 +135,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       case Left(x :: Nil) => argPrinter(Left(x))
       case Left(x :: xs) => Some((x :: xs).flatMap(c => argPrinter(Left(c))).map(_.stripPrefix(DOUBLE_QUOTE).stripSuffix(DOUBLE_QUOTE)).
         mkString(DOUBLE_QUOTE, DOUBLE_COLON, DOUBLE_COLON + LIST_END + DOUBLE_QUOTE))
-      case Left(expr: Expression) => Some(DOUBLE_QUOTE + KeYmaeraXPrettyPrinter(expr) + DOUBLE_QUOTE)
+      case Left(expr: Expression) => Some(DOUBLE_QUOTE + exprPP(expr) + DOUBLE_QUOTE)
       case Left(pie: PosInExpr) => Some(DOUBLE_QUOTE + pie.pos.mkString(".") + DOUBLE_QUOTE)
       case Left(Some(expr)) => argPrinter(Left(expr))
       case Left(expr) => Some(DOUBLE_QUOTE + expr + DOUBLE_QUOTE)

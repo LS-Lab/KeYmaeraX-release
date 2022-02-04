@@ -195,7 +195,7 @@ object PegasusK2MConverter extends UncheckedBaseK2MConverter {
 
   override def convert(e: KExpr): MExpr = {
     //insist on less strict input: interpreted function symbols allowed here
-    insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.contains(fn) case _ => true }),
+    insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.exists(_._2 == fn) case _ => true }),
       "Interpreted functions must have expected domain and sort")
     insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
     e match {

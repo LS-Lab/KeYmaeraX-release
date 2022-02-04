@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -154,6 +155,10 @@ class ImplicitFunctionTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  "QE" should "not abbreviate interpreted functions known to Mathematica" in withMathematica { _ =>
+    proveBy("exp(x)>0".asFormula, QE) shouldBe 'proved
+  }
+
   //TODO: substitute uninterpreted for interpreted functions in these tests
   "examples" should "work under assignments and nesting" in withMathematica { _ =>
     val fml = "x =1 -> [x := exp(exp(x)); x:=1; ++ x:= exp(x); ] x > 0".asFormula
@@ -171,29 +176,19 @@ class ImplicitFunctionTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "work with DI (1)" in withMathematica { _ =>
-    val fml = "x =1 -> [{x' = exp(x)}] x > 0".asFormula
-    val pr = proveBy(fml, skip)
-    // Ideally: prove by dI('full)(1), etc.
+  it should "work with DI (1)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
+    proveBy("x =1 ==> [{x' = exp(x)}] x > 0".asSequent, dI()(1)) shouldBe 'proved
+  }}
 
-    pr shouldBe 'proved
-  }
+  it should "work with DI (2)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
+    val s = "x>=0&y>=0&z>=0 ==> [{x' = exp(y), y' = exp(z), z'=1}] x+y+z>=0".asSequent
+    proveBy(s, dI()(1)) shouldBe 'proved
+  }}
 
-  it should "work with DI (2)" in withMathematica { _ =>
-    val fml = "x>=0&y>=0&z>=0 -> [{x' = exp(y), y' = exp(z), z'=1}] x+y+z>=0".asFormula
-    val pr = proveBy(fml, skip)
-    // Ideally: prove by dI('full)(1), etc.
-
-    pr shouldBe 'proved
-  }
-
-  it should "work with DI (3)" in withMathematica { _ =>
-    val fml = "x=5 -> [{x' = sin(x) + 1}] x>=0".asFormula
-    val pr = proveBy(fml, skip)
-    // Ideally: prove by dI('full)(1), etc.
-
-    pr shouldBe 'proved
-  }
+  it should "work with DI (3)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
+    val s = "x=5 ==> [{x' = sin(x) + 1}] x>=0".asSequent
+    proveBy(s, dI()(1)) shouldBe 'proved
+  }}
 
   it should "model a pendulum" in withMathematica { _ =>
     val fml = "a > 0 & b > 0 & x1 = 1 & x2 = 1 -> [{x1' = x2, x2'= -a*sin(x1) - b*x2}] a*(1-cos(x1))+1/2*x2^2 <= 1/2".asFormula
