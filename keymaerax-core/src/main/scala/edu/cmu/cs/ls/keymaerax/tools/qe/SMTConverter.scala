@@ -34,6 +34,14 @@ abstract class SMTConverter extends (Formula=>String) {
   private val SMT_ABS = "absolute"
   private val SMT_MIN = "minimum"
   private val SMT_MAX = "maximum"
+
+  //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
+  private val SMT_INTERPRETED_FUNCTIONS = Map[NamedSymbol, String](
+    InterpretedSymbols.absF -> ("(define-fun " + nameIdentifier(InterpretedSymbols.absF) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"),
+    InterpretedSymbols.minF -> ("(define-fun " + nameIdentifier(InterpretedSymbols.minF) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"),
+    InterpretedSymbols.maxF -> ("(define-fun " + nameIdentifier(InterpretedSymbols.maxF) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))")
+  )
+
   /**
     * Convert KeYmaera X expression to SMT expression with negated formula form
     * the result SMT expression is checked by Z3 for satisfiability
@@ -56,10 +64,9 @@ abstract class SMTConverter extends (Formula=>String) {
           //@note this check is redundant with the check from nameIdentifier
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
           "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")" //@note identical to (declare-const name sort)
-        //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
-        case fn@InterpretedSymbols.minF => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
-        case fn@InterpretedSymbols.maxF => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
-        case fn@InterpretedSymbols.absF => "(define-fun " + nameIdentifier(fn) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
+        case fn@Function(_, _, _, _, Some(_)) =>
+          if (SMT_INTERPRETED_FUNCTIONS.contains(fn)) SMT_INTERPRETED_FUNCTIONS(fn)
+          else throw ConversionException("Conversion of interpreted function " + fn.prettyString + " not supported")
         case fn@Function(_, _, _, _, None) =>
           require(fn.sort==Real, "Only support functions of type real, but not " + fn.sort)
           "(declare-fun " + nameIdentifier(fn) + " (" + generateFuncParamSorts(fn.domain) +  ") " + fn.sort + ")"
@@ -159,7 +166,7 @@ abstract class SMTConverter extends (Formula=>String) {
       case t: DifferentialSymbol => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) =>
-        if (fn.interpreted) fn match {
+        if (fn.interpreted && !SMT_INTERPRETED_FUNCTIONS.contains(fn)) fn match {
           // TODO: handle
           case _ => throw ConversionException("Interpreted function not supported presently by SMT: " + t)
         } else "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
