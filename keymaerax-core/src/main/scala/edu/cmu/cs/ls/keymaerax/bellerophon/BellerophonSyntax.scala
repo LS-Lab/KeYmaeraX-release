@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -512,14 +513,26 @@ case class AppliedDependentTwoPositionTactic(t: DependentTwoPositionTactic, p1: 
   */
 case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: PositionLocator) extends BelleExpr {
   import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+
+  /** True if the `fml` matches the `shape`, false otherwise. */
+  private def matches(fml: Option[Expression], shape: Expression): Boolean = {
+    //@note shape in tactics is always abbreviated (without interpretation), formula is either expanded fn<<...>>(x) or abbreviated fn(x)
+    fml.flatMap(ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case FuncOf(fn, args) => Right(FuncOf(fn.copy(interp = None), args))
+        case _ => Left(None)
+      }
+    }, _)).contains(shape)
+  }
+
   final def computeResult(provable: ProvableSig) : ProvableSig = try { locator match {
       //@note interprets PositionLocator
       case Fixed(pos, shape, exact) => shape match {
         case Some(f: Formula) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal since otherwise ill-defined")
           //@note (implicit .apply needed to ensure subposition to pos.inExpr
-          if (( exact && provable.subgoals.head.sub(pos).contains(f)) ||
-              (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
+          if (( exact && matches(provable.subgoals.head.sub(pos), f)) ||
+              (!exact && provable.subgoals.head.sub(pos).flatMap(UnificationMatch.unifiable(f, _)).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
             throw new IllFormedTacticApplicationException("Formula " + provable.subgoals.head.sub(pos).getOrElse("") + " at position " + pos +
@@ -698,6 +711,18 @@ class AppliedDependentPositionTacticWithAppliedInput(override val pt: DependentP
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
   import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
   override def prettyString: String = pt.name + "(" + locator.prettyString + ")"
+
+  /** True if the `fml` matches the `shape`, false otherwise. */
+  private def matches(fml: Option[Expression], shape: Expression): Boolean = {
+    //@note shape in tactics is always abbreviated (without interpretation), formula is either expanded fn<<...>>(x) or abbreviated fn(x)
+    fml.flatMap(ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case FuncOf(fn, args) => Right(FuncOf(fn.copy(interp = None), args))
+        case _ => Left(None)
+      }
+    }, _)).contains(shape)
+  }
+
   final override def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]], defs: Declaration): BelleExpr =
   /*final override def computeExpr(v: BelleValue): BelleExpr =*/ try {
     locator match {
@@ -706,7 +731,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         case Some(f) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
           //@note (implicit .apply needed to ensure subposition to pos.inExpr
-          if ((exact && provable.subgoals.head.sub(pos).contains(f)) ||
+          if ((exact && matches(provable.subgoals.head.sub(pos), f)) ||
             (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             pt.factory(pos).computeExpr(BelleProvable(provable, labels, defs))
           } else {
