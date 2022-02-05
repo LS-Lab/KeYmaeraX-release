@@ -517,12 +517,15 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   /** True if the `fml` matches the `shape`, false otherwise. */
   private def matches(fml: Option[Expression], shape: Expression): Boolean = {
     //@note shape in tactics is always abbreviated (without interpretation), formula is either expanded fn<<...>>(x) or abbreviated fn(x)
-    fml.flatMap(ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+    val traverse = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
         case FuncOf(fn, args) => Right(FuncOf(fn.copy(interp = None), args))
         case _ => Left(None)
       }
-    }, _)).contains(shape)
+    }
+    val shapeAbbrev = ExpressionTraversal.traverse(traverse, shape).getOrElse(return false)
+
+    fml.flatMap(ExpressionTraversal.traverse(traverse, _)).contains(shapeAbbrev)
   }
 
   final def computeResult(provable: ProvableSig) : ProvableSig = try { locator match {
