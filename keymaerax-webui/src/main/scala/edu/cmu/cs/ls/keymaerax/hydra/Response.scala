@@ -739,6 +739,9 @@ object Helpers {
       case t: UnaryCompositeTerm => print(q, "term", hasStep, isEditable, exprPrinter(expr), op(t, fp) +: wrapChild(t, printJson(q ++ 0, t.child, fp), fp))
       case t: BinaryCompositeTerm => print(q, "term", hasStep, isEditable, exprPrinter(expr),
         wrapLeft(t, printJson(q ++ 0, t.left, fp), fp) ++ (op(t, fp)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right, fp), fp))
+      case FuncOf(Function(_, _, _, _, i), _) =>
+        if (i.isDefined) print(q, exprPrinter(expr), "interp-fn", fp)
+        else print(q, exprPrinter(expr), "term", fp)
       case _ => print(q, exprPrinter(expr), "term", fp)
     }
   }

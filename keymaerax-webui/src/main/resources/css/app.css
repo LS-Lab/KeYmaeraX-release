@@ -416,6 +416,10 @@ del {
 
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
+.k4-interp-fn {
+  background: transparent;
+  font-style: italic;
+}
 .k4-functional {
   font-style: bold small-caps;
   text-transform: capitalize;
