@@ -353,11 +353,11 @@ private object ToolTactics {
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
   // was "pQE"
-  def partialQE(qeTool: => QETacticTool): BelleExpr = anon ((s: Sequent) => {
+  def partialQE(qeTool: => QETacticTool, reformatAssumptions: Boolean = true): BelleExpr = anon ((s: Sequent) => {
     // dependent tactic so that qeTool is evaluated only when tactic is executed, but not when tactic is instantiated
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     hidePredicates & toSingleFormula & rcf(qeTool) &
-      (if (s.ante.exists(!_.isInstanceOf[PredOf]))
+      (if (reformatAssumptions && s.ante.exists(!_.isInstanceOf[PredOf]))
         Idioms.doIf(!_.isProved)(cut(s.ante.filterNot(_.isInstanceOf[PredOf]).reduceRight(And)) <(
           SaturateTactic(andL('L)) & SimplifierV3.fullSimpTac(),
           QE & done
