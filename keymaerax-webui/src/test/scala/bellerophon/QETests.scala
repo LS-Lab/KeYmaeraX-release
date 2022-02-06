@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpecula
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.qe.KeYmaeraToMathematica
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
 
 import scala.collection.immutable.IndexedSeq
@@ -305,6 +306,13 @@ class QETests extends TacticTestBase {
   it should "not forget assumptions on x^2>=0 |- y>1" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq("x^2>=0".asFormula), IndexedSeq("y>1".asFormula)), ToolTactics.partialQE(qeTool)).
       subgoals.loneElement shouldBe  "x^2>=0 ==> y>1".asSequent
+  }
+
+  "Prepare QE" should "prepare but not perform a QE call" in withMathematica { _ =>
+    proveBy("x>=2 ==> y>=1 -> x^2*y>=4 & \\forall z (z>0 -> x/z > 0)".asSequent, ToolTactics.prepareQE(List.empty, skip)).
+      subgoals.loneElement shouldBe "==> \\forall y \\forall x (x>=2 & y>=1 -> x^2*y>=4 & \\forall z (z>0 -> x/z > 0))".asSequent
+    proveBy("x>=2 ==> y>=1 -> x^2*y>=4 | \\forall z (z>0 -> x/z > 0)".asSequent, ToolTactics.prepareQE(List.empty, skip)).
+      subgoals.loneElement shouldBe "==> \\forall z \\forall y \\forall x (x>=2 & y>=1 & z>0 -> x^2*y>=4 | x/z > 0)".asSequent
   }
 
 }
