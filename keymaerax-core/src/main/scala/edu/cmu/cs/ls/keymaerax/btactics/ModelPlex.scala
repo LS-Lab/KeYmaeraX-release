@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, SimplificationTool}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
@@ -1120,9 +1120,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
     here | left | right
   })
 
-  /** Partial QE on a formula that first abbreviates all uninterpreted function symbols to variables and
-    * then substitutes back in on the result. */
-  def mxPartialQE(fml: Formula, defs: Declaration): Formula = {
+  /** Abbreviates functions to nullary function symbols if all their arguments are free in `fml`,
+   * expand according to `defs` the functions that have at least one if their arguments bound. Returns the formula
+   * with abbreviated/expanded functions and a Map telling which functions were abbreviated how. */
+  def mxAbbreviateFunctions(fml: Formula, defs: Declaration): (Formula, Map[FuncOf, FuncOf]) = {
     // Reduce/Resolve do not support arbitrary functions -> abbreviate to nullary functions for QE
     val is = scala.collection.mutable.Map.empty[Function, Int]
     val vars = scala.collection.mutable.Map.empty[FuncOf, FuncOf]
@@ -1155,9 +1156,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
       }
     }, expr).get
 
-    val fnified = replaceOrExpand(fml)
+    (replaceOrExpand(fml), vars.toMap)
+  }
+
+  /** Partial QE on a formula that first abbreviates all uninterpreted function symbols to variables and
+    * then substitutes back in on the result. */
+  def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): Formula = {
+    val (fnified, vars) = mxAbbreviateFunctions(fml, defs)
     //@todo sort vars topologically and use Let
-    proveBy(fnified, TactixLibrary.partialQE).subgoals.toList match {
+    proveBy(fnified, ToolTactics.partialQE(tool, reformatAssumptions=false)).subgoals.toList match {
       case Nil => True
       case Sequent(IndexedSeq(), IndexedSeq(g)) :: Nil =>
         vars.map({ case (k, v) => v -> k }).foldLeft(g)({
