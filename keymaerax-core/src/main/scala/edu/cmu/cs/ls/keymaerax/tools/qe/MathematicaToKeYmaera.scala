@@ -64,6 +64,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.not.applies(e))        convertUnary(e, Not.apply)
     else if (MathematicaOpSpec.and.applies(e))        convertNary(e, And.apply)
     else if (MathematicaOpSpec.or.applies(e))         convertNary(e, Or.apply)
+    else if (MathematicaOpSpec.xor.applies(e))        convertBinary(e, (a: Formula, b: Formula) => Or(And(a, Not(b)), And(Not(a), b)))
     else if (MathematicaOpSpec.implies.applies(e))    convertBinary(e, Imply.apply)
     else if (MathematicaOpSpec.equivalent.applies(e)) convertBinary(e, Equiv.apply)
 
