@@ -523,9 +523,11 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         case _ => Left(None)
       }
     }
-    val shapeAbbrev = ExpressionTraversal.traverse(traverse, shape).getOrElse(return false)
-
-    fml.flatMap(ExpressionTraversal.traverse(traverse, _)).contains(shapeAbbrev)
+    ExpressionTraversal.traverse(traverse, shape) match {
+      case Some(shapeAbbrev) =>
+        fml.flatMap(ExpressionTraversal.traverse(traverse, _)).contains(shapeAbbrev)
+      case None => false
+    }
   }
 
   final def computeResult(provable: ProvableSig) : ProvableSig = try { locator match {
