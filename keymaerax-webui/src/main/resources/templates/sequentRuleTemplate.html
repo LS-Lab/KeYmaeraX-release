@@ -25,11 +25,19 @@
                                         <span ng-if="!readOnly && !premise.isClosed && antePart.isInput" class="popover-wrapper">
                                             <a href="#" id="{{antePart.text}}" class="k4-axiomtactic-input"
                                                e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
-                                               e-uib-typeahead="inp.text as inp for inp in generateInputs()"
+                                               e-uib-typeahead="inp.text as inp for inp in inputSuggestions"
                                                e-typeahead-min-length="0"
                                                e-typeahead-template-url="invariantTemplate.html"
                                                editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
                                                e-required>{{antePart.placeholder}}</a>
+                                            <span class="fa fa-cogs"
+                                                  ng-if="!isLoading && tactic.derivation.inputGenerator && inputSuggestions.length <= 0"
+                                                  uib-tooltip="Click to generate input suggestions"
+                                                  ng-click="generateInputs()"></span>
+                                            <span ng-if="isLoading" class="fa fa-spin fa-spinner"></span>
+                                            <span ng-if="!isLoading && inputSuggestions.length > 0"
+                                                  uib-tooltip="Click {{antePart.text}} to see suggestions"
+                                                  class="fa fa-info-circle"></span>
                                         </span>
                                     </span>
                                     {{$last ? '' : ','}}
@@ -45,12 +53,19 @@
                                         <span ng-if="!readOnly && !premise.isClosed && succPart.isInput" class="popover-wrapper">
                                             <a href="#" id="{{succPart.text}}" class="k4-axiomtactic-input"
                                                e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
-                                               e-uib-typeahead="inp.text as inp for inp in generateInputs()"
+                                               e-uib-typeahead="inp.text as inp for inp in inputSuggestions"
                                                e-typeahead-min-length="0"
                                                e-typeahead-template-url="invariantTemplate.html"
                                                editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
                                                e-required>{{succPart.placeholder}}</a>
-                                            <span ng-show="isLoading" class="fa fa-spin fa-spinner"></span>
+                                            <span class="fa fa-cogs"
+                                                  ng-if="!isLoading && tactic.derivation.inputGenerator && inputSuggestions.length <= 0"
+                                                  uib-tooltip="Click to generate input suggestions"
+                                                  ng-click="generateInputs()"></span>
+                                            <span ng-if="isLoading" class="fa fa-spin fa-spinner"></span>
+                                            <span ng-if="!isLoading && inputSuggestions.length > 0"
+                                                  uib-tooltip="Click {{succPart.text}} to see suggestions"
+                                                  class="fa fa-info-circle"></span>
                                         </span>
                                     </span>
                                     {{$last ? '' : ','}}
