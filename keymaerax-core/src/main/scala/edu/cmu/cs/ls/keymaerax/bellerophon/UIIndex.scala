@@ -65,7 +65,6 @@ object UIIndex {
             case _: Power => "^' derive power" :: alwaysApplicable
             case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
             case FuncOf(f, _) if f.interpreted => {
-              println(f)
               ImplicitAx.getDiffAx(f) match {
                 case None => alwaysApplicable
                 case Some(pf) => pf.canonicalName :: alwaysApplicable
