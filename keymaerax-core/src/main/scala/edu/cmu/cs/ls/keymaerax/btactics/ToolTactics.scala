@@ -223,6 +223,14 @@ private object ToolTactics {
     case _ => false
   })
 
+  /** Returns all sub-terms of `fml` that are interpreted except known functions. */
+  def interpretedFuncsOfExcept(e: Expression): List[Term] = e.matchingTerms({
+    case FuncOf(fn@Function(_, _, _, _, Some(_)), _) =>
+      Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false) &&
+        !MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn)
+    case _ => false
+  })
+
   /** Abbreviates differentials and differential symbols to variables. */
   private val abbreviateDifferentials = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
     flatMap(differentialsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
@@ -238,11 +246,17 @@ private object ToolTactics {
   /** Abbreviates interpreted functions to variables. */
   private val abbreviateInterpretedFuncs = anon { (seq: Sequent) =>
     val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct
+    val interpretedExcept = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOfExcept).distinct
 
     if (interpreted.nonEmpty) {
       // Automatically apply simplifications when there are interpreted functions
-      Idioms.?(SimplifierV3.fullSimplify & interpreted.map(abbrvAll(_, None) & hideL('Llast)).
-        reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & assertNoCex)
+      SimplifierV3.fullSimplify &
+        (// Try full abbreviation and search for cex
+        interpreted.map(abbrvAll(_, None) & hideL('Llast)).
+        reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & assertNoCex |
+        // Otherwise, skip known functions but still abbrev
+        interpretedExcept.map(abbrvAll(_, None) & hideL('Llast)).
+            reduceRightOption[BelleExpr](_ & _).getOrElse(skip))
     } else skip
   }
 

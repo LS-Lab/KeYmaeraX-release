@@ -4,6 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.ImplicitAx
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -63,6 +64,13 @@ object UIIndex {
             case _: Divide => "/' derive quotient" :: alwaysApplicable
             case _: Power => "^' derive power" :: alwaysApplicable
             case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
+            case FuncOf(f, _) if f.interpreted => {
+              println(f)
+              ImplicitAx.getDiffAx(f) match {
+                case None => alwaysApplicable
+                case Some(pf) => pf.canonicalName :: alwaysApplicable
+              }
+            }
             case _ => alwaysApplicable
           }
         "derive" :: tactics
@@ -205,7 +213,20 @@ object UIIndex {
           }
         if (!isTop) axioms
         else {
-          (expr, isAnte) match {
+          // Check for expansions
+          val sig = StaticSemantics.signature(expr)
+          sig.toList.flatMap( s => s match {
+            case (fn : Function) if substs.exists({
+              case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn
+              case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn
+              case _ => false }) =>
+              Some(s"""expand "${fn.prettyString}"""")
+            //case (PredOf(fn, _)) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false }) =>
+            //  Some(s"""expand "${fn.prettyString}"""")
+            case _ => None
+          }
+          ) ++
+          ((expr, isAnte) match {
             case (True, false) => "closeTrue" :: alwaysApplicable
             case (False, true) => "closeFalse" :: alwaysApplicable
             case (_: Not, true) => "notL" :: alwaysApplicable
@@ -223,12 +244,14 @@ object UIIndex {
             case (_: Exists, true) => "existsL" :: alwaysApplicable
             case (_: Exists, false) => "existsR" :: "existsRmon" :: alwaysApplicable
             case (_: Equal, true) => "allL2R" :: "allR2L" :: "= commute" :: "alphaRenAllBy" :: alwaysApplicable
-            case (FuncOf(fn, _), _) if substs.exists({ case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn case _ => false }) =>
-              s"""expand "${fn.prettyString}"""" :: alwaysApplicable
-            case (PredOf(fn, _), _) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false}) =>
-              s"""expand "${fn.prettyString}"""" :: alwaysApplicable
+            // Suggest diffUnfolding for atomic comparisons if there is an interpreted function
+            case (f:ComparisonFormula,false) =>
+              if(StaticSemantics.signature(f).exists( e => e match {
+                case ee: Function => ee.interpreted
+              })) "diffUnfold" :: alwaysApplicable
+              else alwaysApplicable
             case _ => alwaysApplicable
-          }
+          })
         }
     }
   }).map(DerivationInfo(_))
