@@ -181,6 +181,15 @@ class QETests extends TacticTestBase {
       ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
   }
 
+  it should "try to abbreviate interpreted functions and only proceed expanded on counterexample" in withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce")) { withMathematica { tool =>
+    //@note not solvable by Reduce without abbreviating
+    val s =
+      """(x^2+y^2)^(1/2)<=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())), tau()>0, eps>0, init>=0
+        |  ==>  y*y+x*x<=(exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())))^2
+        |""".stripMargin.asSequent
+    proveBy(s, ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
+  }}
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Declaration(Map.empty), Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved

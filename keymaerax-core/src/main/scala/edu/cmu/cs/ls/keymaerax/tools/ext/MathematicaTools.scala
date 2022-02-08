@@ -82,12 +82,14 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
 
   override protected def convertFormula(f: Formula): MExpr = f match {
     case PredOf(Function(name, index, Unit, Bool, None), Nothing) =>
+      //@todo name may have underscores
       MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
     case _ => super.convertFormula(f)
   }
 
   override protected[tools] def convertTerm(t: Term): MExpr = t match {
     case FuncOf(Function(name, index, Unit, Real, None), Nothing) =>
+      //@todo name may have underscores
       MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
@@ -98,7 +100,7 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
   private val baseConverter = new UncheckedBaseK2MConverter {
     override def convert(e: KExpr): MExpr = {
       //insist on less strict input: interpreted function symbols allowed here
-      insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.contains(fn) case _ => true }),
+      insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.exists(_._2 == fn) case _ => true }),
         "Interpreted functions must have known conversion to Mathematica")
       insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
       e match {
@@ -113,7 +115,6 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
       //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
       case Differential(c) => ExtMathematicaOpSpec.primed(convert(c))
       case DifferentialSymbol(c) => ExtMathematicaOpSpec.primed(convert(c))
-      case FuncOf(fn@Function(_, _, Unit, Real, None), Nothing) => CEXK2MConverter.this.convert(Right(fn))
       case _ => super.convertTerm(t)
     }
   }

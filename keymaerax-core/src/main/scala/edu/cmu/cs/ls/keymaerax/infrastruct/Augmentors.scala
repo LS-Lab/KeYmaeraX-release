@@ -8,6 +8,7 @@ import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
+import scala.collection.immutable.List
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -485,6 +486,18 @@ object Augmentors {
       }
 
       subPositions.toList
+    }
+
+    /** Returns all sub-terms of this expression that pass `matcher`. */
+    def matchingTerms(matcher: Term => Boolean): List[Term] = {
+      val result = scala.collection.mutable.ListBuffer.empty[Term]
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
+          if (matcher(e)) result += e
+          Left(None)
+        }
+      }, e)
+      result.toList
     }
   }
 

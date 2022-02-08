@@ -93,7 +93,7 @@ private object ToolTactics {
           close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
             // if
             EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-              abbreviateInterpretedFuncs & abbreviateUninterpretedFuncs & closure & doQE
+              abbreviateUninterpretedFuncs & abbreviateInterpretedFuncs & closure & doQE
             ,
             // else
             anon { (s: Sequent) =>
@@ -106,7 +106,7 @@ private object ToolTactics {
               hidePredicates & hideQuantifiedFuncArgsFmls &
                 assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
                 EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-                abbreviateInterpretedFuncs & abbreviateUninterpretedFuncs & closure &
+                abbreviateUninterpretedFuncs & abbreviateInterpretedFuncs & closure &
                 Idioms.doIf(_ => doQE != nil)(
                   doQE & done | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg) }
                 )
@@ -205,37 +205,23 @@ private object ToolTactics {
   })
 
   /** Returns all sub-terms of expression `e` that are differentials or differential symbols. */
-  private def differentialsOf(e: Expression): List[Term] = matchingTermsOf(e, {
+  private def differentialsOf(e: Expression): List[Term] = e.matchingTerms({
     case _: Differential => true
     case _: DifferentialSymbol => true
     case _ => false
   })
 
   /** Returns all sub-terms of expression `e` that are uninterpreted functions. */
-  private def uninterpretedFuncsOf(e: Expression): List[Term] = matchingTermsOf(e, {
-    case f@FuncOf(Function(_, _, domain, _, None), _) => domain != Unit
+  private def uninterpretedFuncsOf(e: Expression): List[Term] = e.matchingTerms({
+    case FuncOf(Function(_, _, domain, _, None), _) => domain != Unit
     case _ => false
   })
 
   /** Returns all sub-terms of `fml` that are interpreted functions. */
-  def interpretedFuncsOf(e: Expression): List[Term] = matchingTermsOf(e, {
-    case FuncOf(fn@Function(_, _, _, _, Some(_)), _) =>
-      Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false) &&
-      !MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn)
+  def interpretedFuncsOf(e: Expression): List[Term] = e.matchingTerms({
+    case FuncOf(Function(_, _, _, _, i), _) => i.isDefined
     case _ => false
   })
-
-  /** Returns all sub-terms of `fml` that pass `matcher`. */
-  private def matchingTermsOf(e: Expression, matcher: Term=>Boolean): List[Term] = {
-    val result = scala.collection.mutable.ListBuffer.empty[Term]
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
-        if (matcher(e)) result += e
-        Left(None)
-      }
-    }, e)
-    result.toList
-  }
 
   /** Abbreviates differentials and differential symbols to variables. */
   private val abbreviateDifferentials = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
@@ -250,17 +236,15 @@ private object ToolTactics {
   )
 
   /** Abbreviates interpreted functions to variables. */
-  private val abbreviateInterpretedFuncs = anon ((seq: Sequent) => {
+  private val abbreviateInterpretedFuncs = anon { (seq: Sequent) =>
     val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct
 
-    if(interpreted.nonEmpty) {
+    if (interpreted.nonEmpty) {
       // Automatically apply simplifications when there are interpreted functions
-      SimplifierV3.fullSimplify & interpreted.map(abbrvAll(_, None) & hideL('Llast)).
-        reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-    }
-    else skip
+      Idioms.?(SimplifierV3.fullSimplify & interpreted.map(abbrvAll(_, None) & hideL('Llast)).
+        reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & assertNoCex)
+    } else skip
   }
-  )
 
   def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE(Declaration(Map.empty), List.empty)(qeTool)
 
