@@ -448,7 +448,7 @@ object DifferentialHelper {
       //  if (StaticSemantics.freeVars(args).intersect(odes.keySet.map(_.asInstanceOf[Variable])).isEmpty)
       //    Number(0)
       //  else throw new IllegalArgumentException("Unable to derive function applied to non-constant arguments: "+t)
-      case _ =>  throw new IllegalArgumentException("Unable to derive: "+t)
+      case _ =>  throw new IllegalArgumentException("Unable to derive: "+t+". Try expanding all function symbols present in the model.")
       //Unimplemented stuff should never be derived
     }
   }

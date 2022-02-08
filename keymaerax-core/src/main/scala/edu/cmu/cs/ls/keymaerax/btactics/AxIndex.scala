@@ -26,14 +26,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
  */
 object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
 
-  /**
-    * TODO: PURELY EXPERIMENTAL HACK. DO NOT MERGE.
-    *
-    * Map of (implicit) functions to the relevant differential axiom for their definition
-    */
-  val implFuncDiffs: scala.collection.mutable.Map[Function, List[(ProvableSig,PosInExpr, List[PosInExpr])]] =
-    scala.collection.mutable.Map.empty
-
   /** lookup canonical axioms or tactics for an expression (index) */
   def apply(expr: Expression): List[DerivationInfo] = axiomsFor(expr)
 
