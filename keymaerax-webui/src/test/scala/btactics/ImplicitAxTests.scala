@@ -539,10 +539,18 @@ class ImplicitAxTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "bar" in withMathematica { _=>
+  it should "prove pi with RCF" in withMathematica { _ =>
 
     val pr = proveBy("cos(pi()/2) = 0".asFormula,
       RCF
+    )
+    println(pr)
+  }
+
+  it should "work correctly with composition correctly" in withMathematica { _=>
+
+    val pr = proveBy("v=0 -> [{v'=1&v<=x()}]arctan<< <{arctan:=._0;t:=._1;}{{arctan'=-(1/(1+t^2)),t'=-(1)}++{arctan'=1/(1+t^2),t'=1}}>(arctan=0&t=0) >>(sin<< <{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0) >>(v)/cos<< <{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0) >>(v))=v".asFormula,
+      implyR(1) & ODEInvariance.dRI(1)
     )
     println(pr)
   }
