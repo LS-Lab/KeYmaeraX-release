@@ -518,7 +518,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   private def matches(fml: Option[Expression], shape: Expression): Boolean = {
     //@note shape in tactics is always abbreviated (without interpretation), formula is either expanded fn<<...>>(x) or abbreviated fn(x)
     val traverse = new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+      override def postT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
         case FuncOf(fn, args) => Right(FuncOf(fn.copy(interp = None), args))
         case _ => Left(None)
       }
