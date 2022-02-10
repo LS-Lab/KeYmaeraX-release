@@ -262,6 +262,35 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
   }
 
+  it should "parse in order" in {
+
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   implicit Real exp1(Real s) '=
+        |     {{s:=0;exp1:=exp(1);}; {s'=1,exp1'=exp1}};
+        |   Real foo = 5;
+        |   implicit Real exp2(Real s) '=
+        |     {{s:=exp1(foo);exp2:=0;}; {s'=1,exp2'=exp1(s)+exp2}};
+        |
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp2(y) > 0 End.
+        |End.
+      """.stripMargin
+
+    val entry = parse(input).loneElement
+    println(entry.defs)
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("exp1",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(.)".asTerm), UnknownLocation),
+        Name("foo",None) -> Signature(Some(Unit),Real,Some(List()),Some(Number(5)), UnknownLocation),
+        Name("exp2",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Some("exp2<< <{exp2:=._0;s:=._1;}{{exp2'=-(exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2),s'=-(1)}++{exp2'=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2,s'=1}}>(exp2=0&s=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(5)) >>(.)".asTerm), UnknownLocation),
+        Name("y",None) -> Signature(None,Real,None,None, UnknownLocation)))
+    )
+  }
+
   it should "fail to parse implicit function multi-variate definitions" in {
     val input =
       """

@@ -405,11 +405,16 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ ImplicitFuncFam(fns) :+ (next: FuncPredDef) :+ Token(PRIME, _) =>
         la match {
           case EQ =>
+
             val (term: Either[Option[Program], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.programTokenParser)
-            val prog: Program = term match {
+            val preProg: Program = term match {
               case Left(Some(prog)) => prog
               case _ => throw ParseException("Expected a program of the form {initial condition}; {differential equations} for implicit definition.", st, Nil)
             }
+
+            val definitions = defs.defs.map(convert).reduceOption(_++_).getOrElse(Declaration(Map.empty))
+
+            val prog = definitions.expandFull(preProg)
 
             val sigs = (next :: fns).reverse
 
