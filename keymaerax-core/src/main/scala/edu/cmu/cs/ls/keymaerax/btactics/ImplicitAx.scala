@@ -758,7 +758,10 @@ object ImplicitAx {
       val u = UnificationMatch(pr.subgoals(0), sp.conclusion)
       sp(u.toForward(pr))
     })
-    axs
+
+    // TODO: the following renaming step frees t_ for subsequent uses
+    val axsRen = axs.map(ax => ax(URename("t_".asVariable,"TDIFFAX_".asVariable, semantic=true)))
+    axsRen
   }
 
   private def listifyCompose(p:Program) : List[AtomicProgram] = p match{
@@ -829,7 +832,10 @@ object ImplicitAx {
     val timevar = "t_".asVariable
     val xLHS = (1 to fs.length).map(i => BaseVariable("z_", Some(i)))
 
-    val axs = fs.map( f => deriveDefAxiom(f))
+    val axsOpt = fs.map( f => getDefAx(f))
+    if(axsOpt.exists(p => p.isEmpty))  throw new IllegalArgumentException("Unable to canonicalize ODEs: " + ode)
+
+    val axs = axsOpt.map( p => p.get.provable)
 
     val vpairs = (xLHS.toList :+ timevar) zip odeLHS
 
@@ -880,7 +886,11 @@ object ImplicitAx {
     val t0 = m(assgnList.last.asInstanceOf[Assign].x)
     val x0 = m(assgnList.dropRight(1).last.asInstanceOf[Assign].x)
 
-    val ax = deriveDefAxiom(f)
+    val axOpt = getDefAx(f)
+
+    if(axOpt.isEmpty) throw new IllegalArgumentException("Unable to get defining axiom for: "+f.interp.get)
+
+    val ax = axOpt.get.provable
 
     val pr = proveBy(
       Equal(FuncOf(f,t0),x0),

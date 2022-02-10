@@ -244,19 +244,29 @@ private object ToolTactics {
   )
 
   /** Abbreviates interpreted functions to variables. */
-  private val abbreviateInterpretedFuncs = anon { (seq: Sequent) =>
+  private val abbreviateInterpretedFuncsHelper = anon { (seq: Sequent) =>
     val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct.reverse
     val interpretedExcept = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOfExcept).distinct.reverse
 
     if (interpreted.nonEmpty) {
+        (// Try full abbreviation and search for cex
+          interpreted.map(abbrvAll(_, None) & hideL('Llast)).
+            reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & assertNoCex |
+            // Otherwise, skip known functions but still abbrev
+            interpretedExcept.map(abbrvAll(_, None) & hideL('Llast)).
+              reduceRightOption[BelleExpr](_ & _).getOrElse(skip))
+    } else skip
+  }
+
+  /** Abbreviates interpreted functions to variables with 1 layer of simplification. */
+  private val abbreviateInterpretedFuncs = anon { (seq: Sequent) =>
+    val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct.reverse
+
+    if (interpreted.nonEmpty) {
       // Automatically apply simplifications when there are interpreted functions
       SimplifierV3.fullSimplify &
-        (// Try full abbreviation and search for cex
-        interpreted.map(abbrvAll(_, None) & hideL('Llast)).
-        reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & assertNoCex |
-        // Otherwise, skip known functions but still abbrev
-        interpretedExcept.map(abbrvAll(_, None) & hideL('Llast)).
-            reduceRightOption[BelleExpr](_ & _).getOrElse(skip))
+        // This tries to unfold initial conditions at least once
+        abbreviateInterpretedFuncsHelper
     } else skip
   }
 

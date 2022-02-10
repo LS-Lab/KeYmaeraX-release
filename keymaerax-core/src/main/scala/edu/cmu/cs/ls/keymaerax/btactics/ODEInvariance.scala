@@ -827,7 +827,7 @@ object ODEInvariance {
     def absGroebnerBasis(e: List[Term]) : List[Term] = {
 
       val interp = (e.flatMap(ToolTactics.interpretedFuncsOf(_))).distinct
-      val renvar = "x_"
+      val renvar = "ABS_" // TODO: better to rename free
       val renvari = (0 to interp.length).map( i => Variable(renvar,Some(i)))
       val renames = interp zip renvari
       val eren = e.map( ee => renames.foldRight(ee)( (e,t) => t.replaceAll(e._1,e._2)) )
@@ -839,7 +839,7 @@ object ODEInvariance {
     def absPolynomialReduce(p: Term, gb: List[Term]) : (List[Term],Term) = {
 
       val interp = (gb.flatMap(ToolTactics.interpretedFuncsOf(_))++ToolTactics.interpretedFuncsOf(p)).distinct
-      val renvar = "x_"
+      val renvar = "ABS_" // TODO: better to rename free
       val renvari = (0 to interp.length).map( i => Variable(renvar,Some(i)))
       val renames = interp zip renvari
       val pren = renames.foldRight(p)( (e,t) => t.replaceAll(e._1,e._2))

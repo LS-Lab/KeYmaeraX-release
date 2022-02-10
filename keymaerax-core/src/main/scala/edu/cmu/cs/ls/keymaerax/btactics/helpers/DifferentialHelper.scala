@@ -13,10 +13,10 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, PosInExpr, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, Nil}
 import scala.util.Try
 
 /**
@@ -372,7 +372,7 @@ object DifferentialHelper {
       case None => termSimp(t,emptyCtx,defaultTaxs)._1
       case Some(tl) => {
         val interp = ToolTactics.interpretedFuncsOf(t).distinct
-        val renvar = "x_"
+        val renvar = "SIMP_"  // TODO: better to rename free
         val renvari = (0 to interp.length).map( i => Variable(renvar,Some(i)))
         val renames = interp zip renvari
         val tren = renames.foldRight(t)( (e,t) => t.replaceAll(e._1,e._2))
@@ -433,12 +433,15 @@ object DifferentialHelper {
         val dAx = ImplicitAx.getDiffAx(f)
         if(dAx.isEmpty)
           throw new IllegalArgumentException("Unable to derive: "+t)
-        val concl = dAx.get.provable.conclusion.succ(0)
+        // todo: hardcoded removal of |t_| space
+        val concl = dAx.get.provable.conclusion.succ(0).replaceAll("g(|t_|)".asTerm,"g(||)".asTerm)
+
         // (_)' = _ * (_)'
-        val lhs = concl.sub(PosInExpr(0::0::Nil)).get
+        val lhs = concl.sub(PosInExpr(0::0::0::Nil)).get
         val rhsL = concl.sub(PosInExpr(1::0::Nil)).get.asInstanceOf[Term]
         val rhsR = concl.sub(PosInExpr(1::1::0::Nil)).get.asInstanceOf[Term]
-        val u = UnificationMatch(lhs,t)
+
+        val u = RenUSubst(USubst(lhs.asInstanceOf[Term] ~> arg :: Nil))
         Times(u(rhsL),derive(u(rhsR),odes))
       }
       //case FuncOf(_,args) =>
