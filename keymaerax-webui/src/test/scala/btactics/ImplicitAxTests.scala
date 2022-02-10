@@ -595,6 +595,6 @@ class ImplicitAxTests extends TacticTestBase {
     )
 
     println(pr)
-
+    pr shouldBe 'proved
   }
 }
