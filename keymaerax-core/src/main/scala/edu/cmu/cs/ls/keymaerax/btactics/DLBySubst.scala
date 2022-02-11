@@ -383,7 +383,10 @@ private object DLBySubst {
     displayLevel = "browse"
   )
   def postCut(C: Formula): DependentPositionWithAppliedInputTactic = inputanon (useAt(Ax.K, PosInExpr(1::1::Nil),
-    (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p(||)".asFormula, C)::Nil))(_: Position))
+    (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p(||)".asFormula, C)::Nil))(_: Position) <(
+    label(BelleLabels.cutUse),
+    label(BelleLabels.cutShow)
+  ))
 
   /** Returns conditions in `fmls` that are unaffected by `taboo`, expanding formulas according to `defs` to determine
     * the free variables of their constituent subformulas. */
