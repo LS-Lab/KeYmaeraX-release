@@ -1,12 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, Find}
-import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-
-import scala.collection.immutable
 
 import org.scalatest.LoneElement._
 
@@ -38,7 +35,7 @@ class LocateTests extends TacticTestBase {
 
   it should "throw an exception if no applicable position can be found" in withTactics {
     val e = intercept[BelleThrowable] { proveBy("a=2, x>0 | y>0 ==>".asSequent, TactixLibrary.andL('L)) }
-    e.getMessage should include ("Position tactic andL('L) is not applicable anywhere in antecedent")
+    e.getMessage should include ("Not found: locator 'L\nof position tactic andL('L)\ndoes not match anywhere in antecedent")
   }
 
   it should "work with dependent position tactics" in withTactics {
@@ -66,7 +63,7 @@ class LocateTests extends TacticTestBase {
 
   it should "throw an exception if no applicable position can be found" in withTactics {
     val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, TactixLibrary.orR('R)) }
-    e.getMessage should include ("Position tactic orR('R) is not applicable anywhere in succedent")
+    e.getMessage should include ("Not found: locator 'R\nof position tactic orR('R)\ndoes not match anywhere in succedent")
   }
 
   it should "work with dependent position tactics" in withTactics {
@@ -94,7 +91,7 @@ class LocateTests extends TacticTestBase {
 
   it should "throw an exception if no applicable position can be found" in withTactics {
     val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, TactixLibrary.orR('_)) }
-    e.getMessage should include ("Position tactic orR('R) is not applicable anywhere in succedent")
+    e.getMessage should include ("Not found: locator 'R\nof position tactic orR('R)\ndoes not match anywhere in succedent")
   }
 
   "'Llast" should "apply on last formula in antecedent" in withTactics {

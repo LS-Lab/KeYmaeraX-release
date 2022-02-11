@@ -112,7 +112,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
       "P() -> (Q_()=0 -> F_() = 0)".asFormula)
     val succs = antes
 
-    val useAt = PrivateMethod[DependentPositionTactic]('useAt)
+    val useAt = PrivateMethod[BuiltInPositionTactic]('useAt)
 
     val pr = proveBy(Sequent(antes,succs),
       //The position passed in identifies the location of the key to match in rewritten position
