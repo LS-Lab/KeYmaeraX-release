@@ -295,9 +295,9 @@ cut("init=0|init>0"); <(
                     expand "tanh";
                     andR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
                       "tanh(lambda()*x)^2 < 1":
-                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master"),
+                        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master"),
                       "tanh(lambda()*y)^2 < 1":
-                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master")
+                        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master")
                     )
                 ),
               "Show [a]Q":
@@ -308,7 +308,7 @@ cut("init=0|init>0"); <(
               "Use Q->P":
                 expandAllDefs;
                 dgVdbxAuto('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](!(x=0&y=0))");
-                dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(((y!=0|tanh(lambda()*x)!=0)|tanh(lambda()*y)!=0)|x!=0)}](!(x=0&y=0))");
+                dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(((y!=0|x!=0)|tanh(lambda()*x)!=0)|tanh(lambda()*y)!=0)}](!(x=0&y=0))");
                 QE,
               "Show [a]Q":
                 QE using "!(x=0&y=0) :: x^2+y^2>0 :: nil"
@@ -355,71 +355,53 @@ End.
 
 Tactic "IJCAR22/Khalil Exercise 2.28 and 3.14 Proof"
 unfold;
-cut("init=0|init>0"); <(
+cut("\exists t t=0&\exists init (x^2+y^2=init&init>=0)"); <(
   "Use":
-    orL('L=="init=0|init>0"); <(
-      "init=0":
-        cut("x=0&y=0"); <(
+    unfold;
+    vDG("t'=1", 'R=="<{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps");
+    compatCut("(x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))", 'R=="<{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps"); <(
+      "Use":
+        cut("\exists l \forall t (t>=l->exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps)"); <(
           "Use":
-            cut("tanh(lambda()*x)=0&tanh(lambda()*y)=0"); <(
-              "Use":
-                dC("x=0&y=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
-                  "Use":
-                    dC("t>=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
-                      "Use":
-                        dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&(true&x=0&y=0)&t>=0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))");
-                        QE,
-                      "Show":
-                        ODE('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}]t>=0")
-                    ),
-                  "Show":
-                    expandAllDefs;
-                    dRI('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x=0&y=0)")
-                ),
-              "Show":
-                hideR('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))");
-                QE
-            ),
+            existsL('L=="\exists l \forall t (t>=l->exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps)");
+            kDomainDiamond("t>=l", 'R=="<{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps") ; <(
+        "Use": hideL('L=="\forall t (t>=l->exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps)") ; gEx("y*y+x*x<=(exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau())))^2", 'R=="<{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>t>=l"),
+        "Show": Dcomp('L=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))") ; odeUnify('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&(true&![{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps)&(x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))}](!t>=l)") ; hideL('L=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}][{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))") ; dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&((true&![{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps)&(x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau())))&[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))}](!t>=l)") ; unfold ; notR('R=="!t>=l") ; vDG("t'=1", 'R=="[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps") ; odeUnify('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps") ; hideL('L=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))") ; dC("t>=l", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))}](x^2+y^2)^(1/2)<=2*tau()+eps") ; <(
+            "Use": dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&(true&(x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau())))&t>=l}](x^2+y^2)^(1/2)<=2*tau()+eps") ; unfold ; allL('L=="\forall t (t>=l->exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps)") ; implyL('L=="t>=l->exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps") ; <(
+                "t>=l": propClose,
+                "exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps": QE
+              ),
+            "Show": dIClose('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))}]t>=l")
+          )
+      ),
           "Show":
-            QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"
+            hideR('R=="<{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps");
+            hideL('L=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))");
+            hideL('L=="x^2+y^2=init") ; existsRmon("exp(-l/tau())*init^(1/2)+2*tau()*(1-exp(-l/tau()))<=2*tau()+eps", 'R=="\exists l \forall t (t>=l->exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps)") ; <(
+        "Use": diffUnfoldD("0", 'R=="\exists l exp(-l/tau())*init^(1/2)+2*tau()*(1-exp(-l/tau()))<=2*tau()+eps") ; orR('R=="<{v'=1}>exp(-v/tau())*init^(1/2)+2*tau()*(1-exp(-v/tau()))<=2*tau()+eps|<{v'=(-1)}>exp(-v/tau())*init^(1/2)+2*tau()*(1-exp(-v/tau()))<=2*tau()+eps") ; hideR('R=="<{v'=(-1)}>exp(-v/tau())*init^(1/2)+2*tau()*(1-exp(-v/tau()))<=2*tau()+eps") ; dV("eps/tau()", 'R=="<{v'=1}>exp(-v/tau())*init^(1/2)+2*tau()*(1-exp(-v/tau()))<=2*tau()+eps"),
+        "Show": unfold ; cut("exp(-t/tau())<=exp(-l/tau())&exp(-t/tau())>0") ; <(
+            "Use": QE,
+            "Show": hideR('R=="exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))<=2*tau()+eps") ; andR('R=="exp(-t/tau())<=exp(-l/tau())&exp(-t/tau())>0") ; <(
+                "exp(-t/tau())<=exp(-l/tau())": hideL('L=="exp(-l/tau())*init^(1/2)+2*tau()*(1-exp(-l/tau()))<=2*tau()+eps") ; diffUnfold("t", "l", 'R=="exp(-t/tau())<=exp(-l/tau())") ; <(
+                    "Init": QE,
+                    "[{v'=1&v<=t}]exp(-v/tau())<=exp(-l/tau())": ODE('R=="[{v'=1&v<=t}]exp(-v/tau())<=exp(-l/tau())"),
+                    "[{v'=(-1)&t<=v}]exp(-v/tau())<=exp(-l/tau())": dC("v=l", 'R=="[{v'=(-1)&t<=v}]exp(-v/tau())<=exp(-l/tau())") ; <(
+                        "Use": ODE('R=="[{v'=(-1)&t<=v&v=l}]exp(-v/tau())<=exp(-l/tau())"),
+                        "Show": ODE('R=="[{v'=(-1)&t<=v}]v=l")
+                      )
+                  ),
+                "exp(-t/tau())>0": QE
+              )
+          )
+      )
         ),
-      "init>0":
-        dC("x^2+y^2>0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
-          "Use":
-            MR("exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)>=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
-              "Use Q->P":
-                dbx("(-1)/tau()", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}]exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)>=0");
-                unfold;
-                cut("tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
-                  "Use":
-                    QE,
-                  "Show":
-                    cohideR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1");
-                    expand "tanh";
-                    andR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
-                      "tanh(lambda()*x)^2 < 1":
-                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master"),
-                      "tanh(lambda()*y)^2 < 1":
-                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master")
-                    )
-                ),
-              "Show [a]Q":
-                QE
-            ),
-          "Show":
-            MR("!(x=0&y=0)", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}]x^2+y^2>0"); <(
-              "Use Q->P":
-                expandAllDefs;
-                dgVdbxAuto('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](!(x=0&y=0))");
-                dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(((y!=0|x!=0)|tanh(lambda()*x)!=0)|tanh(lambda()*y)!=0)}](!(x=0&y=0))");
-                QE,
-              "Show [a]Q":
-                QE using "!(x=0&y=0) :: x^2+y^2>0 :: nil"
-            )
-        )
+      "Show":
+        hideR('R=="<{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps");
+        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)", "prop")
     ),
   "Show":
-    QE using "x^2+y^2=init :: init=0|init>0 :: nil"
+    hideR('R=="<{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps");
+    QE
 )
 End.
 
