@@ -1,0 +1,1026 @@
+Theorem "IJCAR22/Arctan Identity"
+
+Definitions
+  implicit Real arctan(Real t) '= {{arctan:=0;t:=0;}; {arctan'=1/(1+t^2),t'=1}};
+  Real tan(Real x) = sin(x)/cos(x);
+  Real x;
+End.
+
+Problem
+  arctan(tan(x)) = x
+End.
+
+Tactic "IJCAR22/Arctan Identity Proof"
+expand "arctan";
+expand "tan";
+diffUnfold("x()", "0", 'R=="arctan(sin(x())/cos(x()))=x()"); <(
+  "Init":
+    QE,
+  "[{v'=1&v<=x()}]arctan(sin(v)/cos(v))=v":
+    ODE('R=="[{v'=1&v<=x()}]arctan(sin(v)/cos(v))=v"),
+  "[{v'=(-1)&x()<=v}]arctan(sin(v)/cos(v))=v":
+    ODE('R=="[{v'=(-1)&x()<=v}]arctan(sin(v)/cos(v))=v")
+)
+End.
+
+End.
+
+Theorem "IJCAR22/Denman Thesis Case Study 6.1: Bouncing Ball on a Sine Curve"
+
+Definitions
+  Real g; /* Gravity */
+  Real k; /* Constant of proportionality for energy lost in inelastic collision */
+End.
+
+ProgramVariables
+  Real x, y;   /* Coordinates in the x,y plane */
+  Real vx, vy; /* Velocity in x,y directions */
+  Real vx0;    /* Temporary variable */
+End.
+
+Problem
+  g > 0 & 0 <= k & k <= 1 &
+  y < 1 & pi()/2 < x & x < 5*pi()/2 & /* Ball starts in a trough of the sine wave */
+  vx = 0 & vy = 0 ->
+  [{
+    /* Continuous dynamics */
+    {x' = vx, y' = vy, vx' = 0, vy' = -g & y >= sin(x)} ;
+    /* Discrete bounce when the ball contacts the surface */
+    if (y = sin(x)) {
+      vx0 := vx;
+      vx := ((1-k*cos(x)^2)*vx + (1+k)*cos(x)*vy) / (1 + cos(x)^2);
+      vy := ((1+k)*cos(x)*vx0 + (cos(x)^2-k)*vy) / (1 + cos(x)^2);
+    }
+  }*]
+  ( y < 1 & pi()/2 < x & x < 5*pi()/2 )  /* Ball stays in the trough */
+End.
+
+Tactic "IJCAR22/Denman Thesis Case Study 6.1: Bouncing Ball on a Sine Curve Proof"
+unfold;
+loop("g()*y+1/2*(vx^2+vy^2) < g()&pi()/2 < x&x < 5*pi()/2", 'R=="[{{x'=vx,y'=vy,vx'=0,vy'=-g()&y>=sin(x)}{?y=sin(x);vx0:=vx;vx:=((1-k()*cos(x)^2)*vx+(1+k())*cos(x)*vy)/(1+cos(x)^2);vy:=((1+k())*cos(x)*vx0+(cos(x)^2-k())*vy)/(1+cos(x)^2);++?!y=sin(x);?true;}}*](y < 1&pi()/2 < x&x < 5*pi()/2)"); <(
+  "Init":
+    QE,
+  "Post":
+    QE,
+  "Step":
+    unfold;
+    dC("g()*y+1/2*(vx^2+vy^2) < g()", 'R=="[{x'=vx,y'=vy,vx'=0,vy'=-g()&y>=sin(x)}][?y=sin(x);vx0:=vx;vx:=((1-k()*cos(x)^2)*vx+(1+k())*cos(x)*vy)/(1+cos(x)^2);vy:=((1+k())*cos(x)*vx0+(cos(x)^2-k())*vy)/(1+cos(x)^2);++?!y=sin(x);?true;](g()*y+1/2*(vx^2+vy^2) < g()&pi()/2 < x&x < 5*pi()/2)"); <(
+      "Use":
+        dC("pi()/2 < x&x < 5*pi()/2", 'R=="[{x'=vx,y'=vy,vx'=0,vy'=-g()&y>=sin(x)&g()*y+1/2*(vx^2+vy^2) < g()}][?y=sin(x);vx0:=vx;vx:=((1-k()*cos(x)^2)*vx+(1+k())*cos(x)*vy)/(1+cos(x)^2);vy:=((1+k())*cos(x)*vx0+(cos(x)^2-k())*vy)/(1+cos(x)^2);++?!y=sin(x);?true;](g()*y+1/2*(vx^2+vy^2) < g()&pi()/2 < x&x < 5*pi()/2)"); <(
+          "Use":
+            dW('R=="[{x'=vx,y'=vy,vx'=0,vy'=-g()&(y>=sin(x)&g()*y+1/2*(vx^2+vy^2) < g())&pi()/2 < x&x < 5*pi()/2}][?y=sin(x);vx0:=vx;vx:=((1-k()*cos(x)^2)*vx+(1+k())*cos(x)*vy)/(1+cos(x)^2);vy:=((1+k())*cos(x)*vx0+(cos(x)^2-k())*vy)/(1+cos(x)^2);++?!y=sin(x);?true;](g()*y+1/2*(vx^2+vy^2) < g()&pi()/2 < x&x < 5*pi()/2)");
+            unfold; <(
+              "[?y=sin(x);vx0:=vx;vx:=((1-k()*cos(x)^2)*vx+(1+k())*cos(x)*vy)/(1+cos(x)^2);vy:=((1+k())*cos(x)*vx0+(cos(x)^2-k())*vy)/(1+cos(x)^2);](g()*y+1/2*(vx^2+vy^2) < g()&pi()/2 < x&x < 5*pi()/2)":
+                andR('R=="g()*y+1/2*(vx^2+(((1+k())*cos(x)*vx0+(cos(x)^2-k())*vy)/(1+cos(x)^2))^2) < g()&pi()/2 < x&x < 5*pi()/2"); <(
+                  "g()*y+1/2*(vx^2+(((1+k())*cos(x)*vx0+(cos(x)^2-k())*vy)/(1+cos(x)^2))^2) < g()":
+                    QE,
+                  "pi()/2 < x&x < 5*pi()/2":
+                    propClose
+                ),
+              "[?!y=sin(x);?true;](g()*y+1/2*(vx^2+vy^2) < g()&pi()/2 < x&x < 5*pi()/2)":
+                propClose
+            ),
+          "Show":
+            ODE('R=="[{x'=vx,y'=vy,vx'=0,vy'=-g()&y>=sin(x)&g()*y+1/2*(vx^2+vy^2) < g()}](pi()/2 < x&x < 5*pi()/2)")
+        ),
+      "Show":
+        ODE('R=="[{x'=vx,y'=vy,vx'=0,vy'=-g()&y>=sin(x)}]g()*y+1/2*(vx^2+vy^2) < g()")
+    )
+)
+End.
+
+End.
+
+Theorem "IJCAR22/Discretely Driven Swing"
+
+Definitions
+  Real g; /* Gravity */
+  Real L; /* Length of rod */
+  Real k; /* Coefficient of friction against angular velocity */
+End.
+
+ProgramVariables
+  Real w;      /* angular velocity */
+  Real theta;  /* displacement angle */
+  Real push;   /* extra push */
+End.
+
+Problem
+  g > 0 & L > 0 & k > 0 &
+  theta = 0 & w = 0 /* Swing starts at rest */
+  ->
+  [{
+    /* Discrete push allowed if it is safe to do so */
+    {
+      push :=*;
+      if (1/2*(w-push)^2 < g/L *cos(theta)) { w := w-push; }
+    }
+    /* Continuous dynamics */
+    { theta' = w, w' = -g/L * sin(theta) - k*w }
+  }*]
+  (-pi()/2 < theta & theta < pi()/2) /* Swing never crosses horizontal */
+End.
+
+Tactic "IJCAR22/Discretely Driven Swing Proof"
+unfold;
+loop("g()/L()*(1-cos(theta))+1/2*w^2 < g()/L()&-pi()/2 < theta&theta < pi()/2", 'R=="[{{push:=*;{?1/2*(w-push)^2 < g()/L()*cos(theta);w:=w-push;++?!1/2*(w-push)^2 < g()/L()*cos(theta);?true;}}{theta'=w,w'=-g()/L()*sin(theta)-k()*w}}*](-pi()/2 < theta&theta < pi()/2)"); <(
+  "Init":
+    QE,
+  "Post":
+    propClose,
+  "Step":
+    composeb('R=="[{push:=*;{?1/2*(w-push)^2 < g()/L()*cos(theta);w:=w-push;++?!1/2*(w-push)^2 < g()/L()*cos(theta);?true;}}{theta'=w,w'=-g()/L()*sin(theta)-k()*w}](g()/L()*(1-cos(theta))+1/2*w^2 < g()/L()&-pi()/2 < theta&theta < pi()/2)");
+    MR("g()/L()*(1-cos(theta))+1/2*w^2 < g()/L()", 'R=="[push:=*;{?1/2*(w-push)^2 < g()/L()*cos(theta);w:=w-push;++?!1/2*(w-push)^2 < g()/L()*cos(theta);?true;}][{theta'=w,w'=-g()/L()*sin(theta)-k()*w}](g()/L()*(1-cos(theta))+1/2*w^2 < g()/L()&-pi()/2 < theta&theta < pi()/2)"); <(
+      "Use Q->P":
+        unfold;
+        QE,
+      "Show [a]Q":
+        ODE('R=="[{theta'=w,w'=-g()/L()*sin(theta)-k()*w}](g()/L()*(1-cos(theta))+1/2*w^2 < g()/L()&-pi()/2 < theta&theta < pi()/2)")
+    )
+)
+End.
+
+End.
+
+Theorem "IJCAR22/Double Iterated Exponential"
+
+Definitions
+  implicit Real exp1(Real t) '= {{exp1:=1;}; {exp1'=exp1}};
+  Real E = exp1(1);
+  implicit Real exp2(Real t) '= {{exp2:=E;t:=0;}; {exp2'=exp1(t)*exp2,t'=1}};
+  Real x;
+End.
+
+Problem
+  exp2(x) = exp(exp(x))
+End.
+
+Tactic "IJCAR22/Double Iterated Exponential Proof"
+cut("exp(exp(x()))=exp1(exp1(x()))"); <(
+  "Use":
+    allL2R('L=="exp(exp(x()))=exp1(exp1(x()))");
+    hideL('L=="exp(exp(x()))=exp1(exp1(x()))");
+    expand "exp2";
+    expand "exp1";
+    diffUnfold("x()", "0", 'R=="exp2(x())=exp1(exp1(x()))"); <(
+      "Init":
+        QE,
+      "[{v'=1&v<=x()}]exp2(v)=exp1(exp1(v))":
+        ODE('R=="[{v'=1&v<=x()}]exp2(v)=exp1(exp1(v))"),
+      "[{v'=(-1)&x()<=v}]exp2(v)=exp1(exp1(v))":
+        ODE('R=="[{v'=(-1)&x()<=v}]exp2(v)=exp1(exp1(v))")
+    ),
+  "Show":
+    hideR('R=="exp2(x())=exp(exp(x()))");
+    expand "exp1";
+    cut("\forall y exp(y)=exp1(y)"); <(
+      "Use":
+        allLkeep("x()", 'L=="\forall y exp(y)=exp1(y)");
+        allL2R('L=="exp(x())=exp1(x())");
+        hideL('L=="exp(x())=exp1(x())");
+        allL("exp1(x())", 'L=="\forall y exp(y)=exp1(y)");
+        expand "exp1";
+        propClose,
+      "Show":
+        hideR('R=="exp(exp(x()))=exp1(exp1(x()))");
+        allR('R=="\forall y exp(y)=exp1(y)");
+        expand "exp1";
+        diffUnfold("y", "0", 'R=="exp(y)=exp1(y)"); <(
+          "Init":
+            QE,
+          "[{v'=1&v<=y}]exp(v)=exp1(v)":
+            ODE('R=="[{v'=1&v<=y}]exp(v)=exp1(v)"),
+          "[{v'=(-1)&y<=v}]exp(v)=exp1(v)":
+            ODE('R=="[{v'=(-1)&y<=v}]exp(v)=exp1(v)")
+        )
+    )
+)
+End.
+
+End.
+
+Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)"
+
+Definitions
+  implicit Real tanh(Real t) '=
+     {{tanh:=0;}; {tanh'=1-tanh^2}};
+
+  Real f;
+End.
+
+Problem
+  tanh(f)^2 < 1
+End.
+
+Tactic "IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1) Proof"
+expand "tanh";
+diffUnfold("f()", "0", 'R=="tanh(f())^2 < 1"); <(
+  "Init":
+    QE,
+  "[{v'=1&v<=f()}]tanh(v)^2 < 1":
+    ODE('R=="[{v'=1&v<=f()}]tanh(v)^2 < 1"),
+  "[{v'=(-1)&f()<=v}]tanh(v)^2 < 1":
+    ODE('R=="[{v'=(-1)&f()<=v}]tanh(v)^2 < 1")
+)
+End.
+
+End.
+
+Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)"
+
+Definitions
+  implicit Real tanh(Real t) '=
+     {{tanh:=0;}; {tanh'=1-tanh^2}};
+
+  Real tau;
+  Real lambda;
+End.
+
+ProgramVariables
+  Real x, y;
+  Real init;
+End.
+
+Problem
+  tau > 0 & t = 0 & x^2+y^2 = init->
+  [{
+    t'=1,
+    x' = -x/tau + tanh(lambda*x) - tanh(lambda*y),
+    y' = -y/tau + tanh(lambda*x) + tanh(lambda*y)
+  }] (x^2+y^2)^(1/2) <= exp(-t/tau)*(init)^(1/2) + 2*tau*(1-exp(-t/tau))
+End.
+
+Tactic "IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)"
+unfold;
+cut("init=0|init>0"); <(
+  "Use":
+    orL('L=="init=0|init>0"); <(
+      "init=0":
+        cut("x=0&y=0"); <(
+          "Use":
+            cut("tanh(lambda()*x)=0&tanh(lambda()*y)=0"); <(
+              "Use":
+                dC("x=0&y=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+                  "Use":
+                    dC("t>=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+                      "Use":
+                        dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&(true&x=0&y=0)&t>=0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))");
+                        QE,
+                      "Show":
+                        ODE('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}]t>=0")
+                    ),
+                  "Show":
+                    expandAllDefs;
+                    dRI('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x=0&y=0)")
+                ),
+              "Show":
+                hideR('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))");
+                QE
+            ),
+          "Show":
+            QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"
+        ),
+      "init>0":
+        dC("x^2+y^2>0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+          "Use":
+            MR("exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)>=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+              "Use Q->P":
+                dbx("(-1)/tau()", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}]exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)>=0");
+                unfold;
+                cut("tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
+                  "Use":
+                    QE,
+                  "Show":
+                    cohideR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1");
+                    expand "tanh";
+                    andR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
+                      "tanh(lambda()*x)^2 < 1":
+                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master"),
+                      "tanh(lambda()*y)^2 < 1":
+                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master")
+                    )
+                ),
+              "Show [a]Q":
+                QE
+            ),
+          "Show":
+            MR("!(x=0&y=0)", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}]x^2+y^2>0"); <(
+              "Use Q->P":
+                expandAllDefs;
+                dgVdbxAuto('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](!(x=0&y=0))");
+                dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(((y!=0|tanh(lambda()*x)!=0)|tanh(lambda()*y)!=0)|x!=0)}](!(x=0&y=0))");
+                QE,
+              "Show [a]Q":
+                QE using "!(x=0&y=0) :: x^2+y^2>0 :: nil"
+            )
+        )
+    ),
+  "Show":
+    QE using "x^2+y^2=init :: init=0|init>0 :: nil"
+)
+End.
+
+End.
+
+Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14"
+
+Definitions
+  implicit Real tanh(Real t) '=
+     {{tanh:=0;}; {tanh'=1-tanh^2}};
+
+  Real tau;    /* Characteristic time constant (see Khalil Ex. 2.28) */
+  Real lambda; /* Amplification gain (see Khalil Ex. 2.28) */
+End.
+
+ProgramVariables
+  Real x, y; /* Coordinates in the x,y plane */
+  Real eps;  /* eps bound for eventually-always property */
+End.
+
+Problem
+  tau > 0 -> /* Assumptions on constants: typically, lambda > 0 but not needed in proof */
+  /* For any arbitrary eps > 0, the norm eventually-always satisfies (x^2 + y^2)^(1/2) <= (2*tau + eps) */
+  \forall eps( eps > 0 ->
+    <{
+        x' = -x/tau + tanh(lambda*x) - tanh(lambda*y),
+        y' = -y/tau + tanh(lambda*x) + tanh(lambda*y)
+    }>
+    [{
+        x' = -x/tau + tanh(lambda*x) - tanh(lambda*y),
+        y' = -y/tau + tanh(lambda*x) + tanh(lambda*y)
+    }]
+    (x^2 + y^2)^(1/2) <= (2*tau + eps)
+  )
+End.
+
+Tactic "IJCAR22/Khalil Exercise 2.28 and 3.14 Proof"
+unfold;
+cut("init=0|init>0"); <(
+  "Use":
+    orL('L=="init=0|init>0"); <(
+      "init=0":
+        cut("x=0&y=0"); <(
+          "Use":
+            cut("tanh(lambda()*x)=0&tanh(lambda()*y)=0"); <(
+              "Use":
+                dC("x=0&y=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+                  "Use":
+                    dC("t>=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+                      "Use":
+                        dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&(true&x=0&y=0)&t>=0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))");
+                        QE,
+                      "Show":
+                        ODE('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}]t>=0")
+                    ),
+                  "Show":
+                    expandAllDefs;
+                    dRI('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x=0&y=0)")
+                ),
+              "Show":
+                hideR('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))");
+                QE
+            ),
+          "Show":
+            QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"
+        ),
+      "init>0":
+        dC("x^2+y^2>0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+          "Use":
+            MR("exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)>=0", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}](x^2+y^2)^(1/2)<=exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))"); <(
+              "Use Q->P":
+                dbx("(-1)/tau()", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}]exp(-t/tau())*init^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)>=0");
+                unfold;
+                cut("tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
+                  "Use":
+                    QE,
+                  "Show":
+                    cohideR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1");
+                    expand "tanh";
+                    andR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
+                      "tanh(lambda()*x)^2 < 1":
+                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master"),
+                      "tanh(lambda()*y)^2 < 1":
+                        useLemma("Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master")
+                    )
+                ),
+              "Show [a]Q":
+                QE
+            ),
+          "Show":
+            MR("!(x=0&y=0)", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}]x^2+y^2>0"); <(
+              "Use Q->P":
+                expandAllDefs;
+                dgVdbxAuto('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](!(x=0&y=0))");
+                dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(((y!=0|x!=0)|tanh(lambda()*x)!=0)|tanh(lambda()*y)!=0)}](!(x=0&y=0))");
+                QE,
+              "Show [a]Q":
+                QE using "!(x=0&y=0) :: x^2+y^2>0 :: nil"
+            )
+        )
+    ),
+  "Show":
+    QE using "x^2+y^2=init :: init=0|init>0 :: nil"
+)
+End.
+
+End.
+
+ArchiveEntry "IJCAR22/Longitudinal Motion of an Airplane Invariant"
+
+Citation "Khalil Ghorbal and André Platzer. Characterizing algebraic invariants by differential radical invariants. In Erika Ábrahám and Klaus Havelund, editors, Tools and Algorithms for the Construction and Analysis of Systems, TACAS 2014, Proceedings, volume 8413 of LNCS, pp. 279-294. Springer, 2014.".
+Link "https://lfcps.org/pub/diffradicalinv.pdf".
+
+Definitions
+  Real X;   /* aerodynamics and thrust moment w.r.t. x axis */
+  Real M;   /* aerodynamics and thrust moment w.r.t. y axis */
+  Real Z;   /* aerodynamics and thrust moment w.r.t. z axis */
+  Real Iyy; /* second diagonal element of inertia matrix */
+  Real m;   /* total mass of airplane */
+  Real g;   /* gravity */
+
+  Real inv1(Real z, Real u, Real w, Real theta, Real q) =
+    M*z/Iyy + g*theta + (X/m-q*w)*cos(theta) + (Z/m+q*u)*sin(theta);
+
+  Real inv2(Real x, Real u, Real w, Real theta, Real q) =
+    M*x/Iyy - (Z/m+q*u)*cos(theta) + (X/m-q*w)*sin(theta);
+
+  Real inv3(Real theta, Real q) =
+    -q^2+2*M*theta/Iyy;
+
+  Bool assmpts() <-> m>0 & g>0 & Iyy>0;
+
+  Bool inv(Real x, Real z, Real u, Real w, Real theta, Real q) <->
+    inv1(z,u,w,theta,q)=0 & inv2(x,u,w,theta,q)=0 & inv3(theta,q)=0;
+
+  HP motion ::= {
+      x' = cos(theta)*u + sin(theta)*w,
+      z' = -sin(theta)*u + cos(theta)*w,
+      u' = X/m - g*sin(theta) - q*w,
+      w' = Z/m + g*cos(theta) + q*u,
+      theta' = q,
+      q' = M/Iyy
+  };
+End.
+
+ProgramVariables
+  Real u;     /* axial velocity */
+  Real w;     /* vertical velocity */
+  Real x;     /* range */
+  Real z;     /* altitude */
+  Real theta; /* pitch angle */
+  Real q;     /* pitch rate */
+End.
+
+Problem
+  assmpts() & inv(x,z,u,w,theta,q) -> [motion;]inv(x,z,u,w,theta,q)
+End.
+
+Tactic "IJCAR22/Longitudinal Motion of an Airplane Invariant Proof"
+expand "inv";
+unfold;
+expand "motion";
+dC("inv3(theta,q)=0", 'R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()}](inv1(z,u,w,theta,q)=0&inv2(x,u,w,theta,q)=0&inv3(theta,q)=0)"); <(
+  "Use":
+    boxAnd('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}](inv1(z,u,w,theta,q)=0&inv2(x,u,w,theta,q)=0&inv3(theta,q)=0)");
+    andR('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv1(z,u,w,theta,q)=0&[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}](inv2(x,u,w,theta,q)=0&inv3(theta,q)=0)"); <(
+      "[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv1(z,u,w,theta,q)=0":
+        dIClose('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv1(z,u,w,theta,q)=0") using "assmpts() :: inv1(z,u,w,theta,q)=0 :: [{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv1(z,u,w,theta,q)=0 :: nil",
+      "[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}](inv2(x,u,w,theta,q)=0&inv3(theta,q)=0)":
+        boxAnd('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}](inv2(x,u,w,theta,q)=0&inv3(theta,q)=0)");
+        andR('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv2(x,u,w,theta,q)=0&[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv3(theta,q)=0"); <(
+          "[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv2(x,u,w,theta,q)=0":
+            dIClose('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv2(x,u,w,theta,q)=0") using "assmpts() :: inv2(x,u,w,theta,q)=0 :: [{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv2(x,u,w,theta,q)=0 :: nil",
+          "[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv3(theta,q)=0":
+            dW('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}]inv3(theta,q)=0");
+            propClose
+        )
+    ),
+  "Show":
+    dIClose('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()}]inv3(theta,q)=0") using "assmpts() :: inv3(theta,q)=0 :: [{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()}]inv3(theta,q)=0 :: nil"
+)
+End.
+
+End.
+
+ArchiveEntry "IJCAR22/Robot Collision Avoidance Static Safety".
+
+Citation "Stefan Mitsch, Khalil Ghorbal, David Vogelbacher, and André Platzer. Formal verification of obstacle avoidance and navigation of ground robots. International Journal of Robotics Research 36(12), pp. 1312-1340, 2017.".
+Link "http://dx.doi.org/10.1177/0278364917733549".
+
+Definitions
+  Real ep;      /* time limit for control decisions */
+  Real b;       /* minimum braking capability of the robot */
+  Real A;       /* maximum acceleration -b <= a <= A */
+  Real W;       /* maximum steering */
+
+  Real stopDist(Real v) = v^2 / (2*b);             /* The straight-line stopping distance from brake start to full stop. */
+  Real accelComp(Real v) = ((A/b + 1) * (A/2 * ep^2 + ep*v));       /* Straight-line distance to compensate acceleration */
+  Real admissibleSeparation(Real v) = stopDist(v) + accelComp(v);  /* Separation that allows accelerating on a new curve */
+
+  Bool bounds() <-> (                                                                     /* Bounds for global constants */
+      A >= 0                                                                                           /* Working engine */
+    & b > 0                                                                                            /* Working brakes */
+    & ep > 0                                                                                 /* Controller reaction time */
+  );
+  Bool initialState(Real x, Real y, Real v, Real xo, Real yo) <-> (                            /* Stopped safe initially */
+    v = 0
+    & (x-xo)^2 + (y-yo)^2 > 0
+  );
+
+  /* Under these assumptions we guarantee safety */
+  Bool assumptions(Real x, Real y, Real v, Real xo, Real yo) <->
+    bounds() & initialState(x, y, v, xo, yo);
+
+  /* Conditions that are true on each loop iteration */
+  Bool loopinv(Real x, Real y, Real v, Real xo, Real yo) <-> (
+    v >= 0
+    & (abs(x-xo) > stopDist(v) | abs(y-yo) > stopDist(v))
+  );
+End.
+
+ProgramVariables
+  Real x, y;   /* robot position */
+  Real v;      /* robot translational velocity */
+  Real a;      /* robot translational acceleration */
+  Real theta;  /* robot orientation */
+  Real w;      /* robot rotational velocity */
+  Real r;      /* robot curve radius */
+  Real xo, yo; /* position of closest obstacle on curve */
+  Real t;      /* time */
+End.
+
+Problem
+assumptions(x, y, v, xo, yo) ->
+  [
+    {
+      {
+        {
+          /* brake on current curve or remain stopped */
+          { a := -b; }
+          ++
+          { ?v = 0; a := 0; w := 0; }
+          ++
+          /* or choose a new safe curve */
+          { a := A;
+            w := *; ?-W<=w & w<=W;       /* choose steering */
+            r := *;
+            xo := *; yo := *;            /* measure closest obstacle on the curve */
+
+            /* admissible curve */
+            ?r!=0 & r*w = v;
+
+            /* use that curve, if it is a safe one (admissible velocities) */
+            ? abs(x-xo) > admissibleSeparation(v)
+            | abs(y-yo) > admissibleSeparation(v);
+          }
+        };
+        t := 0;
+      }
+
+      /* dynamics */
+      { x' = -v*sin(theta), y' = v*cos(theta), v' = a,   /* accelerate/decelerate and move */
+        theta'=w, w' = a/r,                             /* follow curve */
+        t' = 1 & t <= ep & v >= 0
+      }
+    }*@invariant(loopinv(x, y, v, xo, yo))
+  ](x - xo)^2 + (y - yo)^2 > 0
+End.
+
+Tactic "IJCAR22/Robot Collision Avoidance Static Safety Proof"
+implyR('R=="assumptions(x,y,v,xo,yo)->[{{{a:=-b();++?v=0;a:=0;w:=0;++a:=A();w:=*;?-W()<=w&w<=W();r:=*;xo:=*;yo:=*;?r!=0&r*w=v;?abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);}t:=0;}{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&t<=ep()&v>=0}}*](x-xo)^2+(y-yo)^2>0");
+loop("loopinv(x,y,v,xo,yo)", 'R=="[{{{a:=-b();++?v=0;a:=0;w:=0;++a:=A();w:=*;?-W()<=w&w<=W();r:=*;xo:=*;yo:=*;?r!=0&r*w=v;?abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);}t:=0;}{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&t<=ep()&v>=0}}*](x-xo)^2+(y-yo)^2>0"); <(
+  "Init":
+    QE,
+  "Post":
+    QE,
+  "Step":
+    composeb('R=="[{{a:=-b();++?v=0;a:=0;w:=0;++a:=A();w:=*;?-W()<=w&w<=W();r:=*;xo:=*;yo:=*;?r!=0&r*w=v;?abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);}t:=0;}{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&t<=ep()&v>=0}]loopinv(x,y,v,xo,yo)");
+    dC("t>=0", 'R=="[{a:=-b();++?v=0;a:=0;w:=0;++a:=A();w:=*;?-W()<=w&w<=W();r:=*;xo:=*;yo:=*;?r!=0&r*w=v;?abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);}t:=0;]#[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&t<=ep()&v>=0}]loopinv(x,y,v,xo,yo)#"); <(
+      "Use":
+        unfold; <(
+          "[a:=-b();][t:=0;][{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&(t<=ep()&v>=0)&t>=0}]loopinv(x,y,v,xo,yo)":
+            dC("v=old(v)-b()*t", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&(t<=ep()&v>=0)&t>=0}]loopinv(x,y,v,xo,yo)"); <(
+              "Use":
+                dC("(-t*(old(v)-b()/2*t)<=x-old(x)&x-old(x)<=t*(old(v)-b()/2*t))&-t*(old(v)-b()/2*t)<=y-old(y)&y-old(y)<=t*(old(v)-b()/2*t)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}]loopinv(x,y,v,xo,yo)"); <(
+                  "Use":
+                    dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&(((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t)&(-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))&-t*(v_0-b()/2*t)<=y-y_0&y-y_0<=t*(v_0-b()/2*t)}]loopinv(x,y,v,xo,yo)");
+                    QE,
+                  "Show":
+                    boxAnd('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}]((-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))&-t*(v_0-b()/2*t)<=y-y_0&y-y_0<=t*(v_0-b()/2*t))");
+                    andR('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))&[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=y-y_0&y-y_0<=t*(v_0-b()/2*t))"); <(
+                      "[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))":
+                        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))"),
+                      "[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=y-y_0&y-y_0<=t*(v_0-b()/2*t))":
+                        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=y-y_0&y-y_0<=t*(v_0-b()/2*t))")
+                    )
+                ),
+              "Show":
+                dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&(t<=ep()&v>=0)&t>=0}]v=v_0-b()*t")
+            ),
+          "[?v=0;a:=0;w:=0;][t:=0;][{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&(t<=ep()&v>=0)&t>=0}]loopinv(x,y,v,xo,yo)":
+            dC("v=old(v)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,t'=1&(t<=ep()&v>=0)&t>=0}]loopinv(x,y,v,xo,yo)"); <(
+              "Use":
+                dC("x=old(x)&y=old(y)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0}]loopinv(x,y,v,xo,yo)"); <(
+                  "Use":
+                    dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,t'=1&(((t<=ep()&v>=0)&t>=0)&v=v_0)&x=x_0&y=y_0}]loopinv(x,y,v,xo,yo)");
+                    QE,
+                  "Show":
+                    dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0}](x=x_0&y=y_0)")
+                ),
+              "Show":
+                dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,t'=1&(t<=ep()&v>=0)&t>=0}]v=v_0")
+            ),
+          "[a:=A();w:=*;?-W()<=w&w<=W();r:=*;xo:=*;yo:=*;?r!=0&r*w=v;?abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);][t:=0;][{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&(t<=ep()&v>=0)&t>=0}]loopinv(x,y,v,xo,yo)":
+            dC("v=old(v)+A()*t", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&(t<=ep()&v>=0)&t>=0}]loopinv(x,y,v,xo,yo)"); <(
+              "Use":
+                dC("(-t*(old(v)+A()/2*t)<=x-old(x)&x-old(x)<=t*(old(v)+A()/2*t))&-t*(old(v)+A()/2*t)<=y-old(y)&y-old(y)<=t*(old(v)+A()/2*t)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}]loopinv(x,y,v,xo,yo)"); <(
+                  "Use":
+                    dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&(((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t)&(-t*(v_0+A()/2*t)<=x-x_0&x-x_0<=t*(v_0+A()/2*t))&-t*(v_0+A()/2*t)<=y-y_0&y-y_0<=t*(v_0+A()/2*t)}]loopinv(x,y,v,xo,yo)");
+                    unfold;
+                    hideL('L=="loopinv(x_0,y_0,v_0,xo_0,yo_0)");
+                    expand "loopinv";
+                    andR('R=="v>=0&(abs(x-xo)>stopDist(v)|abs(y-yo)>stopDist(v))"); <(
+                      "v>=0":
+                        id,
+                      "abs(x-xo)>stopDist(v)|abs(y-yo)>stopDist(v)":
+                        orR('R=="abs(x-xo)>stopDist(v)|abs(y-yo)>stopDist(v)");
+                        orL('L=="abs(x_0-xo)>admissibleSeparation(v_0)|abs(y_0-yo)>admissibleSeparation(v_0)"); <(
+                          "abs(x_0-xo)>admissibleSeparation(v_0)":
+                            QE using "v=v_0+A()*t :: A()>=0 :: t>=0 :: -t*(v_0+A()/2*t)<=x-x_0 :: x-x_0<=t*(v_0+A()/2*t) :: -t*(v_0+A()/2*t)<=y-y_0 :: y-y_0<=t*(v_0+A()/2*t) :: b()>0 :: t<=ep() :: v>=0 :: ep()>0 :: abs(x_0-xo)>admissibleSeparation(v_0) :: r!=0 :: abs(x-xo)>stopDist(v) :: nil",
+                          "abs(y_0-yo)>admissibleSeparation(v_0)":
+                            QE using "v=v_0+A()*t :: A()>=0 :: t>=0 :: -t*(v_0+A()/2*t)<=x-x_0 :: x-x_0<=t*(v_0+A()/2*t) :: -t*(v_0+A()/2*t)<=y-y_0 :: y-y_0<=t*(v_0+A()/2*t) :: b()>0 :: t<=ep() :: v>=0 :: ep()>0 :: abs(y_0-yo)>admissibleSeparation(v_0) :: r!=0 :: abs(y-yo)>stopDist(v) :: nil"
+                        )
+                    ),
+                  "Show":
+                    boxAnd('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}]((-t*(v_0+A()/2*t)<=x-x_0&x-x_0<=t*(v_0+A()/2*t))&-t*(v_0+A()/2*t)<=y-y_0&y-y_0<=t*(v_0+A()/2*t))");
+                    andR('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=x-x_0&x-x_0<=t*(v_0+A()/2*t))&[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=y-y_0&y-y_0<=t*(v_0+A()/2*t))"); <(
+                      "[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=x-x_0&x-x_0<=t*(v_0+A()/2*t))":
+                        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=x-x_0&x-x_0<=t*(v_0+A()/2*t))") using "A()>=0 :: b()>0 :: ep()>0 :: t=0 :: -W()<=w :: w<=W() :: r!=0 :: r*w=v_0 :: v_0=v :: x_0=x :: y_0=y :: [{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=x-x_0&x-x_0<=t*(v_0+A()/2*t)) :: nil",
+                      "[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=y-y_0&y-y_0<=t*(v_0+A()/2*t))":
+                        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=y-y_0&y-y_0<=t*(v_0+A()/2*t))") using "A()>=0 :: b()>0 :: ep()>0 :: t=0 :: -W()<=w :: w<=W() :: r!=0 :: r*w=v_0 :: v_0=v :: x_0=x :: y_0=y :: [{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t}](-t*(v_0+A()/2*t)<=y-y_0&y-y_0<=t*(v_0+A()/2*t)) :: nil"
+                    )
+                ),
+              "Show":
+                dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&(t<=ep()&v>=0)&t>=0}]v=v_0+A()*t")
+            )
+        ),
+      "Show":
+        composeb('R=="[{a:=-b();++?v=0;a:=0;w:=0;++a:=A();w:=*;?-W()<=w&w<=W();r:=*;xo:=*;yo:=*;?r!=0&r*w=v;?abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);}t:=0;][{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&t<=ep()&v>=0}]t>=0");
+        GV('R=="[a:=-b();++?v=0;a:=0;w:=0;++a:=A();w:=*;?-W()<=w&w<=W();r:=*;xo:=*;yo:=*;?r!=0&r*w=v;?abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);][t:=0;][{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&t<=ep()&v>=0}]t>=0");
+        unfold;
+        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,t'=1&t<=ep()&v>=0}]t>=0") using "t=0"
+    )
+)
+End.
+
+End.
+
+ArchiveEntry "IJCAR22/Robot Collision Avoidance Passive Orientation Safety".
+
+Citation "Stefan Mitsch, Khalil Ghorbal, David Vogelbacher, and André Platzer. Formal verification of obstacle avoidance and navigation of ground robots. International Journal of Robotics Research 36(12), pp. 1312-1340, 2017.".
+Link "http://dx.doi.org/10.1177/0278364917733549".
+
+Definitions
+  Real ep;      /* time limit for control decisions */
+  Real b;       /* minimum braking capability of the robot */
+  Real A;       /* maximum acceleration -b <= a <= A */
+  Real W;       /* maximum steering */
+  Real V;       /* maximum obstacle velocity */
+  Real gamma;   /* sensor range in radian */
+
+  Real stopDist(Real v)   = v^2 / (2*b);
+  Real stopMargin(Real v) = stopDist(v) + V*v/b;
+  Real accelComp(Real v)  = ( (A/b + 1) * (A/2 * ep^2 + ep*v) );
+  Real accelMargin(Real v)  = accelComp(v) + (A/b + 1)*ep*V;
+  Real admissibleSeparation(Real v) = stopMargin(v) + accelMargin(v);
+  Real admissibleTurnLength(Real v) = stopDist(v) + accelComp(v);
+
+  Real sqrt(Real x) = x^(1/2);
+
+  /* distance between points (a,b) and (x,y) */
+  Real d(Real a, Real b, Real x, Real y) = sqrt((a-x)^2 + (b-y)^2);
+
+  /* rotates point (a,b) around point (x,y) counterclockwise by angle theta. */
+  Real rotateX(Real a, Real b, Real x, Real y, Real theta) = cos(theta)*(a-x) - sin(theta)*(b-y) + x;
+  Real rotateY(Real a, Real b, Real x, Real y, Real theta) = sin(theta)*(a-x) + cos(theta)*(b-y) + y;
+
+  /* True if point (a,b) is in the visible range gamma of robot at (x,y) with orientation theta, false otherwise */
+  Bool isVisible(Real a, Real b, Real x, Real y, Real theta) <-> (rotateY(a,b,x,y,-theta)-y)/d(a,b,x,y) >= sin((pi()-gamma)/2);
+
+  Bool bounds() <-> (                                                                  /* Bounds for global constants */
+      A >= 0                                                                                        /* Working engine */
+    & b > 0                                                                                         /* Working brakes */
+    & ep > 0                                                                              /* Controller reaction time */
+    & V >= 0
+    & gamma > 0
+  );
+
+  /* Stopped somewhere safe initially */
+  Bool initialState(Real x, Real y, Real v, Real r, Real theta, Real xo, Real yo, Real x_0, Real y_0, Real theta_0, Real xo_0, Real yo_0) <-> (
+    v = 0
+    & r != 0
+    & (x-xo)^2 + (y-yo)^2 > 0
+    & x_0 = x & y_0 = y & theta_0 = theta
+    & xo_0 = xo & yo_0 = yo
+  );
+
+  /* Under these assumptions we guarantee safety */
+  Bool assumptions(Real x, Real y, Real v, Real r, Real theta, Real xo, Real yo, Real x_0, Real y_0, Real theta_0, Real xo_0, Real yo_0) <->
+    bounds() & initialState(x, y, v, r, theta, xo, yo, x_0, y_0, theta_0, xo_0, yo_0);
+
+  /* Conditions that are true on each loop iteration */
+  Bool loopinv(Real x, Real y, Real v, Real r, Real theta, Real xo, Real yo, Real x_0, Real y_0, Real theta_0, Real xo_0, Real yo_0) <-> (
+    v >= 0
+    & r != 0
+    & (v>0 -> ( (abs(x-xo) > stopMargin(v) | abs(y-yo) > stopMargin(v))
+              | (!isVisible(xo_0,yo_0,x_0,y_0,theta_0) & abs(theta-theta_0) + stopDist(v)/abs(r) < gamma )) )
+  );
+End.
+
+ProgramVariables
+  Real x;    /* robot position: x */
+  Real y;    /* robot position: y */
+  Real v;    /* robot translational velocity */
+  Real a;    /* robot translational acceleration */
+  Real theta;/* robot orientation */
+  Real w;    /* robot rotational velocity */
+  Real r;    /* robot curve radius */
+  Real xo;   /* position of closest obstacle on curve */
+  Real yo;
+  Real vxo;  /* velocity vector of obstacle */
+  Real vyo;
+  Real t;    /* time */
+  /* state at last decision */
+  Real x_0;
+  Real y_0;
+  Real theta_0;
+  Real xo_0;
+  Real yo_0;
+End.
+
+Problem
+  assumptions(x, y, v, r, theta, xo, yo, x_0, y_0, theta_0, xo_0, yo_0) -> [
+      {
+        {
+        /* obstacle control */
+        {
+          vxo := *;
+          vyo := *;
+          ?vxo^2+vyo^2 <= V^2;
+        }
+
+        /* robot control */
+        {
+           /* brake on current curve. If the velocity is zero this just means that the robot remains stopped */
+           {a := -b;}
+        ++ /* When we are stopped, both translational and rotational acceleration are 0 */
+           {?v=0; a := 0; w := 0;}
+        ++ /* or choose a new safe curve */
+           {a := A;
+            r :=*; ?r!=0;
+
+            /* measure obstacle position */
+            xo := *; yo := *;
+
+            /* remember decision state */
+            theta_0 := theta;
+            x_0 := x;
+            y_0 := y;
+            xo_0 := xo;
+            yo_0 := yo;
+
+            /* far enough from the (visible) obstacle? */
+            ?(isVisible(xo,yo,x,y,theta) ->
+               ( abs(x-xo) > admissibleSeparation(v)
+               | abs(y-yo) > admissibleSeparation(v)) );
+
+            /* make sure robot doesn't blindly drive outside visible range */
+            ?admissibleTurnLength(v) < gamma*abs(r);
+           }
+        }
+
+        /* Reset the clocks */
+        t := 0;
+        /* Set w according to physics (rigid body motion) */
+        w :=*; ?w*r = v;
+        }
+
+        {x' = -v*sin(theta), y' = v*cos(theta), v' = a, theta' = w, w' = a/r,
+         xo' = vxo, yo' = vyo, t' = 1 & (t <= ep & v >= 0)}
+      }*@invariant(loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0))
+    ] (v > 0 -> ((x - xo)^2 + (y - yo)^2 > 0 | (!isVisible(xo_0,yo_0,x_0,y_0,theta_0) & (abs(theta - theta_0) < gamma))) )
+End.
+
+Tactic "IJCAR22/Robot Collision Avoidance Passive Orientation Safety proof"
+implyR('R=="assumptions(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)->[{{{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;}{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&t<=ep()&v>=0}}*](v>0->(x-xo)^2+(y-yo)^2>0|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0) < gamma())");
+loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;}{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&t<=ep()&v>=0}}*](v>0->(x-xo)^2+(y-yo)^2>0|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0) < gamma())"); <(
+  "Init":
+    QE,
+  "Post":
+    expand "loopinv";
+    andL('L)*;
+    implyR('R=="v>0->(x-xo)^2+(y-yo)^2>0|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0) < gamma()");
+    simplify('L=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()") using "v>0";
+    orR('R=="(x-xo)^2+(y-yo)^2>0|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0) < gamma()");
+    orL('L=="(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()"); <(
+      "abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v)":
+        QE using "A()>=0 :: b()>0 :: ep()>0 :: V()>=0 :: gamma()>0 :: v>=0 :: r!=0 :: abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v) :: v>0 :: (x-xo)^2+(y-yo)^2>0 :: nil",
+      "!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()":
+        andL('L=="!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
+        simplify('R=="!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0) < gamma()") using "!isVisible(xo_0,yo_0,x_0,y_0,theta_0)";
+        QE using "A()>=0 :: b()>0 :: ep()>0 :: V()>=0 :: gamma()>0 :: v>=0 :: r!=0 :: v>0 :: abs(theta-theta_0)+stopDist(v)/abs(r) < gamma() :: abs(theta-theta_0) < gamma() :: nil"
+    ),
+  "Step":
+    composeb('R=="[{{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;}{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&t<=ep()&v>=0}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)");
+    dC("t>=0", 'R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]#[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&t<=ep()&v>=0}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)#"); <(
+      "Use":
+        dC("w*r=v", 'R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]#[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&(t<=ep()&v>=0)&t>=0}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)#"); <(
+          "Use":
+            dC("(-t*V()<=xo-old(xo)&xo-old(xo)<=t*V())&-t*V()<=yo-old(yo)&yo-old(yo)<=t*V()", 'R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]#[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&((t<=ep()&v>=0)&t>=0)&w*r=v}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)#"); <(
+              "Use":
+                unfold; <(
+                  "[a:=-b();][t:=0;w:=*;?w*r=v;]\forall yo_1 (yo_1=yo->\forall xo_1 (xo_1=xo->[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)))":
+                    dC("v=old(v)-b()*t", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                      "Use":
+                        dC("theta=old(theta)+t*(w+1/2*b()/r*t)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                          "Use":
+                            dC("(-t*(v+b()/2*t)<=x-old(x)&x-old(x)<=t*(v+b()/2*t))&-t*(v+b()/2*t)<=y-old(y)&y-old(y)<=t*(v+b()/2*t)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                              "Use":
+                                allR2L('L=="yo_1=yo");
+                                allR2L('L=="xo_1=xo");
+                                dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&((((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t))&(-t*(v+b()/2*t)<=x-x_1&x-x_1<=t*(v+b()/2*t))&-t*(v+b()/2*t)<=y-y_1&y-y_1<=t*(v+b()/2*t)}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)");
+                                expand "loopinv";
+                                andL('L)*;
+                                simplify('R=="v>=0&r!=0&(v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma())") using "r!=0 :: v>=0 :: nil";
+                                implyR('R=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
+                                orR('R=="(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
+                                orR('R=="abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v)");
+                                edit("v_0>0", 'L=="v_0>=0") using "v=v_0-b()*t :: b()>0 :: t>=0 :: v>0 :: nil";
+                                simplify('L=="v_0>0->(abs(x_1-xo_1)>stopMargin(v_0)|abs(y_1-yo_1)>stopMargin(v_0))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma()") using "v_0>0";
+                                orL('L=="(abs(x_1-xo_1)>stopMargin(v_0)|abs(y_1-yo_1)>stopMargin(v_0))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma()"); <(
+                                  "abs(x_1-xo_1)>stopMargin(v_0)|abs(y_1-yo_1)>stopMargin(v_0)":
+                                    orL('L=="abs(x_1-xo_1)>stopMargin(v_0)|abs(y_1-yo_1)>stopMargin(v_0)"); <(
+                                      "abs(x_1-xo_1)>stopMargin(v_0)":
+                                        QE using "v_0>0 :: v=v_0-b()*t :: -t*(v+b()/2*t)<=x-x_1 :: x-x_1<=t*(v+b()/2*t) :: -t*(v+b()/2*t)<=y-y_1 :: y-y_1<=t*(v+b()/2*t) :: abs(x_1-xo_1)>stopMargin(v_0) :: b()>0 :: V()>=0 :: t>=0 :: -t*V()<=xo-xo_1 :: xo-xo_1<=t*V() :: -t*V()<=yo-yo_1 :: yo-yo_1<=t*V() :: v>=0 :: v>0 :: abs(x-xo)>stopMargin(v) :: nil",
+                                      "abs(y_1-yo_1)>stopMargin(v_0)":
+                                        QE using "v_0>0 :: v=v_0-b()*t :: -t*(v+b()/2*t)<=x-x_1 :: x-x_1<=t*(v+b()/2*t) :: -t*(v+b()/2*t)<=y-y_1 :: y-y_1<=t*(v+b()/2*t) :: abs(y_1-yo_1)>stopMargin(v_0) :: b()>0 :: V()>=0 :: t>=0 :: -t*V()<=xo-xo_1 :: xo-xo_1<=t*V() :: -t*V()<=yo-yo_1 :: yo-yo_1<=t*V() :: v>=0 :: v>0 :: abs(y-yo)>stopMargin(v) :: nil"
+                                    ),
+                                  "!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma()":
+                                    andL('L=="!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma()");
+                                    simplify('R=="!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()") using "!isVisible(xo_0,yo_0,x_0,y_0,theta_0)";
+                                    QE using "theta=theta_1+t*(w+1/2*b()/r*t) :: v_0>0 :: v=v_0-b()*t :: r!=0 :: b()>0 :: w*r=v :: V()>=0 :: t>=0 :: gamma()>0 :: v>=0 :: v>0 :: abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma() :: abs(theta-theta_0)+stopDist(v)/abs(r) < gamma() :: nil"
+                                ),
+                              "Show":
+                                expand "loopinv";
+                                andL('L)*;
+                                hideL('L=="v_0>0->(abs(x_1-xo)>stopMargin(v_0)|abs(y_1-yo)>stopMargin(v_0))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma()");
+                                boxAnd('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}]((-t*(v+b()/2*t)<=x-x_1&x-x_1<=t*(v+b()/2*t))&-t*(v+b()/2*t)<=y-y_1&y-y_1<=t*(v+b()/2*t))");
+                                andR('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}](-t*(v+b()/2*t)<=x-x_1&x-x_1<=t*(v+b()/2*t))&[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}](-t*(v+b()/2*t)<=y-y_1&y-y_1<=t*(v+b()/2*t))"); <(
+                                  "[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}](-t*(v+b()/2*t)<=x-x_1&x-x_1<=t*(v+b()/2*t))":
+                                    dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}](-t*(v+b()/2*t)<=x-x_1&x-x_1<=t*(v+b()/2*t))"),
+                                  "[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}](-t*(v+b()/2*t)<=y-y_1&y-y_1<=t*(v+b()/2*t))":
+                                    dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}](-t*(v+b()/2*t)<=y-y_1&y-y_1<=t*(v+b()/2*t))")
+                                )
+                            ),
+                          "Show":
+                            expand "loopinv";
+                            andL('L)*;
+                            dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t}]theta=theta_1+t*(w+1/2*b()/r*t)") using "b()>0 :: w*r=v_0 :: v_0=v :: theta_1=theta :: v_0>=0 :: r!=0 :: nil"
+                        ),
+                      "Show":
+                        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]v=v_0-b()*t") using "b()>0 :: t=0 :: w*r=v_0 :: v_0=v :: [{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]v=v_0-b()*t :: nil"
+                    ),
+                  "[?v=0;a:=0;w:=0;][t:=0;w:=*;?w*r=v;]\forall yo_1 (yo_1=yo->\forall xo_1 (xo_1=xo->[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)))":
+                    dC("v=old(v)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                      "Use":
+                        dC("theta=old(theta)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                          "Use":
+                            dC("x=old(x)&y=old(y)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0)&theta=theta_1}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                              "Use":
+                                allR2L('L=="yo_1=yo");
+                                allR2L('L=="xo_1=xo");
+                                dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&((((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0)&theta=theta_1)&x=x_1&y=y_1}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)");
+                                expand "loopinv";
+                                andL('L)*;
+                                simplify('R=="v>=0&r!=0&(v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma())") using "r!=0 :: v>=0 :: nil";
+                                implyR('R=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
+                                orR('R=="(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
+                                orR('R=="abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v)");
+                                QE using "v=v_0 :: v_0=0 :: v>0 :: nil",
+                              "Show":
+                                dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0)&theta=theta_1}](x=x_1&y=y_1)") using "b()>0 :: ep()>0 :: v_0=0 :: t=0 :: w*r=v_0 :: v_0=v :: x_1=x :: y_1=y :: [{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0)&theta=theta_1}](x=x_1&y=y_1) :: nil"
+                            ),
+                          "Show":
+                            expand "loopinv";
+                            andL('L)*;
+                            edit("w=0", 'L=="w*r=v_0") using "v_0=0 :: r!=0 :: nil";
+                            dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0}]theta=theta_1") using "w=0 :: theta_1=theta :: r!=0 :: nil"
+                        ),
+                      "Show":
+                        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]v=v_0") using "v_0=0 :: v_0=v :: nil"
+                    ),
+                  "[a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);][t:=0;w:=*;?w*r=v;]\forall yo_1 (yo_1=yo->\forall xo_1 (xo_1=xo->[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)))":
+                    dC("v=old(v)+A()*t", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                      "Use":
+                        dC("theta=old(theta)+t*(w-1/2*A()/r*t)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                          "Use":
+                            dC("(-t*(v-A()/2*t)<=x-old(x)&x-old(x)<=t*(v-A()/2*t))&-t*(v-A()/2*t)<=y-old(y)&y-old(y)<=t*(v-A()/2*t)", 'R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)"); <(
+                              "Use":
+                                allR2L('L=="yo_1=yo");
+                                allR2L('L=="xo_1=xo");
+                                dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&((((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t))&(-t*(v-A()/2*t)<=x-x_0&x-x_0<=t*(v-A()/2*t))&-t*(v-A()/2*t)<=y-y_0&y-y_0<=t*(v-A()/2*t)}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)");
+                                expand "loopinv";
+                                andL('L)*;
+                                simplify('R=="v>=0&r!=0&(v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma())") using "v>=0 :: r!=0 :: nil";
+                                implyR('R=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
+                                orR('R=="(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
+                                orR('R=="abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v)");
+                                hideL('L=="v_0>0->(abs(x_0-xo_2)>stopMargin(v_0)|abs(y_0-yo_2)>stopMargin(v_0))|!isVisible(xo_3,yo_3,x_1,y_1,theta_1)&abs(theta_0-theta_1)+stopDist(v_0)/abs(r_0) < gamma()");
+                                allR2L('L=="xo_0=xo_1");
+                                allR2L('L=="yo_0=yo_1");
+                                implyL('L=="isVisible(xo_0,yo_0,x_0,y_0,theta_0)->abs(x_0-xo_0)>admissibleSeparation(v_0)|abs(y_0-yo_0)>admissibleSeparation(v_0)"); <(
+                                  "isVisible(xo_0,yo_0,x_0,y_0,theta_0)":
+                                    andR('R=="!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()"); <(
+                                      "!isVisible(xo_0,yo_0,x_0,y_0,theta_0)":
+                                        propClose,
+                                      "abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()":
+                                        QE using "theta=theta_0+t*(w-1/2*A()/r*t) :: v_0>=0 :: A()>=0 :: v=v_0+A()*t :: r_0!=0 :: b()>0 :: ep()>0 :: w*r=v :: t>=0 :: gamma()>0 :: t<=ep() :: v>=0 :: r!=0 :: admissibleTurnLength(v_0) < gamma()*abs(r) :: v>0 :: abs(theta-theta_0)+stopDist(v)/abs(r) < gamma() :: nil"
+                                    ),
+                                  "abs(x_0-xo_0)>admissibleSeparation(v_0)|abs(y_0-yo_0)>admissibleSeparation(v_0)":
+                                    orL('L=="abs(x_0-xo_0)>admissibleSeparation(v_0)|abs(y_0-yo_0)>admissibleSeparation(v_0)"); <(
+                                      "abs(x_0-xo_0)>admissibleSeparation(v_0)":
+                                        expand "admissibleSeparation";
+                                        expand "accelMargin";
+                                        expand "accelComp";
+                                        edit("abs(x_0-xo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V())", 'L=="abs(x_0-xo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*ep()^2+ep()*v_0)+(A()/b()+1)*ep()*V())") using "v_0>=0 :: A()>=0 :: v=v_0+A()*t :: b()>0 :: ep()>0 :: V()>=0 :: t>=0 :: t<=ep() :: v>=0 :: nil";
+                                        QE using "v_0>=0 :: A()>=0 :: v=v_0+A()*t :: -t*(v-A()/2*t)<=x-x_0 :: x-x_0<=t*(v-A()/2*t) :: -t*(v-A()/2*t)<=y-y_0 :: y-y_0<=t*(v-A()/2*t) :: b()>0 :: V()>=0 :: t>=0 :: -t*V()<=xo-xo_0 :: xo-xo_0<=t*V() :: -t*V()<=yo-yo_0 :: yo-yo_0<=t*V() :: v>=0 :: abs(x_0-xo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V()) :: v>0 :: abs(x-xo)>stopMargin(v) :: nil",
+                                      "abs(y_0-yo_0)>admissibleSeparation(v_0)":
+                                        expand "admissibleSeparation";
+                                        expand "accelMargin";
+                                        expand "accelComp";
+                                        edit("abs(y_0-yo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V())", 'L=="abs(y_0-yo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*ep()^2+ep()*v_0)+(A()/b()+1)*ep()*V())") using "v_0>=0 :: A()>=0 :: b()>0 :: ep()>0 :: V()>=0 :: t>=0 :: t<=ep() :: v>=0 :: nil";
+                                        QE using "v_0>=0 :: A()>=0 :: v=v_0+A()*t :: -t*(v-A()/2*t)<=x-x_0 :: x-x_0<=t*(v-A()/2*t) :: -t*(v-A()/2*t)<=y-y_0 :: y-y_0<=t*(v-A()/2*t) :: b()>0 :: V()>=0 :: t>=0 :: -t*V()<=xo-xo_0 :: xo-xo_0<=t*V() :: -t*V()<=yo-yo_0 :: yo-yo_0<=t*V() :: v>=0 :: abs(y_0-yo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V()) :: abs(y-yo)>stopMargin(v) :: nil"
+                                    )
+                                ),
+                              "Show":
+                                hideL('L=="loopinv(x_0,y_0,v_0,r_0,theta_0,xo_2,yo_2,x_1,y_1,theta_1,xo_3,yo_3)");
+                                hideL('L=="isVisible(xo,yo,x_0,y_0,theta_0)->abs(x_0-xo)>admissibleSeparation(v_0)|abs(y_0-yo)>admissibleSeparation(v_0)");
+                                hideL('L=="admissibleTurnLength(v_0) < gamma()*abs(r)");
+                                boxAnd('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}]((-t*(v-A()/2*t)<=x-x_0&x-x_0<=t*(v-A()/2*t))&-t*(v-A()/2*t)<=y-y_0&y-y_0<=t*(v-A()/2*t))");
+                                andR('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}](-t*(v-A()/2*t)<=x-x_0&x-x_0<=t*(v-A()/2*t))&[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}](-t*(v-A()/2*t)<=y-y_0&y-y_0<=t*(v-A()/2*t))"); <(
+                                  "[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}](-t*(v-A()/2*t)<=x-x_0&x-x_0<=t*(v-A()/2*t))":
+                                    dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}](-t*(v-A()/2*t)<=x-x_0&x-x_0<=t*(v-A()/2*t))"),
+                                  "[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}](-t*(v-A()/2*t)<=y-y_0&y-y_0<=t*(v-A()/2*t))":
+                                    dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t)}](-t*(v-A()/2*t)<=y-y_0&y-y_0<=t*(v-A()/2*t))")
+                                )
+                            ),
+                          "Show":
+                            dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t}]theta=theta_0+t*(w-1/2*A()/r*t)") using "A()>=0 :: b()>0 :: ep()>0 :: gamma()>0 :: r!=0 :: theta_0=theta :: x_0=x :: y_0=y :: admissibleTurnLength(v_0) < gamma()*abs(r) :: t=0 :: w*r=v_0 :: v_0=v :: [{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t}]theta=theta_0+t*(w-1/2*A()/r*t) :: nil"
+                        ),
+                      "Show":
+                        dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]v=v_0+A()*t") using "A()>=0 :: b()>0 :: ep()>0 :: x_0=x :: y_0=y :: t=0 :: w*r=v_0 :: v_0=v :: [{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&(((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V()}]v=v_0+A()*t :: nil"
+                    )
+                ),
+              "Show":
+                MR("vxo^2+vyo^2<=V()^2", 'R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]\forall yo_1 (yo_1=yo->\forall xo_1 (xo_1=xo->[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&((t<=ep()&v>=0)&t>=0)&w*r=v}]((-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())))"); <(
+                  "Use Q->P":
+                    composeb('R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]vxo^2+vyo^2<=V()^2");
+                    GV('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]#[{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]vxo^2+vyo^2<=V()^2#");
+                    chaseAt('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]vxo^2+vyo^2<=V()^2");
+                    simplify('R=="\forall vxo \forall vyo (vxo^2+vyo^2<=V()^2->vxo^2+vyo^2<=V()^2)") using "\forall vxo \forall vyo (vxo^2+vyo^2<=V()^2->vxo^2+vyo^2<=V()^2)";
+                    closeT,
+                  "Show [a]Q":
+                    unfold;
+                    dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&((t<=ep()&v>=0)&t>=0)&w*r=v}]((-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())")
+                )
+            ),
+          "Show":
+            MR("w*r=v", 'R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;][{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&(t<=ep()&v>=0)&t>=0}]w*r=v"); <(
+              "Use Q->P":
+                composeb('R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]w*r=v");
+                composeb('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]#[{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]w*r=v#");
+                chaseAt('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;][a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);]#[t:=0;w:=*;?w*r=v;]w*r=v#");
+                simplify('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;][a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);]\forall w (w*r=v->w*r=v)");
+                boxTrue('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]#[a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);]true#");
+                boxTrue('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]true"),
+              "Show [a]Q":
+                dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&(t<=ep()&v>=0)&t>=0}]w*r=v")
+            )
+        ),
+      "Show":
+        MR("t=0", 'R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;][{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&t<=ep()&v>=0}]t>=0"); <(
+          "Use Q->P":
+            composeb('R=="[{vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;}{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]t=0");
+            composeb('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]#[{a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);}t:=0;w:=*;?w*r=v;]t=0#");
+            chaseAt('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;][a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);]#[t:=0;w:=*;?w*r=v;]t=0#");
+            simplify('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;][a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);]\forall w (w*r=v->0=0)");
+            boxTrue('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]#[a:=-b();++?v=0;a:=0;w:=0;++a:=A();r:=*;?r!=0;xo:=*;yo:=*;theta_0:=theta;x_0:=x;y_0:=y;xo_0:=xo;yo_0:=yo;?isVisible(xo,yo,x,y,theta)->abs(x-xo)>admissibleSeparation(v)|abs(y-yo)>admissibleSeparation(v);?admissibleTurnLength(v) < gamma()*abs(r);]true#");
+            boxTrue('R=="[vxo:=*;vyo:=*;?vxo^2+vyo^2<=V()^2;]true"),
+          "Show [a]Q":
+            dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=a,theta'=w,w'=a/r,xo'=vxo,yo'=vyo,t'=1&t<=ep()&v>=0}]t>=0")
+        )
+    )
+)
+End.
+
+End.

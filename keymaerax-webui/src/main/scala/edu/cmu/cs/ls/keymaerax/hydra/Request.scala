@@ -979,12 +979,17 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
     //@todo read from the database/some web page?
     //@note Learner's mode Level=0, Industry mode Level=1
     val examples = List(
+      ExamplePOJO(8, "IJCAR22",
+        "Implicit Definitions Examples",
+        "",
+        "classpath:/examples/ijcar22.kyx",
+        "/examples/ijcar22.png", 0),
       ExamplePOJO(6, "Textbook",
         "LFCPS 2018 Textbook Examples",
         "",
         "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
         "/examples/tutorials/lfcps-examples.png", 0),
-      ExamplePOJO(6, "MOD19",
+      ExamplePOJO(7, "MOD19",
         "Marktoberdorf 2019 Tutorial Examples",
         //"/keymaerax-projects/lfcps-turorial/README.md",
         "",
