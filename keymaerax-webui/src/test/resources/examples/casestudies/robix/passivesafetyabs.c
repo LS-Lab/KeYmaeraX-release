@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdbool.h>
 
+/** Model parameters */
 typedef struct parameters {
   long double A;
   long double B;
@@ -19,6 +20,7 @@ typedef struct parameters {
   long double ypost;
 } parameters;
 
+/** State (control choices, environment measurements etc.) */
 typedef struct state {
   long double a;
   long double dxo;
@@ -29,10 +31,18 @@ typedef struct state {
   long double yo;
 } state;
 
+/** Values for resolving non-deterministic assignments in control code */
 typedef struct input input;
 
+/** Monitor verdict: `id` identifies the violated monitor sub-condition, `val` the safety margin (<0 violated, >=0 satisfied). */
 typedef struct verdict { int id; long double val; } verdict;
 
+
+verdict checkInit(const state* const init, const parameters* const params) {
+  bool initOk = 1.0L;
+  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
+  return result;
+}
 
 /* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
 verdict boundaryDist(state pre, state curr, const parameters* const params) {
@@ -46,7 +56,8 @@ bool monitorSatisfied(state pre, state curr, const parameters* const params) {
 
 /* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
 state monitoredCtrl(state curr, const parameters* const params, const input* const in,
-                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {
+                    state (*ctrl)(state,const parameters* const,const input* const),
+                    state (*fallback)(state,const parameters* const,const input* const)) {
   state pre = curr;
   state post = (*ctrl)(pre,params,in);
   if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);

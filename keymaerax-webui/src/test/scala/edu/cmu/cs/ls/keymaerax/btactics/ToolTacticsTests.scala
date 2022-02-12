@@ -230,15 +230,15 @@ class ToolTacticsTests extends TacticTestBase {
   it should "only abbreviate if no transformations are present" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("x>=2+3", edit("x>=abbrv(2+3,y)".asFormula)(1))
     provable.subgoals.loneElement shouldBe "y=2+3 ==> x>=y".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("""edit("x>=abbrv(2+3,y)",'R=="x>=2+3")""")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2+3","y")""")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("x>=abbrv(2+3,y)",'R=="x>=2+3");todo""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2+3","y");todo""")
   }}
 
   it should "abbreviate and transform" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("2*g()*x=37+4", edit("abbrv(2*g())*x=41".asFormula)(1))
     provable.subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*x=41", 'R=="2*g()*x=37+4")""")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv"); transform("41", 'R=="abbrv*x=#37+4#"); assert("abbrv*x=41", "Unexpected edit result", 'R=="abbrv*x=41")""")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*x=41", 'R=="2*g()*x=37+4");todo""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv"); transform("41", 'R=="abbrv*x=#37+4#"); assert("abbrv*x=41", "Unexpected edit result", 'R=="abbrv*x=41");todo""")
   }}
 
   it should "expand abs" in withQE { _ =>
@@ -264,8 +264,8 @@ class ToolTacticsTests extends TacticTestBase {
   it should "abbreviate and expand and transform" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("2*g()*abs(x)=37+4", edit("abbrv(2*g())*expand(abs(x))=41".asFormula)(1))
     provable.subgoals.loneElement shouldBe "abbrv=2*g(), x>=0&abs_=x | x<0&abs_=-x ==> abbrv*abs_=41".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*expand(abs(x))=41", 'R=="2*g()*abs(x)=37+4")""")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv") & absExp('R=="abbrv*#abs(x)#=37+4") & transform("41", 'R=="abbrv*abs_=#37+4#"); assert("abbrv*abs_=41", "Unexpected edit result", 'R=="abbrv*abs_=41")""")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*expand(abs(x))=41", 'R=="2*g()*abs(x)=37+4");todo""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv") & absExp('R=="abbrv*#abs(x)#=37+4") & transform("41", 'R=="abbrv*abs_=#37+4#"); assert("abbrv*abs_=41", "Unexpected edit result", 'R=="abbrv*abs_=41");todo""")
   }}
 
   it should "abbreviate in programs" in withQE { _ =>

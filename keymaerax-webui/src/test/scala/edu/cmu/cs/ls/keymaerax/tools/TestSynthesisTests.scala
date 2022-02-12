@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.TestSynthesis
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable.ListMap
 
@@ -30,6 +31,7 @@ class TestSynthesisTests extends TacticTestBase {
     ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
+    ts.init()
     val amount = 100
     // search for sunshine test case values (initial+expected)
     val testConfig = ts.synthesizeTestConfig(monitor, amount, Some(20))
@@ -52,6 +54,7 @@ class TestSynthesisTests extends TacticTestBase {
     ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
+    ts.init()
     val amount = 100
     val range@(Number(lower), Number(upper)) = (Number(0), Number(1))
     // search for sunshine test case values (initial+expected)
@@ -75,6 +78,7 @@ class TestSynthesisTests extends TacticTestBase {
     ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
+    ts.init()
     val amount = 5
     // invalid range, all compliant tests for x:=2 have margin 0
     val range = (Number(-2), Number(-1))
@@ -93,14 +97,14 @@ class TestSynthesisTests extends TacticTestBase {
     ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
+    ts.init()
     val (Number(lower), Number(upper)) = ts.getSafetyRange(monitor)
     // numeric evaluation doesn't get it exactly right
     lower.doubleValue should be (0.0 +- 0.1)
     upper.doubleValue should be (4.0 +- 0.1)
   }
 
-  //@todo cannot reparse number 1.5E-14
-  it should "find the maximum even when safety margin range is a point" ignore withMathematica { tool =>
+  it should "find the maximum even when safety margin range is a point" in withMathematica { tool =>
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
       "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), ListMap.empty)
 
@@ -110,6 +114,7 @@ class TestSynthesisTests extends TacticTestBase {
     ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
+    ts.init()
     val (Number(lower), Number(upper)) = ts.getSafetyRange(monitor)
     // numeric evaluation doesn't get it exactly right
     lower.doubleValue should be (0.0 +- 0.1)

@@ -59,7 +59,6 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
         )
       }).toArray:_*)
     val cmd = MathematicaOpSpec.module(valsExpr, metricExpr)
-    println("Execute in Mathematica to compute safety margin of test case: " + cmd)
     run(cmd) match {
       case (_, Left(t: Number)) => t
       case (_, Left(Divide(Number(a), Number(b)))) => Number(a/b)

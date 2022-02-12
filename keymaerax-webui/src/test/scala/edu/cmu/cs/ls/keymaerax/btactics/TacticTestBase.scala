@@ -528,7 +528,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     */
   val whiteSpaceRemoved: Uniformity[String] =
     new AbstractStringUniformity {
-      def normalized(s: String): String = s.replaceAll("\\s+", "")
+      def normalized(s: String): String = s.replaceAll("[\\n\\r\\s]+", "")
       override def toString: String = "whiteSpaceRemoved"
     }
 }

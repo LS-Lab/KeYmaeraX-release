@@ -194,8 +194,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     the [ParseException] thrownBy parse(input) should have message
       """3:3 Lexer 3:3 Lexer does not recognize input at 3:3 to EOF$ in `
         |@todo An unclosed comment
-        |Problem x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0 End.
-        |End.
+        |Problem x>=2 -> [{x:=x+1
         |` beginning with character `@`=64
         |Found:    @... at 3:3 to EOF$
         |Expected: <unknown>""".stripMargin
