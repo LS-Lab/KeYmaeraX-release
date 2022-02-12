@@ -1601,3 +1601,15 @@ del {
 .k4-accordion-list-group {
   margin-bottom: 0px;
 }
+
+.k4-template-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.k4-template-description {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -58,8 +58,12 @@
                             <div class="thumbnail clearfix">
                                 <img ng-src="{{template.imageUrl}}" style="margin:auto;max-width:100%;"/>
                                 <div class="caption">
-                                    <h5>{{template.title}}</h5>
-                                    <p>{{template.description}}</p>
+                                    <h5 class="k4-template-title">{{template.title}}</h5>
+                                    <p class="k4-template-description"
+                                       uib-popover="{{repo.description}}"
+                                       popover-append-to-body="true"
+                                       popover-popup-delay="500"
+                                       popover-trigger="'mouseenter'">{{template.description}}</p>
                                     <div>
                                         <a class="btn btn-success" ng-click="openNewModelDialog(template)">New Model...</a>
                                     </div>
@@ -69,8 +73,8 @@
                         <div class="item col-xs-3 col-lg-3">
                             <div class="thumbnail clearfix">
                                 <div class="caption">
-                                    <h5>Switched Systems</h5>
-                                    <p>(Asymptotic) stability</p>
+                                    <h5 class="k4-template-title">Switched Systems</h5>
+                                    <p class="k4-template-description">(Asymptotic) stability</p>
                                     <div>
                                         <a class="btn btn-success" ng-click="openControlledStabilityModelTemplateDialog()">New Model...</a>
                                     </div>
@@ -94,12 +98,14 @@
                                 <div class="thumbnail clearfix">
                                     <img ng-src="{{repo.image}}" style="margin:auto;max-width:100%;"/>
                                     <div class="caption">
-                                        <h5>{{repo.title}}</h5>
-                                        <p>
+                                        <h5 class="k4-template-title" ng-if="repo.infoUrl && repo.infoUrl.length > 0"><a ng-href="{{repo.infoUrl}}">{{repo.title}}</a></h5>
+                                        <h5 class="k4-template-title" ng-if="!(repo.infoUrl && repo.infoUrl.length > 0)">{{repo.title}}</h5>
+                                        <p class="k4-template-description"
+                                           uib-popover="{{repo.description}}"
+                                           popover-append-to-body="true"
+                                           popover-popup-delay="500"
+                                           popover-trigger="'mouseenter'">
                                             {{repo.description}}
-                                            <small ng-if="repo.infoUrl && repo.infoUrl.length > 0">
-                                                <a ng-href="{{repo.infoUrl}}">Details...</a>
-                                            </small>
                                         </p>
                                         <div>
                                             <a class="btn btn-success" ng-click="importRepo(repo.url)">Import</a>
