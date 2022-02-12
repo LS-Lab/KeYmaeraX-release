@@ -30,6 +30,8 @@ object KeYmaeraXStartup {
             |You should configure settings in keymaerax.conf and restart KeYmaera X
           """.stripMargin
         logger(msg, e)
+        System.err.println(e.getMessage)
+        System.err.println(msg)
     }
   }
 }
