@@ -488,7 +488,7 @@ End.
 ArchiveEntry "IJCAR22/Robot Collision Avoidance Static Safety".
 
 Citation "Stefan Mitsch, Khalil Ghorbal, David Vogelbacher, and André Platzer. Formal verification of obstacle avoidance and navigation of ground robots. International Journal of Robotics Research 36(12), pp. 1312-1340, 2017.".
-Link "http://dx.doi.org/10.1177/0278364917733549".
+Link "http://doi.org/10.1177/0278364917733549".
 
 Definitions
   Real ep;      /* time limit for control decisions */
@@ -661,7 +661,7 @@ End.
 ArchiveEntry "IJCAR22/Robot Collision Avoidance Passive Orientation Safety".
 
 Citation "Stefan Mitsch, Khalil Ghorbal, David Vogelbacher, and André Platzer. Formal verification of obstacle avoidance and navigation of ground robots. International Journal of Robotics Research 36(12), pp. 1312-1340, 2017.".
-Link "http://dx.doi.org/10.1177/0278364917733549".
+Link "http://doi.org/10.1177/0278364917733549".
 
 Definitions
   Real ep;      /* time limit for control decisions */
