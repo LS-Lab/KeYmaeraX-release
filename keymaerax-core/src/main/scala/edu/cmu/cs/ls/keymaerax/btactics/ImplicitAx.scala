@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.List
 
@@ -25,6 +26,7 @@ import scala.collection.immutable.List
 object ImplicitAx {
 
   private val namespace = "implicitax"
+  private val logger = LoggerFactory.getLogger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
 
   // Replace interpreted functions with uninterpreted ones for display purposes
   private def uninterpretFunctions(e:Expression) : Expression = {
@@ -42,8 +44,9 @@ object ImplicitAx {
   }
 
   private def registerDiffAx(f: Function, p:ProvableSig) : Unit = {
-    println("Registering differential axiom: ",f,p)
     val (name,codename) = canonicalDiffAxName(f)
+    //println("Registering derived differential axiom: ",name)
+    logger.debug("Registering derived differential axiom: "+name+ "codename: "+codename+" provable: "+p)
 
     val fml = p.conclusion.succ(0) // ==> (f(x))' = ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
@@ -106,8 +109,11 @@ object ImplicitAx {
   }
 
   private def registerInitAx(f: Function, p:ProvableSig) : Unit = {
-    println("Registering initial condition axiom: ",f,p)
+
     val (name,codename) = canonicalInitAxName(f)
+
+    //println("Registering initial condition: ",name)
+    logger.debug("Registering initial condition: "+name+ "codename: "+codename+" provable: "+p)
 
     val fml = p.conclusion.succ(0) // ==> f(0) = ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
@@ -166,8 +172,10 @@ object ImplicitAx {
   }
 
   private def registerDefAx(f: Function, p:ProvableSig) : Unit = {
-    println("Registering defining axiom: ",f,p)
+
     val (name,codename) = canonicalDefAxName(f)
+    //println("Registering implicit definition: ",name)
+    logger.debug("Registering implicit definition: "+name+ "codename: "+codename+" provable: "+p)
 
     val fml = p.conclusion.succ(0) // ==> ._0 = f(._1 <-> ...
     val lhs = uninterpretFunctions(fml.sub(PosInExpr(0::Nil)).get).toString
