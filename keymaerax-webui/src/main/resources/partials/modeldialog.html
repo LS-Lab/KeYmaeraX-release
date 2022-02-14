@@ -17,8 +17,9 @@
                     Fill in the blanks (__________)
                 </span>
                 <span class="pull-right">
-                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelIsComplete()"
-                            ng-click="save.cmd=startProof">Start proof</button>
+                    <button class="btn" ng-class="{'btn-primary':!(model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()),'btn-default':model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()}"
+                            type="submit" ng-if="!user.isGuest() && mode==='edit' && modelIsComplete()"
+                            ng-click="save.cmd=startProof">New proof</button>
                     <button class="btn" ng-class="{'btn-primary':model.keyFile!=origModel.keyFile, 'btn-default':model.keyFile==origModel.keyFile}"
                             type="submit" ng-if="!user.isGuest() && mode==='edit' && modelDataForm.$visible"
                             ng-click="save.cmd=refreshModels">Save</button>
@@ -29,8 +30,8 @@
                             ng-click="save.cmd=redoProof">Save</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
                             ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
-                    <button class="btn btn-default" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
-                            ng-click="save.cmd=proveFromTactic()">Run stored tactic</button>
+                    <button class="btn btn-primary" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
+                            ng-click="save.cmd=proveFromTactic()">Load proof</button>
                     <button class="btn btn-link" ng-click="save.cmd=cancel"><span class="fa fa-close"></span></button>
                 </span>
             </h3>
