@@ -178,7 +178,7 @@ object DatabasePopulator extends Logging {
         globalProvable, branch, recursive = false, tacticName, constructGlobalProvable = false) :: Nil
     }
     def interpreter(orig: Seq[IOListener]) = LazySequentialInterpreter(orig ++ listeners, throwWithDebugInfo = false)
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, defs, listener, interpreter, 0, strict=true, convertPending=true)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, defs, listener, interpreter, 0, strict=true, convertPending=true, recordInternal=false)
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */

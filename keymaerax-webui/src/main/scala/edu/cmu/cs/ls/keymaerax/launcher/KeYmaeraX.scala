@@ -398,7 +398,7 @@ object KeYmaeraX {
             val proofId = tempDB.createProof(e.fileContent, e.name, name)
             val interpreter = SpoonFeedingInterpreter(proofId, -1, tempDB.db.createProof, e.defs,
               DBTools.listener(tempDB.db, additionalListeners = additionalListeners),
-              ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 0, strict=false, convertPending=false)
+              ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 0, strict=false, convertPending=false, recordInternal=false)
             BelleInterpreter.setInterpreter(interpreter)
             BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(e.model.asInstanceOf[Formula])))
             val tree = DbProofTree(tempDB.db, proofId.toString)

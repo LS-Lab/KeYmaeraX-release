@@ -91,7 +91,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                                    inner: scala.collection.immutable.Seq[IOListener] => Interpreter,
                                    descend: Int,
                                    strict: Boolean,
-                                   convertPending: Boolean) extends Interpreter with Logging {
+                                   convertPending: Boolean,
+                                   recordInternal: Boolean) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
 
   private var runningInner: Interpreter = _
@@ -378,7 +379,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           if (descend > 0) {
             val innerId = idProvider(in)
             innerProofId = Some(innerId)
-            val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, defs, listenerFactory, inner, descend, strict, convertPending)
+            val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, defs, listenerFactory, inner, descend, strict, convertPending, recordInternal)
             val result = innerFeeder.runTactic(innerMost, BelleProvable(in, None, defs), level, DbAtomPointer(-1),
               strict, convertPending, executePending) match {
               case (BelleProvable(derivation, _, defs), _) =>
@@ -528,7 +529,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     //@todo record a NoOpTactic that operates on all subgoals (print, assert etc)
                     else result
                   } else {
-                    assert(!BelleExpr.isInternal(tactic.prettyString), "Unable to record internal tactic")
+                    assert(recordInternal || !BelleExpr.isInternal(tactic.prettyString), "Unable to record internal tactic")
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                     runningInner(tactic, BelleProvable(provable.sub(0), labels, defs)) match {
                       case p: BelleDelayedSubstProvable =>

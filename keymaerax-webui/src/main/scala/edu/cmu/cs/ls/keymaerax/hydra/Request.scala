@@ -1980,7 +1980,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         session += localProofId.toString -> proofSession.copy(proofId = localProofId.toString)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, proofSession.defs,
           RequestHelper.listenerFactory(db, proofSession),
-          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false, recordInternal=true)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(conjecture, None, tree.info.defs(db)))
         innerInterpreter.kill()
@@ -2529,7 +2529,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 private val proofSession = session(proofId.toString).asInstanceOf[ProofSession]
                 private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, proofSession.defs,
                   RequestHelper.listenerFactory(db, proofSession),
-                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true)
+                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true, recordInternal=false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                   inner(expr, v)
@@ -2648,7 +2648,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
       executor.getTask(taskId) match {
         case Some(task) =>
           val progressList = task.interpreter match {
-            case SpoonFeedingInterpreter(_, _, _, _, _, interpreterFactory, _, _, _) =>
+            case SpoonFeedingInterpreter(_, _, _, _, _, interpreterFactory, _, _, _, _) =>
               //@note the inner interpreters have CollectProgressListeners attached
               interpreterFactory(Nil).listeners.flatMap({
                 case l@CollectProgressListener(p) => Some(

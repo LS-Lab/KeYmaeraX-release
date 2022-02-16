@@ -132,7 +132,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
         case Some(tactic) =>
           val localProofId = db.createProof(node.localProvable)
           val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, node.proof.info.defs(db), DBTools.listener(db),
-            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true)
+            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true, recordInternal=true)
           interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion), None, node.proof.info.defs(db)))
           extractTactic(localProofId)
       }
@@ -152,7 +152,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
         val proofId = createProof(modelContent)
         val currInterpreter = BelleInterpreter.interpreter
         val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, Declaration(Map.empty), DBTools.listener(db),
-          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true)
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false)
         def interpreter(listeners: Seq[IOListener]): Interpreter = {
           //@note ignore listeners provided by db.proveByWithProofId, use own trace recording listener
           theInterpreter
