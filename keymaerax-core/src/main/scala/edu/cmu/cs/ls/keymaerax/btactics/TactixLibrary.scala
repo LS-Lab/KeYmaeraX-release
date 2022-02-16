@@ -140,8 +140,8 @@ object TactixLibrary extends HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id |
-      DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil))
+    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)('R) | doStep(index)('L) | id |
+      DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil)))
   }
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
@@ -159,7 +159,7 @@ object TactixLibrary extends HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil))
+    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil)))
   }
 
   @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true, displayLevel = "menu")
@@ -299,7 +299,7 @@ object TactixLibrary extends HilbertCalculus
 
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
-      SaturateTactic(onAll(autoStep)) &
+      SaturateTactic(onAll(Idioms.doIf(!_.isProved)(autoStep))) &
         Idioms.doIf(!_.isProved)(onAll(
           propClose |
           //@note apply equalities inside | to undo in case branches do not close
