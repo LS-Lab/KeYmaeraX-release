@@ -140,7 +140,7 @@ loop("g()/L()*(1-cos(theta))+1/2*w^2 < g()/L()&-pi()/2 < theta&theta < pi()/2", 
 )
 End.
 
-Illustration "keymaeraX.org/keymaeraXfunc/img/implicitdefinitions.png".
+Illustration "https://www.ls.cs.cmu.edu/KeYmaeraX/keymaeraXfunc/img/implicitdefinitions.png".
 End.
 
 Theorem "IJCAR22/Double Iterated Exponential"
