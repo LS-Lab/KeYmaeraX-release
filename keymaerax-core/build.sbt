@@ -15,7 +15,7 @@ libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
 
 libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.+"
 
-libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.16.0"
+libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1"
 
 libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5"
 
