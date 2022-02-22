@@ -20,7 +20,6 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import java.security.MessageDigest
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 
 // require favoring immutable Seqs for soundness
 
@@ -689,16 +688,16 @@ object Provable {
     }
   }
 
-  /** Existence-guarded axiom schema for interpreted functions, schematic in the function
+  /** Existence-guarded axiom schema for defining equality of interpreted functions, schematic in the function.
     *
     * {{{
     *   *
     *   --- (with proof of |- \\exists x_ P(x_,._1,...,._n))
-    *   |- ._0 = f<< P(._0,._1,...,._n) >>(._1,...,._n) <-> P(.0,._1,...,._n)
+    *   |- ._0 = f<< P(._0,._1,...,._n) >>(._1,...,._n)  <->  P(.0,._1,...,._n)
     * }}}
     *
     * @param f the interpreted function
-    * @param pr the existence proof
+    * @param pr the proof of existence of the function's value.
     */
   final def implicitFunc(f: Function, pr: Provable): Provable = {
     insist(f.interpreted, "Function must be interpreted.")
@@ -706,7 +705,7 @@ object Provable {
     // P(._0,._1,...,._n)
     val interp = f.interp.get
 
-    //Syntactic guard on the shape of interp for smoothness
+    // Syntactic guard on the shape of interp for smoothness
     isODEInterp(interp)
 
     val dim = f.realDomainDim.get
@@ -716,9 +715,9 @@ object Provable {
     val dotArg = if(dim == 0) Nothing else (1 to dim).map( i => DotTerm(Real,Some(i))).reduceRight(Pair)
 
     // The result dot ._0
-    val xdot = DotTerm(Real,Some(0))
+    val xdot = DotTerm(Real, Some(0))
     // Substitution ._0 ~> x_
-    val subst = USubst( immutable.Seq(SubstitutionPair(DotTerm(Real,Some(0)),x)) )
+    val subst = USubst( immutable.Seq(SubstitutionPair(DotTerm(Real, Some(0)), x)) )
     // Existence guard \\exists x_ P(x_,._1,...,._n)
     val guardSeq = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Exists(x::Nil, subst(interp))))
 
