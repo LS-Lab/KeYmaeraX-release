@@ -290,8 +290,13 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
   * @param domain the sort of expected arguments.
   * @param sort the sort resulting when this function/predicate/predicational symbol has been applied to an argument.
   * @param interp if present, this function symbol `f` has a fixed interpretation defined by
-  *                   y = f x <-> P(y,x)
-  *               where P is the interp formula, substituting (y,x) for the dot terms.
+  *   {{{
+  *      y = f(x) <-> P(y,x)
+  *   }}}
+  *   where P is the interp formula, substituting (y,x) for the dot terms. That is
+  *   {{{
+  *     ._0 = f(._1) <-> P(._0,._1)
+  *   }}}
   */
 case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interp: Option[Formula] = None)
     extends NamedSymbol {
@@ -328,7 +333,7 @@ case class Function(name: String, index: Option[Int] = None, domain: Sort, sort:
   // Dimension of the domain interpreted as a Real domain
   val realDomainDim : Option[Int] = realDomain(domain)
 
-  if(interpreted) {
+  if (interpreted) {
     insist(sort == Real, "Interpreted function codomain must be Real.")
     insist(realDomainDim.isDefined, "Interpreted function domain must be Real(s).")
 
