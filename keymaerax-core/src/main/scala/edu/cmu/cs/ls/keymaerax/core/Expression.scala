@@ -338,6 +338,8 @@ case class Function(name: String, index: Option[Int] = None, domain: Sort, sort:
     insist(realDomainDim.isDefined, "Interpreted function domain must be Real(s).")
 
     insist(StaticSemantics.freeVars(interp.get).isEmpty, "Function interpretation must not mention free variables: " + interp.get)
+
+    // The interpretation can only mention uninterpreted dot terms .0, ..., .n allowed by its domain dimension n
     val validDots = (0 to realDomainDim.get).map(i => DotTerm(Real, Some(i)))
     val signature = StaticSemantics.signature(interp.get).filter( f => f match {
       case f:Function if f.interpreted => false // by data structure invariant, f is a valid interpreted function symbol

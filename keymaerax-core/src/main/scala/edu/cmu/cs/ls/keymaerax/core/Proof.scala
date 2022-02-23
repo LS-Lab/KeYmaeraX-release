@@ -628,16 +628,37 @@ object Provable {
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(diffAdj)), immutable.IndexedSeq())
   }
 
+  /**
+    * Checks that the interpretation formula is of the expected ODE shape to guarantee
+    * uniqueness, (local) existence, and smoothness of its solution
+    * {{{
+    *   < {x1:=*;...;xn:=*; x0:=.0; t:=.1;}
+    *     { {x1'=e1,...,xn'=en,t'=1} ++ {x1'=-e1,...,xn'=-en,t'=-(1)} }>
+    *     ( x0=X0 & x1=X1 & ... & xn = Xn & t=T0 )
+    * }}}
+    *
+    * - The assignment block { x1:=*;...;xn:=*; x0:=.0; t:=.1; } must set the output variable x0 to .0
+    *   and the time variable t to .1. All other variables are assigned nondeterministically.
+    *
+    * - The backward ODE {x1'=-e1,...,xn'=-en,t'=-(1)} must be the forward ODE {x1'=e1,...,xn'=en,t'=1}
+    *   with the same LHS but all RHS reversed. Both ODE RHS have no uninterpreted symbols (no dot terms).
+    *
+    * - The postcondition x0=X0 & x1=X1 & ... & xn = Xn & t=T0 gives initial values for the ODE
+    *   so X0, ..., Xn, T0 are dL terms with no free variables (no x0,...,xn) and no uninterpreted symbols (no dot terms).
+    *
+    * @param interp the interpretation formula
+    */
   private def isODEInterp(interp: Formula) : Unit = {
 
     def noFreeVars(e : Expression) : Boolean = StaticSemantics.freeVars(e).isEmpty
     def noUninterpretedSymbols(e : Expression) : Boolean = StaticSemantics.signature(e).filter( f => f match {
       case f:Function if f.interpreted => false // by data structure invariant, f is a valid interpreted function symbol
-      case _ => true
+      case _ => true // by data structure invariant, the only remaining symbols are dot terms
     }).isEmpty
 
     // Check the shape of initial condition and extract the equalities x=x0&t=t0
     // Right-hand sides of initial conditions must have no free variables nor uninterpreted symbols
+    // Returns the list of variables assigned by the initial conditions
     def checkInit( f : Formula ) : List[BaseVariable] = {
       f match {
         case And(Equal(v : BaseVariable, e), rest) if noFreeVars(e) && noUninterpretedSymbols(e) => v::checkInit(rest)
@@ -647,6 +668,7 @@ object Provable {
     }
 
     // Check the shape of the assignment block x:=*;y:=._0;t:=._1
+    // Returns the list of variables assigned by the assignment block
     def checkAssign( p : Program ) : List[BaseVariable] = {
       p match {
         case Compose(AssignAny(v : BaseVariable),rest) => v::checkAssign(rest)
@@ -658,30 +680,34 @@ object Provable {
     interp match {
       case Diamond(Compose(assgn, Choice(ODESystem(odeB,True),ODESystem(odeF,True))), init ) => {
 
+        // Check shape and ensure that only 1 initial condition assignment is used for each variable
         val inits = checkInit(init)
-
         insist(inits.toSet.size == inits.size, "Exactly one initial condition allowed per variable.")
 
+        // Check shape and ensure that only 1 assignment is given in the assignment block for each variable
         val assgns = checkAssign(assgn)
-
         insist(assgns.toSet.size == assgns.size, "Exactly one assignment allowed per variable.")
 
+        // Variables used in initial condition and assignment block match (up to re-ordering)
         insist(assgns.toSet == inits.toSet, "Variables in initial condition and assignment must match.")
 
         // The ODEs must be atomic by data structure invariant on interpreted functions
         val odeFs = DifferentialProduct.listify(odeF).map(_.asInstanceOf[AtomicODE])
         val odeBs = DifferentialProduct.listify(odeB).map(_.asInstanceOf[AtomicODE])
 
-        // Check that the forward ODE matches the reversed ODE
+        // Reversed ODE is exactly the forward ODE with RHs negated
         insist(odeFs.map(ode => ode.copy(e=Neg(ode.e))) == odeBs, "Forward ODEs must match backward ODEs.")
 
-        // Check that the variables match initial conditions
+        // Variables used in initial condition and ODEs match (up to re-ordering)
         insist(odeFs.map(ode => ode.xp.x).toSet == inits.toSet, "Variables in ODEs must match variables in initial conditions.")
 
-        // Check that the last ODE is a time variable
+        // The time variable (last variable) in the assignment block is the same as the last variable in the ODEs
+        insist(assgns.last == odeFs.last.xp.x, "Time variable must occur last in both assignment and ODEs.")
+
+        // The last ODE must be a clock ODE
         insist(odeFs.last.e == Number(1), "Last ODE must be a clock ODE t'=1.")
 
-        // Check that the forward ODE does not mention uninterpreted symbols (in particular, no ._0 and ._1)
+        // The forward ODE does not mention uninterpreted symbols
         insist(noUninterpretedSymbols(odeF), "No uninterpreted symbols in ODE RHS.")
       }
       case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
@@ -714,8 +740,8 @@ object Provable {
     // The dot term argument for f's sort (guaranteed to be right-associated)
     val dotArg = if(dim == 0) Nothing else (1 to dim).map( i => DotTerm(Real,Some(i))).reduceRight(Pair)
 
-    // The result dot ._0
-    val xdot = DotTerm(Real, Some(0))
+    // The result dot ._0, note f.sort == Real by data structure invariant
+    val xdot = DotTerm(f.sort, Some(0))
     // Substitution ._0 ~> x_
     val subst = USubst( immutable.Seq(SubstitutionPair(DotTerm(Real, Some(0)), x)) )
     // Existence guard \\exists x_ P(x_,._1,...,._n)
