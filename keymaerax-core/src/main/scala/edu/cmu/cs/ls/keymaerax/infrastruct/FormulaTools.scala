@@ -54,10 +54,8 @@ object FormulaTools extends Logging {
 
   /** Reassociates conjunctions and disjunctions into their default right-associative case. */
   def reassociate(fml: Formula): Formula = fml match {
-    case Or(Or(ll, lr), r) => reassociate(Or(reassociate(ll), Or(reassociate(lr), reassociate(r))))
-    case Or(l, r) => Or(reassociate(l), reassociate(r))
-    case And(And(ll, lr), r) => reassociate(And(reassociate(ll), And(reassociate(lr), reassociate(r))))
-    case And(l, r) => And(reassociate(l), reassociate(r))
+    case Or(l, r) => (disjuncts(l) ++ disjuncts(r)).map(reassociate).reduceRight(Or)
+    case And(l, r) => (conjuncts(l) ++ conjuncts(r)).map(reassociate).reduceRight(And)
     case _ => fml
   }
 
@@ -66,8 +64,8 @@ object FormulaTools extends Logging {
     */
   @tailrec
   def kernel(formula: Formula): Formula = formula match {
-    case Forall(vars, p) => kernel(p)
-    case Exists(vars, p) => kernel(p)
+    case Forall(_, p) => kernel(p)
+    case Exists(_, p) => kernel(p)
     case p => p
   }
 
@@ -132,20 +130,29 @@ object FormulaTools extends Logging {
     case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
   }
 
-  /** Turns `fml` into disjunctive normal form. */
-  def disjunctiveNormalForm(fml: Formula): Formula = {
-    def distributeOrOverAnd(fml: Formula): Formula = fml match {
-      case Or(l, r) => Or(distributeOrOverAnd(l), distributeOrOverAnd(r))
-      case And(Or(ll, lr), r) => distributeOrOverAnd(Or(And(ll, r), And(lr, r)))
-      case And(l, Or(rl, rr)) => distributeOrOverAnd(Or(And(l, rl), And(l, rr)))
-      case And(l, r) =>
-        val distributed = And(distributeOrOverAnd(l), distributeOrOverAnd(r))
-        if (distributed != fml) distributeOrOverAnd(distributed)
-        else distributed
-      case f => f
-    }
-    reassociate(distributeOrOverAnd(negationNormalForm(fml)))
+  /** The element-wise combinations in `l`, e.g., [ [a,b,c], [p,q] ] ==> [ [a,p], [a,q], [b,p], [b,q], [c,p], [c,q] ]. */
+  def combinations(l: List[List[Formula]]): List[List[Formula]] = l match {
+    case Nil => List(Nil)
+    case head :: tail => for {
+      n <- head
+      t <- combinations(tail)
+    } yield n :: t
   }
+
+  /** Distributes disjunctions over conjunctions, e.g., a&(b|c) ==> a&b | a&c. */
+  def distributeOrOverAnd(fml: Formula): Formula = fml match {
+    case Or(l, r) =>
+      val (conjunctions, others) = (disjuncts(l) ++ disjuncts(r)).partition(_.isInstanceOf[And])
+      (disjuncts(conjunctions.map(distributeOrOverAnd)) ++ others).reduceRight(Or)
+    case And(l, r) =>
+      val (disjunctions, others) = (conjuncts(l) ++ conjuncts(r)).partition(_.isInstanceOf[Or])
+      combinations(disjunctions.map(disjunctiveNormalForm).map(disjuncts)).
+        map(o => (o ++ others).reduceRight(And)).reduceRight(Or)
+    case f => f
+  }
+
+  /** Turns `fml` into disjunctive normal form. */
+  def disjunctiveNormalForm(fml: Formula): Formula = reassociate(distributeOrOverAnd(negationNormalForm(fml)))
 
   /** Read off all atomic subformulas of `formula`.
     * Will not descend into programs to find even further atomic formulas since they are not directly subformulas.
@@ -176,7 +183,7 @@ object FormulaTools extends Logging {
       case f: BinaryCompositeFormula if pos.head == 0 => polarityAt(f.left, pos.child)
       case f: BinaryCompositeFormula if pos.head == 1 => polarityAt(f.right, pos.child)
       case f: Modal                  if pos.head == 1 => polarityAt(f.child, pos.child)
-      case f: Modal                  if pos.head == 0 => logger.warn("Polarity within programs not yet implemented " + formula); 0
+      case _: Modal                  if pos.head == 0 => logger.warn("Polarity within programs not yet implemented " + formula); 0
 //      case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
       case f: Quantified             => require(pos.head == 0, "Quantified must have position head 0, but was " + pos); polarityAt(f.child, pos.child)
     }
@@ -285,9 +292,9 @@ object FormulaTools extends Logging {
 
   def singularities(term: Term): Set[Term] = term match {
     case Nothing | DotTerm(_, _) | Number(_) => Set.empty
-    case _: Variable     => Set.empty
+    case _: Variable       => Set.empty
     case _: UnitFunctional => Set.empty
-    case FuncOf(f,t)     => singularities(t)
+    case FuncOf(_,t)       => singularities(t)
     // homomorphic cases
     case f:UnaryCompositeTerm  => singularities(f.child)
     case f@Divide(_,Number(n)) if n!=0 => singularities(f.left) ++ singularities(f.right)
@@ -302,8 +309,8 @@ object FormulaTools extends Logging {
     // base cases
     case True | False         => Set.empty
     case _: UnitPredicational | DotFormula => Set.empty
-    case PredOf(p,t)          => singularities(t)
-    case PredicationalOf(c,t) => singularities(t)
+    case PredOf(_,t)          => singularities(t)
+    case PredicationalOf(_,t) => singularities(t)
     // pseudo-homomorphic cases
     case f:ComparisonFormula  => singularities(f.left) ++ singularities(f.right)
     // homomorphic cases
@@ -315,8 +322,8 @@ object FormulaTools extends Logging {
   }
 
   def singularities(program: Program): Set[Term] = program match {
-    case Assign(x,t)       => singularities(t)
-    case AssignAny(x)      => Set.empty
+    case Assign(_,t)       => singularities(t)
+    case AssignAny(_)      => Set.empty
     case Test(f)           => singularities(f)
     case ODESystem(ode, h) => singularities(ode) ++ singularities(h)
     // homomorphic cases
@@ -326,25 +333,25 @@ object FormulaTools extends Logging {
   }
 
   private def singularities(program: DifferentialProgram): Set[Term] = program match {
-    case AtomicODE(xp,t)       => singularities(t)
+    case AtomicODE(_,t)             => singularities(t)
     case _:DifferentialProgramConst => Set.empty
-    case f:DifferentialProduct => singularities(f.left) ++ singularities(f.right)
+    case f:DifferentialProduct      => singularities(f.left) ++ singularities(f.right)
     case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
   }
 
   /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game.
     * @see [[SubstitutionPair.dualFree]] */
   def dualFree(program: Program): Boolean = program match {
-    case a: ProgramConst => false
-    case a: SystemConst  => true
-    case Assign(x, e)    => true
-    case AssignAny(x)    => true
-    case Test(f)         => true /* even if f contains duals, since they're different nested games) */
-    case ODESystem(a, h) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
+    case _: ProgramConst => false
+    case _: SystemConst  => true
+    case Assign(_, _)    => true
+    case AssignAny(_)    => true
+    case Test(_)         => true /* even if f contains duals, since they're different nested games) */
+    case ODESystem(_, _) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
     case Choice(a, b)    => dualFree(a) && dualFree(b)
     case Compose(a, b)   => dualFree(a) && dualFree(b)
     case Loop(a)         => dualFree(a)
-    case Dual(a)         => false
+    case Dual(_)         => false
   }
 
   /** Check whether `fml` is dual-free. */
@@ -380,7 +387,7 @@ object FormulaTools extends Logging {
     * @note This is soundness-critical.
     * @author Nathan Fulton */
   def unnaturalPowers(f: Formula): List[(Term, PosInExpr)] = {
-    var problematicExponents = scala.collection.mutable.ListBuffer[(Term, PosInExpr)]()
+    val problematicExponents = scala.collection.mutable.ListBuffer[(Term, PosInExpr)]()
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
         case Power(_, Number(n)) if n.isValidInt && n >= 0 => Left(None)
@@ -411,7 +418,7 @@ object FormulaTools extends Logging {
     case _: Less => fml
     case And(a, b) => And(interior(a), interior(b))
     case Or(a, b) => Or(interior(a), interior(b))
-    case Equal(a, b) => False
+    case Equal(_, _) => False
     case NotEqual(a, b) => NotEqual(a, b)
     case True => True
     case False => False
@@ -426,7 +433,7 @@ object FormulaTools extends Logging {
     case And(a, b) => And(closure(a), closure(b))
     case Or(a, b) => Or(closure(a), closure(b))
     case Equal(a, b) => Equal(a, b)
-    case NotEqual(a, b) => True
+    case NotEqual(_, _) => True
     case True => True
     case False => False
   }
