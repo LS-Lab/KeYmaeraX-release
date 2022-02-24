@@ -584,7 +584,7 @@ object Provable {
   }
 
   /**
-    * Axiom schema for differential adjoints, schematic in dimension.
+    * Axiom schema for differential adjoints, schematic in given dimension.
     * {{{
     *   <{x_'=f_(x_) & q_(x_)}>x_=y_ <-> <{y_'=-f_(y_) & q_(y_)}>x_=y_
     * }}}
@@ -594,7 +594,7 @@ object Provable {
   final def diffAdjoint(dim : Int): Provable = {
     insist(dim > 0, "Diff. adjoint over ODE with at least 1 variable.")
 
-    //Indices 1,2,...dim
+    // Indices 1,2,...dim
     val indices = 1 to dim
     // The list of LHS variables x__1, x__2, ..., x__dim
     val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
@@ -621,7 +621,7 @@ object Provable {
     // Postcondition x_ = y_
     val eq = (xLHS zip yLHS).map( xy => Equal(xy._1,xy._2)).reduceRight(And)
 
-    //<x_'=f_(x_)&q_(x_)>x_=y_ <-> <y_'=-f_(y_)&q_(y_)>x_=y_
+    // <x_'=f_(x_)&q_(x_)>x_=y_ <-> <y_'=-f_(y_)&q_(y_)>x_=y_
     val diffAdj = Equiv(Diamond(ODESystem(xODE,xDom),eq),Diamond(ODESystem(yODE,yDom),eq))
 
     //@note soundness-critical
@@ -641,44 +641,47 @@ object Provable {
     *   and the time variable t to .1. All other variables are assigned nondeterministically.
     *
     * - The backward ODE {x1'=-e1,...,xn'=-en,t'=-(1)} must be the forward ODE {x1'=e1,...,xn'=en,t'=1}
-    *   with the same LHS but all RHS reversed. Both ODE RHS have no uninterpreted symbols (no dot terms).
+    *   with the same LHS but the negative of all RHS. Both ODE RHS have no uninterpreted symbols (no dot terms).
     *
-    * - The postcondition x0=X0 & x1=X1 & ... & xn = Xn & t=T0 gives initial values for the ODE
+    * - The postcondition x0=X0 & x1=X1 & ... & xn = Xn & t=T0 specifies initial values for the ODE
     *   so X0, ..., Xn, T0 are dL terms with no free variables (no x0,...,xn) and no uninterpreted symbols (no dot terms).
     *
     * @param interp the interpretation formula
     */
   private def isODEInterp(interp: Formula) : Unit = {
 
+    // checks that e has no free variables
     def noFreeVars(e : Expression) : Boolean = StaticSemantics.freeVars(e).isEmpty
+    // checks that e has no uninterpreted symbols
     def noUninterpretedSymbols(e : Expression) : Boolean = StaticSemantics.signature(e).filter( f => f match {
       case f:Function if f.interpreted => false // by data structure invariant, f is a valid interpreted function symbol
+        //@todo clarify what data structure invariant rules out or add case false for other uninterpreted predicationals / program constant symbols ...
       case _ => true // by data structure invariant, the only remaining symbols are dot terms
     }).isEmpty
 
     // Check the shape of initial condition and extract the equalities x=x0&t=t0
     // Right-hand sides of initial conditions must have no free variables nor uninterpreted symbols
     // Returns the list of variables assigned by the initial conditions
-    def checkInit( f : Formula ) : List[BaseVariable] = {
+    def checkInit(f : Formula) : List[BaseVariable] = {
       f match {
-        case And(Equal(v : BaseVariable, e), rest) if noFreeVars(e) && noUninterpretedSymbols(e) => v::checkInit(rest)
-        case Equal(v : BaseVariable, e) if noFreeVars(e) && noUninterpretedSymbols(e) => v::Nil
+        case And(Equal(v:BaseVariable, e), rest) if noFreeVars(e) && noUninterpretedSymbols(e) => v::checkInit(rest)
+        case Equal(v:BaseVariable, e) if noFreeVars(e) && noUninterpretedSymbols(e) => v::Nil
         case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
       }
     }
 
     // Check the shape of the assignment block x:=*;y:=._0;t:=._1
-    // Returns the list of variables assigned by the assignment block
-    def checkAssign( p : Program ) : List[BaseVariable] = {
+    // Returns the list of variables assigned by the assignment block in the given order
+    def checkAssign(p : Program) : List[BaseVariable] = {
       p match {
-        case Compose(AssignAny(v : BaseVariable),rest) => v::checkAssign(rest)
+        case Compose(AssignAny(v:BaseVariable),rest) => v::checkAssign(rest)
         case Compose(Assign(v:BaseVariable,DotTerm(Real,Some(0))),Assign(t:BaseVariable,DotTerm(Real,Some(1)))) => v::t::Nil
         case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
       }
     }
 
     interp match {
-      case Diamond(Compose(assgn, Choice(ODESystem(odeB,True),ODESystem(odeF,True))), init ) => {
+      case Diamond(Compose(assgn, Choice(ODESystem(odeB,True),ODESystem(odeF,True))), init) => {
 
         // Check shape and ensure that only 1 initial condition assignment is used for each variable
         val inits = checkInit(init)
@@ -710,11 +713,12 @@ object Provable {
         // The forward ODE does not mention uninterpreted symbols
         insist(noUninterpretedSymbols(odeF), "No uninterpreted symbols in ODE RHS.")
       }
-      case _ => throw new IllegalArgumentException("Unexpected shape of interpretation.")
+      case _ => throw new IllegalArgumentException("Unexpected shape of interpretation: " + interp)
     }
   }
 
-  /** Existence-guarded axiom schema for defining equality of interpreted functions, schematic in the function.
+  /** 
+    * Existence-guarded axiom schema for defining equality of interpreted functions, schematic in the function.
     *
     * {{{
     *   *
@@ -726,7 +730,7 @@ object Provable {
     * @param pr the proof of existence of the function's value.
     */
   final def implicitFunc(f: Function, pr: Provable): Provable = {
-    insist(f.interpreted, "Function must be interpreted.")
+    insist(f.interpreted, "Function must be interpreted: " + f)
 
     // P(._0,._1,...,._n)
     val interp = f.interp.get
@@ -738,22 +742,25 @@ object Provable {
 
     val x = BaseVariable("x_")
     // The dot term argument for f's sort (guaranteed to be right-associated)
-    val dotArg = if(dim == 0) Nothing else (1 to dim).map( i => DotTerm(Real,Some(i))).reduceRight(Pair)
+    val dotArg = if(dim == 0) Nothing else (1 to dim).map(i => DotTerm(Real,Some(i))).reduceRight(Pair)
 
     // The result dot ._0, note f.sort == Real by data structure invariant
     val xdot = DotTerm(f.sort, Some(0))
     // Substitution ._0 ~> x_
-    val subst = USubst( immutable.Seq(SubstitutionPair(DotTerm(Real, Some(0)), x)) )
+    val subst = USubst(immutable.Seq(SubstitutionPair(xdot, x)))
     // Existence guard \\exists x_ P(x_,._1,...,._n)
     val guardSeq = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Exists(x::Nil, subst(interp))))
 
     insist(pr.isProved && pr.conclusion == guardSeq, "Supplied provable must prove existence.")
 
-    oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(
+    // characteristic axiom defining f by its interpretation interp
+    oracle(Sequent(immutable.IndexedSeq(),immutable.IndexedSeq(
       // ._0 = f<< P(._0,._1,...,._n) >>(.) <-> P(.0,._1,...,._n)
-      Equiv(Equal(DotTerm(f.sort, Some(0)), FuncOf(f, dotArg)), f.interp.get)
-      )),immutable.IndexedSeq.empty[Sequent])
+      Equiv(Equal(xdot, FuncOf(f, dotArg)), f.interp.get)
+      )),
+      immutable.IndexedSeq.empty[Sequent])
   }
+
 
   /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
@@ -763,7 +770,7 @@ object Provable {
     * @return a Provable of given conclusion and given subgoals.
     * @note soundness-critical magic/trustme, only call from [[proveArithmetic()]]/[[fromStorageString()]] with true facts.
     */
-  private final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
+  private[this] final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
     Provable(conclusion, subgoals)
 
 
