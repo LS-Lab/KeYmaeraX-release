@@ -4,17 +4,18 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /** Tests expression, term, formula, program, sequent augmentors. */
 class AugmentorsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   override protected def beforeEach(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
