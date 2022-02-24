@@ -633,7 +633,7 @@ object Provable {
     * uniqueness, (local) existence, and smoothness of its solution
     * {{{
     *   < {x1:=*;...;xn:=*; x0:=.0; t:=.1;}
-    *     { {x1'=e1,...,xn'=en,t'=1} ++ {x1'=-e1,...,xn'=-en,t'=-(1)} }>
+    *     { {x1'=-e1,...,xn'=-en,t'=-(1)} ++ {x1'=e1,...,xn'=en,t'=1} }>
     *     ( x0=X0 & x1=X1 & ... & xn = Xn & t=T0 )
     * }}}
     *
@@ -655,8 +655,8 @@ object Provable {
     // checks that e has no uninterpreted symbols
     def noUninterpretedSymbols(e : Expression) : Boolean = StaticSemantics.signature(e).filter( f => f match {
       case f:Function if f.interpreted => false // by data structure invariant, f is a valid interpreted function symbol
-        //@todo clarify what data structure invariant rules out or add case false for other uninterpreted predicationals / program constant symbols ...
-      case _ => true // by data structure invariant, the only remaining symbols are dot terms
+      case DotTerm(Real,Some(_)) => true
+      // remaining cases are impossible by data structure invariant on function interpretations
     }).isEmpty
 
     // Check the shape of initial condition and extract the equalities x=x0&t=t0
