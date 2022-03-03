@@ -148,7 +148,7 @@ trait UnifyUSCalculus {
     if (sub.isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
     axiomIndex(sub.get) match {
       case Some(axiom) =>
-        logger.debug("stepAt " + axiom)
+        logger.debug("stepAt {}", axiom)
         axiom.belleExpr match {
           case ap: AtPosition[_] => ap(pos)
           case expr: BelleExpr => expr
@@ -379,7 +379,7 @@ trait UnifyUSCalculus {
       val info = ProvableInfo.ofStoredName(name)
       if (info.provable == lem.fact) useAt(info, key, inst)
       else {
-        logger.info("INFO: useAt(" + name + ") has an incompatible lemma name, which may disable tactic extraction")
+        logger.info("INFO: useAt({}) has an incompatible lemma name, which may disable tactic extraction", name)
         useAt(lem.fact, key, inst)
       }
     case Some(name) if !ProvableInfo.existsStoredName(name) =>
@@ -395,7 +395,7 @@ trait UnifyUSCalculus {
       val info = ProvableInfo.ofStoredName(name)
       if (info.provable == lem.fact) useAt(info)
       else {
-        logger.info("INFO: useAt(" + name + ") has an incompatible lemma name, which may disable tactic extraction")
+        logger.info("INFO: useAt({}) has an incompatible lemma name, which may disable tactic extraction", name)
         useAt(lem.fact)
       }
     case _ => useAt(lem, PosInExpr(0 :: Nil))
@@ -483,11 +483,11 @@ trait UnifyUSCalculus {
     */
   def US(fact: ProvableSig): BuiltInTactic = anon { pr: ProvableSig => {
     val sequent = pr.subgoals.head
-    logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
+    if (logger.isDebugEnabled) logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
     //@todo is there a way of flagging a fact that comes from ProvableInfo with ProvableInfo.linear=true for faster LinearMatcher?
     //@note Probably not worth it, because all axiomatic rules in AxiomBase are nonlinear
     val subst = defaultMatcher(fact.conclusion, sequent)
-    logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
+    if (logger.isDebugEnabled) logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
     if (sequent != subst(fact.conclusion)) throw new UnsupportedTacticFeature("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
     pr(subst.toForward(fact), 0)
   }}
@@ -617,7 +617,7 @@ trait UnifyUSCalculus {
         } catch {
           case ex: InapplicableUnificationKeyFailure => throw ex.inContext("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  of:      " + codeName + "\n  unsuccessful")
         }
-        logger.debug("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  by:      " + subst)
+        if (logger.underlying.isDebugEnabled) logger.debug("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  by:      " + subst)
         Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         useAt(subst, keyCtx, keyPart, pos, ctx, expr, provable)
@@ -939,14 +939,14 @@ trait UnifyUSCalculus {
         require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
         Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
         Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
-        logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
+        if (logger.isDebugEnabled) logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
         if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty) {
           val subst = USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
           provable(Ax.CQrule.provable(subst), 0)
         } else {
-          logger.debug("CQ: Split " + p + " around " + inEqPos)
+          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos)
           val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
-          logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
+          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
           if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
           if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
           //@todo could optimize to build directly since ctx already known
@@ -991,15 +991,15 @@ trait UnifyUSCalculus {
         require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
         Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
         Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
-        logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
+        if (logger.isDebugEnabled) logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
         //@todo this would be too permissive due to lack of special permission for CQimplyCongruence: if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty)
         if (StaticSemantics.vars(ctxF.ctx).isEmpty) {
           val subst = USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
           provable(Ax.CQimplyCongruence.provable(subst), 0)
         } else {
-          logger.debug("CQ: Split " + p + " around " + inEqPos)
+          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos)
           val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
-          logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
+          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
           //if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
           //if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
           //@todo could optimize to build directly since ctx already known
@@ -1045,15 +1045,15 @@ trait UnifyUSCalculus {
         require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
         Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
         Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
-        logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
+        if (logger.isDebugEnabled) logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
         //@todo this would be too permissive due to lack of special permission for CQimplyCongruence: if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty)
         if (StaticSemantics.vars(ctxF.ctx).isEmpty) {
           val subst = USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
           provable(Ax.CQrevimplyCongruence.provable(subst), 0)
         } else {
-          logger.debug("CQ: Split " + p + " around " + inEqPos)
+          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos)
           val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
-          logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
+          if (logger.isDebugEnabled) logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
           //if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
           //if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
           //@todo could optimize to build directly since ctx already known
@@ -1576,11 +1576,11 @@ trait UnifyUSCalculus {
       else (impl.conclusion.ante.head, impl.conclusion.succ.head)
 
     require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
-    logger.debug("CMon(" + C + ")" + "(" + impl + ")")
+    if (logger.isDebugEnabled) logger.debug("CMon(" + C + ")" + "(" + impl + ")")
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: ProvableSig): ProvableSig = {
       //@todo assert(mon.ante.head == C{left or right} && mon.succ.head == C{right or left})
-      logger.debug("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
+      if (logger.isDebugEnabled) logger.debug("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
 
       val localPolarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
         throw new TacticAssertionError("Context should contain DotFormula")))
@@ -1630,7 +1630,7 @@ trait UnifyUSCalculus {
               ) (monStep(Context(c), mon), 0)
 
           case Imply(e, c) if !symbols(e).contains(DotFormula) =>
-            logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
+            if (logger.isDebugEnabled) logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (ProvableSig.startProof(Sequent(ante, succ))
               // e->c{a} |- e->c{s}
@@ -1646,7 +1646,7 @@ trait UnifyUSCalculus {
               ) (monStep(Context(c), mon), 0)
 
           case Imply(c, e) if !symbols(e).contains(DotFormula) =>
-            logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
+            if (logger.isDebugEnabled) logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (ProvableSig.startProof(Sequent(ante, succ))
               // c{a}->e |- c{s}->e
@@ -1895,7 +1895,7 @@ trait UnifyUSCalculus {
   private def useForImpl(fact: ProvableSig, key: PosInExpr, matcher: Matcher, inst: Subst=>Subst): ForwardPositionTactic = {
     // split key into keyCtx{keyPart} = fact
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
-    logger.debug("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
+    if (logger.isDebugEnabled) logger.debug("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
 
     pos => proof => {
       // split proof into ctx{expr} at pos
@@ -1905,8 +1905,8 @@ trait UnifyUSCalculus {
         inst(matcher(keyPart, expr))
       else
         inst(defaultMatcher(keyPart, expr))
-      logger.debug("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
-      logger.debug("useFor(" + fact.conclusion + ") on " + proof)
+      if (logger.isDebugEnabled) logger.debug("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
+      if (logger.isDebugEnabled) logger.debug("useFor(" + fact.conclusion + ") on " + proof)
       Predef.assert(expr == subst(keyPart), "unification matched key successfully:\nexpr     " + expr + "\nequals   " + subst(keyPart) + "\nwhich is " + keyPart + "\ninstantiated by " + subst)
 
       /** useFor(subst, K,k, p, C,c)
@@ -2182,7 +2182,7 @@ trait UnifyUSCalculus {
       }
 
       val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
-      logger.debug("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
+      if (logger.isDebugEnabled) logger.debug("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
       r
     }
   }
@@ -2332,10 +2332,10 @@ trait UnifyUSCalculus {
       }
       Predef.assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1,
         "Proved reflexive start " + initial + " for " + e)
-      logger.debug("chase starts at " + initial)
+      if (logger.isDebugEnabled) logger.debug("chase starts at " + initial)
       //@note start the chase on the left-hand side
       val r = forward(SuccPosition(1, 0::Nil))(initial)
-      logger.debug("chase(" + e.prettyString + ") = ~~> " + r + " done")
+      if (logger.isDebugEnabled) logger.debug("chase(" + e.prettyString + ") = ~~> " + r + " done")
       r
     } ensures(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
     anon {(provable: ProvableSig, pos: Position) => {
@@ -2380,11 +2380,11 @@ trait UnifyUSCalculus {
     pos => de => {
     /** Recursive chase implementation */
     def doChase(de: ProvableSig, pos: Position): ProvableSig = {
-      logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+      if (logger.isDebugEnabled) logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
       keys(de.conclusion.sub(pos).get) match {
         case Nil =>
-          logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+          if (logger.isDebugEnabled) logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
           de
         /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
         case List(ax) =>
@@ -2407,7 +2407,7 @@ trait UnifyUSCalculus {
           }
           firstAxUse match {
             case None =>
-              logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+              if (logger.isDebugEnabled) logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
@@ -2431,11 +2431,11 @@ trait UnifyUSCalculus {
   def chaseCustomFor(keys: Expression=>List[(ProvableSig,PosInExpr, List[PosInExpr])]): ForwardPositionTactic = pos => de => {
     /** Recursive chase implementation */
     def doChase(de: ProvableSig, pos: Position): ProvableSig = {
-      logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+      if (logger.isDebugEnabled) logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
       keys(de.conclusion.sub(pos).get) match {
         case Nil =>
-          logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+          if (logger.isDebugEnabled) logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
           de
         // take the first axiom among breadth that works for one useFor step
         case l: List[(ProvableSig,PosInExpr, List[PosInExpr])] =>
@@ -2448,7 +2448,7 @@ trait UnifyUSCalculus {
           }
           firstAxUse match {
             case None =>
-              logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+              if (logger.isDebugEnabled) logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
