@@ -278,7 +278,8 @@ object KeYmaeraX {
         Some(fallback),
         kind = 'ctrl,
         checkProvable =  None,
-        synthesizeProofs = false)(inputModel)
+        synthesizeProofs = false,
+        defs = inputEntry.defs)(inputModel)
       println("Done synthesizing sandbox and safety proof")
 
       val db = new TempDBTools(Nil)
