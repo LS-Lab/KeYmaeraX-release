@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, IllFormedTacticApplicationException}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -222,6 +222,27 @@ class PropositionalTests extends TacticTestBase {
   it should "handle nested branching" in withTactics { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, prop) shouldBe 'proved }
   it should "handle more nested branching" in withTactics {
     val result = proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, prop)
+    result.subgoals.loneElement shouldBe "L_()=LL_(), A_() ==> L_()+R_()=LL_()+R_()".asSequent
+  }
+
+  "Builtin prop" should "handle implication in succedent" in withTactics { succImplication(PropositionalTactics.prop) }
+  it should "handle disjunction in succedent" in withTactics { succDisjunction(PropositionalTactics.prop) }
+  it should "handle negation in succedent" in withTactics { succNegation(PropositionalTactics.prop) }
+  it should "handle conjunction in antecedent" in withTactics { anteConjunction(PropositionalTactics.prop) }
+  it should "handle negation in antecedent" in withTactics { anteNegation(PropositionalTactics.prop) }
+  it should "handle implication in antecedent" in withTactics { anteImplication(PropositionalTactics.prop) }
+  it should "handle disjunction in antecedent" in withTactics { anteDisjunction(PropositionalTactics.prop) }
+  it should "handle conjunction in succedent" in withTactics { succConjunction(PropositionalTactics.prop) }
+  it should "handle equivalence in antecedent" in withTactics {
+    val result = proveBy(Sequent(IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), PropositionalTactics.prop)
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "x>1, y>1 ==> ".asSequent
+    result.subgoals(1) shouldBe "==> y>1, x>1".asSequent
+  }
+  it should "handle equivalence in succedent" in withTactics { succEquivalence(PropositionalTactics.prop) }
+  it should "handle nested branching" in withTactics { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, PropositionalTactics.prop) shouldBe 'proved }
+  it should "handle more nested branching" in withTactics {
+    val result = proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, PropositionalTactics.prop)
     result.subgoals.loneElement shouldBe "L_()=LL_(), A_() ==> L_()+R_()=LL_()+R_()".asSequent
   }
 

@@ -521,6 +521,7 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "exhaustively apply propositional" in withTactics {
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
+    proveBy("true<->(p()<->q())&q()->p()".asFormula, PropositionalTactics.prop) shouldBe 'proved
   }
 
   it should "inherit labels from core rules with prop" in {
