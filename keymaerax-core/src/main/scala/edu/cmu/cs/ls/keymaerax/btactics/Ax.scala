@@ -2583,6 +2583,24 @@ object Ax extends Logging {
     )
 
   /**
+   * {{{Axiom "exists or".
+   *    (\exists x p(x) | q(x)) <-> (\exists x p(x) | \exists x q(x))
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom(("∃∨","existsOr"))
+  lazy val existsOr: DerivedAxiomInfo =
+  derivedAxiom("existsOr",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (p_(x_) | q_(x_)) <-> \\exists x_ p_(x_) | \\exists x_ q_(x_)".asFormula)),
+    equivR(1) <(
+      existsL(-1) & orR(1) & existsR("x_".asVariable)(1) & existsR("x_".asVariable)(2) & prop & done,
+      orL(-1) & OnAll(existsL(-1) & existsR("x_".asVariable)(1) & prop & done)
+    )
+  )
+
+  /**
     * {{{Axiom "V[:*] vacuous assign nondet".
     *    [x:=*;]p() <-> p()
     * End.
