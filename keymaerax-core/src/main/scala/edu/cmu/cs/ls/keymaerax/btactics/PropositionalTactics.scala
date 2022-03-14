@@ -262,31 +262,34 @@ private object PropositionalTactics extends Logging {
   }
 
   /** Forward propositional tactic for internal use (does not create branch labels). */
-  val prop: BuiltInTactic = prop(List.empty, List.empty)
-  private def prop(alpha: List[PositionRule], beta: List[PositionRule]): BuiltInTactic = anon { provable: ProvableSig =>
+  val prop: BuiltInTactic = prop(alphaRules, betaRules)(List.empty, List.empty)
+
+  /** Returns the alpha rules for `fml`, applied at position `p`. */
+  def alphaRules(fml: Formula, p: SeqPos): List[PositionRule] = (fml, p) match {
+    case (_: Or,    sp: SuccPos) => List(OrRight(sp))
+    case (_: Imply, sp: SuccPos) => List(ImplyRight(sp))
+    case (_: Not,   sp: SuccPos) => List(NotRight(sp))
+    case (_: And,   ap: AntePos) => List(AndLeft(ap))
+    case (_: Not,   ap: AntePos) => List(NotLeft(ap))
+    case (True,     sp: SuccPos) => List(CloseTrue(sp))
+    case (False,    ap: AntePos) => List(CloseFalse(ap))
+    case _ => Nil
+  }
+
+  /** Returns the beta rules for `fml`, applied at position `p`. */
+  def betaRules(fml: Formula, p: SeqPos): List[PositionRule] = (fml, p) match {
+    case (_: And,   sp: SuccPos) => List(AndRight(sp))
+    case (_: Equiv, sp: SuccPos) => List(EquivRight(sp))
+    case (_: Or,    ap: AntePos) => List(OrLeft(ap))
+    case (_: Imply, ap: AntePos) => List(ImplyLeft(ap))
+    case (_: Equiv, ap: AntePos) => List(EquivLeft(ap))
+    case _ => Nil
+  }
+
+  /** Forward propositional tactic implementation with work stacks `alpha` and `beta`, and configuration */
+  def prop(alphaRules: (Formula, SeqPos) => List[PositionRule], betaRules: (Formula, SeqPos) => List[PositionRule])
+          (alpha: List[PositionRule], beta: List[PositionRule]): BuiltInTactic = anon { provable: ProvableSig =>
     ProofRuleTactics.requireOneSubgoal(provable, "PropositionalTactics.prop")
-
-    /** Returns the alpha rules for `fml`, applied at position `p`. */
-    def alphaRule(fml: Formula, p: SeqPos): List[PositionRule] = (fml, p) match {
-      case (_: Or,    sp: SuccPos) => List(OrRight(sp))
-      case (_: Imply, sp: SuccPos) => List(ImplyRight(sp))
-      case (_: Not,   sp: SuccPos) => List(NotRight(sp))
-      case (_: And,   ap: AntePos) => List(AndLeft(ap))
-      case (_: Not,   ap: AntePos) => List(NotLeft(ap))
-      case (True,     sp: SuccPos) => List(CloseTrue(sp))
-      case (False,    ap: AntePos) => List(CloseFalse(ap))
-      case _ => Nil
-    }
-
-    /** Returns the beta rules for `fml`, applied at position `p`. */
-    def betaRule(fml: Formula, p: SeqPos): List[PositionRule] = (fml, p) match {
-      case (_: And,   sp: SuccPos) => List(AndRight(sp))
-      case (_: Equiv, sp: SuccPos) => List(EquivRight(sp))
-      case (_: Or,    ap: AntePos) => List(OrLeft(ap))
-      case (_: Imply, ap: AntePos) => List(ImplyLeft(ap))
-      case (_: Equiv, ap: AntePos) => List(EquivLeft(ap))
-      case _ => Nil
-    }
 
     /** Repositions the beta rules in `r` a position up (to index-1) if they are after position `p`. */
     def repositionBeta(r: List[PositionRule], p: SeqPos): List[PositionRule] = r.map({
@@ -307,25 +310,25 @@ private object PropositionalTactics extends Logging {
           s(pos) match {
             case And(l, r) =>
               assert(pos.isAnte)
-              provable(rule, 0)(prop(
-                alphaRule(r, AntePos(s.ante.length)) ++ alphaRule(l, AntePos(s.ante.length-1)) ++ tail,
-                betaRule(r, AntePos(s.ante.length)) ++ betaRule(l, AntePos(s.ante.length-1)) ++ repositionBeta(beta, pos)
+              provable(rule, 0)(prop(alphaRules, betaRules)(
+                alphaRules(r, AntePos(s.ante.length)) ++ alphaRules(l, AntePos(s.ante.length-1)) ++ tail,
+                betaRules(r, AntePos(s.ante.length)) ++ betaRules(l, AntePos(s.ante.length-1)) ++ repositionBeta(beta, pos)
               ).result _, 0)
             case Or(l, r) =>
               assert(pos.isSucc)
-              provable(rule, 0)(prop(
-                alphaRule(r, SuccPos(s.succ.length)) ++ alphaRule(l, SuccPos(s.succ.length-1)) ++ tail,
-                betaRule(r, SuccPos(s.succ.length)) ++ betaRule(l, SuccPos(s.succ.length-1)) ++ repositionBeta(beta, pos)
+              provable(rule, 0)(prop(alphaRules, betaRules)(
+                alphaRules(r, SuccPos(s.succ.length)) ++ alphaRules(l, SuccPos(s.succ.length-1)) ++ tail,
+                betaRules(r, SuccPos(s.succ.length)) ++ betaRules(l, SuccPos(s.succ.length-1)) ++ repositionBeta(beta, pos)
               ).result _, 0)
             case Imply(l, r) =>
               assert(pos.isSucc)
-              provable(rule, 0)(prop(
-                alphaRule(r, SuccPos(s.succ.length-1)) ++ alphaRule(l, AntePos(s.ante.length)) ++ tail,
-                betaRule(r, SuccPos(s.succ.length-1)) ++ betaRule(l, AntePos(s.ante.length)) ++ repositionBeta(beta, pos)
+              provable(rule, 0)(prop(alphaRules, betaRules)(
+                alphaRules(r, SuccPos(s.succ.length-1)) ++ alphaRules(l, AntePos(s.ante.length)) ++ tail,
+                betaRules(r, SuccPos(s.succ.length-1)) ++ betaRules(l, AntePos(s.ante.length)) ++ repositionBeta(beta, pos)
               ).result _, 0)
             case Not(f) =>
               val p = if (pos.isSucc) AntePos(s.ante.length) else SuccPos(s.succ.length)
-              provable(rule, 0)(prop(alphaRule(f, p) ++ tail, betaRule(f, p) ++ repositionBeta(beta, pos)).result _, 0)
+              provable(rule, 0)(prop(alphaRules, betaRules)(alphaRules(f, p) ++ tail, betaRules(f, p) ++ repositionBeta(beta, pos)).result _, 0)
             case True =>
               assert(pos.isSucc)
               provable(rule, 0)
@@ -339,46 +342,46 @@ private object PropositionalTactics extends Logging {
             s(pos) match {
               case And(l, r) =>
                 assert(pos.isSucc)
-                val propLeft = prop(alphaRule(l, pos), betaRule(l, pos) ++ tail)
-                val propRight = prop(alphaRule(r, pos), betaRule(r, pos) ++ tail)
+                val propLeft = prop(alphaRules, betaRules)(alphaRules(l, pos), betaRules(l, pos) ++ tail)
+                val propRight = prop(alphaRules, betaRules)(alphaRules(r, pos), betaRules(r, pos) ++ tail)
                 provable(rule, 0)(propRight.result _, 1)(propLeft.result _, 0)
               case Or(l, r) =>
                 assert(pos.isAnte)
-                val propLeft = prop(alphaRule(l, pos), betaRule(l, pos) ++ tail)
-                val propRight = prop(alphaRule(r, pos), betaRule(r, pos) ++ tail)
+                val propLeft = prop(alphaRules, betaRules)(alphaRules(l, pos), betaRules(l, pos) ++ tail)
+                val propRight = prop(alphaRules, betaRules)(alphaRules(r, pos), betaRules(r, pos) ++ tail)
                 provable(rule, 0)(propRight.result _, 1)(propLeft.result _, 0)
               case Imply(l, r) =>
                 assert(pos.isAnte)
-                val propLeft = prop(alphaRule(l, SuccPos(s.succ.length)), betaRule(l, SuccPos(s.succ.length)) ++ tail)
-                val propRight = prop(alphaRule(r, pos), betaRule(r, pos) ++ tail)
+                val propLeft = prop(alphaRules, betaRules)(alphaRules(l, SuccPos(s.succ.length)), betaRules(l, SuccPos(s.succ.length)) ++ tail)
+                val propRight = prop(alphaRules, betaRules)(alphaRules(r, pos), betaRules(r, pos) ++ tail)
                 provable(rule, 0)(propRight.result _, 1)(propLeft.result _, 0)
               case Equiv(l, r) =>
                 if (pos.isSucc) {
                   //@see [[EquivRight]]
-                  val propLeft = prop(
-                    alphaRule(r, SuccPos(s.succ.length-1)) ++ alphaRule(l, AntePos(s.ante.length)),
-                    betaRule(r, SuccPos(s.succ.length-1)) ++ betaRule(l, AntePos(s.ante.length)) ++ tail
+                  val propLeft = prop(alphaRules, betaRules)(
+                    alphaRules(r, SuccPos(s.succ.length-1)) ++ alphaRules(l, AntePos(s.ante.length)),
+                    betaRules(r, SuccPos(s.succ.length-1)) ++ betaRules(l, AntePos(s.ante.length)) ++ tail
                   )
-                  val propRight = prop(
-                    alphaRule(l, SuccPos(s.succ.length-1)) ++ alphaRule(r, AntePos(s.ante.length)),
-                    betaRule(l, SuccPos(s.succ.length-1)) ++ betaRule(r, AntePos(s.ante.length)) ++ tail
+                  val propRight = prop(alphaRules, betaRules)(
+                    alphaRules(l, SuccPos(s.succ.length-1)) ++ alphaRules(r, AntePos(s.ante.length)),
+                    betaRules(l, SuccPos(s.succ.length-1)) ++ betaRules(r, AntePos(s.ante.length)) ++ tail
                   )
                   provable(rule, 0)(propRight.result _, 1)(propLeft.result _, 0)
                 } else {
                   //@see [[EquivLeft]]
-                  val propLeft = prop(List(AndLeft(pos.asInstanceOf[AntePos])), tail)
-                  val propRight = prop(List(AndLeft(pos.asInstanceOf[AntePos])), tail)
+                  val propLeft = prop(alphaRules, betaRules)(List(AndLeft(pos.asInstanceOf[AntePos])), tail)
+                  val propRight = prop(alphaRules, betaRules)(List(AndLeft(pos.asInstanceOf[AntePos])), tail)
                   provable(rule, 0)(propRight.result _, 1)(propLeft.result _, 0)
                 }
             }
           case Nil =>
             val alpha =
-              s.succ.zipWithIndex.flatMap({ case (fml, i) => alphaRule(fml, SuccPos(i)) }).reverse ++
-              s.ante.zipWithIndex.flatMap({ case (fml, i) => alphaRule(fml, AntePos(i)) }).reverse
+              s.succ.zipWithIndex.flatMap({ case (fml, i) => alphaRules(fml, SuccPos(i)) }).reverse ++
+              s.ante.zipWithIndex.flatMap({ case (fml, i) => alphaRules(fml, AntePos(i)) }).reverse
             val beta =
-              s.succ.zipWithIndex.flatMap({ case (fml, i) => betaRule(fml, SuccPos(i)) }).reverse ++
-              s.ante.zipWithIndex.flatMap({ case (fml, i) => betaRule(fml, AntePos(i)) }).reverse
-            if (alpha.nonEmpty || beta.nonEmpty) prop(alpha.toList, beta.toList).result(provable)
+              s.succ.zipWithIndex.flatMap({ case (fml, i) => betaRules(fml, SuccPos(i)) }).reverse ++
+              s.ante.zipWithIndex.flatMap({ case (fml, i) => betaRules(fml, AntePos(i)) }).reverse
+            if (alpha.nonEmpty || beta.nonEmpty) prop(alphaRules, betaRules)(alpha.toList, beta.toList).result(provable)
             else provable
         }
       }
