@@ -117,7 +117,7 @@ trait AlgebraTool extends ToolInterface {
   /**
     * Computes the quotient and remainder of `term` divided by `div`.
     * @example {{{
-    *           quotientRemainder(6*x^2+4*x+8, 2*x, x) == (3*x+2, 8)
+    *           quotientRemainder("6*x^2+4*x+8".asTerm, "2*x".asTerm, Variable("x")) == (3*x+2, 8)
     * }}}
     */
   def quotientRemainder(term: Term, div: Term, v: Variable): (Term, Term)
@@ -132,6 +132,12 @@ trait AlgebraTool extends ToolInterface {
     * Computes the multi-variate polynomial reduction of `polynomial` divided with respect to the
     * set of polynomials `GB`, which is guaranteed to be unique iff `GB` is a Gröbner basis. Returns the list of
     * cofactors and the remainder.
+    * Repeatedly divides the leading term of `polynomial` by a corresponding multiple of a polynomial of `GB` while possible.
+    * Each individual reduction divides the leading term of `polynomial` by the required multiple of the leading term of the polynomial of `GB`
+    * such that those cancel.
+    * @example {{{
+    *            polynomialReduce("y^3 + 2*x^2*y".asTerm, List("x^2-y".asTerm, "y^2+5".asTerm)) = ((2*y :: 2 + y), -5*y-10)
+    * }}}
     * @see [[groebnerBasis()]]
     */
   def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term)
