@@ -1166,6 +1166,20 @@ object Ax extends Logging {
     prop
   )
 
+  /**
+   * {{{Axiom "| distributes over &".
+   *  (p() & (q() | r())) <-> ((p() & q()) | (p() & r()))
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom(("∨∧","|&"))
+  lazy val orDistAnd: DerivedAxiomInfo = derivedAxiom("| distributes over &",
+    Sequent(IndexedSeq(), IndexedSeq("(p_() & (q_()|r_())) <-> ((p_()&q_()) | (p_()&r_()))".asFormula)),
+    prop
+  )
+
 
   /**
     * CONGRUENCE AXIOMS (for constant terms)
@@ -2685,6 +2699,17 @@ object Ax extends Logging {
     */
   @Axiom(("∧A","&A"), key = "0", recursor = "*", unifier = "surjlinear")
   lazy val andAssoc: DerivedAxiomInfo = derivedAxiom("& associative", Sequent(IndexedSeq(), IndexedSeq("((p_() & q_()) & r_()) <-> (p_() & (q_() & r_()))".asFormula)), prop)
+
+  /**
+   * {{{Axiom "| associative".
+   *    ((p() | q()) | r()) <-> (p() | (q() | r()))
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom(("∨A","|A"), key = "0", recursor = "*", unifier = "surjlinear")
+  lazy val orAssoc: DerivedAxiomInfo = derivedAxiom("| associative", Sequent(IndexedSeq(), IndexedSeq("((p_() | q_()) | r_()) <-> (p_() | (q_() | r_()))".asFormula)), prop)
 
   /**
     * {{{Axiom "& reflexive".
