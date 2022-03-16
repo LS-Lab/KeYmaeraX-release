@@ -18,7 +18,7 @@ trait ODESolverTool extends ToolInterface {
     * Computes the symbolic solution of a differential equation in normal form.
     * @param diffSys The system of differential equations of the form x' = theta & H.
     * @param diffArg The name of the differential argument (dx/d diffArg = theta).
-    * @param iv The initial values per derivative.
+    * @param iv The variables for initial values per derivative.
     * @return The solution if found; None otherwise
     *         The solution should be a
     */
@@ -90,6 +90,7 @@ trait CounterExampleTool extends ToolInterface {
   * Tool for simplifying logical and/or arithmetical expressions.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
+ *  @see [[[edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3]]
   */
 trait SimplificationTool extends ToolInterface {
   /**
