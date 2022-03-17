@@ -13,11 +13,22 @@ import scala.collection.immutable.List
 case class Name(name: String, index: Option[Int] = None) {
   def prettyString: String = name + index.map("_" + _).getOrElse("")
 }
-/** Signature is a domain sort, codomain sort, argument names, expression used as interpretation, location that starts the declaration. */
+/** Signature is a domain sort, codomain sort, argument names, expression used as interpretation, location that starts the declaration.
+  * The signature of a function/predicate/program symbol.
+  * @param domain the source domain required as an argument (if any).
+  * @param codomain the resulting target domain.
+  * @param arguments the list of named arguments (and their sorts which are compatible with `domain`).
+  * @param interpretation uninterpreted symbol if None, or the interpretation of interpreted symbols.
+  * @param loc the location in the model archive file where this was declared.
+  */
+//@todo check whether domain sort is compatible with sorts of arguments
 case class Signature(domain: Option[Sort], codomain: Sort, arguments: Option[List[(Name, Sort)]],
                      interpretation: Option[Expression], loc: Location)
 
-/** A parsed declaration, which assigns a signature to names. */
+/** A parsed declaration, which assigns a signature to names.
+  * This is the central data structure remembering which name belongs to which function/predicate/program symbol declaration
+  * of a model in an archive.
+  */
 case class Declaration(decls: Map[Name, Signature]) {
   /** The declarations as topologically sorted substitution pairs. */
   lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2.interpretation.isDefined).map({
