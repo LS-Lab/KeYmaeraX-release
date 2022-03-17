@@ -3,12 +3,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, RenUSubst, SuccPosition, UnificationMatchUSubstAboveURen}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, RenUSubst, SuccPosition, UnificationMatchUSubstAboveURen}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -600,4 +601,116 @@ private object PropositionalTactics extends Logging {
 
   //endregion
 
+  /** Proves equivalence of `p` and `q` by axiom `ax` after applying `trafos`. */
+  private def equivByAx(p: Formula, q: Formula, ax: AxiomInfo,
+                   trafos: List[ProvableSig=>ProvableSig] = List.empty): (Formula, ProvableSig) = {
+    (q, trafos.foldLeft(ProvableSig.startProof(Equiv(p, q)))({
+      case (p, t) =>
+        val Equiv(l, r) = p.conclusion.succ.head
+        if (l != r) t(p)
+        else p
+    })(byUS(ax.provable).result _, 0))
+  }
+
+  /**
+   * Negation normal form with proof.
+   * @see [[FormulaTools.negationNormalForm]]
+   */
+  def negationNormalForm(fml: Formula): (Formula, ProvableSig) = fml match {
+    case p: AtomicFormula => (p, ProvableSig.startProof(Equiv(p, p))(byUS(Ax.equivReflexive.provable).result _, 0))
+    case Not(g:AtomicFormula) => g match {
+      case Equal(a, b)        => equivByAx(fml, NotEqual(a, b),     Ax.notEqual)
+      case NotEqual(a, b)     => equivByAx(fml, Equal(a, b),        Ax.notNotEqual)
+      case Greater(a, b)      => equivByAx(fml, LessEqual(a, b),    Ax.notGreater)
+      case GreaterEqual(a, b) => equivByAx(fml, Less(a, b),         Ax.notGreaterEqual)
+      case Less(a, b)         => equivByAx(fml, GreaterEqual(a, b), Ax.notLess)
+      case LessEqual(a, b)    => equivByAx(fml, Greater(a, b),      Ax.notLessEqual)
+      case True      => (False, ProvableSig.startProof(Equiv(fml, False))(PropositionalTactics.prop.result _, 0))
+      case False     => (True,  ProvableSig.startProof(Equiv(fml, True))(PropositionalTactics.prop.result _, 0))
+      case _: PredOf => (fml,   ProvableSig.startProof(Equiv(fml, fml))(byUS(Ax.equivReflexive.provable).result _, 0))
+      case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
+    }
+    case Not(g: CompositeFormula) => g match {
+      case Not(p) =>
+        val pr = negationNormalForm(p)
+        equivByAx(fml, pr._1, Ax.doubleNegation, List(
+          useAt(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult))
+      case And(p, q) =>
+        val pr = negationNormalForm(Not(p))
+        val qr = negationNormalForm(Not(q))
+        equivByAx(fml, Or(pr._1, qr._1), Ax.notAnd, List(
+          useAt(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult,
+          useAt(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))).computeResult))
+      case Or(p, q) =>
+        val pr = negationNormalForm(Not(p))
+        val qr = negationNormalForm(Not(q))
+        equivByAx(fml, And(pr._1, qr._1), Ax.notOr, List(
+          useAt(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult,
+          useAt(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))).computeResult))
+      case Imply(p, q) =>
+        val pr = negationNormalForm(p)
+        val qr = negationNormalForm(Not(q))
+        equivByAx(fml, And(pr._1, qr._1), Ax.notImply, List(
+          useAt(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult,
+          useAt(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))).computeResult))
+      case Equiv(p, q) =>
+        val pr = negationNormalForm(p)
+        val npr = negationNormalForm(Not(p))
+        val qr = negationNormalForm(q)
+        val nqr = negationNormalForm(Not(q))
+        equivByAx(fml, Or(And(pr._1, nqr._1), And(npr._1, qr._1)), Ax.notEquiv, List(
+          useAt(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))).computeResult,
+          useAt(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))).computeResult,
+          useAt(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))).computeResult,
+          useAt(qr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1)))).computeResult))
+      case Forall(vs, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Exists(vs, pr._1), Ax.notAll, List(
+          useAt(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult))
+      case Exists(vs, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Forall(vs, pr._1), Ax.notExists, List(
+          useAt(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult))
+      case Box(prg, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Diamond(prg, pr._1), Ax.notBox, List(
+          useAt(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))).computeResult))
+      case Diamond(prg, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Box(prg, pr._1), Ax.notDiamond, List(
+          useAt(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))).computeResult))
+      case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
+    }
+    case Imply(p, q) =>
+      val pr = negationNormalForm(Not(p))
+      val qr = negationNormalForm(q)
+      equivByAx(fml, Or(pr._1, qr._1), Ax.implyExpand, List(
+        useAt(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult,
+        useAt(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))).computeResult))
+    case Equiv(p, q) =>
+      val pr = negationNormalForm(p)
+      val npr = negationNormalForm(Not(p))
+      val qr = negationNormalForm(q)
+      val nqr = negationNormalForm(Not(q))
+      equivByAx(fml, Or(And(pr._1, qr._1), And(npr._1, nqr._1)), Ax.equivExpandAnd, List(
+        useAt(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))).computeResult,
+        useAt(qr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))).computeResult,
+        useAt(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))).computeResult,
+        useAt(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1)))).computeResult))
+    case f: BinaryCompositeFormula =>
+      val ar = negationNormalForm(f.left)
+      val br = negationNormalForm(f.right)
+      equivByAx(f, f.reapply(ar._1, br._1), Ax.equivReflexive, List(
+        useAt(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult,
+        useAt(br._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))).computeResult))
+    case f: Quantified             =>
+      val ar = negationNormalForm(f.child)
+      equivByAx(f, f.reapply(f.vars, ar._1), Ax.equivReflexive, List(
+        useAt(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult))
+    case f: Modal                  =>
+      val ar = negationNormalForm(f.child)
+      equivByAx(f, f.reapply(f.program, ar._1), Ax.equivReflexive, List(
+        useAt(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))).computeResult))
+    case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
+  }
 }

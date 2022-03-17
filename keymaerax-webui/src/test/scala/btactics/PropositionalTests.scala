@@ -357,4 +357,20 @@ class PropositionalTests extends TacticTestBase {
     the [IllegalArgumentException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=3 -> z>=3)".asFormula), IndexedSeq("\\exists x (a=2 -> z>=1)".asFormula)),
       propCMon(PosInExpr(0::1::Nil))) should have message "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1, but got \\exists x (a=3->z>=3)\n  ==>  \\exists x (a=2->z>=1)\n\\exists x (a=3->⎵) != \\exists x (a=2->⎵)"
   }
+
+  "Negation normal" should "produce a proof" in withTactics {
+    val fml = "!!p() & !q() | !(r() -> s())".asFormula
+    val (dnf, proof) = PropositionalTactics.negationNormalForm(fml)
+    dnf shouldBe "p()&!q()|r()&!s()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (2)" in withTactics {
+    val fml = "!!p() & !x=1 | !(r() -> y>=2)".asFormula
+    val (dnf, proof) = PropositionalTactics.negationNormalForm(fml)
+    dnf shouldBe "p()&x!=1 | r()&y<2".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
 }
