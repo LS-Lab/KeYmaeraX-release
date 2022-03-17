@@ -373,4 +373,63 @@ class PropositionalTests extends TacticTestBase {
     proof shouldBe 'proved
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
   }
+
+  "Right-associate" should "produce a proof" in withTactics {
+    val fml = "(p() & q()) & r()".asFormula
+    val (r, proof) = PropositionalTactics.rightAssociate(fml)
+    r shouldBe "p() & q() & r()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, r)))
+  }
+
+  "Distribute or over and" should "produce a proof" in withTactics {
+    val fml = "p() & (q() | r())".asFormula
+    val (dist, proof) = PropositionalTactics.orDistAnd(fml)
+    dist shouldBe "q()&p() | r()&p()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dist)))
+  }
+
+  "Disjunctive normal form" should "produce a proof (1)" in withTactics {
+    val fml = "p() | q()".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "p() | q()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (2)" in withTactics {
+    val fml = "(p() | q()) & r()".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "(p() & r()) | (q() & r())".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (3)" in withTactics {
+    val fml = "p() & (q_1() | q_2()) & (r_1() | r_2())".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "q_1()&r_1()&p() | q_1()&r_2()&p() | q_2()&r_1()&p() | q_2()&r_2()&p()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (4)" in withTactics {
+    val fml = "p_1() & (q_1() | q_2()) & (r_1() | r_2()) & p_2() & (s_1() | s_2() | s_3())".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe
+      """q_1()&r_1()&s_1()&p_1()&p_2() | q_1()&r_1()&s_2()&p_1()&p_2() | q_1()&r_1()&s_3()&p_1()&p_2() | q_1()&r_2()&s_1()&p_1()&p_2() | q_1()&r_2()&s_2()&p_1()&p_2() | q_1()&r_2()&s_3()&p_1()&p_2() |
+        |q_2()&r_1()&s_1()&p_1()&p_2() | q_2()&r_1()&s_2()&p_1()&p_2() | q_2()&r_1()&s_3()&p_1()&p_2() | q_2()&r_2()&s_1()&p_1()&p_2() | q_2()&r_2()&s_2()&p_1()&p_2() | q_2()&r_2()&s_3()&p_1()&p_2()
+        |""".stripMargin.asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (5)" in withTactics {
+    val fml = "(x=0 & y=1 | x=1 & !y=3) <-> (!z<4 & a+b!=5)".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "x=0&y=1&z>=4&a+b!=5|x=1&y!=3&z>=4&a+b!=5|x!=0&x!=1&z < 4|x!=0&x!=1&a+b=5|x!=0&y=3&z < 4|x!=0&y=3&a+b=5|y!=1&x!=1&z < 4|y!=1&x!=1&a+b=5|y!=1&y=3&z < 4|y!=1&y=3&a+b=5".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
 }
