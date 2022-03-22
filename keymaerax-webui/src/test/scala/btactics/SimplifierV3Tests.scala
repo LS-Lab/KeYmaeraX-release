@@ -32,6 +32,12 @@ class SimplifierV3Tests extends TacticTestBase {
       Sequent(ctxt, IndexedSeq("R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&R()&Q()&Z()&Y()".asFormula))
   }
 
+  it should "simplify propositional" in withTactics {
+    proveBy("!p(), !q(), r()&p() | r()&q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
+    proveBy("r()&p() | r()&q(), !p(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
+    proveBy("!p(), r()&p() | r()&q(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
+  }
+
   it should "do dependent arithmetic simplification" in withMathematica { _ =>
     val fml = "ar > 0 -> (x - 0 + 0 * y + 0 + 0/ar >= 0 - k)".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))
