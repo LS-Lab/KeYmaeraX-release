@@ -1054,13 +1054,37 @@ class ModelplexTacticTests extends TacticTestBase {
       loneElement shouldBe """==> \forall x1_0 (x1_0=x1->x1_0>=0&\exists x1 x1>=2)""".asSequent
   }
 
-  "Reassociating formulas" should "be fast" in withTactics {
-    val p = "((v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost))|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x)))|(v+vpost=0&x=xpost)&(v>0&A() < 0|A()>0&v < 0)".asFormula
-    val (q, qp) = ModelPlex.reassociate(p)
+  "Reassociating formulas" should "be fast" taggedAs IgnoreInBuildTest in withTactics {
+    // run with -da -Xss20M
+    val predicates = (0 to 1000).map(i => PredOf(Function("p", Some(i), Unit, Bool), Nothing))
+    val p = predicates.reduceLeft(Or)
     val tic = System.currentTimeMillis()
-    proveBy(Equiv(p, q), TactixLibrary.byUS(qp)) shouldBe 'proved
+    val (q, proof) = PropositionalTactics.rightAssociate(p)
     val toc = System.currentTimeMillis()
-    (toc-tic) should be <= 200L
+    proof shouldBe 'proved
+    q shouldBe predicates.reduceRight(Or)
+    (toc-tic) should be <= 60000L
+  }
+
+  it should "be fast on a robot example" taggedAs IgnoreInBuildTest in withTactics {
+    // run with -da -Xss20M
+    val p = "((v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost))|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x)))|(v+vpost=0&x=xpost)&(v>0&A() < 0|A()>0&v < 0)".asFormula
+    val tic = System.currentTimeMillis()
+    val (q, proof) = PropositionalTactics.rightAssociate(p)
+    val toc = System.currentTimeMillis()
+    proof shouldBe 'proved
+    q shouldBe "v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost)|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x))|v+vpost=0&x=xpost&(v>0&A() < 0|A()>0&v < 0)".asFormula
+    (toc-tic) should be <= 1000L
+  }
+
+  "Disjunctive normal form" should "be fast on a robot example" taggedAs IgnoreInBuildTest in withTactics {
+    // run with -da -Xss20M
+    val fml = "(((((((((xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0|Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0)|(w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0&(-2)*w*xo+(-1)*Da*xo^2+2*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+2*v*yo+(-1)*Da*yo^2+(-2)*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)|((-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|(Da<=0&w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0)&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)|(Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&(-2)*w*xo+(-1)*Da*xo^2+2*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+2*v*yo+(-1)*Da*yo^2+(-2)*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(Da<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)|(Da<=0&(-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0)&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&(0 < -accpost&-accpost<=Da)&(xr+w/(-accpost)-xo)^2+(yr-v/(-accpost)-yo)^2!=(v^2+w^2)/accpost^2&(xrpost+wpost/(-accpost)-xo)^2+(yrpost-vpost/(-accpost)-yo)^2!=(vpost^2+wpost^2)/accpost^2&yrpost_0=yr&vpost_0=v&xrpost_0=xr&apost=(-1)&wpost_0=w|(((((((((xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0|Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0)|(w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|((-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0&2*w*xo+(-1)*Da*xo^2+(-2)*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+(-2)*v*yo+(-1)*Da*yo^2+2*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)|(Da<=0&w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0)&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)|(Da<=0&(-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0)&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)|(Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&2*w*xo+(-1)*Da*xo^2+(-2)*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+(-2)*v*yo+(-1)*Da*yo^2+2*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(Da<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)&(0 < accpost&accpost<=Da)&(xr+w/accpost-xo)^2+(yr-v/accpost-yo)^2!=(v^2+w^2)/accpost^2&(xrpost+wpost/accpost-xo)^2+(yrpost-vpost/accpost-yo)^2!=(vpost^2+wpost^2)/accpost^2&yrpost_0=yr&vpost_0=v&xrpost_0=xr&apost=1&wpost_0=w".asFormula
+    val tic = System.currentTimeMillis()
+    val (_, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    val toc = System.currentTimeMillis()
+    proof shouldBe 'proved
+    (toc-tic) should be <= 1000L
   }
 
 }

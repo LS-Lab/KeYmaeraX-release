@@ -9,8 +9,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -382,13 +383,58 @@ class PropositionalTests extends TacticTestBase {
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, r)))
   }
 
-  "Distribute or over and" should "produce a proof" in withTactics {
+  "Distribute or over and" should "produce a proof (1)" in withTactics {
     val fml = "p() & (q() | r())".asFormula
     val (dist, proof) = PropositionalTactics.orDistAnd(fml)
     dist shouldBe "q()&p() | r()&p()".asFormula
     proof shouldBe 'proved
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dist)))
   }
+
+  it should "produce a proof (2)" in withTactics {
+    val fml = "p_1()&(q()|r()) | p_2()&(q()|r())".asFormula
+    val (dist, proof) = PropositionalTactics.orDistAnd(fml)
+    dist shouldBe "(q()&p_1() | r()&p_1()) | (q()&p_2()|r()&p_2())".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dist)))
+  }
+
+  it should "produce a proof (3)" in withTactics {
+    val fml = "p_1()&(q()|r()) | p_2()&(q()|r()) | p_3()&(q()|r()) | p_4()".asFormula
+    val (dist, proof) = PropositionalTactics.orDistAnd(fml)
+    dist shouldBe "(q()&p_1() | r()&p_1()) | (q()&p_2()|r()&p_2()) | (q()&p_3()|r()&p_3()) | p_4()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dist)))
+  }
+
+//  "Distribute or over and reverse" should "produce a proof (1)" in withTactics {
+//    val fml = "p() & (q() | r())".asFormula
+//    val reversed = ProvableSig.startProof(Equiv(fml, "q()&p() | r()&p()".asFormula))(PropositionalTactics.orDistAndReverse(fml)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
+//    //@todo rearrange disjunctions, close by equivReflexive
+//    reversed shouldBe 'proved
+//  }
+//
+//  it should "produce a proof (2)" in withTactics {
+//    val fml = "p_1()&(q()|r()) | p_2()&(q()|r()) | p_3()&(q()|r()) | p_4()".asFormula
+//    val reversed = ProvableSig.startProof(Equiv(fml, "(q()&p_1() | r()&p_1()) | (q()&p_2()|r()&p_2()) | (q()&p_3()|r()&p_3()) | p_4()".asFormula))(PropositionalTactics.orDistAndReverse(fml)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
+//    reversed shouldBe 'proved
+//  }
+//
+//  it should "work on a water tank example" in withTactics {
+//    val src = "(cpost<=ep()&ep()>=0)&(lpost>=0&(fd=0|ep()*fd+l>0&fd>=0)|(fd < 0&cpost*fd+l>=0)&ep()*fd+l=0)|(cpost < ep()&ep()>0)&((fd < 0&cpost*fd+l>=0)&ep()*fd+l<=0|fd>0&lpost>=0)".asFormula
+//
+//    //val (q, _) = orDistAnd(src)
+//
+//    val fml =
+//      """((ep()*fd+l>0&fd>=0)&lpost>=0)&cpost<=ep()&ep()>=0 |
+//        |(fd=0&lpost>=0)&cpost<=ep()&ep()>=0 |
+//        |((fd < 0&cpost*fd+l>=0)&ep()*fd+l=0)&cpost<=ep()&ep()>=0 |
+//        |((fd < 0&cpost*fd+l>=0)&ep()*fd+l<=0)&cpost < ep()&ep()>0 |
+//        |(fd>0&lpost>=0)&cpost < ep()&ep()>0
+//        |""".stripMargin.asFormula
+//    val reversed = ProvableSig.startProof(Equiv(src, fml))(PropositionalTactics.orDistAndReverse(src)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
+//    reversed(UnifyUSCalculus.byUS(Ax.equivReflexive.provable).result _, 0) shouldBe 'proved
+//  }
 
   "Disjunctive normal form" should "produce a proof (1)" in withTactics {
     val fml = "p() | q()".asFormula
