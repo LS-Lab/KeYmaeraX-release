@@ -119,6 +119,7 @@ class DLParser extends Parser {
       }
       val oldres = KeYmaeraXParser.apply(s)
       if (oldres != newres) {
+        println("Oops expr: `" + s + "`")
         println(oldres)
         println(newres)
       }
@@ -126,32 +127,78 @@ class DLParser extends Parser {
     })
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic term */
-  override val termParser: String => Term = (s => fastparse.parse(s, fullTerm(_)) match {
-    case Parsed.Success(value, index) => value
-    case f: Parsed.Failure => throw parseException(f)
+  override val termParser: String => Term = (s => {
+    val newres = fastparse.parse(s, fullTerm(_)) match {
+      case Parsed.Success(value, index) => value
+      case f: Parsed.Failure => throw parseException(f)
+    }
+    val oldres = KeYmaeraXParser.termParser(s)
+    if (oldres != newres) {
+      println("Oops term: `" + s + "`")
+      println(oldres)
+      println(newres)
+    }
+    newres
   })
+
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
-  override val formulaParser: String => Formula = (s => fastparse.parse(s, fullFormula(_)) match {
-    case Parsed.Success(value, index) => value
-    case f: Parsed.Failure => throw parseException(f)
+  override val formulaParser: String => Formula = (s => {
+    val newres = fastparse.parse(s, fullFormula(_)) match {
+      case Parsed.Success(value, index) => value
+      case f: Parsed.Failure => throw parseException(f)
+    }
+    val oldres = KeYmaeraXParser.formulaParser(s)
+    if (oldres != newres) {
+      println("Oops formula: `" + s + "`")
+      println(oldres)
+      println(newres)
+    }
+    newres
   })
+
   /** Parse the input string in the concrete syntax as a differential dynamic logic program */
-  override val programParser: String => Program = (s => fastparse.parse(s, fullProgram(_)) match {
-    case Parsed.Success(value, index) => value
-    case f: Parsed.Failure => throw parseException(f)
+  override val programParser: String => Program = (s => {
+    val newres = fastparse.parse(s, fullProgram(_)) match {
+      case Parsed.Success(value, index) => value
+      case f: Parsed.Failure => throw parseException(f)
+    }
+    val oldres = KeYmaeraXParser.programParser(s)
+    if (oldres != newres) {
+      println("Oops program: `" + s + "`")
+      println(oldres)
+      println(newres)
+    }
+    newres
   })
+
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
-  override val differentialProgramParser: String => DifferentialProgram = (s => fastparse.parse(s, fullDifferentialProgram(_)) match {
-    case Parsed.Success(value, index) => value
-    case f: Parsed.Failure => throw parseException(f)
+  override val differentialProgramParser: String => DifferentialProgram = (s => {
+    val newres = fastparse.parse(s, fullDifferentialProgram(_)) match {
+      case Parsed.Success(value, index) => value
+      case f: Parsed.Failure => throw parseException(f)
+    }
+    val oldres = KeYmaeraXParser.differentialProgramParser(s)
+    if (oldres != newres) {
+      println("Oops diff prog: `" + s + "`")
+      println(oldres)
+      println(newres)
+    }
+    newres
   })
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic sequent. */
   override val sequentParser: String => Sequent = (s => {
-    fastparse.parse(s, fullSequent(_)) match {
+    val newres = fastparse.parse(s, fullSequent(_)) match {
       case Parsed.Success(value, index) => value
       case f: Parsed.Failure => throw parseException(f)
     }
+    val oldres = KeYmaeraXParser.sequentParser(s)
+    if (oldres != newres) {
+      println("Oops sequent: `" + s + "`")
+      println(oldres)
+      println(newres)
+    }
+    newres
   })
 
   /** Parse the input string in the concrete syntax as a ;; separated list fof differential dynamic logic sequents . */
@@ -196,7 +243,10 @@ class DLParser extends Parser {
   def fullTerm[_: P]: P[Term]   = P( term ~ End )
   def fullFormula[_: P]: P[Formula]   = P( formula ~ End )
   def fullProgram[_: P]: P[Program]   = P( program ~ End )
-  def fullDifferentialProgram[_: P]: P[DifferentialProgram]   = P( diffProgram ~ End )
+  def fullDifferentialProgram[_: P]: P[DifferentialProgram]   = {
+    /* Hack because old parser allowed with or without {}s */
+    P( "{" ~ diffProgram ~ "}" | diffProgram ~ End )
+  }
 
   def fullExpression[_: P]: P[Expression] = P( NoCut(formula ~ End) | NoCut(term ~ End) | (program ~ End) )
 
@@ -279,10 +329,10 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
-  def term[_: P]: P[Term] = P(signed(summand) ~ termRight).map{case(x,f) => f(x)}
+  def term[_: P]: P[Term] = P(signed(summand).flatMap(termRight))
 
-  def termRight[_: P]: P[Term => Term] =
-    (("+" | "-" ~ !">").!./ ~ summand).rep.map(sums => left =>
+  def termRight[_: P](left: Term): P[Term] =
+    (("+" | "-" ~ !">").!./ ~ summand).rep.map(sums =>
       sums.foldLeft(left) {
         case (m1, ("+", m2)) => Plus(m1, m2)
         case (m1, ("-", m2)) => Minus(m1, m2)
@@ -290,10 +340,10 @@ class DLParser extends Parser {
       }
     )
 
-  def summand[_: P]: P[Term] = P(multiplicand ~ summRight).map{case(x,f) => f(x)}
+  def summand[_: P]: P[Term] = P(multiplicand.flatMap(summRight))
 
-  def summRight[_: P]: P[Term => Term] =
-    (("*" | "/").!./ ~ signed(multiplicand)).rep.map(mults => left =>
+  def summRight[_: P](left: Term): P[Term] =
+    (("*" | "/").!./ ~ signed(multiplicand)).rep.map(mults =>
       mults.foldLeft(left) {
         case (m1, ("*", m2)) => Times(m1, m2)
         case (m1, ("/", m2)) => Divide(m1, m2)
@@ -301,19 +351,23 @@ class DLParser extends Parser {
       }
     )
 
-  def multiplicand[_: P]: P[Term] = P(baseTerm ~ multRight).map{case(x,f) => f(x)}
+  def multiplicand[_: P]: P[Term] = P(baseTerm.flatMap(multRight))
 
-  def multRight[_: P]: P[Term => Term] =
-    ("^"./ ~ signed(baseTerm)).rep.map(pows => left => (left +: pows).reduceRight(Power))
+  def multRight[_: P](left: Term): P[Term] =
+    ("^"./ ~ signed(baseTerm)).rep.map(pows => (left +: pows).reduceRight(Power))
 
   def baseTerm[_: P]: P[Term] = P(
     number./ | dot./ | func | unitFunctional | variable
       // These cuts are safe, because when *formula* enters term we guarantee
       // the first available character is NOT (
       // So the leftmost baseTerm occurrence in a formula always skips this branch :)
-      | ("(" ~/ term ~ ")" ~/ "'".!.?).
-        map {case (term,None) => term case (term,Some("'")) => Differential(term) }
+      | ("(" ~/ term.flatMap(parenRight))
   )
+
+  // IMPORTANT: Cannot place a cut after ), because (f(||))' may be
+  // either a predicational or a functional. See `comparison`
+  def parenRight[_: P](left: Term): P[Term] = P(")" ~ "'".!.?).
+    map {case None => left case Some("'") => Differential(left) }
 
   def func[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
     FuncOf(
@@ -330,7 +384,7 @@ class DLParser extends Parser {
   def signed[_: P](p: => P[Term]): P[Term] = P(("-".! ~~ !">").? ~ p).map({case (Some("-"),t) => Neg(t) case (None,t) =>t})
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
-  def termList[_: P]: P[Term] = P("(" ~ !"|" ~ term.rep(sep=","./) ~ ")").
+  def termList[_: P]: P[Term] = P("(" ~~ !"|" ~/ term.rep(sep=","./) ~ ")").
     map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
@@ -341,56 +395,57 @@ class DLParser extends Parser {
   // formula parser
   //*****************
 
-  def formula[_: P] = P(biimplication.log)
+  def formula[_: P] = P(biimplication)
 
   /* <-> (lowest prec, non-assoc) */
-  def biimplication[_: P]: P[Formula] = P(backImplication ~ biimpRight).map{case(x,f) => f(x)}
-  def biimpRight[_: P]: P[Formula => Formula] =
+  def biimplication[_: P]: P[Formula] = P(backImplication).flatMap(biimpRight)
+  def biimpRight[_: P](left: Formula): P[Formula] =
     P("<->" ~/ backImplication).?.
-      map{ case None => (l => l) case Some(r) => l => Equiv(l,r) }
+      map{ case None => left case Some(r) => Equiv(left,r) }
 
   /* <- (left-assoc) */
-  def backImplication[_: P]: P[Formula] = P(implication ~ backImpRight).map{case(x,f) => f(x)}
-  def backImpRight[_: P]: P[Formula => Formula] =
-    P("<-" ~ !">" ~/ implication).rep.map(hyps => left =>
+  def backImplication[_: P]: P[Formula] = P(implication).flatMap(backImpRight)
+  def backImpRight[_: P](left: Formula): P[Formula] =
+    P("<-" ~ !">" ~/ implication).rep.map(hyps =>
       hyps.foldLeft(left){case (acc,hyp) => Imply(hyp,acc)}
     )
 
   /* -> (right-assoc) */
-  def implication[_: P]: P[Formula] = P(disjunct ~ impRight).map{case(x,f) => f(x)}
-  def impRight[_: P]: P[Formula => Formula] =
-    P("->" ~/ disjunct).rep.map(concls => left =>
+  def implication[_: P]: P[Formula] = P(disjunct).flatMap(impRight)
+  def impRight[_: P](left: Formula): P[Formula] =
+    P("->" ~/ disjunct).rep.map(concls =>
       (left +: concls).reduceRight(Imply)
     )
 
   /* | (right-assoc) */
-  def disjunct[_: P]: P[Formula] = P(conjunct ~ disjRight).map{case(x,f) => f(x)}
-  def disjRight[_: P]: P[Formula => Formula] =
-    P("|" ~/ conjunct).rep.map(conjs => left =>
+  def disjunct[_: P]: P[Formula] = P(conjunct).flatMap(disjRight)
+  def disjRight[_: P](left: Formula): P[Formula] =
+    P("|" ~/ conjunct).rep.map(conjs =>
       (left +: conjs).reduceRight(Or)
     )
 
   /* & (right-assoc) */
-  def conjunct[_: P]: P[Formula] = P(baseF ~ conjRight).map{case(x,f) => f(x)}
-  def conjRight[_: P]: P[Formula => Formula] =
-    P("&" ~/ baseF).rep.map(forms => left =>
+  def conjunct[_: P]: P[Formula] = P(baseF).flatMap(conjRight)
+  def conjRight[_: P](left: Formula): P[Formula] =
+    P("&" ~/ baseF).rep.map(forms =>
       (left +: forms).reduceRight(And)
     )
 
   /* atomic formulas, constant T/F, quantifiers, modalities */
   def baseF[_: P]: P[Formula] = P(
     "true"./.map(_ => True) | "false"./.map(_ => False)
-      | ( ("\\forall"|"\\exists").! ~~/ blank ~/ variable ~/ conjunct ).
+      | ( ("\\forall"|"\\exists").! ~~/ blank ~/ variable ~/ baseF ).
         map{case ("\\forall",x, f) => Forall(x::Nil, f)
             case ("\\exists",x, f) => Exists(x::Nil, f)}
-      | ( (("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ conjunct ).
+      | ( (("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF ).
         map{case ("[",p,"]", f) => Box(p, f)
             case ("<",p,">", f) => Diamond(p, f)}
-      | ("!" ~/ conjunct ).map(f => Not(f))
-      | "(".!.rep.map(_.length)./.flatMap(lPars =>
-        term.flatMap(comparison(lPars))./.flatMap{case(lPars,cmp) => parenFormula(lPars)(cmp)}
-          | (if (lPars > 0) formula.flatMap(parenFormula(lPars)) else Fail)
-      )
+      | ("!" ~/ baseF ).map(f => Not(f))
+      | "(".!.rep(1)./.map(_.length).flatMap(lPars =>
+        NoCut(term.flatMap(comparison(lPars)).flatMap{case(lPars,cmp) => parenFormula(lPars)(cmp)})
+          | formula.flatMap(parenFormula(lPars))
+        )
+      | NoCut(term.flatMap(comparison(0)).map(_._2))
       | unitPredicational | predicational | pred
   )
 
@@ -398,24 +453,26 @@ class DLParser extends Parser {
   * build up a formula matching the rest.
    */
   def parenFormula[_: P](lPars: Int)(left: Formula): P[Formula] =
-    if (lPars < 0) throw new IllegalArgumentException() else
-    P( Pass(left) ~ conjRight ~ disjRight ~ impRight ~ backImpRight ~ biimpRight ).
-      map{case (x,f,g,h,i,j) => j(i(h(g(f(x)))))}.
-      flatMap(left =>
-        if (lPars == 0) Pass(left)
-        else (")" ~/ "'".!.?).
+    if (lPars < 0) throw new IllegalArgumentException()
+    else if (lPars == 0) Pass(left)
+    else
+      P( Pass(left).flatMap(conjRight).flatMap(disjRight).flatMap(impRight).flatMap(backImpRight).flatMap(biimpRight) ).
+        flatMap(left =>
+          // We've tried consuming the rparen as a term, so now we can guarantee
+          // it is a formula paren and not a term paren.
+          (")" ~/ "'".!.?).
           map{ case None => left case Some("'") => DifferentialFormula(left)}.
           flatMap(parenFormula(lPars-1))
-      )
+        )
 
   /* Given number of left parens at the start of the comparison,
   * on success returns remaining left paren count and the comparison*/
-  def comparison[_: P](lPars: Int)(left: Term): P[(Int,Formula)] = P({
+  def comparison[_: P](lPars: Int)(left: Term): P[(Int,Formula)] = P(
     (if (lPars > 0)
-      (")" ~ multRight ~ summRight ~ termRight).
-        map{case(f,g,h) => h(g(f(left)))}.flatMap(comparison(lPars - 1))
-    else Fail
-      ) | ((("=" | "!=" | ">=" | ">" | "<=" | "<" ~ !"-").! ~/ term).map {
+      parenRight(left).flatMap(multRight).flatMap(summRight).flatMap(termRight).
+        flatMap(comparison(lPars - 1))
+    else Fail)
+    | ((("=" | "!=" | ">=" | ">" | "<=" | "<" ~ !"-").! ~/ term).map {
       case ("=", right) => Equal(left, right)
       case ("!=", right) => NotEqual(left, right)
       case (">=", right) => GreaterEqual(left, right)
@@ -423,9 +480,9 @@ class DLParser extends Parser {
       case ("<=", right) => LessEqual(left, right)
       case ("<", right) => Less(left, right)
     }.map((lPars, _)))
-  })
+  )
 
-  def pred[_: P]: P[PredOf] = P(ident ~~ ("<<" ~ formula ~ ">>").? ~~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
+  def pred[_: P]: P[PredOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
     map({case (s,idx,interp,ts) => PredOf(Function(s,idx,ts.sort,Bool,interp), ts)})
   def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
   def predicational[_: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
@@ -496,7 +553,7 @@ class DLParser extends Parser {
          case (s, Some(i), _)     => throw ParseException("Differential program symbols cannot have an index: " + s + "_" + i)})
   def atomicDP[_: P]: P[AtomicDifferentialProgram] = P( ode | diffProgramSymbol )
 
-  /** (|x1,x2,x3|) parses a space declaration */
+  /** {|x1,x2,x3|} parses a space declaration */
   def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
     map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
 
