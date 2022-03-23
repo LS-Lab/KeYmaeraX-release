@@ -724,7 +724,7 @@ private object PropositionalTactics extends Logging {
     val resultFml = result.map(_._1).reduceRight(merge)
     val resultAppliedSubproofs = (ProvableSig.startProof(Equiv(merge(l, r), resultFml))
       (applySubproofs(result.map(_._2), PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
-      (applyTacticAbbrv(prop, result.map(_._1)).result _, 0)
+      (applyTacticAbbrv(prop, prop, result.map(_._1)).result _, 0)
       )
     (resultFml, resultAppliedSubproofs)
   }
@@ -743,6 +743,10 @@ private object PropositionalTactics extends Logging {
   private val propAndOr = prop(
     { case (_: And, ap: AntePos) => List(AndLeft(ap))  case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
     { case (_: And, sp: SuccPos) => List(AndRight(sp)) case (_: Or, ap: AntePos) => List(OrLeft(ap))  case _ => List.empty })(List.empty, List.empty)
+
+  private val andOrAlpha = prop(
+    { case (_: And, ap: AntePos) => List(AndLeft(ap))  case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
+    { case _ => List.empty })(List.empty, List.empty)
 
   /** Propositional reasoning for only conjunctions and disjunctions, and applies alpha rules only when right-hand side equal to `p`. */
   private def propOrAnd(p: Formula) = PropositionalTactics.prop(
@@ -782,15 +786,15 @@ private object PropositionalTactics extends Logging {
 
   /** Applies tactic `t` on the subgoals resulting from splitting the equivalence in the only subgoal of `pr`
    * after abbreviating the formulas in `ps` to uninterpreted predicates. */
-  private def applyTacticAbbrv(t: BuiltInTactic, ps: List[Formula]): BuiltInTactic = anon { (pr: ProvableSig) =>
+  private def applyTacticAbbrv(l: BuiltInTactic, r: BuiltInTactic, ps: List[Formula]): BuiltInTactic = anon { (pr: ProvableSig) =>
     assert(pr.subgoals.size == 1 && pr.subgoals.head.succ.size == 1 && pr.subgoals.head.succ.head.isInstanceOf[Equiv])
     val subst = USubst(ps.zipWithIndex.map({ case (p, i) =>
       SubstitutionPair(PredOf(Function("p_", Some(i), Unit, Bool, interpreted=false), Nothing), p)
     }))
     (ProvableSig.startProof(subst.subsDefsInput.foldLeft(pr.subgoals.head.succ.head)({ case (p, s) => p.replaceAll(s.repl, s.what) }))
       (EquivRight(SuccPos(0)), 0)
-      (t.result _, 1)
-      (t.result _, 0)
+      (r.result _, 1)
+      (l.result _, 0)
       (subst)
       )
   }
@@ -805,7 +809,7 @@ private object PropositionalTactics extends Logging {
       val innerDisjuncts = inner.map(_._1).map(FormulaTools.disjuncts)
       val resultProof = timed(ProvableSig.startProof(Equiv(fml, result))
         (applySubproofs(inner.map(_._2), PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
-        (applyTacticAbbrv(propOr, innerDisjuncts.flatten).result _, 0)
+        (applyTacticAbbrv(propOr, propOr, innerDisjuncts.flatten).result _, 0)
         , "applySubproofs")
       assert(resultProof.isProved)
       (result, resultProof)
@@ -826,9 +830,41 @@ private object PropositionalTactics extends Logging {
           val cor = c.reduceRight(Or)
           val cOrO = And(cor, o)
 
+          // branch on disjunctions left (original formula) and close by assumption
+          val revA = anon { (pr: ProvableSig) =>
+            ProofRuleTactics.requireOneSubgoal(pr, "")
+            val r = pr(andOrAlpha.result _, 0)
+            if (r.isProved) r
+            else {
+              val ror = r(propOr.result _, 0)
+              val ralpha = ror.subgoals.indices.foldLeft(ror)({ case (p, i) => p(andOrAlpha.result _, i) })
+              ralpha.subgoals.indices.foldRight(ralpha)({ case (i, p) =>
+                val s = p.subgoals(i)
+                val j = s.succ.indexOf(s.ante.reduceRight(And))
+                p(cohideOnlyR(SuccPos(j)).computeResult _, i)(propAnd.result _, i)
+              })
+            }
+          }
+
+          // branch on conjunctions right (orDistAnd formula) and close by contradiction, simplifier uses !p -> (p <-> false)
+          val revB = anon { (pr: ProvableSig) =>
+            ProofRuleTactics.requireOneSubgoal(pr, "")
+            val r = pr(andOrAlpha.result _, 0)
+            if (r.isProved) r
+            else {
+              val rand = r(propAnd.result _, 0)
+              val ralpha = rand.subgoals.indices.foldLeft(rand)({ case (p, i) => p(andOrAlpha.result _, i) })
+              ralpha.subgoals.indices.foldRight(ralpha)({ case (i, p) =>
+                p.subgoals(i).succ.indices.foldRight(p)({
+                  case (j, pi) => pi(useAt(Ax.doubleNegation, PosInExpr(List(1)))(SuccPos(j)).computeResult _, i)(NotRight(SuccPos(j)), i)
+                })(SimplifierV3.simplify(AntePos(0)).computeResult _, i)(CloseFalse(AntePos(0)), i)
+              })
+            }
+          }
+
           val orDistAndRevProof = timed(ProvableSig.startProof(Equiv(dand, cor))
             (applySubproofs(inner.map(_._2), PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0)))).computeResult _, 0)
-            (applyTacticAbbrv(prop, innerDisjuncts.flatten).result _, 0)
+            (applyTacticAbbrv(revA, revB, innerDisjuncts.flatten).result _, 0)
             , "orDistAndReverse")
           assert(orDistAndRevProof.isProved, "Expected proved orDistAndRev proof, but got open goals")
 
@@ -848,14 +884,14 @@ private object PropositionalTactics extends Logging {
           assert(combineProof.isProved)
 
           val mixOProof = timed(ProvableSig.startProof(Equiv(result, cOrO))
-            (applyTacticAbbrv(propOrAnd(o), innerDisjuncts.flatten).result _, 0)
+            (applyTacticAbbrv(propOrAnd(o), propOrAnd(o), innerDisjuncts.flatten).result _, 0)
             , "mixOProof")
           assert(mixOProof.isProved)
 
           val resultProof = timed(ProvableSig.startProof(Equiv(fml, result))
             (useAt(mixOProof)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
             (useAt(combineProof)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
-            (applyTacticAbbrv(propAnd, innerDisjuncts.flatten).result _, 0)
+            (applyTacticAbbrv(propAnd, propAnd, innerDisjuncts.flatten).result _, 0)
             , "resultProof")
           assert(resultProof.isProved)
 
@@ -865,13 +901,13 @@ private object PropositionalTactics extends Logging {
           val rearranged = disjunctions.reduceRight(And)
           val disjuncts = disjunctions.flatMap(FormulaTools.disjuncts)
           val combineProof = timed(ProvableSig.startProof(Equiv(result, rearranged))
-            (applyTacticAbbrv(propAndOr, disjuncts).result _, 0)
+            (applyTacticAbbrv(propAndOr, propAndOr, disjuncts).result _, 0)
             , "combineProof (2)")
           assert(combineProof.isProved)
 
           val resultProof = timed(ProvableSig.startProof(Equiv(fml, result))
             (useAt(combineProof)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
-            (applyTacticAbbrv(propAnd, disjuncts).result _, 0)
+            (applyTacticAbbrv(propAnd, propAnd, disjuncts).result _, 0)
             , "resultProof (2)")
           assert(resultProof.isProved)
 
