@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.codegen.{CodeGenerator, PythonGenerator, PythonMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
@@ -87,19 +87,29 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
     val synthEnd = System.currentTimeMillis()
 
-    //@todo link by proof
-    val result = ModelPlex.stepwisePartialQE(synthResult.subgoals.loneElement.succ.loneElement, assumptions, entry.defs, tool)
+    val stepwiseQEProof = ModelPlex.stepwisePartialQE(synthResult.subgoals.loneElement.succ.loneElement, assumptions, entry.defs, tool)
+    stepwiseQEProof shouldBe 'proved
+
+    val expand = StaticSemantics.symbols(synthResult.subgoals.head) -- StaticSemantics.symbols(stepwiseQEProof.conclusion)
+    val subst = USubst(entry.defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty }))
+
+    val qfProof = (synthResult(subst)
+      (useAt(stepwiseQEProof)(SuccPos(0)).computeResult _, 0)
+      (PropositionalTactics.rightAssociate(SuccPos(0)).computeResult _, 0)
+      (SimplifierV3.simplify(SuccPos(0)).computeResult _, 0)
+      )
+    val qf = qfProof.subgoals.loneElement.succ.loneElement
 
     val end = System.currentTimeMillis()
 
-    StaticSemantics.boundVars(result) shouldBe 'empty
-    StaticSemantics.freeVars(result).intersect(unobservable.keySet.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])) shouldBe 'empty
+    StaticSemantics.boundVars(qf) shouldBe 'empty
+    StaticSemantics.freeVars(qf).intersect(unobservable.keySet.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])) shouldBe 'empty
 
-    report(synthResult.subgoals.head.succ.head, result, synthResult, entry.name, start, intermediate, synthEnd, end)
+    report(synthResult.subgoals.head.succ.head, qf, qfProof, entry.name, start, intermediate, synthEnd, end)
 
     // transform to test program
-    val testResult = proveBy(result, ModelPlex.chaseToTests(combineTests=false)(1))
-    val testProg = testResult.subgoals.head.succ.head
+    val testPrgProof = qfProof(ModelPlex.chaseToTests(combineTests=false)(SuccPos(0)).computeResult _, 0)
+    val testProg = testPrgProof.subgoals.head.succ.head
 
     // export code
     val Imply(_, Box(Loop(prg), _)) = entry.expandedModel
@@ -117,7 +127,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
     //@todo EulerIntegrationCompiler: compile to a Python simulator
 
-    result
+    qf
   }
 
   "Partial Observability" should "derive a model monitor from approximated turning behavior" in withMathematica { tool =>
@@ -164,7 +174,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val unobservable = ListMap[Variable, Option[Formula]]("c_0".asVariable -> None, "l_0".asVariable -> None)
 
     val monitor = deriveMonitor(entry, entry.tactics.find(_._1 == "Proof Water tank is safe").map(_._3), unobservable, tool)
-    monitor shouldBe "((-1)<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&(0<=lpost&cpost<=ep())&cpost>=0&lpost=l+fpost*cpost".asFormula
+    monitor shouldBe "(-1)<=fpost&fpost<=(m()-l)/ep()&0<=l&0<=ep()&0<=lpost&cpost<=ep()&cpost>=0&lpost=l+fpost*cpost".asFormula
 
     val monitor2 = deriveMonitor(entry, None, unobservable, tool)
     proveBy(Equiv(monitor, monitor2), QE) shouldBe 'proved
@@ -173,7 +183,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val monitor3 = deriveMonitor(entry, Some(TactixLibrary.autoClose),
       unobservable ++ ListMap[Variable, Option[Formula]]("time_".asVariable -> None), tool,
       postVarFactory = (v: Variable) => BaseVariable(v.name, Some(v.index.map(_ + 11).getOrElse(10))))
-    monitor3 shouldBe "((-1)<=f_10&f_10<=(m()-l)/ep())&(0<=l&0<=ep())&l_10>=0&c_10>=0&c_10<=ep()&c_10*f_10+l=l_10".asFormula
+    monitor3 shouldBe "(-1)<=f_10&f_10<=(m()-l)/ep()&0<=l&0<=ep()&-l_10<=0&-c_10<=0&-ep()<=0&c_10+-ep()<=0&c_10*f_10+l+-l_10=0".asFormula
   }
 
   it should "derive a model monitor from water tank with flow disturbance" in withMathematica { tool =>
@@ -266,7 +276,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap("x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
-    deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe "I2(v1,v2,1,0,dx,dy,x,y)>2*v1*v2+2*v2&dx^2+dy^2=1&(dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&w1post=1&w2post=0".asFormula
+    deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe "I2(v1,v2,1,0,dx,dy,x,y)>2*v1*v2+2*v2&dx^2+dy^2=1&dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y)&w1post=1&w2post=0".asFormula
   }
 
   it should "derive model monitor from approximated planar flight motion" in withMathematica { tool =>
@@ -274,7 +284,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap("x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
-    deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe "I1(v1,v2,dx,dy,x,y)>v1+v2&(0=1->dx^2+dy^2=1)&((0=1->dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y))&w1post=0&w2post=0|I2(v1,v2,1,0,dx,dy,x,y)>2*v1*v2+2*v2&dx^2+dy^2=1&((dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&(1=0->dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y)))&w1post=1&w2post=0".asFormula
+    deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe "I1(v1,v2,dx,dy,x,y)>v1+v2&(0=1->dx^2+dy^2=1)&(0=1->dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y)&w1post=0&w2post=0|I2(v1,v2,1,0,dx,dy,x,y)>2*v1*v2+2*v2&dx^2+dy^2=1&dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y)&(1=0->dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y))&w1post=1&w2post=0".asFormula
   }
 
   it should "derive model monitor from approximated planar flight motion simple 2 with ownship actuator disturbance" in withMathematica { tool =>
@@ -282,7 +292,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap("w1".asVariable -> None,
       "x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
-    deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool) shouldBe "(v2!=0&((dy*x=1+dx*y&(dx*v1*v2>v1*v2&(wD() < 0|v2*(((-1)+dx)*v1+(1+wD())*((-1)+dy*x+(-1)*dx*y))>0&v2*(wD()+dy*x+dx*(v1+wD()*y))>v2*(1+v1+dy*wD()*x+dx*y))|(v2*(((-1)+dx)*v1+(1+wD())*((-1)+dy*x+(-1)*dx*y))>0&v2*(wD()+dy*x+dx*(v1+wD()*y))>v2*(1+v1+dy*wD()*x+dx*y))&wD() < 1)|v2*(((-1)+dx)*v1+(1+wD())*((-1)+dy*x+(-1)*dx*y))>0&(v2*(wD()+dy*x+dx*(v1+wD()*y))>v2*(1+v1+dy*wD()*x+dx*y)&v2+dx*v2*y!=dy*v2*x|v2+dx*v2*y>=dy*v2*x&wD() < 0))|wD() < 0&(v2+dx*v2*y>=dy*v2*x&v2*(wD()+dy*x+dx*(v1+wD()*y)) < v2*(1+v1+dy*wD()*x+dx*y)|v2*(wD()+dy*x+dx*(v1+wD()*y))>v2*(1+v1+dy*wD()*x+dx*y)&v2+dx*v2*y<=dy*v2*x))|wD() < 0&(v2+dx*v2*y=dy*v2*x|v2*(((-1)+dx)*v1+(1+wD())*((-1)+dy*x+(-1)*dx*y)) < 0&v2+dx*v2*y<=dy*v2*x))&dx^2+dy^2=1&dxpost^2+dypost^2=1&w1ppost=1&w2post=0&(dx=dxpost&dy*x+dxpost*ypost=dypost*xpost+dx*y&wD()>=0|dypost*xpost+dx*y < dy*x+dxpost*ypost&dxpost+dx*((-1)+y+wD()*y)<=(1+wD())*(dy*x+(-1)*dypost*xpost+dxpost*ypost)&dx+dy*x+dypost*wD()*xpost+dx*wD()*y+dxpost*ypost<=dxpost+dy*wD()*x+dypost*xpost+dx*y+dxpost*wD()*ypost|dy*x+dxpost*ypost < dypost*xpost+dx*y&dxpost+dy*wD()*x+dypost*xpost+dx*y+dxpost*wD()*ypost<=dx+dy*x+dypost*wD()*xpost+dx*wD()*y+dxpost*ypost&dx+(1+wD())*(dy*x+(-1)*dypost*xpost)+dxpost*((-1)+ypost+wD()*ypost)<=dx*(1+wD())*y)".asFormula
+    deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool) shouldBe "(v2+(-dy)*v2*x+dx*v2*y=0&1+wD() < 0|v2!=0&1+(-dy)*x+dx*y=0&1+wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+v2*wD()+(-dy)*v2*x*wD()+dx*v2*y*wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+(-v2)*wD()+dy*v2*x*wD()+(-dx)*v2*y*wD() < 0|v2+(-dy)*v2*x+dx*v2*y=0&wD() < 0|(-1)+dx!=0&v1!=0&v2!=0&v1*v2+(-dx)*v1*v2 < 0&1+(-dy)*x+dx*y=0&wD() < 0|v2!=0&1+(-dy)*x+dx*y=0&(-1)+wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+v2*wD()+(-dy)*v2*x*wD()+dx*v2*y*wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+(-v2)*wD()+dy*v2*x*wD()+(-dx)*v2*y*wD() < 0|(-1)+dx!=0&v1!=0&v2!=0&v1*v2+(-dx)*v1*v2 < 0&1+(-dy)*x+dx*y=0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+v2*wD()+(-dy)*v2*x*wD()+dx*v2*y*wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+(-v2)*wD()+dy*v2*x*wD()+(-dx)*v2*y*wD() < 0|v2+(-dy)*v2*x+dx*v2*y < 0&wD() < 0&-v2+(-v1)*v2+dx*v1*v2+dy*v2*x+(-dx)*v2*y+(-v2)*wD()+dy*v2*x*wD()+(-dx)*v2*y*wD() < 0|v2!=0&v2+(-dy)*v2*x+dx*v2*y < 0&wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+(-v2)*wD()+dy*v2*x*wD()+(-dx)*v2*y*wD() < 0|v2!=0&v2+(-dy)*v2*x+dx*v2*y < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+v2*wD()+(-dy)*v2*x*wD()+dx*v2*y*wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+(-v2)*wD()+dy*v2*x*wD()+(-dx)*v2*y*wD() < 0|v2!=0&-v2+dy*v2*x+(-dx)*v2*y < 0&wD() < 0&-v2+(-v1)*v2+dx*v1*v2+dy*v2*x+(-dx)*v2*y+v2*wD()+(-dy)*v2*x*wD()+dx*v2*y*wD() < 0|v2!=0&-v2+dy*v2*x+(-dx)*v2*y < 0&wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+v2*wD()+(-dy)*v2*x*wD()+dx*v2*y*wD() < 0|v2!=0&-v2+dy*v2*x+(-dx)*v2*y < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+v2*wD()+(-dy)*v2*x*wD()+dx*v2*y*wD() < 0&v2+v1*v2+(-dx)*v1*v2+(-dy)*v2*x+dx*v2*y+(-v2)*wD()+dy*v2*x*wD()+(-dx)*v2*y*wD() < 0)&(dx+-dxpost=0&(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&(-1)+w1ppost=0&w2post=0&(-dy)*x+dypost*xpost+dx*y+(-dxpost)*ypost=0&-wD()<=0|(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&(-1)+w1ppost=0&w2post=0&(-dy)*x+dypost*xpost+dx*y+(-dxpost)*ypost < 0&-dx+dxpost+(-dy)*x+dypost*xpost+dx*y+(-dxpost)*ypost+(-dy)*x*wD()+dypost*xpost*wD()+dx*y*wD()+(-dxpost)*ypost*wD()<=0&dx+-dxpost+dy*x+(-dypost)*xpost+(-dx)*y+dxpost*ypost+(-dy)*x*wD()+dypost*xpost*wD()+dx*y*wD()+(-dxpost)*ypost*wD()<=0|(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&(-1)+w1ppost=0&w2post=0&dy*x+(-dypost)*xpost+(-dx)*y+dxpost*ypost < 0&dx+-dxpost+dy*x+(-dypost)*xpost+(-dx)*y+dxpost*ypost+dy*x*wD()+(-dypost)*xpost*wD()+(-dx)*y*wD()+dxpost*ypost*wD()<=0&-dx+dxpost+(-dy)*x+dypost*xpost+dx*y+(-dxpost)*ypost+dy*x*wD()+(-dypost)*xpost*wD()+(-dx)*y*wD()+dxpost*ypost*wD()<=0)".asFormula
   }
 
   it should "derive model monitor from approximated planar flight motion with ownship actuator disturbance" in withMathematica { tool =>
@@ -301,7 +311,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val unobservableVars = ListMap(
       "v2".asVariable -> Some("v2-v2U()<=v2m&v2m<=v2+v2U()".asFormula),
       "x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
-    deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool) shouldBe "dx^2+dy^2=1&dxpost^2+dypost^2=1&w1post=1&w2post=0&I2(1,1,1,0,dx,dy,x,y)=I2(1,1,1,0,dxpost,dypost,xpost,ypost)&v2U()>=0&(v2m<=v2mpost+2*v2U()&v2mpost<=v2m&(v2mpost < 0&v2m+v2U() < 0&dx*v1+dy*x < 1+v1+dx*y|v2U() < v2m&1+v1+dx*y < dx*v1+dy*x)|v2m<=v2mpost&v2mpost<=v2m+2*v2U()&(v2mpost>0&v2U() < v2m&1+v1+dx*y < dx*v1+dy*x|v2m+v2U() < 0&dx*v1+dy*x < 1+v1+dx*y))".asFormula
+    deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool) shouldBe "v2U() < 0&-w1post < 0&w2post=0&(-1)+-v1+dx*v1+dy*x+(-dx)*y=0&v2m+v2U() < 0&2*v2U()=0&(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost=0&v2m+-v2mpost+2*v2U()=0&(-1)+w1post=0|v2U() < 0&-w1post < 0&w2post=0&(-1)+-v1+dx*v1+dy*x+(-dx)*y=0&-v2m+v2U() < 0&2*v2U()=0&(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost=0&v2m+-v2mpost+2*v2U()=0&(-1)+w1post=0|v2U() < 0&-w1post < 0&w2post=0&(-1)+-v1+dx*v1+dy*x+(-dx)*y < 0&-v2m+v2U() < 0&2*v2U()=0&(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost=0&v2m+-v2mpost+2*v2U()=0&(-1)+w1post=0|v2U() < 0&-w1post < 0&w2post=0&(-1)+-v1+dx*v1+dy*x+(-dx)*y < 0&v2m+v2U() < 0&2*v2U()=0&(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost=0&v2m+-v2mpost+2*v2U()=0&(-1)+w1post=0|(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&v2m < 0&-v2m+v2mpost<=0&v2mpost < 0&(-1)+w1post=0&w2post=0&(-1)+-v1+dx*v1+dy*x+(-dx)*y < 0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost+(-2)*v2U()<=0&-v2U()<=0&v2m+v2U() < 0|(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&v2m < 0&v2m+-v2mpost<=0&(-1)+w1post=0&w2post=0&(-1)+-v1+dx*v1+dy*x+(-dx)*y < 0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&-v2U()<=0&v2m+v2U() < 0&-v2m+v2mpost+(-2)*v2U()<=0|v2U() < 0&-w1post < 0&w2post=0&1+v1+(-dx)*v1+(-dy)*x+dx*y < 0&v2m+v2U() < 0&2*v2U()=0&(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost=0&v2m+-v2mpost+2*v2U()=0&(-1)+w1post=0|v2U() < 0&-w1post < 0&w2post=0&1+v1+(-dx)*v1+(-dy)*x+dx*y < 0&-v2m+v2U() < 0&2*v2U()=0&(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost=0&v2m+-v2mpost+2*v2U()=0&(-1)+w1post=0|(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&-v2m < 0&-v2m+v2mpost<=0&(-1)+w1post=0&w2post=0&1+v1+(-dx)*v1+(-dy)*x+dx*y < 0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&v2m+-v2mpost+(-2)*v2U()<=0&-v2m+v2U() < 0&-v2U()<=0|(-1)+dx^2+dy^2=0&(-1)+dxpost^2+dypost^2=0&-v2m < 0&v2m+-v2mpost<=0&-v2mpost < 0&(-1)+w1post=0&w2post=0&1+v1+(-dx)*v1+(-dy)*x+dx*y < 0&2*dypost*xpost+2*(-dxpost)*ypost+2*dxpost+-(2*dy*x+2*(-dx)*y+2*dx)=0&-v2m+v2U() < 0&-v2U()<=0&-v2m+v2mpost+(-2)*v2U()<=0".asFormula
   }
 
   it should "derive model monitor from approximated planar flight motion with intruder linear velocity uncertainty" in withMathematica { tool =>
@@ -313,7 +323,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       "x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
     //@todo partial QE may not terminate
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool,
-      checkWitnessResult = _.subgoals.loneElement shouldBe "==> \\exists v2 ((v2-v2U()<=v2m&v2m<=v2+v2U())&(\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I1(v1,v2p,dx,dy,x,y)>v1+v2p)&((0=1->dx^2+dy^2=1&I2(1,1,1,0,dx,dy,x,y)=const())&dx=const()&dy=const()&I1(1,1,dx,dy,x,y)=const())&((0=1->dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=const())&dxpost=const()&dypost=const()&I1(1,1,dxpost,dypost,xpost,ypost)=const())&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&w1post=0&w2post=0|\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I2(v1,v2p,1,0,dx,dy,x,y)>2*v1*v2p+2*v2p)&((dx^2+dy^2=1&I2(1,1,1,0,dx,dy,x,y)=const())&(1=0->dx=const()&dy=const()&I1(1,1,dx,dy,x,y)=const()))&((dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=const())&(1=0->dxpost=const()&dypost=const()&I1(1,1,dxpost,dypost,xpost,ypost)=const()))&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&w1post=1&w2post=0))".asSequent)
+      checkWitnessResult = _.subgoals.loneElement shouldBe "  ==>  \\exists v2 ((v2-v2U()<=v2m&v2m<=v2+v2U())&(\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I1(v1,v2p,dx,dy,x,y)>v1+v2p)&(0=1->dx^2+dy^2=1)&((0=1->dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y))&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&w1post=0&w2post=0|\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I2(v1,v2p,1,0,dx,dy,x,y)>2*v1*v2p+2*v2p)&dx^2+dy^2=1&((dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&(1=0->dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y)))&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&w1post=1&w2post=0))".asSequent)
   }
 
   it should "FEATURE_REQUEST: derive model monitor from approximated planar flight motion with ownship velocity disturbance and intruder velocity uncertainty" taggedAs TodoTest ignore withMathematica { tool =>
@@ -340,7 +350,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val entry = KeYmaeraXArchiveParser.getEntry("ICFEM09/ETCS Essentials",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/etcs/etcs.kyx")).mkString).get
     val monitor = deriveMonitor(entry, Some(entry.tactics.find(_._1 == "ETCS Essentials Proof with Differential Invariants").get._3), ListMap.empty, tool)
-    monitor shouldBe "m()-z<=SB(v)&(v>=0&0<=ep())&((vpost>=0&tpost<=ep())&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2)&zpost_0=z&vpost_0=v&apost=-b()&tpost_0=0|m()-z>=SB(v)&(v>=0&0<=ep())&((vpost>=0&tpost<=ep())&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2)&zpost_0=z&vpost_0=v&apost=A()&tpost_0=0".asFormula
+    monitor shouldBe "m()-z<=SB(v)&v>=0&0<=ep()&vpost>=0&tpost<=ep()&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2&zpost_0=z&vpost_0=v&apost=-b()&tpost_0=0|m()-z>=SB(v)&v>=0&0<=ep()&vpost>=0&tpost<=ep()&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2&zpost_0=z&vpost_0=v&apost=A()&tpost_0=0".asFormula
   }
 
   it should "derive a model monitor from ETCS essentials with train position measurement" in withMathematica { tool =>
@@ -361,7 +371,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       "a".asVariable -> None,
       "z_0".asVariable -> None, "v_0".asVariable -> None, "t_0".asVariable -> None)
     val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool)
-    monitor shouldBe "m()-z<=SB(v)&aD()>=0&accpost+b()=0&ep()>=tpost&tpost>=0&v>=0&aD()*tpost+v>=b()*tpost+vpost&vpost>=0&aD()*tpost^2+2*tpost*v+2*z+(-2)*zpost>=b()*tpost^2&(A()+b() < 0|A()+2*aD()+b() < 0|(A()+aD())*tpost+v>=vpost&tpost*((A()+aD())*tpost+2*v)+2*z>=2*zpost)|m()-z>=SB(v)&accpost=A()&aD()>=0&tpost>=0&v>=0&vpost>=0&tpost*((A()+aD())*tpost+2*v)+2*z>=2*zpost&tpost<=ep()&vpost<=(A()+aD())*tpost+v&(2*aD() < A()+b()|A()+b()>0|tpost*((-1)*aD()*tpost+b()*tpost+(-2)*v)+2*zpost<=2*z&b()*tpost+vpost<=aD()*tpost+v)".asFormula
+    monitor shouldBe "m()-z<=SB(v)&(-tpost<=0&-v<=0&-vpost<=0&-aD()<=0&accpost+b()=0&A()+b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&-aD()<=0&accpost+b()=0&A()+2*aD()+b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&-aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&accpost+b()=0&A()+b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&-aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&accpost+b()=0&A()+2*aD()+b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&accpost+b()=0&A()+b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&accpost+b()=0&A()+2*aD()+b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&accpost+b()=0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0)|m()-z>=SB(v)&(-tpost<=0&-v<=0&-vpost<=0&accpost+-A()=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&-A()+-b() < 0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&accpost+-A()=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&-A()+2*aD()+-b() < 0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&accpost+-A()=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&-A()+-b() < 0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&accpost+-A()=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&-A()+2*aD()+-b() < 0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&accpost+-A()=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&-A()+-b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&accpost+-A()=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&-A()+2*aD()+-b() < 0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&tpost+-ep()<=0&-ep()<=0|-tpost<=0&-v<=0&-vpost<=0&accpost+-A()=0&-aD()<=0&-v+vpost+(-tpost)*A()+(-tpost)*aD()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*A()+(-tpost^2)*aD()<=0&-v+vpost+(-tpost)*aD()+tpost*b()<=0&(-2)*tpost*v+(-2)*z+2*zpost+(-tpost^2)*aD()+tpost^2*b()<=0&tpost+-ep()<=0&-ep()<=0)".asFormula
   }
 
   it should "derive a model monitor from approximated VSL" in withMathematica { tool =>
@@ -370,7 +380,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap("v1_0".asVariable -> None, "t_0".asVariable -> None, "x1_0".asVariable -> None)
     val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool)
-    monitor shouldBe "((v1>=0&0<=ep())&(v1post>=0&tpost<=ep())&a1post=-B()&vslpost=vsl&xslpost=xsl|(vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost))&(v1>=0&0<=ep())&(v1post>=0&tpost<=ep())&a1post=-B())|xsl>=accCompensation(x1,v1,vsl)&(-B()<=a1post&a1post<=A())&((v1>=0&0<=ep())&(v1post>=0&tpost<=ep())&vslpost=vsl&xslpost=xsl|(vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost))&(v1>=0&0<=ep())&v1post>=0&tpost<=ep())|x1>=xsl&(-B()<=a1post&a1post<=A()&a1post<=(v1-vsl)/ep())&((v1>=0&0<=ep())&(v1post>=0&tpost<=ep())&vslpost=vsl&xslpost=xsl|(vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost))&(v1>=0&0<=ep())&v1post>=0&tpost<=ep())".asFormula
+    monitor shouldBe "v1>=0&0<=ep()&v1post>=0&tpost<=ep()&a1post=-B()&vslpost=vsl&xslpost=xsl|vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost)&v1>=0&0<=ep()&v1post>=0&tpost<=ep()&a1post=-B()|xsl>=accCompensation(x1,v1,vsl)&-B()<=a1post&a1post<=A()&(v1>=0&0<=ep()&v1post>=0&tpost<=ep()&vslpost=vsl&xslpost=xsl|vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost)&v1>=0&0<=ep()&v1post>=0&tpost<=ep())|x1>=xsl&-B()<=a1post&a1post<=A()&a1post<=(v1-vsl)/ep()&(v1>=0&0<=ep()&v1post>=0&tpost<=ep()&vslpost=vsl&xslpost=xsl|vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost)&v1>=0&0<=ep()&v1post>=0&tpost<=ep())".asFormula
   }
 
   it should "derive a model monitor from approximated VSL with car actuator disturbance" in withMathematica { tool =>
@@ -381,7 +391,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       "a1".asVariable -> None,
       "v1_0".asVariable -> None, "t_0".asVariable -> None, "x1_0".asVariable -> None)
     val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool)
-    monitor shouldBe "(aD()>=0&acc1post+B()=0&ep()>=0&tpost<=ep()&v1>=0&v1post>=0&vsl=vslpost&xsl=xslpost|(vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost))&aD()>=0&acc1post+B()=0&ep()>=0&tpost<=ep()&v1>=0&v1post>=0)|xsl>=accCompensation(x1,v1,vsl)&(-B()<=acc1post&acc1post<=A())&(aD()>=0&ep()>=0&tpost<=ep()&v1>=0&v1post>=0&vsl=vslpost&xsl=xslpost|(vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost))&aD()>=0&ep()>=0&tpost<=ep()&v1>=0&v1post>=0)|x1>=xsl&(-B()<=acc1post&acc1post<=A()&acc1post<=(v1-vsl)/ep()-aD())&(aD()>=0&ep()>=0&tpost<=ep()&v1>=0&v1post>=0&vsl=vslpost&xsl=xslpost|(vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost))&aD()>=0&ep()>=0&tpost<=ep()&v1>=0&v1post>=0)".asFormula
+    monitor shouldBe "-v1<=0&-v1post<=0&vsl+-vslpost=0&xsl+-xslpost=0&-aD()<=0&acc1post+B()=0&tpost+-ep()<=0&-ep()<=0|vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost)&-v1<=0&-v1post<=0&-aD()<=0&acc1post+B()=0&tpost+-ep()<=0&-ep()<=0|xsl>=accCompensation(x1,v1,vsl)&-B()<=acc1post&acc1post<=A()&(-v1<=0&-v1post<=0&vsl+-vslpost=0&xsl+-xslpost=0&-aD()<=0&tpost+-ep()<=0&-ep()<=0|vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost)&-v1<=0&-v1post<=0&-aD()<=0&tpost+-ep()<=0&-ep()<=0)|x1>=xsl&-B()<=acc1post&acc1post<=A()&acc1post<=(v1-vsl)/ep()-aD()&(-v1<=0&-v1post<=0&vsl+-vslpost=0&xsl+-xslpost=0&-aD()<=0&tpost+-ep()<=0&-ep()<=0|vslpost>=0&xslpost>=accCompensation(x1,v1,vslpost)&-v1<=0&-v1post<=0&-aD()<=0&tpost+-ep()<=0&-ep()<=0)".asFormula
   }
 
   it should "derive a model monitor from approximated VSL with car position uncertainty" in withMathematica { tool =>
@@ -392,7 +402,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       "x1".asVariable -> Some("x1m-xU()<=x1&x1<=x1m+xU()".asFormula),
       "v1_0".asVariable -> None, "t_0".asVariable -> None, "x1_0".asVariable -> None)
     val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool)
-    monitor shouldBe "ep()>=0&v1>=0&v1post>=0&xU()>=0&tpost<=ep()&(a1post+B()=0&(vsl=vslpost&xsl=xslpost|vslpost>=0&accCompensation(x1m,v1,vslpost)<=xslpost)|vsl=vslpost&xsl=xslpost&a1post+B()>=0&a1post<=A()&accCompensation(x1m,v1,vsl)<=xsl)|a1post<=A()&a1post+B()>=0&ep()>=0&tpost<=ep()&v1>=0&v1post>=0&vslpost>=0&xU()>=0&accCompensation(x1m,v1,vslpost)<=xslpost&accCompensation(x1m,v1,vsl)<=xsl|ep()>0&a1post+B()>=0&v1>=0&v1post>=0&xU()>=0&a1post<=A()&tpost<=ep()&a1post*ep()+vsl<=v1&(xsl<=x1m+xU()|xsl+xU()<=x1m)&(vsl=vslpost&xsl=xslpost|vslpost>=0&accCompensation(x1m,v1,vslpost)<=xslpost)".asFormula
+    monitor shouldBe "-v1<=0&-v1post<=0&vsl+-vslpost=0&xsl+-xslpost=0&a1post+B()=0&tpost+-ep()<=0&-ep()<=0&-xU()<=0|-v1<=0&-v1post<=0&-vslpost<=0&-xslpost+accCompensation(x1m,v1,vslpost)<=0&a1post+B()=0&tpost+-ep()<=0&-ep()<=0&-xU()<=0|-v1<=0&-v1post<=0&vsl+-vslpost=0&xsl+-xslpost=0&a1post+-A()<=0&-xsl+accCompensation(x1m,v1,vsl)<=0&-a1post+-B()<=0&tpost+-ep()<=0&-ep()<=0&-xU()<=0|-v1<=0&-v1post<=0&-vslpost<=0&a1post+-A()<=0&-xslpost+accCompensation(x1m,v1,vslpost)<=0&-xsl+accCompensation(x1m,v1,vsl)<=0&-a1post+-B()<=0&tpost+-ep()<=0&-ep()<=0&-xU()<=0|-v1<=0&-v1post<=0&vsl+-vslpost=0&xsl+-xslpost=0&a1post+-A()<=0&-a1post+-B()<=0&tpost+-ep()<=0&-ep() < 0&-v1+vsl+a1post*ep()<=0&-x1m+xsl+xU()<=0&-xU()<=0|-v1<=0&-v1post<=0&vsl+-vslpost=0&xsl+-xslpost=0&a1post+-A()<=0&-a1post+-B()<=0&tpost+-ep()<=0&-ep() < 0&-v1+vsl+a1post*ep()<=0&-xU()<=0&-x1m+xsl+-xU()<=0|-v1<=0&-v1post<=0&-vslpost<=0&a1post+-A()<=0&-xslpost+accCompensation(x1m,v1,vslpost)<=0&-a1post+-B()<=0&tpost+-ep()<=0&-ep() < 0&-v1+vsl+a1post*ep()<=0&-x1m+xsl+xU()<=0&-xU()<=0|-v1<=0&-v1post<=0&-vslpost<=0&a1post+-A()<=0&-xslpost+accCompensation(x1m,v1,vslpost)<=0&-a1post+-B()<=0&tpost+-ep()<=0&-ep() < 0&-v1+vsl+a1post*ep()<=0&-xU()<=0&-x1m+xsl+-xU()<=0".asFormula
   }
 
   it should "derive a model monitor from approximated robix static safety" in withMathematica { tool =>

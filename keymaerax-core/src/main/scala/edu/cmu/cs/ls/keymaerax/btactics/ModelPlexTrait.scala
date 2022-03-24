@@ -46,6 +46,6 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def diamondTestRetainConditionT: DependentPositionTactic
   def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic],
+                                unobservable: List[_ <: NamedSymbol], simplifier: Option[BuiltInPositionTactic],
                                 postVar: Variable=>Variable = NAMED_POST_VAR): DependentPositionTactic
 }
