@@ -83,16 +83,15 @@ trait Interpreter {
     }
   } ensures(r => r match {
     case (rmerged: Boolean, rp: ProvableSig) =>
-      ((!rmerged && rp==subderivation) ||
+      (!rmerged && rp==subderivation) ||
        ( rmerged && exhaustiveSubst(rp, subst).conclusion == exhaustiveSubst(original, subst).conclusion &&
          (if (subderivation.isProved) {
            rp.subgoals.size == original.subgoals.size - 1
          } else {
-           rp.subgoals(n) == subderivation.subgoals(0) &&
-             rp.subgoals.takeRight(subderivation.subgoals.size - 1) == subderivation.subgoals.tail
+           subst(rp.subgoals(n)) == subst(subderivation.subgoals(0)) &&
+             rp.subgoals.takeRight(subderivation.subgoals.size - 1).map(subst(_)) == subderivation.subgoals.tail.map(subst(_))
          })
        )
-      )
   })
 
   /** Assert that the conclusion of provable `sub` matches the subgoal `n` of provable `parent` either verbatim or
