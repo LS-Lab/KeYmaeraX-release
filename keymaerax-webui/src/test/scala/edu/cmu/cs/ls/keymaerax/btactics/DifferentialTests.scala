@@ -1839,6 +1839,11 @@ class DifferentialTests extends TacticTestBase {
     pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
   }
 
+  it should "prove work with constified" in withMathematica { _ =>
+    val seq = "y=0, x > 0 ==> [{x'=k*x+y}] x+y>0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("k".asVariable)(1)) shouldBe 'proved
+  }
+
   "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val seq = "-x<=0 ==> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] -x<=0".asSequent

@@ -1315,8 +1315,8 @@ private object DifferentialTactics extends Logging {
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
-    val property = seq.sub(pos) match {
-      case Some(Box(_: ODESystem, property)) => property
+    val (ode,property) = seq.sub(pos) match {
+      case Some(Box(ode: ODESystem, property)) => (ode,property)
       case Some(e) => throw new TacticInapplicableFailure("dbx only applicable to box ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
@@ -1328,13 +1328,14 @@ private object DifferentialTactics extends Logging {
       case e => throw new TacticInapplicableFailure(s"Not sure what to do with shape ${e.prettyString}, dgDbx requires 0 on RHS")
     }
 
+    val qcoRepl = ODEInvariance.replaceODEfree(p,qco,ode.ode)
     val (dbxRw,subst) = pop match {
-      case Equal(_,_) => (Ax.DBXeq,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
-      case GreaterEqual(_,_) => (Ax.DBXge,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
-      case LessEqual(_,_) => (Ax.DBXle,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
-      case Greater(_,_) => (Ax.DBXgtOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
-      case Less(_,_) => (Ax.DBXltOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
-      case NotEqual(_,_) => (Ax.DBXneOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
+      case Equal(_,_) => (Ax.DBXeq,RenUSubst(("g(|y_,z_|)".asTerm, qcoRepl) :: Nil))
+      case GreaterEqual(_,_) => (Ax.DBXge,RenUSubst(("g(|y_,z_|)".asTerm, qcoRepl) :: Nil))
+      case LessEqual(_,_) => (Ax.DBXle,RenUSubst(("g(|y_,z_|)".asTerm, qcoRepl) :: Nil))
+      case Greater(_,_) => (Ax.DBXgtOpen,RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
+      case Less(_,_) => (Ax.DBXltOpen,RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
+      case NotEqual(_,_) => (Ax.DBXneOpen,RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
       case _ =>  ??? // caught by exception in previous case match
     }
 
