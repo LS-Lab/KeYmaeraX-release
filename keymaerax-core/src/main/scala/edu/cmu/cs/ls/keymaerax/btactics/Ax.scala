@@ -2598,7 +2598,7 @@ object Ax extends Logging {
 
   /**
    * {{{Axiom "exists or".
-   *    (\exists x p(x) | q(x)) <-> (\exists x p(x) | \exists x q(x))
+   *    \exists x (p(x) | q(x)) <-> (\exists x p(x) | \exists x q(x))
    * End.
    * }}}
    *
@@ -2688,6 +2688,17 @@ object Ax extends Logging {
     */
   @Axiom(("∧C","&C"), key = "0", recursor = "*", unifier = "surjlinear")
   lazy val andCommute: DerivedAxiomInfo = derivedAxiom("& commute", Sequent(IndexedSeq(), IndexedSeq("(p_() & q_()) <-> (q_() & p_())".asFormula)), prop)
+
+  /**
+   * {{{Axiom "| commute".
+   *    (p() | q()) <-> (q() | p())
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom(("∨C","|C"), key = "0", recursor = "*", unifier = "surjlinear")
+  lazy val orCommute: DerivedAxiomInfo = derivedAxiom("| commute", Sequent(IndexedSeq(), IndexedSeq("(p_() | q_()) <-> (q_() | p_())".asFormula)), prop)
 
   /**
     * {{{Axiom "& associative".
