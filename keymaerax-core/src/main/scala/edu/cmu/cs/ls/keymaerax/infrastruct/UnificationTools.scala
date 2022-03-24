@@ -31,6 +31,7 @@ object UnificationTools {
       val (sg, ss, _) = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
       val expand = (sg ++ ss).filter(expansible).toList.minBy(symbolDeps.indexOf)
       val subst = USubst(substs.find({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).contains(expand) }).toList)
+      assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbol differences " + sg.map(_.prettyString).mkString(",") + " and " + ss.map(_.prettyString).mkString(","))
 
       val substGoal = exhaustiveSubst(goal, subst)
       val substSub = exhaustiveSubst(sub, subst)
