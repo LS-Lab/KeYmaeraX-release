@@ -18,7 +18,7 @@ trait ODESolverTool extends ToolInterface {
     * Computes the symbolic solution of a differential equation in normal form.
     * @param diffSys The system of differential equations of the form x' = theta & H.
     * @param diffArg The name of the differential argument (dx/d diffArg = theta).
-    * @param iv The initial values per derivative.
+    * @param iv The variables for initial values per derivative.
     * @return The solution if found; None otherwise
     *         The solution should be a
     */
@@ -32,7 +32,7 @@ trait ODESolverTool extends ToolInterface {
   */
 trait EquationSolverTool extends ToolInterface {
   /**
-    * Computes the symbolic solution of an equation system.
+    * Computes the symbolic solution of an equation system written as a conjunction of equations.
     * @param equations The system of equations as a conjunction of equations.
     * @param vars The variables or symbols to solve for.
     *            Within reason, it may also be possible to solve for compound expressions like solve for j(z).
@@ -74,13 +74,13 @@ trait LyapunovSolverTool extends ToolInterface {
 }
 
 /**
-  * Quantifier elimination tool.
+  * Counterexample generation tool for first-order real arithmetic formulas.
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */
 trait CounterExampleTool extends ToolInterface {
   /**
     * Returns a counterexample for the specified formula.
-    * @param formula The formula.
+    * @param formula The formula of first-order real arithmetic.
     * @return A counterexample, if found. None otherwise.
     */
   def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]]
@@ -90,6 +90,7 @@ trait CounterExampleTool extends ToolInterface {
   * Tool for simplifying logical and/or arithmetical expressions.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
+ *  @see [[[edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3]]
   */
 trait SimplificationTool extends ToolInterface {
   /**
@@ -116,25 +117,69 @@ trait SimplificationTool extends ToolInterface {
 trait AlgebraTool extends ToolInterface {
   /**
     * Computes the quotient and remainder of `term` divided by `div`.
+    * @param term the polynomial term to divide, considered as a univariate polynomial in variable `v` with coefficients that may have other variables.
+    * @param div the polynomial term to divide `term` by, considered as a univariate polynomial in variable `v` with coefficients that may have other variables.
+    * @param v the variable with respect to which `term` and `div` are regarded as univariate polynomials (with coefficients that may have other variables).
     * @example {{{
-    *           quotientRemainder(6*x^2+4*x+8, 2*x, x) == (3*x+2, 8)
+    *           quotientRemainder("6*x^2+4*x+8".asTerm, "2*x".asTerm, Variable("x")) == (3*x+2, 8)
+    *           // because (6*x^2+4*x+8) == (3*x+2) * (2*x) + 8
+    *           // so the result of division is 3*x+2 with remainder 8
     * }}}
     */
   def quotientRemainder(term: Term, div: Term, v: Variable): (Term, Term)
 
   /**
-    * Computes the Gröbner Basis of the given set of polynomials (with respect to some fixed monomial order).
-    * @see [[polynomialReduce()]]
-    */
-  def groebnerBasis(polynomials: List[Term]): List[Term]
-
-  /**
-    * Computes the multi-variate polynomial reduction of `polynomial` divided with respect to the
+    * Computes the multivariate polynomial reduction of `polynomial` divided with respect to the
     * set of polynomials `GB`, which is guaranteed to be unique iff `GB` is a Gröbner basis. Returns the list of
     * cofactors and the remainder.
+    * Repeatedly divides the leading term of `polynomial` by a corresponding multiple of a polynomial of `GB` while possible.
+    * Each individual reduction divides the leading term of `polynomial` by the required multiple of the leading term of the polynomial of `GB`
+    * such that those cancel.
+    * Let l(p) be the leading monomial of p and lc(p) its leading coefficient.
+    * Then each round of reduction of p:=polynomial with leading term `l*X^v` picks a polynomial g in `GB` and turns it into
+    * {{{
+    *   p := p - l/lc(g) * X^v/l(g) * g
+    * }}}
+    * alias
+    * {{{
+    *   p := p - (l/(lc(g) * l(g)))*X^v  * g
+    * }}}
+    * The former leading monomial `X^v` no longer occurs in the resulting polynomial and `p` got smaller or is now 0.
+    * To determine leading terms, polynomial reduction uses the same fixed monomial order that [[groeberBasis()]] uses.
+    * The remainders will be unique (independent of the order of divisions) iff `GB` is a [[groeberBasis() Gröbner Basis]].
+    * @param polynomial the multivariate polynomial to divide by the elements of `GB` until saturation.
+    * @param GB the set of multivariate polynomials that `polynomial` will repeatedly be divided by.
+    * The result of this algorithm is particularly insightful (and has unique remainders) if `GB` is a Gröbner Basis.
+    * @return (coeff, rem) where `rem` is the result of multivariate polynomial division of `polynomial` by `GB`
+    *   and `coeff` are the respective coefficients of the polynomials in `GB` that explain the result.
+    *   That is
+    *   {{{
+    *   polynomial == coeff(1)*GB(1) + coeff(2)*GB(2) + ... + coeff(n)*GB(n) + rem
+    *   }}}
+    *   alias
+    *   {{{
+    *   rem == polynomial - coeff(1)*GB(1) - coeff(2)*GB(2) - ... - coeff(n)*GB(n)
+    *   }}}
+    *   In addition, the remainder `rem` is small in that its leading monomial cannot be divided by leading monomials of any polynomial in `GB`.
+    *   The result `rem` is unique when `GB` is a Gröbner Basis.
+    * @example {{{
+    *            polynomialReduce("y^3 + 2*x^2*y".asTerm, List("x^2-y".asTerm, "y^2+5".asTerm)) = ((2*y :: 2 + y), -5*y-10)
+    *            // because y^3 + 2*x^2*y == (2*y) * (x^2-y) + (2+y) * (y^2+5) + (-5*y-10)
+    * }}}
     * @see [[groebnerBasis()]]
     */
   def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term)
+
+  /**
+    * Computes the Gröbner Basis of the given set of polynomials (with respect to some fixed monomial order).
+    * Gröbner Bases can be made unique for the fixed monomial order, when reduced, modulo scaling by constants.
+    * @param polynomials, the list of polynomial terms to form a Gröbner Basis for.
+    * @return The Gröbner Basis of `polynomials`.
+    *   The Gröbner Basis spans the same ideal as `polynomials` but has unique remainders of polynomialReduce.
+    * @see [[polynomialReduce()]]
+    * @see [[https://lfcps.org/orbital/Orbital-doc/api/orbital/math/AlgebraicAlgorithms.html#groebnerBasis(java.util.Set,%20java.util.Comparator)]]
+    */
+  def groebnerBasis(polynomials: List[Term]): List[Term]
 }
 
 /**
