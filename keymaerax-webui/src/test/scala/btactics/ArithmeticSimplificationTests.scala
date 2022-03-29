@@ -97,9 +97,12 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "exhaustiveAbsSplit" should "handle nested abs" in withMathematica { _ =>
-    proveBy("abs(abs(x)-y)>=0".asFormula, ArithmeticSpeculativeSimplification.exhaustiveAbsSplit).subgoals shouldBe
-      "x>=0, x-y>=0 ==> x-y>=0".asSequent :: "x < 0, -x-y>=0 ==> -x-y>=0".asSequent ::
-      "x>=0, x-y < 0 ==> -(x-y)>=0".asSequent :: "x < 0, -x-y < 0 ==> -(-x-y)>=0".asSequent :: Nil
+    proveBy("abs(abs(x)-y)>=0".asFormula, ArithmeticSpeculativeSimplification.exhaustiveAbsSplit).subgoals should contain theSameElementsAs List(
+      "x>=0, x-y>=0 ==> x-y>=0".asSequent,
+      "x < 0, -x-y>=0 ==> -x-y>=0".asSequent,
+      "x>=0, x-y < 0 ==> -(x-y)>=0".asSequent,
+      "x < 0, -x-y < 0 ==> -(-x-y)>=0".asSequent
+    )
   }
 
   "autoTransform" should "transform formulas from worst-case bounds to concrete variables" in withMathematica { _ =>

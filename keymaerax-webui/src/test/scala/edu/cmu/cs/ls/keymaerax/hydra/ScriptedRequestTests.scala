@@ -253,8 +253,8 @@ class ScriptedRequestTests extends TacticTestBase {
           |"x=3": todo,
           |"x^2>=4//x>2": todo,
           |"x^4>=16//x>2": todo,
-          |"x^2>=4//x < (-2)": todo,
-          |"x^4>=16//x < (-2)": todo
+          |"x^4>=16//x < (-2)": todo,
+          |"x^2>=4//x < (-2)": todo
           |)""".stripMargin) (after being whiteSpaceRemoved)
         val todoRegions = regionIn(tacticText, "todo")
         loc shouldBe Map(
@@ -286,8 +286,8 @@ class ScriptedRequestTests extends TacticTestBase {
           |  prop; <(
           |    "x^2>=4//x>2": todo,
           |    "x^4>=16//x>2": todo,
-          |    "x^2>=4//x < (-2)": todo,
-          |    "x^4>=16//x < (-2)": todo
+          |    "x^4>=16//x < (-2)": todo,
+          |    "x^2>=4//x < (-2)": todo
           |  )
           |)""".stripMargin) (after being whiteSpaceRemoved)
         println(tacticText)
@@ -324,8 +324,8 @@ class ScriptedRequestTests extends TacticTestBase {
           |  prop; <(
           |    "x^2>=4//x>2": todo,
           |    "x^4>=16//x>2": todo,
-          |    "x^2>=4//x < (-2)": todo,
-          |    "x^4>=16//x < (-2)": todo
+          |    "x^4>=16//x < (-2)": todo,
+          |    "x^2>=4//x < (-2)": todo
           |  )
           |)""".stripMargin) (after being whiteSpaceRemoved)
         println(tacticText)

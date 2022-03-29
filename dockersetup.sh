@@ -17,6 +17,8 @@
 # run example (without MATLAB license):
 # dockersetup.sh -m MAC_ADDRESS
 
+set -e
+
 while getopts "l:m:u:" flag; do
     case $flag in
         l) license=${OPTARG};;
@@ -75,7 +77,7 @@ fi
 # Set up licensing for WolframEngine
 # The folder for Licensing is given lax permissions so that WolframEngine's activation process inside Docker can write to it
 mkdir -p Licensing
-chmod -R 757 $PWD/Licensing
+chmod -R 757 "$PWD/Licensing"
 
 docker rm -f kyx
 docker build --build-arg LICENSE_FILE=matlab.lic --build-arg USER_NAME=$user -t keymaerax .

@@ -1188,7 +1188,7 @@ object ODELiveness {
         case GreaterEqual(p , _) => GreaterEqual(Minus(p, Plus(oldp,Times(bnd, timevar))), Number(0))
         case And(l,r) => And(mkFml(l),mkFml(r))
         case Or(l,r) => Or(mkFml(l),mkFml(r))
-        case _ => ??? //impossible thanks to normalization
+        case _ => throw new TacticInapplicableFailure("Unable to normalize postcondition to conjunction/disjunction of >, >=. Attempted normalization: " + fml)
       }
     }
 
@@ -1262,7 +1262,7 @@ object ODELiveness {
         case GreaterEqual(p , _) => GreaterEqual(Minus(p, Plus(oldp,Times(eps, timevar))), Number(0))
         case And(l,r) => And(mkFml(l),mkFml(r))
         case Or(l,r) => Or(mkFml(l),mkFml(r))
-        case _ => ??? //impossible thanks to normalization
+        case _ => throw new TacticInapplicableFailure("Unable to normalize postcondition to conjunction/disjunction of >, >=. Attempted normalization: " + fml)
       }
     }
 

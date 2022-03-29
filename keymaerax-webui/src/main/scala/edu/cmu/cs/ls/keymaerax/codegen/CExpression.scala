@@ -355,6 +355,18 @@ class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
       |    .source = klog("!(%s)", c.source)
       |  };
       |}
+      |expr true() {
+      |  return (expr) {
+      |    .value = 1.0L,
+      |    .source = klog("true")
+      |  };
+      |}
+      |expr false() {
+      |  return (expr) {
+      |    .value = 0.0L,
+      |    .source = klog("false")
+      |  };
+      |}
       |long double eval(expr e) {
       |  printf("expr = %Lf from %s\r\n", e.value, e.source);
       |  return e.value;
@@ -391,9 +403,13 @@ class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
     case CGreaterEqual(l, r) => "geq(" + print(l) + ", " + print(r) + ")"
     case CGreater(l, r) => "gt(" + print(l) + ", " + print(r) + ")"
     case CNotEqual(l, r) => "neq(" + print(l) + ", " + print(r) + ")"
+
     case CNot(c) => "not(" + print(c) + ")"
     case CAnd(l, r) => "and(" + print(l) + ", " + print(r) + ")"
     case COr(l, r) => "or(" + print(l) + ", " + print(r) + ")"
+
+    case CTrue => "true()"
+    case CFalse => "false()"
   }
 
 }

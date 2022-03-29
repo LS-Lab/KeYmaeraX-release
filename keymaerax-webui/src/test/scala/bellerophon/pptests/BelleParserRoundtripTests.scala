@@ -85,7 +85,9 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic boundRename" in withTactics {
-    roundTrip(TactixLibrary.boundRename("x".asVariable, "y".asVariable)(1), """boundRename("x", "y", 1)""")
+    //@note TactixLibrary.boundRename refers to the forward tactic, not the parsed input tactic
+    // want ProofRuleTactics.boundRename, but ProofRuleTactics is private
+    roundTrip(belleParser("""boundRename("x", "y", 1)"""), """boundRename("x", "y", 1)""")
   }
 
   it should "input tactic stutter" in withTactics {

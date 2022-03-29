@@ -1223,7 +1223,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       Declaration(Map(
         Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
         Name("y", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        Name("ctrl", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)
+        Name("ctrl", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;^@".asProgram), UnknownLocation)
       )))
     entry.model shouldBe "x>y() -> [ctrl;]x>=y()".asFormula
     entry.tactics shouldBe empty

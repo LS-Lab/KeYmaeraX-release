@@ -200,6 +200,8 @@ object MathematicaOpSpec {
 
   def or: NaryMathOpSpec = NaryMathOpSpec(symbol("Or"))
 
+  def xor: NaryMathOpSpec = NaryMathOpSpec(symbol("Xor"))
+
   def implies: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Implies"))
 
   def equivalent: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Equivalent"))

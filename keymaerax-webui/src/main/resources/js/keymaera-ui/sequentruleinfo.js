@@ -14,6 +14,8 @@ angular.module('keymaerax.ui.directives')
           return input.saveValue(scope.userId, scope.proofId, scope.nodeId, newValue);
         }
 
+        scope.inputSuggestions = [];
+
         scope.generateInputs = function() {
           if (scope.tactic.derivation && scope.tactic.derivation.inputGenerator && scope.tactic.derivation.inputGenerator !== '') {
             scope.isLoading = true;
@@ -21,7 +23,9 @@ angular.module('keymaerax.ui.directives')
               .then(function(response) {
                 scope.isLoading = false;
                 if (response.data.candidates && response.data.candidates.length > 0) {
-                  return response.data.candidates[0].fmls;
+                  var result = response.data.candidates[0].fmls;
+                  scope.inputSuggestions = result;
+                  return result;
                 } else return [];
               });
           } else return [];

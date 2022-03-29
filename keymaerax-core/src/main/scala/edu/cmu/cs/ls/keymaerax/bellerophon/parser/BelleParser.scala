@@ -441,7 +441,7 @@ object BelleParser extends TacticParser with Logging {
             case LIST_END :: Nil => Nil // explicit empty list
             case head :: Nil => Parser.parser.formulaParser(head) :: Nil // single-element lists without :: nil
             case scala.collection.:+(args, LIST_END) => args.map(Parser.parser.formulaParser) // all other lists
-            case l => throw ParseException("Formula list in " + USING.img + DOUBLE_QUOTE + l.mkString(DOUBLE_QUOTE) + DOUBLE_QUOTE + " must end in " + DOUBLE_COLON + LIST_END,
+            case l => throw ParseException("Formula list in " + USING.img + SPACE + DOUBLE_QUOTE + l.mkString(DOUBLE_COLON) + DOUBLE_QUOTE + " must end in " + DOUBLE_COLON + SPACE + LIST_END,
               esLoc, s, l.mkString(DOUBLE_QUOTE, DOUBLE_COLON, DOUBLE_COLON + LIST_END + DOUBLE_QUOTE))
           }
           ParserState(r :+ ParsedBelleExpr(Using(fmls, expr), eLoc.spanTo(esLoc), l), tail)
