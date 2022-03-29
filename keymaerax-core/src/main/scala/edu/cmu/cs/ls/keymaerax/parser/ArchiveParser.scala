@@ -28,6 +28,14 @@ case class Declaration(decls: Map[Name, Signature]) {
       (name, sig.copy(interpretation = interpretation.map(i => elaborateToSystemConsts(elaborateToFunctions(i, taboo)))))
   })).map((declAsSubstitutionPair _).tupled)
 
+  /** The subset of substs for implicitly defined functions. */
+  lazy val isubsts: List[SubstitutionPair] = substs.filter(f =>
+    f.repl match {
+      case FuncOf(e,_) => e.interpreted && e.domain == Real
+      case _ => false
+    }
+  )
+
   /** Returns the substitutions reachable transitively from symbols `s`. */
   def transitiveSubstsFrom(e: Expression): List[SubstitutionPair] = {
     val s = StaticSemantics.symbols(e).filterNot(_.isInstanceOf[DotTerm])
@@ -76,6 +84,14 @@ case class Declaration(decls: Map[Name, Signature]) {
   }
   /** Applies substitutions per `substs` exhaustively to sequent `s`. */
   def exhaustiveSubst(s: Sequent): Sequent = Sequent(s.ante.map(exhaustiveSubst[Formula]), s.succ.map(exhaustiveSubst[Formula]))
+
+  /** Applies implicit definition substitutions to expression-like `arg`. */
+  def implicitSubst[T <: Expression](arg: T): T = try {
+    USubst(isubsts).apply(arg).asInstanceOf[T]
+  } catch {
+    case ex: SubstitutionClashException =>
+      throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
+  }
 
   /** Expands all symbols in expression `arg` fully. */
   def expandFull[T <: Expression](arg: T): T = try {
@@ -388,7 +404,7 @@ object ArchiveParser extends ArchiveParser {
 
     // elaborate model and check
     val elaboratedModel = try {
-      elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model).asInstanceOf[Formula])
+      elaboratedDefs.implicitSubst(elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model).asInstanceOf[Formula]))
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }

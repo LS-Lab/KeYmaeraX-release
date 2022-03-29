@@ -291,6 +291,25 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     )
   }
 
+  it should "parse expanded" in {
+
+    val input =
+      """
+        |ArchiveEntry "Entry"
+        | Definitions
+        |   implicit Real exp1(Real s) '=
+        |     {{s:=0;exp1:=1;}; {s'=1,exp1'=exp1}};
+        | End.
+        | ProgramVariables Real y; End.
+        | Problem exp1(y) > 0 End.
+        |End.
+      """.stripMargin
+
+    val entry = parse(input).loneElement
+
+    entry.model shouldBe "exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=0) >>(y)>0".asFormula
+  }
+
   it should "fail to parse implicit function multi-variate definitions" in {
     val input =
       """

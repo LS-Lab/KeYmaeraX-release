@@ -654,8 +654,8 @@ object BelleParser extends TacticParser with Logging {
       val remainder = closeParenAndRemainder.tail
 
       def expand[T <: Expression](e: T): T =
-        if (expandAll) defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
-        else defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))
+        if (expandAll) defs.implicitSubst(defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))))
+        else defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.
