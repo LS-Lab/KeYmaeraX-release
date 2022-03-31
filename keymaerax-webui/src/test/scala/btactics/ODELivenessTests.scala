@@ -357,6 +357,15 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "support semialgebraic dV auto 2" in withMathematica { _ =>
+    val pr = proveBy("<{u'=-u^3}>(-1<=u & u <=1 )".asFormula,
+      semialgdVAuto()(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   "cor" should "refine a closed domain" in withQE { _ =>
     val seq = "x^2+y^2=1/2 ==> <{x'=x, y'=y & -1 <= x & x <= 1 & -1 <=y & y<=1}> (x=1|y=1|x=-1|y=-1)".asSequent
 

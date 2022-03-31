@@ -235,6 +235,22 @@ object ODEInvariance {
         ))
   })
 
+  private def refineToEqualities: DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("refineToEqualities needs top-level ODE")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("refineToEqualities needs top-level ODE but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    diffRefine(domainEqualities(sys.constraint).foldLeft(True:Formula)((f,g)=>And(f,Equal(g,Number(0)))))(pos)<(
+      skip,
+      diffWeakenG(pos) & QE
+    )
+  })
+
   // Helper tactic proving p*>0 -> <t'=1, x'=f(x)& p>=0> t!=0
   private def lpgeq(bound:Int) : BelleExpr =
     if (bound <= 0)
@@ -273,7 +289,9 @@ object ODEInvariance {
             orL(-3) < (
               cohideOnlyL(-3) & lpgeq(r - 1),
               implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
-                dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
+                // Get rid of nasty constraints
+                refineToEqualities(1) &
+                  dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
             )
           }
         )
@@ -285,7 +303,9 @@ object ODEInvariance {
           }
           else {
             implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
-              dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
+              // Get rid of nasty constraints
+              refineToEqualities(1) &
+              dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
           }
         )
       case GtFml(r) => ???
@@ -323,6 +343,8 @@ object ODEInvariance {
                 orL(-3) < (
                   cohideOnlyL(-3) & lpgeq(r - 1),
                   implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
+                    // Get rid of nasty constraints
+                    refineToEqualities(1) &
                     dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
                 )
               }
@@ -336,7 +358,9 @@ object ODEInvariance {
               }
               else {
                 implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
-                  dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
+                  // Get rid of nasty constraints
+                  refineToEqualities(1) &
+                  dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
               }
             )
         case GtFml(r) =>
@@ -427,7 +451,7 @@ object ODEInvariance {
           implyR(1) &
           //Cut P*
           cutR(pf)(1) <(
-            hideL(-3) & tac22 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done,
+            hideL(-3) & tac22 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & (prop & done | timeoutQE & done),
             skip
           ) & //Don't bother running the rest if QE fails
           hideL(-1) & DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) &
@@ -874,6 +898,9 @@ object ODEInvariance {
   private val one = Number(1)
   private val two = Number(2)
 
+  private lazy val ghostLemLe = remember("dbxy_ > 0 & dbxy_ * pp() <= 0 -> pp() <= 0".asFormula,QE)
+  private lazy val ghostLemGt = remember("dbxy_ > 0 & dbxy_ * pp() > 0 -> pp() > 0".asFormula,QE)
+
   def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
     if(!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("dgVdbx: position " + pos + " must point to a top-level succedent position")
@@ -931,6 +958,11 @@ object ODEInvariance {
     val lie = replaceODEfree(sump,liePre,ode)
     val dpPre = dot_prod(matvec_prod(Gco,ps),ps)
     val dp = replaceODEfree(sump,dpPre,ode)
+
+    val ghostLem =
+      if(negate) ghostLemGt
+      else ghostLemLe
+
     if(lie == Number(0))
       dC(cutp)(pos) <( skip, diffInd('full)(pos))
 
@@ -939,8 +971,9 @@ object ODEInvariance {
     dC(cutp)(pos) <(
       skip,
       useAt(pr)(pos.checkTop.getPos,1::Nil) &
-      DifferentialTactics.dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+      DifferentialTactics.dG(dey, None)(pos) & //Introduce the dbx ghost
         existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
+        useAt(ghostLem,PosInExpr(1::Nil))(pos.checkTop.getPos,1::Nil) &
         dC(gtz)(pos) < (
           // Do the vdbx case manually
           boxAnd(pos) & andR(pos) < (
@@ -1317,12 +1350,12 @@ object ODEInvariance {
     ()
   }
 
-  private def replaceODEfree(post:Term, t:Term, ode: DifferentialProgram) : Term = {
+  private[btactics] def replaceODEfree(post:Term, t:Term, ode: DifferentialProgram) : Term = {
     val consts = (StaticSemantics.freeVars(post) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
     consts.foldLeft(t)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
   }
 
-  private def replaceODEfree(post:Term, f:Formula, ode: DifferentialProgram) : Formula = {
+  private[btactics] def replaceODEfree(post:Term, f:Formula, ode: DifferentialProgram) : Formula = {
     val consts = (StaticSemantics.freeVars(post) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
     consts.foldLeft(f)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
   }
