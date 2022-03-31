@@ -312,6 +312,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |)""".stripMargin)
   }}
 
+  it should "delete labels of auto-closed goals" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables Real x,v,a; End. Problem x>=0 -> [{x'=v & v>=0 & a<=-5}](v>=0 & a<=0) End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = createInterpreter(proofId, db.db)
+    interpreter(
+      BelleParser.tacticParser("auto"),
+      BelleProvable.labeled(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)), Some(List(BelleTopLevelLabel("A label"))))
+    ) match {
+      case BelleProvable(p, l, _) =>
+        p shouldBe 'proved
+        l.toList.flatten shouldBe 'empty
+    }
+  }}
+
   it should "delete labels of closed goals" in withDatabase { db => withMathematica { _ =>
     val modelContent = "ProgramVariables Real x, eps; End. Problem true & !(-2<x&x<=1) & x<=1 -> !-2<x End."
     val proofId = db.createProof(modelContent)
