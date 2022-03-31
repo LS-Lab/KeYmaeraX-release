@@ -86,4 +86,34 @@ class UnificationToolsTests extends FlatSpec with Matchers with BeforeAndAfterEa
     )
   }
 
+  it should "find constifications" in {
+    UnificationTools.collectSubst(
+      Provable.startProof("x>=0 -> x>=0".asFormula), 0,
+      Provable.startProof("x()>=0 -> x()>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0),
+      List.empty).subsDefsInput should contain theSameElementsAs List(
+      "x() ~> x".asSubstitutionPair
+    )
+  }
+
+  it should "find constifications (2)" in {
+    UnificationTools.collectSubst(
+      Provable.startProof("x_>=0 & x__0<=0 -> x_>=0 & x__0<=0".asFormula), 0,
+      Provable.startProof("x_()>=0 & x__0()<=0 -> x_()>=0 & x__0()<=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0),
+      List.empty).subsDefsInput should contain theSameElementsAs List(
+      "x_() ~> x_".asSubstitutionPair,
+      "x__0() ~> x__0".asSubstitutionPair
+    )
+  }
+
+  it should "combine constifications and defs" in {
+    val defs = "P(x) ~> x>=0 :: nil".asDeclaration
+    UnificationTools.collectSubst(
+      Provable.startProof("P(x) -> P(x)".asFormula), 0,
+      Provable.startProof("x()>=0 -> x()>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0),
+      defs.substs).subsDefsInput should contain theSameElementsAs List(
+      "P(x) ~> x>=0".asSubstitutionPair,
+      "x() ~> x".asSubstitutionPair
+    )
+  }
+
 }

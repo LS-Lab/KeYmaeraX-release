@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Expression, NamedSymbol, Provable, StaticSemantics, SubstitutionPair, USubst, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Expression, FuncOf, Function, NamedSymbol, Nothing, Provable, Real, StaticSemantics, SubstitutionPair, USubst, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ProvableHelper.exhaustiveSubst
 
 
@@ -29,8 +29,17 @@ object UnificationTools {
     if (goal.subgoals(i) == sub.conclusion) USubst(List.empty)
     else {
       val (sg, ss, _) = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
-      val expand = (sg ++ ss).filter(expansible).toList.minBy(symbolDeps.indexOf)
-      val subst = USubst(substs.find({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).contains(expand) }).toList)
+      val (exp, nonexp) = (sg ++ ss).partition(symbolDeps.contains)
+      val constifications =
+        if (sub.isProved) {
+          nonexp.groupBy(n => (n.name, n.index, n.sort)).filter(_._2.size > 1).flatMap({ case (_, s) => s.toList match {
+            case (v: Variable) :: (f@Function(_, _, Unit, Real, false)) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
+            case (f@Function(_, _, Unit, Real, false)) :: (v: Variable) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
+            case _ => None
+          } }).toList
+        } else List.empty
+      val expand = if (exp.nonEmpty) Some(exp.minBy(symbolDeps.indexOf)) else None
+      val subst = expand.map(e => USubst(substs.find({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).contains(e) }).toList)).getOrElse(USubst(List.empty)) ++ USubst(constifications)
       assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbol differences " + sg.map(_.prettyString).mkString(",") + " and " + ss.map(_.prettyString).mkString(","))
 
       val substGoal = exhaustiveSubst(goal, subst)
