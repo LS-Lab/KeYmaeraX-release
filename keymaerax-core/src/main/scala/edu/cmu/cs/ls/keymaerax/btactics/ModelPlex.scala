@@ -117,9 +117,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   @Tactic(longDisplayName = "ModelPlex Monitor Shape Formatting")
   def mxFormatShape(shape: String): InputTactic = inputanon ((seq: Sequent) => shape match {
-    //@ performance bottleneck: prop
-    case "boolean" => PropositionalTactics.rightAssociate
-    case "metricprg" => PropositionalTactics.rightAssociate & ModelPlex.chaseToTests(combineTests = false)(1)*2
+    case "boolean" => PropositionalTactics.rightAssociate(SuccPos(0))
+    case "metricprg" => PropositionalTactics.rightAssociate(SuccPos(0)) & ModelPlex.chaseToTests(combineTests = false)(1)*2
     case "metricfml" => toMetricT(seq.succ.head)
   })
 
@@ -1146,20 +1145,23 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val componentResults = monitorComponents.zipWithIndex.map({ case (f, i) =>
         //@note backend QE seems to not always handle f[] well in the context of existential quantifiers
         preQE(f, i)
-//        val consts = StaticSemantics.symbols(f).
-//          filter({ case Function(_, _, Unit, Real, false) => true case _ => false }).
-//          map({ case fn@Function(n, i, Unit, s, _) => FuncOf(fn, Nothing) -> Variable(n, i, s) }).toList
-//        val varified = consts.foldLeft(f)({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
+        val consts = StaticSemantics.symbols(f).
+          filter({ case Function(_, _, Unit, Real, false) => true case _ => false }).
+          map({ case fn@Function(n, i, Unit, s, _) => FuncOf(fn, Nothing) -> Variable(n, i, s) }).toList
+        val varified = consts.foldLeft(f)({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
 
-        val qfProof = timed({
-          ModelPlex.mxPartialQE(f, defs, tool)
+        val qfVarifiedProof = timed({
+          ModelPlex.mxPartialQE(varified, defs, tool)
           //@todo
           //tool.simplify(qfResult.subgoals.head.succ.head, assumptions)
         }, "QE " + (i+1) + "/" + monitorComponents.size)
 
-        //@todo cannot substitute Variable ~> FuncOf
-        //val result = qfResult.conclusion.succ.head
-        //val fnified = consts.foldLeft(result)({ case (fml, (fn, v)) => fml.replaceAll(v, fn) })
+        val result = qfVarifiedProof.conclusion.succ.head
+        val fnified = consts.foldLeft(result)({ case (fml, (fn, v)) => fml.replaceAll(v, fn) })
+
+        val qfProof = consts.foldLeft(ProvableSig.startProof(fnified))({
+          case (p, c) => p(FOQuantifierTactics.allInstantiateInverse(c)(SuccPos(0)).computeResult _, 0)(ProofRuleTactics.skolemizeR(SuccPos(0)).computeResult _, 0)
+        })(qfVarifiedProof, 0)
 
         val Equiv(_, qfResult) = qfProof.conclusion.succ.head
         postQE(qfResult, i)
