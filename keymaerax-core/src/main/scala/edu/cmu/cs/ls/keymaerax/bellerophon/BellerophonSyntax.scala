@@ -939,7 +939,7 @@ object BelleProvable {
 
 /** A Provable during a Bellerophon interpreter run, readily paired with an optional list of BelleLabels */
 case class BelleProvable(p: ProvableSig, label: Option[List[BelleLabel]], defs: Declaration) extends BelleExpr with BelleValue {
-  if (label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
+  if (label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length})")
   override def toString: String = p.prettyString
   override def prettyString: String = p.prettyString
 }
