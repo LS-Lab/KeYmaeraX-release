@@ -99,7 +99,7 @@ object KeYmaeraXProofChecker {
         assert(witness.subgoals.isEmpty)
         val expected = inputSequent.exhaustiveSubst(USubst(defs.substs))
         //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
-        insist(Parser.parser(PrettyPrinter.printer(input)) == input, "parse of print is identity")
+        insist(Parser.parser.formulaParser(PrettyPrinter.printer(input)) == input, "parse of print is identity")
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
         insist(witness.proved == expected, "Expected to have proved the original problem and not something else, but proved witness deviates from input")
         //@note check that proved conclusion is what we actually wanted to prove
