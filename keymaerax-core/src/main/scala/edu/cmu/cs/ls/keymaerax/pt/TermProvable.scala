@@ -30,7 +30,7 @@ trait ProvableSig {
   /** The core's [[Provable]] that this object really represents. */
   val underlyingProvable : Provable = this match {
     case TermProvable(child, _) => child.underlyingProvable
-    case ElidingProvable(provable) => provable
+    case ElidingProvable(provable, _) => provable
   }
 
   /** Returns a copy of this provable with the underlying provable replaced by `underlying`. */
@@ -40,7 +40,7 @@ trait ProvableSig {
   }
 
   /* The number of steps performed to create this provable. */
-  def steps: Int = 0
+  val steps: Int
 
   /**
     * Position types for the subgoals of a Provable.
@@ -354,10 +354,10 @@ object ProvableSig {
 }
 
 /**
-  * A direct [[Provable]] straight from the core that does not keep track of its proof term.
-  * Directly forwards all function calls to [[provable]].
+  * A direct [[Provable]] straight from the core that does not keep track of its proof term, but only tracks number of
+  * proof steps. Directly forwards all function calls to [[provable]].
   */
-case class ElidingProvable(provable: Provable) extends ProvableSig {
+case class ElidingProvable(provable: Provable, steps: Int) extends ProvableSig {
   override val conclusion: Sequent = provable.conclusion
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
 
@@ -382,7 +382,7 @@ case class ElidingProvable(provable: Provable) extends ProvableSig {
   override def apply(prolongation: ProvableSig): ProvableSig =
     ElidingProvable(provable(prolongation.underlyingProvable), steps+prolongation.steps)
 
-  override def sub(subgoal: Subgoal): ProvableSig = ElidingProvable(provable.sub(subgoal), steps)
+  override def sub(subgoal: Subgoal): ProvableSig = ElidingProvable(provable.sub(subgoal), 0)
 
   override def startProof(goal: Sequent): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
 
@@ -393,19 +393,28 @@ case class ElidingProvable(provable: Provable) extends ProvableSig {
   override def proveArithmeticLemma(t: QETool, f: Formula): Lemma = ElidingProvable.proveArithmeticLemma(t,f)
 
   override def prettyString: String = s"ElidingProvable(${provable.prettyString})"
+
+  /** @inheritdoc */
+  override def equals(obj: Any): Boolean = obj match {
+    case ElidingProvable(o, _) => provable == o // ignore steps for equality check (important for lemma assertions)
+    case _ => super.equals(obj)
+  }
+
+  /** @inheritdoc */
+  override def hashCode(): Subgoal = provable.hashCode()
 }
 
 object ElidingProvable {
   val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, ElidingProvable(kvp._2, 0)))
   val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, ElidingProvable(kvp._2, 0)))
 
-  def apply(provable: Provable, initSteps: Int): ElidingProvable = new ElidingProvable(provable) { override def steps: Int = initSteps }
+  def apply(provable: Provable): ElidingProvable = new ElidingProvable(provable, 0)
 
   def startProof(goal: Sequent): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
 
   def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
 
-  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f))
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f), 1)
 
   def proveArithmeticLemma(tool: QETool, f: Formula): Lemma = {
     val fact = proveArithmetic(tool, f)
@@ -443,7 +452,7 @@ object TermProvable {
     TermProvable(ElidingProvable.startProof(goal), StartProof(fml2Seq(goal)))
   }
 
-  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f))
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f), 1)
 
   def proveArithmeticLemma(t: QETool, f: Formula): Lemma = {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
@@ -467,6 +476,9 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
 
   /** @inheritdoc */
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
+
+  /** @inheritdoc */
+  override val steps: Int = 0
 
   /** @inheritdoc */
   override def proved: Sequent = provable.proved

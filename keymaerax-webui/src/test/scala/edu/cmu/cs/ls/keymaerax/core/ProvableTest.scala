@@ -41,6 +41,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // check if proof successful
     if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be (true)
+    proving.steps shouldBe 1
   }
 
   it should "glue trivial proofs forward" in {
@@ -53,6 +54,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // check if proof successful
     if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be (true)
+    proving.steps shouldBe 1
 
     val more = Sequent(IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
     // another conjecture
@@ -60,11 +62,13 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // construct another (partial) proof
     val moreProving = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
     moreProving.isProved should be (false)
+    moreProving.steps shouldBe 2
     // merge proofs by gluing their Provables together
     val mergedProving = moreProving(proving, 0)
     // check if proof successful
     if (mergedProving.isProved) println("Successfully proved " + mergedProving.proved)
     mergedProving.isProved should be (true)
+    mergedProving.steps shouldBe 3
   }
 
   it should "glue trivial proofs backward" in {
@@ -75,6 +79,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // construct another (partial) proof
     val moreProving = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
     moreProving.isProved should be (false)
+    moreProving.steps shouldBe 2
 
     val verum = Sequent(IndexedSeq(), IndexedSeq(True))
     // conjecture
@@ -84,12 +89,21 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // check if proof successful
     if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be (true)
+    proving.steps shouldBe 1
 
     // merge proofs by gluing their Provables together
     val mergedProving = moreProving(proving, 0)
     // check if proof successful
     if (mergedProving.isProved) println("Successfully proved " + mergedProving.proved)
     mergedProving.isProved should be (true)
+    mergedProving.steps shouldBe 3
+
+    val otherProving = moreProving.sub(0)(CloseTrue(SuccPos(0)), 0)
+    otherProving shouldBe 'proved
+    otherProving.steps shouldBe 1
+    val otherMergedProving = moreProving(otherProving, 0)
+    otherMergedProving shouldBe 'proved
+    otherMergedProving.steps shouldBe 3
   }
 
 /**
@@ -122,6 +136,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
         Close(AntePos(0), SuccPos(0)), 0)
     proof.isProved should be (true)
     proof.proved should be (finGoal)
+    proof.steps shouldBe 5
   }
 
   /**
@@ -164,6 +179,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
       ImplyRight(SuccPos(0)), 0) (merged, 0)
     proof.isProved should be (true)
     proof.proved should be (finGoal)
+    proof.steps shouldBe 5
   }
 
   /**
@@ -202,6 +218,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
       )
     proof.isProved should be (true)
     proof.proved should be (Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))))
+    proof.steps shouldBe 5
   }
 
   /**
@@ -261,6 +278,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     val proved = finProof(Close(AntePos(0), SuccPos(0)), 0)
     proved.isProved should be (true)
     proved.proved should be (finGoal)
+    proved.steps shouldBe 5
   }
 
   it should "not close different formulas by identity" in {
@@ -337,6 +355,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
       Close(AntePos(0), SuccPos(0)), 0)
     proof.isProved should be (true)
     proof.proved should be (finGoal)
+    proof.steps shouldBe 4
 
     // prolong forward
     // x>5 |- x>5 & true
@@ -344,6 +363,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     val finProof = proof(goal, ImplyRight(SuccPos(0)))
     finProof.isProved should be (true)
     finProof.proved should be (goal)
+    finProof.steps shouldBe 5
     // incorrectly prolong forward
     a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, AndRight(SuccPos(0))))
     a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, OrRight(SuccPos(0))))
