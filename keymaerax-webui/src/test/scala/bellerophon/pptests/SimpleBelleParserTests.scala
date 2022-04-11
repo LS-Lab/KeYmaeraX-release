@@ -517,7 +517,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "work in the beginning of a branch" in {
     val tactic = BelleParser("andR(1) & <(?(id), ?(orR(1)))")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.id), Idioms.?(TactixLibrary.orR(1))))
+    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.id.asInstanceOf[BelleExpr]), Idioms.?(TactixLibrary.orR(1))))
   }
 
 

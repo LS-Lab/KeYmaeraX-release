@@ -124,7 +124,7 @@ trait UnifyUSCalculus {
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
   @Tactic()
-  val fail : BelleExpr = anon {(_: Sequent) => throw new TacticInapplicableFailure("fail")}
+  val fail: BuiltInTactic = anon { (_: ProvableSig) => throw new TacticInapplicableFailure("fail")}
 
 
   /*******************************************************************

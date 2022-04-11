@@ -894,7 +894,7 @@ object SimplifierV3 {
       case None => List()
       case Some(v) if v.isExactDouble && v.isValidInt =>
         val num = Number(v.toIntExact)
-        val pr = proveBy(Equal(t, num), ?(RCF))
+        val pr = ProvableSig.startProof(Equal(t, num))(?(RCF.result _), 0)
         if (pr.isProved) List(pr)
         else List()
       case _ => List()

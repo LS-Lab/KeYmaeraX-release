@@ -967,7 +967,7 @@ object TactixLibrary extends HilbertCalculus
     //    pQE -----------
     conclusion="Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
     displayLevel="browse")
-  def RCF: BelleExpr = anon { ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))}
+  def RCF: BuiltInTactic = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true

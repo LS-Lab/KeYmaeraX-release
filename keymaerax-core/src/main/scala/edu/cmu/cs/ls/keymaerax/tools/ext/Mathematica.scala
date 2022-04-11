@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleCEX, OnAll}
-import edu.cmu.cs.ls.keymaerax.btactics.{InvGenTool, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{InvGenTool, PropositionalTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
@@ -246,9 +246,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private def splitFormula(fml: Formula): Goal = fml match {
     case Forall(x, p) => applyTo(splitFormula(p), Forall(x, _))
     case _: Imply =>
-      val propSubgoals = TactixLibrary.proveBy(fml, TactixLibrary.prop).subgoals
-      val expandedSubgoals = TactixLibrary.proveBy(fml, TactixLibrary.expandAll & TactixLibrary.prop &
-        OnAll(TactixLibrary.applyEqualities)).subgoals
+      val propSubgoals = ProvableSig.startProof(fml)(PropositionalTactics.prop, 0).subgoals
+      val expandedSubgoals = ProvableSig.startProof(fml)(TactixLibrary.expandAll andThen PropositionalTactics.prop, 0)(TactixLibrary.applyEqualities).subgoals
       if (propSubgoals.size > 1) {
         if (expandedSubgoals.size > 1) OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula))), AllOf(expandedSubgoals.map(p => Atom(p.toFormula)))))
         else OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula)))))

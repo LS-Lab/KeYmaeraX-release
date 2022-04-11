@@ -445,9 +445,10 @@ trait RightTactic extends PositionalTactic {
 
 
 /* Common base class for built-in tactics coming from the base layer of the tactic library directly manipulate core Provables. */
-abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
+abstract case class BuiltInTactic(name: String) extends NamedBelleExpr with (ProvableSig => ProvableSig) {
   private[bellerophon] final def execute(provable: ProvableSig): ProvableSig = result(provable)
   private[keymaerax] def result(provable: ProvableSig): ProvableSig
+  def apply(provable: ProvableSig): ProvableSig = result(provable)
 }
 
 

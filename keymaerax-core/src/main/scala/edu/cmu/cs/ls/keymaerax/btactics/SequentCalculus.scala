@@ -311,7 +311,7 @@ trait SequentCalculus {
   @Tactic("∀R",
     premises = "Γ |- p(x), Δ",
     conclusion = "Γ |- ∀x p(x), Δ")
-  val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
+  val allR: BuiltInPositionTactic = FOQuantifierTactics.allSkolemize
   private[btactics] val allRInfo: TacticInfo = TacticInfo("allR")
   @Tactic("∀Ri",
     inputs = "f:term;;x[x]:option[variable]",
@@ -790,10 +790,10 @@ trait SequentCalculus {
   // Equality rewriting tactics
 
   /** Expands all special functions (abs/min/max). */
-  def expandAll: BelleExpr = EqualityTactics.expandAll
+  val expandAll: BuiltInTactic = EqualityTactics.expandAll
 
   /** Rewrites all atom equalities in the assumptions. */
-  def applyEqualities: BelleExpr = EqualityTactics.applyEqualities
+  val applyEqualities: BuiltInTactic = EqualityTactics.applyEqualities
 
   //  meta-tactics for proof structuring information but no effect
 

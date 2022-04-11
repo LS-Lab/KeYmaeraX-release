@@ -20,7 +20,7 @@ import scala.util.Try
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.
  */
-private object PropositionalTactics extends Logging {
+private[keymaerax] object PropositionalTactics extends Logging {
   /**
    * Inverse of [[SequentCalculus.implyR]].
    * @author Nathan Fulton
