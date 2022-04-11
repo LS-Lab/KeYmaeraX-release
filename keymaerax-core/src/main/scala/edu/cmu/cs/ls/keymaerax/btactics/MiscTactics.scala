@@ -265,6 +265,11 @@ object Idioms {
     else r
   }
 
+  /** Try `s` and recover from proof search control failure with `t`. */
+  def or(s: ProvableSig=>ProvableSig, t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => {
+    try { s(pr) } catch { case _: BelleProofSearchControl => t(pr) }
+  }
+
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
 
