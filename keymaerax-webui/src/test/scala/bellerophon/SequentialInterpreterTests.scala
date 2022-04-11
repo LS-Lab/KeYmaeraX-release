@@ -19,6 +19,8 @@ import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 
+import scala.collection.immutable._
+
 /**
  * Very fine-grained tests of the sequential interpreter.
  * These tests are all I/O tests, so it should be possible to switch out
@@ -705,12 +707,12 @@ class SequentialInterpreterTests extends TacticTestBase {
         |Problem p(x) -> [y:=x; ++ ?q(y);]q(y) End.
         |End.""".stripMargin).head
 
-    proveBy(entry.model.asInstanceOf[Formula],
+    proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
       ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "==> x>0 -> [y:=x; ++ ?y>0;]y>0".asSequent, "Unexpected expand result") &
-        implyR(1) & choiceb(1) & andR(1) <(assignb(1) & id, testb(1) & implyR(1) & id)) shouldBe 'proved
+        implyR(1) & choiceb(1) & andR(1) <(assignb(1) & id, testb(1) & implyR(1) & id), entry.defs) shouldBe 'proved
 
-    proveBy(entry.model.asInstanceOf[Formula],
+    proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
       implyR(1) & choiceb(1) & andR(1) <(
         assignb(1) &
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
@@ -722,8 +724,8 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.assert(_ == "p(x),q(y) ==> q(y)".asSequent, "Unexpected result prior to expand") &
         ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0,y>0 ==> y>0".asSequent, "Unexpected expand result") &
-        id)
-        ) shouldBe 'proved
+        id),
+      entry.defs) shouldBe 'proved
   }
 
   it should "replay when expanded only on some branches" in withMathematica { _ =>
@@ -734,7 +736,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         |Problem p(x) -> [y:=x; ++ ?q(y);]q(y) End.
         |End.""".stripMargin).head
 
-    proveBy(entry.model.asInstanceOf[Formula],
+    proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
       implyR(1) & choiceb(1) & andR(1) <(
         assignb(1) &
           DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
@@ -742,11 +744,11 @@ class SequentialInterpreterTests extends TacticTestBase {
           DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
           id
         ,
-        testb(1) & implyR(1) & id)
-    ) shouldBe 'proved
+        testb(1) & implyR(1) & id),
+      entry.defs) shouldBe 'proved
 
     // branches in reverse order
-    proveBy(entry.model.asInstanceOf[Formula],
+    proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
       implyR(1) & choiceb(1) & useAt(Ax.andCommute)(1) & andR(1) <(
         testb(1) & implyR(1) & id
         ,
@@ -754,8 +756,8 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
         ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
-        id)
-    ) shouldBe 'proved
+        id),
+      entry.defs) shouldBe 'proved
   }
 
   it should "support introducing variables for function symbols of closed provables" in withMathematica { _ =>
@@ -801,6 +803,28 @@ class SequentialInterpreterTests extends TacticTestBase {
     val defs = "g(x) ~> x^2+1".asDeclaration
     proveByS("==> x^2<=g(x) & x^2/g(x)>=0".asSequent, andR(1) <(skip, QE), defs).subgoals.
       loneElement shouldBe "==> x^2<=x^2+1".asSequent
+  }
+
+  it should "extend parent provable" in withMathematica { _ =>
+    val defs = "g(x) ~> 2*x".asDeclaration
+    proveByS("min(v,0)>=0, x_0>=0, x=x_0 ==> [{x'=v}]g(x)>=g(x_0)".asSequent,
+      EqualityTactics.minmax(-1) & dIRule(1) <(QE, TactixLibrary.unfoldProgramNormalize & QE), defs) shouldBe 'proved
+  }
+
+  it should "extend parent provable on branch (1)" in withMathematica { _ =>
+    val defs = "g(x) ~> 2*x".asDeclaration
+    //@todo want g(x)>=0 in remaining subgoal, requires delayed substitution in interpreter combine branch result
+    proveByS("min(v,0)>=0, x_0>=0, x=x_0 ==> g(x)>=0 & [{x'=v}]g(x)>=g(x_0)".asSequent,
+      andR(1) <(skip, EqualityTactics.minmax(-1) & dIRule(1) <(QE, TactixLibrary.unfoldProgramNormalize & QE)), defs).
+      subgoals.loneElement shouldBe "min(v,0)>=0, x_0>=0, x=x_0 ==> 2*x>=0".asSequent
+  }
+
+  it should "extend parent provable on branch after all definitions were expanded" in withMathematica { _ =>
+    val defs = "g(x) ~> 2*x".asDeclaration
+    //@todo want g(x)>=0 in remaining subgoal, requires delayed substitution in interpreter combine branch result
+    proveByS("min(v,0)>=0, x_0>=0, x=x_0 ==> g(x)>=0 & [{x'=v}]g(x)>=g(x_0)".asSequent,
+      andR(1) <(skip, ExpandAll(defs.substs) & EqualityTactics.minmax(-1) & dIRule(1) <(QE, TactixLibrary.unfoldProgramNormalize & QE)), defs).
+      subgoals.loneElement shouldBe "min(v,0)>=0, x_0>=0, x=x_0 ==> 2*x>=0".asSequent
   }
 
   it should "FEATURE_REQUEST: apply constified conclusion to non-constified open goal" taggedAs TodoTest in withMathematica { _ =>

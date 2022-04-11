@@ -46,10 +46,26 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       // preserve delayed substitutions
       val result = v match {
         case p: BelleDelayedSubstProvable => exprResult match {
-          case fp: BelleDelayedSubstProvable =>
-            assert(p.parent.isEmpty || p.parent == fp.parent)
-            new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst ++ fp.subst, p.parent)
-          case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst, p.parent)
+          case r: BelleDelayedSubstProvable =>
+            assert(p.parent.isEmpty || p.parent == r.parent)
+            new BelleDelayedSubstProvable(r.p, r.label, p.defs, p.subst ++ r.subst, if (p.parent.isEmpty) r.parent else p.parent)
+          case r: BelleProvable => new BelleDelayedSubstProvable(r.p, r.label, p.defs, p.subst, p.parent)
+          case _ => exprResult
+        }
+        case p: BelleProvable => exprResult match {
+          case r: BelleDelayedSubstProvable => r.parent match {
+            case None => r
+            case Some((pp, i)) =>
+              assert(pp(r.subst).conclusion == p.p(r.subst).conclusion, "Expected matching conclusions:\nexpected\n" + p.p(r.subst).conclusion.prettyString + "\nbut got\n" + pp(r.subst).conclusion.prettyString)
+              if (r.p.isProved) {
+                val substGoal = exhaustiveSubst(pp, r.subst)
+                val substSub = exhaustiveSubst(r.p, r.subst)
+                val other = collectSubst(substGoal, i, substSub, r.defs)
+                new BelleDelayedSubstProvable(exhaustiveSubst(substGoal, other)(exhaustiveSubst(substSub, other), i), r.label, r.defs, r.subst ++ other, None)
+              } else {
+                r
+              }
+          }
           case _ => exprResult
         }
         case _ => exprResult
@@ -92,6 +108,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
                                            defs: Declaration): BelleProvable = {
     //@todo preserve labels from parent p (turn new labels into sublabels)
     //@todo combine result defs?
+
+    //@todo delayed substitution across results
 
     //@note when a subgoal is closed = replaced with 0 new subgoals: drop labels
     val (combinedResult, combinedLabels, combinedSubsts) = {
@@ -384,11 +402,12 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
             val addSubst = collectSubst(provable, 0, sub, p.defs)
             val substGoal = exhaustiveSubst(provable, addSubst)
             val substSub = exhaustiveSubst(sub, addSubst)
-            new BelleDelayedSubstProvable(substGoal(substSub, 0), p.label, p.defs, p.subst ++ addSubst, p.parent)
+            new BelleDelayedSubstProvable(substGoal(substSub, 0), p.label, p.defs, p.subst ++ addSubst, None)
           } catch {
             case _: SubstitutionClashException =>
               // happens on Let(v()=v, t) if t did not (yet) finish the proof, e.g., dIRule. postpone until subgoals are proved
-              new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ us, p.parent)
+              assert(p.parent.isEmpty)
+              new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ us, Some(provable, 0))
           }
         case BelleProvable(derivation, resultLbl, resultDefs) =>
           try {
@@ -634,9 +653,6 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
   }
 
-  /** Maps sequents to BelleProvables. */
-  protected def bval(s: Sequent, lbl: Option[List[BelleLabel]], defs: Declaration) = BelleProvable(ProvableSig.startProof(s), lbl, defs)
-
   /** Applies substitutions `substs` to the products of `generator` and returns a new generator that includes both
     * original and substituted products */
   private def substGenerator[A](generator: Generator[A], substs: List[USubst]): Generator[A] = {
@@ -705,7 +721,7 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
         //Compute the results of piecewise applications of children to provable subgoals.
         val results: Seq[BelleProvable] = children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
           val ithResult = try {
-            apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
+            apply(e_i, BelleProvable(ProvableSig.startProof(s_i), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
           } catch {
             case e: BelleThrowable => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
           }
@@ -774,7 +790,7 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
         val results: Seq[Either[BelleValue, BelleThrowable]] =
           children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
             try {
-              Left(apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs)))
+              Left(apply(e_i, BelleProvable(ProvableSig.startProof(s_i), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs)))
             } catch {
               case e: BelleThrowable =>
                 Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
@@ -810,7 +826,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
         //Compute the results of piecewise applications of children to provable subgoals.
         val results: Seq[BelleProvable] = children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
           val ithResult = try {
-            apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
+            apply(e_i, BelleProvable(ProvableSig.startProof(s_i), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
           } catch {
             case e: BelleThrowable => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
           }
