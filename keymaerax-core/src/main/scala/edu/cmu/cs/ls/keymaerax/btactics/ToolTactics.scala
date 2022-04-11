@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -51,7 +52,7 @@ private object ToolTactics {
         if (!ToolProvider.isInitialized) throw new TacticAssertionError("Failed to switch to Z3: unable to initialize the connection; please check the configured path to Z3")
       case _ => throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
     }
-    nil
+    Idioms.nil
   }}
 
   /** Assert that there is no counter example. skip if none, error if there is. */
@@ -75,43 +76,60 @@ private object ToolTactics {
 
   /** Prepares a QE call with all pre-processing steps, uses `order` to form the universal closure and finishes the
     * remaining subgoals using `doQE`. */
-  def prepareQE(order: List[Variable], doQE: BelleExpr): BelleExpr = {
-    val closure = toSingleFormula & Idioms.doIf(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosure(order)(1))
+  def prepareQE(order: List[Variable], rcf: BuiltInTactic): BuiltInTactic = anon { (provable: ProvableSig) =>
+    val closure = toSingleFormula andThen
+      doIfFw(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosureFw(order)(1).computeResult)
 
     val expand =
       if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
-      else EqualityTactics.expandAll &
+      else EqualityTactics.expandAll andThen
         assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }),
           "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
-    Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
-      assertT(_.isFOL, "QE on FOL only") &
-        SaturateTactic(alphaRule | allR('R)) &
-        Idioms.doIf(!_.isProved)(
-          close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
+    if (!provable.isProved && provable.subgoals.forall(_.isFOL)) {
+      val alpha = provable(saturate(or(alphaRule, allR('R).computeResult)), 0)
+      if (!alpha.isProved) {
+        alpha(or(
+          close,
+          doIfElseFw(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
             // if
-            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-              abbreviateUninterpretedFuncs & closure & doQE
-            ,
+            EqualityTactics.applyEqualities andThen
+              hideTrivialFormulas andThen
+              abbreviateDifferentials andThen
+              expand andThen
+              abbreviateUninterpretedFuncs andThen
+              closure andThen
+              rcf,
             // else
-            anon { (s: Sequent) =>
-              val msg =
-                if (StaticSemantics.symbols(s).exists(n => n.name.startsWith("p_") || n.name.startsWith("q_"))) {
-                  "Sequent cannot be proved. Please try to unhide some formulas."
-                } else {
-                  "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
-                }
-              hidePredicates & hideQuantifiedFuncArgsFmls &
-                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-                abbreviateUninterpretedFuncs & closure &
-                Idioms.doIf(_ => doQE != nil)(
-                  doQE & done | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg) }
+            (pr: ProvableSig) => try {
+              pr(hidePredicates andThen
+                hideQuantifiedFuncArgsFmls andThen
+                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL,
+                  "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") andThen
+                EqualityTactics.applyEqualities andThen
+                hideTrivialFormulas andThen
+                abbreviateDifferentials andThen
+                expand andThen
+                abbreviateUninterpretedFuncs andThen
+                closure andThen
+                doIfFw(_ => rcf != skip)(
+                  rcf andThen doIfFw(!_.isProved)(fail)
                 )
+              )
+            } catch {
+              case _: TacticInapplicableFailure =>
+                val msg =
+                  if (StaticSemantics.symbols(pr.subgoals.head).exists(n => n.name.startsWith("p_") || n.name.startsWith("q_"))) {
+                    "Sequent cannot be proved. Please try to unhide some formulas."
+                  } else {
+                    "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
+                  }
+                throw new TacticInapplicableFailure(msg)
             }
           )
-        )
-    )
+        ), 0)
+      } else alpha
+    } else provable
   }
 
   /** Performs QE and fails if the goal isn't closed. */
@@ -372,7 +390,7 @@ private object ToolTactics {
           SaturateTactic(andL('L)) & SimplifierV3.fullSimpTac(),
           QE & done
         ))
-       else nil)
+       else Idioms.nil)
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
