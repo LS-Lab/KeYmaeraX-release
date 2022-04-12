@@ -158,7 +158,7 @@ object SimplifierV2 {
     res match {
       case None => None
       case Some(v) =>
-        val pr = ProvableSig.startProof(Equal(t,Number(v)))(?(RCF.result _), 0)
+        val pr = ProvableSig.startProof(Equal(t,Number(v)))(opt(RCF), 0)
         if(pr.isProved) Some(Number(v),pr)
         else None
     }

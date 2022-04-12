@@ -511,7 +511,7 @@ case class AppliedDependentTwoPositionTactic(t: DependentTwoPositionTactic, p1: 
   * Stores the position tactic and position at which the tactic was applied.
   * Useful for storing execution traces.
   */
-case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: PositionLocator) extends BelleExpr {
+case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: PositionLocator) extends BelleExpr with (ProvableSig=>ProvableSig) {
   import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
   final def computeResult(provable: ProvableSig) : ProvableSig = try { locator match {
       //@note interprets PositionLocator
@@ -540,6 +540,9 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       ": applied at position " + locator.prettyString +
       " may point outside the positions of the goal " + provable.underlyingProvable.prettyString, ex)
   }
+
+  /** @inheritdoc */
+  override def apply(provable: ProvableSig): ProvableSig = computeResult(provable)
 
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
   @tailrec
@@ -600,8 +603,9 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends NamedBelleExp
 }
 
 /** Motivation is similar to [[AppliedPositionTactic]], but for [[BuiltInTwoPositionTactic]] */
-case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr {
+case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr with (ProvableSig=>ProvableSig) {
   final def computeResult(provable: ProvableSig) : ProvableSig = positionTactic.computeResult(provable, posOne, posTwo)
+  override def apply(provable: ProvableSig): ProvableSig = computeResult(provable)
 
   override def prettyString: String = positionTactic.prettyString + "(" + posOne.prettyString + "," + posTwo.prettyString + ")"
 }

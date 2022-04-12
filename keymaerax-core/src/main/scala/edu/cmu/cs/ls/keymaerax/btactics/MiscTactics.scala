@@ -252,7 +252,7 @@ object Idioms {
 
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = t | TactixLibrary.nil
-  def ?(t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => try {
+  def opt(t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => try {
     t(pr)
   } catch {
     case _: BelleProofSearchControl => pr
@@ -260,7 +260,7 @@ object Idioms {
 
   /** Saturate tactic `t` until no longer applicable. */
   def saturate(t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => {
-    val r = pr(?(t))
+    val r = pr(opt(t))
     if (r != pr) r(saturate(t))
     else r
   }

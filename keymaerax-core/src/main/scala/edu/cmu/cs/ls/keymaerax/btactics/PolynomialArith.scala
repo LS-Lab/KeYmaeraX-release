@@ -526,7 +526,7 @@ object PolynomialArith extends Logging {
     val gt = groundNormalise(t)
     (if(toNum) gt.flatMap(ratToNum) else gt) match{
       case Some(tt) =>
-        val pr = ProvableSig.startProof(Equal(t,tt))(?(RCF.result _), 0)
+        val pr = ProvableSig.startProof(Equal(t,tt))(opt(RCF), 0)
         if (pr.isProved) Some(tt,pr) else None
       case _ => None
     }

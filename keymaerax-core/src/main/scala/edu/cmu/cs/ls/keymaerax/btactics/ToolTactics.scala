@@ -78,7 +78,7 @@ private object ToolTactics {
     * remaining subgoals using `doQE`. */
   def prepareQE(order: List[Variable], rcf: BuiltInTactic): BuiltInTactic = anon { (provable: ProvableSig) =>
     val closure = toSingleFormula andThen
-      doIfFw(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosureFw(order)(1).computeResult)
+      doIfFw(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosureFw(order)(1))
 
     val expand =
       if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
@@ -87,7 +87,7 @@ private object ToolTactics {
           "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
     if (!provable.isProved && provable.subgoals.forall(_.isFOL)) {
-      val alpha = provable(saturate(or(alphaRule, allR('R).computeResult)), 0)
+      val alpha = provable(saturate(or(alphaRule, allR('R))), 0)
       if (!alpha.isProved) {
         alpha(or(
           close,
@@ -383,7 +383,7 @@ private object ToolTactics {
         //onall
         saturate(alphaRule) andThen or(
           close,
-          saturate(EqualityTactics.atomExhaustiveEqL2R('L).computeResult) andThen
+          saturate(EqualityTactics.atomExhaustiveEqL2R('L)) andThen
             hidePredicates andThen
             toSingleFormula andThen
             orderedClosure(po) andThen
@@ -450,8 +450,8 @@ private object ToolTactics {
       def applyFacts(facts: List[Formula]): BuiltInTactic = anon { (provable: ProvableSig) =>
         facts.map({ case Equiv(f, result) => (pr: ProvableSig) =>
           (pr(toSingleFormula, 0)
-          (FOQuantifierTactics.universalClosureFw(leadingQuantOrder(f).toList)(1).computeResult _, 0)
-          (cutLRFw(result)(1).computeResult _, 0)
+          (FOQuantifierTactics.universalClosureFw(leadingQuantOrder(f).toList)(1), 0)
+          (cutLRFw(result)(1), 0)
           /* show */
           (EquivifyRight(SuccPos(0)), 1)
           (CommuteEquivRight(SuccPos(0)), 1)
@@ -467,7 +467,7 @@ private object ToolTactics {
       }
 
       def applySingleFact(result: Formula, fact: ProvableSig): BuiltInTactic = anon { provable: ProvableSig =>
-        (provable(cutLRFw(result)(SuccPos(0)).computeResult _, 0)
+        (provable(cutLRFw(result)(SuccPos(0)), 0)
         /* show */
         (EquivifyRight(SuccPos(0)), 1)
         (CommuteEquivRight(SuccPos(0)), 1)
@@ -482,7 +482,7 @@ private object ToolTactics {
         case result: And =>
           //@note apply same steps as QETacticTool to use `close` in applyFacts
           val facts = FormulaTools.conjuncts(result)
-          val skolemized = provable(Idioms.saturate(allR('R).computeResult))
+          val skolemized = provable(saturate(allR('R)))
           val r = skolemized(PropositionalTactics.prop)
           if (r.subgoals.size == facts.size) applyFacts(facts)(r)
           else applyFacts(facts)(skolemized(expandAll andThen PropositionalTactics.prop, 0)(applyEqualities))
@@ -756,7 +756,7 @@ private object ToolTactics {
     (sequent: Sequent) =>
       (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
         ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-        ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) }),
+        ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hidePredicates"
     )
   }
@@ -766,7 +766,7 @@ private object ToolTactics {
     (sequent: Sequent) =>
       (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
         ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-        ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) }),
+        ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hideQuantifiedFuncArgsFml"
     )
   }
@@ -776,7 +776,7 @@ private object ToolTactics {
     (sequent: Sequent) =>
       (    sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
         ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-        ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) }),
+        ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hideNonFOL"
     )
   }

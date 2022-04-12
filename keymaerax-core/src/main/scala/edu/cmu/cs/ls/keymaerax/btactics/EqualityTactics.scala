@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions, opt}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
@@ -627,9 +627,9 @@ private object EqualityTactics {
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
-        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(opt(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
         case _ => None
       })
     )
@@ -644,9 +644,9 @@ private object EqualityTactics {
     ProofRuleTactics.requireOneSubgoal(provable, "expandAllAt")
     val tactics =
       Idioms.mapSubpositions(pos, provable.subgoals.head, {
-        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(opt(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
         case _ => None
       })
     tactics.foldLeft(provable)({ (pr, r) => pr(r, 0) })
