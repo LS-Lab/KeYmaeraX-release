@@ -197,12 +197,16 @@ private object ToolTactics {
   }
 
   /** Hides duplicate formulas (expensive because needs to sort positions). */
-  private val hideDuplicates = anon ((seq: Sequent) => {
-    val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
-      filter({ case (_, l) => l.size > 1 })
-    val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t => (t._3, hide(t._3))) }).toList
-    tactics.sortBy({ case (pos, _) => pos.index0 }).map(_._2).reverse.reduceOption[BelleExpr](_&_).getOrElse(skip)
-  })
+  private val hideDuplicates: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireAtMostOneSubgoal(provable, "ToolTactics.hideDuplicates")
+    provable.subgoals.headOption.map(seq => {
+      val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
+        filter({ case (_, l) => l.size > 1 })
+      val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t =>
+        (t._3, if (t._3.isAnte) HideLeft(t._3.checkAnte.top) else HideRight(t._3.checkSucc.top))) }).toList
+      tactics.sortBy({ case (pos, _) => pos.index0 }).map(_._2).reverse.foldLeft(provable)({ case (p, t) => p(t, 0) })
+    }).getOrElse(provable)
+  }
 
   /** Hides useless trivial true/false formulas. */
   private val hideTrivialFormulas: BuiltInTactic = anon { (provable: ProvableSig) =>
@@ -362,20 +366,32 @@ private object ToolTactics {
 
   //Note: the same as fullQE except it uses computes the heuristic order in the middle
   def heuristicQE(qeTool: => QETacticTool, po: Ordering[Variable]=equalityOrder): BelleExpr = {
+    //@note labels not yet available in forward tactics
+    heuristicQEImpl(qeTool, po) & (done | anon ((s: Sequent) =>
+      if (s.succ.head == False) label(BelleLabels.QECEX)
+      else DebuggingTactics.done("QE was unable to prove: invalid formula"))
+      )
+  }
+
+  /** Heuristic QE forward implementation. */
+  private def heuristicQEImpl(qeTool: => QETacticTool, po: Ordering[Variable]=equalityOrder): BuiltInTactic= internal ("_hQE", (provable: ProvableSig) => {
+    require(provable.subgoals.forall(_.isFOL), "QE only on FOL formulas")
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    Idioms.NamedTactic("ordered QE",
-      //      DebuggingTactics.recordQECall() &
-      done | //@note don't fail QE if already proved
-        (SaturateTactic(alphaRule) &
-        (close |
-          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
-          hidePredicates &
-          toSingleFormula & orderedClosure(po) & rcf(qeTool) &
-            (done | anon ((s: Sequent) =>
-              if (s.succ.head == False) label(BelleLabels.QECEX)
-              else DebuggingTactics.done("QE was unable to prove: invalid formula"))
-              ))))
-    )}
+    provable.subgoals.toList match {
+      case Nil => provable
+      case _ => provable(
+        //onall
+        saturate(alphaRule) andThen or(
+          close,
+          saturate(EqualityTactics.atomExhaustiveEqL2R('L).computeResult) andThen
+            hidePredicates andThen
+            toSingleFormula andThen
+            orderedClosure(po) andThen
+            rcf(qeTool)
+          )
+        )
+    }
+  })
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
