@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
+import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.prop
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -777,6 +778,33 @@ object SimplifierV3 {
     conclusion="Γ |- P, Δ",
     displayLevel="browse")
   val simplify: BuiltInPositionTactic = simpTac()
+
+  /** Simplifies with full context (antecedent + negated succedent).  */
+  val simplifyAllCtx: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "SimplifierV3.simplifyAllCtx")
+
+    val alpha =
+      if (pos.isSucc) {
+        prop(
+          { case (_: And, ap: AntePos) => List(AndLeft(ap)) case _ => List.empty },
+          { (_, _) => List.empty })(List.empty, List.empty)
+      } else {
+        prop(
+          { case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
+          { (_, _) => List.empty })(List.empty, List.empty)
+      }
+
+    val moveContext = (pr: ProvableSig) => {
+      ProofRuleTactics.requireAtMostOneSubgoal(pr, "PropositionalTactics.moveContext")
+      pr.subgoals.headOption.map(seq => {
+        val indices = if (pos.isAnte) seq.succ.indices else seq.succ.indices.diff(List(pos.index0))
+        indices.map(SuccPos).reverse.foldLeft(pr)({ case (p, i) =>
+          p(useAt(Ax.doubleNegation.provable, PosInExpr(List(1)))(i), 0)(NotRight(i), 0) })
+      }).getOrElse(pr)
+    }
+
+    provable(alpha andThen doIfFw(!_.isProved)(moveContext andThen SimplifierV3.simplify(pos)), 0)
+  }
 
   /**
     * Full sequent simplification tactic

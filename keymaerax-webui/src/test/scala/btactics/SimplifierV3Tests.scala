@@ -327,4 +327,27 @@ class SimplifierV3Tests extends TacticTestBase {
     maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "max((-1),x-5)>=0".asFormula
   }
 
+  "simplify" should "find contradictions" in withMathematica { _ =>
+    proveBy("x=1, x!=1 ==>".asSequent, simplify(-1)).subgoals.loneElement shouldBe "false, x!=1 ==>".asSequent
+    proveBy("x=1, !x=1 ==>".asSequent, simplify(-1)).subgoals.loneElement shouldBe "false, !x=1 ==>".asSequent
+  }
+
+  "simplifyAllCtx" should "consider succedent when searching for contradictions" in withMathematica { _ =>
+    proveBy("(x=1 | x=2) | x=3 ==> x=1 | x=2 | x=3".asSequent, simplifyAllCtx(-1)).subgoals.
+      loneElement shouldBe "false, !x=3, !x=2, !x=1 ==>".asSequent
+  }
+
+  it should "simplify succedent" in withMathematica { _ =>
+    proveBy("(x=1 & y=2) & z=3 ==> x=1 & y=2 & z=3".asSequent, simplifyAllCtx(1)).subgoals.
+      loneElement shouldBe "z=3, x=1, y=2 ==> true".asSequent
+  }
+
+  it should "FEATURE_REQUEST: consider remaining succedent when simplifying a formula in the succedent" taggedAs TodoTest in withMathematica { _ =>
+    proveBy("x=1 ==> x=1 & y=2, y!=2".asSequent, simplifyAllCtx(1)) shouldBe 'proved
+  }
+
+  it should "FEATURE_REQUEST: find contradictions hidden in double negations" taggedAs TodoTest in withMathematica { _ =>
+    proveBy("x=1 ==> !x!=1".asSequent, simplifyAllCtx(-1)).subgoals.loneElement shouldBe "false, !!x!=1 ==>".asSequent
+  }
+
 }
