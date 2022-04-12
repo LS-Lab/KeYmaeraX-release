@@ -42,9 +42,9 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.rational.applies(e)) convertBinary(e, Divide.apply)
 
     // Arith expressions
-    else if (MathematicaOpSpec.plus.applies(e))   convertNary  (e, Plus.apply)
+    else if (MathematicaOpSpec.plus.applies(e))   convertNaryL (e, Plus.apply)
     else if (MathematicaOpSpec.minus.applies(e))  convertBinary(e, Minus.apply)
-    else if (MathematicaOpSpec.times.applies(e))  convertNary  (e, Times.apply)
+    else if (MathematicaOpSpec.times.applies(e))  convertNaryL (e, Times.apply)
     else if (MathematicaOpSpec.divide.applies(e)) convertBinary(e, Divide.apply)
     else if (MathematicaOpSpec.power.applies(e))  convertBinary(e, Power.apply)
     else if (MathematicaOpSpec.neg.applies(e))    convertUnary (e, Neg.apply)
@@ -62,8 +62,8 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.ltrue.applies(e))      True
     else if (MathematicaOpSpec.lfalse.applies(e))     False
     else if (MathematicaOpSpec.not.applies(e))        convertUnary(e, Not.apply)
-    else if (MathematicaOpSpec.and.applies(e))        convertNary(e, And.apply)
-    else if (MathematicaOpSpec.or.applies(e))         convertNary(e, Or.apply)
+    else if (MathematicaOpSpec.and.applies(e))        convertNaryR(e, And.apply)
+    else if (MathematicaOpSpec.or.applies(e))         convertNaryR(e, Or.apply)
     else if (MathematicaOpSpec.xor.applies(e))        convertBinary(e, (a: Formula, b: Formula) => Or(And(a, Not(b)), And(Not(a), b)))
     else if (MathematicaOpSpec.implies.applies(e))    convertBinary(e, Imply.apply)
     else if (MathematicaOpSpec.equivalent.applies(e)) convertBinary(e, Equiv.apply)
@@ -101,14 +101,21 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   /** Converts a binary expression. */
   private def convertBinary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
     require(e.args.length == 2, "binary operator expects 2 arguments")
-    convertNary(e, op)
+    convertNaryL(e, op)
   }
 
-  /** Converts an n-ary expression. */
-  private def convertNary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
+  /** Converts an n-ary expression (left-associative). */
+  private def convertNaryL[T<:Expression](e: MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args.map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
     subexpressions.map(_.asInstanceOf[T]).reduce(op)
+  }
+
+  /** Converts an n-ary expression (right-associative). */
+  private def convertNaryR[T<:Expression](e: MExpr, op: (T,T) => T): T = {
+    val subexpressions = e.args.map(convert)
+    require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
+    subexpressions.map(_.asInstanceOf[T]).reduceRight(op)
   }
 
   /** Converts a comparison. */
