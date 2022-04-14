@@ -1358,6 +1358,20 @@ trait UnifyUSCalculus {
     }
   }
 
+  /** CEat replacing `key` with the other expression in the equality/equivalence. @see [[CEat(ProvableSig)]] */
+  def CEat(fact: ProvableSig, key: PosInExpr): BuiltInPositionTactic = {
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
+    key.pos match {
+      case 0 :: Nil => fact.conclusion.succ.head match {
+        case Equiv(l, r) => CEat(ProvableSig.startProof(Equiv(r, l))(commuteEquivR(SuccPos(0)), 0)(fact, 0))
+        case Equal(l, r) => CEat(ProvableSig.startProof(Equal(r, l))(commuteEqual(SuccPos(0)), 0)(fact, 0))
+        case p => throw new InputFormatFailure("fact must be either equality or equivalence, but got " + p)
+      }
+      case 1 :: Nil => CEat(fact)
+      case _ => throw new InputFormatFailure("key must be either .0 or .1, but got " + key.prettyString)
+    }
+  }
+
   /** CEat(fact,C) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning in the given context C at the indicated position to replace `right` by `left` in that context (literally, no substitution).
     *
