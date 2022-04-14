@@ -224,6 +224,8 @@ object Augmentors {
     /** Replace all occurrences of `what` in `seq` by `repl`. */
     def replaceAll(what: Expression, repl: Expression): Sequent =
       Sequent(seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
+    def replaceAll(repls: Map[Expression, Expression]): Sequent =
+      Sequent(seq.ante.map(_.replaceAll(repls)), seq.succ.map(_.replaceAll(repls)))
     def zipAnteWithPositions: List[(Formula, TopAntePosition)] =
       seq.ante.zipWithIndex.map({ case (f, i) => (f, AntePosition(AntePos(i))) }).toList
     def zipSuccWithPositions: List[(Formula, TopSuccPosition)] =
@@ -276,57 +278,66 @@ object Augmentors {
       * either Term, Formula, or Program. Replaces literal occurrences even in places disallowed by uniform
       * substitution (minimal safeguarding to not replace in some obvious invalid places).
       * @throws ClassCastException When `repl` cannot be cast to the type expected at an occurrence of `what` (e.g., when replacing x with f() inside x:=y). */
-    def replaceAll(what: Expression, repl: Expression): E = {
-      require(what.kind == repl.kind, "Replacee and replacement must be of same kind, but got what.kind=" + what.kind + " and repl.kind=" + repl.kind)
-      //@note Not using StaticSemantics.boundVars, since also replacing past program/ODE constant symbols.
-      repl match {
-        case _: Term => ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
-          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-            if (t == what) Right(repl.asInstanceOf[Term])
-            else Left(None)
+    def replaceAll(what: Expression, repl: Expression): E = replaceAll(Map(what -> repl))
 
-          override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
-            // do not replace with invalid abbreviations in some obvious places
-            case Forall(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
-            case Forall(x, q) if x.contains(what) && repl.isInstanceOf[Variable] =>
-              Right(Forall(x.map(v => if (v == what) repl.asInstanceOf[Variable] else v), q.replaceAll(what, repl)))
-            case Exists(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
-            case Exists(x, q) if x.contains(what) && repl.isInstanceOf[Variable] =>
-              Right(Exists(x.map(v => if (v == what) repl.asInstanceOf[Variable] else v), q.replaceAll(what, repl)))
-            case Box(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
-            case Box(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
-              Right(Box(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
-            case Box(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
-            case Box(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
-              Right(Box(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
-            case Diamond(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
-            case Diamond(Assign(x, t), q) if x == what && repl.isInstanceOf[Variable] =>
-              Right(Diamond(Assign(repl.asInstanceOf[Variable], t.replaceFree(what.asInstanceOf[Term], repl.asInstanceOf[Term])), q.replaceAll(what, repl)))
-            case Diamond(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
-            case Diamond(AssignAny(x), q) if x == what && repl.isInstanceOf[Variable] =>
-              Right(Diamond(AssignAny(repl.asInstanceOf[Variable]), q.replaceAll(what, repl)))
-            case _ => Left(None)
+    /** Replace all occurrences of `what` in `e` by `repl`. `what` and `repl` must be of the same kind,
+     * either Term, Formula, or Program. Replaces literal occurrences even in places disallowed by uniform
+     * substitution (minimal safeguarding to not replace in some obvious invalid places).
+     * @throws ClassCastException When `repl` cannot be cast to the type expected at an occurrence of `what` (e.g., when replacing x with f() inside x:=y). */
+    def replaceAll(repls: Map[Expression, Expression]): E = {
+      require(repls.forall({ case (k, v) => k.kind == v.kind }), "Replacee and replacement must be of same kind, but got " +
+        repls.find({ case (what, repl) => what.kind != repl.kind }).map({ case (what, repl) => "what.kind=" + what.kind + " and repl.kind=" + repl.kind }))
+      //@note Not using StaticSemantics.boundVars, since also replacing past program/ODE constant symbols.
+      if (repls.isEmpty) e
+      else {
+        val trmRepls = repls.filter(_._2.kind == TermKind)
+        val fmlRepls = repls.filter(_._2.kind == FormulaKind)
+        val prgRepls = repls.filter(_._2.kind == ProgramKind)
+        ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = trmRepls.get(t) match {
+            case Some(r) => Right(r.asInstanceOf[Term])
+            case None => Left(None)
+          }
+
+          override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = fmlRepls.get(f) match {
+            case Some(r) => Right(r.asInstanceOf[Formula])
+            case None => f match {
+              // do not replace with invalid abbreviations in some obvious places
+              case Forall(x, q) =>
+                val (bound, free) = trmRepls.partition({ case (k, _) => x.contains(k) })
+                val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
+                Right(Forall(x.map(v => ren.getOrElse(v, v).asInstanceOf[Variable]), q.replaceAll(free ++ ren ++ fmlRepls ++ prgRepls)))
+              case Exists(x, q) =>
+                val (bound, free) = trmRepls.partition({ case (k, _) => x.contains(k) })
+                val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
+                Right(Exists(x.map(v => ren.getOrElse(v, v).asInstanceOf[Variable]), q.replaceAll(free ++ ren ++ fmlRepls ++ prgRepls)))
+              case Box(Assign(x, t), q) =>
+                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
+                Right(Box(Assign(ren.getOrElse(x, x).asInstanceOf[Variable], t.replaceAll(ren ++ free)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+              case Box(AssignAny(x), q) =>
+                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
+                Right(Box(AssignAny(ren.getOrElse(x, x).asInstanceOf[Variable]), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+              case Diamond(Assign(x, t), q) =>
+                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
+                Right(Diamond(Assign(ren.getOrElse(x, x).asInstanceOf[Variable], t.replaceAll(ren ++ free)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+              case Diamond(AssignAny(x), q) =>
+                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
+                Right(Diamond(AssignAny(ren.getOrElse(x, x).asInstanceOf[Variable]), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+              case _ => Left(None)
+            }
+          }
+
+          override def preP(q: PosInExpr, a: Program): Either[Option[StopTraversal], Program] = prgRepls.get(a) match {
+            case Some(r) => Right(r.asInstanceOf[Program])
+            case None => Left(None)
           }
         }, e) match {
           case Some(r) => r
         }
-
-        case afml: Formula => ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
-          override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
-            if (f == what) Right(afml)
-            else Left(None)
-        }, e) match {
-          case Some(r) => r
-        }
-
-        case aprg: Program => ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
-          override def preP(q: PosInExpr, a: Program): Either[Option[StopTraversal], Program] =
-            if (a == what) Right(aprg)
-            else Left(None)
-        }, e) match {
-          case Some(r) => r
-        }
-
       }
     }
 
