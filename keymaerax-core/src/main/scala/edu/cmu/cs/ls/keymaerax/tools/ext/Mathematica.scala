@@ -162,7 +162,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
       // ask parallel QE to find out how to prove, then follow that recipe to get lemmas and return combined
       // result; double the work but prefers soundness over splitting soundness-critically inside QETool and
       // directly believing that result
-      val lemmas = qe(splitFormula(formula)) match {
+      val lemmas = qe(splitFormula(formula), continueOnFalse=true) match {
         case (Atom(fml), _) => List(mQE.run(ProvableSig.proveArithmeticLemma(_, fml)))
         case (AllOf(fmls), _) => fmls.map({
           case Atom(fml) => mQE.run(ProvableSig.proveArithmeticLemma(_, fml))
@@ -175,13 +175,15 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     } else mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
   }
 
-  override def qe(goal: Goal): (Goal, Formula) = firstResultQE(goal)
+  /** @inheritdoc */
+  override def qe(goal: Goal, continueOnFalse: Boolean): (Goal, Formula) = firstResultQE(goal, continueOnFalse)
 
   private val INDEX = Variable("i")
   private val RESULT = PredOf(Function("result", None, Unit, Bool, interpreted=false), Nothing)
 
-  /** Returns the result of the first QE call to succeed among the formulas in `fmls`. */
-  private def firstResultQE(goal: Goal): (Goal, Formula) = {
+  /** Returns the result of the first QE call to succeed among the options in `goal`. Continues executing options when
+   * option succeeds with result=false when continueOnFalse is set. */
+  private def firstResultQE(goal: Goal, continueOnFalse: Boolean): (Goal, Formula) = {
     val ids = ListBuffer.empty[Goal]
     // {res, id, eids} = WaitNext[...]; AbortKernels[]; res
     val input = goal match {
@@ -204,12 +206,20 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             case OneOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: nested OneOf in OneOf")
           }):_*))
         ),
-        compoundExpr(
-          mwhile(and(equal(part(symbol("res"), int(2)), bool(false)), greater(ExtMathematicaOpSpec.length(symbol("res")), int(0))),
-            set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids")))),
-          abortKernels(),
-          symbol("res")
-        )
+        if (continueOnFalse) {
+          compoundExpr(
+            mwhile(and(equal(part(symbol("res"), int(2)), bool(false)), greater(ExtMathematicaOpSpec.length(symbol("res")), int(0))),
+              set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids")))),
+            abortKernels(),
+            symbol("res")
+          )
+        } else {
+          compoundExpr(
+            set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids"))),
+            abortKernels(),
+            symbol("res")
+          )
+        }
       )
       case AllOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: top-level AllOf")
     }

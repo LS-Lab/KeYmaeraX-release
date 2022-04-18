@@ -575,7 +575,7 @@ object TactixLibrary extends HilbertCalculus
             if (dwPropBase.subgoals.size <= 8) List(AllOf(dwPropBase.subgoals.map(g => Atom(g.succ.head))))
             else List.empty
 
-          t.qe(OneOf(List(diAttempt, dwSmartAttempt, dwPlainAttempt) ++ dwPropAttempts)) match {
+          t.qe(OneOf(List(diAttempt, dwSmartAttempt, dwPlainAttempt) ++ dwPropAttempts), continueOnFalse=true) match {
             case (_, False) => fail
             case (g, True) =>
               if (g == diAttempt) DifferentialTactics.Dconstify(by(di) & OnAll(RCF))(pos)

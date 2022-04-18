@@ -1115,7 +1115,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val (fnified, subst) = mxAbbreviateFunctions(fml, defs)
     val expanded = defs.exhaustiveSubst(fml)
     val goal = OneOf(Seq(Atom(fnified), Atom(expanded)))
-    tool.qe(goal) match {
+    tool.qe(goal, continueOnFalse=false) match {
       case (Atom(f), _) =>
         if (f == fnified) tool.qe(fnified).fact(subst)
         else if (f == expanded) tool.qe(expanded).fact

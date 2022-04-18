@@ -30,6 +30,7 @@ trait QETacticTool {
   def qe(formula: Formula): Lemma
 
   /** Returns the result of the first-to-finish (sub-)goal in `g` (result of the first-to-finish sub-goal of [[OneOf]],
-    * else result of [[Atom]] or [[AllOf]]). */
-  def qe(g: Goal): (Goal, Formula)
+    * else result of [[Atom]] or [[AllOf]]). When `continueOnFalse` is set, continues trying other options in case a
+   * finished option's result is false. */
+  def qe(g: Goal, continueOnFalse: Boolean): (Goal, Formula)
 }
