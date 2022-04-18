@@ -10,4 +10,7 @@ import java.lang.annotation.Target;
 @TagAnnotation
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.TYPE})
-public @interface ExtremeTest {}
+public @interface ExtremeTest {
+    /** 3 hour default timeout. */
+    int timeout() default 3;
+}
