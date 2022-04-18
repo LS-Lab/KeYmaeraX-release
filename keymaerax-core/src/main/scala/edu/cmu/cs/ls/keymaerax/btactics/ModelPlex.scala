@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, SimplificationTool}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{Atom, OneOf, QETacticTool, SimplificationTool}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
@@ -1113,7 +1113,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * then substitutes back in on the result. */
   def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = {
     val (fnified, subst) = mxAbbreviateFunctions(fml, defs)
-    tool.qe(fnified).fact(subst)
+    val expanded = defs.exhaustiveSubst(fml)
+    val goal = OneOf(Seq(Atom(fnified), Atom(expanded)))
+    tool.qe(goal) match {
+      case (Atom(f), _) =>
+        if (f == fnified) tool.qe(fnified).fact(subst)
+        else if (f == expanded) tool.qe(expanded).fact
+        else throw new IllegalStateException("Unexpected parallel QE answer")
+    }
   }
 
   /** Returns the position of the innermost quantifier of `fml`. */
@@ -1160,7 +1167,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val fnified = consts.foldLeft(result)({ case (fml, (fn, v)) => fml.replaceAll(v, fn) })
 
         val qfProof = consts.foldLeft(ProvableSig.startProof(fnified))({
-          case (p, c) => p(FOQuantifierTactics.allInstantiateInverse(c)(SuccPos(0)).computeResult _, 0)(ProofRuleTactics.skolemizeR(SuccPos(0)).computeResult _, 0)
+          case (p, c) => p(
+            FOQuantifierTactics.allInstantiateInverse(c)(SuccPos(0)) andThen
+            ProofRuleTactics.skolemizeR(SuccPos(0)), 0)
         })(qfVarifiedProof, 0)
 
         val Equiv(_, qfResult) = qfProof.conclusion.succ.head
@@ -1177,12 +1186,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
           val Equiv(Exists(x, p), pqf) = lproof.conclusion.succ.head
           val Equiv(Exists(y, q), qqf) = rproof.conclusion.succ.head
           assert(x == y)
-          val merged = (ProvableSig.startProof(Equiv(Exists(x, Or(p, q)), Or(pqf, qqf)))
-            (useAt(Ax.existsOr)(SuccPosition.base0(0, PosInExpr(List(0)))).computeResult _, 0)
-            (useAt(lproof)(SuccPosition.base0(0, PosInExpr(List(0, 0)))).computeResult _, 0)
-            (useAt(rproof)(SuccPosition.base0(0, PosInExpr(List(0, 1)))).computeResult _, 0)
-            (byUS(Ax.equivReflexive.provable).result _, 0)
-            )
+          val dot = DotTerm()
+          val merged = ProvableSig.startProof(Equiv(Exists(x, Or(p, q)), Or(pqf, qqf)))(
+            CEat(RenUSubst(List(
+              (PredOf(Function("p_", None, Real, Bool), dot), p.replaceFree(x.head, dot)),
+              (PredOf(Function("q_", None, Real, Bool), dot), q.replaceFree(x.head, dot)),
+              (Variable("x_"), x.head))).toForward(Ax.existsOr.provable), PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0)))), 0)(
+            CEat(lproof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
+            CEat(rproof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 1)))), 0)(
+            Ax.equivReflexive.provable(USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Or(pqf, qqf))))), 0)
           assert(merged.isProved, "Expected closed merge proof, but got open goals")
           merged
           //@todo
@@ -1198,37 +1210,49 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val Exists(x, l) = lq
         val (lr, lp) = PropositionalTactics.rightAssociate(l)
         val (rr, rp) = PropositionalTactics.rightAssociate(rqf)
-        val result = Equiv(merged, Equiv(Exists(x, lr), rr))
-        val proof = (ProvableSig.startProof(result)
-          (useAt(lp)(SuccPosition.base0(0, PosInExpr(List(0, 0, 0)))).computeResult _, 0)
-          (useAt(rp)(SuccPosition.base0(0, PosInExpr(List(0, 1)))).computeResult _, 0)
-          (byUS(Ax.equivReflexive.provable).result _, 0)
-          )
+        val result = Equiv(Exists(x, lr), rr)
+        val resultEquiv = Equiv(merged, result)
+        val subst = USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), result)))
+        val proof = timed(ProvableSig.startProof(resultEquiv)(
+          CEat(lp, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0, 0)))), 0)(
+          CEat(rp, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 1)))), 0)(
+          Ax.equivReflexive.provable(subst), 0), "Applying reassociate subproofs")
+
         assert(proof.isProved, "Expected a finished reassociation proof, but proof not closed")
-        (result, proof)
+        (resultEquiv, proof)
       }, "Reassociating")
 
       val Equiv(_, Equiv(_, qfResult)) = reassociated
-      val expand = StaticSemantics.symbols(exists) -- StaticSemantics.symbols(qfResult)
-      val subst = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty }))
+      val es = StaticSemantics.symbols(exists)
+      val qfs = StaticSemantics.symbols(qfResult)
 
-      val innerProof = (ProvableSig.startProof(Equiv(exists, qfResult))
-        (useAt(dnfProof)(SuccPosition.base0(0, PosInExpr(List(0, 0)))).computeResult _, 0)
-        (PropositionalTactics.rightAssociate(SuccPosition.base0(0, PosInExpr(List(0, 0)))).computeResult _, 0)
-        (subst)
-        (useAt(reassociateProof, PosInExpr(List(1)))(SuccPosition.base0(0)).computeResult _, 0)
-        (byUS(mergedProof).result _, 0)
-        )
+      val expand = monitorComponents.zip(componentResults).map({ case (o, qfProof) =>
+        val Equiv(_, qf) = qfProof.conclusion.succ.head
+        StaticSemantics.symbols(o) -- StaticSemantics.symbols(qf)
+      }).reduce(_ ++ _)
+
+      println("Symbols: " + es.mkString(",") + "\nQF symbols: " + qfs.mkString(",") + "\nDiff: " + expand.mkString(","))
+      val subst = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty }))
+      println("Substitution: " + subst.subsDefsInput.mkString(","))
+
+      val innerProof = timed(ProvableSig.startProof(Equiv(exists, qfResult))(
+        CEat(dnfProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
+        PropositionalTactics.rightAssociate(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
+        subst)(
+        CEat(reassociateProof(subst), PosInExpr(List(1)))(SuccPosition.base0(0)), 0)(
+        mergedProof(subst), 0), "Inner proof")
       assert(innerProof.isProved, "Expected closed inner proof, but got open goals")
+
+      val innermostPos = innermostQuantifierPos(fml)
+      println("Finished quantifier " + x + " at " + innermostPos.prettyString + ", advancing outwards")
 
       val outerProof = stepwisePartialQE(ctx(qfResult), assumptions, defs, tool)(subst)
       val Equiv(_, outerQf) = outerProof.conclusion.succ.head
-      val innerPos = PosInExpr(List(0)) ++ innermostQuantifierPos(fml)
-      (ProvableSig.startProof(Equiv(fml, outerQf))
-        (subst)
-        (useAt(innerProof)(SuccPosition.base0(0, innerPos)).computeResult _, 0)
-        (outerProof, 0)
-        )
+      val innerPos = PosInExpr(List(0)) ++ innermostPos
+      timed(ProvableSig.startProof(Equiv(fml, outerQf))(
+        subst)(
+        CEat(innerProof, PosInExpr(List(0)))(SuccPosition.base0(0, innerPos)), 0)(
+        outerProof, 0), "Combining inner and outer proof")
     case (ctx, p: Forall) =>
       //@todo conjunctive normal form and split
       val innerProof = ModelPlex.mxPartialQE(p, defs, tool)
@@ -1250,13 +1274,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
       }))
 
       val innerPos = PosInExpr(List(0)) ++ innermostQuantifierPos(fml)
-      (ProvableSig.startProof(Equiv(fml, outerQf))
-        (innerSubst)
-        (useAt(innerProof)(SuccPosition.base0(0, innerPos)).computeResult _, 0)
-        (outerSubst)
-        (outerProof, 0)
-        )
-    case (ctx, f) => ProvableSig.startProof(Equiv(ctx(f), ctx(f)))(byUS(Ax.equivReflexive.provable).result _, 0)
+      ProvableSig.startProof(Equiv(fml, outerQf))(
+        innerSubst)(
+        CEat(innerProof, PosInExpr(List(0)))(SuccPosition.base0(0, innerPos)), 0)(
+        outerSubst)(
+        outerProof, 0)
+    case (ctx, f) => ProvableSig.startProof(Equiv(ctx(f), ctx(f)))(byUS(Ax.equivReflexive.provable), 0)
   }
 
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
