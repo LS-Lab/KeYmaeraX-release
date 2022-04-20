@@ -211,12 +211,14 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             mwhile(and(equal(part(symbol("res"), int(2)), bool(false)), greater(ExtMathematicaOpSpec.length(symbol("res")), int(0))),
               set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids")))),
             abortKernels(),
+            closeKernels(),
             symbol("res")
           )
         } else {
           compoundExpr(
             set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids"))),
             abortKernels(),
+            closeKernels(),
             symbol("res")
           )
         }

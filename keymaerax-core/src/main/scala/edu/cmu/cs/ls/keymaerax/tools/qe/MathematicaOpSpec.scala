@@ -233,6 +233,8 @@ object MathematicaOpSpec {
   def parallelSubmit: UnaryMathOpSpec = UnaryMathOpSpec(symbol("ParallelSubmit"))
 
   def abortKernels: NaryMathOpSpec = NaryMathOpSpec(symbol("AbortKernels"))
+
+  def closeKernels: NaryMathOpSpec = NaryMathOpSpec(symbol("CloseKernels"))
   //</editor-fold>
 
   //<editor-fold desc="Diagnostics">
