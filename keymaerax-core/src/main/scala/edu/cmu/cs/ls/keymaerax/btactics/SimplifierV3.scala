@@ -33,6 +33,25 @@ object SimplifierV3 {
 
   private val namespace = "simplifierv3"
 
+  private val pA = PredOf(Function("A_", None, Unit, Bool), Nothing)
+  private val pB = PredOf(Function("B_", None, Unit, Bool), Nothing)
+  private val pP = PredOf(Function("P_", None, Unit, Bool), Nothing)
+  private val pQ = PredOf(Function("Q_", None, Unit, Bool), Nothing)
+  private val pF = PredOf(Function("F_", None, Unit, Bool), Nothing)
+  private val pFF = PredOf(Function("FF_", None, Unit, Bool), Nothing)
+  private val pFFF = PredOf(Function("FFF_", None, Unit, Bool), Nothing)
+  private val pL = PredOf(Function("L_", None, Unit, Bool), Nothing)
+  private val pLL = PredOf(Function("LL_", None, Unit, Bool), Nothing)
+  private val pR = PredOf(Function("R_", None, Unit, Bool), Nothing)
+  private val pRR = PredOf(Function("RR_", None, Unit, Bool), Nothing)
+  private val fL = FuncOf(Function("L_", None, Unit, Real), Nothing)
+  private val fLL = FuncOf(Function("LL_", None, Unit, Real), Nothing)
+  private val fR = FuncOf(Function("R_", None, Unit, Real), Nothing)
+  private val fRR = FuncOf(Function("RR_", None, Unit, Real), Nothing)
+  private val fF = FuncOf(Function("F_", None, Unit, Real), Nothing)
+  private val fFF = FuncOf(Function("FF_", None, Unit, Real), Nothing)
+  private val fFFF = FuncOf(Function("FFF_", None, Unit, Real), Nothing)
+
   /** Term simplifier */
 
   /**
@@ -102,7 +121,8 @@ object SimplifierV3 {
         val uprem = unif(prem)
         if(ctx.contains(uprem)){
           val concl = unif(v)
-          val proof = ProvableSig.startProof(Imply(uprem,Equal(t,unif(v))))(byUS(pr).result _, 0)
+          //@todo construct substitution
+          val proof = ProvableSig.startProof(Imply(uprem,Equal(t,unif(v))))(byUS(pr), 0)
           //assert(proof.isProved)
           Some(concl,uprem,proof)
         }
@@ -111,20 +131,13 @@ object SimplifierV3 {
       case Equal(k,v) => {
         val unif = try { UnificationMatch(k,t) } catch { case _: UnificationException => return None}
         val concl = unif(v)
-        val proof = ProvableSig.startProof(Imply(True, Equal(t, unif(v))))(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(byUS(pr).result _, 0)
+        //@todo construct substitution
+        val proof = ProvableSig.startProof(Imply(True, Equal(t, unif(v))))(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(byUS(pr), 0)
         //assert(proof.isProved)
         Some(concl,True,proof)
       }
       case _ => ??? //Illegal shape of rewrite
     }
-  }
-
-  private def completeDischarge(prem:Formula, left:Term, right:Term, pr:ProvableSig ) : ProvableSig = {
-    //Given prem -> (left = right), returns left = right
-    (ProvableSig.startProof(Equal(left, right))
-      (useAt(pr,PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)
-      (fastCloser(HashSet.empty, prem), 0)
-      )
   }
 
   /**
@@ -136,8 +149,7 @@ object SimplifierV3 {
     *         some simplification was applied.
     *         premise is an assumption in contained in ctx
     */
-  def termSimp(t:Term, ctx:context, taxs: termIndex ) : (Term, Option[(Formula,ProvableSig)]) =
-  {
+  def termSimp(t: Term, ctx: context, taxs: termIndex ): (Term, Option[(Formula,ProvableSig)]) = {
     val (rect,recpropt) =
       t match {
         case bop: BinaryCompositeTerm =>
@@ -156,17 +168,22 @@ object SimplifierV3 {
           (lpropt, rpropt) match {
             case (None, None) => (t, None)
             case (Some((lprem, lpr)), None) =>
+              assert(rf==bop.right, "Missing proof: simplified r=" + bop.right.prettyString + " to " + rf.prettyString + ", but got no proof")
               val fml = Imply(lprem, Equal(t, concl))
-              val pr = ProvableSig.startProof(fml)(useAt(lem._1, PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)(lpr, 0)
+              val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(fL, bop.left), SubstitutionPair(fLL, lf), SubstitutionPair(fR, bop.right)))
+              val pr = ProvableSig.startProof(fml)(CEat(lem._1(subst), PosInExpr(1 :: Nil))(SuccPos(0)), 0)(lpr, 0)
               (concl, Some((lprem, pr)))
             case (None, Some((rprem, rpr))) =>
+              assert(lf==bop.left, "Missing proof: simplified l=" + bop.left.prettyString + " to " + lf.prettyString + ", but got no proof")
               val fml = Imply(rprem, Equal(t, concl))
-              val pr = ProvableSig.startProof(fml)(useAt(lem._2, PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)(rpr, 0)
+              val subst = USubst(List(SubstitutionPair(pB, rprem), SubstitutionPair(fL, bop.left), SubstitutionPair(fR, bop.right), SubstitutionPair(fRR, rf)))
+              val pr = ProvableSig.startProof(fml)(CEat(lem._2(subst), PosInExpr(1 :: Nil))(SuccPos(0)), 0)(rpr, 0)
               (concl, Some((rprem, pr)))
             case (Some((lprem, lpr)), Some((rprem, rpr))) =>
               val premise = And(lprem, rprem)
               val fml = Imply(premise, Equal(t, concl))
-              val pr = ProvableSig.startProof(fml)(useAt(lem._3, PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
+              val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pB, rprem), SubstitutionPair(fL, bop.left), SubstitutionPair(fLL, lf), SubstitutionPair(fR, bop.right), SubstitutionPair(fRR, rf)))
+              val pr = ProvableSig.startProof(fml)(CEat(lem._3(subst), PosInExpr(1 :: Nil))(SuccPos(0)), 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
               (concl, Some((premise, pr)))
           }
         case Neg(u) =>
@@ -178,7 +195,8 @@ object SimplifierV3 {
             case None => (t,None)
             case Some((uprem,upr)) =>
               val fml = Imply(uprem,Equal(t,nt))
-              (nt,Some((uprem, ProvableSig.startProof(fml)(useAt(negAx, PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)(upr, 0))))
+              val subst = USubst(List(SubstitutionPair(pA, uprem), SubstitutionPair(fL, u), SubstitutionPair(fLL, ut)))
+              (nt,Some((uprem, ProvableSig.startProof(fml)(CEat(negAx(subst), PosInExpr(1 :: Nil))(SuccPos(0)), 0)(upr, 0))))
           }
 
         case FuncOf(fn, c) if c != Nothing =>
@@ -186,10 +204,17 @@ object SimplifierV3 {
             t=> termSimp(t,ctx,taxs))
           val nt = FuncOf(fn, nArgs)
           val premise = proofs.map({ case (None,_) => True case (Some(pr),_) => pr._1}).reduceRight(And)
-          //@todo builtin proof
-          val cuts = proofs.zipWithIndex.map({ case ((None,_),_) => ident case ((Some(prf),_),i) => useAt(prf._2)(-(i+1)) & eqL2R(-(i+1))(1)}).
-            reduceRight( _&_)
-          val pr = proveBy(Imply(premise,Equal(t,nt)),implyR(1) & (andL('Llast)*(proofs.length-1)) & cuts & cohideR(1) & byUS(Ax.equalReflexive))
+          val cuts = proofs.zipWithIndex.map({
+            case ((None,_),_) => ident
+            case ((Some(prf),_),i) => CEat(prf._2, PosInExpr(1::Nil))(-(i+1)) andThen eqL2R(-(i+1))(1)
+          }).foldLeft(_: ProvableSig)({ case (p, t) => p(t, 0) })
+          val subst = USubst(List(SubstitutionPair(FuncOf(Function("s_", None, Unit, Real), Nothing), nt)))
+          val pr = ProvableSig.startProof(Imply(premise,Equal(t,nt)))(
+            ImplyRight(SuccPos(0)), 0)(
+            times(andL('Llast), proofs.length-1), 0)(
+            cuts, 0)(
+            cohideR(SuccPos(0)), 0)(
+            Ax.equalReflexive.provable(subst), 0)
           (nt,Some(premise,pr))
         //todo: Function arguments
         case _ => (t, None)
@@ -206,10 +231,9 @@ object SimplifierV3 {
           case Some((prem2,pr2)) =>
             val premise = And(prem2,prem)
             val fml = Imply(premise, Equal( t, tt ))
-            //instantiate the middle ff to recf
+            val subst = USubst(List(SubstitutionPair(pP, prem2), SubstitutionPair(pQ, prem), SubstitutionPair(fF, t), SubstitutionPair(fFF, rect), SubstitutionPair(fFFF, tt)))
             val prr = (ProvableSig.startProof(fml)
-              (useAt(equalTrans,PosInExpr(1::Nil),
-                (us:Option[Subst])=>us.get++RenUSubst(("FF_()".asTerm,rect)::Nil))(SuccPos(0)).computeResult _, 0)
+              (CEat(equalTrans(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)
               (AndRight(SuccPos(0)), 0)
               (pr, 1)
               (pr2, 0)
@@ -316,7 +340,8 @@ object SimplifierV3 {
         val uprem = unif(prem)
         if (ctx.contains(uprem)) {
           val concl = unif(v)
-          val proof = ProvableSig.startProof(Imply(uprem, Equiv(f, unif(v))))(byUS(pr).result _, 0)
+          //@todo construct substitution
+          val proof = ProvableSig.startProof(Imply(uprem, Equiv(f, unif(v))))(byUS(pr), 0)
           //assert(proof.isProved)
           Some(concl,uprem,proof)
         } else None
@@ -325,7 +350,8 @@ object SimplifierV3 {
         val Equiv(fsubst, _) = unif(Equiv(k,v))
         if (fsubst == f) {
           val concl = unif(v)
-          val proof = ProvableSig.startProof(Imply(True, Equiv(f, unif(v))))(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(byUS(pr).result _, 0)
+          //@todo construct substitution
+          val proof = ProvableSig.startProof(Imply(True, Equiv(f, unif(v))))(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(byUS(pr), 0)
           //assert(proof.isProved)
           Some(concl, True, proof)
         } else None
@@ -372,18 +398,23 @@ object SimplifierV3 {
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
           case (Some((lprem,lpr)),None) =>
+            assert(rf==r, "Missing proof: simplified r=" + r.prettyString + " to " + rf.prettyString + ", but got no proof")
             val fml = Imply(lprem, Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(andAxL,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r)))
+            val pr = ProvableSig.startProof(fml)(CEat(andAxL(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(lpr, 0)
             (concl,Some((lprem,pr)))
           case (None,Some((rprem,rpr))) =>
+            assert(lf==l, "Missing proof: simplified l=" + l.prettyString + " to " + lf.prettyString + ", but got no proof")
             val premise = Imply(lf,rprem)
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(andAxR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(rpr, 0)
+            val subst = USubst(List(SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(andAxR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(rpr, 0)
             (concl,Some((premise,pr)))
           case (Some((lprem,lpr)),Some((rprem,rpr))) =>
             val premise = And(lprem,Imply(lf,rprem))
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(andAxLR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(andAxLR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
             (concl,Some((premise,pr)))
         }
       case Imply(l,r) =>
@@ -393,18 +424,23 @@ object SimplifierV3 {
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
           case (Some((lprem,lpr)),None) =>
+            assert(rf==r, "Missing proof: simplified r=" + r.prettyString + " to " + rf.prettyString + ", but got no proof")
             val fml = Imply(lprem, Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(impAxL,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r)))
+            val pr = ProvableSig.startProof(fml)(CEat(impAxL(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(lpr, 0)
             (concl,Some((lprem,pr)))
           case (None,Some((rprem,rpr))) =>
+            assert(lf==l, "Missing proof: simplified l=" + l.prettyString + " to " + lf.prettyString + ", but got no proof")
             val premise = Imply(lf,rprem)
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(impAxR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(rpr, 0)
+            val subst = USubst(List(SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(impAxR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(rpr, 0)
             (concl,Some((premise,pr)))
           case (Some((lprem,lpr)),Some((rprem,rpr))) =>
             val premise = And(lprem,Imply(lf,rprem))
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(impAxLR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(impAxLR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
             (concl,Some((premise,pr)))
         }
       case Or(l,r) =>
@@ -415,18 +451,23 @@ object SimplifierV3 {
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
           case (Some((lprem,lpr)),None) =>
+            assert(rf==r, "Missing proof: simplified r=" + r.prettyString + " to " + rf.prettyString + ", but got no proof")
             val fml = Imply(lprem, Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(orAxL,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r)))
+            val pr = ProvableSig.startProof(fml)(CEat(orAxL(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(lpr, 0)
             (concl,Some((lprem,pr)))
           case (None,Some((rprem,rpr))) =>
+            assert(lf==l, "Missing proof: simplified l=" + l.prettyString + " to " + lf.prettyString + ", but got no proof")
             val premise = Imply(Not(lf),rprem)
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(orAxR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(rpr, 0)
+            val subst = USubst(List(SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(orAxR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(rpr, 0)
             (concl,Some((premise,pr)))
           case (Some((lprem,lpr)),Some((rprem,rpr))) =>
             val premise = And(lprem,Imply(Not(lf),rprem))
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(orAxLR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(orAxLR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
             (concl,Some((premise,pr)))
         }
       case Not(u) =>
@@ -436,7 +477,8 @@ object SimplifierV3 {
           case None => (f,None)
           case Some((uprem,upr)) =>
             val fml = Imply(uprem, Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(notAx,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(upr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, uprem), SubstitutionPair(pL, u), SubstitutionPair(pLL, uf)))
+            val pr = ProvableSig.startProof(fml)(CEat(notAx(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(upr, 0)
             (concl,Some((uprem,pr)))
         }
       case Equiv(l,r) =>
@@ -446,17 +488,22 @@ object SimplifierV3 {
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
           case (Some((lprem,lpr)),None) =>
+            assert(rf==r, "Missing proof: simplified r=" + r.prettyString + " to " + rf.prettyString + ", but got no proof")
             val fml = Imply(lprem, Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(equivAxL,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r)))
+            val pr = ProvableSig.startProof(fml)(CEat(equivAxL(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(lpr, 0)
             (concl,Some((lprem,pr)))
           case (None,Some((rprem,rpr))) =>
+            assert(lf==l, "Missing proof: simplified l=" + l.prettyString + " to " + lf.prettyString + ", but got no proof")
             val fml = Imply(rprem , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(equivAxR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(rpr, 0)
+            val subst = USubst(List(SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(equivAxR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(rpr, 0)
             (concl,Some((rprem,pr)))
           case (Some((lprem,lpr)),Some((rprem,rpr))) =>
             val premise = And(lprem,rprem)
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(equivAxLR,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pB, rprem), SubstitutionPair(pL, l), SubstitutionPair(pLL, lf), SubstitutionPair(pR, r), SubstitutionPair(pRR, rf)))
+            val pr = ProvableSig.startProof(fml)(CEat(equivAxLR(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
             (concl,Some((premise,pr)))
         }
 
@@ -479,17 +526,22 @@ object SimplifierV3 {
         (lpropt,rpropt) match {
           case (None,None) => (f,None)
           case (Some((lprem,lpr)),None) =>
+            assert(rt==r, "Missing proof: simplified r=" + r.prettyString + " to " + rt.prettyString + ", but got no proof")
             val fml = Imply(lprem, Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(lem._1, PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(fL, l), SubstitutionPair(fLL, lt), SubstitutionPair(fR, r)))
+            val pr = ProvableSig.startProof(fml)(CEat(lem._1(subst), PosInExpr(1 :: Nil))(SuccPos(0)), 0)(lpr, 0)
             (concl,Some((lprem,pr)))
           case (None,Some((rprem,rpr))) =>
+            assert(lt==l, "Missing proof: simplified l=" + l.prettyString + " to " + lt.prettyString + ", but got no proof")
             val fml = Imply(rprem , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(lem._2, PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)(rpr, 0)
+            val subst = USubst(List(SubstitutionPair(pB, rprem), SubstitutionPair(fL, l), SubstitutionPair(fR, r), SubstitutionPair(fRR, rt)))
+            val pr = ProvableSig.startProof(fml)(CEat(lem._2(subst), PosInExpr(1 :: Nil))(SuccPos(0)), 0)(rpr, 0)
             (concl,Some((rprem,pr)))
           case (Some((lprem,lpr)),Some((rprem,rpr))) =>
             val premise = And(lprem,rprem)
             val fml = Imply(premise , Equiv(f, concl))
-            val pr = ProvableSig.startProof(fml)(useAt(lem._3,PosInExpr(1::Nil))(SuccPos(0)).computeResult _, 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
+            val subst = USubst(List(SubstitutionPair(pA, lprem), SubstitutionPair(pB, rprem), SubstitutionPair(fL, l), SubstitutionPair(fLL, lt), SubstitutionPair(fR, r), SubstitutionPair(fRR, rt)))
+            val pr = ProvableSig.startProof(fml)(CEat(lem._3(subst),PosInExpr(1::Nil))(SuccPos(0)), 0)(AndRight(SuccPos(0)), 0)(rpr, 1)(lpr, 0)
             (concl,Some((premise,pr)))
         }
       case q:Quantified =>
@@ -505,14 +557,14 @@ object SimplifierV3 {
 
             val seq = q match {
               case _: Forall => ((_: ProvableSig)
-                (FOQuantifierTactics.allSkolemize(SuccPos(0)).computeResult _, 0)
-                (FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)).computeResult _, 0)
-                (FOQuantifierTactics.allInstantiate(None, None)(AntePos(1)).computeResult _, 0)
+                (FOQuantifierTactics.allSkolemize(SuccPos(0)), 0)
+                (FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)), 0)
+                (FOQuantifierTactics.allInstantiate(None, None)(AntePos(1)), 0)
                 )
               case _: Exists => ((_: ProvableSig)
-                (FOQuantifierTactics.existsSkolemize(AntePos(1)).computeResult _, 0)
-                (FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)).computeResult _, 0)
-                (FOQuantifierTactics.existsInstantiate(None, None)(SuccPos(0)).computeResult _, 0)
+                (FOQuantifierTactics.existsSkolemize(AntePos(1)), 0)
+                (FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)), 0)
+                (FOQuantifierTactics.existsInstantiate(None, None)(SuccPos(0)), 0)
                 )
             }
 
@@ -522,16 +574,16 @@ object SimplifierV3 {
               (EquivRight(SuccPos(0)), 0)
               // right branch
               (seq, 1)
-              (implyRi()(AntePos(1), SuccPos(0)).computeResult _, 1)
+              (implyRi()(AntePos(1), SuccPos(0)), 1)
               (EquivifyRight(SuccPos(0)), 1)
               (CommuteEquivRight(SuccPos(0)), 1)
-              (implyRi.computeResult _, 1)
+              (implyRi, 1)
               (upr, 1)
               // left branch
               (seq, 0)
-              (implyRi()(AntePos(1), SuccPos(0)).computeResult _, 0)
+              (implyRi()(AntePos(1), SuccPos(0)), 0)
               (EquivifyRight(SuccPos(0)), 0)
-              (implyRi.computeResult _, 0)
+              (implyRi, 0)
               (upr, 0)
               )
 
@@ -553,7 +605,7 @@ object SimplifierV3 {
             val concl = Equiv(m.child, uf)
             // |- p <-> q
             val upr2 = (ProvableSig.startProof(concl)
-              (useAt(upr,PosInExpr(1 :: Nil))(SuccPos(0)).computeResult _, 0)
+              (CEat(upr,PosInExpr(1 :: Nil))(SuccPos(0)), 0)
               (fastCloser(HashSet.empty, uprem), 0))
             val res = m.reapply(m.program,uf)
 
@@ -575,11 +627,17 @@ object SimplifierV3 {
         val (nArgs,proofs) = pairWalk(c, t=> termSimp(t,ctx,taxs))
         val nf = PredOf(fn, nArgs)
         val premise = proofs.map({ case (None,_) => True case (Some(pr),_) => pr._1}).reduceRight(And)
-        //@todo builtin proof
-        val cuts = proofs.zipWithIndex.map({ case ((None,_),_) => ident case ((Some(prf),_),i) => useAt(prf._2)(AntePos(i)) & eqL2R(AntePosition.base0(i))(SuccPosition.base0(0))}).
-          reduceRight( _&_)
-        val pr = proveBy(Imply(premise,Equiv(f,nf)),implyR(1) & (andL('Llast)*(proofs.length-1)) & cuts & cohideR(1)
-          & byUS(Ax.equivReflexive))
+        val cuts = proofs.zipWithIndex.map({
+          case ((None,_),_) => ident
+          case ((Some(prf),_),i) => CEat(prf._2)(AntePos(i)) andThen eqL2R(AntePosition.base0(i))(SuccPosition.base0(0))
+        }).foldLeft(_: ProvableSig)({ case (p, t) => p(t, 0) })
+        val subst = USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), nf)))
+        val pr = ProvableSig.startProof(Imply(premise,Equiv(f,nf)))(
+          ImplyRight(SuccPos(0)), 0)(
+          times(andL('Llast), proofs.length-1), 0)(
+          cuts, 0)(
+          cohideR(1), 0)(
+          Ax.equivReflexive.provable(subst), 0)
         (nf,Some(premise,pr))
       //Differentials
       case _ => (f,None)
@@ -597,9 +655,9 @@ object SimplifierV3 {
             val premise = And(prem2,prem)
             val fml = Imply(premise, Equiv( f, ff ))
             //instantiate the middle ff to recf
+            val subst = USubst(List(SubstitutionPair(pP, prem2), SubstitutionPair(pQ, prem), SubstitutionPair(pF, f), SubstitutionPair(pFF, recf), SubstitutionPair(pFFF, ff)))
             val prr = (ProvableSig.startProof(fml)
-              (useAt(equivTrans, PosInExpr(1::Nil),
-                (us:Option[Subst])=>us.get++RenUSubst(("FF_()".asFormula,recf)::Nil))(SuccPos(0)).computeResult _, 0)
+              (CEat(equivTrans(subst), PosInExpr(1::Nil))(SuccPos(0)), 0)
               (AndRight(SuccPos(0)), 0)
               (pr, 1)
               (pr2, 0)
@@ -658,7 +716,7 @@ object SimplifierV3 {
             (fastCloser(hs, prem), 1)
             // use
             (CoHide2(AntePos(ctx.length), SuccPos(0)), 0)
-            (implyRi.computeResult _, 0)
+            (implyRi, 0)
             (recpr, 0)
             )
       }
@@ -691,7 +749,7 @@ object SimplifierV3 {
           (fastCloser(hs, prem), 1)
           // use
           (CoHide2(AntePos(ctx.length), SuccPos(0)), 0)
-          (implyRi.computeResult _, 0)
+          (implyRi, 0)
           (recpr, 0)
           )
       }
@@ -739,15 +797,15 @@ object SimplifierV3 {
         //If simplification was at the top level, then we can use the existing context
         if (pos.isTopLevel) {
           val (ctx, cutPos, commute) =
-            if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1).computeResult _)
-            else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip.result _)
+            if (pos.isSucc) (sequent.ante, pos, commuteEquivR(1))
+            else (sequent.ante.patch(pos.top.getIndex, Nil, 1), SuccPosition.base0(sequent.succ.length), skip)
 
           simpWithDischarge(ctx,f,augmentFaxs,augmentTaxs) match {
             case (_, None) => provable
             case (ff, Some(pr)) =>
-              (provable(cutAtFw(ff)(pos).computeResult _, 0)
-                (cohideOnlyR(cutPos).computeResult _, 1)
-                (equivifyR(SuccPos(0)).computeResult _, 1)
+              (provable(cutAtFw(ff)(pos), 0)
+                (cohideOnlyR(cutPos), 1)
+                (equivifyR(SuccPos(0)), 1)
                 (commute, 1)
                 (pr, 1)
                 )
@@ -756,13 +814,13 @@ object SimplifierV3 {
           //Otherwise we only do the simplification under empty context and CEat the result
           simpWithDischarge(IndexedSeq(),f,augmentFaxs,augmentTaxs) match {
             case (_, None) => provable
-            case (_, Some(pr)) => provable(CEat(commuteEquivFR(SuccPosition(1))(pr))(pos).computeResult _, 0)
+            case (_, Some(pr)) => provable(CEat(commuteEquivFR(SuccPosition(1))(pr))(pos), 0)
           }
         }
       case Some(t: Term) => termSimpWithDischarge(IndexedSeq(),t, augmentTaxs) match {
         case (_, None) => provable
         case (_, Some(pr)) => try {
-          provable(CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos).computeResult _, 0)
+          provable(CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos), 0)
         } catch {
           case _: InfiniteTacticLoopError =>
             throw new UnsupportedTacticFeature("Unable to simplify term " + t +
@@ -799,7 +857,8 @@ object SimplifierV3 {
       pr.subgoals.headOption.map(seq => {
         val indices = if (pos.isAnte) seq.succ.indices else seq.succ.indices.diff(List(pos.index0))
         indices.map(SuccPos).reverse.foldLeft(pr)({ case (p, i) =>
-          p(useAt(Ax.doubleNegation.provable, PosInExpr(List(1)))(i), 0)(NotRight(i), 0) })
+          val subst = USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), seq(i))))
+          p(CEat(Ax.doubleNegation.provable(subst), PosInExpr(List(1)))(i), 0)(NotRight(i), 0) })
       }).getOrElse(pr)
     }
 
@@ -830,11 +889,11 @@ object SimplifierV3 {
     val seq = provable.subgoals.head
 
     val antes =
-      if (simpAntes) List.range(-1, -(seq.ante.length+1), -1).foldRight(provable)((i, pr) => pr(simps(i).computeResult _, 0))
+      if (simpAntes) List.range(-1, -(seq.ante.length+1), -1).foldRight(provable)((i, pr) => pr(simps(i), 0))
       else provable
 
     val succ =
-      if (simpSuccs) List.range(1, seq.succ.length+1, 1).foldRight(antes)((i, pr)=> pr(simps(i).computeResult _, 0))
+      if (simpSuccs) List.range(1, seq.succ.length+1, 1).foldRight(antes)((i, pr)=> pr(simps(i), 0))
       else antes
 
     succ(hideTrues, 0)(hideFalses, 0)
@@ -1101,7 +1160,7 @@ object SimplifierV3 {
   }
 
   def chaseIndex(f: Formula, ctx: context): List[ProvableSig] = {
-    val id = ProvableSig.startProof(Equiv(f,f))(byUS(Ax.equivReflexive.provable).result _, 0)
+    val id = ProvableSig.startProof(Equiv(f,f))(byUS(Ax.equivReflexive.provable), 0)
     val cpr = chaseFor(3,3,e=>AxIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
     List(cpr)
   }
