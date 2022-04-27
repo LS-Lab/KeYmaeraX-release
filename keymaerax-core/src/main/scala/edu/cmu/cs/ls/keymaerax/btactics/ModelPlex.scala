@@ -162,17 +162,27 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val (unobservableStateVars, unknownParams) = partitionUnobservable(unobservable)
 
     def conjectureOf(assumptions: Formula, prg: Program): (Formula, List[Formula]) = {
+      val measure = unobservableStateVars.
+        filter(_._2.isDefined).
+        map({ case (v, Some(e)) => (StaticSemantics.freeVars(e).toSet - v).map(AssignAny).reduceRightOption(Compose).map(Compose(_, Test(e))).getOrElse(Test(e)) }).
+        reduceRightOption(Compose)
+      val sensorVars = measure.map(StaticSemantics.boundVars(_).symbols).getOrElse(Set.empty)
+      val measurementNormalForm = measure.map(Compose(prg, _)).getOrElse(prg)
       val boundVars = StaticSemantics.boundVars(prg).symbols
       assert(boundVars.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
         "All bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
           "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.filterNot(_.isInstanceOf[DifferentialSymbol]) diff vars.toSet).mkString(", "))
-      val postEqs = unobservableStateVars.keys.
-        foldRight[Formula](vars.map(v => Equal(postVar(v), v)).
-          reduceRight(And))((v, f) => Exists(postVar(v)::Nil, f))
-      val estimator = unobservable.
-        filter(_._2.isDefined).map({ case (_, Some(e)) => e }).
+
+      val preEstimator = unobservable.
+        filter(_._2.isDefined).
+        map({ case (_, Some(e)) => e }).
         reduceRightOption(And).getOrElse(True)
-      val varConjectureBody = if (estimator == True) Diamond(prg, postEqs) else And(estimator, Diamond(prg, postEqs))
+      val postEqs = unobservableStateVars.keys.
+        foldRight[Formula]((vars ++ sensorVars).
+        map(v => Equal(postVar(v), v)).
+        reduceRight(And))((v, f) => Exists(postVar(v)::Nil, f))
+
+      val varConjectureBody = if (preEstimator == True) Diamond(measurementNormalForm, postEqs) else And(preEstimator, Diamond(measurementNormalForm, postEqs))
       val varConjecture = unobservableStateVars.foldRight[Formula](varConjectureBody)((v, f) => Exists(v._1::Nil, f))
       val conjecture = unknownParams.foldRight[Formula](varConjecture)({ case (((fn, v), _), f) =>
         val args = fn.domain match {
@@ -1252,10 +1262,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
       val outerProof = stepwisePartialQE(ctx(qfResult), assumptions, defs, tool)(subst)
       val Equiv(_, outerQf) = outerProof.conclusion.succ.head
+
+      val outerExpand = StaticSemantics.symbols(ctx(qfResult)) -- StaticSemantics.symbols(outerQf)
+      val outerSubst = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(outerExpand).nonEmpty }))
+
       val innerPos = PosInExpr(List(0)) ++ innermostPos
       timed(ProvableSig.startProof(Equiv(fml, outerQf))(
         subst)(
         CEat(innerProof, PosInExpr(List(0)))(SuccPosition.base0(0, innerPos)), 0)(
+        outerSubst)(
         outerProof, 0), "Combining inner and outer proof")
     case (ctx, p: Forall) =>
       //@todo conjunctive normal form and split
