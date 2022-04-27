@@ -265,6 +265,12 @@ object Idioms {
     else r
   }
 
+  /** Executes tactic `t` `n` times. */
+  def times(t: ProvableSig=>ProvableSig, n: Int): ProvableSig=>ProvableSig = (pr: ProvableSig) => {
+    if (n > 0) times(t, n-1)(pr(t))
+    else pr
+  }
+
   /** Try `s` and recover from proof search control failure with `t`. */
   def or(s: ProvableSig=>ProvableSig, t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => {
     try { s(pr) } catch { case _: BelleProofSearchControl => t(pr) }
