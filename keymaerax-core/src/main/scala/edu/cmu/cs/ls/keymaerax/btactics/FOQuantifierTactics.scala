@@ -59,6 +59,7 @@ protected object FOQuantifierTactics {
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
   def allInstantiateInverse(what: (Term, Variable)*): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    //@todo allInstantiateInverse misleading name; allIntro instead?
     def allInstI(t: Term, v: Variable, provable: ProvableSig): ProvableSig = {
       ProofRuleTactics.requireOneSubgoal(provable, "allInst")
       val sequent = provable.subgoals.head
@@ -67,10 +68,11 @@ protected object FOQuantifierTactics {
         case Some(e) => throw new TacticInapplicableFailure("allInstantiateInverse only applicable to formulas, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       }
-      useAt(Ax.allInst, PosInExpr(1::Nil), (_: Option[Subst]) => RenUSubst(
-        ("x_".asTerm, v) ::
-        ("f()".asTerm, t.replaceFree(v, "x_".asTerm)) ::
-        ("p(.)".asFormula, fml.replaceFree(t, DotTerm())) :: Nil))(pos).computeResult(provable)
+      val subst = RenUSubst(List(
+        (Variable("x_"), v),
+        (FuncOf(Function("f", None, Unit, Real), Nothing), t.replaceFree(v, Variable("x_"))),
+        (PredOf(Function("p", None, Real, Bool), DotTerm()), fml.replaceFree(t, DotTerm()))))
+      CEat(subst.toForward(Ax.allInst.provable), PosInExpr(1::Nil))(pos).computeResult(provable)
     }
     what.map({ case (t, v) => allInstI(t, v, _) }).foldLeft(provable)({ (pr, r) => pr(r, 0) })
   }
