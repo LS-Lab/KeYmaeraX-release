@@ -1111,15 +1111,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Partial QE on a formula that first expands/abbreviates all uninterpreted symbols and
     * then substitutes back in on the result. */
-  def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = {
-    val (fnified, subst) = mxAbbreviateFunctions(fml, defs)
-    val expanded = defs.exhaustiveSubst(fml)
-    val goal = OneOf(Seq(Atom(fnified), Atom(expanded)))
+  def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = mxPartialQE(List(fml), defs, tool)
+  def mxPartialQE(fmlAlts: List[Formula], defs: Declaration, tool: QETacticTool): ProvableSig = {
+    val abbreviated = fmlAlts.map(mxAbbreviateFunctions(_, defs)).toMap
+    val goal = OneOf(abbreviated.map(f => Atom(f._1)).toSeq)
     tool.qe(goal, continueOnFalse=false) match {
-      case (Atom(f), _) =>
-        if (f == fnified) tool.qe(fnified).fact(subst)
-        else if (f == expanded) tool.qe(expanded).fact
-        else throw new IllegalStateException("Unexpected parallel QE answer")
+      case (Atom(f), _) => abbreviated.get(f) match {
+        case Some(subst) => tool.qe(f).fact(subst)
+        case None => throw new IllegalStateException("Unexpected parallel QE answer")
+      }
     }
   }
 
@@ -1156,9 +1156,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
           filter({ case Function(_, _, Unit, Real, false) => true case _ => false }).
           map({ case fn@Function(n, i, Unit, s, _) => FuncOf(fn, Nothing) -> Variable(n, i, s) }).toList
         val varified = consts.foldLeft(f)({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
+        //@note first exhaustive subst, then varify, because exhaustive subst elaborates to functions and so would undo varification
+        val varifiedExpanded = consts.foldLeft(defs.exhaustiveSubst(f))({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
+        assert(StaticSemantics.symbols(varified).intersect(consts.map(_._1.func).toSet).isEmpty)
+        assert(StaticSemantics.symbols(varifiedExpanded).intersect(consts.map(_._1.func).toSet).isEmpty)
 
         val qfVarifiedProof = timed({
-          ModelPlex.mxPartialQE(varified, defs, tool)
+          ModelPlex.mxPartialQE(List(varified, varifiedExpanded), defs, tool)
           //@todo
           //tool.simplify(qfResult.subgoals.head.succ.head, assumptions)
         }, "QE " + (i+1) + "/" + monitorComponents.size)
