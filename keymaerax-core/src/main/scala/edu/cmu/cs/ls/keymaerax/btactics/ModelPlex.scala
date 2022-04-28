@@ -1105,7 +1105,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
               case FuncOf(wfn, _) => wfn == f
               case _ => false
             }) match {
-              case None => ???
+              case None => throw new IllegalArgumentException("Function " + fn.prettyString + " depends on quantified variable " + bv + " and so must be expanded, but got no definition how to expand; please make unobservable")
               case Some(d) =>
                 val s = USubst(List(d))
                 subst = subst ++ s
@@ -1122,12 +1122,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /** Partial QE on a formula that first expands/abbreviates all uninterpreted symbols and
     * then substitutes back in on the result. */
   def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = mxPartialQE(List(fml), defs, tool)
-  def mxPartialQE(fmlAlts: List[Formula], defs: Declaration, tool: QETacticTool): ProvableSig = {
+  def mxPartialQE(fmlAlts: List[Formula], defs: Declaration, tool: QETacticTool, verified: Boolean = true): ProvableSig = {
     val abbreviated = fmlAlts.map(mxAbbreviateFunctions(_, defs)).toMap
     val goal = OneOf(abbreviated.map(f => Atom(f._1)).toSeq)
     tool.qe(goal, continueOnFalse=false) match {
-      case (Atom(f), _) => abbreviated.get(f) match {
-        case Some(subst) => tool.qe(f).fact(subst)
+      case (Atom(f), result) => abbreviated.get(f) match {
+        case Some(subst) => if (verified) tool.qe(f).fact(subst) else ProvableSig.startProof(Equiv(f, result))(subst)
         case None => throw new IllegalStateException("Unexpected parallel QE answer")
       }
     }
