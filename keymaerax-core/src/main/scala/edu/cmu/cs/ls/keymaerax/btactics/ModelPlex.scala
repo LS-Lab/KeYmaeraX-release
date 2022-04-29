@@ -1147,6 +1147,22 @@ object ModelPlex extends ModelPlexTrait with Logging {
     innermost
   }
 
+  /** Simplifies the right-hand side of the equivalence conclusion of `p`. */
+  private def simplifyEquivProof(p: ProvableSig): ProvableSig = {
+    val Equiv(orig, result) = p.conclusion.succ.head
+    SimplifierV3.formulaSimp(result, faxs=SimplifierV3.defaultFaxs, taxs=SimplifierV3.defaultTaxs) match {
+      case (simplifiedResult, Some((True, simpProof))) =>
+        val Imply(True, equiv) = simpProof.conclusion.succ.head
+        val uncondSimpProof = ProvableSig.startProof(equiv)(
+          CEat(Ax.trueImply.provable(USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), equiv)))))(SuccPos(0)), 0)(
+          simpProof, 0)
+        ProvableSig.startProof(Equiv(orig, simplifiedResult))(
+          CEat(uncondSimpProof, PosInExpr(1::Nil))(SuccPosition.base0(0, PosInExpr(1::Nil))), 0)(
+          p, 0)
+      case _ => p
+    }
+  }
+
   /** Splits into separate partial QE calls and merges results.  */
   def stepwisePartialQE(fml: Formula,
                         assumptions: List[Formula],
@@ -1172,9 +1188,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
         assert(StaticSemantics.symbols(varifiedExpanded).intersect(consts.map(_._1.func).toSet).isEmpty)
 
         val qfVarifiedProof = timed({
-          ModelPlex.mxPartialQE(List(varified, varifiedExpanded), defs, tool)
+          val partialQEProof = ModelPlex.mxPartialQE(List(varified, varifiedExpanded), defs, tool)
           //@todo
           //tool.simplify(qfResult.subgoals.head.succ.head, assumptions)
+          simplifyEquivProof(partialQEProof)
         }, "QE " + (i+1) + "/" + monitorComponents.size)
 
         val result = qfVarifiedProof.conclusion.succ.head
@@ -1215,7 +1232,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           //timed(tool.simplify(d, assumptions), "Simplifying")
       }
 
-      val mergedProof = mergeDisjuncts(componentResults)
+      val mergedProof = timed(simplifyEquivProof(mergeDisjuncts(componentResults)), "Merging QE component results")
       assert(mergedProof.isProved, "Expected a finished merge proof, but proof not closed")
       val merged@Equiv(lq, rqf) = mergedProof.conclusion.succ.head
       assert(StaticSemantics.boundVars(rqf).isEmpty, "Expected all quantifiers eliminated, but formula still has quantifiers: " + rqf.prettyString)
