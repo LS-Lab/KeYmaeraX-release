@@ -134,12 +134,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
   }
 
   /** Partitions the unobservable symbols into unobservable state variables and unknown model parameters. */
-  def partitionUnobservable(unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (ListMap[Variable, Option[Formula]], ListMap[(Function, Variable), Option[Formula]]) = {
+  def partitionUnobservable(unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (ListMap[Variable, Option[Formula]], ListMap[(Function, Variable), Option[Formula]], ListMap[(Function, Variable), Option[Formula]]) = {
     val unobservableStateVars: ListMap[Variable, Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Variable]).
       map({ case (k: Variable, v) => k -> v })
-    val unknownParams: ListMap[(Function, Variable), Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Function]).
+    val unknownParams: ListMap[(Function, Variable), Option[Formula]] = unobservable.filter({ case (Function(_, _, domain, _, _), _) => domain == Unit case _ => false }).
       map({ case (k: Function, v) => (k, Variable(k.name, k.index, k.sort)) -> v })
-    (unobservableStateVars, unknownParams)
+    val unknownFunctions: ListMap[(Function, Variable), Option[Formula]] = unobservable.filter({ case (Function(_, _, domain, _, _), _) => domain != Unit case _ => false }).
+      map({ case (k: Function, v) => (k, Variable(k.name, k.index, k.sort)) -> v })
+    (unobservableStateVars, unknownParams, unknownFunctions)
   }
 
   /**
@@ -159,32 +161,52 @@ object ModelPlex extends ModelPlexTrait with Logging {
     require(StaticSemantics.symbols(fml).intersect(vars.map(postVar).toSet).isEmpty,
       "ModelPlex post symbols must not occur in original formula")
 
-    val (unobservableStateVars, unknownParams) = partitionUnobservable(unobservable)
+    val (unobservableStateVars, unknownParams, unknownFunctions) = partitionUnobservable(unobservable)
 
     def conjectureOf(assumptions: Formula, prg: Program): (Formula, List[Formula]) = {
-      val measure = unobservableStateVars.
-        filter(_._2.isDefined).
-        map({ case (v, Some(e)) => (StaticSemantics.freeVars(e).toSet - v).map(AssignAny).reduceRightOption(Compose).map(Compose(_, Test(e))).getOrElse(Test(e)) }).
-        reduceRightOption(Compose)
-      val sensorVars = measure.map(StaticSemantics.boundVars(_).symbols).getOrElse(Set.empty)
-      val measurementNormalForm = measure.map(Compose(prg, _)).getOrElse(prg)
       val boundVars = StaticSemantics.boundVars(prg).symbols
       assert(boundVars.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
         "All bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
           "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.filterNot(_.isInstanceOf[DifferentialSymbol]) diff vars.toSet).mkString(", "))
 
+      val unknownFnApps = ListBuffer[FuncOf]()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case f@FuncOf(fn, _) =>
+            if (unknownFunctions.keySet.map(_._1).contains(fn)) unknownFnApps += f
+            Left(None)
+          case _ => Left(None)
+        }
+      }, prg)
+      val boundArgsFns = unknownFnApps.filter(fn => StaticSemantics.freeVars(fn).toSet.intersect(boundVars).nonEmpty)
+      require(boundArgsFns.isEmpty,
+        "Unable to make functions " + boundArgsFns.map(_.prettyString).mkString(",") +
+          " unobservable, because their arguments are bound in program; replace manually with non-deterministic assignments (e.g., replace x:=2; y:=f(x) with x:=2; fx:=*; y:=fx)")
+
+      val postEstimators = unobservableStateVars.
+        filter(_._2.isDefined).
+        map({ case (v, Some(e)) =>
+          (StaticSemantics.freeVars(e).toSet - v).toList match {
+            case Nil => ???
+            case sensorVar :: Nil => v -> e.replaceFree(v, postVar(v)).replaceFree(sensorVar, postVar(sensorVar))
+            case s => throw new IllegalArgumentException("Sensor specifications with multiple variables not supported, please use function symbols for uncertainty and other parameters")
+          }
+        })
+
       val preEstimator = unobservable.
         filter(_._2.isDefined).
         map({ case (_, Some(e)) => e }).
         reduceRightOption(And).getOrElse(True)
-      val postEqs = unobservableStateVars.keys.
-        foldRight[Formula]((vars ++ sensorVars).
-        map(v => Equal(postVar(v), v)).
-        reduceRight(And))((v, f) => Exists(postVar(v)::Nil, f))
 
-      val varConjectureBody = if (preEstimator == True) Diamond(measurementNormalForm, postEqs) else And(preEstimator, Diamond(measurementNormalForm, postEqs))
+      val postEqs = unobservableStateVars.keys.
+        foldRight[Formula](vars.map(v => Equal(postVar(v), v)).reduceRight(And))((v, f) => postEstimators.get(v) match {
+          case Some(e) => Exists(postVar(v)::Nil, And(e, f))
+          case _ => Exists(postVar(v)::Nil, f)
+        })
+
+      val varConjectureBody = if (preEstimator == True) Diamond(prg, postEqs) else And(preEstimator, Diamond(prg, postEqs))
       val varConjecture = unobservableStateVars.foldRight[Formula](varConjectureBody)((v, f) => Exists(v._1::Nil, f))
-      val conjecture = unknownParams.foldRight[Formula](varConjecture)({ case (((fn, v), _), f) =>
+      val conjecture = (unknownParams ++ unknownFunctions).foldRight[Formula](varConjecture)({ case (((fn, v), _), f) =>
         val args = fn.domain match {
           case Unit  => Nothing
           case d => d.toDots(0)._1
@@ -225,7 +247,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     //@todo encode in dL
     val ModelPlexConjecture(_, spec, assms) = createMonitorSpecificationConjecture(fml, vars, unobservable, NAMED_POST_VAR)
 
-    val (unobservableStateVars, unknownParams) = partitionUnobservable(unobservable)
+    val (unobservableStateVars, unknownParams, _) = partitionUnobservable(unobservable)
     val (ctx, specFml: Formula) = spec.at(PosInExpr(List.fill(unknownParams.keys.size)(0)))
     def ithMon(mon: Formula, vars: List[Variable], i: Int): Formula = {
       (vars.toSet -- unobservableStateVars.keySet).foldLeft(mon)({ case (f, v) =>

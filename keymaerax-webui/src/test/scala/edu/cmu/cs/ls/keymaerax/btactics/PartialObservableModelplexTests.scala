@@ -130,6 +130,42 @@ class PartialObservableModelplexTests extends TacticTestBase {
     qf
   }
 
+  "Conjecture generator" should "make a state variable unobservable" in {
+    val fml = "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+    ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Variable("x") -> None)).
+      conjecture shouldBe "\\exists x <{x:=x+1;}*>\\exists xpost xpost=x".asFormula
+  }
+
+  it should "replace a state variable with a sensor" in {
+    val fml = "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+    ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Variable("x") -> Some("xS-xU()<=x & x<=xS+xU()".asFormula))).
+      conjecture shouldBe "\\exists x ((xS-xU()<=x&x<=xS+xU())&<{x:=x+1;}*>\\exists xpost ((xSpost-xU()<=xpost & xpost<=xSpost+xU()) & xpost=x))".asFormula
+  }
+
+  it should "existentially quantify an unknown parameter" in {
+    val fml = "x>=0 -> [{x:=f()+1;}*]x>=0".asFormula
+    ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Function("f", None, Unit, Real) -> None)).
+      conjecture shouldBe "\\exists f <{x:=f+1;}*>xpost=x".asFormula
+  }
+
+  it should "existentially quantify an unknown function" in {
+    val fml = "x>=0 -> [{x:=f(y)+1;z:=2*f(y);}*]x>=0".asFormula
+    ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x"), Variable("z")), ListMap(Function("f", None, Real, Real) -> None)).
+      conjecture shouldBe "\\exists f <{x:=f+1;z:=2*f;}*>(xpost=x&zpost=z)".asFormula
+  }
+
+  it should "complain when function arguments are bound" in {
+    val fml = "x>=0 -> [{x:=f(x)+1;}*]x>=0".asFormula
+    the [IllegalArgumentException] thrownBy ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Function("f", None, Real, Real) -> None)) should
+      have message "requirement failed: Unable to make functions f(x) unobservable, because their arguments are bound in program; replace manually with non-deterministic assignments (e.g., replace x:=2; y:=f(x) with x:=2; fx:=*; y:=fx)"
+  }
+
+  it should "replace a function with a sensor" in {
+    val fml = "x>=0 & f(x)>=0 -> [{y:=f(x)+1;}*]y>=0".asFormula
+    ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("y")), ListMap(Function("f", None, Real, Real) -> Some("fS-fU() <= f(x) & f(x) <= fS+fU()".asFormula))).
+      conjecture shouldBe "\\exists f ((fS-fU()<=f&f<=fS+fU())&<{y:=f+1;}*>ypost=y)".asFormula
+  }
+
   "Partial Observability" should "derive a model monitor from approximated turning behavior" in withMathematica { tool =>
     val Some(curvedBot) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Curved Ground Robot Motion is Safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
