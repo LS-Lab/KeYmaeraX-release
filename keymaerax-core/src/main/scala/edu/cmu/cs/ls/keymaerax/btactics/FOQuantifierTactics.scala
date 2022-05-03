@@ -150,18 +150,19 @@ protected object FOQuantifierTactics {
     def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
     sequent.at(pos) match {
-      case (_, Exists(vars, _)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
-        useAt(Ax.existse)(pos).computeResult(pr)
+      case (_, Exists(vars, p)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+        val subst = RenUSubst(List((Variable("x_"), vars.head), (UnitPredicational("p_", AnyArg), URename(Variable("x_"), vars.head)(p))))
+        CEat(subst.toForward(Ax.existse.provable), PosInExpr(1::Nil))(pos).computeResult(pr)
       case (_, Exists(vars, qf)) if instance.isDefined &&
         !StaticSemantics.freeVars(qf).isInfinite && //@note useAt internal renaming introduces x_ which would clash
         StaticSemantics.freeVars(qf).intersect(StaticSemantics.freeVars(instance.get)).isEmpty &&
         StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
         (quantified.isEmpty || vars.contains(quantified.get)) =>
-        //@todo assumes any USubstAboveURen
-        useAt(Ax.existsGeneralize, PosInExpr(1 :: Nil), (uso: Option[Subst]) => uso match {
-          case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil)
-          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
-        })(pos).computeResult(pr)
+        val subst = RenUSubst(List(
+          (Variable("x_"), vars.head),
+          (PredOf(Function("p_", None, Real, Bool), DotTerm()), qf.replaceFree(vars.head, DotTerm())),
+          (FuncOf(Function("f", None, Unit, Real), Nothing), URename(Variable("x_"), vars.head)(instance.get))))
+        CEat(subst.toForward(Ax.existsGeneralize.provable), PosInExpr(1::Nil))(pos).computeResult(pr)
       case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
         require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
         def exists(h: Formula) = if (vars.length > 1) Exists(vars.filter(_ != vToInst(vars)), h) else h
@@ -173,10 +174,14 @@ protected object FOQuantifierTactics {
         val (v, assign, assignPreprocess, subst) = t match {
           case vinst: Variable if !StaticSemantics.freeVars(p).contains(vinst) =>
             (vinst,Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), ProofRuleTactics.boundRenameFw(x, vinst)(pos).computeResult _,
-              RenUSubst( ("f()".asTerm, vinst) :: ("p_(.)".asFormula, Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))) :: Nil))
+              RenUSubst(List(
+                (FuncOf(Function("f", None, Unit, Real), Nothing), vinst),
+                (PredOf(Function("p_", None, Real, Bool), DotTerm()), Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))))))
           case _ =>
             (x,Box(Assign(x, t), p), skip.result _,
-              RenUSubst(("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p)) :: Nil))
+              RenUSubst(List(
+                (FuncOf(Function("f", None, Unit, Real), Nothing), t),
+                (PredOf(Function("p_", None, Real, Bool), DotTerm()), Box(Assign(x, DotTerm()), p)))))
         }
         val rename = Ax.existsGeneralize.provable(URename(Variable("x_"), v, semantic=true))
 
