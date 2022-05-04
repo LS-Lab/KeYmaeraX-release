@@ -91,8 +91,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       globalProvable, 0 /* start from single provable */, recursive = false, "custom", constructGlobalProvable = false)
     val listeners = listener::Nil ++ additionalListeners
     BelleInterpreter.setInterpreter(interpreter(listeners))
-    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs), None, entry.defs)) match {
-      case BelleProvable(provable, _, _) =>
+    BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
+      case BelleProvable(provable, _) =>
         assert(provable.conclusion == expectedSubstConclusion, "The proved conclusion must match the input model")
         //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
         if (provable.isProved) {
@@ -133,7 +133,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
           val localProofId = db.createProof(node.localProvable)
           val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, node.proof.info.defs(db), DBTools.listener(db),
             ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true, recordInternal=true)
-          interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion, node.proof.info.defs(db)), None, node.proof.info.defs(db)))
+          interpreter(BelleParser(tactic), BelleProvable.plain(ProvableSig.startProof(node.localProvable.conclusion, node.proof.info.defs(db))))
           extractTactic(localProofId)
       }
     }

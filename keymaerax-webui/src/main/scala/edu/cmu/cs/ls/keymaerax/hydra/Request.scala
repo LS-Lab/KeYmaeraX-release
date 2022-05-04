@@ -1973,7 +1973,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         new ErrorResponse("Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic")::Nil
       case Some(node) if node.maker.isDefined =>
         assert(node.maker.isDefined, "Unable to expand node without tactics")
-        val (conjecture, parentStep, parentRule) = (ProvableSig.startPlainProof(node.conclusion), node.maker.get, node.makerShortName.get)
+        val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion, tree.info.defs(db)), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val proofSession = session(proofId).asInstanceOf[ProofSession]
         //@note add a copy of parent proof session under local proof ID to allow stepping deeper into tactics
@@ -1982,7 +1982,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           RequestHelper.listenerFactory(db, proofSession),
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false, recordInternal=true)
         val parentTactic = BelleParser(parentStep)
-        innerInterpreter(parentTactic, BelleProvable(conjecture, None, tree.info.defs(db)))
+        innerInterpreter(parentTactic, BelleProvable.plain(conjecture))
         innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)
@@ -2567,7 +2567,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                   val localProvable = ProvableSig.startProof(sequent, tree.info.defs(db))
                   val localProofId = db.createProof(localProvable)
                   val executor = BellerophonTacticExecutor.defaultExecutor
-                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable, node.label.map(_ :: Nil), tree.info.defs(db)), interpreter(localProofId, -1))
+                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable.labeled(localProvable, node.label.map(_ :: Nil)), interpreter(localProofId, -1))
                   RunBelleTermResponse(localProofId.toString, "()", taskId, "Executing internal steps of " + executionInfo(belleTerm)) :: Nil
                 }
               } else {
@@ -3142,9 +3142,9 @@ object ProofValidationRunner extends Logging {
         val provable = ElidingProvable(Provable.startProof(model), defs)
 
         try {
-          BelleInterpreter(proof, BelleProvable(provable, None, defs)) match {
-            case BelleProvable(p, _, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
-            case _                                    => results update (taskId, (model, proof, Some(false)))
+          BelleInterpreter(proof, BelleProvable.plain(provable)) match {
+            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
+            case _                                 => results update (taskId, (model, proof, Some(false)))
           }
         } catch {
           //Catch everything and indicate a failed proof attempt.

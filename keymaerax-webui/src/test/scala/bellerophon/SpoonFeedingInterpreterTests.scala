@@ -236,7 +236,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1),
       BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List(
           "x>0 ==> x>0".asSequent,
           "x>0 ==> x>-1".asSequent
@@ -259,7 +259,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       )),
       BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))
     ) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List(
           "x>0 ==> x>-1, x>=0".asSequent,
           "x>0, x>=0 ==> x>-1".asSequent
@@ -294,7 +294,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       )),
       BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))
     ) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p shouldBe 'proved
         l shouldBe 'empty
     }
@@ -320,7 +320,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       BelleParser.tacticParser("auto"),
       BelleProvable.labeled(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)), Some(List(BelleTopLevelLabel("A label"))))
     ) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p shouldBe 'proved
         l.toList.flatten shouldBe 'empty
     }
@@ -334,7 +334,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(implyR(1) & label("Delete") & propClose,
       BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))
     ) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p shouldBe 'proved
         l.value shouldBe 'empty
     }
@@ -928,7 +928,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         QE),
       QE //Expand(eq, None) & Expand(Function("one", None, Unit, Real), None) & QE
       ),
-      BelleProvable.withDefs(ProvableSig.startProof(problem.asFormula, defs), defs))
+      BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
@@ -948,7 +948,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         Using("eq(x,one()), eq(x,1)".asFormulaList, QE & DebuggingTactics.print("Branch 2 proved?"))) & DebuggingTactics.print("Both branches proved?"),
       Expand(eq, None) & Expand(Function("one", None, Unit, Real), None) & QE
     ),
-      BelleProvable.withDefs(ProvableSig.startProof(problem.asFormula, defs), defs))
+      BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
@@ -1869,7 +1869,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       listener(db.db, constructGlobalProvable = true),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false, recordInternal=true))
     interpreter(prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula))) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List("==> x>=0, x<y".asSequent)
         l.value should contain theSameElementsAs List("!x<y".asFormula.prettyString.asLabel)
     }
@@ -1903,7 +1903,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       listener(db.db, constructGlobalProvable = true),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=true, convertPending=false, recordInternal=true))
     interpreter(prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula))) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List("==> x>=0, x<y".asSequent)
         l.value should contain theSameElementsAs List("!x<y".asFormula.prettyString.asLabel)
     }
@@ -2438,7 +2438,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ODE(1)
         |)""".stripMargin)
     interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) =>
+      case BelleProvable(p, _) =>
         p.subgoals should contain theSameElementsInOrderAs List(
           "x^2+y^2=r, r>0, r>1 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent,
           "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r, r>1".asSequent
@@ -2469,7 +2469,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ODE(1)
         |)""".stripMargin)
     interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) =>
+      case BelleProvable(p, _) =>
         p.subgoals should contain theSameElementsInOrderAs List(
           "x^2+y^2=r, r>0, r>1 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent,
           "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r, r>1".asSequent
@@ -2493,7 +2493,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  unfold; QE
         |)""".stripMargin)
     interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r(), true ==> x^2+y^2=r()".asSequent
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r(), true ==> x^2+y^2=r()".asSequent
     }
   }}
 
@@ -2523,7 +2523,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  expandAllDefs; ODE(1)
         |)""".stripMargin, defs=entry.defs, expandAll=false)
     interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
     }
   }}
 
@@ -2553,7 +2553,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  expandAllDefs; ODE(1)
         |)""".stripMargin, defs=entry.defs, expandAll=false)
     interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
     }
   }}
 
@@ -2574,7 +2574,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = BelleParser.parseWithInvGen(
       """implyR(1); dIRule(1)""".stripMargin, defs=entry.defs, expandAll=false)
     interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) =>
+      case BelleProvable(p, _) =>
         p.subgoals should contain theSameElementsAs List(
           "x^2+y^2+s()=r(), true ==> x^2+y^2+s()=r()".asSequent,
           "x_0^2+y_0^2+s()=r(), true ==> [y':=-r()*x;][x':=r()*y;]2*x^(2-1)*x'+2*y^(2-1)*y'+0=0".asSequent
@@ -2601,8 +2601,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     //@note QE expands wUp and wLo
     val tactic = BelleParser.parseWithInvGen(
       """implyR(1); andL('L)*; implyL('L); <(QE, QE)""".stripMargin, defs=defs, expandAll=false)
-    interpreter(tactic, BelleProvable.withDefs(ProvableSig.startProof(s.asFormula, defs), defs)) match {
-      case BelleProvable(p, _, _) => p shouldBe 'proved
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(s.asFormula, defs))) match {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
   }}
 
@@ -2628,8 +2628,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         | andL('Llast);
         | QE using "y>=0 :: z>=1 :: y/(z*one())>=0 & (b=0 -> b/z=0) :: nil"
         |)""".stripMargin, defs=defs, expandAll=false)
-    interpreter(tactic, BelleProvable.withDefs(ProvableSig.startProof(s.asFormula, defs), defs)) match {
-      case BelleProvable(p, _, _) => p shouldBe 'proved
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(s.asFormula, defs))) match {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
   }}
 

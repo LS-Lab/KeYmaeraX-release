@@ -1060,15 +1060,14 @@ object TactixLibrary extends HilbertCalculus
     * @see [[TactixLibrary.by(Provable)]]
     * @see [[proveBy()]]
     */
-  def proveBy(goal: ProvableSig, tactic: BelleExpr, defs: Declaration): ProvableSig = {
-    val v = BelleProvable(goal, None, defs)
+  def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = {
+    val v = BelleProvable(goal, None)
     BelleInterpreter(tactic, v) match {
-      case BelleProvable(provable, _, _) => provable
+      case BelleProvable(provable, _) => provable
 //      //@note there is no other case at the moment
 //      case r => throw BelleIllFormedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
     }
   }
-  def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = proveBy(goal, tactic, Declaration(Map.empty))
 
   // lemmas
 

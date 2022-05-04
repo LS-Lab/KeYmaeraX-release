@@ -68,7 +68,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
 
   def interpret(e:BelleExpr, pr:Provable):ProvableSig = {
     BelleInterpreter(e, BelleProvable.plain(ElidingProvable(pr, Declaration(Map.empty)))) match {
-      case BelleProvable(result,_ , _) => result
+      case BelleProvable(result,_ ) => result
     }
   }
 

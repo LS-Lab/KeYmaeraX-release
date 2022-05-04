@@ -164,7 +164,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     val value = BelleProvable.plain(ProvableSig.startPlainProof("p() -> p()".asFormula))
     val result = BelleInterpreter(tactic, value)
     result match {
-      case BelleProvable(resultingProvable, _, _) => resultingProvable.isProved shouldBe true
+      case BelleProvable(resultingProvable, _) => resultingProvable.isProved shouldBe true
       case _ => throw new Exception("Expected a BelleProvable.")
     }
   }

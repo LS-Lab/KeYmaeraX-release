@@ -41,13 +41,13 @@ trait Interpreter {
 
   /** Compares provables ignoring labels. */
   protected def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
-    case (BelleProvable(pPrev, _, _), BelleProvable(pCurr, _, _)) => pCurr != pPrev
+    case (BelleProvable(pPrev, _), BelleProvable(pCurr, _)) => pCurr != pPrev
     case _ => curr != prev
   }
 
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
-  protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration): USubst =
-    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, defs.substs)
+  protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig): USubst =
+    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, goal.defs.substs)
 
 
   /** Applies substitutions `s` to provable `p` exhaustively. */

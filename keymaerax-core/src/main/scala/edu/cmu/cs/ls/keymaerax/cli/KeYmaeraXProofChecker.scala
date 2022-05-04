@@ -383,7 +383,7 @@ case class KeYmaeraXProofChecker(timeout: Long, defs: Declaration) extends (Bell
       BelleInterpreter.interpreter.start()
       Await.result(
         Future {
-          TactixLibrary.proveBy(ProvableSig.startProof(s, defs), t, defs)
+          TactixLibrary.proveBy(ProvableSig.startProof(s, defs), t)
         },
         if (timeout > 0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf
       )

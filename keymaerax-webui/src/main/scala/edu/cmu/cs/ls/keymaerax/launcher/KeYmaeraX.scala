@@ -401,7 +401,7 @@ object KeYmaeraX {
               DBTools.listener(tempDB.db, additionalListeners = additionalListeners),
               ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 0, strict=false, convertPending=false, recordInternal=false)
             BelleInterpreter.setInterpreter(interpreter)
-            BelleInterpreter(t, BelleProvable.withDefs(ProvableSig.startProof(e.model.asInstanceOf[Formula], e.defs), e.defs))
+            BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(e.model.asInstanceOf[Formula], e.defs)))
             val tree = DbProofTree(tempDB.db, proofId.toString)
             val converter = how match {
               case "verboseTactics" => new VerboseTraceToTacticConverter(tree.info.defs(tempDB.db))

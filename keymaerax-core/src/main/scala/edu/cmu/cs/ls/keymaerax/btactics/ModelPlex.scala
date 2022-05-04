@@ -302,7 +302,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil) if t.pt.name == "loopAuto" && loopBranch.isEmpty =>
         loopBranch = Some(b)
       case t: AppliedDependentPositionTactic if t.name == "dW" => input match {
-        case BelleProvable(p, _, _) =>
+        case BelleProvable(p, _) =>
           val dwr = proveBy(p.subgoals.head, t)
           assert(dwr.subgoals.size == 1, "dW expected to result in a single subgoal")
           dWResult = Some(dwr.subgoals)
@@ -314,11 +314,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
         invariant = Some(t.pt.inputs.head.asInstanceOf[Formula] -> None)
       case t: AppliedDependentPositionTactic if t.pt.name == "loopAuto" && invariant.isEmpty =>
         input match {
-          case BelleProvable(p, _, _) =>
+          case BelleProvable(p, _) =>
             invariant = TactixLibrary.invGenerator(p.subgoals(0), t.locator.toPosition(p).get).toList.headOption
         }
       case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" && !inDW => input match {
-        case BelleProvable(p, _, _) =>
+        case BelleProvable(p, _) =>
           val di = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
               case Equal(t, FuncOf(TacticReservedSymbols.const, Nothing)) =>
@@ -341,7 +341,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           }
       }
       case b@BranchTactic(children) if loopBranch.contains(b) => input match {
-        case BelleProvable(p, _, _) =>
+        case BelleProvable(p, _) =>
           //@todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
           assert(3 <= children.size && children.size <= 4 && children.size == p.subgoals.size,
             "3 open goals expected after loop, 4 open goals expected after throughout")
@@ -349,7 +349,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         case _ =>
       }
       case t => input match {
-        case BelleProvable(p, _, _) if dWResult.contains(p.subgoals) =>
+        case BelleProvable(p, _) if dWResult.contains(p.subgoals) =>
           // close after dW
           assert(p.subgoals.size == 1, "dW expected on a single subgoal")
           def unsequentTac(a:Int,s:Int):BelleExpr = {
@@ -413,8 +413,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val x0Ghosts = x0.toList.sortBy[NamedSymbol](_._1).map({ case (v, g) => Assign(g, v) }).reduceRight(Compose)
 
       val pl = proofListener(name, plantVars.toSet, /*q, */x0)
-      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(model.asInstanceOf[Formula], defs), defs)) match {
-        case BelleProvable(proof, _, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
+      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(model.asInstanceOf[Formula], defs))) match {
+        case BelleProvable(proof, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
         case _ => assert(assertion = false, "Cannot derive a nonlinear model from unfinished proof")
       }
 
@@ -507,7 +507,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val olds = senseVars.map(v => FuncOf(Function("old", None, Real, Real), postVar(v)) -> v).toMap
 
     val pl = proofListener(name, senseVars.toSet, x0)
-    LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(formula, defs), defs))
+    LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(formula, defs)))
 
     assert(pl.invariant.isDefined, "Proof of model " + name + " does not provide a loop invariant. Please use tactic loop({`inv`},...) in the proof.")
     assert(pl.diffInvariants.nonEmpty, "Proof of model " + name + " does not provide sufficient insight into invariant regions of the ODE dynamics. Please use differential cuts dC in the proof.")

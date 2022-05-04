@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, Position, RenUSubst, R
 import edu.cmu.cs.ls.keymaerax.parser.Location
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
 import scala.annotation.tailrec
@@ -350,7 +350,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val listener = new TraceRecordingListener(db, proof.info.proofId, stepId, localProvable,
       goalIdx, recursive = false, shortName, constructGlobalProvable = false)
-    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil), proof.info.defs(db)),
+    val taskId = executor.schedule(userId, tactic, BelleProvable.labeled(localProvable.sub(goalIdx), label.map(_ :: Nil)),
       interpreter(listener::Nil))
     if (wait) {
       executor.wait(taskId)
@@ -369,7 +369,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
                           executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                           wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
-    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil), proof.info.defs(db)), interpreter)
+    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter)
     if (wait) {
       executor.wait(taskId)
       // report tactic execution problems upon completion
@@ -503,7 +503,11 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
     )
   }
 
-  private lazy val dbLocalProvable = db.getProvable(step.localProvableId.get).provable
+  private lazy val dbLocalProvable = db.getProvable(step.localProvableId.get).provable match {
+    // database does not store definitions of provables
+    case ep: ElidingProvable => ep.copy(defs = proof.info.defs(db))
+    case tp: TermProvable => tp.copy(defs = proof.info.defs(db))
+  }
 }
 
 /** A loaded node (root if step=None, then also parent=None, maker=None, makerShortName=None). */

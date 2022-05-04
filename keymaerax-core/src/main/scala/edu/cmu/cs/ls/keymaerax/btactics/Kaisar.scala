@@ -432,7 +432,7 @@ object Kaisar {
 
   def interpret(e:BelleExpr, pr:Provable):Provable = {
     BelleInterpreter(e, BelleProvable.plain(ElidingProvable(pr, Declaration(Map.empty)))) match {
-      case BelleProvable(result, _, _) => result.underlyingProvable
+      case BelleProvable(result, _) => result.underlyingProvable
     }
   }
 
