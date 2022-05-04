@@ -24,7 +24,7 @@ class BTacticExamples extends TacticTestBase  {
   "Explicit Proof Certificates" should "prove !!p() <-> p()" in {
     import edu.cmu.cs.ls.keymaerax.core._
     // explicit proof certificate construction of |- !!p() <-> p()
-    val proof = (ProvableSig.startProof(
+    val proof = (ProvableSig.startPlainProof(
       "==> !!p() <-> p()".asSequent)
       (EquivRight(SuccPos(0)), 0)
       // right branch

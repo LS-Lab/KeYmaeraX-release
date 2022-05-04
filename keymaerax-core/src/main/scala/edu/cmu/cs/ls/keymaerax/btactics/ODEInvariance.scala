@@ -21,6 +21,7 @@ import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
@@ -2276,7 +2277,7 @@ object ODEInvariance {
     val lhs = odels.map(_.xp.x)  // variables in the ODE
     val diffadjren = (lhs zip dadjlhs).foldLeft(diffadj)( (acc,bv) => acc(URename(bv._1,bv._2,semantic=true)) )
 
-    ElidingProvable(diffadjren)
+    ElidingProvable(diffadjren, Declaration(Map.empty))
   }
 
   // Prove rewrite [ODE1&Q]P -> [ODE2&Q]P, where ODE1, ODE2 have the same LHS but possibly different RHS

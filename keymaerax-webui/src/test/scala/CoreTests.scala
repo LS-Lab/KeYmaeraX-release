@@ -79,7 +79,7 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
     println("\tCheck " + rule) //@TODO turn into "should" output?
-    val pn = ProvableSig.startProof(in)
+    val pn = ProvableSig.startPlainProof(in)
     val resList = pn.apply(rule, 0).subgoals
     println("\tResult\t" + resList)
     println("\tExpected\t" + out)
@@ -97,7 +97,7 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     }
   }
 
-  private def testRule(rule: Rule, in: Sequent) = ProvableSig.startProof(in).apply(rule, 0).subgoals
+  private def testRule(rule: Rule, in: Sequent) = ProvableSig.startPlainProof(in).apply(rule, 0).subgoals
 
   private implicit def form2SeqForm(f: Formula): Seq[Formula] = Seq(f)
 

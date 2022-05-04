@@ -84,14 +84,14 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       case Some(id) => id
       case None => createProof(archiveContent, modelName)
     }
-    val globalProvable = ProvableSig.startProof(entry.model.asInstanceOf[Formula])
+    val globalProvable = ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs)
     val expectedSubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.expandedModel.asInstanceOf[Formula]))
     val expectedUnsubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.model.asInstanceOf[Formula]))
     val listener = new TraceRecordingListener(db, pId, None,
       globalProvable, 0 /* start from single provable */, recursive = false, "custom", constructGlobalProvable = false)
     val listeners = listener::Nil ++ additionalListeners
     BelleInterpreter.setInterpreter(interpreter(listeners))
-    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]), None, entry.defs)) match {
+    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs), None, entry.defs)) match {
       case BelleProvable(provable, _, _) =>
         assert(provable.conclusion == expectedSubstConclusion, "The proved conclusion must match the input model")
         //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
@@ -133,7 +133,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
           val localProofId = db.createProof(node.localProvable)
           val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, node.proof.info.defs(db), DBTools.listener(db),
             ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true, recordInternal=true)
-          interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion), None, node.proof.info.defs(db)))
+          interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion, node.proof.info.defs(db)), None, node.proof.info.defs(db)))
           extractTactic(localProofId)
       }
     }

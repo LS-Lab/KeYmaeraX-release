@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.ext.Z3
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
@@ -116,10 +117,10 @@ object Ax extends Logging {
         }
     }
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
-    val npt = ElidingProvable(fact.underlyingProvable)
+    val npt = ElidingProvable(fact.underlyingProvable, fact.defs)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        TermProvable(npt, AxiomTerm(lemmaName))
+        TermProvable(npt, AxiomTerm(lemmaName), fact.defs)
       } else {
         npt
       }
@@ -1101,7 +1102,7 @@ object Ax extends Logging {
   @Axiom(("↔R","<->R"), conclusion = "__p↔p__",
     key = "", recursor = "", unifier = "full")
   lazy val equivReflexive: DerivedAxiomInfo = derivedFact("<-> reflexive",
-    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)), Declaration(Map.empty))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (Close(AntePos(0),SuccPos(0)), 1)
@@ -1236,7 +1237,7 @@ object Ax extends Logging {
   @Axiom(("¬¬","!!"), conclusion ="__¬¬p__↔p",
     key = "0", recursor = "*", unifier = "surjlinear")
   lazy val doubleNegation: DerivedAxiomInfo = derivedFact("!! double negation",
-    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)), Declaration(Map.empty))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (NotRight(SuccPos(0)), 1)
@@ -4125,7 +4126,7 @@ object Ax extends Logging {
     */
   @Axiom("x'",  conclusion = "__(x)'__=x'")
   lazy val DvariableAxiom: DerivedAxiomInfo = derivedFact("x' derive variable",
-    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)), Declaration(Map.empty))
     (Skolemize(SuccPos(0)), 0)
     (DerivedAxiomProvableSig.axioms("x' derive var"), 0)
   )

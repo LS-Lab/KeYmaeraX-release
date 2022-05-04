@@ -124,7 +124,7 @@ class InMemoryDB extends DBAbstraction {
     val proofId = proofs.keys.size
     val provableId = provables.keys.size
     val model = ArchiveParser.parseAsFormula(models(modelId).keyFile)
-    val provable = ProvableSig.startProof(model)
+    val provable = ProvableSig.startPlainProof(model)
     provables(provableId) = provable
     proofs(proofId) = (provable, ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,
       Some(provableId), temporary=false, tactic))

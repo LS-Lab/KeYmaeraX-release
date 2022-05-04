@@ -673,7 +673,7 @@ class DLTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
 
-    val BelleProvable(result, _, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
+    val BelleProvable(result, _, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
     result.subgoals.size shouldBe 3
     val finalTree = DbProofTree(db.db, proofId.toString).load()
     finalTree.openGoals.flatMap(_.goal) should contain theSameElementsAs result.subgoals

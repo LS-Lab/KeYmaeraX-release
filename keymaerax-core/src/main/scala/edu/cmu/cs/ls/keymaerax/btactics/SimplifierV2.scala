@@ -158,7 +158,7 @@ object SimplifierV2 {
     res match {
       case None => None
       case Some(v) =>
-        val pr = ProvableSig.startProof(Equal(t,Number(v)))(opt(RCF), 0)
+        val pr = ProvableSig.startPlainProof(Equal(t,Number(v)))(opt(RCF), 0)
         if(pr.isProved) Some(Number(v),pr)
         else None
     }
@@ -277,7 +277,7 @@ object SimplifierV2 {
   }
 
   private def weaken(ctx:IndexedSeq[Formula]): ForwardTactic = pr => {
-    val p = ProvableSig.startProof(pr.conclusion.glue(Sequent(ctx, IndexedSeq())))
+    val p = ProvableSig.startPlainProof(pr.conclusion.glue(Sequent(ctx, IndexedSeq())))
     proveBy(p,
       cohideR(1) & //('Llast)*ctx.length &
         by(pr))

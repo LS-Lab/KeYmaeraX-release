@@ -830,7 +830,7 @@ object AssessmentProver {
     val p = ProvableSig.proveArithmetic(BigDecimalQETool, fml)
     p.conclusion match {
       case Sequent(IndexedSeq(), IndexedSeq(Equiv(f, True))) if fml == f => p
-      case _ => ProvableSig.startProof(False)
+      case _ => ProvableSig.startPlainProof(False)
     }
   }
 
@@ -927,9 +927,9 @@ object AssessmentProver {
             val gbb = tool.groebnerBasis(bt :: Nil)
             tool.polynomialReduce(at, gbb) match {
               case (_, Number(n)) if n == 0 => prove(Sequent(IndexedSeq(), IndexedSeq(True)), closeT)
-              case _ => ProvableSig.startProof(False)
+              case _ => ProvableSig.startPlainProof(False)
             }
-          case _ => ProvableSig.startProof(False)
+          case _ => ProvableSig.startPlainProof(False)
         }
       case None => generalPolynomialEquality(a, b, normalize)
     }

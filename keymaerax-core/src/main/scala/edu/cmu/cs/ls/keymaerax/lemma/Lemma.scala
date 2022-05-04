@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 import edu.cmu.cs.ls.keymaerax.{Configuration, lemma}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
@@ -56,16 +56,16 @@ object Lemma {
     val (storedName, provable, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
     val fact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        TermProvable(ElidingProvable(provable), storedName match { case Some(n) =>
+        TermProvable(ElidingProvable(provable, Declaration(Map.empty)), storedName match { case Some(n) =>
           DerivedAxiomInfo.allInfoByStoredName.get(n) match {
             case Some(info) => AxiomTerm(info.canonicalName)
             case None =>
               if (DerivedRuleInfo.allInfo.contains(n)) RuleTerm(n)
               else NoProof
           }
-        case None => FOLRConstant(provable.conclusion.succ.head) })
+        case None => FOLRConstant(provable.conclusion.succ.head) }, Declaration(Map.empty))
       } else {
-        ElidingProvable(provable)
+        ElidingProvable(provable, Declaration(Map.empty))
       }
     Lemma(fact, evidence, storedName) //@todo also load proof terms.
   }

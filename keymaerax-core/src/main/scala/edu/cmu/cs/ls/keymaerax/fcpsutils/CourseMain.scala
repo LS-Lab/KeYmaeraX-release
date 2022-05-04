@@ -130,7 +130,7 @@ object CourseMain {
         /*val f = parseProblemFileOrFail(problem)*/
         /*val expr = parseTacticFileOrFail(solution)*/
 
-        val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f), None, Declaration(Map.empty)))
+        val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f, Declaration(Map.empty)), None, Declaration(Map.empty)))
         result match {
           case BelleProvable(p, _, _) => {
             if(!p.isProved) {
@@ -159,7 +159,7 @@ object CourseMain {
     val f = parseProblemFileOrFail(problem)
     val expr = parseTacticFileOrFail(solution)
 
-    val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f), None, Declaration(Map.empty)))
+    val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f, Declaration(Map.empty)), None, Declaration(Map.empty)))
     result match {
       case BelleProvable(p, _, _) => {
         if(!p.isProved) {

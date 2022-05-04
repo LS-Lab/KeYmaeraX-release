@@ -380,7 +380,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
                       repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
         case Let(a, v, c) => flattenLets(c, substs :+ subst(a, v), repls :+ v -> a)
         case t => (
-          ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
+          ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) }), defs),
           USubst(substs),
           t
         )
@@ -429,7 +429,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       if (provable.subgoals.length != 1)
         throw new IllFormedTacticApplicationException("LetInspect of multiple goals is not currently supported.").inContext(expr, "")
 
-      val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
+      val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head, defs)
       apply(inner, BelleProvable(in, lbl, defs)) match {
         case BelleProvable(derivation, resultLbl, resultDefs) =>
           try {
@@ -453,7 +453,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       if (provable.subgoals.length != 1)
         throw new IllFormedTacticApplicationException("SearchAndRescueAgain of multiple goals is not currently supported.").inContext(expr, "")
 
-      val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
+      val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head, defs)
       apply(common, BelleProvable(in, lbl, defs)) match {
         case BelleProvable(commonDerivation, lbl2, defs2) =>
           var lastProblem: ProverException = NoProverException
@@ -590,7 +590,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
             else abbrv(f, i, "q_")
           })
 
-          (ProvableSig.startProof(Sequent(antes.map(_._1), succs.map(_._1))),
+          (ProvableSig.startProof(Sequent(antes.map(_._1), succs.map(_._1)), defs),
             USubst(antes.flatMap(_._2) ++ succs.flatMap(_._2)))
         })
 
@@ -721,7 +721,7 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
         //Compute the results of piecewise applications of children to provable subgoals.
         val results: Seq[BelleProvable] = children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
           val ithResult = try {
-            apply(e_i, BelleProvable(ProvableSig.startProof(s_i), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
+            apply(e_i, BelleProvable(ProvableSig.startProof(s_i, defs), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
           } catch {
             case e: BelleThrowable => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
           }
@@ -790,7 +790,7 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
         val results: Seq[Either[BelleValue, BelleThrowable]] =
           children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
             try {
-              Left(apply(e_i, BelleProvable(ProvableSig.startProof(s_i), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs)))
+              Left(apply(e_i, BelleProvable(ProvableSig.startProof(s_i, defs), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs)))
             } catch {
               case e: BelleThrowable =>
                 Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
@@ -826,7 +826,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
         //Compute the results of piecewise applications of children to provable subgoals.
         val results: Seq[BelleProvable] = children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
           val ithResult = try {
-            apply(e_i, BelleProvable(ProvableSig.startProof(s_i), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
+            apply(e_i, BelleProvable(ProvableSig.startProof(s_i, defs), lbl.getOrElse(Nil).lift(i).map(_ :: Nil), defs))
           } catch {
             case e: BelleThrowable => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
           }

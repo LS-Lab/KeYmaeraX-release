@@ -1035,7 +1035,7 @@ object TactixLibrary extends HilbertCalculus
     *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
     * }}}
     */
-  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal), tactic)
+  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal, Declaration(Map.empty)), tactic)
   /**
     * Prove the new goal by the given tactic, returning the resulting Provable
     *

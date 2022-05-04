@@ -76,7 +76,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
 
     val proofStart = Platform.currentTime
-    val result = TactixLibrary.proveBy(ProvableSig.startProof(mxInputSequent), tactic)
+    val result = TactixLibrary.proveBy(ProvableSig.startPlainProof(mxInputSequent), tactic)
     val proofDuration = Platform.currentTime - proofStart
     logger.info("[proof time " + proofDuration + "ms]")
 
@@ -413,7 +413,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val x0Ghosts = x0.toList.sortBy[NamedSymbol](_._1).map({ case (v, g) => Assign(g, v) }).reduceRight(Compose)
 
       val pl = proofListener(name, plantVars.toSet, /*q, */x0)
-      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(model.asInstanceOf[Formula]), defs)) match {
+      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(model.asInstanceOf[Formula], defs), defs)) match {
         case BelleProvable(proof, _, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
         case _ => assert(assertion = false, "Cannot derive a nonlinear model from unfinished proof")
       }
@@ -507,7 +507,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val olds = senseVars.map(v => FuncOf(Function("old", None, Real, Real), postVar(v)) -> v).toMap
 
     val pl = proofListener(name, senseVars.toSet, x0)
-    LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(formula), defs))
+    LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(formula, defs), defs))
 
     assert(pl.invariant.isDefined, "Proof of model " + name + " does not provide a loop invariant. Please use tactic loop({`inv`},...) in the proof.")
     assert(pl.diffInvariants.nonEmpty, "Proof of model " + name + " does not provide sufficient insight into invariant regions of the ODE dynamics. Please use differential cuts dC in the proof.")
@@ -898,7 +898,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   def eulerAllIn: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     val eulerAxiom = "<{x_'=f(x_)}>p(x_) <-> \\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x_);}*>(t_>=0 & \\exists y_ (abs(x_-y_) < e_ & p(y_))) ))))".asFormula
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
-      case (Diamond(_: ODESystem, _), pp) => Some(useAt(ProvableSig.startProof(eulerAxiom), PosInExpr(0::Nil))(pp))
+      case (Diamond(_: ODESystem, _), pp) => Some(useAt(ProvableSig.startPlainProof(eulerAxiom), PosInExpr(0::Nil))(pp))
       case _ => None
     })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
@@ -937,7 +937,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
       //@note OnAll necessary since the "show axiom" branches are left open by useAt (because we cut in the desired result, not use an actual axiom)
-      case (Diamond(ode: ODESystem, p), dpos) => Some(OnAll(useAt(ProvableSig.startProof(createEulerAxiom(ode, p)), PosInExpr(0::Nil))(dpos) | skip))
+      case (Diamond(ode: ODESystem, p), dpos) => Some(OnAll(useAt(ProvableSig.startPlainProof(createEulerAxiom(ode, p)), PosInExpr(0::Nil))(dpos) | skip))
       case _ => None
     })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
@@ -1149,7 +1149,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val goal = OneOf(abbreviated.map(f => Atom(f._1)).toSeq)
     tool.qe(goal, continueOnFalse=false) match {
       case (Atom(f), result) => abbreviated.get(f) match {
-        case Some(subst) => if (verified) tool.qe(f).fact(subst) else ProvableSig.startProof(Equiv(f, result))(subst)
+        case Some(subst) => if (verified) tool.qe(f).fact(subst) else ProvableSig.startProof(Equiv(f, result), defs)(subst)
         case None => throw new IllegalStateException("Unexpected parallel QE answer")
       }
     }
@@ -1175,10 +1175,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
     SimplifierV3.formulaSimp(result, faxs=SimplifierV3.defaultFaxs, taxs=SimplifierV3.defaultTaxs) match {
       case (simplifiedResult, Some((True, simpProof))) =>
         val Imply(True, equiv) = simpProof.conclusion.succ.head
-        val uncondSimpProof = ProvableSig.startProof(equiv)(
+        val uncondSimpProof = ProvableSig.startProof(equiv, p.defs)(
           CEat(Ax.trueImply.provable(USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), equiv)))))(SuccPos(0)), 0)(
           simpProof, 0)
-        ProvableSig.startProof(Equiv(orig, simplifiedResult))(
+        ProvableSig.startProof(Equiv(orig, simplifiedResult), p.defs)(
           CEat(uncondSimpProof, PosInExpr(1::Nil))(SuccPosition.base0(0, PosInExpr(1::Nil))), 0)(
           p, 0)
       case _ => p
@@ -1219,7 +1219,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val result = qfVarifiedProof.conclusion.succ.head
         val fnified = consts.foldLeft(result)({ case (fml, (fn, v)) => fml.replaceAll(v, fn) })
 
-        val qfProof = consts.foldLeft(ProvableSig.startProof(fnified))({
+        val qfProof = consts.foldLeft(ProvableSig.startProof(fnified, defs))({
           case (p, c) => p(
             FOQuantifierTactics.allInstantiateInverse(c)(SuccPos(0)) andThen
             ProofRuleTactics.skolemizeR(SuccPos(0)), 0)
@@ -1240,7 +1240,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           val Equiv(Exists(y, q), qqf) = rproof.conclusion.succ.head
           assert(x == y)
           val dot = DotTerm()
-          val merged = ProvableSig.startProof(Equiv(Exists(x, Or(p, q)), Or(pqf, qqf)))(
+          val merged = ProvableSig.startProof(Equiv(Exists(x, Or(p, q)), Or(pqf, qqf)), defs)(
             CEat(RenUSubst(List(
               (PredOf(Function("p_", None, Real, Bool), dot), p.replaceFree(x.head, dot)),
               (PredOf(Function("q_", None, Real, Bool), dot), q.replaceFree(x.head, dot)),
@@ -1266,7 +1266,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val result = Equiv(Exists(x, lr), rr)
         val resultEquiv = Equiv(merged, result)
         val subst = USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), result)))
-        val proof = timed(ProvableSig.startProof(resultEquiv)(
+        val proof = timed(ProvableSig.startProof(resultEquiv, defs)(
           CEat(lp, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0, 0)))), 0)(
           CEat(rp, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 1)))), 0)(
           Ax.equivReflexive.provable(subst), 0), "Applying reassociate subproofs")
@@ -1288,7 +1288,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val subst = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty }))
       println("Substitution: " + subst.subsDefsInput.mkString(","))
 
-      val innerProof = timed(ProvableSig.startProof(Equiv(exists, qfResult))(
+      val innerProof = timed(ProvableSig.startProof(Equiv(exists, qfResult), defs)(
         CEat(dnfProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
         PropositionalTactics.rightAssociate(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
         subst)(
@@ -1306,7 +1306,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val outerSubst = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(outerExpand).nonEmpty }))
 
       val innerPos = PosInExpr(List(0)) ++ innermostPos
-      timed(ProvableSig.startProof(Equiv(fml, outerQf))(
+      timed(ProvableSig.startProof(Equiv(fml, outerQf), defs)(
         subst)(
         CEat(innerProof, PosInExpr(List(0)))(SuccPosition.base0(0, innerPos)), 0)(
         outerSubst)(
@@ -1332,12 +1332,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
       }))
 
       val innerPos = PosInExpr(List(0)) ++ innermostQuantifierPos(fml)
-      ProvableSig.startProof(Equiv(fml, outerQf))(
+      ProvableSig.startProof(Equiv(fml, outerQf), defs)(
         innerSubst)(
         CEat(innerProof, PosInExpr(List(0)))(SuccPosition.base0(0, innerPos)), 0)(
         outerSubst)(
         outerProof, 0)
-    case (ctx, f) => ProvableSig.startProof(Equiv(ctx(f), ctx(f)))(byUS(Ax.equivReflexive.provable), 0)
+    case (ctx, f) => ProvableSig.startProof(Equiv(ctx(f), ctx(f)), defs)(byUS(Ax.equivReflexive.provable), 0)
   }
 
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased

@@ -169,7 +169,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
           case g => throw ToolExecutionException("Unable to split goal " + g + " into separate QE calls")
         })
       }
-      val combined = ProvableSig.startProof(lemmas.map(_.fact.conclusion.succ.head).reduceRight(And))
+      val combined = ProvableSig.startProof(lemmas.map(_.fact.conclusion.succ.head).reduceRight(And), lemmas.map(_.fact.defs).reduce(_ ++ _))
       val result = lemmas.init.foldLeft(combined)({ case (c, l) => c(AndRight(SuccPos(0)), 0)(l.fact, 0) })(lemmas.last.fact, 0)
       Lemma(result, Nil)
     } else mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
@@ -258,8 +258,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private def splitFormula(fml: Formula): Goal = fml match {
     case Forall(x, p) => applyTo(splitFormula(p), Forall(x, _))
     case _: Imply =>
-      val propSubgoals = ProvableSig.startProof(fml)(PropositionalTactics.prop, 0).subgoals
-      val expandedSubgoals = ProvableSig.startProof(fml)(TactixLibrary.expandAll andThen PropositionalTactics.prop, 0)(TactixLibrary.applyEqualities).subgoals
+      val propSubgoals = ProvableSig.startPlainProof(fml)(PropositionalTactics.prop, 0).subgoals
+      val expandedSubgoals = ProvableSig.startPlainProof(fml)(TactixLibrary.expandAll andThen PropositionalTactics.prop, 0)(TactixLibrary.applyEqualities).subgoals
       if (propSubgoals.size > 1) {
         if (expandedSubgoals.size > 1) OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula))), AllOf(expandedSubgoals.map(p => Atom(p.toFormula)))))
         else OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula)))))

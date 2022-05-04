@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.implyRi
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.immutable
 import scala.collection.immutable.Nil
@@ -158,7 +159,7 @@ object ODELiveness {
     // The extra urename frees up y_
     val dgbU = dgb.fact(URename(dbxghostvar,ghostvar,semantic=true))(unifA)
 
-    val vdgrawimply = ElidingProvable(Provable.vectorialDG(dim)._1)
+    val vdgrawimply = ElidingProvable(Provable.vectorialDG(dim)._1, Declaration(Map.empty))
     val unifB = UnificationMatch.unifiable(cofF, ghostvar).get.usubst
     val vdg = vdgrawimply(unifB)
     // Turn c{|y_1,...y_n|} into c{|y_1,...,y_n|}
@@ -171,7 +172,7 @@ object ODELiveness {
     val dbx = Ax.DBXgt.provable(unifC)
 
     val unifD = UnificationMatch.unifiable("c".asDifferentialProgram,extODE).get.usubst
-    val commute = ElidingProvable(Provable.axioms(", commute")(unifD))
+    val commute = ElidingProvable(Provable.axioms(", commute")(unifD), Declaration(Map.empty))
 
     //TODO: change to "remember" when parsing is supported
     val pr = proveBy(Imply(inv,DDGimply),
@@ -188,7 +189,7 @@ object ODELiveness {
           useAt(getDDGhelperLemma,PosInExpr(1::Nil))(1) &
           useAt(Ax.DvarAxiom)(1,1::0::Nil) &
           useAt(commute,PosInExpr(0::Nil))(1) &
-          useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
+          useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true)), Declaration(Map.empty)))(1) &
           G(1) & DassignbCustom(1) &
           byUS(Ax.equalReflexive)
         ,
@@ -238,7 +239,7 @@ object ODELiveness {
     val resimply = vdgimplyren(unif.usubst)
     val resylpmi = vdgylpmiren(unif.usubst)
 
-    (ElidingProvable(resimply), ElidingProvable(resylpmi))
+    (ElidingProvable(resimply, Declaration(Map.empty)), ElidingProvable(resylpmi, Declaration(Map.empty)))
   }
 
   /** Helper that gets the appropriate DDG instance (already instantiated for the ghosts by renaming and friends)
@@ -305,7 +306,7 @@ object ODELiveness {
   private lazy val DESystemCustom: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
       val ax = Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,x,semantic=true))
-      useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos)
+      useAt(ElidingProvable(ax, Declaration(Map.empty)), PosInExpr(0::Nil))(pos)
     case _ => skip
   })
 
@@ -315,7 +316,7 @@ object ODELiveness {
   private lazy val DassignbCustom: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(Assign(xp@DifferentialSymbol(x),f0), p)) =>
       val ax = Provable.axioms("[':=] differential assign")(URename("x_".asVariable,x,semantic=true))
-      useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos) & DassignbCustom(pos)
+      useAt(ElidingProvable(ax, Declaration(Map.empty)), PosInExpr(0::Nil))(pos) & DassignbCustom(pos)
     case _ => skip
   })
 

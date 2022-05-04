@@ -186,7 +186,7 @@ object DatabasePopulator extends Logging {
     val entry = ArchiveParser(model).head
     val interpreter = prepareInterpreter(db, proofId, entry.defs)
     val parsedTactic = BelleParser.parseBackwardsCompatible(tactic, entry.defs)
-    interpreter(parsedTactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(model))))
+    interpreter(parsedTactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(model))))
     interpreter.kill()
   }
 

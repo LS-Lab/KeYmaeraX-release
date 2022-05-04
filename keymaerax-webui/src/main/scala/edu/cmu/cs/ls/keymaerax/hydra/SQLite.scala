@@ -539,7 +539,7 @@ object SQLite {
         case Some(t) => Some(BellePrettyPrinter(BelleParser.parseWithInvGen(t, None, d)))
       }
 
-      val provable = ProvableSig.startProof(problem)
+      val provable = ProvableSig.startProof(problem, d)
       (createProvable(provable), substTactic)
     }
 
@@ -973,7 +973,7 @@ object SQLite {
           val provableIds = steps.map(_.localProvableId.get)
           val provables = steps.map(_.stepId).zip(loadProvables(provableIds).map(_.provable)).toMap
           val conclusion = provables(steps.head.stepId).conclusion
-          val initProvable = ProvableSig.startProof(conclusion)
+          val initProvable = ProvableSig.startPlainProof(conclusion)
           Some((initProvable, provables))
         } else None
         val traceSteps = zipTrace(steps, provables)

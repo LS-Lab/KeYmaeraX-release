@@ -344,7 +344,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, defs: Declaration): ProvableSig = {
-    val v = BelleProvable.withDefs(ProvableSig.startProof(s), defs)
+    val v = BelleProvable.withDefs(ProvableSig.startProof(s, defs), defs)
     val subst = USubst(defs.substs)
     theInterpreter(tactic, v) match {
       case dsp: BelleDelayedSubstProvable =>
@@ -373,7 +373,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = proveBy(s, tactic, Declaration(Map.empty))
   def proveBy(s: Sequent, tactic: BelleExpr, defs: Declaration): ProvableSig = {
-    val v = BelleProvable(ProvableSig.startProof(s), None, defs)
+    val v = BelleProvable(ProvableSig.startProof(s, defs), None, defs)
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
@@ -381,7 +381,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   }
 
   def proveBy(p: Provable, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable.plain(ElidingProvable(p))
+    val v = BelleProvable.plain(ElidingProvable(p, Declaration(Map.empty)))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)

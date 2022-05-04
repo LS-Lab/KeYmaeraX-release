@@ -22,7 +22,7 @@ class TraceRecordingTests extends TacticTestBase   {
   val db = DBAbstractionObj.testDatabase
   //@todo fill in reasonable data, this is bogus
   private val u = 999
-  val listener = new TraceRecordingListener(db, 1337, Some(u), ProvableSig.startProof(True), 0, false, "TODO", constructGlobalProvable = true)
+  val listener = new TraceRecordingListener(db, 1337, Some(u), ProvableSig.startPlainProof(True), 0, false, "TODO", constructGlobalProvable = true)
   override val theInterpreter = ExhaustiveSequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
@@ -31,7 +31,7 @@ class TraceRecordingTests extends TacticTestBase   {
   }
 
   override def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable.plain(ProvableSig.startProof(s))
+    val v = BelleProvable.plain(ProvableSig.startPlainProof(s))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)

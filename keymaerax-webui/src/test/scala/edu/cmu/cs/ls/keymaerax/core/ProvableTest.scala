@@ -35,7 +35,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     import scala.collection.immutable._
     val verum = Sequent(IndexedSeq(), IndexedSeq(True))
     // conjecture
-    val provable = ProvableSig.startProof(verum)
+    val provable = ProvableSig.startPlainProof(verum)
     // construct a proof
     val proving = provable(CloseTrue(SuccPos(0)), 0)
     // check if proof successful
@@ -48,7 +48,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     import scala.collection.immutable._
     val verum = Sequent(IndexedSeq(), IndexedSeq(True))
     // conjecture
-    val provable = ProvableSig.startProof(verum)
+    val provable = ProvableSig.startPlainProof(verum)
     // construct a proof
     val proving = provable(CloseTrue(SuccPos(0)), 0)
     // check if proof successful
@@ -58,7 +58,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
     val more = Sequent(IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
     // another conjecture
-    val moreProvable = ProvableSig.startProof(more)
+    val moreProvable = ProvableSig.startPlainProof(more)
     // construct another (partial) proof
     val moreProving = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
     moreProving.isProved should be (false)
@@ -75,7 +75,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     import scala.collection.immutable._
     val more = Sequent(IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
     // another conjecture
-    val moreProvable = ProvableSig.startProof(more)
+    val moreProvable = ProvableSig.startPlainProof(more)
     // construct another (partial) proof
     val moreProving = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
     moreProving.isProved should be (false)
@@ -83,7 +83,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
     val verum = Sequent(IndexedSeq(), IndexedSeq(True))
     // conjecture
-    val provable = ProvableSig.startProof(verum)
+    val provable = ProvableSig.startPlainProof(verum)
     // construct a proof
     val proving = provable(CloseTrue(SuccPos(0)), 0)
     // check if proof successful
@@ -126,7 +126,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // |- x>5 -> x>5 & true
     val finGoal = Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
     // conjecture
-    val finProvable = ProvableSig.startProof(finGoal)
+    val finProvable = ProvableSig.startPlainProof(finGoal)
     // construct a proof
     val proof = finProvable(
       ImplyRight(SuccPos(0)), 0)(
@@ -157,25 +157,25 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     import scala.collection.immutable._
     val fm = Greater(Variable("x"), Number(5))
     // x>0 |- x>0
-    val left = ProvableSig.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
+    val left = ProvableSig.startPlainProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
       Close(AntePos(0), SuccPos(0)), 0)
     // |- true
-    val right = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
+    val right = ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
       CloseTrue(SuccPos(0)), 0)
-    val right2 = ProvableSig.startProof(Sequent(IndexedSeq(fm), IndexedSeq(True)))(
+    val right2 = ProvableSig.startPlainProof(Sequent(IndexedSeq(fm), IndexedSeq(True)))(
       HideLeft(AntePos(0)), 0) (right, 0)
-    val merged = ProvableSig.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+    val merged = ProvableSig.startPlainProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
       AndRight(SuccPos(0)), 0) (
       left, 0)(
         right2, 0)
     // gluing order irrelevant
-    merged should be (ProvableSig.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+    merged should be (ProvableSig.startPlainProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
       AndRight(SuccPos(0)), 0) (
       right2, 1)(
         left, 0))
     // |- x>5 -> x>5 & true
     val finGoal = Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
-    val proof = ProvableSig.startProof(finGoal)(
+    val proof = ProvableSig.startPlainProof(finGoal)(
       ImplyRight(SuccPos(0)), 0) (merged, 0)
     proof.isProved should be (true)
     proof.proved should be (finGoal)
@@ -200,14 +200,14 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     import scala.collection.immutable._
     val fm = Greater(Variable("x"), Number(5))
     // proof of x>5 |- x>5 & true merges left and right branch by AndRight
-    val proof = ProvableSig.startProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+    val proof = ProvableSig.startPlainProof(Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True))))(
       AndRight(SuccPos(0)), 0) (
       // left branch: x>5 |- x>5
-      ProvableSig.startProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
+      ProvableSig.startPlainProof(Sequent(IndexedSeq(fm), IndexedSeq(fm)))(
         Close(AntePos(0), SuccPos(0)), 0),
       0)(
         //right branch: |- true
-        ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
+        ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq(True)))(
           CloseTrue(SuccPos(0)), 0)(
             // x>5 |- true
             Sequent(IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
@@ -246,7 +246,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // x>5  |-  x>5 & true
     val mid = Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True)))
     // middle conjecture
-    val midProvable = ProvableSig.startProof(mid)
+    val midProvable = ProvableSig.startPlainProof(mid)
     // construct a middle proof
     val midProof: ProvableSig = midProvable/*(ImplyRight(SuccPos(0)), 0)*/(
       AndRight(SuccPos(0)), 0)(
@@ -254,7 +254,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     midProof.isProved should be (false)
     // right conjecture: True
     val right = Sequent(IndexedSeq(), IndexedSeq(True))
-    val rightProvable = ProvableSig.startProof(right)
+    val rightProvable = ProvableSig.startPlainProof(right)
     rightProvable.isProved should be (false)
     // construct a right proof
     val rightProof = rightProvable(CloseTrue(SuccPos(0)), 0)
@@ -269,7 +269,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // add to the bottom of the proof
     // final conjecture: |- x>5 -> x>5&true
     val finGoal = Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
-    val fin = ProvableSig.startProof(finGoal)
+    val fin = ProvableSig.startPlainProof(finGoal)
     // glue mergeMidRight intermediate proof forward as the partial proof of fin
     val finProof = fin(ImplyRight(SuccPos(0)), 0) (mergeMidRight, 0)
     finProof.isProved should be (false)
@@ -287,14 +287,14 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     val fm1 = Less(Variable("x"), Number(5))
     // x>5 |- x>5
     val finGoal = Sequent(IndexedSeq(fm), IndexedSeq(fm))
-    val finProof = ProvableSig.startProof(finGoal)(
+    val finProof = ProvableSig.startPlainProof(finGoal)(
       Close(AntePos(0), SuccPos(0)), 0
     )
     finProof.isProved should be (true)
     finProof.proved should be (finGoal)
     // x<5 |- x>5
     val noGoal = Sequent(IndexedSeq(fm1), IndexedSeq(fm))
-    a [CoreException] shouldBe thrownBy(ProvableSig.startProof(noGoal)(
+    a [CoreException] shouldBe thrownBy(ProvableSig.startPlainProof(noGoal)(
       Close(AntePos(0), SuccPos(0)), 0
     ))
   }
@@ -346,7 +346,7 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // x>5 |- x>5 & true
     val finGoal = Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True)))
     // conjecture
-    val finProvable = ProvableSig.startProof(finGoal)
+    val finProvable = ProvableSig.startPlainProof(finGoal)
     // construct a proof
     val proof = finProvable(
       AndRight(SuccPos(0)), 0)(
@@ -374,34 +374,34 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Individual proof rules" should "refuse Skolemization clashes" in {
     println("Testing " + Skolemize(SuccPos(0)))
-    val goal = ProvableSig.startProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("\\forall x p(x)".asFormula)))
+    val goal = ProvableSig.startPlainProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("\\forall x p(x)".asFormula)))
     a [SkolemClashException] shouldBe thrownBy (goal(Skolemize(SuccPos(0)), 0))
-    val goal2 = ProvableSig.startProof(Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\forall x p(x)".asFormula)))
+    val goal2 = ProvableSig.startPlainProof(Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\forall x p(x)".asFormula)))
     a [SkolemClashException] shouldBe thrownBy (goal2(Skolemize(SuccPos(0)), 0))
-    val goal3 = ProvableSig.startProof(Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\forall x x>=0".asFormula)))
+    val goal3 = ProvableSig.startPlainProof(Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\forall x x>=0".asFormula)))
     a [SkolemClashException] shouldBe thrownBy (goal3(Skolemize(SuccPos(0)), 0))
-    val goal4 = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x x>=0".asFormula, "x<=0".asFormula)))
+    val goal4 = ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x x>=0".asFormula, "x<=0".asFormula)))
     a [SkolemClashException] shouldBe thrownBy (goal4(Skolemize(SuccPos(0)), 0))
   }
 
   it should "refuse bound renaming except at bound occurrences" in {
     val rens = BoundRenaming(Variable("y"),Variable("x"),SuccPos(0))
     println("Testing " + rens)
-//    val goal = Provable.startProof(Sequent(Nil, IndexedSeq("p(y)".asFormula), IndexedSeq("\\forall y p(y)".asFormula)))
+//    val goal = Provable.startPlainProof(Sequent(Nil, IndexedSeq("p(y)".asFormula), IndexedSeq("\\forall y p(y)".asFormula)))
 //    a [CoreException] shouldBe thrownBy (goal(rens, 0))
-    val goal2 = ProvableSig.startProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("x>=9".asFormula)))
+    val goal2 = ProvableSig.startPlainProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("x>=9".asFormula)))
     a [RenamingClashException] shouldBe thrownBy (goal2(BoundRenaming(Variable("x"),Variable("y"),SuccPos(0)), 0))
-    val goal3 = ProvableSig.startProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("p(x)".asFormula)))
+    val goal3 = ProvableSig.startPlainProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("p(x)".asFormula)))
     a [RenamingClashException] shouldBe thrownBy (goal3(rens, 0))
-    val goal4 = ProvableSig.startProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("[y:=9;z:=0;]z>=10".asFormula)))
+    val goal4 = ProvableSig.startPlainProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("[y:=9;z:=0;]z>=10".asFormula)))
     a [RenamingClashException] shouldBe thrownBy (goal4(rens, 0))
-    val goal5 = ProvableSig.startProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("[{y'=9}]y>=10".asFormula)))
+    val goal5 = ProvableSig.startPlainProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("[{y'=9}]y>=10".asFormula)))
     a [RenamingClashException] shouldBe thrownBy (goal5(rens, 0))
   }
 
   it should "report bound renaming clashes" in {
     val rens = BoundRenaming(Variable("y"),Variable("x"),SuccPos(0))
-    val goal = ProvableSig.startProof(Sequent(IndexedSeq("true".asFormula), IndexedSeq("\\forall y y>=x".asFormula)))
+    val goal = ProvableSig.startPlainProof(Sequent(IndexedSeq("true".asFormula), IndexedSeq("\\forall y y>=x".asFormula)))
     a [RenamingClashException] shouldBe thrownBy (goal(rens, 0))
   }
 

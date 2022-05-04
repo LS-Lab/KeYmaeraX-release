@@ -241,7 +241,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Apply Rule Forward: like Provable.apply(Sequent,Rule) except for two premises */
   private def prolong(p1: ProvableSig, p2: ProvableSig, newConsequence: Sequent, rule: Rule): ProvableSig = {
-    ProvableSig.startProof(newConsequence)(rule, 0)(p1, 0)(p2, 1)
+    ProvableSig.startPlainProof(newConsequence)(rule, 0)(p1, 0)(p2, 1)
   }
 
   /** padding such that at least lefts many formula in antecedent of pr by weakening */
@@ -445,11 +445,11 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   /** Generate a random proof of a random tautological sequent, basically via an external forward sequent calculus */
   def nextPr(vars : IndexedSeq[Variable], n : Int): ProvableSig = {
     require(n>=0)
-    if (n == 0 || rand.nextFloat()<=shortProbability) return ProvableSig.startProof(True)(CloseTrue(SuccPos(0)), 0)
+    if (n == 0 || rand.nextFloat()<=shortProbability) return ProvableSig.startPlainProof(True)(CloseTrue(SuccPos(0)), 0)
     val r = rand.nextInt(70)
     r match {
-      case 0 => ProvableSig.startProof(True)(CloseTrue(SuccPos(0)), 0)
-      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); ProvableSig.startProof(Sequent(IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
+      case 0 => ProvableSig.startPlainProof(True)(CloseTrue(SuccPos(0)), 0)
+      case it if 1 until 10 contains it => val fml = nextF(vars, n - 1); ProvableSig.startPlainProof(Sequent(IndexedSeq(fml), IndexedSeq(fml)))(Close(AntePos(0),SuccPos(0)), 0)
       case it if 10 until 20 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);
         p1(p1.conclusion.glue(Sequent(IndexedSeq(), IndexedSeq(fml))), HideRight(SuccPos(p1.conclusion.succ.length)))
       case it if 20 until 30 contains it => val p1 = nextPr(vars, n-1); val fml = nextF(vars, n-1);

@@ -206,7 +206,7 @@ class QETests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     interpreter(BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))"),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser(
       """implyR('R=="x>0->x>=0&\exists s x*s^2>0");
         |andR('R=="x>=0&\exists s x*s^2>0"); <(
@@ -225,7 +225,7 @@ class QETests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     interpreter(BelleParser("implyR(1); andR(1); <(QE, QE)"),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser(
       """implyR('R=="x>0->x>=0&x>=(-1)");
         |andR('R=="x>=0&x>=(-1)"); <(
@@ -247,7 +247,7 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
-    interpreter(QEX(None, Some(Number(7))), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(QEX(None, Some(Number(7))), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"7\")")
   }}
 
@@ -256,7 +256,7 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
-    interpreter(QE, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(QE, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE")
   }}
 
@@ -265,7 +265,7 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
-    interpreter(QEX(Some(tool.name), Some(Number(7))), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(QEX(Some(tool.name), Some(Number(7))), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"" + tool.name + "\", \"7\")")
   }}
 

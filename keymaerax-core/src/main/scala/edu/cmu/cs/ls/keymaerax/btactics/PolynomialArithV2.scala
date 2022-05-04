@@ -332,7 +332,7 @@ object PolynomialArithV2Helpers {
     val pq = PQ.conclusion.succ(0)
     val p = P.conclusion.succ(0)
     pq match {
-      case Imply(pp, q) => ProvableSig.startProof(Sequent(PQ.conclusion.ante, IndexedSeq(q)))(CutRight(p, SuccPos(0)), 0)(PQ, 1)(P, 0)
+      case Imply(pp, q) => ProvableSig.startProof(Sequent(PQ.conclusion.ante, IndexedSeq(q)), PQ.defs ++ P.defs)(CutRight(p, SuccPos(0)), 0)(PQ, 1)(P, 0)
       case _ => throw new IllegalArgumentException("Cannot impliesElim here")
     }
   }
@@ -346,7 +346,7 @@ object PolynomialArithV2Helpers {
     if (Ps.length == 0) PsQ
     else {
       val conj = Ps.map(P => P.conclusion.succ(0)).reduceRight(And)
-      val conjPrv = Ps.dropRight(1).foldLeft(ProvableSig.startProof(Sequent(PsQ.conclusion.ante, IndexedSeq(conj)))){(prv, P) =>
+      val conjPrv = Ps.dropRight(1).foldLeft(ProvableSig.startProof(Sequent(PsQ.conclusion.ante, IndexedSeq(conj)), PsQ.defs ++ Ps.map(_.defs).reduce(_++_))){(prv, P) =>
         prv(AndRight(SuccPos(0)), 0)(P, 0)
       }(Ps.last, 0)
       impliesElim(PsQ, conjPrv)

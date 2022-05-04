@@ -88,7 +88,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
   it should "work with no subgoals" in {
     val sequent = Sequent(IndexedSeq("p()".asFormula), IndexedSeq("p()".asFormula))
-    val closedProvable = ProvableSig.startProof(sequent).apply(Close(AntePos(0), SuccPos(0)), 0)
+    val closedProvable = ProvableSig.startPlainProof(sequent).apply(Close(AntePos(0), SuccPos(0)), 0)
     val kyxversion = ToolEvidence(List("kyxversion" -> edu.cmu.cs.ls.keymaerax.core.VERSION))
     val lemmaFile =
       s"""Lemma "MyLemma".
@@ -106,7 +106,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
   it should "work with sequents that don't have antes" in {
     val sequent = Sequent(IndexedSeq(), IndexedSeq("2=2".asFormula, "5=5".asFormula))
-    val provable = ProvableSig.startProof(sequent)
+    val provable = ProvableSig.startPlainProof(sequent)
     val tool = ToolEvidence(List("input" -> "", "output" -> ""))
     val kyxversion = ToolEvidence(List("kyxversion" -> edu.cmu.cs.ls.keymaerax.core.VERSION))
 
@@ -127,7 +127,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
   it should "work with sequents that don't have succs" in {
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq())
-    val provable = ProvableSig.startProof(sequent)
+    val provable = ProvableSig.startPlainProof(sequent)
     val tool = ToolEvidence(List("input" -> "", "output" -> ""))
     val kyxversion = ToolEvidence(List("kyxversion" -> edu.cmu.cs.ls.keymaerax.core.VERSION))
 
@@ -229,7 +229,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
   it should "not create a lemma without evidence in strict mode" in {
     val name ="blah"
-    val p = ProvableSig.startProof("1=1".asFormula)
+    val p = ProvableSig.startPlainProof("1=1".asFormula)
     val c = Lemma.getClass.getDeclaredConstructor()
     c.setAccessible(true)
     withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "false")) {
@@ -292,7 +292,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     var name = "1111112"
     while (db.contains(name)) name = name + "1"
 
-    val p = ProvableSig.startProof("1=1".asFormula)
+    val p = ProvableSig.startPlainProof("1=1".asFormula)
 
     try {
       db.add(new Lemma(p, Lemma.requiredEvidence(p, ToolEvidence(("a", "a")::Nil)::Nil), Some(name)))

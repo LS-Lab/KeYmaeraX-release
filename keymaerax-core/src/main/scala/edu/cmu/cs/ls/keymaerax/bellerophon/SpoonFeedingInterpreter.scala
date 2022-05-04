@@ -212,7 +212,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                 p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(tactic, "")
 
             val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.zipWithIndex.map({
-              case (sg, i) => BelleProvable(ProvableSig.startProof(sg), labels.map(_(i) :: Nil), defs)
+              case (sg, i) => BelleProvable(ProvableSig.startProof(sg, defs), labels.map(_(i) :: Nil), defs)
             }))
             val branchCtxs = ctx.branch(children.size)
 
@@ -360,7 +360,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                           repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
             case Let(a, v, c) => flattenLets(c, substs :+ subst(a, v), repls :+ v -> a)
             case t => (
-              ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
+              ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) }), defs),
               USubst(substs),
               t
             )

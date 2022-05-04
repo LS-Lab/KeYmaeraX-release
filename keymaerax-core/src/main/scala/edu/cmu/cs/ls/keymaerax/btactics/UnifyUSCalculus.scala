@@ -704,7 +704,7 @@ trait UnifyUSCalculus {
             //---------------
             // |- fml<->true
             //@todo optimizable by proving this once and using it, although maybe the inline proof is fast anyhow
-            val provedFact = (ProvableSig.startProof(Equiv(fact.conclusion.succ.head, True))
+            val provedFact = (ProvableSig.startProof(Equiv(fact.conclusion.succ.head, True), fact.defs)
               (EquivRight(SuccPos(0)), 0)
               (CoHideRight(SuccPos(0)), 1)
               (fact, 1)
@@ -748,7 +748,7 @@ trait UnifyUSCalculus {
               require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
 
               // |- subst(remainder{k})
-              val remFact: ProvableSig = (ProvableSig.startProof(subst(Context(remainder)(k)))
+              val remFact: ProvableSig = (ProvableSig.startProof(subst(Context(remainder)(k)), provable.defs)
                 // |- subst(prereq)      |- subst(prereq -> remainder)
                 (CutRight(subst(prereq), SuccPos(0)), 0)
                 // prove right branch   |- subst(prereq -> remainder)
@@ -816,7 +816,7 @@ trait UnifyUSCalculus {
                   (HideRight(SuccPos(0)), 3) /* hide C(r)->C(l) */
                   (implyRi.computeResult _, 3)
                   (CMonFw(p.inExpr).result _, 3)
-                  (ProvableSig.startProof(Imply(subst(prereq), subst(Context(remainder)(k))))(subst.toForward(fact), 0), 3)
+                  (ProvableSig.startProof(Imply(subst(prereq), subst(Context(remainder)(k))), fact.defs)(subst.toForward(fact), 0), 3)
                   /* Use C(subst(equiv)) */
                   (HideLeft(AntePos(0)), 2) /* hide C(prereq) */
                   (ImplyRight(SuccPos(0)), 2)
@@ -1240,11 +1240,11 @@ trait UnifyUSCalculus {
           val (ctxQ, q: Formula) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
           if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
-            CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)))), 0)(
-            inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))))), 0)
+            CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)), 0)(
+            inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
           else implyR(SuccPos(0)).computeResult(provable)(
-            CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)))), 0)(
-            inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))))), 0)
+            CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)), 0)(
+            inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)), 0)
         }
     }
   }
@@ -1363,8 +1363,8 @@ trait UnifyUSCalculus {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
     key.pos match {
       case 0 :: Nil => fact.conclusion.succ.head match {
-        case Equiv(l, r) => CEat(ProvableSig.startProof(Equiv(r, l))(commuteEquivR(SuccPos(0)), 0)(fact, 0))
-        case Equal(l, r) => CEat(ProvableSig.startProof(Equal(r, l))(commuteEqual(SuccPos(0)), 0)(fact, 0))
+        case Equiv(l, r) => CEat(ProvableSig.startProof(Equiv(r, l), fact.defs)(commuteEquivR(SuccPos(0)), 0)(fact, 0))
+        case Equal(l, r) => CEat(ProvableSig.startProof(Equal(r, l), fact.defs)(commuteEqual(SuccPos(0)), 0)(fact, 0))
         case p => throw new InputFormatFailure("fact must be either equality or equivalence, but got " + p)
       }
       case 1 :: Nil => CEat(fact)
@@ -1608,7 +1608,7 @@ trait UnifyUSCalculus {
           case DotFormula => mon
 
           case And(e, c) if !symbols(e).contains(DotFormula) =>
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
             (AndLeft(AntePos(0)), 0)
             (AndRight(SuccPos(0)), 0)
             (Close(AntePos(0), SuccPos(0)), 0)
@@ -1617,7 +1617,7 @@ trait UnifyUSCalculus {
               ) (monStep(Context(c), mon), 0)
 
           case And(c, e) if !symbols(e).contains(DotFormula) =>
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
             (AndLeft(AntePos(0)), 0)
             (AndRight(SuccPos(0)), 0)
             (Close(AntePos(1), SuccPos(0)), 1)
@@ -1626,7 +1626,7 @@ trait UnifyUSCalculus {
               ) (monStep(Context(c), mon), 0)
 
           case Or(e, c) if !symbols(e).contains(DotFormula) =>
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
             (OrRight(SuccPos(0)), 0)
             (OrLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(0)), 0)
@@ -1635,7 +1635,7 @@ trait UnifyUSCalculus {
               ) (monStep(Context(c), mon), 0)
 
           case Or(c, e) if !symbols(e).contains(DotFormula) =>
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
             (OrRight(SuccPos(0)), 0)
             (OrLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(1)), 1)
@@ -1646,7 +1646,7 @@ trait UnifyUSCalculus {
           case Imply(e, c) if !symbols(e).contains(DotFormula) =>
             if (logger.isDebugEnabled) logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
               // e->c{a} |- e->c{s}
               (ImplyRight(SuccPos(0)), 0)
               // e->c{a}, e |- c{s}
@@ -1662,7 +1662,7 @@ trait UnifyUSCalculus {
           case Imply(c, e) if !symbols(e).contains(DotFormula) =>
             if (logger.isDebugEnabled) logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
               // c{a}->e |- c{s}->e
               (ImplyRight(SuccPos(0)), 0)
               // c{a}->e, c{s} |- e
@@ -1724,7 +1724,7 @@ trait UnifyUSCalculus {
             val (bleft, bright) =
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
             (Ax.monbaxiom.provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
@@ -1739,7 +1739,7 @@ trait UnifyUSCalculus {
             val (dleft, dright) =
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
             (ProvableSig.rules("<> monotone")(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(dleft))
@@ -1840,7 +1840,7 @@ trait UnifyUSCalculus {
 
           case Not(c) =>
             //@note no polarity switch necessary here, since global polarity switch at beginning of CMon
-            (ProvableSig.startProof(Sequent(ante, succ))
+            (ProvableSig.startProof(Sequent(ante, succ), mon.defs)
             (NotLeft(AntePos(0)), 0)
             (NotRight(SuccPos(0)), 0)
               ) (monStep(Context(c), mon), 0)
@@ -1987,7 +1987,7 @@ trait UnifyUSCalculus {
           // succ: G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
           // ante: G |- D, C{subst(o)} -> C{subst(k)} by CoHideRight
           val proved = {
-            ProvableSig.startProof(proof.conclusion.updated(p.top, C(subst(o))))(
+            ProvableSig.startProof(proof.conclusion.updated(p.top, C(subst(o))), proof.defs)(
             if (pos.isSucc) CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos])
             else CutLeft(C(subst(k)), p.top.asInstanceOf[AntePos]), 0
           ) (coside, 1)
@@ -2063,17 +2063,17 @@ trait UnifyUSCalculus {
             val proved = {
               if (pos.isSucc)
               // G |- C{subst(o)}, D by CutRight with coside
-                ProvableSig.startProof(proof.conclusion.updated(pos.top, oo))(
+                ProvableSig.startProof(proof.conclusion.updated(pos.top, oo), proof.defs)(
                   CutRight(kk, pos.top.asInstanceOf[SuccPos]), 0) (coside, 1)
               else
               // C{subst(o)}, G |- D by CutLeft with coside
-                ProvableSig.startProof(proof.conclusion.updated(pos.top, kk))(
+                ProvableSig.startProof(proof.conclusion.updated(pos.top, kk), proof.defs)(
                   CutLeft(oo, pos.top.asInstanceOf[AntePos]), 0) (coside, 1)
             } /*ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
                 ) ensures(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
 
             if (polarity == 0 && pos.isSucc) {
-              val equivified = proved(ProvableSig.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
+              val equivified = proved(ProvableSig.startProof(proved.subgoals.head, proved.defs)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
               //@note equiv assumed to always be top-level, so looking at inExpr.head determines direction
               val commuted =
                 if (pos.inExpr.head == 1) equivified(CommuteEquivRight(pos.top.asInstanceOf[SuccPos]), 0)
@@ -2129,17 +2129,17 @@ trait UnifyUSCalculus {
               // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
               if (pos.isSucc)
               // C{subst(k)}, G |- D by CutLeft with coside
-                ProvableSig.startProof(proof.conclusion.updated(pos.top, oo))(
+                ProvableSig.startProof(proof.conclusion.updated(pos.top, oo), proof.defs)(
                   CutRight(kk, pos.top.asInstanceOf[SuccPos]), 0) (coside, 1)
               else
               // G |- C{subst(o)}, D by CutRight with coside
-                ProvableSig.startProof(proof.conclusion.updated(pos.top, kk))(
+                ProvableSig.startProof(proof.conclusion.updated(pos.top, kk), proof.defs)(
                   CutLeft(oo, pos.top.asInstanceOf[AntePos]), 0) (coside, 1)
             } /*ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
               ) ensures(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
 
             if (polarity == 0 && pos.isSucc) {
-              val equivified = proved(ProvableSig.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
+              val equivified = proved(ProvableSig.startProof(proved.subgoals.head, proved.defs)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
               //@note equiv assumed to always be top-level, so looking at inExpr.head determines direction
               val commuted =
                 if (pos.inExpr.head == 0) equivified(CommuteEquivRight(pos.top.asInstanceOf[SuccPos]), 0)
@@ -2172,7 +2172,7 @@ trait UnifyUSCalculus {
             require(prereqFact.isProved, "only globally provable requirements currently supported. Use useAt instead " + prereqFact)
 
             // |- subst(remainder{k})
-            val remFact: ProvableSig = (ProvableSig.startProof(subst(Context(remainder)(k)))
+            val remFact: ProvableSig = (ProvableSig.startProof(subst(Context(remainder)(k)), prereqFact.defs)
               // |- subst(prereq)      |- subst(prereq -> remainder)
               (CutRight(subst(prereq), SuccPos(0)), 0)
               // prove right branch   |- subst(prereq -> remainder)
@@ -2215,7 +2215,7 @@ trait UnifyUSCalculus {
     val pos = SuccPos(0)
     val last = AntePos(pr.conclusion.ante.length)
     val Imply(a,b) = pr.conclusion.succ.head
-    (ProvableSig.startProof(pr.conclusion.updated(pos, b).glue(Sequent(IndexedSeq(a), IndexedSeq())))
+    (ProvableSig.startProof(pr.conclusion.updated(pos, b).glue(Sequent(IndexedSeq(a), IndexedSeq())), pr.defs)
     (CutRight(a, pos), 0)
       // left branch
       (Close(last, pos), 0)

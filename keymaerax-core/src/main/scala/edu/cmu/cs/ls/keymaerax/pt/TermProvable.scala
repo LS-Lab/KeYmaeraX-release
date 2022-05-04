@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.immutable
 import scala.collection.immutable.IndexedSeq
@@ -29,8 +30,8 @@ import scala.collection.immutable.IndexedSeq
 trait ProvableSig {
   /** The core's [[Provable]] that this object really represents. */
   val underlyingProvable : Provable = this match {
-    case TermProvable(child, _) => child.underlyingProvable
-    case ElidingProvable(provable, _) => provable
+    case TermProvable(child, _, _) => child.underlyingProvable
+    case ElidingProvable(provable, _, _) => provable
   }
 
   /** Returns a copy of this provable with the underlying provable replaced by `underlying`. */
@@ -38,6 +39,9 @@ trait ProvableSig {
     case t: TermProvable => t.copy(provable = t.provable.reapply(underlying))
     case e: ElidingProvable => e.copy(provable = underlying)
   }
+
+  /* Symbol definitions (substitutions). */
+  val defs: Declaration
 
   /* The number of steps performed to create this provable. */
   val steps: Int
@@ -271,7 +275,7 @@ trait ProvableSig {
 
   def proveArithmetic(t: QETool, f: Formula): ProvableSig
 
-
+  /** @inheritdoc */
   def prettyString: String
 }
 
@@ -324,8 +328,11 @@ object ProvableSig {
     * @param goal the desired conclusion.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     */
-  def startProof(goal : Sequent): ProvableSig =
-    if(PROOF_TERMS_ENABLED) TermProvable.startProof(goal) else ElidingProvable.startProof(goal)
+  def startProof(goal: Sequent, defs: Declaration): ProvableSig =
+    if(PROOF_TERMS_ENABLED) TermProvable.startProof(goal, defs) else ElidingProvable.startProof(goal, defs)
+
+  /** Starts a proof without definitions. */
+  def startPlainProof(goal: Sequent): ProvableSig = startProof(goal, Declaration(Map.empty))
 
   /**
     * Begin a new proof for the desired conclusion formula from no antecedent.
@@ -338,8 +345,11 @@ object ProvableSig {
     * @param goal the desired conclusion formula for the succedent.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     */
-  def startProof(goal : Formula): ProvableSig =
-    if(PROOF_TERMS_ENABLED) TermProvable.startProof(goal) else ElidingProvable.startProof(goal)
+  def startProof(goal: Formula, defs: Declaration): ProvableSig =
+    if(PROOF_TERMS_ENABLED) TermProvable.startProof(goal, defs) else ElidingProvable.startProof(goal, defs)
+
+  /** Starts a proof without definitions. */
+  def startPlainProof(goal: Formula): ProvableSig = startProof(goal, Declaration(Map.empty))
 
   def proveArithmetic(t: QETool, f: Formula): ProvableSig =
     if(PROOF_TERMS_ENABLED) TermProvable.proveArithmetic(t,f) else ElidingProvable.proveArithmetic(t,f)
@@ -360,7 +370,7 @@ object ProvableSig {
   * A direct [[Provable]] straight from the core that does not keep track of its proof term, but only tracks number of
   * proof steps. Directly forwards all function calls to [[provable]].
   */
-case class ElidingProvable(provable: Provable, steps: Int) extends ProvableSig {
+case class ElidingProvable(provable: Provable, steps: Int, defs: Declaration) extends ProvableSig {
   override val conclusion: Sequent = provable.conclusion
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
 
@@ -369,27 +379,27 @@ case class ElidingProvable(provable: Provable, steps: Int) extends ProvableSig {
   override val axioms: Map[String, ProvableSig] = ElidingProvable.axioms
   override val rules: Map[String, ProvableSig] = ElidingProvable.rules
 
-  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = ElidingProvable(provable(rule,subgoal), steps+1)
+  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = ElidingProvable(provable(rule,subgoal), steps+1, defs)
 
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig =
-    ElidingProvable(provable(subderivation.underlyingProvable, subgoal), steps+subderivation.steps)
+    ElidingProvable(provable(subderivation.underlyingProvable, subgoal), steps+subderivation.steps, defs ++ subderivation.defs)
 
   override def apply(subst: USubst): ProvableSig =
-    ElidingProvable(provable(subst), steps+1)
+    ElidingProvable(provable(subst), steps+1, defs)
 
   override def apply(ren: URename): ProvableSig =
-    ElidingProvable(provable(ren), steps+1)
+    ElidingProvable(provable(ren), steps+1, defs)
 
-  override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = ElidingProvable(provable(newConsequence, rule), steps+1)
+  override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = ElidingProvable(provable(newConsequence, rule), steps+1, defs)
 
   override def apply(prolongation: ProvableSig): ProvableSig =
-    ElidingProvable(provable(prolongation.underlyingProvable), steps+prolongation.steps)
+    ElidingProvable(provable(prolongation.underlyingProvable), steps+prolongation.steps, defs ++ prolongation.defs)
 
-  override def sub(subgoal: Subgoal): ProvableSig = ElidingProvable(provable.sub(subgoal), 0)
+  override def sub(subgoal: Subgoal): ProvableSig = ElidingProvable(provable.sub(subgoal), 0, defs)
 
-  override def startProof(goal: Sequent): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
+  override def startProof(goal: Sequent): ProvableSig = ElidingProvable(Provable.startProof(goal), 0, defs)
 
-  override def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
+  override def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0, defs)
 
   override def proveArithmetic(t: QETool, f: Formula): ProvableSig = ElidingProvable.proveArithmetic(t,f)
 
@@ -399,7 +409,7 @@ case class ElidingProvable(provable: Provable, steps: Int) extends ProvableSig {
 
   /** @inheritdoc */
   override def equals(obj: Any): Boolean = obj match {
-    case ElidingProvable(o, _) => provable == o // ignore steps for equality check (important for lemma assertions)
+    case ElidingProvable(o, _, _) => provable == o // ignore steps for equality check (important for lemma assertions)
     case _ => super.equals(obj)
   }
 
@@ -408,16 +418,16 @@ case class ElidingProvable(provable: Provable, steps: Int) extends ProvableSig {
 }
 
 object ElidingProvable {
-  val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, ElidingProvable(kvp._2, 0)))
-  val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, ElidingProvable(kvp._2, 0)))
+  val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, ElidingProvable(kvp._2, 0, Declaration(Map.empty))))
+  val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, ElidingProvable(kvp._2, 0, Declaration(Map.empty))))
 
-  def apply(provable: Provable): ElidingProvable = new ElidingProvable(provable, 0)
+  def apply(provable: Provable, defs: Declaration): ElidingProvable = new ElidingProvable(provable, 0, defs)
 
-  def startProof(goal: Sequent): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
+  def startProof(goal: Sequent, defs: Declaration): ProvableSig = ElidingProvable(Provable.startProof(goal), 0, defs)
 
-  def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
+  def startProof(goal: Formula, defs: Declaration): ProvableSig = ElidingProvable(Provable.startProof(goal), 0, defs)
 
-  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f), 1)
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f), 1, Declaration(Map.empty))
 
   def proveArithmeticLemma(tool: QETool, f: Formula): Lemma = {
     val fact = proveArithmetic(tool, f)
@@ -429,39 +439,42 @@ object TermProvable {
 
   val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, TermProvable(ElidingProvable.axioms.apply(x._1),
     {//println("Provable-axiom:" + x._1);
-    AxiomTerm(x._1)}
-  )))
+    AxiomTerm(x._1)}, Declaration(Map.empty))))
 
-  val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, TermProvable(ElidingProvable.rules.apply(x._1), RuleTerm(x._1))))
+  val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, TermProvable(ElidingProvable.rules.apply(x._1), RuleTerm(x._1), Declaration(Map.empty))))
 
-  def startProof(goal : Sequent): ProvableSig = {
+  def startProof(goal: Sequent, defs: Declaration): ProvableSig = {
     val sym = StaticSemantics.signature(goal)
     if(sym.exists({case _:UnitFunctional => true case _ => false})) {
       val 2 = 1 + 1
       ???
     }
 
-    TermProvable(ElidingProvable.startProof(goal), StartProof(goal))
+    TermProvable(ElidingProvable.startProof(goal, defs), StartProof(goal), defs)
   }
+
+  def startPlainProof(goal: Sequent): ProvableSig = startProof(goal, Declaration(Map.empty))
 
   private def fml2Seq(f:Formula):Sequent = Sequent(IndexedSeq(), IndexedSeq(f))
 
-  def startProof(goal : Formula): ProvableSig = {
+  def startProof(goal: Formula, defs: Declaration): ProvableSig = {
     val sym = StaticSemantics.signature(goal)
     if(sym.exists({case _:UnitFunctional => true case _ => false})) {
       //println("Goal needs exemption: " + goal)
 
     }
-    TermProvable(ElidingProvable.startProof(goal), StartProof(fml2Seq(goal)))
+    TermProvable(ElidingProvable.startProof(goal, defs), StartProof(fml2Seq(goal)), defs)
   }
 
-  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f), 1)
+  def startPlainProof(goal: Formula): ProvableSig = startProof(goal, Declaration(Map.empty))
+
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f), 1, Declaration(Map.empty))
 
   def proveArithmeticLemma(t: QETool, f: Formula): Lemma = {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
     //@TODO Does this work at all
     val lem = ElidingProvable.proveArithmeticLemma(t,f)
-    Lemma(TermProvable(lem.fact, FOLRConstant(lem.fact.conclusion.succ.head)), lem.evidence, lem.name)
+    Lemma(TermProvable(lem.fact, FOLRConstant(lem.fact.conclusion.succ.head), Declaration(Map.empty)), lem.evidence, lem.name)
   }
 
 }
@@ -473,7 +486,7 @@ object TermProvable {
   * @author Nathan Fulton
   * @author Brandon Bohrer
   */
-case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig with Logging {
+case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration) extends ProvableSig with Logging {
   /** @inheritdoc */
   override val conclusion: Sequent = provable.conclusion
 
@@ -488,15 +501,15 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
 
   /** @inheritdoc */
   override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = {
-    TermProvable(provable(rule, subgoal), RuleApplication(pt, rule, subgoal))
+    TermProvable(provable(rule, subgoal), RuleApplication(pt, rule, subgoal), defs)
   }
 
   /** @inheritdoc */
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
     subderivation match {
-      case TermProvable(subProvable, subPT) =>
+      case TermProvable(subProvable, subPT, _) =>
         val thePt = Sub(pt, subPT, subgoal)
-        TermProvable(ElidingProvable(underlyingProvable(subProvable.underlyingProvable,subgoal)), thePt)
+        TermProvable(ElidingProvable(underlyingProvable(subProvable.underlyingProvable,subgoal), defs ++ subderivation.defs), thePt, defs ++ subderivation.defs)
 
       case subprovable: ProvableSig => {
         //Find an axiom or rule with the same name.
@@ -510,24 +523,24 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
 
         //If such an axiom exists, create evidence using the axiom's associated proof certificate.
         if (coreAxiom.isDefined) {
-          val TermProvable(subProvable, subPT) = TermProvable.axioms(coreAxiom.get._1)
+          val TermProvable(subProvable, subPT, _) = TermProvable.axioms(coreAxiom.get._1)
           val thePt = Sub(pt, subPT, subgoal)
-          TermProvable(provable(subProvable, subgoal), thePt)
+          TermProvable(provable(subProvable, subgoal), thePt, defs ++ subderivation.defs)
         } else if (derivedAxiom.isDefined) {
           val term = Sub(pt, AxiomTerm(derivedAxiom.get.codeName), subgoal)
           logger.trace("derivedaxiom codename: " + derivedAxiom.get.codeName)
-          TermProvable(ElidingProvable(derivedAxiom.get.provable.underlyingProvable), term) // assert that found axiom would work
-          TermProvable(provable(subprovable, subgoal), term)
+          TermProvable(ElidingProvable(derivedAxiom.get.provable.underlyingProvable, defs ++ subderivation.defs), term, defs ++ subderivation.defs) // assert that found axiom would work
+          TermProvable(provable(subprovable, subgoal), term, defs ++ subderivation.defs)
         }
         //And ditto for rules.
         else if (rule.isDefined) {
-          val TermProvable(subProvable, subPT) = TermProvable.rules(rule.get._1)
+          val TermProvable(subProvable, subPT, _) = TermProvable.rules(rule.get._1)
           val thePt = Sub(pt, subPT, subgoal)
-          TermProvable(provable(subProvable, subgoal), thePt)
+          TermProvable(provable(subProvable, subgoal), thePt, defs ++ subderivation.defs)
         } else if (derivedRule.isDefined) {
           val term = Sub(pt, RuleTerm(derivedRule.get.codeName), subgoal)
-          TermProvable(ElidingProvable(derivedRule.get.provable.underlyingProvable), term) // assert that found rule would work
-          TermProvable(provable(subprovable, subgoal), term)
+          TermProvable(ElidingProvable(derivedRule.get.provable.underlyingProvable, defs ++ subderivation.defs), term, defs ++ subderivation.defs) // assert that found rule would work
+          TermProvable(provable(subprovable, subgoal), term, defs ++ subderivation.defs)
         }
         else {
           //For more complicated uses of useAt, by, etc. it's unclear what to do (and indeed the general architecture is problematic -- same reason that extraction works by the miracle of hard work aone).
@@ -541,26 +554,26 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
   class DebugMeException extends Exception {}
 
   /** @inheritdoc */
-  override def apply(subst: USubst): ProvableSig = TermProvable(provable(subst), UsubstProvableTerm(pt, subst))
+  override def apply(subst: USubst): ProvableSig = TermProvable(provable(subst), UsubstProvableTerm(pt, subst), defs)
 
   /** @inheritdoc */
-  override def apply(ren: URename): ProvableSig = TermProvable(provable(ren), URenameTerm(pt, ren))
+  override def apply(ren: URename): ProvableSig = TermProvable(provable(ren), URenameTerm(pt, ren), defs)
 
   /** @inheritdoc */
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig =
-    TermProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))
+    TermProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule), defs)
 
   /** @inheritdoc */
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
     case prolongationProof: TermProvable =>
-      TermProvable(provable(prolongationProof), ProlongationTerm(pt, prolongationProof.pt))
+      TermProvable(provable(prolongationProof), ProlongationTerm(pt, prolongationProof.pt), defs ++ prolongation.defs)
     case subProvable: ProvableSig =>
       /* @TODO: Arguable this should just not be allowed and represents a bug elsewhere */
-      TermProvable(ElidingProvable(provable.underlyingProvable(subProvable.underlyingProvable)), ProlongationTerm(pt, NoProof))
+      TermProvable(ElidingProvable(provable.underlyingProvable(subProvable.underlyingProvable), subProvable.defs), ProlongationTerm(pt, NoProof), defs ++ subProvable.defs)
   }
 
   /** @inheritdoc */
-  override def sub(subgoal: Subgoal): ProvableSig = TermProvable(provable.sub(subgoal), StartProof(provable.subgoals(subgoal)))
+  override def sub(subgoal: Subgoal): ProvableSig = TermProvable(provable.sub(subgoal), StartProof(provable.subgoals(subgoal)), defs)
 
   /** @inheritdoc */
   lazy val axioms: immutable.Map[String, ProvableSig] = TermProvable.axioms
@@ -575,7 +588,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
       val 2 = 1 + 1
       ???
     }
-    TermProvable.startProof(goal)
+    TermProvable.startProof(goal, defs)
   }
 
   /** @inheritdoc */

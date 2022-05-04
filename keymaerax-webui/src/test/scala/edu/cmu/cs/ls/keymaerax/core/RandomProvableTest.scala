@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 
@@ -21,6 +22,7 @@ import scala.collection.immutable.Map
  * @author Andre Platzer
  */
 class RandomProvableTest extends FlatSpec with Matchers {
+  Configuration.setConfiguration(FileConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 40000
   val randomComplexity = 12
@@ -35,9 +37,9 @@ class RandomProvableTest extends FlatSpec with Matchers {
       val e = rand.nextProvable(randomComplexity)
       e shouldBe 'proved
       // prolong with conclusion identity is a no-op
-      e(ProvableSig.startProof(e.conclusion)) shouldBe e
+      e(ProvableSig.startPlainProof(e.conclusion)) shouldBe e
       // use a fact that isn't proved and then continue above with a sub is a no-op
-      ProvableSig.startProof(e.conclusion).sub(0)(ProvableSig.startProof(e.conclusion)) shouldBe ProvableSig.startProof(e.conclusion)
+      ProvableSig.startPlainProof(e.conclusion).sub(0)(ProvableSig.startPlainProof(e.conclusion)) shouldBe ProvableSig.startPlainProof(e.conclusion)
 //      val sub = rand.rand.nextInt(e.subgoals.length)
 //      e(e.sub(sub), sub) shouldBe e
     }
