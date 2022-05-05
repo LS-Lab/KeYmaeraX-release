@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Expression, FuncOf, Function, NamedSymbol, Nothing, Provable, Real, StaticSemantics, SubstitutionPair, USubst, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ProvableHelper.exhaustiveSubst
 
 
@@ -12,7 +12,12 @@ object UnificationTools {
   private val expansible = (t: Expression) => t match { case _: DotTerm => false case _: Variable => false case _ => true }
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
   def collectSubst(goal: Provable, i: Int, sub: Provable, substs: List[SubstitutionPair]): USubst = {
-    if (goal.subgoals(i) == sub.conclusion) USubst(List.empty)
+    collectSubst(goal.subgoals(i), sub.conclusion, sub.isProved, substs)
+  }
+
+  /** Collects substitutions (of `defs`) that are needed to make `have` fit `goal`. */
+  def collectSubst(goal: Sequent, have: Sequent, haveIsProved: Boolean, substs: List[SubstitutionPair]): USubst = {
+    if (goal == have) USubst(List.empty)
     else {
       // order substitutions by dependency
       val adj = substs.map(sp =>
@@ -20,18 +25,23 @@ object UnificationTools {
       ).groupBy(_._1).map({ case (v, e) => v -> e.flatMap(_._2).toSet })
       val symbolDeps = DependencyAnalysis.dfs(adj)
 
-      collectSubstOrdered(goal, i, sub, substs, symbolDeps)
+      collectSubstOrdered(goal, have, haveIsProved, substs, symbolDeps)
     }
   }
 
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. Uses `symbolDeps` to determine in which order to expand symbols. */
   private def collectSubstOrdered(goal: Provable, i: Int, sub: Provable, substs: List[SubstitutionPair], symbolDeps: List[NamedSymbol]): USubst = {
-    if (goal.subgoals(i) == sub.conclusion) USubst(List.empty)
+    collectSubstOrdered(goal.subgoals(i), sub.conclusion, sub.isProved, substs, symbolDeps)
+  }
+
+  /** Collects substitutions (of `defs`) that are needed to make `have` fit `goal`. Uses `symbolDeps` to determine in which order to expand symbols. */
+  private def collectSubstOrdered(goal: Sequent, have: Sequent, haveIsProved: Boolean, substs: List[SubstitutionPair], symbolDeps: List[NamedSymbol]): USubst = {
+    if (goal == have) USubst(List.empty)
     else {
-      val (sg, ss, _) = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
+      val (sg, ss, _) = FormulaTools.symbolsDiff(goal.ante ++ goal.succ, have.ante ++ have.succ)
       val (exp, nonexp) = (sg ++ ss).partition(symbolDeps.contains)
       val constifications =
-        if (sub.isProved) {
+        if (haveIsProved) {
           nonexp.groupBy(n => (n.name, n.index, n.sort)).filter(_._2.size > 1).flatMap({ case (_, s) => s.toList match {
             case (v: Variable) :: (f@Function(_, _, Unit, Real, false)) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
             case (f@Function(_, _, Unit, Real, false)) :: (v: Variable) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
@@ -43,8 +53,8 @@ object UnificationTools {
       assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbol differences " + sg.map(_.prettyString).mkString(",") + " and " + ss.map(_.prettyString).mkString(","))
 
       val substGoal = exhaustiveSubst(goal, subst)
-      val substSub = exhaustiveSubst(sub, subst)
-      subst ++ collectSubstOrdered(substGoal, i, substSub, substs.diff(subst.subsDefsInput), symbolDeps)
+      val substHave = exhaustiveSubst(have, subst)
+      subst ++ collectSubstOrdered(substGoal, substHave, haveIsProved, substs.diff(subst.subsDefsInput), symbolDeps)
     }
   }
 }

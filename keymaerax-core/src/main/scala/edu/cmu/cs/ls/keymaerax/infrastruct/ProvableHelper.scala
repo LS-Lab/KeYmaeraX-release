@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.core.{Provable, USubst}
+import edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent, USubst}
 
 import scala.annotation.tailrec
 
@@ -16,6 +16,14 @@ object ProvableHelper {
   def exhaustiveSubst(p: Provable, s: USubst): Provable = {
     val substituted = p(s)
     if (substituted != p) exhaustiveSubst(substituted, s)
+    else substituted
+  }
+
+  /** Applies substitutions `s` to sequent `seq` exhaustively. */
+  @tailrec
+  def exhaustiveSubst(seq: Sequent, s: USubst): Sequent = {
+    val substituted = s(seq)
+    if (substituted != seq) exhaustiveSubst(substituted, s)
     else substituted
   }
 
