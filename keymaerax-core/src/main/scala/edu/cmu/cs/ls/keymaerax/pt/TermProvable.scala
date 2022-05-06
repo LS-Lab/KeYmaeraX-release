@@ -39,6 +39,11 @@ trait ProvableSig {
     case t: TermProvable => t.copy(provable = t.provable.reapply(underlying))
     case e: ElidingProvable => e.copy(provable = underlying)
   }
+  /** Returns a copy of this provable with the definitions replaced by `defs`. */
+  def reapply(defs: Declaration): ProvableSig = this match {
+    case t: TermProvable => t.copy(defs = defs)
+    case e: ElidingProvable => e.copy(defs = defs)
+  }
 
   /* Symbol definitions (substitutions). */
   val defs: Declaration
