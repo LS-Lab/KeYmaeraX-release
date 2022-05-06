@@ -117,14 +117,14 @@ private object ToolTactics {
                 )
               )
             } catch {
-              case _: TacticInapplicableFailure =>
+              case _: TacticInapplicableFailure | ex: BelleCEX =>
                 val msg =
                   if (StaticSemantics.symbols(pr.subgoals.head).exists(n => n.name.startsWith("p_") || n.name.startsWith("q_"))) {
                     "Sequent cannot be proved. Please try to unhide some formulas."
                   } else {
                     "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
                   }
-                throw new TacticInapplicableFailure(msg)
+                throw new TacticInapplicableFailure(msg, ex)
             }
           )
         ), 0)
@@ -149,13 +149,12 @@ private object ToolTactics {
         classOf[TacticInapplicableFailure],
         (ex: TacticInapplicableFailure) =>
           if (StaticSemantics.symbols(seq).exists(defs.contains)) {
-            ExpandAll(defs.substs) & prepareQE(order, rcf(qeTool))
+            expandAllDefs(defs.substs) & prepareQE(order, rcf(qeTool))
           } else throw ex
       )
       ,
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
-      "qecache/" + qeTool.getClass.getSimpleName,
-      defs
+      "qecache/" + qeTool.getClass.getSimpleName
     ) & Idioms.doIf(!_.isProved)(anon ((s: Sequent) =>
       if (s.succ.head == False) label(BelleLabels.QECEX)
       else DebuggingTactics.done("QE was unable to prove: invalid formula"))
@@ -271,7 +270,7 @@ private object ToolTactics {
     }).getOrElse(provable)
   }
 
-  def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE(Declaration(Map.empty), List.empty)(qeTool)
+  def fullQE(qeTool: => QETacticTool): BelleExpr = anons { (pr: ProvableSig) => fullQE(pr.defs, List.empty)(qeTool) }
 
   // Follows heuristic in C.W. Brown. Companion to the tutorial: Cylindrical algebraic decomposition, (ISSAC 2004)
   // www.usna.edu/Users/cs/wcbrown/research/ISSAC04/handout.pdf
