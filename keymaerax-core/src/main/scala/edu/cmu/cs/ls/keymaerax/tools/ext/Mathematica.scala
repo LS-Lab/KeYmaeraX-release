@@ -150,7 +150,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
           case None if qeMaxTimeout != 0 => doMaxQE(formula)
           case Some(cex) =>
             //@note only return Lemma if no open goals (but CEX tool not trusted, so impossible to create)
-            throw BelleCEX("QE counterexample", cex, Sequent(IndexedSeq(), IndexedSeq(formula)))
+            throw BelleCEX("QE counterexample:\n  formula: " + formula.prettyString + "\n  CEX: " + cex, cex, Sequent(IndexedSeq(), IndexedSeq(formula)))
         }
     }
   }
