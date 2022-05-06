@@ -136,17 +136,17 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] = P(
-    NoCut((programVariables | definitions).rep).map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
+    ((programVariables | definitions).rep).map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
   )
 
   /** `Description "text".` parsed. */
-  def description[_: P]: P[String] = P("Description" ~~ blank~/ string ~ "." )
+  def description[_: P]: P[String] = P("Description" ~~ blank ~/ string ~ "." )
 
   /** `Title "text".` parsed. */
-  def title[_: P]: P[String] = P("Title" ~~ blank~/ string ~ "." )
+  def title[_: P]: P[String] = P("Title" ~~ blank ~/ string ~ "." )
 
   /** `Link "text".` parsed. */
-  def link[_: P]: P[String] = P("Link" ~~ blank~/ string ~ "." )
+  def link[_: P]: P[String] = P("Link" ~~ blank ~/ string ~ "." )
 
   /** `SharedDefinitions declOrDef End.` parsed. */
   def sharedDefinitions[_: P]: P[Declaration] = P("SharedDefinitions" ~~ blank ~/ declOrDef.rep ~ "End." ).
@@ -158,17 +158,23 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 //      list.filter({case (id,sig) => sig._3.isEmpty}).toMap,
 //      list.filter({case (id,sig) => sig._3.isDefined}).toMap)
 
-  /** `implicit Real name1(Real arg1, Real arg2), name2(Real arg1, Real arg2) '= term;` ODE function definition or
+  /** `implicit Real name1(Real arg1, Real arg2), name2(Real arg1, Real arg2) '= {initConds; ode};` ODE function definition or
     * `sort name(sort1 arg1, sorg2 arg2);` declaration or
     * `sort name(sort1 arg1, sorg2 arg2) = term;` function definition or
     * `Bool name(sort1 arg1, sorg2 arg2) <-> formula;` predicate definition or
     * `HP name ::= program;` program definition. */
   def declOrDef[_: P]: P[List[(Name,Signature)]] = P(
-      NoCut(implicitDef ~ ";")
-    | NoCut(progDef).map(p => p::Nil)
-    | NoCut(declPartList ~ ";")
-    | NoCut(declPart ~ "=" ~ term ~ ";").map({case (id, sig, e) => (id, sig.copy(interpretation = Some(e)))::Nil})
-    | NoCut(declPart ~ "<->" ~ formula ~ ";").map({case (id, sig, f) => (id, sig.copy(interpretation = Some(f)))::Nil})
+      implicitDef ~ ";"
+    | progDef.map(p => p::Nil)
+    | declPartList.flatMap(decls =>
+        Pass(decls) ~ ";"./
+        | (decls match {
+          case (id,sig)::Nil =>
+            ("="./ ~ term ~ ";").map(e => (id, sig.copy(interpretation = Some(e)))::Nil) |
+            ("<->" ~ formula ~ ";").map(f => (id, sig.copy(interpretation = Some(f)))::Nil)
+          case _ => Fail
+        })
+    )
   )
 
   private def namedTupleDo(ty1: Sort, n1: Option[Name], ty2: Sort, n2: Option[List[(Name, Sort)]]): (Sort, Option[List[(Name, Sort)]]) =
@@ -188,38 +194,33 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     case None => if (acc.isEmpty) None else throw ParseException("Either all or no arguments of function/predicate declarations should have names")
   }
 
-  /** `sort name(sort1 arg1, sorg2 arg2)` single declaration part.*/
-  //type Signature = (Option[Sort], Sort, Option[List[(Name, Sort)]], Option[Expression], Location)
-  def declPart[_: P]: P[(Name,Signature)] = P(
-    /* TODO: check that handling of arguments is right */
-    sort ~~ blank ~~/ ident ~~ (
-      ("(" ~ (sort ~~ (blank ~ ident).?).rep(sep=","./) ~ ")").
-        map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
+  /** `name(sort1 arg1, sorg2 arg2)` declaration part.
+   * Input sort is the (codomain) sort */
+  def declPart[_: P](ty: Sort) : P[(Name,Signature)] =
+    P(
+      ident ~~ (
+        (("(" ~ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")").
+          map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
             , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
             (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
           })
+          )).?
+        //| "".!.map(_ => (core.Unit,Some(Nil)))
         )
-      //| "".!.map(_ => (core.Unit,Some(Nil)))
-    )
-  ).map({case (ty,n,args) => (Name(n._1,n._2), Signature(Some(args._1), ty, Some(args._2), None, UnknownLocation))})
+    ).map({ case (n, idx, args) => (Name(n, idx), Signature(args.map(_._1), ty, args.map(_._2), None, UnknownLocation)) })
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
   def declPartList[_: P]: P[List[(Name,Signature)]] = P(
-    sort ~~ blank ~~/ (ident ~~ (
-      ("(" ~ (sort ~~ (blank ~ ident).?).rep(sep=","./) ~ ")").
-        map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
-            , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
-            (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
-          })
-        )
-      //| "".!.map(_ => (core.Unit,Some(Nil)))
-      )).rep(sep=","./)
-  ).map({case (ty,decllist) => decllist.map({case (n,idx,args) => (Name(n,idx), Signature(Some(args._1), ty, Some(args._2), None, UnknownLocation))}).toList})
+    (sort ~~ blank ~/ Pass).flatMap(sort =>
+      declPart(sort).rep(sep=","./).
+        map(_.toList)
+    )
+  )
 
   /** `HP name ::= {program};` | `HG name ::= {program};` program definition. */
     //@todo better return type with ProgramConst/SystemConst instead of Name
   def progDef[_: P]: P[(Name,Signature)] = P(
-    ("HP" | "HG") ~~ blank ~ ident ~ "::=" ~ ("{" ~ (NoCut(program) | odeprogram) ~ "}" /*| NoCut(program)*/) ~ ";".?
+    ("HP" | "HG") ~~ blank ~/ ident ~ "::=" ~ "{" ~/ (NoCut(program) | odeprogram) ~ "}" ~ ";".?
   ).map({case (s,idx,p) => (Name(s,idx), Signature(Some(Unit), Trafo, None, Some(p), UnknownLocation))})
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
@@ -249,12 +250,13 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    */
   def implicitDef[_: P]: P[List[(Name,Signature)]] =
     P("implicit" ~~ blank ~/ (
-      NoCut(implicitDefInterp).map(List(_)) |
-      NoCut(implicitDefODE)
+      // This syntax was removed in favor of syntactic restriction to ODE implicit defs
+      // implicitDefInterp.map(List(_)) |
+      implicitDefODE
     ))
 
   def implicitDefODE[_: P]: P[List[(Name,Signature)]] = P(
-    (declPartList ~ "'=" ~/ NoCut(program))
+    (declPartList ~ "'=" ~/ "{" ~ program ~ "}")
       .map{case (sigs, prog) =>
         if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
           throw ParseException("Implicit ODE declarations can only declare real-valued " +
@@ -289,6 +291,10 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       }
   )
 
+  /* Commented out because this syntax was removed in favor of syntactic
+   * restriction to ODE implicit defs
+   */
+  /*
   def implicitDefInterp[_: P]: P[(Name,Signature)] = P(
     (declPart ~ "=" ~ ident ~ "<->" ~ formula)
       .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, form) =>
@@ -313,12 +319,13 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         )
       }
   )
+  */
 
   /** `Problem  formula  End.` parsed. */
   def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )
 
   //@todo tactic needs tactic parser or skip ahead to End. and ask BelleParser.
-  def tacticProof[_: P]: P[(Option[String],BelleExpr)] = P( "Tactic" ~~ blank ~ string.? ~ tactic ~/ "End.")
+  def tacticProof[_: P]: P[(Option[String],BelleExpr)] = P( "Tactic" ~~ blank ~/ string.? ~ tactic ~ "End.")
 
 
   // externals

@@ -76,8 +76,9 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def namedCombinator[_: P]: P[BelleExpr] = P( ("doall".!) ~~ "(" ~ tactic ~ ")" ).
     map({case ("doall", t) => OnAll(t)})
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )
-  def baseTac[_: P]: P[BelleExpr] = P( (namedCombinator | atomicTactic | NoCut(at) |
-    branchTac | parenTac) ~~ ("*" ~ integer | "*".! ~ !CharIn("0-9")).?
+  def baseTac[_: P]: P[BelleExpr] = P(
+    (namedCombinator | atomicTactic | at | branchTac | parenTac)
+      ~~ ("*" ~ integer | "*".! ~ !CharIn("0-9")).?
   ).map({case (t,None) => t case (t,Some(n:Integer)) => RepeatTactic(t,n) case (t,Some("*")) => SaturateTactic(t)})
 
   def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ baseTac.rep(min=1,sep=","./) ~ ")").
