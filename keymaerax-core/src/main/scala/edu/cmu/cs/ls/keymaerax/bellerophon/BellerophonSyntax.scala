@@ -910,24 +910,6 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
   override def prettyString: String = t.name
 }
 
-object Expand {
-  def apply(name: NamedSymbol, s: SubstitutionPair): Expand = Expand(name, Some(s))
-}
-
-/** Expands symbol `name` per uniform substitution `s`.
-  * @see [[USubstOne]] */
-case class Expand(name: NamedSymbol, s: Option[SubstitutionPair]) extends BelleExpr {
-  //@note serialize `s` for database since required in the proof tree when assembling provables
-  override def prettyString: String = s"""expand "${name.prettyString}""""
-}
-/** Expands all definitions from the model provided in topologically sorted `defs`. Expands all definitions known
-  * to the interpreter when `defs` is empty.
-  * @see [[USubstOne]] */
-case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
-  //@note serialize `defs` for database since required in the proof tree when assembling provables
-  override def prettyString: String = "expandAllDefs"
-}
-
 /**
  * Bellerophon expressions that are values, so should not be evaluated any further since irreducible.
  */

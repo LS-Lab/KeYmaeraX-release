@@ -268,7 +268,7 @@ private object DLBySubst {
           // case [x:=x+1;][prg;]
           val unexpandedSymbols = StaticSemantics.symbols(p).
             filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false })
-          unexpandedSymbols.map(n => Expand(n, None)).reduceRight[BelleExpr](_ & _) & assignEquality(pos)
+          unexpandedSymbols.map(n => expandFw(n, None)).reduceRight[BelleExpr](_ & _) & assignEquality(pos)
         } else {
           // case [x:=y;][prg;]
           useAt(rename)(pos) & skolemize
@@ -422,7 +422,7 @@ private object DLBySubst {
         sequent.sub(pos) match {
           case Some(Box(Loop(a), _)) =>
             val toExpand = defs.transitiveSubstsFrom(a)
-            if (toExpand.nonEmpty) ExpandAll(toExpand)
+            if (toExpand.nonEmpty) expandAllDefs(toExpand)
             else skip
           case _ => skip
         }
@@ -446,13 +446,13 @@ private object DLBySubst {
 
             val expandInit = anon ((s: Sequent) => {
               val toExpand = defs.transitiveSubstsFrom(s.toFormula)
-              if (toExpand.nonEmpty) ExpandAll(toExpand)
+              if (toExpand.nonEmpty) expandAllDefs(toExpand)
               else skip
             })
             val expandPrg =
               if (consts.flatMap(StaticSemantics.symbols).exists(_.isInstanceOf[Variable]) && StaticSemantics.boundVars(a).isInfinite) {
                 val asymbols = StaticSemantics.symbols(a)
-                ExpandAll(defs.substs.filter({
+                expandAllDefs(defs.substs.filter({
                   case SubstitutionPair(p: ProgramConst, _) => asymbols.contains(p)
                   case SubstitutionPair(p: SystemConst, _) => asymbols.contains(p)
                   case _ => false

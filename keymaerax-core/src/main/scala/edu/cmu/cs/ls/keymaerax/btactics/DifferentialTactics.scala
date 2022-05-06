@@ -150,7 +150,7 @@ private object DifferentialTactics extends Logging {
           }).map({
             case fn@Function(_, _, _, _, interpreted) =>
               if (interpreted) EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
-              else Expand(fn, None)
+              else expandFw(fn, None)
           }).reduceRightOption[BelleExpr](_ & _)
         case _ => None
       }

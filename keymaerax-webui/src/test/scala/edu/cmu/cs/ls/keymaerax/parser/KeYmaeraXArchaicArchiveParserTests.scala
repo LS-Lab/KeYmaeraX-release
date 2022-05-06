@@ -5,10 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, Find, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Program, Real, SubstitutionPair, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, SubstitutionPair, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
@@ -457,13 +457,14 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |Expected: <unknown>""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: expand program definitions to decide whether symbol is undefined" taggedAs TodoTest in {
+  it should "expand program definitions to decide whether symbol is undefined" in {
     val input =
       """ArchiveEntry "Entry 1"
         |  Definitions
         |    HP b ::= { y:=4; };
         |    Bool p(Real x) <-> [y:=x; ++ b;]y>=2;
         |  End.
+        |  ProgramVariables Real y; End.
         |  Problem p(2) End.
         |End.""".stripMargin
     val entry = parse(input).loneElement
@@ -474,12 +475,14 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     val input =
       """ArchiveEntry "Entry 1"
         |  Definitions
-        |    HP b ::= { y:=y+1; };
+        |    HP b ::= { z:=x+1; };
         |    Bool p(Real x) <-> [y:=x; ++ b;]y>=2;
         |  End.
+        |  ProgramVariables Real y; End.
         |  Problem p(2) End.
         |End.""".stripMargin
-    the [ParseException] thrownBy parse(input) should have message """todo"""
+    //@todo not particularly clear with current language what the error is: if b was just expanded in p(x) z would be undefined, but x would not be
+    the [ParseException] thrownBy parse(input) should have message """4:5 Definition p uses undefined symbol(s) z. Please add arguments or define as functions/predicates/programs"""
   }
 
   it should "parse definitions after variables" in {
@@ -1100,7 +1103,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |ArchiveEntry "Entry 1".
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.
-        | Tactic "Empty". /* a comment */ nil partial End.
+        | Tactic "Empty". /* a comment */ nil End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -1113,7 +1116,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Empty", "/* a comment */ nil partial", PartialTactic(nil)) :: Nil
+    entry.tactics shouldBe ("Empty", "/* a comment */ nil", nil) :: Nil
     entry.info shouldBe empty
   }
 
@@ -1670,7 +1673,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       """Lemma "Entry 1".
         | Description "The description of entry 1".
         | Title "A short entry 1 title".
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> y<x End.
         |End.""".stripMargin
@@ -1681,7 +1684,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       """Lemma "Entry 1".
         | Description "The description of entry 1".
         | Title "A short entry 1 title".
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> y<x End.
         |End.""".stripMargin
@@ -1695,7 +1698,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.info shouldBe Map(
       "Description" -> "The description of entry 1",
       "Title" -> "A short entry 1 title",
-      "Link" -> "http://web.keymaerax.org/show/entry1")
+      "Link" -> "https://web.keymaerax.org/show/entry1")
   }
 
   it should "parse meta information at any position" in {
@@ -1703,7 +1706,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       """Lemma "Entry 1".
         | Description "The description of entry 1".
         | ProgramVariables. R x. R y. End.
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | Problem. x>y -> y<x End.
         | Title "A short entry 1 title".
         | Illustration "https://lfcps.org/example.png".
@@ -1715,7 +1718,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       """Lemma "Entry 1".
         | Description "The description of entry 1".
         | ProgramVariables. R x. R y. End.
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | Problem. x>y -> y<x End.
         | Title "A short entry 1 title".
         | Illustration "https://lfcps.org/example.png".
@@ -1730,7 +1733,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.info shouldBe Map(
       "Description" -> "The description of entry 1",
       "Title" -> "A short entry 1 title",
-      "Link" -> "http://web.keymaerax.org/show/entry1",
+      "Link" -> "https://web.keymaerax.org/show/entry1",
       "Illustration" -> "https://lfcps.org/example.png"
     )
   }
@@ -1957,7 +1960,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma("Entry 1")""",
-      Expand("gt".asNamedSymbol, SubstitutionPair("gt(._0,._1)".asFormula, "._0>._1".asFormula)) &
+      expandFw("gt".asNamedSymbol, Some(SubstitutionPair("gt(._0,._1)".asFormula, "._0>._1".asFormula))) &
         TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
@@ -2215,7 +2218,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       |  Problem [y:=y;]y=y End.
       |End.""".stripMargin
     inside (parse(input)) {
-      case (e1 :: e2 :: Nil) =>
+      case e1 :: e2 :: Nil =>
         e1.fileContent shouldBe
           """SharedDefinitions
             |  Real sq(Real x) = x^2 + (x')^2;
@@ -2348,7 +2351,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       |  Problem [inc;]x>=old(x) End.
       |End.""".stripMargin
     inside (parse(input)) {
-      case (e1 :: e2 :: e3 :: Nil) =>
+      case e1 :: e2 :: e3 :: Nil =>
         e1.fileContent shouldBe
           """SharedDefinitions
             |  HP inc ::= { x:=x+1; };

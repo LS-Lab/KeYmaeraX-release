@@ -49,6 +49,10 @@ trait Interpreter {
   protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig): USubst =
     UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, goal.defs.substs)
 
+  /** Collects substitutions (of `defs`) that are needed to make `have` fit `goal`. */
+  protected def collectSubst(goal: Sequent, have: Sequent, haveIsProved: Boolean, defs: Declaration): USubst =
+    UnificationTools.collectSubst(goal, have, haveIsProved, defs.substs)
+
 
   /** Applies substitutions `s` to provable `p` exhaustively. */
   protected def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig =

@@ -944,9 +944,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val eq = Function("eq", None, Tuple(Real, Real), Bool)
     interpreter(implyR(1) & andR(1) <(
       cut("eq(x,1)".asFormula) <(
-        Expand(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT & DebuggingTactics.print("Branch 1 proved?"),
+        expandFw(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT & DebuggingTactics.print("Branch 1 proved?"),
         Using("eq(x,one()), eq(x,1)".asFormulaList, QE & DebuggingTactics.print("Branch 2 proved?"))) & DebuggingTactics.print("Both branches proved?"),
-      Expand(eq, None) & Expand(Function("one", None, Unit, Real), None) & QE
+      expandFw(eq, None) & expandFw(Function("one", None, Unit, Real), None) & QE
     ),
       BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)))
 
@@ -2522,7 +2522,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ),
         |  expandAllDefs; ODE(1)
         |)""".stripMargin, defs=entry.defs, expandAll=false)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
       case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
     }
   }}
@@ -2552,7 +2552,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ),
         |  expandAllDefs; ODE(1)
         |)""".stripMargin, defs=entry.defs, expandAll=false)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
       case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
     }
   }}

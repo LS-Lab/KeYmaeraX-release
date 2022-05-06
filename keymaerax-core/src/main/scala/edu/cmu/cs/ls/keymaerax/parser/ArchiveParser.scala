@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -237,6 +237,23 @@ object Declaration {
           case _ => ProgramConst(name)
         }
     }
+  }
+
+  /** Converts a list of substitution pairs `s` into a declaration. */
+  def fromSubst(s: List[SubstitutionPair]): Declaration = {
+    def argsFromExpr(t: Expression): Option[List[(Name, Sort)]] = {
+      val symbols = StaticSemantics.symbols(t)
+      if (symbols.isEmpty) None
+      else Some(StaticSemantics.symbols(t).map(s => Name(s.name, s.index) -> s.sort).toList)
+    }
+    Declaration(s.map({
+      case SubstitutionPair(af: ApplicationOf, r) =>
+        Name(af.func.name, af.func.index) -> Signature(Some(af.func.domain), af.func.sort, argsFromExpr(af.child), Some(r), UnknownLocation)
+      case SubstitutionPair(s: SystemConst, r) =>
+        Name(s.name, s.index) -> Signature(None, s.sort, None, Some(r), UnknownLocation)
+      case SubstitutionPair(s: ProgramConst, r) =>
+        Name(s.name, s.index) -> Signature(None, s.sort, None, Some(r), UnknownLocation)
+    }).toMap)
   }
 }
 

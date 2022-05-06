@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, ParseException, Region, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -495,7 +495,6 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   "Optional combinator" should "parse ?(closeId)" in {
     val tactic = BelleParser("?(id)")
-    TactixLibrary.nil
     tactic shouldBe (round trip Idioms.?(TactixLibrary.id))
   }
 
@@ -705,7 +704,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "Expand" should "parse a simple definition expand" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f()\"", None,
       Declaration(scala.collection.immutable.Map((Name("f", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation)))))
-    tactic shouldBe TactixLibrary.implyR(1) & Expand(Function("f", None, Unit, Real), "f() ~> 3*2".asSubstitutionPair)
+    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Function("f", None, Unit, Real), Some("f() ~> 3*2".asSubstitutionPair))
   }
 
   it should "elaborate variables to functions" in {
@@ -715,8 +714,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("g", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation))
       )
     ))
-    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
-      FuncOf(Function("f", None, Unit, Real), Nothing), Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2))
+    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Variable("f"), Some(SubstitutionPair(
+      FuncOf(Function("f", None, Unit, Real), Nothing), Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2)))
     ))
   }
 
@@ -726,7 +725,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
       (Name("g", None), Signature(Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
     ))
     BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=true) shouldBe
-      ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL(
+      expandAllDefs("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL(
         Find.FindLDef("f()=1*f()".asFormula, PosInExpr.HereP, defs))
     BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=false) shouldBe
       TactixLibrary.hideL(Find.FindLDef("f()=g()".asFormula, PosInExpr.HereP, defs))
@@ -739,8 +738,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("g", None), Signature(Some(Unit), Real, None, Some("0".asExpr), UnknownLocation))
       )
       ))
-    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
-      FuncOf(Function("f", None, Unit, Real), Nothing), FuncOf(Function("g", None, Unit, Real), Nothing)
+    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Variable("f"), Some(SubstitutionPair(
+      FuncOf(Function("f", None, Unit, Real), Nothing), FuncOf(Function("g", None, Unit, Real), Nothing))
     ))
   }
 
@@ -751,8 +750,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("g", None), Signature(Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation))
       )
       ))
-    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
-      PredOf(Function("f", None, Unit, Bool), Nothing), PredOf(Function("g", None, Unit, Bool), Nothing)
+    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Variable("f"), Some(SubstitutionPair(
+      PredOf(Function("f", None, Unit, Bool), Nothing), PredOf(Function("g", None, Unit, Bool), Nothing))
     ))
   }
 
@@ -764,7 +763,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     BelleParser.parseWithInvGen("implyR(1) ; cut(\"[a;]p\")", None, decls) shouldBe
       TactixLibrary.implyR(1) & cut("[a{|^@|};]p()".asFormula)
     BelleParser.parseWithInvGen("implyR(1) ; cut(\"[a;]p\")", None, decls, expandAll=true) shouldBe
-      ExpandAll(decls.substs) & (TactixLibrary.implyR(1) & cut("[x:=x+1;]3*2>=0".asFormula))
+      expandAllDefs(decls.substs) & (TactixLibrary.implyR(1) & cut("[x:=x+1;]3*2>=0".asFormula))
   }
 
   it should "not collide with expandAll" in {
@@ -779,7 +778,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("g", None), Signature(Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
       )))
     tactic match {
-      case ExpandAll(defs) => defs should contain theSameElementsAs("f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
+      case InputTactic("expandAllDefs", (substs: List[SubstitutionPair]) :: Nil) =>
+        substs should contain theSameElementsAs("f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
     }
   }
 
@@ -793,7 +793,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     tactic shouldBe TactixLibrary.uniformSubstitute(
       USubst(SubstitutionPair(FuncOf(Function("f", None, Unit, Real), Nothing),
              Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2))) :: Nil)) &
-        ExpandAll(SubstitutionPair(FuncOf(Function("g", None, Unit, Real), Nothing), Number(4)) :: Nil)
+        expandAllDefs(SubstitutionPair(FuncOf(Function("g", None, Unit, Real), Nothing), Number(4)) :: Nil)
   }
 
   it should "expand and elaborate proof definitions with US and model definitions after with expandAllDefs" in {
@@ -805,7 +805,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
       )))
     tactic shouldBe TactixLibrary.uniformSubstitute(USubst(
       SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), PredOf(Function("g", None, Real, Bool), DotTerm())) :: Nil)) &
-      ExpandAll(SubstitutionPair(PredOf(Function("g", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(0))) :: Nil)
+      expandAllDefs(SubstitutionPair(PredOf(Function("g", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(0))) :: Nil)
   }
 
   it should "default expand and elaborate model definitions with expandAllDefs" in {
@@ -815,7 +815,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("f", None), Signature(Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
         (Name("g", None), Signature(Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
       )), expandAll = true)
-    tactic shouldBe ExpandAll(
+    tactic shouldBe expandAllDefs(
       SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
       TactixLibrary.dC("x>g()".asFormula)(1)
   }
@@ -827,7 +827,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("f", None), Signature(Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
         (Name("g", None), Signature(Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
       )), expandAll = true)
-    tactic shouldBe ExpandAll(
+    tactic shouldBe expandAllDefs(
       SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
       TactixLibrary.dC("x>g()".asFormula)(1)
   }
@@ -842,7 +842,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("j", None), Signature(Some(Unit), Trafo, None, Some("x:=g()+i();".asProgram), Region(0, 0, 0, 0)))
       )))
     tactic match {
-      case ExpandAll(defs) =>
+      case InputTactic("expandAllDefs", (defs: List[SubstitutionPair]) :: Nil) =>
         defs should contain theSameElementsAs("h() ~> g()*2".asSubstitutionPair :: "j{|^@|}; ~> x:=g()+i();".asSubstitutionPair ::
           "i() ~> 1".asSubstitutionPair :: "g() ~> f()+4".asSubstitutionPair :: "f() ~> 3*2".asSubstitutionPair :: Nil)
         val hi = defs.indexOf("h() ~> g()*2".asSubstitutionPair)
@@ -911,7 +911,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
-      case SeqTactic(ExpandAll(substs) :: (adpt: AppliedDependentPositionTactic) :: Nil) =>
+      case SeqTactic(InputTactic("expandAllDefs", (substs: List[SubstitutionPair]) :: Nil) :: (adpt: AppliedDependentPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
     }
@@ -927,7 +927,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
-      case SeqTactic(ExpandAll(substs) :: _ :: (adpt: AppliedDependentPositionTactic) :: Nil) =>
+      case SeqTactic(InputTactic("expandAllDefs", (substs: List[SubstitutionPair]) :: Nil) :: _ :: (adpt: AppliedDependentPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
     }
@@ -945,7 +945,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
 
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, defs, expandAll = true)) {
-      case SeqTactic(ExpandAll(substs) :: (apt: AppliedPositionTactic) :: Nil) =>
+      case SeqTactic(InputTactic("expandAllDefs", (substs: List[SubstitutionPair]) :: Nil) :: (apt: AppliedPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Find.FindLDef("s=y".asFormula, PosInExpr.HereP, defs)
     }
@@ -963,7 +963,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
       Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
-      case SeqTactic(ExpandAll(substs) :: (apt: AppliedPositionTactic) :: Nil) =>
+      case SeqTactic(InputTactic("expandAllDefs", (substs: List[SubstitutionPair]) :: Nil) :: (apt: AppliedPositionTactic) :: Nil) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
     }

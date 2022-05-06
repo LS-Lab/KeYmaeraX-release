@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, ReflectiveExpressionBuilder, SeqTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{InputTactic, ReflectiveExpressionBuilder, SeqTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Function, Greater, Number, Pair, Plus, PredOf, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
@@ -1071,7 +1071,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val entry = parse(input).loneElement
     entry.defs.substs shouldBe List("z(.) ~> .*b()*y()".asSubstitutionPair, "b()~>3*y()".asSubstitutionPair, "y() ~> 4".asSubstitutionPair)
     inside (entry.tactics) {
-      case (_, _, ExpandAll(defs)) :: Nil => defs shouldBe entry.defs.substs
+      case (_, _, InputTactic("expandAllDefs", defs)) :: Nil => defs shouldBe entry.defs.substs
     }
   }
 
@@ -1486,7 +1486,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """Lemma "Entry 1"
         | Description "The description of entry 1".
         | Title "A short entry 1 title".
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> y<x End.
         |End.""".stripMargin
@@ -1503,12 +1503,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe Map(
       "Description" -> "The description of entry 1",
       "Title" -> "A short entry 1 title",
-      "Link" -> "http://web.keymaerax.org/show/entry1")
+      "Link" -> "https://web.keymaerax.org/show/entry1")
     entry.fileContent shouldBe
       """Lemma "Entry 1"
         | Description "The description of entry 1".
         | Title "A short entry 1 title".
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> y<x End.
         |End.""".stripMargin
@@ -1519,7 +1519,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """Lemma "Entry 1"
         | Description "The description of entry 1".
         | ProgramVariables Real x; Real y; End.
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | Problem x>y -> y<x End.
         | Title "A short entry 1 title".
         | Illustration "https://lfcps.org/example.png".
@@ -1537,14 +1537,14 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe Map(
       "Description" -> "The description of entry 1",
       "Title" -> "A short entry 1 title",
-      "Link" -> "http://web.keymaerax.org/show/entry1",
+      "Link" -> "https://web.keymaerax.org/show/entry1",
       "Illustration" -> "https://lfcps.org/example.png"
     )
     entry.fileContent shouldBe
       """Lemma "Entry 1"
         | Description "The description of entry 1".
         | ProgramVariables Real x; Real y; End.
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | Problem x>y -> y<x End.
         | Title "A short entry 1 title".
         | Illustration "https://lfcps.org/example.png".
@@ -1687,7 +1687,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     inside (entry2.tactics) {
-      case (name, text, SeqTactic(ExpandAll(substs) :: lemma :: Nil)) :: Nil =>
+      case (name, text, SeqTactic(InputTactic("expandAllDefs", substs) :: lemma :: Nil)) :: Nil =>
         name shouldBe "Proof Entry 2"
         text shouldBe "useLemma({`Entry 1`})"
         substs should contain theSameElementsAs entry2.defs.substs
@@ -1769,10 +1769,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
-      Expand("gt".asNamedSymbol, SubstitutionPair(
+      expandFw("gt".asNamedSymbol, Some(SubstitutionPair(
         PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
         Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1))))
-      ) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
+      )) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions

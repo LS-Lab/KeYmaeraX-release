@@ -56,7 +56,6 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           case r: BelleDelayedSubstProvable => r.parent match {
             case None => r
             case Some((pp, i)) =>
-              assert(pp(r.subst).conclusion == p.p(r.subst).conclusion, "Expected matching conclusions:\nexpected\n" + p.p(r.subst).conclusion.prettyString + "\nbut got\n" + pp(r.subst).conclusion.prettyString)
               if (r.p.isProved) {
                 val substGoal = exhaustiveSubst(pp, r.subst)
                 val substSub = exhaustiveSubst(r.p, r.subst)
@@ -66,6 +65,14 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
                 r
               }
           }
+          case r: BelleProvable =>
+            if (p.p.conclusion == r.p.conclusion) r
+            else {
+              //@note proof may use US with user-provided substitution, without def in parent provable: merge definitions
+              val subst = collectSubst(p.p.conclusion, r.p.conclusion, r.p.isProved, p.p.defs ++ r.p.defs)
+              assert(exhaustiveSubst(p.p, subst).conclusion == exhaustiveSubst(r.p, subst).conclusion, "Expected matching conclusions:\nexpected\n" + p.p(subst).conclusion.prettyString + "\nbut got\n" + r.p(subst).conclusion.prettyString)
+              new BelleDelayedSubstProvable(r.p, r.label, subst, None)
+            }
           case _ => exprResult
         }
         case _ => exprResult
@@ -114,16 +121,28 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     val (combinedResult, combinedLabels, combinedSubsts) = {
       results.zipWithIndex.reverse.foldLeft[(ProvableSig, Option[List[BelleLabel]], USubst)]((parent, None, USubst(scala.collection.immutable.Seq.empty)))({
         case ((cp: ProvableSig, clabels: Option[List[BelleLabel]], csubsts: USubst), (subderivation: BelleProvable, cidx: Int)) =>
-          val substs = subderivation match {
-            case p: BelleDelayedSubstProvable => csubsts ++ p.subst ++ collectSubst(cp, cidx, subderivation.p)
+          val (substs, subProvable) = subderivation match {
+            case p: BelleDelayedSubstProvable => p.parent match {
+              case Some((parent, i)) =>
+                if (p.subst.subsDefsInput.exists({ case SubstitutionPair(FuncOf(n, Nothing), v: Variable) => n.name == v.name && n.index == v.index case _ => false })) {
+                  if (p.p.isProved) {
+                    (csubsts ++ p.subst ++ collectSubst(cp, cidx, parent), parent(p.p(p.subst), i))
+                  } else {
+                    //@note need to substitute p.p into p.parent and then p.parent into cp, but cannot apply substitutions because p.p is not proved
+                    throw BelleUnfinished("Unable to merge provables: constified sub-derivation still has open goals\n  " +
+                      p.p.prettyString + "\nand therefore cannot be applied to the " + i + "-th subgoal of parent\n  " + parent.prettyString, p.p.underlyingProvable)
+                  }
+                } else (csubsts ++ p.subst ++ collectSubst(cp, cidx, parent), subderivation.p)
+              case None => (csubsts ++ p.subst ++ collectSubst(cp, cidx, subderivation.p), subderivation.p)
+            }
             //@note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
-            case _ => csubsts ++ collectSubst(cp, cidx, subderivation.p)
+            case _ => (csubsts ++ collectSubst(cp, cidx, subderivation.p), subderivation.p)
           }
-          val (_, combinedProvable) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+          val (_, combinedProvable) = applySubDerivation(cp, cidx, exhaustiveSubst(subProvable, csubsts), substs)
           //@todo want to keep names of cp abbreviated instead of substituted
           val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
             case (Some(origLabels), newLabels) =>
-              val labels = newLabels.getOrElse(createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.length))
+              val labels = newLabels.getOrElse(createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subProvable.subgoals.length))
               if (labels.isEmpty) {
                 if (origLabels.size == combinedProvable.subgoals.size) Some(origLabels)
                 else Some(origLabels.patch(cidx, List.empty, 1)) // goal cidx was closed, remove label
@@ -303,57 +322,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     }
 
     case DefTactic(_, _) => v //@note noop, but included for serialization purposes
-
-    case Expand(n, s) => v match {
-      case BelleProvable(p, _) =>
-        val subst = p.defs.substs.find(_.what match {
-          case FuncOf(fn, _) => fn.name == n.name && fn.index == n.index
-          case PredOf(fn, _) => fn.name == n.name && fn.index == n.index
-          case PredicationalOf(fn, _) => fn.name == n.name && fn.index == n.index
-          case fn: NamedSymbol => fn.name == n.name && fn.index == n.index
-          case fn => fn == n
-        }) match {
-          case Some(pd) => s match {
-            case None => USubst(List(pd))
-            case Some(sd) =>
-              if (pd.repl == sd.repl) USubst(List(pd))
-              else throw new IllFormedTacticApplicationException("Expand " + n.prettyString + " substitutions disagree: " + sd.repl.prettyString + " != " + pd.repl.prettyString)
-          }
-          case None => s match {
-            case Some(sd) => USubst(List(sd))
-            case None => throw new IllFormedTacticApplicationException("Unknown symbol " + n.prettyString + ": neither file definitions nor proof definitions provide information how to expand")
-          }
-        }
-        TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, List(subst))
-        apply(TactixLibrary.US(subst), v) match {
-          case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ subst, p.parent)
-          case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, subst, None)
-          case v => v
-        }
-      case _ => throw new IllFormedTacticApplicationException("Attempted to expand a definition on a Non-Provable")
-    }
-
-    case ExpandAll(defs) => v match {
-      case BelleProvable(p, _) =>
-        val substs =
-          if (defs.nonEmpty) {
-            val diff = defs.filterNot({ case SubstitutionPair(what, repl) => p.defs.substs.find(_.what == what).forall(_.repl == repl) })
-            if (diff.isEmpty) defs.map(s => USubst(List(s)))
-            else throw new IllFormedTacticApplicationException("ExpandAll substitutions disagree")
-          } else p.defs.substs.map(s => USubst(List(s)))
-        if (substs.nonEmpty) {
-          TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
-          val result = apply(substs.map(TactixLibrary.US).reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v)
-          result match {
-            case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ substs.reduceRight(_ ++ _), p.parent)
-            case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, substs.reduceRight(_ ++ _), None)
-            case v => v
-          }
-        } else v
-      case _ => throw new IllFormedTacticApplicationException("Attempted to expand a definition on a Non-Provable")
-    }
-
     case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
+
     case named: NamedTactic => apply(named.tactic, v)
 
     case Let(abbr, value, inner) =>

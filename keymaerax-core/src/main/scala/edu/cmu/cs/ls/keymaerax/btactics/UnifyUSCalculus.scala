@@ -19,9 +19,10 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic, TacticInfo}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position.seqPos2Position
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable._
@@ -512,7 +513,10 @@ trait UnifyUSCalculus {
   def uniformSubstitute(subst: USubst): InputTactic = inputanon { US(subst)}
 
   @Tactic(("US", "US"), codeName = "US", conclusion = "|- S(P)", premises = "|- P")
-  def USX(S: List[SubstitutionPair]): InputTactic = inputanon { US(USubst(S)) }
+  def USX(S: List[SubstitutionPair]): InputTactic = inputanonP { (pr: ProvableSig) =>
+    // add user-provided substitutions to the definitions
+    US(USubst(S))(pr).reapply(pr.defs ++ Declaration.fromSubst(S))
+  }
 
 
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): BuiltInPositionTactic =
@@ -2251,7 +2255,7 @@ trait UnifyUSCalculus {
   /** Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
     * exhaustively. */
   @Tactic(longDisplayName = "Deep Decompose")
-  val deepChase: DependentPositionTactic = anon {(pos:Position) => (ExpandAll(Nil) & must(chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos))) | nil}
+  val deepChase: DependentPositionTactic = anon {(pos:Position) => (TactixLibrary.expandAllDefs(Nil) & must(chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos))) | nil}
   private[btactics] val deepChaseInfo: TacticInfo = TacticInfo("deepChase")
 
   /** Chase with bounded breadth and giveUp to stop.

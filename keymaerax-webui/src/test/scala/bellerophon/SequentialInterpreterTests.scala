@@ -687,14 +687,16 @@ class SequentialInterpreterTests extends TacticTestBase {
         |End.""".stripMargin).head
 
     proveBy(entry.model.asInstanceOf[Formula],
-      ExpandAll(entry.defs.substs) &
+      defs = entry.defs,
+      tactic = expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "==> x>0 -> [y:=x;]y>0".asSequent, "Unexpected expand result") &
         implyR(1) & assignb(1) & id) shouldBe 'proved
 
     proveBy(entry.model.asInstanceOf[Formula],
-      implyR(1) & assignb(1) &
+      defs = entry.defs,
+      tactic = implyR(1) & assignb(1) &
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
-        ExpandAll(entry.defs.substs) &
+        expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
         id) shouldBe 'proved
   }
@@ -708,7 +710,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         |End.""".stripMargin).head
 
     proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
-      ExpandAll(entry.defs.substs) &
+      expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "==> x>0 -> [y:=x; ++ ?y>0;]y>0".asSequent, "Unexpected expand result") &
         implyR(1) & choiceb(1) & andR(1) <(assignb(1) & id, testb(1) & implyR(1) & id), entry.defs) shouldBe 'proved
 
@@ -716,13 +718,13 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(1) & choiceb(1) & andR(1) <(
         assignb(1) &
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
-        ExpandAll(entry.defs.substs) &
+        expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
         id
         ,
         testb(1) & implyR(1) &
         DebuggingTactics.assert(_ == "p(x),q(y) ==> q(y)".asSequent, "Unexpected result prior to expand") &
-        ExpandAll(entry.defs.substs) &
+        expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0,y>0 ==> y>0".asSequent, "Unexpected expand result") &
         id),
       entry.defs) shouldBe 'proved
@@ -740,7 +742,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(1) & choiceb(1) & andR(1) <(
         assignb(1) &
           DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
-          ExpandAll(entry.defs.substs) &
+          expandAllDefs(entry.defs.substs) &
           DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
           id
         ,
@@ -754,7 +756,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         ,
         assignb(1) &
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
-        ExpandAll(entry.defs.substs) &
+        expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
         id),
       entry.defs) shouldBe 'proved
@@ -823,7 +825,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     val defs = "g(x) ~> 2*x".asDeclaration
     //@todo want g(x)>=0 in remaining subgoal, requires delayed substitution in interpreter combine branch result
     proveByS("min(v,0)>=0, x_0>=0, x=x_0 ==> g(x)>=0 & [{x'=v}]g(x)>=g(x_0)".asSequent,
-      andR(1) <(skip, ExpandAll(defs.substs) & EqualityTactics.minmax(-1) & dIRule(1) <(QE, TactixLibrary.unfoldProgramNormalize & QE)), defs).
+      andR(1) <(skip, expandAllDefs(defs.substs) & EqualityTactics.minmax(-1) & dIRule(1) <(QE, TactixLibrary.unfoldProgramNormalize & QE)), defs).
       subgoals.loneElement shouldBe "min(v,0)>=0, x_0>=0, x=x_0 ==> 2*x>=0".asSequent
   }
 

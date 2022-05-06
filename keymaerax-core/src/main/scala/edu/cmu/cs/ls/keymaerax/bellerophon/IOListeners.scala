@@ -177,8 +177,6 @@ object IOListeners {
 
         expr match {
           case ApplyDefTactic(DefTactic(name, _)) => printer.println(name + " done (" + status + ")")
-          case Expand(name, _) => printer.println("Expanding " + name + " done (" + status + ")")
-          case ExpandAll(_) => printer.println("Expanding all definitions done (" + status + ")")
           case _: AppliedPositionTactic => printer.println("done (" + status + ")")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
             printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
