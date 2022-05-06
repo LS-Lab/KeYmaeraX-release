@@ -231,7 +231,7 @@ object ODEInvariance {
                   useAt(geq)(1) & orR(1) & id,
                   cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
                   useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
-              ))(1)
+              ))(1) & done
           )
         ))
   })
