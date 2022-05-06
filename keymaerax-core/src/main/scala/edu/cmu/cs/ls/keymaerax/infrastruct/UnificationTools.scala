@@ -50,7 +50,10 @@ object UnificationTools {
         } else List.empty
       val expand = if (exp.nonEmpty) Some(exp.minBy(symbolDeps.indexOf)) else None
       val subst = expand.map(e => USubst(substs.find({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).contains(e) }).toList)).getOrElse(USubst(List.empty)) ++ USubst(constifications)
-      assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbol differences " + sg.map(_.prettyString).mkString(",") + " and " + ss.map(_.prettyString).mkString(","))
+      assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbols " + sg.map(_.prettyString).mkString(",") +
+        " from goal\n  " + goal.prettyString + "\ndo not occur in sub-derivation\n  " + have.prettyString +
+        (if (ss.nonEmpty) " and symbols " + ss.map(_.prettyString).mkString(",") + " from sub-derivation to not occur in goal" else "") +
+        "\nand there is no substitution to address the difference" + (if (substs.nonEmpty) " in\n  " + substs.mkString(", ") else ""))
 
       val substGoal = exhaustiveSubst(goal, subst)
       val substHave = exhaustiveSubst(have, subst)
