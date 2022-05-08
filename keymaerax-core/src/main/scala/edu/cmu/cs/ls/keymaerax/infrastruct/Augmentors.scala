@@ -293,6 +293,21 @@ object Augmentors {
         val trmRepls = repls.filter(_._2.kind == TermKind)
         val fmlRepls = repls.filter(_._2.kind == FormulaKind)
         val prgRepls = repls.filter(_._2.kind == ProgramKind)
+
+        /** Partitions `repls` into those with key in `x` (variable/differential symbol), and those whose key is not in `x`. */
+        def partitionBF(x: Seq[Variable], repls: Map[Expression, Expression]): (Map[Expression, Expression], Map[Expression, Expression]) = {
+          repls.partition({ case (k: Variable, _) => x.exists({
+            case ds@DifferentialSymbol(xx) => ds == k || xx == k
+            case v => v == k
+          }) })
+        }
+
+        /** Renames variable or differential symbol `what` according to the renaming in `ren`. */
+        def rename(what: Variable, ren: Map[Expression, Expression]): Variable = what match {
+          case DifferentialSymbol(x) => DifferentialSymbol(ren.getOrElse(x, x).asInstanceOf[Variable])
+          case _ => ren.getOrElse(what, what).asInstanceOf[Variable]
+        }
+
         ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
           override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = trmRepls.get(t) match {
             case Some(r) => Right(r.asInstanceOf[Term])
@@ -303,30 +318,31 @@ object Augmentors {
             case Some(r) => Right(r.asInstanceOf[Formula])
             case None => f match {
               // do not replace with invalid abbreviations in some obvious places
+              // bound x can be variable or differential symbol
               case Forall(x, q) =>
-                val (bound, free) = trmRepls.partition({ case (k, _) => x.contains(k) })
+                val (bound, free) = partitionBF(x, trmRepls)
                 val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
-                Right(Forall(x.map(v => ren.getOrElse(v, v).asInstanceOf[Variable]), q.replaceAll(free ++ ren ++ fmlRepls ++ prgRepls)))
+                Right(Forall(x.map(rename(_, ren)), q.replaceAll(free ++ ren ++ fmlRepls ++ prgRepls)))
               case Exists(x, q) =>
-                val (bound, free) = trmRepls.partition({ case (k, _) => x.contains(k) })
+                val (bound, free) = partitionBF(x, trmRepls)
                 val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
-                Right(Exists(x.map(v => ren.getOrElse(v, v).asInstanceOf[Variable]), q.replaceAll(free ++ ren ++ fmlRepls ++ prgRepls)))
+                Right(Exists(x.map(rename(_, ren)), q.replaceAll(free ++ ren ++ fmlRepls ++ prgRepls)))
               case Box(Assign(x, t), q) =>
-                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val (bound, free) = partitionBF(Seq(x), trmRepls)
                 val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
-                Right(Box(Assign(ren.getOrElse(x, x).asInstanceOf[Variable], t.replaceAll(ren ++ free)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+                Right(Box(Assign(rename(x, ren), t.replaceAll(ren ++ free)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
               case Box(AssignAny(x), q) =>
-                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val (bound, free) = partitionBF(Seq(x), trmRepls)
                 val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
-                Right(Box(AssignAny(ren.getOrElse(x, x).asInstanceOf[Variable]), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+                Right(Box(AssignAny(rename(x, ren)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
               case Diamond(Assign(x, t), q) =>
-                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val (bound, free) = partitionBF(Seq(x), trmRepls)
                 val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
-                Right(Diamond(Assign(ren.getOrElse(x, x).asInstanceOf[Variable], t.replaceAll(ren ++ free)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+                Right(Diamond(Assign(rename(x, ren), t.replaceAll(ren ++ free)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
               case Diamond(AssignAny(x), q) =>
-                val (bound, free) = trmRepls.partition({ case (k, _) => x == k })
+                val (bound, free) = partitionBF(Seq(x), trmRepls)
                 val ren = bound.filter({ case (_, v) => v.isInstanceOf[Variable] })
-                Right(Diamond(AssignAny(ren.getOrElse(x, x).asInstanceOf[Variable]), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
+                Right(Diamond(AssignAny(rename(x, ren)), q.replaceAll(ren ++ free ++ fmlRepls ++ prgRepls)))
               case _ => Left(None)
             }
           }

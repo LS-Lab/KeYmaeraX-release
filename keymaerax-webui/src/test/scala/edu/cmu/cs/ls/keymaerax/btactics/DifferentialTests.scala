@@ -502,6 +502,11 @@ class DifferentialTests extends TacticTestBase {
     proveByS(entry.sequent, implyR(1) & dI(auto='full)(1), entry.defs) shouldBe 'proved
   }
 
+  it should "work as dIRule in existential context" in withMathematica { _ =>
+    proveBy("x>0 ==> \\exists y [{x'=-x,y'=1/2*y}]x*y^2=1".asSequent, dI(auto='diffInd)(1, 0::Nil)).subgoals.
+      loneElement shouldBe "x>0 ==> \\exists y (true->x*y^2=1&\\forall x \\forall y [y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y^(2-1)*y')=0)".asSequent
+  }
+
   "odeInvariant" should "prove STTT Example 9b invariant" in withQE { _ =>
     val seq = "Kp()=2, Kd()=3, v>=0, xm<=x, xr=(xm+S())/2, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2, true ==> [{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent
     proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe 'proved

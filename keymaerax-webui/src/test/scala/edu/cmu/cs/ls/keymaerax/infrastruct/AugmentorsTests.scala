@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -47,6 +47,14 @@ class AugmentorsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "complain when trying to elaborate in literal bound occurrence" in {
     the [AssertionError] thrownBy "x=1 -> [y:=y;x:=x;]x<=2".asFormula.elaborateToFunctions(Set("x()".asFunction)) should have message
       """assertion failed: Elaboration tried replacing x in literal bound occurrence inside x=1->[y:=y;x:=x;]x<=2""".stripMargin
+  }
+
+  it should "replace all (rename) variables and differential symbols" in {
+    "\\exists x [{x'=-x}][x':=-x;]x>=0".asFormula.replaceAll(Variable("x"), Variable("y")) shouldBe "\\exists y [{y'=-y}][y':=-y;]y>=0".asFormula
+  }
+
+  it should "not replace bound occurrences with terms" in {
+    "\\exists x x>=1".asFormula.replaceAll(Variable("x"), "y+1".asTerm) shouldBe "\\exists x x>=1".asFormula
   }
 
 }

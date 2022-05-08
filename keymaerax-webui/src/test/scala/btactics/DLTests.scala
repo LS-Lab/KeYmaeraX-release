@@ -91,6 +91,11 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> \\forall x [x':=2;](x>0)'".asSequent
   }
 
+  it should "work on ODEs in existential context" in withMathematica { _ =>
+    proveBy("x>0 ==> \\exists y (true->x*y^2=1&[{x'=-x,y'=1/2*y}][y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y*y')=0)".asSequent, abstractionb(1, 0::1::1::Nil)).
+      subgoals.loneElement shouldBe "x>0 ==> \\exists y (true->x*y^2=1&\\forall x \\forall y [y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y*y')=0)".asSequent
+  }
+
   it should "work with ODEs followed by diff assigns, multi-var case" in withMathematica { _ =>
     val result = proveBy("[{x'=2,y'=3,z'=4}][x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asFormula, abstractionb(1))
     result.subgoals.loneElement shouldBe "==> \\forall x \\forall y \\forall z [x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asSequent
