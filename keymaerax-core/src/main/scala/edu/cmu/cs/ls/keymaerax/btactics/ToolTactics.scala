@@ -117,7 +117,7 @@ private object ToolTactics {
                 )
               )
             } catch {
-              case _: TacticInapplicableFailure | ex: BelleCEX =>
+              case ex@(_: TacticInapplicableFailure | _: BelleCEX) =>
                 val msg =
                   if (StaticSemantics.symbols(pr.subgoals.head).exists(n => n.name.startsWith("p_") || n.name.startsWith("q_"))) {
                     "Sequent cannot be proved. Please try to unhide some formulas."
