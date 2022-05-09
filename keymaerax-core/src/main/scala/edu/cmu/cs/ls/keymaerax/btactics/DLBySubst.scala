@@ -244,57 +244,64 @@ private object DLBySubst {
     conclusion = "Γ |- [x:=e]P, Δ",
     displayLevel = "all"
   )
-  private[btactics] val assignEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    //@note have already failed assigning directly so grab fresh name index otherwise
-    // [x:=f(x)]P(x)
-    case Some(Box(Assign(x, e), p)) =>
-      val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      val rename = x match {
-        case v: BaseVariable =>
-          if (universal) Ax.assignbeq.provable(URename("x_".asVariable, v, semantic=true))
-          else Ax.assignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
-        case DifferentialSymbol(v) =>
-          if (universal) Ax.Dassignbeq.provable(URename("x_".asVariable, v, semantic=true))
-          else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
-      }
-
-      val skolemize =
-        if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-        else ident
-
-      if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
-        if (StaticSemantics.freeVars(e).contains(x)) {
-          // case [x:=x+1;][prg;]
-          val unexpandedSymbols = StaticSemantics.symbols(p).
-            filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false })
-          unexpandedSymbols.map(n => expandFw(n, None)).reduceRight[BelleExpr](_ & _) & assignEquality(pos)
-        } else {
-          // case [x:=y;][prg;]
-          useAt(rename)(pos) & skolemize
+  private[btactics] val assignEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assignEqualityFw")
+    val sequent = provable.subgoals.head
+    val (expand: (ProvableSig=>ProvableSig), assign: (ProvableSig=>ProvableSig)) = sequent.sub(pos) match {
+      //@note have already failed assigning directly so grab fresh name index otherwise
+      // [x:=f(x)]P(x)
+      case Some(Box(Assign(x, e), p)) =>
+        val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
+        val assignAx = x match {
+          case v: BaseVariable =>
+            if (universal) Ax.assignbeq.provable(URename("x_".asVariable, v, semantic = true))
+            else Ax.assignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
+          case DifferentialSymbol(v) =>
+            if (universal) Ax.Dassignbeq.provable(URename("x_".asVariable, v, semantic = true))
+            else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
         }
-      } else {
-        if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
-          useAt(rename)(pos) & skolemize &
-            (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
-            else if (pos.isTopLevel && pos.isAnte) eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length - 1))
-            else ident)
+
+        val skolemize =
+          if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
+          else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL('Llast)
+          else ident
+
+        if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
+          if (StaticSemantics.freeVars(e).contains(x)) {
+            // case [x:=x+1;][prg;]
+            val expand = StaticSemantics.symbols(p).
+              filter({ case _: SystemConst | _: ProgramConst => true case _ => false }).
+              map(n => expandFw(n, None)).
+              reduceRight[ProvableSig=>ProvableSig](_ andThen _)
+            (expand, assignEquality(pos))
+          } else {
+            // case [x:=y;][prg;]
+            (ident, useAt(assignAx)(pos) andThen skolemize)
+          }
         } else {
-          //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
-          x match {
-            case _: BaseVariable =>
-              if (StaticSemantics.freeVars(p).isInfinite) useAt(rename)(pos) & skolemize
-              else {
-                val y = TacticHelper.freshNamedSymbol(x, sequent)
-                ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) & skolemize
-              }
-            case _: DifferentialSymbol => useAt(rename)(pos) & skolemize
+          if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
+            (ident, useAt(assignAx)(pos) andThen skolemize andThen
+              (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) andThen hideL('Llast)
+              else if (pos.isTopLevel && pos.isAnte) eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) andThen hideL(AntePosition.base0(sequent.ante.length - 1))
+              else ident))
+          } else {
+            //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
+            x match {
+              case _: BaseVariable =>
+                if (StaticSemantics.freeVars(p).isInfinite) useAt(assignAx)(pos) andThen skolemize
+                else {
+                  val y = TacticHelper.freshNamedSymbol(x, sequent)
+                  (ident, ProofRuleTactics.boundRenameFw(x, y)(pos) andThen useAt(assignAx)(pos) andThen ProofRuleTactics.uniformRenameFw(y, x) andThen skolemize)
+                }
+              case _: DifferentialSymbol => (ident, useAt(assignAx)(pos) andThen skolemize)
+            }
           }
         }
-      }
-    case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
-    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-  })
+      case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+    expand(provable)(expand andThen assign, 0)
+  }
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
   @Tactic(
@@ -305,21 +312,26 @@ private object DLBySubst {
     conclusion = "Γ |- ⟨x:=e⟩P, Δ",
     displayLevel = "all"
   )
-  private[btactics] val assigndEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    //@note have already failed assigning directly so grab fresh name index otherwise
-    // [x:=f(x)]P(x)
-    case Some(Diamond(Assign(x, t), p)) =>
-      val y = TacticHelper.freshNamedSymbol(x, sequent)
-      val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRename(x, y)(pos) &
-      (if (universal) useAt(Ax.assigndEqualityAll)(pos) else useAt(Ax.assigndEqualityAxiom)(pos)) &
-      ProofRuleTactics.uniformRename(y, x) &
-      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-       else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-       else ident)
-    case Some(e) => throw new TacticInapplicableFailure("assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString)
-    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-  })
+  private[btactics] val assigndEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assigndEquality")
+    val sequent = provable.subgoals.head
+    sequent.sub(pos) match {
+      //@note have already failed assigning directly so grab fresh name index otherwise
+      // [x:=f(x)]P(x)
+      case Some(Diamond(Assign(x, t), p)) =>
+        val y = TacticHelper.freshNamedSymbol(x, sequent)
+        val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
+        provable(
+          ProofRuleTactics.boundRenameFw(x, y)(pos) andThen
+          useAt(if (universal) Ax.assigndEqualityAll else Ax.assigndEqualityAxiom)(pos) andThen
+          ProofRuleTactics.uniformRenameFw(y, x) andThen
+          (if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
+           else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL('Llast)
+           else ident), 0)
+      case Some(e) => throw new TacticInapplicableFailure("assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+  }
 
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K

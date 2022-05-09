@@ -161,9 +161,20 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[DLBySubst.assignEquality]] */
   @Tactic("[:=]", revealInternalSteps = true, conclusion = "__[x:=e]p(x)__↔p(e)")
-  lazy val assignb            : DependentPositionTactic = anon { (pos:Position) =>
-    if (INTERNAL) useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) /*|! useAt(DerivedAxioms.assignbup)(pos)*/
-    else useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) |! DLBySubst.assignEquality(pos)
+  lazy val assignb            : BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+    if (INTERNAL) try {
+      useAt(Ax.assignbAxiom)(pos)(pr)
+    } catch {
+      case _: Throwable => useAt(Ax.selfassignb)(pos)(pr)
+    } else try {
+      useAt(Ax.assignbAxiom)(pos)(pr)
+    } catch {
+      case _: Throwable => try {
+        useAt(Ax.selfassignb)(pos)(pr)
+      } catch {
+        case _: Throwable => DLBySubst.assignEquality(pos)(pr)
+      }
+    }
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
