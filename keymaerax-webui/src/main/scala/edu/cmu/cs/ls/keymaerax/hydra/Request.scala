@@ -2337,10 +2337,14 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
           val fnVarMismatch = hintFresh.map(fn => fn -> allowedSymbols.find(s => s.name == fn.name && s.index == fn.index)).
             filter(_._2.isDefined)
           if (fnVarMismatch.isEmpty) {
-            BooleanResponse(flag = false, Some("argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
+            BooleanResponse(flag=false, Some("argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
               (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
               else ", is it a typo?")))
-          } else BooleanResponse(flag=true)
+          } else BooleanResponse(flag=false, Some("function/variable mismatch between goal and argument " + arg.name + ": " + fnVarMismatch.map({
+            case (have, Some(expect)) =>
+              have.prettyString + "(" + have.getClass.getSimpleName + ") vs. " +
+              expect.prettyString + "(" + expect.getClass.getSimpleName + " in sequent)"
+          }).mkString(", ")))
         } else {
           BooleanResponse(flag=true)
         }

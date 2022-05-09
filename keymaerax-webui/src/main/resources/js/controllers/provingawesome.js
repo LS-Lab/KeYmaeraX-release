@@ -861,6 +861,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           readOnly: function() { return false; },
           userId: function() { return $scope.userId; },
           proofId: function() { return $scope.proofId; },
+          nodeId: function() { return nodeId; },
           defaultPositionLocator: function() { return positionLocator; },
           sequent: function() { return sequentProofData.proofTree.nodesMap[nodeId].getSequent(); }
         }

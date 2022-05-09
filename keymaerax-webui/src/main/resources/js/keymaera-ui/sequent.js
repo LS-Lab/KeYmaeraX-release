@@ -103,10 +103,11 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                 resolve: {
                   tactics: function() { return tactics; },
                   readOnly: function() { return false; },
-                  userId: function() { return undefined; },
-                  proofId: function() { return undefined; },
+                  userId: function() { return scope.userId; },
+                  proofId: function() { return scope.proofId; },
+                  nodeId: function() { return scope.nodeId; },
                   defaultPositionLocator: function() { return undefined; },
-                  sequent: function() { return undefined; }
+                  sequent: function() { return sequentProofData.proofTree.nodesMap[scope.nodeId].getSequent(); }
                 }
               });
 
