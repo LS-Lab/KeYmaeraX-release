@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 angular.module('keymaerax.controllers').controller('ProofCtrl',
-    function($scope, $rootScope, $http, $route, $routeParams, $q, $uibModal, $timeout,
+    function($scope, $rootScope, $http, $route, $routeParams, $q, $uibModal, $timeout, $location,
              sequentProofData, spinnerService, sessionService, derivationInfos) {
 
   $scope.userId = sessionService.getUser();
@@ -207,6 +207,20 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           $scope.definitions = defs;
         });
       }
+  }).catch(function(error) {
+      $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+              title: function() { return "Error loading proof"; },
+              message: function() { return error.data.textStatus; },
+              mode: function() { return "ok"; },
+              oktext: function() { return "Ok, take me back to models"; }
+          }
+      }).result.then(function() {
+          $location.path("/models");
+      });
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
 

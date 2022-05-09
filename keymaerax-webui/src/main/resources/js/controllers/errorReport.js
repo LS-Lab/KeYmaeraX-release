@@ -93,7 +93,7 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
       } else if (rejection.status === 500) {
         // report uncaught server-side exception
         var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
-        var modalInstance = $uibModal.open({
+        $uibModal.open({
           templateUrl: 'partials/error_alert.html',
           controller: 'ErrorAlertCtrl',
           size: 'lg',
@@ -104,8 +104,8 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
             context: function () { return {}; }
           }
         });
-        // response handled here, prevent further calls
-        return rejection;
+        // forward to .catch handlers
+        return $q.reject(rejection);
       } else if (rejection.status === 401 || rejection.status === 403) {
         // session expired or user does not have privileges to access data -> display login
         var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency

@@ -51,6 +51,8 @@ class InMemoryDB extends DBAbstraction {
   override def updateConfiguration(config: ConfigurationPOJO): Unit = { configs(config.name) = config }
 
   //Proofs and Proof Nodes
+  override def proofExists(proofId: Int): Boolean = synchronized { proofs.contains(proofId) }
+
   override def getProofInfo(proofId: Int): ProofPOJO = synchronized { proofs(proofId)._2 }
 
   // Users

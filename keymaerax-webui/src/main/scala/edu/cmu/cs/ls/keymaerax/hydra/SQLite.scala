@@ -435,24 +435,31 @@ object SQLite {
         row.proofid === proofId &&
           row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).map(_._Id).countDistinct)
 
+    final override def proofExists(proofId: Int): Boolean = synchronizedTransaction({
+      Proofs.filter(_._Id === proofId).list.nonEmpty
+    })
+
     /** @inheritdoc */
     final override def getProofInfo(proofId: Int): ProofPOJO = synchronizedTransaction({
       val stepCount = stepCountQuery(proofId).run
       nSelects = nSelects + 1
       val q = for { p <- Proofs if p._Id === proofId } yield (p.modelid, p.lemmaid)
-      val (modelId, lemmaId) = q.run.head
-      if (lemmaId.isEmpty) {
-        val (lemmaId, _) = initializeProofForModel(modelId.get, None)
-        q.update(modelId, Some(lemmaId))
-      }
+      q.run.headOption match {
+        case Some((modelId, lemmaId)) =>
+          if (lemmaId.isEmpty) {
+            val (lemmaId, _) = initializeProofForModel(modelId.get, None)
+            q.update(modelId, Some(lemmaId))
+          }
 
-      val list = Proofs.filter(_._Id === proofId)
-        .list
-        .map(p => ProofPOJO(p._Id.get, p.modelid, p.name.getOrElse(""), p.description.getOrElse(""),
-          p.date.getOrElse(""), stepCount, p.closed.getOrElse(0) == 1, p.lemmaid, p.istemporary.getOrElse(0) == 1, p.tactic))
-      if (list.length > 1) throw new IllegalStateException("Duplicate proof " + proofId)
-      else if (list.isEmpty) throw new IllegalStateException("Proof not found: " + proofId)
-      else list.head
+          val list = Proofs.filter(_._Id === proofId)
+            .list
+            .map(p => ProofPOJO(p._Id.get, p.modelid, p.name.getOrElse(""), p.description.getOrElse(""),
+              p.date.getOrElse(""), stepCount, p.closed.getOrElse(0) == 1, p.lemmaid, p.istemporary.getOrElse(0) == 1, p.tactic))
+          if (list.length > 1) throw new IllegalStateException("Duplicate proof " + proofId)
+          else if (list.isEmpty) throw new IllegalStateException("Proof not found: " + proofId)
+          else list.head
+        case None => throw new IllegalStateException("Proof not found: " + proofId)
+      }
     })
 
     /** @inheritdoc */
