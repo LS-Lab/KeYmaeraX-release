@@ -114,7 +114,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CMon()]]
     */
   //@todo flexibilize via cohide2 first
-  @Tactic(premises = "P |- Q", conclusion = "<a>P |- <a>Q")
+  @Tactic(premises = "P |- Q", conclusion = "&langle;a&rangle;P |- &langle;a&rangle;Q")
   lazy val mond               : BuiltInTactic         = anon { US(Ax.mondrule.provable).result _ }
 
   //
