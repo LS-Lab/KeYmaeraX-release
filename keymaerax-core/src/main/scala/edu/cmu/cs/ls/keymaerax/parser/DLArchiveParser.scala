@@ -136,7 +136,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] = P(
-    ((programVariables | definitions).rep).map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
+    (programVariables | definitions).rep.map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
   )
 
   /** `Description "text".` parsed. */

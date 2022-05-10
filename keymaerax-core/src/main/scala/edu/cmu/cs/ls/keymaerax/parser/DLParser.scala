@@ -249,7 +249,7 @@ class DLParser extends Parser {
     P( "{" ~ diffProgram ~ "}" | diffProgram ~ End )
   }
 
-  def fullExpression[_: P]: P[Expression] = P( NoCut(formula ~ End) | NoCut(term ~ End) | (program ~ End) )
+  def fullExpression[_: P]: P[Expression] = P( NoCut(term ~ End) | NoCut(formula ~ End) | (program ~ End) )
 
   def expression[_: P]: P[Expression] = P( NoCut(formula) | NoCut(term) | program )
 
@@ -330,7 +330,7 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
-  def term[_: P]: P[Term] = P(signed(summand).flatMap(termRight))
+  def term[_: P]: P[Term] = P(Pass ~ summand.flatMap(termRight))
 
   def termRight[_: P](left: Term): P[Term] =
     (("+" | "-" ~ !">").!./ ~ summand).rep.map(sums =>
@@ -344,7 +344,7 @@ class DLParser extends Parser {
   def summand[_: P]: P[Term] = P(multiplicand.flatMap(summRight))
 
   def summRight[_: P](left: Term): P[Term] =
-    (("*" | "/").!./ ~ signed(multiplicand)).rep.map(mults =>
+    (("*" | "/").!./ ~ multiplicand).rep.map(mults =>
       mults.foldLeft(left) {
         case (m1, ("*", m2)) => Times(m1, m2)
         case (m1, ("/", m2)) => Divide(m1, m2)
@@ -352,17 +352,24 @@ class DLParser extends Parser {
       }
     )
 
-  def multiplicand[_: P]: P[Term] = P(baseTerm.flatMap(multRight))
+  def multiplicand[_: P]: P[Term] = P(signDiffTerm.flatMap(multRight))
 
   def multRight[_: P](left: Term): P[Term] =
-    ("^"./ ~ signed(baseTerm)).rep.map(pows => (left +: pows).reduceRight(Power))
+    ("^"./ ~ signDiffTerm).rep.map(pows => (left +: pows).reduceRight(Power))
+
+  def signDiffTerm[_: P]: P[Term] = signed(baseTerm.flatMap(diff))
+
+  /* possibly differentiated occurrence of what is parsed by parser `p` */
+  def diff[_: P](left: Term): P[Term] = P(
+    "'".!.?
+  ).map{case None => left case Some("'") => Differential(left)}
 
   def baseTerm[_: P]: P[Term] = P(
-    number./ | dot./ | func | unitFunctional | variable
-      // These cuts are safe, because when *formula* enters term we guarantee
+      number./ | dot./ | func | unitFunctional | variable
+      // This cut is safe, because when *formula* enters term we guarantee
       // the first available character is NOT (
       // So the leftmost baseTerm occurrence in a formula always skips this branch :)
-      | ("(" ~/ term.flatMap(termParenRight))
+      | termList
   )
 
   // IMPORTANT: Cannot place a cut after ), because (f(||))' may be
@@ -371,7 +378,7 @@ class DLParser extends Parser {
     map {case None => left case Some("'") => Differential(left) }
 
   def extendBaseTerm[_: P](left: Term): P[Term] =
-    multRight(left).flatMap(summRight).flatMap(termRight)
+    diff(left).flatMap(multRight).flatMap(summRight).flatMap(termRight)
 
   def func[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
     FuncOf(
@@ -384,23 +391,25 @@ class DLParser extends Parser {
 
   def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
 
-  /** `-p | p`: possibly signed occurrences of what is parsed by parser `p`, so to `p` or `-p`. */
-  def signed[_: P](p: => P[Term]): P[Term] = P(("-".! ~~ !">").rep ~ p).
-    map({case (mins,t) => mins.foldRight(t){case ("-", t) => Neg(t)}})
+  /** `p | -p`: possibly signed occurrences of what is parsed by parser `p`, so to `p` or `-p`. */
+  def signed[_: P](p: => P[Term]): P[Term] = P(
+    p |
+      (("-".! ~~ !">") ~ signed(p)).map{case ("-",t) => Neg(t)}
+  )
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
   def termList[_: P]: P[Term] = P("(" ~~ !"|" ~/ term.rep(sep=","./) ~ ")").
     map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
-  def space[_: P]: P[Space] = P( "(|" ~ variable.rep(sep=",") ~ "|)" ).
+  def space[_: P]: P[Space] = P( "(|" ~/ variable.rep(sep=",") ~ "|)" ).
     map(ts => if (ts.isEmpty) AnyArg else Except(ts.to))
 
   //*****************
   // formula parser
   //*****************
 
-  def formula[_: P] = P(biimplication)
+  def formula[_: P] = P(Pass ~ biimplication)
 
   /* <-> (lowest prec, non-assoc) */
   def biimplication[_: P]: P[Formula] = P(backImplication).flatMap(biimpRight)
@@ -463,7 +472,7 @@ class DLParser extends Parser {
         map{case ("[",p,"]", f) => Box(p, f)
             case ("<",p,">", f) => Diamond(p, f)}
       | ("!" ~/ baseF ).map(f => Not(f))
-      | unitPredicational | predicational
+      | predicational
       ).map(f => Right(Right(f)))
     )
     /* predicate OR function */
@@ -483,8 +492,35 @@ class DLParser extends Parser {
             ))
         }
       })
+      /* unit predicational OR unit functional */
+      | ( ident ~~ space ).flatMap({
+        case (_, Some(_), _) =>
+          Fail.log("Indices are not yet allowed in predicational/functional names")
+        case (name, None, space) =>
+          // Could be either term or formula
+          Pass(Left((
+            UnitFunctional(name, space, sort=Real),
+            UnitPredicational(name, space)
+          )))
+      })
     /* Parenthesized term OR formula */
-    | "(" ~/ termOrBaseF.flatMap{
+    | "(" ~/ termOrBaseF.flatMap({
+      // Try extending baseF
+      case Left((t,f)) =>
+        /* Note if we can (strictly) extend a formula, then the
+         * consumed input must have been a formula */
+        (Index ~~ extendBaseFormula(f) ~~ Index).map {
+          case (startIdx, f_, endIdx) =>
+            if (startIdx < endIdx)
+              Right(Right(f_))
+            else
+              Left((t, f))
+        }
+      case Right(Right(f)) =>
+        extendBaseFormula(f).
+          map(f => Right(Right(f)))
+      case Right(Left(t)) => Pass(Right(Left(t)))
+    }).flatMap{
         case Left((a,b)) =>
           /* Try finding a right parentheses -- note this doesn't
            * disambiguate term/formula so both remain a possibility */
@@ -502,9 +538,8 @@ class DLParser extends Parser {
 
         case Right(Right(form)) =>
           // Try closing paren as a formula paren
-          extendBaseFormula(form).
-            flatMap(formulaParenRight).
-            map(f=> Right(Right(f)))
+          formulaParenRight(form).
+            map(f => Right(Right(f)))
       }
     | term.map(t => Right(Left(t)))
   ).flatMap{
@@ -540,7 +575,7 @@ class DLParser extends Parser {
     map {case None => left case Some("'") => DifferentialFormula(left) }
 
   def comparison[_: P](left: Term): P[Formula] = P(
-    (("=" | "!=" | ">=" | ">" | "<=" | "<" ~ !"-").! ~/ term).map {
+    (("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~ !"-").! ~/ term).map {
       case ("=", right) => Equal(left, right)
       case ("!=", right) => NotEqual(left, right)
       case (">=", right) => GreaterEqual(left, right)
@@ -606,7 +641,7 @@ class DLParser extends Parser {
          case (f, p, Some(q)) => Choice(Compose(Test(f),p), Compose(Test(Not(f)),q))})
 
   /** program: Parses a dL program. */
-  def program[_: P]: P[Program] = P( choice )
+  def program[_: P]: P[Program] = P( Pass ~ choice )
 
 
   //*****************
