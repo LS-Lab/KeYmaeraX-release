@@ -330,10 +330,10 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
-  def term[_: P]: P[Term] = P(Pass ~ summand.flatMap(termRight))
+  def term[_: P]: P[Term] = P(Pass ~ signed(summand).flatMap(termRight))
 
   def termRight[_: P](left: Term): P[Term] =
-    (("+" | "-" ~ !">").!./ ~ summand).rep.map(sums =>
+    (("+" | "-" ~ !">").!./ ~ signed(summand)).rep.map(sums =>
       sums.foldLeft(left) {
         case (m1, ("+", m2)) => Plus(m1, m2)
         case (m1, ("-", m2)) => Minus(m1, m2)
@@ -344,7 +344,7 @@ class DLParser extends Parser {
   def summand[_: P]: P[Term] = P(multiplicand.flatMap(summRight))
 
   def summRight[_: P](left: Term): P[Term] =
-    (("*" | "/").!./ ~ multiplicand).rep.map(mults =>
+    (("*" | "/").!./ ~ signed(multiplicand)).rep.map(mults =>
       mults.foldLeft(left) {
         case (m1, ("*", m2)) => Times(m1, m2)
         case (m1, ("/", m2)) => Divide(m1, m2)
@@ -352,12 +352,12 @@ class DLParser extends Parser {
       }
     )
 
-  def multiplicand[_: P]: P[Term] = P(signDiffTerm.flatMap(multRight))
+  def multiplicand[_: P]: P[Term] = P(diffTerm.flatMap(multRight))
 
   def multRight[_: P](left: Term): P[Term] =
-    ("^"./ ~ signDiffTerm).rep.map(pows => (left +: pows).reduceRight(Power))
+    ("^"./ ~ signed(diffTerm)).rep.map(pows => (left +: pows).reduceRight(Power))
 
-  def signDiffTerm[_: P]: P[Term] = signed(baseTerm.flatMap(diff))
+  def diffTerm[_: P]: P[Term] = baseTerm.flatMap(diff)
 
   /* possibly differentiated occurrence of what is parsed by parser `p` */
   def diff[_: P](left: Term): P[Term] = P(
@@ -575,7 +575,7 @@ class DLParser extends Parser {
     map {case None => left case Some("'") => DifferentialFormula(left) }
 
   def comparison[_: P](left: Term): P[Formula] = P(
-    (("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~ !"-").! ~/ term).map {
+    (("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~~ !"-").! ~/ term).map {
       case ("=", right) => Equal(left, right)
       case ("!=", right) => NotEqual(left, right)
       case (">=", right) => GreaterEqual(left, right)
