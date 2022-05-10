@@ -696,7 +696,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var selected = sequentProofData.formulas.selectedIn(node.getSequent());
       if (selected.length >= node.getSequent().ante.length + node.getSequent().succ.length) selected = undefined;
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
-      var ignoreUsingWhen = ['chaseat','stepat'];
+      var ignoreUsingWhen = ['chaseat','stepat','hidel','hider'];
       if (selected && ignoreUsingWhen.indexOf(tacticId.toLowerCase()) < 0) {
         $scope.onTacticScript(tacticId + (formulaId ? '(' + formulaId + ')' : '') + ' using "' + selected.join('::') +
           (selected.length > 0 ? '::' : '') + 'nil"', false)
