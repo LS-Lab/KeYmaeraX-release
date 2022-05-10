@@ -595,9 +595,9 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   }
 
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
+    $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
     $scope.model = response.data;
     $scope.model.showModelIllustrations = true;
-    $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
   });
 
   $scope.aceLoaded = function(editor) {
@@ -633,9 +633,15 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   }
 
   $scope.checkModelData = function() {
-    if ($scope.origModel.name !== $scope.model.name || $scope.origModel.title !== $scope.model.title
-     || $scope.origModel.description !== $scope.model.description
-     || $scope.origModel.keyFile !== $scope.model.keyFile) {
+    //@note there is a potential race condition between setting $scope.origModel and $scope.model: $scope.model may
+    // trigger this function (checkModelData) through onBeforeSave in modeldialog.html. We address this by treating
+    // $scope.origModel === undefined equivalent to $scope.origModel === $scope.model here, and by setting
+    // $scope.origModel before $scope.model throughout this controller.
+    if ($scope.origModel !== undefined && (
+        $scope.origModel.name !== $scope.model.name
+        || $scope.origModel.title !== $scope.model.title
+        || $scope.origModel.description !== $scope.model.description
+        || $scope.origModel.keyFile !== $scope.model.keyFile)) {
       if ($scope.save.cmd == $scope.cancel) {
         var modalInstance = $uibModal.open({
           templateUrl: 'templates/modalMessageTemplate.html',
@@ -686,6 +692,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     };
     $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
       var model = Models.getModel(modelid);
+      $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
       if (model) {
         // model === undefined on proof page reload
         model.name = response.data.name;
@@ -693,7 +700,6 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
         model.description = response.data.description;
         model.keyFile = response.data.content;
       }
-      $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
       if ($scope.save.editor) $scope.save.editor.setReadOnly(true);
       if ($scope.closeOnSave) $uibModalInstance.close();
       $scope.save.cmd();
