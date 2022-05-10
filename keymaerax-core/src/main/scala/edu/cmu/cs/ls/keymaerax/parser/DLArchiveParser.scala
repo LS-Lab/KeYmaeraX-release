@@ -149,22 +149,28 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def link[_: P]: P[String] = P("Link" ~~ blank ~/ string ~ "." )
 
   /** `SharedDefinitions declOrDef End.` parsed. */
-  def sharedDefinitions[_: P]: P[Declaration] = P("SharedDefinitions" ~~ blank ~/ declOrDef.rep ~ "End." ).
-    map(list => Declaration(list.flatten.toMap))
+  def sharedDefinitions[_: P]: P[Declaration] = P(
+    "SharedDefinitions" ~~ blank ~/
+      DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
+        declOrDef(curDecls).map(newDecls => curDecls ++ Declaration(newDecls.toMap))
+      ) ~ "End."
+  )
 
   /** `Definitions declOrDef End.` parsed. */
-  def definitions[_: P]: P[Declaration] = P("Definitions" ~~ blank ~/ declOrDef.rep ~ "End." ).
-    map(list => Declaration(list.flatten.toMap))
-//      list.filter({case (id,sig) => sig._3.isEmpty}).toMap,
-//      list.filter({case (id,sig) => sig._3.isDefined}).toMap)
+  def definitions[_: P]: P[Declaration] = P(
+    "Definitions" ~~ blank ~/
+      DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
+        declOrDef(curDecls).map(newDecls => curDecls ++ Declaration(newDecls.toMap))
+      ) ~ "End."
+  )
 
   /** `implicit Real name1(Real arg1, Real arg2), name2(Real arg1, Real arg2) '= {initConds; ode};` ODE function definition or
     * `sort name(sort1 arg1, sorg2 arg2);` declaration or
     * `sort name(sort1 arg1, sorg2 arg2) = term;` function definition or
     * `Bool name(sort1 arg1, sorg2 arg2) <-> formula;` predicate definition or
     * `HP name ::= program;` program definition. */
-  def declOrDef[_: P]: P[List[(Name,Signature)]] = P(
-      implicitDef ~ ";"
+  def declOrDef[_: P](curDecls: Declaration): P[List[(Name, Signature)]] = P(
+      implicitDef(curDecls) ~ ";"
     | progDef.map(p => p::Nil)
     | declPartList.flatMap(decls =>
         Pass(decls) ~ ";"./
@@ -196,18 +202,16 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** `name(sort1 arg1, sorg2 arg2)` declaration part.
    * Input sort is the (codomain) sort */
-  def declPart[_: P](ty: Sort) : P[(Name,Signature)] =
-    P(
-      ident ~~ (
-        (("(" ~ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")").
-          map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
-            , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
-            (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
-          })
-          )).?
-        //| "".!.map(_ => (core.Unit,Some(Nil)))
-        )
-    ).map({ case (n, idx, args) => (Name(n, idx), Signature(args.map(_._1), ty, args.map(_._2), None, UnknownLocation)) })
+  def declPart[_: P](ty: Sort) : P[(Name,Signature)] = P(
+    ident ~~ ("(" ~/ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")"./).?
+  ).map({
+    case (n, idx, argList) =>
+      val args = argList.map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
+          , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
+          (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
+        })).getOrElse(Unit, List())
+      (Name(n, idx), Signature(Some(args._1), ty, Some(args._2), None, UnknownLocation))
+  })
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
   def declPartList[_: P]: P[List[(Name,Signature)]] = P(
@@ -248,16 +252,16 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    *  introduces a substitution for the uninterpreted function at
    *  the elaboration phase.
    */
-  def implicitDef[_: P]: P[List[(Name,Signature)]] =
+  def implicitDef[_: P](curDecls: Declaration): P[List[(Name,Signature)]] =
     P("implicit" ~~ blank ~/ (
       // This syntax was removed in favor of syntactic restriction to ODE implicit defs
       // implicitDefInterp.map(List(_)) |
-      implicitDefODE
+      implicitDefODE(curDecls)
     ))
 
-  def implicitDefODE[_: P]: P[List[(Name,Signature)]] = P(
+  def implicitDefODE[_: P](curDecls: Declaration): P[List[(Name,Signature)]] = P(
     (declPartList ~ "'=" ~/ "{" ~ program ~ "}")
-      .map{case (sigs, prog) =>
+      .map{case (sigs, preProg) =>
         if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
           throw ParseException("Implicit ODE declarations can only declare real-valued " +
             "functions of a single real variable.")
@@ -271,6 +275,10 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
         if (nameSet.size != sigs.size)
           throw ParseException("Tried declaring same function twice in an implicit ODE definition")
+
+        // Hack: expand prior declarations in the program, to allow programs containing prior
+        // definitions in block
+        val prog = curDecls.expandFull(preProg)
 
         val interpFuncs = try {
           ODEToInterpreted.fromProgram(prog,Variable(t.name,t.index))

@@ -447,11 +447,12 @@ class DLParser extends Parser {
     }
   )
 
-  /* Consumes as much input as possible, returning either
+  /* Returns
   * 1. both a term and a formula, if the consumed input can be interpreted as either
   * 2. only a term, if the consumed input can only be a term
   * 3. only a formula, if the consumed input can only be a formula
-  * Note does NOT extend formulas beyond base formulas. */
+  * Note that terms are fully extended, but formulas are only base formulas (not extended)
+  */
   def termOrBaseF[_: P]: P[Either[(Term, Formula), Either[Term,Formula]]] = P(
     ( /* atomic formulas, constant T/F, quantifiers, modalities */
       ("true"./.map(_ => True) | "false"./.map(_ => False)
@@ -468,75 +469,36 @@ class DLParser extends Parser {
     /* predicate OR function */
     | ( ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList ).
       map({case (s,idx,interp,ts) =>
-        (
-          FuncOf(
-            interp match {
-              case Some(i) => Function(s,idx,ts.sort,Real,Some(i))
-              case None => OpSpec.func(s, idx, ts.sort, Real)
-            },
-            ts),
-          PredOf(Function(s,idx,ts.sort,Bool,interp), ts)
-        )
-      }).
-      flatMap{case (t, f) =>
-        /* If, at this point, we can extend the term, this disambiguates it
-         * Note we don't extend the formula since we are supposed to only
-         * return BASE formulas at this point */
-        Index.flatMap(startIdx =>
-          extendBaseTerm(t).flatMap(t_ =>
-            Index.flatMap(endIdx =>
-              if (startIdx == endIdx)
-                Pass(Left(t_,f))
-              else
-                Pass(Right(Left(t_)))
-            )))
-
-      }
+        interp match {
+          case Some(i) =>
+            // Must be a term, since interpreted functions have real domain
+            Right(Left(
+              FuncOf(Function(s,idx,ts.sort,Real,Some(i)), ts)
+            ))
+          case None =>
+            // Could be either term or formula
+            Left((
+              FuncOf(OpSpec.func(s, idx, ts.sort, Real),ts),
+              PredOf(Function(s,idx,ts.sort,Bool,interp), ts)
+            ))
+        }
+      })
     /* Parenthesized term OR formula */
-    | "(" ~ termOrBaseF.flatMap{
+    | "(" ~/ termOrBaseF.flatMap{
         case Left((a,b)) =>
           /* Try finding a right parentheses -- note this doesn't
-           * disambiguate term/base formula so both remain a possibility */
-          (")" ~ "'".!.?).flatMap(diff => {
-            val (a_, b_) = diff match {
-              case Some("'") =>
-                (Differential(a), DifferentialFormula(b))
-              case None =>
-                (a, b)
-            }
-            /* If, at this point, we can extend the term, this disambiguates it
-             * Note we don't extend the formula since we are supposed to only
-             * return BASE formulas at this point */
-            Index.flatMap(startIdx =>
-              extendBaseTerm(a_).flatMap(t =>
-                Index.flatMap(endIdx =>
-                  if (startIdx == endIdx)
-                    Pass(Left(t,b_))
-                  else
-                    Pass(Right(Left(t)))
-                )))
-          }) |
-          // Try making a comparison out of the term
-          comparison(a).
-            flatMap(extendBaseFormula).
-            flatMap(formulaParenRight).
-            map(f => Right(Right(f))) |
-          /* Must be a base formula, not a term, because the term
-           * would have been extended already. */
-          extendBaseFormula(b).flatMap(formulaParenRight).
-            map(f => Right(Right(f)))
+           * disambiguate term/formula so both remain a possibility */
+          (")" ~ "'".!.?).map {
+            case Some("'") =>
+              Left((Differential(a), DifferentialFormula(b)))
+            case None =>
+              Left((a, b))
+          }
 
         case Right(Left(term)) =>
           // Try closing paren as a term paren
           termParenRight(term).
-            flatMap(extendBaseTerm).
-            map(t => Right(Left(t))) |
-          // Try closing paren as a formula paren
-          // (Note comparison is only way to get from term to formula)
-          comparison(term).
-            flatMap(extendBaseFormula).
-            flatMap(formulaParenRight).
-            map(f => Right(Right(f)))
+            map(t => Right(Left(t)))
 
         case Right(Right(form)) =>
           // Try closing paren as a formula paren
@@ -545,7 +507,34 @@ class DLParser extends Parser {
             map(f=> Right(Right(f)))
       }
     | term.map(t => Right(Left(t)))
-  )
+  ).flatMap{
+    // Try extending terms
+    case Left((t,f)) =>
+      /* Note if we can (strictly) extend a term, then the
+       * consumed input mut have been a term */
+      (Index ~~ extendBaseTerm(t) ~~ Index).map {
+        case (startIdx, t_, endIdx) =>
+          if (startIdx < endIdx)
+            Right(Left(t_))
+          else
+            Left((t, f))
+      }
+    case Right(Left(t)) =>
+      extendBaseTerm(t).
+        map(t => Right(Left(t)))
+    case Right(Right(f)) => Pass(Right(Right(f)))
+  }.flatMap{
+    // Try turning terms into comparisons
+    case parsed @ Left((t,_)) =>
+      comparison(t).
+        map(f => Right(Right(f))) |
+        Pass(parsed)
+    case parsed @ Right(Left(t)) =>
+      comparison(t).
+        map(f => Right(Right(f))) |
+        Pass(parsed)
+    case parsed => Pass(parsed)
+  }
 
   def formulaParenRight[_: P](left: Formula): P[Formula] = P(")" ~ "'".!.?).
     map {case None => left case Some("'") => DifferentialFormula(left) }
