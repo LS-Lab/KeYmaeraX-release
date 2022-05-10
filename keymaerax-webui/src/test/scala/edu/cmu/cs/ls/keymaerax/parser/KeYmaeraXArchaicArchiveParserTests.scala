@@ -6,10 +6,11 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.simplify
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, SubstitutionPair, Trafo, Tuple, Unit}
-import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
@@ -45,6 +46,29 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input
+    entry.problemContent shouldBe input
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "allow line breaks and escaped quotation marks in double-quoted strings" in {
+    val input =
+      """ArchiveEntry "Entry \"The Fan-
+        |                          tas-
+        |                          tic\" 1"
+        | ProgramVariables Real x, y; End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry \\\"The Fan-\n                          tas-\n                          tic\\\" 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
     entry.problemContent shouldBe input
@@ -1237,6 +1261,34 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.info shouldBe empty
   }
 
+  it should "parse a tactic with sub-position locators" in withZ3 { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | ProgramVariables Real x, y; End.
+        | Problem x>y -> x*0>=y End.
+        | Tactic "Proof 1" simplify('R=="x>y -> #x*0#>=y"); QE End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.problemContent shouldBe """ArchiveEntry "Entry 1"
+                                    | ProgramVariables Real x, y; End.
+                                    | Problem x>y -> x*0>=y End.
+                                    |End.""".stripMargin.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x*0>=y".asFormula
+    entry.tactics shouldBe ("Proof 1", "simplify('R==\"x>y -> #x*0#>=y\"); QE",
+      simplify(Find.FindR(0, Some("x>y -> x*0>=y".asFormula), PosInExpr(1::0::Nil), exact=true, entry.defs)) & QE) :: Nil
+    entry.info shouldBe empty
+  }
+
   it should "elaborate programconsts to systemconsts" in withQE { _ =>
     val input =
       """
@@ -1284,7 +1336,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.info shouldBe empty
   }
 
-  it should "parse a pending tactic with arguments in new syntax" in {
+  it should "parse a pending tactic with arguments in new syntax" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1".
@@ -1304,6 +1356,42 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       )))
     entry.model shouldBe "x>y -> [{x'=1}]x>=y".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; pending(\"dC(\\\"x>=old(x)\\\", 1)\")", implyR(1) & DebuggingTactics.pending("dC(\\\"x>=old(x)\\\", 1)")) :: Nil
+    entry.info shouldBe empty
+  }
+
+  it should "parse a multi-line pending tactic with arguments and branch labels" in withTactics {
+    val input =
+      """
+        |ArchiveEntry "Entry 1".
+        | ProgramVariables Real x, y; End.
+        | Problem x>y -> [{x'=1}]x>=y End.
+        | Tactic "Simple"
+        |   implyR(1) ; pending("dC(\"x>=old(x)\", 1) <(
+        |                          \"Use\": todo,
+        |                          \"Show\": dI(1); done
+        |                        )")
+        | End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> [{x'=1}]x>=y".asFormula
+    entry.tactics shouldBe ("Simple",
+      """implyR(1) ; pending("dC(\"x>=old(x)\", 1) <(
+        |                          \"Use\": todo,
+        |                          \"Show\": dI(1); done
+        |                        )")""".stripMargin,
+      implyR(1) & DebuggingTactics.pending("""dC(\"x>=old(x)\", 1) <(
+                                             |                          \"Use\": todo,
+                                             |                          \"Show\": dI(1); done
+                                             |                        )""".stripMargin)) :: Nil
     entry.info shouldBe empty
   }
 
