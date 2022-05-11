@@ -296,10 +296,9 @@ class DLParser extends Parser {
   }
 
   // terminals not used here but provided for other DL parsers
-  private def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
 
-  /** "whatevs": Parse a string literal. */
-  def string[_: P]: P[String] = P("\"" ~~/ CharsWhile(stringChars).! ~~ "\"")
+  /** "whatevs": Parse a string literal. (([^\\"]|\\"|\\(?!"))*+) */
+  def string[_: P]: P[String] = P("\"" ~~/ (!CharIn("\\\"") | "\\\"" | "\\" ~~ !"\"").rep.! ~~ "\"")
 
   /** "-532": Parse an integer literal, unnormalized. */
   def integer[_: P]: P[Int] = {
