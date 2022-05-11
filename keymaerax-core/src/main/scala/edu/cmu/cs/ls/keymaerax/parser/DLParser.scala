@@ -4,7 +4,7 @@
   */
 /**
   * Differential Dynamic Logic parser for concrete KeYmaera X notation.
-  * @author Andre Platzer
+  * @author Andre Platzer, James Gallicchio
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -12,7 +12,6 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse._
 import MultiLineWhitespace._
-import edu.cmu.cs.ls.keymaerax.parser.DLParser.formula
 
 import scala.collection.immutable._
 
@@ -49,7 +48,7 @@ object DLParser extends DLParser {
     /*@note tr.msg is redundant compared to the following and could be safely elided for higher-level messages */
     /*@note tr.longMsg can be useful for debugging the parser */
     /*@note tr.longAggregateMsg */
-    ParseException(tr.longTerminalsMsg /*tr.msg*/,
+    ParseException(tr.longAggregateMsg,
       location(f),
       found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
       expect = Parsed.Failure.formatStack(tr.input, List(tr.label -> f.index)),
@@ -343,7 +342,7 @@ class DLParser extends Parser {
   def summand[_: P]: P[Term] = P(multiplicand.flatMap(summRight))
 
   def summRight[_: P](left: Term): P[Term] =
-    (("*" | "/").!./ ~ signed(multiplicand)).rep.map(mults =>
+    (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand)).rep.map(mults =>
       mults.foldLeft(left) {
         case (m1, ("*", m2)) => Times(m1, m2)
         case (m1, ("/", m2)) => Divide(m1, m2)

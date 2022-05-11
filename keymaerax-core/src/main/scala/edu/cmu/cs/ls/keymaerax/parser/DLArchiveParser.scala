@@ -98,7 +98,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   //@todo add sharedDefinition to all entries
 
   /** Parse a single archive entry. */
-  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!.
+  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.
     map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"}) ~~ blank ~
     (label ~ ":").? ~ string ~
     metaInfo ~
@@ -135,22 +135,21 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       (if (link.isDefined) Map("Link"->link.get) else Map.empty)})
 
   /** Functions and ProgramVariables block in any order */
-  def allDeclarations[_: P]: P[Declaration] = P(
+  def allDeclarations[_: P]: P[Declaration] =
     (programVariables | definitions).rep.map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
-  )
 
   /** `Description "text".` parsed. */
-  def description[_: P]: P[String] = P("Description" ~~ blank ~/ string ~ "." )
+  def description[_: P]: P[String] = P("Description" ~~/ blank ~ string ~ "." )
 
   /** `Title "text".` parsed. */
-  def title[_: P]: P[String] = P("Title" ~~ blank ~/ string ~ "." )
+  def title[_: P]: P[String] = P("Title" ~~/ blank ~ string ~ "." )
 
   /** `Link "text".` parsed. */
-  def link[_: P]: P[String] = P("Link" ~~ blank ~/ string ~ "." )
+  def link[_: P]: P[String] = P("Link" ~~/ blank ~ string ~ "." )
 
   /** `SharedDefinitions declOrDef End.` parsed. */
   def sharedDefinitions[_: P]: P[Declaration] = P(
-    "SharedDefinitions" ~~ blank ~/
+    "SharedDefinitions" ~~/ blank ~
       DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
         declOrDef(curDecls).map(newDecls => curDecls ++ Declaration(newDecls.toMap))
       ) ~ "End."
@@ -158,7 +157,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** `Definitions declOrDef End.` parsed. */
   def definitions[_: P]: P[Declaration] = P(
-    "Definitions" ~~ blank ~/
+    "Definitions" ~~/ blank ~
       DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
         declOrDef(curDecls).map(newDecls => curDecls ++ Declaration(newDecls.toMap))
       ) ~ "End."
