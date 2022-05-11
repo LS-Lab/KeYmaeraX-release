@@ -298,7 +298,7 @@ class DLParser extends Parser {
   // terminals not used here but provided for other DL parsers
 
   /** "whatevs": Parse a string literal. (([^\\"]|\\"|\\(?!"))*+) */
-  def string[_: P]: P[String] = P("\"" ~~/ (!CharIn("\\\"") | "\\\"" | "\\" ~~ !"\"").rep.! ~~ "\"")
+  def string[_: P]: P[String] = P("\"" ~~/ (!CharIn("\\\"") ~~ AnyChar | "\\\"" | "\\" ~~ !"\"").rep.! ~~ "\"")
 
   /** "-532": Parse an integer literal, unnormalized. */
   def integer[_: P]: P[Int] = {
