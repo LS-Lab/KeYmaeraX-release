@@ -376,12 +376,15 @@ class DLParser extends Parser {
   )
 
   def termParenRight[_: P](left: Term): P[Term] =
-    ")"./.flatMap(_ => diff(left))
+    (")" ~ "'".!.?).map{
+      case None => left
+      case Some("'") => Differential(left)
+    }
 
   /** Given a base term, builds up to a full term, consuming as much
    * input as possible */
   def extendBaseTerm[_: P](left: Term): P[Term] =
-    diff(left).flatMap(multRight).flatMap(summRight).flatMap(termRight)
+    multRight(left).flatMap(summRight).flatMap(termRight)
 
   def func[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
     FuncOf(
@@ -601,8 +604,10 @@ class DLParser extends Parser {
 
   /** Parses a right formula parenthesis given the pair's contents  */
   def formulaParenRight[_: P](left: Formula): P[Formula] =
-    (")" ~ "'".!.?).
-    map {case None => left case Some("'") => DifferentialFormula(left) }
+    (")" ~ "'".!.?).map {
+      case None => left
+      case Some("'") => DifferentialFormula(left)
+    }
 
   /** Parses a comparison, given the left-hand term */
   def comparison[_: P](left: Term): P[Formula] = P(
