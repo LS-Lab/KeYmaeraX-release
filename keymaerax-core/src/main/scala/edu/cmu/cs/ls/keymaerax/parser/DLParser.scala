@@ -253,7 +253,7 @@ class DLParser extends Parser {
 
   def fullExpression[_: P]: P[Expression] = P( Start ~ expression ~ End )
 
-  def expression[_: P]: P[Expression] = P( NoCut(formula) | NoCut(term) | program )
+  def expression[_: P]: P[Expression] = P( program | NoCut(formula) | NoCut(term) )
 
   def fullSequent[_: P]: P[Sequent]   = P( Start ~ sequent ~ End )
 
@@ -626,7 +626,7 @@ class DLParser extends Parser {
   // program parser
   //*****************
 
-  def programSymbol[_: P]: P[AtomicProgram] = P( ident  ~ ";").flatMap({
+  def programSymbol[_: P]: P[AtomicProgram] = P(ident ~ ";").flatMap({
     case (s,None) => Pass(ProgramConst(s))
     case (s,Some(i)) => Fail.opaque("Program symbols cannot have an index: " + s + "_" + i)
   })
@@ -644,42 +644,41 @@ class DLParser extends Parser {
         | term.map(t => Assign(x,t))
     ) ~ ";"
   )
-
   def test[_: P]: P[Test] = P( "?" ~/ formula ~ ";").map(f => Test(f))
-  def braceP[_: P]: P[Program] = P( "{" ~ program ~ "}" )
+  def braceP[_: P]: P[Program] = P( "{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).
+    map({
+      case (p,None) => p
+      case (p,Some(("*",None))) => Loop(p)
+      case (p,Some(("*",Some(inv)))) => reportAnnotation(Loop(p),inv); Loop(p)
+      case (p,Some(("×", _))) => Dual(Loop(Dual(p)))
+    })
   def odeprogram[_: P]: P[ODESystem] = P( diffProgram ~ ("&" ~/ formula).?).
     map({case (p,f) => ODESystem(p,f.getOrElse(True))})
   def odesystem[_: P]: P[ODESystem] = P( "{" ~ odeprogram ~ "}" ~/ annotation.?).
     map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
-  def baseP[_: P]: P[Program] = P(
-    ( systemSymbol | programSymbol | assign | test | ifthen
-      | "{" ~/ ( (program ~ "}" ~/ ( "*".! ~ annotation.? ).?).map {
-            case (p, None) => p
-            case (p, Some(("*", None))) => Loop(p)
-            case (p, Some(("*", Some(inv)))) => reportAnnotation(p, inv); Loop(p)
-          }
-        | (odeprogram ~ "}" ~/ annotation.?).map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
-        )
-      ) ~ "^@".!.?).map({case (p,None) => p case (p,Some("^@")) => Dual(p)})
 
-  def repeat[_: P]: P[Program] = P( braceP ~ CharIn("*\u00d7").! ~ annotation.?).
-    map({
-      case (p,"*",None) => Loop(p)
-      case (p,"*",Some(inv)) => reportAnnotation(p,inv); Loop(p)
-      case (p,"\u00d7", None) => Dual(Loop(Dual(p)))
-    })
+  def baseP[_: P]: P[Program] = P(
+    systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP
+  )
+
+  /** Parses dual notation: baseP or baseP^@ */
+  def dual[_: P]: P[Program] = (baseP ~ "^@".!./.?).map({
+    case (p, None) => p
+    case (p, Some("^@")) => Dual(p)
+  })
 
   /** Parses an annotation */
-  def annotation[_: P]: P[Formula] = P("@invariant" ~/ "(" ~/ formula ~ ")")
+  def annotation[_: P]: P[Formula] = "@invariant" ~/ "(" ~/ formula ~ ")"
 
-  def sequence[_: P]: P[Program] = P( (baseP ~/ ";".?).rep(1) ).
+  def sequence[_: P]: P[Program] = P( (dual ~/ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
 
-  def choice[_: P]: P[Program] = P( sequence ~/ (("++" | "\u2229").! ~/ sequence).rep ).
-    map({ case (p, ps) =>
+  def choice[_: P]: P[Program] = P(
+    sequence ~/ (("++"./ | "∪"./ | "--" | "∩"./).! ~ sequence).rep
+  ).map({ case (p, ps) =>
       ((None, p) +: ps.map{case (s,p) => (Some(s),p)}).reduceRight[(Option[String], Program)] {
-        case ((pre,p), (Some("++"), q)) => (pre, Choice(p,q))
-        case ((pre,p), (Some("\u2229"), q)) => (pre, Dual(Choice(Dual(p),Dual(q))))
+        case ((pre,p), (Some("++" | "∪"), q)) => (pre, Choice(p,q))
+        case ((pre,p), (Some("--" | "∩"), q)) => (pre, Dual(Choice(Dual(p),Dual(q))))
       }._2
     })
 
@@ -689,7 +688,7 @@ class DLParser extends Parser {
          case (f, p, Some(q)) => Choice(Compose(Test(f),p), Compose(Test(Not(f)),q))})
 
   /** program: Parses a dL program. */
-  def program[_: P]: P[Program] = P( Pass ~ choice )
+  def program[_: P]: P[Program] = P( choice )
 
 
   //*****************
@@ -697,16 +696,16 @@ class DLParser extends Parser {
   //*****************
 
   def ode[_: P]: P[AtomicODE] = P( diffVariable ~ "=" ~/ term).map({case (x,t) => AtomicODE(x,t)})
-  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P( ident ~~ odeSpace.?).
-    map({case (s, None, None)     => DifferentialProgramConst(s)
-         case (s, None, Some(sp)) => DifferentialProgramConst(s,sp)
-         case (s, Some(i), _)     => throw ParseException("Differential program symbols cannot have an index: " + s + "_" + i)})
+  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] =
+    P( ident ~~ odeSpace.?).flatMap({
+      case (s, None, None)     => Pass(DifferentialProgramConst(s))
+      case (s, None, Some(sp)) => Pass(DifferentialProgramConst(s,sp))
+      case (s, Some(i), _)     => Fail.opaque("Differential program symbols cannot have an index: " + s + "_" + i)})
   def atomicDP[_: P]: P[AtomicDifferentialProgram] = P( ode | diffProgramSymbol )
 
   /** {|x1,x2,x3|} parses a space declaration */
   def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
     map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
-
 
   def diffProduct[_: P]: P[DifferentialProgram] = P( atomicDP ~ ("," ~/ atomicDP).rep ).
     map({case (p, ps) => (ps.+:(p)).reduceRight(DifferentialProduct.apply)})
