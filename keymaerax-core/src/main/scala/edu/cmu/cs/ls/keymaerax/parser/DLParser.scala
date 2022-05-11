@@ -623,8 +623,12 @@ class DLParser extends Parser {
         )
       ) ~ "^@".!.?).map({case (p,None) => p case (p,Some("^@")) => Dual(p)})
 
-  def repeat[_: P]: P[Program] = P( braceP ~ "*".! ~ annotation.?).
-    map({case (p,"*",None) => Loop(p) case (p,"*",Some(inv)) => reportAnnotation(p,inv); Loop(p)})
+  def repeat[_: P]: P[Program] = P( braceP ~ CharIn("*\u00d7").! ~ annotation.?).
+    map({
+      case (p,"*",None) => Loop(p)
+      case (p,"*",Some(inv)) => reportAnnotation(p,inv); Loop(p)
+      case (p,"\u00d7", None) => Dual(Loop(Dual(p)))
+    })
 
   /** Parses an annotation */
   def annotation[_: P]: P[Formula] = P("@invariant" ~/ "(" ~/ formula ~ ")")
@@ -632,8 +636,13 @@ class DLParser extends Parser {
   def sequence[_: P]: P[Program] = P( (baseP ~/ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
 
-  def choice[_: P]: P[Program] = P( sequence ~/ ("++" ~/ sequence).rep ).
-    map({case (p, ps) => (ps.+:(p)).reduceRight(Choice)})
+  def choice[_: P]: P[Program] = P( sequence ~/ (("++" | "\u2229").! ~/ sequence).rep ).
+    map({ case (p, ps) =>
+      ((None, p) +: ps.map{case (s,p) => (Some(s),p)}).reduceRight[(Option[String], Program)] {
+        case ((pre,p), (Some("++"), q)) => (pre, Choice(p,q))
+        case ((pre,p), (Some("\u2229"), q)) => (pre, Dual(Choice(Dual(p),Dual(q))))
+      }._2
+    })
 
   //@note macro-expands
   def ifthen[_: P]: P[Program] = P( "if" ~/ "(" ~/ formula ~ ")" ~ braceP ~ ("else" ~/ braceP).? ).
