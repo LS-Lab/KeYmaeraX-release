@@ -61,9 +61,12 @@ object SimplifierV3 {
     val limp = "A_() -> (L_() = LL_())".asFormula
     val rimp = "B_() -> (R_() = RR_())".asFormula
     val lhs = ctor("L_()".asTerm,"R_()".asTerm)
-    val lAx = remember(Imply(limp,Imply( "A_()".asFormula ,Equal(lhs, ctor("LL_()".asTerm,"R_()".asTerm)))),prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
-    val rAx = remember(Imply(rimp,Imply( "B_()".asFormula ,Equal(lhs, ctor("L_()".asTerm,"RR_()".asTerm)))),prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
-    val lrAx = remember(Imply(And(limp,rimp),Imply( "A_() & B_()".asFormula ,Equal(lhs, ctor("LL_()".asTerm,"RR_()".asTerm)))),prop & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
+    val lAx = remember(Imply(limp,Imply( "A_()".asFormula ,Equal(lhs, ctor("LL_()".asTerm,"R_()".asTerm)))),
+      prop & exhaustiveEqL2R(Find.FindLPlain("L_()=LL_()".asFormula)) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
+    val rAx = remember(Imply(rimp,Imply( "B_()".asFormula ,Equal(lhs, ctor("L_()".asTerm,"RR_()".asTerm)))),
+      prop & exhaustiveEqL2R(Find.FindLPlain("R_()=RR_()".asFormula)) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
+    val lrAx = remember(Imply(And(limp,rimp),Imply( "A_() & B_()".asFormula ,Equal(lhs, ctor("LL_()".asTerm,"RR_()".asTerm)))),
+      prop & exhaustiveEqL2R(Find.FindLPlain("L_()=LL_()".asFormula)) & exhaustiveEqL2R(Find.FindLPlain("R_()=RR_()".asFormula)) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
     (lAx,rAx,lrAx)
   }
 
@@ -86,10 +89,11 @@ object SimplifierV3 {
   private lazy val timesAxs = termAx(Times.apply)
   private lazy val divAxs = termAx(Divide.apply)
   private lazy val powAxs = termAx(Power.apply)
-  private lazy val negAx = remember( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
+  private lazy val negAx = remember( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,
+    prop & exhaustiveEqL2R(Find.FindLPlain("L_()=LL_()".asFormula)) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
 
   private lazy val equalTrans = remember("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,
-    prop & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
+    prop & exhaustiveEqL2R(Find.FindLPlain("F_()=FF_()".asFormula)) & exhaustiveEqL2R(Find.FindLPlain("FF_()=FFF_()".asFormula)) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
 
   /**
     * An index is a function from a term/formula and the current formula context (i.e., assumptions)
