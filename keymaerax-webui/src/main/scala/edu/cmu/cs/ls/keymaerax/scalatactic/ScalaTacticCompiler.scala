@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.scalatactic
 
+import java.io.File
 import scala.reflect.internal.util.{AbstractFileClassLoader, BatchSourceFile}
 import scala.tools.nsc.{Global, Settings}
 import scala.tools.nsc.io.VirtualDirectory
@@ -38,7 +39,7 @@ class ScalaTacticCompiler {
 
       /*! Each file name is being constructed from a path in the virtual directory. */
       val path = classFile.path
-      val fullQualifiedName = path.substring(path.indexOf('/')+1,path.lastIndexOf('.')).replace("/",".")
+      val fullQualifiedName = path.substring(path.indexOf(File.separatorChar)+1, path.lastIndexOf('.')).replace(File.separator,".")
 
       /*! Loaded classes are collecting into a returning collection with `yield`. */
       classLoader.loadClass(fullQualifiedName)
