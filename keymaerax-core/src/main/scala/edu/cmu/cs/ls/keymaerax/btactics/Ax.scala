@@ -298,9 +298,7 @@ object Ax extends Logging {
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powZero",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerZero",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivide0",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.TExge",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.TExgt"
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivide0"
         )
       case _ => Set.empty
     }
