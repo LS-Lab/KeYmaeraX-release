@@ -218,11 +218,22 @@ class DLParser extends Parser {
     ("-".? ~~ CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
   ).map(s => Number(BigDecimal(s)))
 
+  /** matches keywords. An identifier cannot be a keyword. */
+  def keywords: Set[String] = Set(
+    "true", "false",
+    "Axiom", "End", "Functions", "Definitions", "ProgramVariables", "Variables",
+    "Problem", "Tactic",
+    "implicit", "Sequent", "Formula", "Lemma", "Tool", "SharedDefinitions",
+    "ArchiveEntry", "Lemma", "Theorem", "Exercise"
+  )
+
   /** parse an identifier.
     * @return the name and its index (if any).
-    * @note Index is normalized so that x_00 cannot be mentioned and confused with x_0.*/
+    * @note Index is normalized so that x_00 cannot be mentioned and confused with x_0.
+    * @note Keywords are not allowed as identifiers. */
   def ident[_: P]: P[(String,Option[Int])] = P(
-    (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX).! ~~
+    (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX).!.
+      filter(!keywords.contains(_)) ~~
       (("_" ~~ ("_".? ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX)).!) |
         "_".!).?
     ).map({
@@ -291,7 +302,7 @@ class DLParser extends Parser {
     )
   }
 
-  def summand[_: P]: P[Term] = P(multiplicand.flatMap(summRight))
+  def summand[_: P]: P[Term] = multiplicand.flatMap(summRight)
 
   def summRight[_: P](left: Term): P[Term] =
     // Lookahead is to avoid /* */ comments
@@ -303,13 +314,13 @@ class DLParser extends Parser {
       }
     )
 
-  def multiplicand[_: P]: P[Term] = P(baseTerm.flatMap(multRight))
+  def multiplicand[_: P]: P[Term] = baseTerm.flatMap(multRight)
 
   def multRight[_: P](left: Term): P[Term] =
     ("^"./ ~ signed(baseTerm)).rep.map(pows => (left +: pows).reduceRight(Power))
 
-  def baseTerm[_: P]: P[Term] = P(
-      number./ | dot./ | func.flatMap(diff) | unitFunctional.flatMap(diff) | variable
+  def baseTerm[_: P]: P[Term] = (
+      number./ | dot./ | function.flatMap(diff) | unitFunctional.flatMap(diff) | variable
       /* termList has a cut after (, but this is safe, because we
        * require that if the first available character is ( it is
        * unambiguously a term parenthesis */
@@ -324,7 +335,7 @@ class DLParser extends Parser {
   def extendBaseTerm[_: P](left: Term): P[Term] =
     multRight(left).flatMap(summRight).flatMap(termRight)
 
-  def func[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
+  def function[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
     FuncOf(
       interp match {
         case Some(i) => Function(s,idx,ts.sort,Real,Some(i))
@@ -360,34 +371,34 @@ class DLParser extends Parser {
   def formula[_: P] = P(biimplication)
 
   /* <-> (lowest prec, non-assoc) */
-  def biimplication[_: P]: P[Formula] = P(backImplication.flatMap(biimpRight))
+  def biimplication[_: P]: P[Formula] = backImplication.flatMap(biimpRight)
   def biimpRight[_: P](left: Formula): P[Formula] =
     ("<->" ~/ backImplication).?.
       map{ case None => left case Some(r) => Equiv(left,r) }
 
   /* <- (left-assoc) */
-  def backImplication[_: P]: P[Formula] = P(implication.flatMap(backImpRight))
+  def backImplication[_: P]: P[Formula] = implication.flatMap(backImpRight)
   def backImpRight[_: P](left: Formula): P[Formula] =
     ("<-" ~ !">" ~/ implication).rep.map(hyps =>
       hyps.foldLeft(left){case (acc,hyp) => Imply(hyp,acc)}
     )
 
   /* -> (right-assoc) */
-  def implication[_: P]: P[Formula] = P(disjunct.flatMap(impRight))
+  def implication[_: P]: P[Formula] = disjunct.flatMap(impRight)
   def impRight[_: P](left: Formula): P[Formula] =
     ("->" ~/ disjunct).rep.map(concls =>
       (left +: concls).reduceRight(Imply)
     )
 
   /* | (right-assoc) */
-  def disjunct[_: P]: P[Formula] = P(conjunct.flatMap(disjRight))
+  def disjunct[_: P]: P[Formula] = conjunct.flatMap(disjRight)
   def disjRight[_: P](left: Formula): P[Formula] =
     ("|" ~/ conjunct).rep.map(conjs =>
       (left +: conjs).reduceRight(Or)
     )
 
   /* & (right-assoc) */
-  def conjunct[_: P]: P[Formula] = P(baseF.flatMap(conjRight))
+  def conjunct[_: P]: P[Formula] = baseF.flatMap(conjRight)
   def conjRight[_: P](left: Formula): P[Formula] =
     ("&" ~/ baseF).rep.map(forms =>
       (left +: forms).reduceRight(And)
@@ -399,10 +410,11 @@ class DLParser extends Parser {
   /** Base formulas. Most work done in `termOrBaseF`.
    * `termOrBaseF` consumes as much input as possible, so if
    * we get a term out then it can't work as a formula. */
-  def baseF[_: P]: P[Formula] = P(
+  def baseF[_: P]: P[Formula] = (
     termOrBaseF.flatMap{
       case Left((_,form)) => Pass(form)
-      case Right(Left(_)) => Fail
+      case Right(Left(t)) =>
+        Fail.opaque("Expected formula, got term")
       case Right(Right(form)) => Pass(form)
     }
   )
