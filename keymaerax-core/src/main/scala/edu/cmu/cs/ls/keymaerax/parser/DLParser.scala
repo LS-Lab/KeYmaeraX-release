@@ -109,104 +109,51 @@ class DLParser extends Parser {
   override def apply(input: String): Expression = exprParser(input)
 
 
+  private def parseAndCompare[A](newParser: P[_] => P[A], oldParser: String => A, name: String): String => A =
+    s => {
+      val newres = fastparse.parse(s, newParser(_)) match {
+        case Parsed.Success(value, _) => Right(value)
+        case f: Parsed.Failure => Left(parseException(f))
+      }
+      val oldres = try {
+        Right(oldParser(s))
+      } catch {
+        case e => Left(e)
+      }
+      if (oldres != newres && (oldres.isRight || newres.isRight)) {
+        println(s"Parser disagreement ($name): `$s`")
+        println(s"KYXParser:\n${oldres match {case Left(x) => x.toString case Right(x) => x.toString}}")
+        println(s"DLParser:\n${newres match {case Left(x) => x.toString case Right(x) => x.toString}}")
+      }
+      newres match {
+        case Left(e) => throw e
+        case Right(res) => res
+      }
+    }
+
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
-    //@todo store the parser for speed
-  val exprParser: String => Expression = (s => {
-      val newres = fastparse.parse(s, fullExpression(_)) match {
-        case Parsed.Success(value, index) => value
-        case f: Parsed.Failure => throw parseException(f)
-      }
-      val oldres = KeYmaeraXParser.apply(s)
-      if (oldres != newres) {
-        println(s"Parser disagreement (expr): `$s`")
-        println(s"KYXParser: `$oldres`")
-        println(s"DLParser: `$newres`")
-      }
-      newres
-    })
+  val exprParser: String => Expression = parseAndCompare(fullExpression(_), KeYmaeraXParser.apply, "expression")
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic term */
-  override val termParser: String => Term = (s => {
-    val newres = fastparse.parse(s, fullTerm(_)) match {
-      case Parsed.Success(value, index) => value
-      case f: Parsed.Failure => throw parseException(f)
-    }
-    val oldres = KeYmaeraXParser.termParser(s)
-    if (oldres != newres) {
-      println(s"Parser disagreement (term): `$s`")
-      println(s"KYXParser: `$oldres`")
-      println(s"DLParser: `$newres`")
-    }
-    newres
-  })
+  override val termParser: String => Term = parseAndCompare(fullTerm(_), KeYmaeraXParser.termParser, "term")
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
-  override val formulaParser: String => Formula = (s => {
-    val newres = fastparse.parse(s, fullFormula(_)) match {
-      case Parsed.Success(value, index) => value
-      case f: Parsed.Failure => throw parseException(f)
-    }
-    val oldres = KeYmaeraXParser.formulaParser(s)
-    if (oldres != newres) {
-      println(s"Parser disagreement (formula): `$s`")
-      println(s"KYXParser: `$oldres`")
-      println(s"DLParser: `$newres`")
-    }
-    newres
-  })
+  override val formulaParser: String => Formula = parseAndCompare(fullFormula(_), KeYmaeraXParser.formulaParser, "formula")
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic program */
-  override val programParser: String => Program = (s => {
-    val newres = fastparse.parse(s, fullProgram(_)) match {
-      case Parsed.Success(value, index) => value
-      case f: Parsed.Failure => throw parseException(f)
-    }
-    val oldres = KeYmaeraXParser.programParser(s)
-    if (oldres != newres) {
-      println(s"Parser disagreement (program): `$s`")
-      println(s"KYXParser: `$oldres`")
-      println(s"DLParser: `$newres`")
-    }
-    newres
-  })
+  override val programParser: String => Program = parseAndCompare(fullProgram(_), KeYmaeraXParser.programParser, "program")
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
-  override val differentialProgramParser: String => DifferentialProgram = (s => {
-    val newres = fastparse.parse(s, fullDifferentialProgram(_)) match {
-      case Parsed.Success(value, index) => value
-      case f: Parsed.Failure => throw parseException(f)
-    }
-    val oldres = KeYmaeraXParser.differentialProgramParser(s)
-    if (oldres != newres) {
-      println(s"Parser disagreement (diff. program): `$s`")
-      println(s"KYXParser: `$oldres`")
-      println(s"DLParser: `$newres`")
-    }
-    newres
-  })
+  override val differentialProgramParser: String => DifferentialProgram =
+    parseAndCompare(fullDifferentialProgram(_), KeYmaeraXParser.differentialProgramParser, "diff. program")
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic sequent. */
-  override val sequentParser: String => Sequent = (s => {
-    val newres = fastparse.parse(s, fullSequent(_)) match {
-      case Parsed.Success(value, index) => value
-      case f: Parsed.Failure => throw parseException(f)
-    }
-    val oldres = KeYmaeraXParser.sequentParser(s)
-    if (oldres != newres) {
-      println(s"Parser disagreement (sequent): `$s`")
-      println(s"KYXParser: `$oldres`")
-      println(s"DLParser: `$newres`")
-    }
-    newres
-  })
+  override val sequentParser: String => Sequent = parseAndCompare(fullSequent(_), KeYmaeraXParser.sequentParser, "sequent")
 
+  /* TODO: Unused
   /** Parse the input string in the concrete syntax as a ;; separated list fof differential dynamic logic sequents . */
-  val sequentListParser: String => List[Sequent] = (s => {
-    fastparse.parse(s, fullSequentList(_)) match {
-      case Parsed.Success(value, index) => value
-      case f: Parsed.Failure => throw parseException(f)
-    }
-  })
+  val sequentListParser: String => List[Sequent] = parseAndCompare(fullSequentList(_), KeYmaeraXParser.sequentListParser, "term")
+  */
 
   /** A pretty-printer that can write the output that this parser reads
     *
