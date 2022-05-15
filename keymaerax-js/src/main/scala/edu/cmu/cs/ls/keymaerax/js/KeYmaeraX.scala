@@ -5,8 +5,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PositionLocator}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLBelleParser
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParseException, Parser,
-  SubstitutionParser, KeYmaeraXArchiveParser, SequentParser, ParsedArchiveEntry}
+  SubstitutionParser, DLArchiveParser, MockBellePrettyPrinter, MockExpressionBuilder, SequentParser, ParsedArchiveEntry}
 
 import scala.util.Try
 import scala.scalajs.js.{Array, Dictionary}
@@ -16,7 +17,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 object KeYmaeraX {
   Configuration.setConfiguration(JsMapConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  ArchiveParser.setParser(KeYmaeraXArchiveParser)
+  ArchiveParser.setParser(new DLArchiveParser(new DLBelleParser(MockBellePrettyPrinter, MockExpressionBuilder)))
 
   //region Parsing for ACE Editor
 
