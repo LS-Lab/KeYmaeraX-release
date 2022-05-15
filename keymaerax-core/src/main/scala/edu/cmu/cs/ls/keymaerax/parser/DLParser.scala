@@ -303,30 +303,21 @@ class DLParser extends Parser {
       }
     )
 
-  def multiplicand[_: P]: P[Term] = P(diffTerm.flatMap(multRight))
+  def multiplicand[_: P]: P[Term] = P(baseTerm.flatMap(multRight))
 
   def multRight[_: P](left: Term): P[Term] =
-    ("^"./ ~ signed(diffTerm)).rep.map(pows => (left +: pows).reduceRight(Power))
-
-  def diffTerm[_: P]: P[Term] = baseTerm.flatMap(diff)
-
-  /** Parses term' */
-  def diff[_: P](left: Term): P[Term] =
-    "'".!.?.map{case None => left case Some("'") => Differential(left)}
+    ("^"./ ~ signed(baseTerm)).rep.map(pows => (left +: pows).reduceRight(Power))
 
   def baseTerm[_: P]: P[Term] = P(
-      number./ | dot./ | func | unitFunctional | variable
+      number./ | dot./ | func.flatMap(diff) | unitFunctional.flatMap(diff) | variable
       /* termList has a cut after (, but this is safe, because we
        * require that if the first available character is ( it is
        * unambiguously a term parenthesis */
-      | termList
+      | termList.flatMap(diff)
   )
 
   def termParenRight[_: P](left: Term): P[Term] =
-    (")" ~ "'".!.?).map{
-      case None => left
-      case Some("'") => Differential(left)
-    }
+    ")".!.map(_ => left).flatMap(diff)
 
   /** Given a base term, builds up to a full term, consuming as much
    * input as possible */
@@ -349,6 +340,10 @@ class DLParser extends Parser {
    * also consume -s. */
   def signed[_: P](p: => P[Term]): P[Term] =
     p | (("-".! ~~ !">") ~ signed(p)).map{case ("-",t) => Neg(t)}
+
+  /** Parses term' */
+  def diff[_: P](left: Term): P[Term] =
+    "'".!.?.map{case None => left case Some("'") => Differential(left)}
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
   def termList[_: P]: P[Term] = P("(" ~~ !"|" ~/ term.rep(sep=","./) ~ ")").
@@ -416,38 +411,31 @@ class DLParser extends Parser {
   * 1. both a term and a formula, if the consumed input can be interpreted as either
   * 2. only a term, if the consumed input can only be a term
   * 3. only a formula, if the consumed input can only be a formula
-  * Note that terms MUST BE fully extended, but formulas are ONLY base formulas (CANNOT be extended)
+  *
+  * NOTE: Terms MUST BE fully extended, but formulas MUST BE base formulas (CANNOT be extended).
+  * Differential formulas f()', f(||)', and (f)' are considered base formulas.
   */
-  def termOrBaseF[_: P]: P[Either[(Term, Formula), Either[Term,Formula]]] = P(
-    ( /* atomic formulas, constant T/F, quantifiers, modalities */
-      "true".!.map(_ => True) | "false".!.map(_ => False)
-      /* Note we cannot cut after true/false because it could also
-       * be the start of an identifier */
-      | ( ("\\forall"|"\\exists").! ~~/ blank ~ variable ~ baseF ).
-        map{case ("\\forall",x, f) => Forall(x::Nil, f)
-            case ("\\exists",x, f) => Exists(x::Nil, f)}
-      | ( (("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF ).
-        map{case ("[",p,"]", f) => Box(p, f)
-            case ("<",p,">", f) => Diamond(p, f)}
-      | ("!" ~/ baseF ).map(f => Not(f))
-      | predicational
-    ).map(f => Right(Right(f))) |
+  def termOrBaseF[_: P]: P[Either[(Term, Formula), Either[Term,Formula]]] = (
+    unambiguousBaseF.map(f => Right(Right(f))) |
 
     /* predicate OR function */
-    ( ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList ).
-      map({case (s,idx,interp,ts) =>
+    ( ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList ~ "'".!.?).
+      map({case (s,idx,interp,ts,diff) =>
+        val (t,f) = (
+          FuncOf(OpSpec.func(s, idx, ts.sort, Real),ts),
+          PredOf(Function(s,idx,ts.sort,Bool,interp), ts)
+        )
+        val (dt,df) = diff match {
+          case None => (t,f)
+          case Some("'") => (Differential(t), DifferentialFormula(f))
+        }
         interp match {
           case Some(i) =>
             // Must be a term, since interpreted functions have real domain
-            Right(Left(
-              FuncOf(Function(s,idx,ts.sort,Real,Some(i)), ts)
-            ))
+            Right(Left(dt))
           case None =>
             // Could be either term or formula
-            Left((
-              FuncOf(OpSpec.func(s, idx, ts.sort, Real),ts),
-              PredOf(Function(s,idx,ts.sort,Bool,interp), ts)
-            ))
+            Left((dt,df))
         }
       }) |
 
@@ -553,6 +541,22 @@ class DLParser extends Parser {
     case parsed => Pass(parsed)
   }
 
+  def unambiguousBaseF[_: P]: P[Formula] =
+    /* atomic formulas, constant T/F, quantifiers, modalities */
+      "true".!.map(_ => True) | "false".!.map(_ => False) |
+    /* Note we cannot cut after true/false because it could also
+     * be the start of an identifier */
+    ( ("\\forall"|"\\exists").! ~~/ blank ~ variable ~ baseF ).
+      map{
+        case ("\\forall",x, f) => Forall(x::Nil, f)
+        case ("\\exists",x, f) => Exists(x::Nil, f)
+      } |
+    ( (("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF ).
+      map{case ("[",p,"]", f) => Box(p, f)
+      case ("<",p,">", f) => Diamond(p, f)} |
+    ("!" ~/ baseF ).map(f => Not(f)) |
+    predicational
+
   /** Parses a right formula parenthesis given the pair's contents  */
   def formulaParenRight[_: P](left: Formula): P[Formula] =
     (")" ~ "'".!.?).map {
@@ -582,9 +586,9 @@ class DLParser extends Parser {
   // program parser
   //*****************
 
-  def programSymbol[_: P]: P[AtomicProgram] = P(ident ~ ";").flatMap({
-    case (s,None) => Pass(ProgramConst(s))
-    case (s,Some(i)) => Fail.opaque("Program symbols cannot have an index: " + s + "_" + i)
+  def programSymbol[_: P]: P[AtomicProgram] = P(ident ~~ odeSpace.? ~ ";").flatMap({
+    case (s,None,taboo) => Pass(ProgramConst(s, taboo.getOrElse(AnyArg)))
+    case (s,Some(i),_) => Fail.opaque("Program symbols cannot have an index: " + s + "_" + i)
   })
   //@todo combine system symbol and space taboo
   def systemSymbol[_: P]: P[AtomicProgram] =
