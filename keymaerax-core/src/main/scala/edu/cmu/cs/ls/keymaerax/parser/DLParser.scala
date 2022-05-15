@@ -451,17 +451,21 @@ class DLParser extends Parser {
         }
       }) |
 
-      /* unit predicational OR unit functional */
-      ( ident ~~ space ).flatMap({
-        case (_, Some(_), _) =>
-          Fail.opaque("Indices are not yet allowed in predicational/functional names")
-        case (name, None, space) =>
-          // Could be either term or formula
-          Pass(Left((
-            UnitFunctional(name, space, sort=Real),
-            UnitPredicational(name, space)
-          )))
-      }) |
+    /* unit predicational OR unit functional */
+    ( ident ~~ space ~ "'".!.?).flatMap({
+      case (_, Some(_), _, _) =>
+        Fail.opaque("Indices are not yet allowed in predicational/functional names")
+      case (name, None, space, diff) =>
+        // Could be either term or formula
+        val (t,f) = (
+          UnitFunctional(name, space, sort=Real),
+          UnitPredicational(name, space)
+        )
+        Pass(Left(diff match {
+          case None => (t,f)
+          case Some("'") => (Differential(t), DifferentialFormula(f))
+        }))
+    }) |
 
     /* Parenthesized term OR formula */
     /* TODO: support parsing (x,(y,z)) in this context?
