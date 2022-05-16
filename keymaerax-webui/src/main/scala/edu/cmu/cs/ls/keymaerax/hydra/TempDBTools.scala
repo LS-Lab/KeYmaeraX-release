@@ -93,7 +93,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
     BelleInterpreter.setInterpreter(interpreter(listeners))
     BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
       case BelleProvable(provable, _) =>
-        assert(provable.conclusion == expectedSubstConclusion, "The proved conclusion must match the input model")
+        assert(entry.defs.exhaustiveSubst(provable.conclusion) == expectedSubstConclusion, "The proved conclusion must match the input model")
         //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
         if (provable.isProved) {
           // check that database thinks so too
