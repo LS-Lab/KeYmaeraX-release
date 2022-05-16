@@ -3500,7 +3500,8 @@ oop.inherits(Worker, Mirror);
           column: error.column,
           endRow: error.endLine-1,
           endColumn: error.endColumn,
-          text: error.message + "; expected '" + error.expect + "', but found '" + error.found + "'",
+          text: "Expected '" + error.expect + "',\nbut found '" + error.found + "'" +
+              (error.hint !== undefined && error.hint !== "" ? ("\n" + error.hint) : ""),
           type: "error" // |"warning"|"info"
         });
       }
