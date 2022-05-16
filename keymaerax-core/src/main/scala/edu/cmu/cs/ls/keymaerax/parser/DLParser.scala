@@ -187,8 +187,8 @@ class DLParser extends Parser {
   // implementation
   //*****************
 
-  // Whitespace is any of ` \t\n\r`
-  import MultiLineWhitespace._
+  // Whitespace is the usual ' \t\n\r' but also comments /* ... */ and // ...
+  import JavaWhitespace._
 
   def fullTerm[_: P]: P[Term]   = P( Start ~ term ~ End )
   def fullFormula[_: P]: P[Formula]   = P( Start ~ formula ~ End )
