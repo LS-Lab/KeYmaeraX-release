@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
 import fastparse._
-import MultiLineWhitespace._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
@@ -56,6 +55,8 @@ class DLBelleParser(override val printer: BelleExpr => String,
     case f: Parsed.Failure => throw parseException(f)
   })
 
+  import JavaWhitespace._
+
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
   def searchLocator[_: P]: P[PositionLocator] = P(
     "'Llast".!.map(_ => LastAnte(0))
@@ -73,7 +74,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
     ~ (argument.map(arg => Left(Seq(arg))::Nil) | locator.map(j => Right(j)::Nil)).rep(min = 1, sep = ","./)
     ~ ")" ).
     map({case (t,args) => tacticProvider(t, args.flatten.toList, defs)})
-  def namedCombinator[_: P]: P[BelleExpr] = P( ("doall".!) ~~ "(" ~ tactic ~ ")" ).
+  def namedCombinator[_: P]: P[BelleExpr] = P( ("doall".!) ~~/ "(" ~ tactic ~ ")" ).
     map({case ("doall", t) => OnAll(t)})
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )
   def baseTac[_: P]: P[BelleExpr] = P(
@@ -81,7 +82,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       ~~ ("*" ~ integer | "*".! ~ !CharIn("0-9")).?
   ).map({case (t,None) => t case (t,Some(n:Integer)) => RepeatTactic(t,n) case (t,Some("*")) => SaturateTactic(t)})
 
-  def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ baseTac.rep(min=1,sep=","./) ~ ")").
+  def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ seqTac.rep(min=1,sep=","./) ~ ")").
     map(BranchTactic)
 
   def repeatTac[_: P]: P[BelleExpr] = P(
@@ -89,7 +90,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
     | (parenTac ~ "*" ~ !CharIn("0-9")).map(SaturateTactic)
   )
 
-  def seqTac[_: P]: P[BelleExpr] = P( baseTac.rep(min=1,sep=";"./) ).
+  def seqTac[_: P]: P[BelleExpr] = P( baseTac.rep(min=1,sep=CharIn(";&")./) ).
     map(SeqTactic.apply)
 
   def eitherTac[_: P]: P[BelleExpr] = P( seqTac.rep(min=1,sep="|"./) ).
