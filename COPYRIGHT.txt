@@ -1,5 +1,5 @@
 KeYmaera X
-Copyright (C) 2014-2021 Carnegie Mellon University
+Copyright (C) 2014-2022 Carnegie Mellon University
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer,
 Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell.
 With previous contributions by Nathan Fulton, Jan-David Quesel,
