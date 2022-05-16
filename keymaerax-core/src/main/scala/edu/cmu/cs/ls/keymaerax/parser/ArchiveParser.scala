@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
@@ -315,7 +315,10 @@ object ArchiveParser extends ArchiveParser {
   private[this] var p: ArchiveParser = _
 
   /** The parser that is presently used per default. */
-  def parser: ArchiveParser = p
+  def parser: ArchiveParser = {
+    if (p != null) p
+    else throw new ProverSetupException("No archive parser set. Please check the command line during startup for error messages.")
+  }
 
   /** Set a new parser. */
   def setParser(parser: ArchiveParser): Unit = { p = parser }
