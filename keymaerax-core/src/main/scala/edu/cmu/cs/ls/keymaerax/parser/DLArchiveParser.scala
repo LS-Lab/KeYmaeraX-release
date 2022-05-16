@@ -91,7 +91,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
 
   /** Parse a list of archive entries */
-  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = P( Start ~
+  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = ( Start ~
     sharedDefinitions.? ~
     archiveEntry.rep(1) ~
     End).map({case (shared,entries) => entries.toList})
@@ -126,26 +126,19 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** meta information */
   def metaInfo[_: P]: P[Map[String,String]] = P(
-    description.? ~
-    title.? ~
-    link.?
-  ).map({case (desc, title, link) =>
-    (if (desc.isDefined) Map("Description"->desc.get) else Map.empty) ++
-      (if (title.isDefined) Map("Title"->title.get) else Map.empty) ++
-      (if (link.isDefined) Map("Link"->link.get) else Map.empty)})
+    DLParserUtils.repFold(Map.empty[String,String])(acc =>
+      (("Description" | "Title" | "Link" | "Author" | "See").! ~~/ blank ~ string ~ ".").
+        flatMap{case (key, value) =>
+          if (acc.contains(key))
+            Fail.opaque(s"MetaInfo key $key appears twice")
+          else
+            Pass(acc + (key -> value))
+        })
+  )
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] =
     (programVariables | definitions).rep.map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
-
-  /** `Description "text".` parsed. */
-  def description[_: P]: P[String] = P("Description" ~~/ blank ~ string ~ "." )
-
-  /** `Title "text".` parsed. */
-  def title[_: P]: P[String] = P("Title" ~~/ blank ~ string ~ "." )
-
-  /** `Link "text".` parsed. */
-  def link[_: P]: P[String] = P("Link" ~~/ blank ~ string ~ "." )
 
   /** `SharedDefinitions declOrDef End.` parsed. */
   def sharedDefinitions[_: P]: P[Declaration] = P(
@@ -168,7 +161,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     * `sort name(sort1 arg1, sorg2 arg2) = term;` function definition or
     * `Bool name(sort1 arg1, sorg2 arg2) <-> formula;` predicate definition or
     * `HP name ::= program;` program definition. */
-  def declOrDef[_: P](curDecls: Declaration): P[List[(Name, Signature)]] = P(
+  def declOrDef[_: P](curDecls: Declaration): P[List[(Name, Signature)]] = (
       implicitDef(curDecls) ~ ";"
     | progDef.map(p => p::Nil)
     | declPartList.flatMap(decls =>
@@ -201,7 +194,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** `name(sort1 arg1, sorg2 arg2)` declaration part.
    * Input sort is the (codomain) sort */
-  def declPart[_: P](ty: Sort) : P[(Name,Signature)] = P(
+  def declPart[_: P](ty: Sort) : P[(Name,Signature)] = (
     ident ~~ ("(" ~/ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")"./).?
   ).map({
     case (n, idx, argList) =>
@@ -213,7 +206,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   })
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
-  def declPartList[_: P]: P[List[(Name,Signature)]] = P(
+  def declPartList[_: P]: P[List[(Name,Signature)]] = (
     (sort ~~ blank ~/ Pass).flatMap(sort =>
       declPart(sort).rep(sep=","./).
         map(_.toList)
@@ -258,8 +251,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       implicitDefODE(curDecls)
     ))
 
-  def implicitDefODE[_: P](curDecls: Declaration): P[List[(Name,Signature)]] = P(
-    (declPartList ~ "'=" ~/ "{" ~ program ~ "}")
+  def implicitDefODE[_: P](curDecls: Declaration): P[List[(Name,Signature)]] = (
+    (declPartList ~ "=" ~/ "{" ~ program ~ "}")
       .map{case (sigs, preProg) =>
         if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
           throw ParseException("Implicit ODE declarations can only declare real-valued " +
@@ -302,7 +295,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    * restriction to ODE implicit defs
    */
   /*
-  def implicitDefInterp[_: P]: P[(Name,Signature)] = P(
+  def implicitDefInterp[_: P]: P[(Name,Signature)] = (
     (declPart ~ "=" ~ ident ~ "<->" ~ formula)
       .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, form) =>
         val formAfterSubstitutions = vars.zipWithIndex.foldLeft (
@@ -331,7 +324,6 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** `Problem  formula  End.` parsed. */
   def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )
 
-  //@todo tactic needs tactic parser or skip ahead to End. and ask BelleParser.
   def tacticProof[_: P]: P[(Option[String],BelleExpr)] = P( "Tactic" ~~ blank ~/ string.? ~ tactic ~ "End.")
 
 

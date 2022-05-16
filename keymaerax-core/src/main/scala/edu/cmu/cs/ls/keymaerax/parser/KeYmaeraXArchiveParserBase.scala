@@ -398,14 +398,8 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
         la match {
           case COMMA =>
             reduce(shift(st), 3, Bottom :+ ImplicitFuncFam(next :: fns) :+ Token(IDENT("Real")), r :+ defs :+ defsBlock)
-          case PRIME =>
-            shift(st)
-          case _ => throw ParseException("Unexpected token", st, Nil)
-        }
-      case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ ImplicitFuncFam(fns) :+ (next: FuncPredDef) :+ Token(PRIME, _) =>
-        la match {
           case EQ =>
-
+            shift(st)
             val (term: Either[Option[Program], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.programTokenParser)
             val preProg: Program = term match {
               case Left(Some(prog)) => prog
@@ -460,8 +454,10 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
               case _ => throw ParseException("Expected semicolon after implicit definition", st2,
                 Expected.ExpectTerminal(SEMI) :: Nil)
             }
-          case _ => throw ParseException("Unexpected token in function definition", st, Expected.ExpectTerminal(EQ) :: Nil)
+
+          case _ => throw ParseException("Unexpected token", st, Nil)
         }
+
       // End: Implicit ODE function definition
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(sort, _) if (isReal(sort) || isBool(sort) || isProgram(sort)) && la.isInstanceOf[IDENT] => shift(st)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isReal(sort) =>
