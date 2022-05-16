@@ -929,7 +929,7 @@ private[keymaerax] object PropositionalTactics extends Logging {
         (fml, ProvableSig.startPlainProof(Equiv(fml, fml))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0))
       }
     case f =>
-      assert(f match { case _: AtomicFormula => true case Not(f) => f.isInstanceOf[AtomicFormula] case _ => false})
+      assert(f match { case _: AtomicFormula => true case Not(_: AtomicFormula) => true case _ => false}, "Expected a (negated) atomic formula, but got: " + f.prettyString)
       (f, ProvableSig.startPlainProof(Equiv(f, f))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, f)))), 0))
   }
 
