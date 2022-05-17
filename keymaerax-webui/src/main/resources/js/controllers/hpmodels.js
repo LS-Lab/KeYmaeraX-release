@@ -637,7 +637,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     // trigger this function (checkModelData) through onBeforeSave in modeldialog.html. We address this by treating
     // $scope.origModel === undefined equivalent to $scope.origModel === $scope.model here, and by setting
     // $scope.origModel before $scope.model throughout this controller.
-    if ($scope.origModel !== undefined && (
+    if ($scope.origModel && (
         $scope.origModel.name !== $scope.model.name
         || $scope.origModel.title !== $scope.model.title
         || $scope.origModel.description !== $scope.model.description
@@ -771,7 +771,9 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   }
 
   $scope.cancel = function() {
-    $scope.model.keyFile = $scope.origModel.keyFile;
+    if ($scope.origModel) {
+      $scope.model.keyFile = $scope.origModel.keyFile;
+    }
     $uibModalInstance.close();
   };
 
