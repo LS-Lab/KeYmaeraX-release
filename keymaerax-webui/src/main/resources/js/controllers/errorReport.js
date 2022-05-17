@@ -58,12 +58,21 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
   var responseInterceptor = {
     loginPromise: null,
     response: function(response) {
-      if (response.data !== undefined && response.data !== null && response.data.type === 'error') {
+      if (response.data && (response.data.type === 'error' || response.data.type === 'uncaught')) {
         console.error(response.data.textStatus);
-        // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
-        return $q.reject(response);
-      } else if (response.data !== undefined && response.data !== null && response.data.type === 'uncaught') {
-        console.error(response.data.textStatus);
+        // report error
+        var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
+        $uibModal.open({
+          templateUrl: 'partials/error_alert.html',
+          controller: 'ErrorAlertCtrl',
+          size: 'lg',
+          resolve: {
+            url: function() { return response.config.url; },
+            message: function () { return response.data.textStatus; },
+            error: function () { return response.data; },
+            context: function () { return {}; }
+          }
+        });
         // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
         return $q.reject(response);
       }
