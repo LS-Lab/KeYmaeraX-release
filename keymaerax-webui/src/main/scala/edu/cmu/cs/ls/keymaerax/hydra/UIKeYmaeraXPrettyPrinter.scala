@@ -177,8 +177,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
         |  ng-click="formulaClick('$id', $$event)"
         |  ng-right-click="formulaRightClick('$id', $$event)"
         |  uib-popover-template="'templates/axiomPopoverTemplate.html'"
-        |  popover-is-open="tacticPopover.isOpen('$id')"
-        |  popover-trigger="'none'"
+        |  popover-trigger="'outsideClick'"
         |  popover-append-to-body="true"
         |  popover-placement="auto bottom"$HTML_CLOSE$content$HTML_OPEN/span$HTML_CLOSE""".stripMargin
 

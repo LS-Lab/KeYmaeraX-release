@@ -18,9 +18,8 @@
     <div class="col-sm-3 k4-sequent-antecedent">
         <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}"
              uib-popover-template="'templates/axiomPopoverTemplate.html'"
-             popover-is-open="tacticPopover.isOpen(f.id)"
              popover-class="k4-axiomtactic-popover"
-             popover-trigger="'none'"
+             popover-trigger="'outsideClick'"
              popover-append-to-body="true"
              popover-placement="auto bottom-left">
             <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">
@@ -124,9 +123,8 @@
     <div class="col-sm-8">
         <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.succ" id="{{f.id}}"
              uib-popover-template="'templates/axiomPopoverTemplate.html'"
-             popover-is-open="tacticPopover.isOpen(f.id)"
              popover-class="k4-axiomtactic-popover"
-             popover-trigger="'none'"
+             popover-trigger="'outsideClick'"
              popover-append-to-body="true"
              popover-placement="auto bottom-right">
             <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">

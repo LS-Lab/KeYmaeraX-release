@@ -146,16 +146,14 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.formulaAxiomsMap = {};
             scope.tacticPopover = {
               openFormulaId: undefined,
-              isOpen: function(formulaId) {
-                // open if formulaId is prefix of openFormulaId (prefix elements separated by ,)
-                return scope.tacticPopover.openFormulaId &&
-                  (scope.tacticPopover.openFormulaId.length == formulaId.length ||
-                   scope.tacticPopover.openFormulaId.charAt(formulaId.length) == ',') &&
-                  scope.tacticPopover.openFormulaId.startsWith(formulaId);
-              },
               open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
-              close: function() { scope.derivationInfos.infos = []; scope.tacticPopover.openFormulaId = undefined; }
+              close: function() {
+                  //@note manually dispatch the popover hide trigger
+                  document.getElementById(scope.tacticPopover.openFormulaId).dispatchEvent(new Event('outsideClick'));
+                  scope.derivationInfos.infos = [];
+                  scope.tacticPopover.openFormulaId = undefined;
+              }
             }
 
             scope.fetchFormulaAxioms = function(formulaId, axiomsHandler) {
@@ -206,6 +204,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.onExprRightClick = function(formulaId) {
               scope.fetchFormulaAxioms(formulaId, function() {
                 scope.tacticPopover.open(formulaId);
+                //@note dispatch popover trigger (click triggers outsideClick)
+                document.getElementById(formulaId).dispatchEvent(new Event('click'));
               });
             }
 
