@@ -93,7 +93,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
     BelleInterpreter.setInterpreter(interpreter(listeners))
     BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
       case BelleProvable(provable, _) =>
-        assert(entry.defs.exhaustiveSubst(provable.conclusion) == expectedSubstConclusion, "The proved conclusion must match the input model")
+        assert(entry.defs.exhaustiveSubst(provable.conclusion) == expectedSubstConclusion, "The proved expanded conclusion must match the input model")
         //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
         if (provable.isProved) {
           // check that database thinks so too
@@ -104,7 +104,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
             case None =>
               // delayed substitution: conclusion of input provable is not yet substituted, but conclusion of combined (proved) provable is
               assert(n.conclusion == expectedUnsubstConclusion, "The input conclusion of the root node must match the input model, but conclusion\n" + n.conclusion.prettyString + "\ndoes not match\n" + expectedUnsubstConclusion.prettyString)
-              assert(n.provable.conclusion == expectedSubstConclusion, "The proved conclusion of the root node must match the expanded input model, but conclusion\n" + n.provable.conclusion.prettyString + "\ndoes not match\n" + expectedSubstConclusion.prettyString)
+              assert(entry.defs.exhaustiveSubst(n.provable.conclusion) == expectedSubstConclusion, "The proved expanded conclusion of the root node must match the expanded input model, but conclusion\n" + n.provable.conclusion.prettyString + "\ndoes not match\n" + expectedSubstConclusion.prettyString)
             case Some(parent) =>
             //@todo throughout tactic records goal index and parent provables wrong
             //@todo delayed substitution
