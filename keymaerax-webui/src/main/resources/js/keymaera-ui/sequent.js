@@ -150,9 +150,11 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
               close: function() {
                   //@note manually dispatch the popover hide trigger
-                  document.getElementById(scope.tacticPopover.openFormulaId).dispatchEvent(new Event('outsideClick'));
-                  scope.derivationInfos.infos = [];
-                  scope.tacticPopover.openFormulaId = undefined;
+                  if (scope.tacticPopover.openFormulaId) {
+                      document.getElementById(scope.tacticPopover.openFormulaId).dispatchEvent(new Event('outsideClick'));
+                      scope.derivationInfos.infos = [];
+                      scope.tacticPopover.openFormulaId = undefined;
+                  }
               }
             }
 
