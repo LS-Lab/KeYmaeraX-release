@@ -617,7 +617,7 @@ private object DLBySubst {
   def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = inputanon (con(x, J, SaturateTactic(alphaRule))(_: Position))
   def con(v: Variable, variant: Formula, pre: BelleExpr): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
-    require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
+    require(sequent(pos.top) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||), but got " + sequent(pos.top).prettyString + "\nin " + sequent.prettyString)
 
     pre & (inputanon {(pp, seq) => {
       seq.sub(pp) match {

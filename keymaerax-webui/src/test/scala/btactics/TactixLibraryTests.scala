@@ -465,6 +465,10 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(s, unfoldProgramNormalize).subgoals.loneElement shouldBe "x>=0, x+1>=0, x>=-2 -> x<=2 -> x^2<=4 ==>".asSequent
   }
 
+  it should "not unfold diamond loops" in withQE { _ =>
+    proveBy("==> x>=0 -> <{x:=x+1;}*>x>=4".asSequent, unfoldProgramNormalize).subgoals.loneElement shouldBe "x>=0 ==> <{x:=x+1;}*>x>=4".asSequent
+  }
+
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout

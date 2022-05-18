@@ -157,6 +157,7 @@ object TactixLibrary extends HilbertCalculus
       case (f: Imply, true) => if (f.isPredicateFreeFOL) None else Some(PropositionalTactics.autoMPInfo)
       case (_: Or, true) => None
       case (_: Equiv, _) => None
+      case (Diamond(Loop(_), _), _) => None
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
