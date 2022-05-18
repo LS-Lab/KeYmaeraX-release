@@ -151,7 +151,9 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               close: function() {
                   //@note manually dispatch the popover hide trigger
                   if (scope.tacticPopover.openFormulaId) {
-                      document.getElementById(scope.tacticPopover.openFormulaId).dispatchEvent(new Event('outsideClick'));
+                      var i = scope.tacticPopover.openFormulaId.indexOf(',')
+                      var fid = i >= 0 ? scope.tacticPopover.openFormulaId.substring(0, i) : scope.tacticPopover.openFormulaId
+                      document.getElementById(fid).dispatchEvent(new Event('outsideClick'));
                       scope.derivationInfos.infos = [];
                       scope.tacticPopover.openFormulaId = undefined;
                   }
@@ -207,7 +209,9 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               scope.fetchFormulaAxioms(formulaId, function() {
                 scope.tacticPopover.open(formulaId);
                 //@note dispatch popover trigger (click triggers outsideClick)
-                document.getElementById(formulaId).dispatchEvent(new Event('click'));
+                var i = formulaId.indexOf(',')
+                var fid = i >= 0 ? formulaId.substring(0, i) : formulaId
+                document.getElementById(fid).dispatchEvent(new Event('click'));
               });
             }
 
