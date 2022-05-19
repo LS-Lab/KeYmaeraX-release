@@ -393,7 +393,7 @@ case class DefaultLoginResponse(triggerRegistration: Boolean) extends Response {
 }
 
 class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
-    extends ErrorResponse(msg, exn) {
+    extends ErrorResponse(msg, exn, severity = "tacticerror") {
   override def getJson: JsValue = exn match {
     case _: BelleUnexpectedProofStateError =>
       JsObject(super.getJson.asJsObject.fields ++ Map(

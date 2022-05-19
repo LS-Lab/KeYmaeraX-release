@@ -84,6 +84,8 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
         }
         // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
         return $q.reject(response);
+      } else if (response.data && response.data.type === 'tacticerror') {
+        return $q.reject(response);
       }
       return response;
     },
