@@ -19,7 +19,7 @@
         <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}"
              uib-popover-template="'templates/axiomPopoverTemplate.html'"
              popover-class="k4-axiomtactic-popover"
-             popover-trigger="'outsideClick'"
+             popover-trigger="'rightClick'"
              popover-append-to-body="true"
              popover-placement="auto bottom-left">
             <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">
@@ -124,7 +124,7 @@
         <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.succ" id="{{f.id}}"
              uib-popover-template="'templates/axiomPopoverTemplate.html'"
              popover-class="k4-axiomtactic-popover"
-             popover-trigger="'outsideClick'"
+             popover-trigger="'rightClick'"
              popover-append-to-body="true"
              popover-placement="auto bottom-right">
             <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">

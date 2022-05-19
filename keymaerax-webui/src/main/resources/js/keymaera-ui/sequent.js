@@ -1,6 +1,6 @@
 angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies', 'angularSpinners'])
-  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', 'sequentProofData', 'derivationInfos',
-      function($rootScope, $uibModal, $http, spinnerService, sequentProofData, derivationInfos) {
+  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', '$document', 'spinnerService', 'sequentProofData', 'derivationInfos',
+      function($rootScope, $uibModal, $http, $document, spinnerService, sequentProofData, derivationInfos) {
     return {
         restrict: 'AE',
         scope: {
@@ -154,6 +154,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                       var i = scope.tacticPopover.openFormulaId.indexOf(',')
                       var fid = i >= 0 ? scope.tacticPopover.openFormulaId.substring(0, i) : scope.tacticPopover.openFormulaId
                       document.getElementById(fid).dispatchEvent(new Event('outsideClick'));
+                      $document.off('click', scope.onDocumentClick);
                       scope.derivationInfos.infos = [];
                       scope.tacticPopover.openFormulaId = undefined;
                   }
@@ -206,13 +207,22 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.onExprRightClick = function(formulaId) {
+              scope.tacticPopover.close()
               scope.fetchFormulaAxioms(formulaId, function() {
                 scope.tacticPopover.open(formulaId);
-                //@note dispatch popover trigger (click triggers outsideClick)
+                //@note dispatch popover trigger on correct element and register document click to detect outsideClick
                 var i = formulaId.indexOf(',')
                 var fid = i >= 0 ? formulaId.substring(0, i) : formulaId
-                document.getElementById(fid).dispatchEvent(new Event('click'));
+                document.getElementById(fid).dispatchEvent(new Event('rightClick'));
+                $document.on('click', scope.onDocumentClick)
               });
+            }
+
+            scope.onDocumentClick = function(e) {
+                var popover = $document.find('body')[0].querySelector('.popover'); //@note the axiom popover is added to the body
+                if (!elem[0].contains(e.target) && !popover.contains(e.target)) {
+                    scope.tacticPopover.close()
+                }
             }
 
             scope.derivationInfos = {
