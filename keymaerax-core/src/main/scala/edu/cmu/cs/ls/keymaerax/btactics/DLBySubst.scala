@@ -777,13 +777,15 @@ private object DLBySubst {
   def discreteGhosts(trms: Set[Term], origSeq: Sequent,
                      cont: List[((Term, Variable), BelleExpr)] => BelleExpr): DependentPositionTactic = anon ((pos: Position) => {
     var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
-    val ghosts: List[((Term, Variable), BelleExpr)] = trms.map(old => {
+    val ghosts: List[((Term, Variable), BelleExpr)] = trms.zipWithIndex.map({ case (old, oi) =>
       val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
       freshOld = nextCandidate
       (old -> ghost,
         ghostPos match {
           case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-          case _ => discreteGhost(old, Some(ghost))(pos)
+          case _ =>
+            //@note discreteGhost does not yet keep positions stable, formula moves to last position in succedent after the first ghost
+            discreteGhost(old, Some(ghost))(if (oi > 0 && pos.isSucc) LastSucc(0, pos.inExpr) else Fixed(pos))
         })
     }).toList
     cont(ghosts)

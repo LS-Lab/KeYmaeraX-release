@@ -963,6 +963,13 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "a=1, z=0 ==> b=2, [x:=5+z;]x>z, c=3".asSequent
   }
 
+  it should "move formula reliably to end until positions are stable for a set of ghosts" in withTactics {
+    val s = "==> [{x'=a,y'=b,a'=c}]x>=0, P(x), Q(y)".asSequent
+    val result = proveBy(s, DLBySubst.discreteGhosts(Set("a".asVariable, "b".asVariable), s,
+      (g: List[((Term, Variable), BelleExpr)]) => g.map(_._2).reduceRight(_ & _))(1))
+    result.subgoals.loneElement shouldBe "a_0=a, b_0=b ==> P(x), Q(y), [{x'=a,y'=b_0,a'=c}]x>=0".asSequent
+  }
+
   it should "introduce differential symbol ghosts" in withTactics {
     proveBy("==> y=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1)).subgoals.
       loneElement shouldBe "==> [x':=1;]y=x'".asSequent

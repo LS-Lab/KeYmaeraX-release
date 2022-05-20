@@ -661,6 +661,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1) shouldBe "x>0 ==> y<0, z=0, [{x'=2}]x>0".asSequent
   }
 
+  it should "retain context for showing condition (2)" in withQE { _ =>
+    val result = proveBy("x>0 ==> [{x'=2,y'=3}]x>=0, y<0, z=0".asSequent, dC("x>=old(x) & y>=old(y)".asFormula)(1))
+    result.subgoals should contain theSameElementsInOrderAs List(
+      "x_0>0, x_0=x, y_0=y ==> y_0<0, z=0, [{x'=2,y'=3 & true & x>=x_0&y>=y_0}]x>=0".asSequent,
+      "x_0>0, x_0=x, y_0=y ==> y_0<0, z=0, [{x'=2,y'=3}](x>=x_0 & y>=y_0)".asSequent)
+  }
+
   it should "not branch formulas in context" in withQE { _ =>
     val result = proveBy("x>0->x>0 ==> y<0&z=1, [{x'=2}]x>=0, z=0".asSequent, dC("x>0".asFormula)(2))
     result.subgoals should have size 2
