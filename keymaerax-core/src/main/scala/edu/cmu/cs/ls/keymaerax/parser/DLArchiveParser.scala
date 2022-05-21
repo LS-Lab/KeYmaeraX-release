@@ -98,8 +98,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   //@todo add sharedDefinition to all entries
 
   /** Parse a single archive entry. */
-  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.
-    map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"}) ~~ blank ~
+  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( archiveStart ~~ blank ~
     (label ~ ":").? ~ string ~
     metaInfo ~
     allDeclarations ~
@@ -108,7 +107,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     metaInfo ~
     ("End.".!.map(s=>None) | "End" ~ label.map(s=>Some(s)) ~ ".")).map(
     {case (kind, label, name, meta, decl, prob, tac, moremeta, endlabel) =>
-      if (endlabel.isDefined && endlabel != label) throw ParseException("end label is optional but should be the same as the start label: " + label + " is not " + endlabel)
+      if (endlabel.isDefined && endlabel != label)
+        Fail.opaque("end label: " + endlabel +" is optional but should be the same as the start label: " + label)
       // definitions elaboration to replace arguments by dots and do type analysis
       ArchiveParser.elaborate(ParsedArchiveEntry(
         name = name,
@@ -123,6 +123,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
       ))}
   )
+
+  def archiveStart[_: P]: P[String] = P(("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.
+    map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"}))
 
   /** meta information */
   def metaInfo[_: P]: P[Map[String,String]] = P(

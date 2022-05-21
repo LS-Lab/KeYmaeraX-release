@@ -37,6 +37,10 @@ object DLParser extends DLParser {
   assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
   assert(OpSpec.negativeNumber, "This parser accepts negative number literals although it does not give precedence to them")
 
+  private def formatStack(input: ParserInput, stack: List[(String, Int)]) = {
+    stack.map{case (s, i) => s"$s at ${input.prettyIndex(i)}"}.mkString(" / ")
+  }
+
   /** Converts Parsed.Failure to corresponding ParseException to throw. */
   private[keymaerax] def parseException(f: Parsed.Failure): ParseException = {
     val tr: Parsed.TracedFailure = f.trace()
@@ -47,14 +51,16 @@ object DLParser extends DLParser {
     /*@note tr.msg is redundant compared to the following and could be safely elided for higher-level messages */
     /*@note tr.longMsg can be useful for debugging the parser */
     /*@note tr.longAggregateMsg */
+    println(tr.label, f.index)
+
     ParseException(tr.longAggregateMsg,
       location(f),
       found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
-      expect = Parsed.Failure.formatStack(tr.input, List(tr.label -> f.index)),
+      expect = formatStack(tr.input, List(tr.label -> f.index)),
       after = "" + tr.stack.headOption.getOrElse(""),
-      state = tr.longMsg,
-      //state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
-      hint = "Try " + tr.groupAggregateString).inInput(inputString, None)
+      // state = tr.longMsg,
+      // state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
+      hint = "Try: " + tr.groupAggregateString).inInput(inputString, None)
   }
 
   /** The location of a parse failure. */
@@ -414,7 +420,7 @@ class DLParser extends Parser {
     termOrBaseF.flatMap{
       case Left((_,form)) => Pass(form)
       case Right(Left(t)) =>
-        Fail.opaque("Expected formula, got term")
+        Fail.opaque("formula, but got term")
       case Right(Right(form)) => Pass(form)
     }
   )
