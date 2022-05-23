@@ -439,19 +439,24 @@ class DLParser extends Parser {
     /* predicate OR function */
     ( ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList ~ "'".!.?).
       map({case (s,idx,interp,ts,diff) =>
-        val (t,f) = (
-          FuncOf(OpSpec.func(s, idx, ts.sort, Real),ts),
-          PredOf(Function(s,idx,ts.sort,Bool,interp), ts)
-        )
-        val (dt,df) = diff match {
-          case None => (t,f)
-          case Some("'") => (Differential(t), DifferentialFormula(f))
-        }
         interp match {
           case Some(i) =>
+            val t = FuncOf(Function(s, idx, ts.sort, Real, Some(i)),ts)
+            val dt = diff match {
+              case None => t
+              case Some("'") => Differential(t)
+            }
             // Must be a term, since interpreted functions have real domain
             Right(Left(dt))
           case None =>
+            val (t,f) = (
+              FuncOf(OpSpec.func(s, idx, ts.sort, Real),ts),
+              PredOf(OpSpec.func(s, idx, ts.sort, Bool), ts)
+            )
+            val (dt,df) = diff match {
+              case None => (t,f)
+              case Some("'") => (Differential(t), DifferentialFormula(f))
+            }
             // Could be either term or formula
             Left((dt,df))
         }
