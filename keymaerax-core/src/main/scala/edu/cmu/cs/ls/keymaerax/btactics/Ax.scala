@@ -3816,7 +3816,7 @@ object Ax extends Logging {
 
   // Some extra versions of the dbx axioms for use in implementations
 
-  private val dbxEqArith = proveBy("f_() = 0 <-> f_()>=0 & -f_()>=0".asFormula,QE)
+  private lazy val dbxEqArith = proveBy("f_() = 0 <-> f_()>=0 & -f_()>=0".asFormula,QE)
   /**
     * {{{Axiom "DBX=".
     *   (e=0 -> [c&q(||)]e=0) <- [c&q(||)](e)'=g*e
@@ -3848,7 +3848,7 @@ object Ax extends Logging {
       )
     )
 
-  private val dbxLtArith = proveBy("f_() < 0 <-> -f_()>0".asFormula,QE)
+  private lazy val dbxLtArith = proveBy("f_() < 0 <-> -f_()>0".asFormula,QE)
   /**
     * {{{Axiom "DBX> open".
     *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e>0 -> (e)'>=g*e)
@@ -3875,7 +3875,7 @@ object Ax extends Logging {
       byUS(TactixLibrary.proveBy("e() < 0->f()<=g()*h() ==> -e()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
   )
 
-  private val dbxLeArith = proveBy("f_() <= 0 <-> -f_()>=0".asFormula,QE)
+  private lazy val dbxLeArith = proveBy("f_() <= 0 <-> -f_()>=0".asFormula,QE)
   /**
     * {{{Axiom "DBX<=".
     *   (e<=0 -> [c&q(||)]e<=0) <- [c&q(||)](e)'<=g*e
@@ -3902,7 +3902,7 @@ object Ax extends Logging {
       byUS(TactixLibrary.proveBy("f()<=g()*h() ==> -f()>=g()*(-h())".asSequent, QE & done))
   )
 
-  private val dbxNeArith = proveBy("f_() != 0 <-> f_()>0 | -f_()>0".asFormula,QE)
+  private lazy val dbxNeArith = proveBy("f_() != 0 <-> f_()>0 | -f_()>0".asFormula,QE)
   /**
     * {{{Axiom "DBX!= open".
     *   (e!=0 -> [c&q(||)]e!=0) <- [c&q(||)](e!=0 -> (e)'=g*e)
