@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.saturate
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -389,10 +390,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus.chase]]
     */
   @Tactic("()'", revealInternalSteps = false /* uninformative as useFor proof */)
-  lazy val derive: DependentPositionTactic = anon {(pos: Position, _: Sequent) =>
+  lazy val derive: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "derive")
+
     val chaseNegations = anon { (provable: ProvableSig, pos: Position) =>
-      val seq = provable.subgoals.head
-      seq.sub(pos) match {
+      ProofRuleTactics.requireOneSubgoal(provable, "derive.chaseNegations")
+      provable.subgoals.head.sub(pos) match {
         case Some(post: Formula) =>
           val notPositions = ListBuffer.empty[PosInExpr]
           ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
@@ -406,8 +409,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
       }
     }
 
-    SaturateTactic(chaseNegations(pos) & deepChase(pos)) & anon { (seq: Sequent) => {
-      seq.sub(pos) match {
+    val deriveVars = anon { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "derive.deriveVars")
+      provable.subgoals.head.sub(pos) match {
         case Some(e: Expression) =>
           val dvarPositions = ListBuffer.empty[PosInExpr]
           ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
@@ -416,11 +420,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
               case _ => Left(None)
             }
           }, e)
-          dvarPositions.map(p => DifferentialTactics.Dvariable(pos ++ p)).
-            reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-        case _ => skip
+          dvarPositions.foldLeft(provable)({ case (pr, p) => pr(DifferentialTactics.Dvariable(pos ++ p), 0) })
+        case _ => provable
       }
-    }}
+    }
+
+    pr(saturate(chaseNegations(pos) andThen deepChase(pos)), 0)(deriveVars(pos), 0)
   }
 
   //
