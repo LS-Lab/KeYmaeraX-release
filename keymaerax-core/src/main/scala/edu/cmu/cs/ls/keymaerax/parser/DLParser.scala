@@ -10,6 +10,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.DLParser.ambiguousBaseF
 import fastparse._
 
 import scala.collection.immutable._
@@ -53,7 +54,7 @@ object DLParser extends DLParser {
     /*@note tr.longAggregateMsg */
     println(tr.label, f.index)
 
-    ParseException(tr.longAggregateMsg,
+    ParseException(tr.msg,
       location(f),
       found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
       expect = formatStack(tr.input, List(tr.label -> f.index)),
@@ -294,52 +295,40 @@ class DLParser extends Parser {
    * If the leftmost character is ( it is interpreted as a term parenthesis,
    * and a cut is made. Should only be used in contexts where the first
    * character must be a part of a term. */
-  def term[_: P]: P[Term] = P(signed(summand).flatMap(termRight))
-
-  def termRight[_: P](left: Term): P[Term] = {
+  def term[_: P]: P[Term] = P(
+    signed(summand) ~
     // Note: the summand is signed, rather than the first multiplicand
     // in `summand`, because -5*6 is parsed as -(5*6)
-    (("+" | "-" ~ !">").!./ ~ signed(summand)).rep.map(sums =>
-      sums.foldLeft(left) {
-        case (m1, ("+", m2)) => Plus(m1, m2)
-        case (m1, ("-", m2)) => Minus(m1, m2)
-        case _ => throw new IllegalStateException()
-      }
-    )
+    (("+" | "-" ~ !">").!./ ~ signed(summand)).rep
+  ).map { case (left, sums) =>
+    sums.foldLeft(left) {
+      case (m1, ("+", m2)) => Plus(m1, m2)
+      case (m1, ("-", m2)) => Minus(m1, m2)
+    }
   }
 
-  def summand[_: P]: P[Term] = multiplicand.flatMap(summRight)
-
-  def summRight[_: P](left: Term): P[Term] =
+  def summand[_: P]: P[Term] =
     // Lookahead is to avoid /* */ comments
-    (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand)).rep.map(mults =>
-      mults.foldLeft(left) {
-        case (m1, ("*", m2)) => Times(m1, m2)
-        case (m1, ("/", m2)) => Divide(m1, m2)
-        case _ => throw new IllegalStateException()
+    (multiplicand ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand)).rep).
+      map { case (left, mults) =>
+        mults.foldLeft(left) {
+          case (m1, ("*", m2)) => Times(m1, m2)
+          case (m1, ("/", m2)) => Divide(m1, m2)
+        }
       }
-    )
 
-  def multiplicand[_: P]: P[Term] = baseTerm.flatMap(multRight)
+  def multiplicand[_: P]: P[Term] =
+    (baseTerm ~ ("^"./ ~ signed(baseTerm)).rep).map{ case (left, pows) =>
+      (left +: pows).reduceRight(Power)
+    }
 
-  def multRight[_: P](left: Term): P[Term] =
-    ("^"./ ~ signed(baseTerm)).rep.map(pows => (left +: pows).reduceRight(Power))
-
-  def baseTerm[_: P]: P[Term] = (
+  def baseTerm[_: P]: P[Term] = P(
       number./ | dot./ | function.flatMap(diff) | unitFunctional.flatMap(diff) | variable
       /* termList has a cut after (, but this is safe, because we
        * require that if the first available character is ( it is
        * unambiguously a term parenthesis */
       | termList.flatMap(diff)
   )
-
-  def termParenRight[_: P](left: Term): P[Term] =
-    ")".!.map(_ => left).flatMap(diff)
-
-  /** Given a base term, builds up to a full term, consuming as much
-   * input as possible */
-  def extendBaseTerm[_: P](left: Term): P[Term] =
-    multRight(left).flatMap(summRight).flatMap(termRight)
 
   def function[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
     FuncOf(
@@ -377,192 +366,72 @@ class DLParser extends Parser {
   def formula[_: P] = P(biimplication)
 
   /* <-> (lowest prec, non-assoc) */
-  def biimplication[_: P]: P[Formula] = backImplication.flatMap(biimpRight)
-  def biimpRight[_: P](left: Formula): P[Formula] =
-    ("<->" ~/ backImplication).?.
-      map{ case None => left case Some(r) => Equiv(left,r) }
+  def biimplication[_: P]: P[Formula] =
+    (backImplication ~ ("<->" ~/ backImplication).?).
+      map{ case (left,None) => left case (left,Some(r)) => Equiv(left,r) }
 
   /* <- (left-assoc) */
-  def backImplication[_: P]: P[Formula] = implication.flatMap(backImpRight)
-  def backImpRight[_: P](left: Formula): P[Formula] =
-    ("<-" ~ !">" ~/ implication).rep.map(hyps =>
-      hyps.foldLeft(left){case (acc,hyp) => Imply(hyp,acc)}
-    )
+  def backImplication[_: P]: P[Formula] =
+    (implication ~ ("<-" ~ !">" ~/ implication).rep).
+      map{ case (left, hyps) =>
+        hyps.foldLeft(left){case (acc,hyp) => Imply(hyp,acc)} }
 
   /* -> (right-assoc) */
-  def implication[_: P]: P[Formula] = disjunct.flatMap(impRight)
-  def impRight[_: P](left: Formula): P[Formula] =
-    ("->" ~/ disjunct).rep.map(concls =>
-      (left +: concls).reduceRight(Imply)
-    )
+  def implication[_: P]: P[Formula] =
+    (disjunct ~ ("->" ~/ disjunct).rep).
+      map{ case (left, concls) => (left +: concls).reduceRight(Imply) }
 
   /* | (right-assoc) */
-  def disjunct[_: P]: P[Formula] = conjunct.flatMap(disjRight)
-  def disjRight[_: P](left: Formula): P[Formula] =
-    ("|" ~/ conjunct).rep.map(conjs =>
-      (left +: conjs).reduceRight(Or)
-    )
+  def disjunct[_: P]: P[Formula] =
+    (conjunct ~ ("|" ~/ conjunct).rep).
+      map{ case (left, conjs) => (left +: conjs).reduceRight(Or) }
 
   /* & (right-assoc) */
-  def conjunct[_: P]: P[Formula] = baseF.flatMap(conjRight)
-  def conjRight[_: P](left: Formula): P[Formula] =
-    ("&" ~/ baseF).rep.map(forms =>
-      (left +: forms).reduceRight(And)
-    )
+  def conjunct[_: P]: P[Formula] =
+    (baseF ~ ("&" ~/ baseF).rep).
+      map{ case (left, forms) => (left +: forms).reduceRight(And) }
 
-  def extendBaseFormula[_: P](left: Formula): P[Formula] =
-    conjRight(left).flatMap(disjRight).flatMap(impRight).flatMap(backImpRight).flatMap(biimpRight)
+  /** Base formulas */
+  def baseF[_: P]: P[Formula] =
+    unambiguousBaseF |
+      &(recAmbiguousBaseF)./ ~ (
+        &(recAmbiguousBaseF ~ ("+" | "-" ~ !">" | "*" | "/" ~~ !"*" | "^" | comparator))./ ~~ comparison |
+        recAmbiguousBaseF
+        ) |
+      NoCut(comparison) |
+      ambiguousBaseF(formula)
 
-  /** Base formulas. Most work done in `termOrBaseF`.
-   * `termOrBaseF` consumes as much input as possible, so if
-   * we get a term out then it can't work as a formula. */
-  def baseF[_: P]: P[Formula] = (
-    termOrBaseF.flatMap{
-      case Left((_,form)) => Pass(form)
-      case Right(Left(t)) =>
-        Fail.opaque("formula, but got term")
-      case Right(Right(form)) => Pass(form)
+  def recAmbiguousBaseF[_: P]: P[Formula] = ambiguousBaseF(recAmbiguousBaseF)
+
+  def ambiguousBaseF[_: P](rec: => P[Formula]): P[Formula] = (
+    /* predicate OR function */
+    ( ident ~~ termList ~ "'".!.? ).map {
+      case (name, idx, args, diff) =>
+        val p = PredOf(Function(name, idx, args.sort, Bool), args)
+        diff match {
+          case None => p
+          case Some("'") => DifferentialFormula(p)
+        }
+    }
+    /* unit predicational OR unit functional */
+    |  ( ident ~~ space ~ "'".!.?).flatMap {
+      case (name, idx, args, diff) =>
+        if (idx.isDefined)
+          Fail.opaque("Unit predicationals cannot have indices")
+        else {
+          val p = UnitPredicational(name, args)
+          Pass(diff match {
+            case None => p
+            case Some("'") => DifferentialFormula(p)
+          })
+        }
+    }
+    /* parenthesized formula OR term */
+    | ("(" ~ rec ~ ")" ~ "'".!.?).map {
+      case (form,None) => form
+      case (form,Some("'")) => DifferentialFormula(form)
     }
   )
-
-  /* Returns
-  * 1. both a term and a formula, if the consumed input can be interpreted as either
-  * 2. only a term, if the consumed input can only be a term
-  * 3. only a formula, if the consumed input can only be a formula
-  *
-  * NOTE: Terms MUST BE fully extended, but formulas MUST BE base formulas (CANNOT be extended).
-  * Differential formulas f()', f(||)', and (f)' are considered base formulas.
-  */
-  def termOrBaseF[_: P]: P[Either[(Term, Formula), Either[Term,Formula]]] = (
-    unambiguousBaseF.map(f => Right(Right(f))) |
-
-    /* predicate OR function */
-    ( ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList ~ "'".!.?).
-      map({case (s,idx,interp,ts,diff) =>
-        interp match {
-          case Some(i) =>
-            val t = FuncOf(Function(s, idx, ts.sort, Real, Some(i)),ts)
-            val dt = diff match {
-              case None => t
-              case Some("'") => Differential(t)
-            }
-            // Must be a term, since interpreted functions have real domain
-            Right(Left(dt))
-          case None =>
-            val (t,f) = (
-              FuncOf(OpSpec.func(s, idx, ts.sort, Real),ts),
-              PredOf(OpSpec.func(s, idx, ts.sort, Bool), ts)
-            )
-            val (dt,df) = diff match {
-              case None => (t,f)
-              case Some("'") => (Differential(t), DifferentialFormula(f))
-            }
-            // Could be either term or formula
-            Left((dt,df))
-        }
-      }) |
-
-    /* unit predicational OR unit functional */
-    ( ident ~~ space ~ "'".!.?).flatMap({
-      case (_, Some(_), _, _) =>
-        Fail.opaque("Indices are not yet allowed in predicational/functional names")
-      case (name, None, space, diff) =>
-        // Could be either term or formula
-        val (t,f) = (
-          UnitFunctional(name, space, sort=Real),
-          UnitPredicational(name, space)
-        )
-        Pass(Left(diff match {
-          case None => (t,f)
-          case Some("'") => (Differential(t), DifferentialFormula(f))
-        }))
-    }) |
-
-    /* Parenthesized term OR formula */
-    /* TODO: support parsing (x,(y,z)) in this context?
-    Currently the only way to get a formula out of a term is via
-    a comparison, and comparisons only occur on Reals, but if this
-    changes then the parsing here will need to change.
-    */
-    "(" ~/ termOrBaseF.
-      /* Since parens contain full terms/formulas (not just base ones)
-       * we should extend formulas where possible */
-      flatMap({
-        case Left((t,f)) =>
-          /* Note if we can (strictly) extend the formula, then the
-           * consumed input must have been a formula because there is
-           * no overloaded syntax between composite formulas & terms */
-          (Index ~~ extendBaseFormula(f) ~~ Index).map {
-            case (startIdx, f_, endIdx) =>
-              if (startIdx < endIdx)
-                Right(Right(f_))
-              else
-                Left((t, f))
-          }
-        case Right(Right(f)) =>
-          // Extend formula
-          extendBaseFormula(f).
-            map(f => Right(Right(f)))
-        case Right(Left(t)) =>
-          // Term already extended
-          Pass(Right(Left(t)))
-      }).
-      // Then we find the matching right parenthesis
-      flatMap{
-        case Left((a,b)) =>
-          /* Note this doesn't disambiguate term/formula so
-           * both remain a possibility */
-          (")" ~ "'".!.?).map {
-            case Some("'") =>
-              Left((Differential(a), DifferentialFormula(b)))
-            case None =>
-              Left((a, b))
-          }
-
-        case Right(Left(term)) =>
-          // Try closing paren as a term paren
-          termParenRight(term).
-            map(t => Right(Left(t)))
-
-        case Right(Right(form)) =>
-          // Try closing paren as a formula paren
-          formulaParenRight(form).
-            map(f => Right(Right(f)))
-      } |
-
-    /* Just a plain old term */
-    term.map(t => Right(Left(t)))
-  ).
-  // Now we ensure the terms are fully extended
-  flatMap{
-    case Left((t,f)) =>
-      /* Note if we can (strictly) extend a term, then the
-       * consumed input must have been a term */
-      (Index ~~ extendBaseTerm(t) ~~ Index).map {
-        case (startIdx, t_, endIdx) =>
-          if (startIdx < endIdx)
-            Right(Left(t_))
-          else
-            Left((t, f))
-      }
-    case Right(Left(t)) =>
-      // Try extending term
-      extendBaseTerm(t).
-        map(t => Right(Left(t)))
-    case Right(Right(f)) =>
-      // Formulas remain unextended
-      Pass(Right(Right(f)))
-  }.
-  // Now we try turning terms into comparisons
-  flatMap{
-    case parsed @ Left((t,_)) =>
-      comparison(t).map(f => Right(Right(f))) |
-        Pass(parsed)
-    case parsed @ Right(Left(t)) =>
-      comparison(t).map(f => Right(Right(f))) |
-        Pass(parsed)
-    case parsed => Pass(parsed)
-  }
 
   def unambiguousBaseF[_: P]: P[Formula] =
     /* atomic formulas, constant T/F, quantifiers, modalities */
@@ -580,24 +449,19 @@ class DLParser extends Parser {
     ("!" ~/ baseF ).map(f => Not(f)) |
     predicational
 
-  /** Parses a right formula parenthesis given the pair's contents  */
-  def formulaParenRight[_: P](left: Formula): P[Formula] =
-    (")" ~ "'".!.?).map {
-      case None => left
-      case Some("'") => DifferentialFormula(left)
-    }
-
   /** Parses a comparison, given the left-hand term */
-  def comparison[_: P](left: Term): P[Formula] = P(
-    (("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~~ !"-").! ~/ term).map {
-      case ("=", right) => Equal(left, right)
-      case ("!=", right) => NotEqual(left, right)
-      case (">=", right) => GreaterEqual(left, right)
-      case (">", right) => Greater(left, right)
-      case ("<=", right) => LessEqual(left, right)
-      case ("<", right) => Less(left, right)
+  def comparison[_: P]: P[Formula] = P(
+    (term ~ comparator.! ~/ term).map {
+      case (left, "=", right) => Equal(left, right)
+      case (left, "!=", right) => NotEqual(left, right)
+      case (left, ">=", right) => GreaterEqual(left, right)
+      case (left, ">", right) => Greater(left, right)
+      case (left, "<=", right) => LessEqual(left, right)
+      case (left, "<", right) => Less(left, right)
     }
   )
+
+  def comparator[_: P]: P[Unit] = ("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~~ !"-")
 
   /** Unit predicationals c(||) */
   def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
