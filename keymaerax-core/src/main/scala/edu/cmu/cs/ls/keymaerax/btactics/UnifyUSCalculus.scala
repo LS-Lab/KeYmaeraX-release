@@ -2255,7 +2255,14 @@ trait UnifyUSCalculus {
   /** Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
     * exhaustively. */
   @Tactic(longDisplayName = "Deep Decompose")
-  val deepChase: DependentPositionTactic = anon {(pos:Position) => (TactixLibrary.expandAllDefs(Nil) & must(chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos))) | nil}
+  val deepChase: BuiltInPositionTactic = anon { (pr: ProvableSig, pos:Position) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "deepChase")
+    val expanded = pr(TactixLibrary.expandAllDefsFw(Nil), 0)
+    val chased = expanded(chase(3, 3, AxIndex.verboseAxiomsFor(_: Expression))(pos), 0)
+    if (chased != expanded) chased
+    else pr
+  }
+
   private[btactics] val deepChaseInfo: TacticInfo = TacticInfo("deepChase")
 
   /** Chase with bounded breadth and giveUp to stop.
