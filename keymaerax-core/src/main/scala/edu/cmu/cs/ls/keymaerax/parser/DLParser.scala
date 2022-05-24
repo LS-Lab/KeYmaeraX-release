@@ -46,10 +46,14 @@ object DLParser extends DLParser {
       case _ => tr.input + ""
     }
 
+    def formatStack(input: ParserInput, stack: List[(String, Int)]) = {
+      stack.map{case (s, i) => s"$s at ${input.prettyIndex(i)}"}.mkString(" / ")
+    }
+
     ParseException(tr.msg,
       location(f),
       found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
-      expect = tr.groupAggregateString,
+      expect = formatStack(tr.input, tr.stack),
       after = "" + tr.stack.headOption.getOrElse(""),
       // state = tr.longMsg,
       // state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
@@ -389,7 +393,7 @@ class DLParser extends Parser {
       map{ case (left, forms) => (left +: forms).reduceRight(And) }
 
   /** Base formulas */
-  def baseF[_: P]: P[Formula] = P(
+  def baseF[_: P]: P[Formula] = (
     unambiguousBaseF |
       // Cut is safe -- we handle all viable cases here
       &(recAmbiguousBaseF)./ ~ (
@@ -485,26 +489,26 @@ class DLParser extends Parser {
       case (s,Some(i),_) => Fail.opaque("System symbols cannot have an index: " + s + "_" + i)
     })
 
-  def assign[_: P]: P[AtomicProgram] = P(
+  def assign[_: P]: P[AtomicProgram] = (
     (variable ~ ":="./).flatMap(x =>
       "*".!.map(_ => AssignAny(x))
         | term.map(t => Assign(x,t))
     ) ~ ";"
   )
-  def test[_: P]: P[Test] = P( "?" ~/ formula ~ ";").map(f => Test(f))
-  def braceP[_: P]: P[Program] = P( "{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).
+  def test[_: P]: P[Test] = ( "?" ~/ formula ~ ";").map(f => Test(f))
+  def braceP[_: P]: P[Program] = ( "{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).
     map({
       case (p,None) => p
       case (p,Some(("*",None))) => Loop(p)
       case (p,Some(("*",Some(inv)))) => reportAnnotation(Loop(p),inv); Loop(p)
       case (p,Some(("×", _))) => Dual(Loop(Dual(p)))
     })
-  def odeprogram[_: P]: P[ODESystem] = P( diffProgram ~ ("&" ~/ formula).?).
+  def odeprogram[_: P]: P[ODESystem] = ( diffProgram ~ ("&" ~/ formula).?).
     map({case (p,f) => ODESystem(p,f.getOrElse(True))})
-  def odesystem[_: P]: P[ODESystem] = P( "{" ~ odeprogram ~ "}" ~/ annotation.?).
+  def odesystem[_: P]: P[ODESystem] = ( "{" ~ odeprogram ~ "}" ~/ annotation.?).
     map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
 
-  def baseP[_: P]: P[Program] = P(
+  def baseP[_: P]: P[Program] = (
     systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP
   )
 
@@ -517,10 +521,10 @@ class DLParser extends Parser {
   /** Parses an annotation */
   def annotation[_: P]: P[Formula] = "@invariant" ~/ "(" ~/ formula ~ ")"
 
-  def sequence[_: P]: P[Program] = P( (dual ~/ ";".?).rep(1) ).
+  def sequence[_: P]: P[Program] = ( (dual ~/ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
 
-  def choice[_: P]: P[Program] = P(
+  def choice[_: P]: P[Program] = (
     sequence ~/ (("++"./ | "∪"./ | "--" | "∩"./).! ~ sequence).rep
   ).map({ case (p, ps) =>
       ((None, p) +: ps.map{case (s,p) => (Some(s),p)}).reduceRight[(Option[String], Program)] {
@@ -530,7 +534,7 @@ class DLParser extends Parser {
     })
 
   //@note macro-expands
-  def ifthen[_: P]: P[Program] = P( "if" ~/ "(" ~/ formula ~ ")" ~ braceP ~ ("else" ~/ braceP).? ).
+  def ifthen[_: P]: P[Program] = ( "if" ~/ "(" ~/ formula ~ ")" ~ braceP ~ ("else" ~/ braceP).? ).
     map({case (f, p, None) => Choice(Compose(Test(f),p), Test(Not(f)))
          case (f, p, Some(q)) => Choice(Compose(Test(f),p), Compose(Test(Not(f)),q))})
 
@@ -548,13 +552,13 @@ class DLParser extends Parser {
       case (s, None, None)     => Pass(DifferentialProgramConst(s))
       case (s, None, Some(sp)) => Pass(DifferentialProgramConst(s,sp))
       case (s, Some(i), _)     => Fail.opaque("Differential program symbols cannot have an index: " + s + "_" + i)})
-  def atomicDP[_: P]: P[AtomicDifferentialProgram] = P( ode | diffProgramSymbol )
+  def atomicDP[_: P]: P[AtomicDifferentialProgram] = ( ode | diffProgramSymbol )
 
   /** {|x1,x2,x3|} parses a space declaration */
   def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
     map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
 
-  def diffProduct[_: P]: P[DifferentialProgram] = P( atomicDP ~ ("," ~/ atomicDP).rep ).
+  def diffProduct[_: P]: P[DifferentialProgram] = ( atomicDP ~ ("," ~/ atomicDP).rep ).
     map({case (p, ps) => (ps.+:(p)).reduceRight(DifferentialProduct.apply)})
 
   /** diffProgram: Parses a dL differential program. */
