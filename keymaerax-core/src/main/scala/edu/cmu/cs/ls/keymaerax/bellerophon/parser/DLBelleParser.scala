@@ -11,11 +11,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, Name, ParseException, Parser}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
-import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
+import edu.cmu.cs.ls.keymaerax.parser.DLParser.{fullExpression, parseException}
 
 import scala.collection.immutable._
 
@@ -59,41 +59,54 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
   def searchLocator[_: P]: P[PositionLocator] = P(
-    "'Llast".!.map(_ => LastAnte(0))
-      | "'L".!.map(_ => Find.FindL(0, None, HereP, exact=true, defs))
-      | "'Rlast".!.map(_ => LastSucc(0))
-      | "'R".!.map(_ => Find.FindR(0, None, HereP, exact=true, defs))
+    "'Llast".!./.map(_ => LastAnte(0))
+      | "'Rlast".!./.map(_ => LastSucc(0))
+      | (("'L" | "'R").!./ ~ (("==" | "~=").!./ ~ escapedExpr).?).map({
+        case ("'L",None) =>
+          Find.FindL(0, None, HereP, exact = true, defs)
+        case ("'R",None) =>
+          Find.FindR(0, None, HereP, exact = true, defs)
+        case ("'L",Some(("==",expr))) =>
+          Find.FindL(0, Some(expr), HereP, exact = true, defs)
+        case ("'R",Some(("==",expr))) =>
+          Find.FindR(0, Some(expr), HereP, exact = true, defs)
+        case ("'L",Some(("~=",expr))) =>
+          Find.FindL(0, Some(expr), HereP, exact = false, defs)
+        case ("'R",Some(("~=",expr))) =>
+          Find.FindR(0, Some(expr), HereP, exact = false, defs)
+      })
   )
+
   def locator[_: P]: P[PositionLocator] = P( position.map(pos => Fixed(pos)) | searchLocator )
   def argument[_: P]: P[Expression] = P("\"" ~~ expression ~~ "\"")
 
-  def tacticSymbol[_: P]: P[String] = P( ident ).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
-  def atomicTactic[_: P]: P[BelleExpr] = P( tacticSymbol ~ !"(").map(t => tacticProvider(t, Nil, defs))
+  def tacticSymbol[_: P]: P[String] = P(ident).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
+  def atomicTactic[_: P]: P[BelleExpr] = ( tacticSymbol ~ !"(").map(t => tacticProvider(t, Nil, defs))
   //@note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
-  def at[_: P]: P[BelleExpr] = P( tacticSymbol ~~ "("
-    ~ (argument.map(arg => Left(Seq(arg))::Nil) | locator.map(j => Right(j)::Nil)).rep(min = 1, sep = ","./)
+  def at[_: P]: P[BelleExpr] = ( tacticSymbol ~~ "("
+    ~/ (argument.map(arg => Left(Seq(arg))::Nil) | locator.map(j => Right(j)::Nil)).rep(min = 1, sep = ","./)
     ~ ")" ).
     map({case (t,args) => tacticProvider(t, args.flatten.toList, defs)})
-  def namedCombinator[_: P]: P[BelleExpr] = P( ("doall".!) ~~/ "(" ~ tactic ~ ")" ).
+  def namedCombinator[_: P]: P[BelleExpr] = ( ("doall".!) ~~/ "(" ~ tactic ~ ")" ).
     map({case ("doall", t) => OnAll(t)})
-  def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )
-  def baseTac[_: P]: P[BelleExpr] = P(
+  def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )("(tactic)", implicitly)
+  def baseTac[_: P]: P[BelleExpr] = (
     (namedCombinator | atomicTactic | at | branchTac | parenTac)
       ~~ ("*" ~ integer | "*".! ~ !CharIn("0-9")).?
   ).map({case (t,None) => t case (t,Some(n:Integer)) => RepeatTactic(t,n) case (t,Some("*")) => SaturateTactic(t)})
 
-  def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ seqTac.rep(min=1,sep=","./) ~ ")").
+  def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ seqTac.rep(min=1,sep=","./) ~ ")")("<(tactic,tactic,...)",implicitly).
     map(BranchTactic)
 
   def repeatTac[_: P]: P[BelleExpr] = P(
     (parenTac ~ "*" ~ integer).map(pn=>RepeatTactic(pn._1,pn._2))
     | (parenTac ~ "*" ~ !CharIn("0-9")).map(SaturateTactic)
-  )
+  )("tactic*",implicitly)
 
-  def seqTac[_: P]: P[BelleExpr] = P( baseTac.rep(min=1,sep=CharIn(";&")./) ).
+  def seqTac[_: P]: P[BelleExpr] = P( baseTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
     map(SeqTactic.apply)
 
-  def eitherTac[_: P]: P[BelleExpr] = P( seqTac.rep(min=1,sep="|"./) ).
+  def eitherTac[_: P]: P[BelleExpr] = P( seqTac.rep(min=1,sep="|"./) )("tactic|tactic",implicitly).
     map(EitherTactic.apply)
 
 //  //@note macro-expands
@@ -108,6 +121,17 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   // externals
   //@todo or just import if no dynamic forwarding needed
+
+  def escapedExpr[_: P]: P[Expression] = P(string)./.
+    map(str => str.replaceAllLiterally("\\\"","\"")).
+    flatMap(str => {
+      //todo: make this not hacky -- starts a new parse every time an escaped expression is encountered
+      val parsed = fastparse.parse(str, fullExpression(_))
+      parsed match {
+        case Parsed.Success(value, _) => Pass(value)
+        case failure: Parsed.Failure => Fail.opaque(failure.msg)
+      }
+    })
 
   /** Explicit nonempty whitespace terminal from [[expParser]]. */
   def blank[_:P]: P[Unit] = expParser.blank
