@@ -98,30 +98,33 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   //@todo add sharedDefinition to all entries
 
   /** Parse a single archive entry. */
-  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( archiveStart ~~ blank ~
+  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( archiveStart ~~/ blank ~
     (label ~ ":").? ~ string ~
     metaInfo ~
     allDeclarations ~
     problem ~
     tacticProof.? ~
     metaInfo ~
-    ("End.".!.map(s=>None) | "End" ~ label.map(s=>Some(s)) ~ ".")).map(
+    ("End" ~ label.? ~ ".")
+  ).flatMap(
     {case (kind, label, name, meta, decl, prob, tac, moremeta, endlabel) =>
       if (endlabel.isDefined && endlabel != label)
         Fail.opaque("end label: " + endlabel +" is optional but should be the same as the start label: " + label)
-      // definitions elaboration to replace arguments by dots and do type analysis
-      ArchiveParser.elaborate(ParsedArchiveEntry(
-        name = name,
-        kind = kind,
-        fileContent = "???",
-        problemContent = "???",
-        defs = decl,
-        model = prob,
-        tactics = if (tac.isEmpty) Nil else List((tac.get._1.getOrElse("<undefined>"),"<source???>",tac.get._2)),
-        annotations = Nil, //@todo fill annotations
-        //@todo check that there are no contradictory facts in the meta and moremeta
-        info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
-      ))}
+      else Pass(
+        // definitions elaboration to replace arguments by dots and do type analysis
+        ArchiveParser.elaborate(ParsedArchiveEntry(
+          name = name,
+          kind = kind,
+          fileContent = "???",
+          problemContent = "???",
+          defs = decl,
+          model = prob,
+          tactics = if (tac.isEmpty) Nil else List((tac.get._1.getOrElse("<undefined>"),"<source???>",tac.get._2)),
+          annotations = Nil, //@todo fill annotations
+          //@todo check that there are no contradictory facts in the meta and moremeta
+          info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
+        ))
+      )}
   )
 
   def archiveStart[_: P]: P[String] = P(("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.

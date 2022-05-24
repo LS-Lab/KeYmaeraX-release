@@ -38,10 +38,6 @@ object DLParser extends DLParser {
   assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
   assert(OpSpec.negativeNumber, "This parser accepts negative number literals although it does not give precedence to them")
 
-  private def formatStack(input: ParserInput, stack: List[(String, Int)]) = {
-    stack.map{case (s, i) => s"$s at ${input.prettyIndex(i)}"}.mkString(" / ")
-  }
-
   /** Converts Parsed.Failure to corresponding ParseException to throw. */
   private[keymaerax] def parseException(f: Parsed.Failure): ParseException = {
     val tr: Parsed.TracedFailure = f.trace()
@@ -49,19 +45,15 @@ object DLParser extends DLParser {
       case IndexedParserInput(input) => input
       case _ => tr.input + ""
     }
-    /*@note tr.msg is redundant compared to the following and could be safely elided for higher-level messages */
-    /*@note tr.longMsg can be useful for debugging the parser */
-    /*@note tr.longAggregateMsg */
-    println(tr.label, f.index)
 
     ParseException(tr.msg,
       location(f),
       found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
-      expect = formatStack(tr.input, List(tr.label -> f.index)),
+      expect = tr.groupAggregateString,
       after = "" + tr.stack.headOption.getOrElse(""),
       // state = tr.longMsg,
       // state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
-      hint = "Try: " + tr.groupAggregateString).inInput(inputString, None)
+      hint = "Try " + tr.terminalAggregateString).inInput(inputString, None)
   }
 
   /** The location of a parse failure. */
@@ -223,7 +215,8 @@ class DLParser extends Parser {
   /** parse a number literal */
   def number[_: P]: P[Number] = P(
     ("-".? ~~ CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
-  ).map(s => Number(BigDecimal(s)))
+  ).map(s => Number(BigDecimal(s))).
+    opaque("constant")
 
   /** matches keywords. An identifier cannot be a keyword. */
   def keywords: Set[String] = Set(
@@ -240,10 +233,14 @@ class DLParser extends Parser {
     * @note Keywords are not allowed as identifiers. */
   def ident[_: P]: P[(String,Option[Int])] = P(
     (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX).!.
-      filter(!keywords.contains(_)) ~~
+      flatMapX(id =>
+        if (keywords.contains(id))
+          Fail.opaque(s"Keyword $id cannot be used as identifiers")
+        else Pass(id)
+      ) ~~
       (("_" ~~ ("_".? ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX)).!) |
         "_".!).?
-    ).map({
+    ).opaque("identifier").map({
       case (s,None) => (s,None)
       case (s,Some("_")) => (s+"_",None)
       case (s,Some(n))=>
@@ -392,14 +389,17 @@ class DLParser extends Parser {
       map{ case (left, forms) => (left +: forms).reduceRight(And) }
 
   /** Base formulas */
-  def baseF[_: P]: P[Formula] =
+  def baseF[_: P]: P[Formula] = P(
     unambiguousBaseF |
+      // Cut is safe -- we handle all viable cases here
       &(recAmbiguousBaseF)./ ~ (
         &(recAmbiguousBaseF ~ ("+" | "-" ~ !">" | "*" | "/" ~~ !"*" | "^" | comparator))./ ~~ comparison |
         recAmbiguousBaseF
         ) |
-      NoCut(comparison) |
+      // Now we know that the following baseF is either a term
+      &(term) ~/ comparison |
       ambiguousBaseF(formula)
+  )
 
   def recAmbiguousBaseF[_: P]: P[Formula] = ambiguousBaseF(recAmbiguousBaseF)
 
@@ -461,7 +461,7 @@ class DLParser extends Parser {
     }
   )
 
-  def comparator[_: P]: P[Unit] = ("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~~ !"-")
+  def comparator[_: P]: P[Unit] = P("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~~ !"-")
 
   /** Unit predicationals c(||) */
   def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
