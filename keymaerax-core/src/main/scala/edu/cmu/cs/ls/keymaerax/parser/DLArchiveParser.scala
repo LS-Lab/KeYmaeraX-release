@@ -103,11 +103,11 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     metaInfo ~
     allDeclarations ~
     problem ~
-    tacticProof.? ~
+    tacticProof.rep ~
     metaInfo ~
     ("End" ~ label.? ~ ".")
   ).flatMap(
-    {case (kind, label, name, meta, decl, prob, tac, moremeta, endlabel) =>
+    {case (kind, label, name, meta, decl, prob, tacs, moremeta, endlabel) =>
       if (endlabel.isDefined && endlabel != label)
         Fail.opaque("end label: " + endlabel +" is optional but should be the same as the start label: " + label)
       else Pass(
@@ -119,7 +119,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
           problemContent = "???",
           defs = decl,
           model = prob,
-          tactics = if (tac.isEmpty) Nil else List((tac.get._1.getOrElse("<undefined>"),"<source???>",tac.get._2)),
+          tactics = tacs.map(tac => (tac._1.getOrElse("<undefined>"),"<source???>",tac._2)).toList,
           annotations = Nil, //@todo fill annotations
           //@todo check that there are no contradictory facts in the meta and moremeta
           info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
@@ -133,7 +133,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** meta information */
   def metaInfo[_: P]: P[Map[String,String]] = P(
     DLParserUtils.repFold(Map.empty[String,String])(acc =>
-      (("Description" | "Title" | "Link" | "Author" | "See").! ~~/ blank ~ string ~ ".").
+      (("Description" | "Title" | "Link" | "Author" | "See" | "Illustration").! ~~/ blank ~ string ~ ".").
         flatMap{case (key, value) =>
           if (acc.contains(key))
             Fail.opaque(s"MetaInfo key $key appears twice")
