@@ -197,13 +197,14 @@ class DLParser extends Parser {
   def fullFormula[_: P]: P[Formula]   = P( Start ~ formula ~ End )
   def fullProgram[_: P]: P[Program]   = P( Start ~ program ~ End )
   def fullDifferentialProgram[_: P]: P[DifferentialProgram]   = {
-    /* Hack because old parser allowed with or without {}s */
+    /* Surrounding braces are not allowed in differential programs
+      but some code has an extra surrounding {} */
     P( Start ~ ("{" ~ diffProgram ~ "}" | diffProgram) ~ End )
   }
 
   def fullExpression[_: P]: P[Expression] = P( Start ~ expression ~ End )
 
-  def expression[_: P]: P[Expression] = P( program | NoCut(formula) | NoCut(term) )
+  def expression[_: P]: P[Expression] = P( program | formula | term )
 
   def fullSequent[_: P]: P[Sequent]   = P( Start ~ sequent ~ End )
 
