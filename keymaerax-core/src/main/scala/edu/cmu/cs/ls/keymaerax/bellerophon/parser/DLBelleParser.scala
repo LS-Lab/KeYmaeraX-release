@@ -133,7 +133,10 @@ class DLBelleParser(override val printer: BelleExpr => String,
       val parsed = fastparse.parse(str, fullExpression(_))
       parsed match {
         case Parsed.Success(value, _) => Pass(value)
-        case failure: Parsed.Failure => Fail.opaque(failure.msg)
+        case failure: Parsed.Failure =>
+          failure.trace()
+          // What information do we expose here??
+          Fail.opaque("escaped expression string")
       }
     })
 
