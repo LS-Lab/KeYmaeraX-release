@@ -250,7 +250,7 @@ private object DLBySubst {
     val (expand: (ProvableSig=>ProvableSig), assign: (ProvableSig=>ProvableSig)) = sequent.sub(pos) match {
       //@note have already failed assigning directly so grab fresh name index otherwise
       // [x:=f(x)]P(x)
-      case Some(Box(Assign(x, e), p)) =>
+      case Some(Box(a@Assign(x, e), p)) =>
         val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
         val assignAx = x match {
           case v: BaseVariable =>
@@ -261,7 +261,7 @@ private object DLBySubst {
             else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
         }
 
-        val skolemize =
+        val skolemize: ProvableSig=>ProvableSig =
           if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
           else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL('Llast)
           else ident
@@ -269,11 +269,14 @@ private object DLBySubst {
         if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
           if (StaticSemantics.freeVars(e).contains(x)) {
             // case [x:=x+1;][prg;]
-            val expand = StaticSemantics.symbols(p).
+            StaticSemantics.symbols(p).
               filter({ case _: SystemConst | _: ProgramConst => true case _ => false }).
               map(n => expandFw(n, None)).
-              reduceRight[ProvableSig=>ProvableSig](_ andThen _)
-            (expand, assignEquality(pos))
+              reduceRightOption[ProvableSig=>ProvableSig](_ andThen _) match {
+              case Some(expand) => (expand, assignEquality(pos))
+              case None => throw new TacticInapplicableFailure("Assignment " + a.prettyString +
+                " prevented since " + e.prettyString + " overlaps with the bound and (infinite) free variables of " + p.prettyString)
+            }
           } else {
             // case [x:=y;][prg;]
             (ident, useAt(assignAx)(pos) andThen skolemize)
@@ -288,7 +291,7 @@ private object DLBySubst {
             //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
             x match {
               case _: BaseVariable =>
-                if (StaticSemantics.freeVars(p).isInfinite) useAt(assignAx)(pos) andThen skolemize
+                if (StaticSemantics.freeVars(p).isInfinite) (ident, useAt(assignAx)(pos) andThen skolemize)
                 else {
                   val y = TacticHelper.freshNamedSymbol(x, sequent)
                   (ident, ProofRuleTactics.boundRenameFw(x, y)(pos) andThen useAt(assignAx)(pos) andThen ProofRuleTactics.uniformRenameFw(y, x) andThen skolemize)
