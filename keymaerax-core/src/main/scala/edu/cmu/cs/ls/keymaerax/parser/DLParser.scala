@@ -401,8 +401,10 @@ class DLParser extends Parser {
         &(recAmbiguousBaseF ~ ("+" | "-" ~ !">" | "*" | "/" ~~ !"*" | "^" | comparator))./ ~~ comparison |
         recAmbiguousBaseF
         ) |
-      // Now we know that the following baseF is either a term
+      // Now we know that the following baseF is either a comparison
+      // (which starts with an unambiguous term)
       &(term) ~/ comparison |
+      // or an ambiguous formula (which doesn't start with a term)
       ambiguousBaseF(formula)
   )
 
