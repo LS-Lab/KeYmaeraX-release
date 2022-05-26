@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, Name, ParseException, Parser}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.{fullExpression, parseException}
 
 import scala.collection.immutable._
@@ -61,19 +61,19 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def searchLocator[_: P]: P[PositionLocator] = P(
     "'Llast".!./.map(_ => LastAnte(0))
       | "'Rlast".!./.map(_ => LastSucc(0))
-      | (("'L" | "'R").!./ ~ (("==" | "~=").!./ ~ escapedExpr).?).map({
+      | (("'L" | "'R").!./ ~ (("==" | "~=").!./ ~ escapedPositionExpression).?).map({
         case ("'L",None) =>
           Find.FindL(0, None, HereP, exact = true, defs)
         case ("'R",None) =>
           Find.FindR(0, None, HereP, exact = true, defs)
-        case ("'L",Some(("==",expr))) =>
-          Find.FindL(0, Some(expr), HereP, exact = true, defs)
-        case ("'R",Some(("==",expr))) =>
-          Find.FindR(0, Some(expr), HereP, exact = true, defs)
-        case ("'L",Some(("~=",expr))) =>
-          Find.FindL(0, Some(expr), HereP, exact = false, defs)
-        case ("'R",Some(("~=",expr))) =>
-          Find.FindR(0, Some(expr), HereP, exact = false, defs)
+        case ("'L",Some(("==",(expr,posIn)))) =>
+          Find.FindL(0, Some(expr), posIn, exact = true, defs)
+        case ("'R",Some(("==",(expr,posIn)))) =>
+          Find.FindR(0, Some(expr), posIn, exact = true, defs)
+        case ("'L",Some(("~=",(expr,posIn)))) =>
+          Find.FindL(0, Some(expr), posIn, exact = false, defs)
+        case ("'R",Some(("~=",(expr,posIn)))) =>
+          Find.FindR(0, Some(expr), posIn, exact = false, defs)
       })
   )
 
@@ -126,17 +126,50 @@ class DLBelleParser(override val printer: BelleExpr => String,
   // externals
   //@todo or just import if no dynamic forwarding needed
 
-  def escapedExpr[_: P]: P[Expression] = P(string)./.
-    map(str => str.replaceAllLiterally("\\\"","\"")).
+  def escapedPositionExpression[_: P]: P[(Expression, PosInExpr)] = P(string)./.
     flatMap(str => {
       //todo: make this not hacky -- starts a new parse every time an escaped expression is encountered
-      val parsed = fastparse.parse(str, fullExpression(_))
-      parsed match {
-        case Parsed.Success(value, _) => Pass(value)
-        case failure: Parsed.Failure =>
-          failure.trace()
-          // What information do we expose here??
-          Fail.opaque("escaped expression string")
+      val unescaped = str.replaceAllLiterally("\\\"","\"")
+      val hashStart = str.indexOf('#')
+      val hashEnd = str.indexOf('#')
+
+      if (hashStart == hashEnd && hashStart != -1)
+        Fail.opaque("Mismatched # delimiters")
+      else if (hashStart == -1) {
+        // No hashes, just return Here for PosIn
+        fastparse.parse(unescaped, fullExpression(_)) match {
+          case Parsed.Success(value, _) => Pass((value, HereP))
+          case failure: Parsed.Failure =>
+            failure.trace()
+            // What information do we expose here??
+            Fail.opaque("escaped expression string")
+        }
+      } else {
+        // Has hashes; extract subexpression and find its position in full expression
+        val sub = unescaped.substring(hashStart+1,hashEnd)
+        val noHashes = unescaped.substring(0, hashStart) ++ sub ++ unescaped.substring(hashEnd+1,unescaped.length)
+        fastparse.parse(noHashes, fullExpression(_)) match {
+          case failure: Parsed.Failure =>
+            failure.trace()
+            // What information do we expose here??
+            Fail.opaque("escaped expression string")
+          case Parsed.Success(expr, _) =>
+            fastparse.parse(sub, fullExpression(_)) match {
+              case failure: Parsed.Failure =>
+                failure.trace()
+                // What information do we expose here??
+                Fail.opaque("escaped expression string")
+              case Parsed.Success(sub, _) =>
+                FormulaTools.posOf(expr, sub) match {
+                  case Some(posIn) =>
+                    Pass((expr, posIn))
+                  case None =>
+                    assert(assertion = false, "Parsed a position locator with subexpression successfully, " +
+                                  "but could not find subexpression in expression")
+                    ???
+                }
+            }
+        }
       }
     })
 
