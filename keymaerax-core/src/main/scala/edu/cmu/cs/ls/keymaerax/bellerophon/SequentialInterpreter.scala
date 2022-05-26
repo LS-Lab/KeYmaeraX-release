@@ -151,7 +151,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
                 Some(origLabels.patch(cidx, List(l), 1) ++ rest)
               }
             case (None, Some(newLabels)) =>
-              Some(createLabels(None, 0, cidx) ++ newLabels)
+              if (newLabels.isEmpty && subderivation.p.isProved) None
+              else Some(createLabels(None, 0, cidx) ++ newLabels)
             case (None, None) => None
           }
           (combinedProvable, combinedLabels, substs)
