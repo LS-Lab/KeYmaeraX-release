@@ -1479,7 +1479,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   "Examples" should "parse example archive LFCPS 05: Short Bouncing Ball" in {
     val parsed = ArchiveParser.parser.parse(
-      s"""
+      raw"""
          |ArchiveEntry "05: Short Bouncing Ball: single hop"
          |Description "5.4: A Proof of a Short Bouncing Ball single-hop without loop".
          |
@@ -1531,9 +1531,9 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     parsed.name shouldBe ("05: Short Bouncing Ball: single hop")
   }
 
-  "Examples" should "parse example archive LFCPS 07: Bouncing Ball" in {
+  it should "parse example archive LFCPS 07: Bouncing Ball" in {
     val parsed = ArchiveParser.parser.parse(
-      s"""ArchiveEntry "07: Bouncing Ball"
+      raw"""ArchiveEntry "07: Bouncing Ball"
          |Description "7.4: Acrophobic Bouncing Ball".
          |
          |Definitions      /* function symbols cannot change their value */
@@ -1679,6 +1679,68 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
          |End.""".stripMargin
     ).loneElement
     //TODO: shouldBes
+  }
+
+  it should "parse iteratedexp.kyx from implicit functions paper" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""Theorem "double iterated exponential"
+         |
+         |Definitions
+         |  implicit Real exp1(Real t) = {{exp1:=1;}; {exp1'=exp1}};
+         |  Real E = exp1(1);
+         |  implicit Real exp2(Real t) = {{exp2:=E;t:=0;}; {exp2'=exp1(t)*exp2,t'=1}};
+         |  Real x;
+         |End.
+         |
+         |Problem
+         |  exp2(x) = exp(exp(x))
+         |End.
+         |
+         |Tactic "double iterated exponential: Proof"
+         |cut("exp(exp(x()))=exp1(exp1(x()))"); <(
+         |  "Use":
+         |    allL2R('L=="exp(exp(x()))=exp1(exp1(x()))");
+         |    hideL('L=="exp(exp(x()))=exp1(exp1(x()))");
+         |    expand "exp2";
+         |    expand "exp1";
+         |    diffUnfold("x()", "0", 'R=="exp2(x())=exp1(exp1(x()))"); <(
+         |      "Init":
+         |        QE,
+         |      "[{v'=1&v<=x()}]exp2(v)=exp1(exp1(v))":
+         |        ODE('R=="[{v'=1&v<=x()}]exp2(v)=exp1(exp1(v))"),
+         |      "[{v'=(-1)&x()<=v}]exp2(v)=exp1(exp1(v))":
+         |        ODE('R=="[{v'=(-1)&x()<=v}]exp2(v)=exp1(exp1(v))")
+         |    ),
+         |  "Show":
+         |    hideR('R=="exp2(x())=exp(exp(x()))");
+         |    expand "exp1";
+         |    cut("\forall y exp(y)=exp1(y)"); <(
+         |      "Use":
+         |        allLkeep("x()", 'L=="\forall y exp(y)=exp1(y)");
+         |        allL2R('L=="exp(x())=exp1(x())");
+         |        hideL('L=="exp(x())=exp1(x())");
+         |        allL("exp1(x())", 'L=="\forall y exp(y)=exp1(y)");
+         |        expand "exp1";
+         |        propClose,
+         |      "Show":
+         |        hideR('R=="exp(exp(x()))=exp1(exp1(x()))");
+         |        allR('R=="\forall y exp(y)=exp1(y)");
+         |        expand "exp1";
+         |        diffUnfold("y", "0", 'R=="exp(y)=exp1(y)"); <(
+         |          "Init":
+         |            QE,
+         |          "[{v'=1&v<=y}]exp(v)=exp1(v)":
+         |            ODE('R=="[{v'=1&v<=y}]exp(v)=exp1(v)"),
+         |          "[{v'=(-1)&y<=v}]exp(v)=exp1(v)":
+         |            ODE('R=="[{v'=(-1)&y<=v}]exp(v)=exp1(v)")
+         |        )
+         |    )
+         |)
+         |End.
+         |
+         |End.""".stripMargin
+    ).loneElement
+    //TODO: shouldBe
   }
 
 }
