@@ -58,9 +58,23 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
             case Some((pp, i)) =>
               if (r.p.isProved) {
                 val substGoal = exhaustiveSubst(pp, r.subst)
-                val substSub = exhaustiveSubst(r.p, r.subst)
-                val other = collectSubst(substGoal, i, substSub)
-                new BelleDelayedSubstProvable(exhaustiveSubst(substGoal, other)(exhaustiveSubst(substSub, other), i), r.label, r.subst ++ other, None)
+                try {
+                  val substSub = exhaustiveSubst(r.p, r.subst)
+                  val other = collectSubst(substGoal, i, substSub)
+                  new BelleDelayedSubstProvable(exhaustiveSubst(substGoal, other)(exhaustiveSubst(substSub, other), i), r.label, r.subst ++ other, None)
+                } catch {
+                  case ex: SubstitutionClashException =>
+                    //@note let(...) when initial conjecture has differentials, e.g.,
+                    // *
+                    // ----------------------
+                    // |- [x':=5;](x+c())'>=0
+                    // ---------------------- c()~>y clash even though subderivation proved
+                    // |- [x':=5;](x+y)'>=0
+                    //
+                    // not relevant when differentials are intermediate (e.g., in dI) so ultimately delayed substitution won't clash
+                    if (p.p == pp) r
+                    else throw ex
+                }
               } else {
                 r
               }

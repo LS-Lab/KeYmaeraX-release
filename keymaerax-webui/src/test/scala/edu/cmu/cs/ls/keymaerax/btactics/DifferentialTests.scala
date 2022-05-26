@@ -1033,8 +1033,18 @@ class DifferentialTests extends TacticTestBase {
 
   it should "let us prove variable [x':=5;](x+y)'>=0" in withQE { _ =>
     //@note proof waited too long. Should have gone constant before diffind
-    TactixLibrary.proveBy("[x':=5;](x+y)'>=0".asFormula,
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
+    val result = TactixLibrary.proveBy("[x':=5;](x+y>=0)'".asFormula,
+      let(FuncOf(Function("y",None,Unit,Real),Nothing), Variable("y"), derive(1,1::Nil) & Dassignb(1) & QE))
+    result shouldBe 'proved
+    //@note result is the internal provable of a BelleDelayedSubstProvable
+    result.conclusion shouldBe "==> [x':=5;](x+y()>=0)'".asSequent
+    //@note delayed provable ultimately resolves once all the differentials are gone
+    val fullResult = TactixLibrary.proveBy("x+y>=0 ==> [{x'=5}]x+y>=0".asSequent, dI('none)(1) <(
+      id,
+      DifferentialTactics.DE(1) & abstractionb(1) & allR(1) & cohideR(1) & by(result)
+    ))
+    fullResult shouldBe 'proved
+    fullResult.conclusion shouldBe "x+y>=0 ==> [{x'=5}]x+y>=0".asSequent
   }
 
   it should "prove const [{x'=5}](x+c())'>=0" in withQE { _ =>
