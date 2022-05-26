@@ -325,7 +325,10 @@ class DLParser extends Parser {
     }
 
   def baseTerm[_: P]: P[Term] = P(
-      number./ | dot./ | function.flatMap(diff) | unitFunctional.flatMap(diff) | variable
+      number./ | dot./ | function.flatMap(diff) | unitFunctional.flatMap(diff)
+      /* This cut means that an identifier which is not followed by () or {} or (||)
+       * will always be interpreted as a variable */
+      | variable./
       /* termList has a cut after (, but this is safe, because we
        * require that if the first available character is ( it is
        * unambiguously a term parenthesis */
