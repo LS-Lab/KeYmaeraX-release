@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationTools
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
@@ -386,8 +387,11 @@ case class ElidingProvable(provable: Provable, steps: Int, defs: Declaration) ex
 
   override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = ElidingProvable(provable(rule,subgoal), steps+1, defs)
 
-  override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig =
-    ElidingProvable(provable(subderivation.underlyingProvable, subgoal), steps+subderivation.steps, defs ++ subderivation.defs)
+  override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
+    //@note subderivation may have expanded definitions
+    val subst = UnificationTools.collectSubst(underlyingProvable, subgoal, subderivation.underlyingProvable, defs.substs)
+    ElidingProvable(provable(subst)(subderivation.underlyingProvable, subgoal), steps+subderivation.steps, defs ++ subderivation.defs)
+  }
 
   override def apply(subst: USubst): ProvableSig =
     ElidingProvable(provable(subst), steps+1, defs)
@@ -511,6 +515,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
 
   /** @inheritdoc */
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
+    //@todo subderivation may have definitions expanded
     subderivation match {
       case TermProvable(subProvable, subPT, _) =>
         val thePt = Sub(pt, subPT, subgoal)
