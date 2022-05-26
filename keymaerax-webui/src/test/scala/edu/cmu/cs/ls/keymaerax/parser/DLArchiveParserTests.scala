@@ -618,6 +618,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
+  //TODO: Are we sure about this?
   it should "accept reserved identifiers" in {
     parse(
       """ArchiveEntry "Entry 1"
@@ -723,7 +724,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse a problem that uses the allowed interpreted functions" taggedAs TodoTest in {
+  it should "parse a problem that uses the built-in interpreted functions" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "Entry 1"
         | Problem abs(-5)>0 End.
@@ -731,7 +732,6 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
-    entry.defs.decls shouldBe Map(Name("abs", None) -> (Some(Real), Real, None, None, UnknownLocation))
     entry.model shouldBe "abs(-5)>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -1477,7 +1477,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     assertThrows[ParseException](parse(input))
   }
 
-  "Examples" should "parse example archive LFCPS 05" in {
+  "Examples" should "parse example archive LFCPS 05: Short Bouncing Ball" in {
     val parsed = ArchiveParser.parser.parse(
       s"""
          |ArchiveEntry "05: Short Bouncing Ball: single hop"
@@ -1527,7 +1527,158 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
          |End.
       """.stripMargin
     ).loneElement
+    //TODO: shouldBes
     parsed.name shouldBe ("05: Short Bouncing Ball: single hop")
+  }
+
+  "Examples" should "parse example archive LFCPS 07: Bouncing Ball" in {
+    val parsed = ArchiveParser.parser.parse(
+      s"""ArchiveEntry "07: Bouncing Ball"
+         |Description "7.4: Acrophobic Bouncing Ball".
+         |
+         |Definitions      /* function symbols cannot change their value */
+         |  Real H;        /* initial height */
+         |  Real g;        /* gravity */
+         |  Real c;        /* damping coefficient */
+         |End.
+         |
+         |ProgramVariables /* program variables may change their value over time */
+         |  Real x, v;     /* height and vertical velocity */
+         |End.
+         |
+         |Problem
+         |  (x>=0 & x=H & v=0) &
+         |  (g>0 & 1=c&c>=0)
+         | ->
+         |  [
+         |    {
+         |      {x'=v,v'=-g&x>=0}
+         |      {?x=0; v:=-c*v;  ++  ?x!=0;}
+         |    }* @invariant(2*g*x=2*g*H-v^2 & x>=0)
+         |  ] (x>=0 & x<=H)
+         |End.
+         |
+         |Tactic "07: Bouncing Ball: generalizing as in book: positional"
+         |  implyR(1) ; loop("2*g*x=2*g*H-v^2&x>=0", 1) ; <(
+         |  "Init": QE,
+         |  "Post": QE,
+         |  "Step": composeb(1) ; MR("2*g*x=2*g*H-v^2&x>=0&c=1&g>0", 1) ; <(
+         |    "Use Q->P": solve(1) ; QE,
+         |    "Show [a]Q": choiceb(1) ; andR(1) ; <(
+         |      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE,
+         |        testb(1) ; prop
+         |      )
+         |    )
+         |)
+         |End.
+         |
+         |Tactic "07: Bouncing Ball: generalizing as in book: named"
+         |  implyR('R=="(x>=0&x=H()&v=0)&g()>0&1=c()&c()>=0->[{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())");
+         |  loop("2*g()*x=2*g()*H()-v^2&x>=0", 'R=="[{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())"); <(
+         |    "Init":
+         |      QE,
+         |    "Post":
+         |      QE,
+         |    "Step":
+         |      composeb('R=="[{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |      MR("2*g()*x=2*g()*H()-v^2&x>=0&c()=1&g()>0", 'R=="[{x'=v,v'=-g()&x>=0}][?x=0;v:=-c()*v;++?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)"); <(
+         |        "Use Q->P":
+         |          solve('R=="[{x'=v,v'=-g()&x>=0}](2*g()*x=2*g()*H()-v^2&x>=0&c()=1&g()>0)");
+         |          QE,
+         |        "Show [a]Q":
+         |          choiceb('R=="[?x=0;v:=-c()*v;++?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |          andR('R=="[?x=0;v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)&[?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)"); <(
+         |            "[?x=0;v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)":
+         |              composeb('R=="[?x=0;v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |              testb('R=="[?x=0;][v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |              implyR('R=="x=0->[v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |              assignb('R=="[v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |              QE,
+         |            "[?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)":
+         |              testb('R=="[?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |              propClose
+         |          )
+         |      )
+         |  )
+         |End.
+         |
+         |Tactic "07: Bouncing Ball: top-level: positional"
+         |  implyR(1) ; loop("2*g*x=2*g*H-v^2&x>=0", 1) ; <(
+         |  "Init": QE,
+         |  "Post": QE,
+         |  "Step": composeb(1) ; solve(1) ; allR(1) ; implyR(1) ; implyR(1) ; allL("t_", -6) ; allR(1) ; implyR(1) ; choiceb(1) ; andR(1) ; <(
+         |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE,
+         |    testb(1) ; implyR(1) ; QE
+         |)
+         |)
+         |End.
+         |
+         |Tactic "07: Bouncing Ball: top-level: named"
+         |implyR('R=="(x>=0&x=H()&v=0)&g()>0&1=c()&c()>=0->[{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())");
+         |loop("2*g()*x=2*g()*H()-v^2&x>=0", 'R=="[{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())"); <(
+         |  "Init":
+         |    QE,
+         |  "Post":
+         |    QE,
+         |  "Step":
+         |    composeb('R=="[{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |    solve('R=="[{x'=v,v'=-g()&x>=0}][?x=0;v:=-c()*v;++?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |    allR('R=="\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->(-g())*(s_^2/2)+v_1*s_+x>=0)->\forall v (v=(-g())*t_+v_1->[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;++?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)))");
+         |    implyR('R=="t_>=0->\forall s_ (0<=s_&s_<=t_->(-g())*(s_^2/2)+v_1*s_+x>=0)->\forall v (v=(-g())*t_+v_1->[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;++?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0))");
+         |    implyR('R=="\forall s_ (0<=s_&s_<=t_->(-g())*(s_^2/2)+v_1*s_+x>=0)->\forall v (v=(-g())*t_+v_1->[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;++?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0))");
+         |    allL("t_", 'L=="\forall s_ (0<=s_&s_<=t_->(-g())*(s_^2/2)+v_1*s_+x>=0)");
+         |    allR('R=="\forall v (v=(-g())*t_+v_1->[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;++?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0))");
+         |    implyR('R=="v=(-g())*t_+v_1->[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;++?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)");
+         |    choiceb('R=="[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;++?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)");
+         |    andR('R=="[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)&[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)"); <(
+         |      "[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)":
+         |        composeb('R=="[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;v:=-c()*v;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)");
+         |        testb('R=="[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0;][v:=-c()*v;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)");
+         |        implyR('R=="(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x=0->[v:=-c()*v;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)");
+         |        assignb('R=="[v:=-c()*v;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)");
+         |        QE,
+         |      "[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)":
+         |        testb('R=="[?(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0;](2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0)");
+         |        implyR('R=="(-g())*((0+1*t_-0)^2/2)+v_1*(0+1*t_-0)+x!=0->2*g()*((-g())*(t_^2/2)+v_1*t_+x)=2*g()*H()-v^2&(-g())*(t_^2/2)+v_1*t_+x>=0");
+         |        QE
+         |    )
+         |)End.
+         |
+         |Tactic "07: Bouncing Ball: in-place proof: positional"
+         |  implyR(1) ; loop("2*g*x=2*g*H-v^2&x>=0", 1) ; <(
+         |    "Init": QE,
+         |    "Post": QE,
+         |    "Step": composeb(1) ; choiceb(1.1) ; composeb(1.1.0) ; testb(1.1.0) ; assignb(1.1.0.1) ; testb(1.1.1) ; solve(1) ; QE
+         |)
+         |End.
+         |
+         |Tactic "07: Bouncing Ball: in-place proof: named"
+         |  implyR('R=="(x>=0&x=H()&v=0)&g()>0&1=c()&c()>=0->[{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())");
+         |  loop("2*g()*x=2*g()*H()-v^2&x>=0", 'R=="[{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())"); <(
+         |    "Init":
+         |      QE,
+         |    "Post":
+         |      QE,
+         |    "Step":
+         |      composeb('R=="[{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}](2*g()*x=2*g()*H()-v^2&x>=0)");
+         |      choiceb('R=="[{x'=v,v'=-g()&x>=0}]#[?x=0;v:=-c()*v;++?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)#");
+         |      composeb('R=="[{x'=v,v'=-g()&x>=0}](#[?x=0;v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)#&[?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0))");
+         |      testb('R=="[{x'=v,v'=-g()&x>=0}](#[?x=0;][v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)#&[?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0))");
+         |      assignb('R=="[{x'=v,v'=-g()&x>=0}]((x=0->#[v:=-c()*v;](2*g()*x=2*g()*H()-v^2&x>=0)#)&[?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0))");
+         |      testb('R=="[{x'=v,v'=-g()&x>=0}]((x=0->2*g()*x=2*g()*H()-(-c()*v)^2&x>=0)&#[?x!=0;](2*g()*x=2*g()*H()-v^2&x>=0)#)");
+         |      solve('R=="[{x'=v,v'=-g()&x>=0}]((x=0->2*g()*x=2*g()*H()-(-c()*v)^2&x>=0)&(x!=0->2*g()*x=2*g()*H()-v^2&x>=0))");
+         |      QE
+         |  )
+         |End.
+         |
+         |Tactic "07: Bouncing Ball: automatic"
+         |  auto
+         |End.
+         |
+         |Illustration "https://lfcps.org/info/fig-bouncing-ball-dark-trace.png".
+         |End.""".stripMargin
+    ).loneElement
+    //TODO: shouldBes
   }
 
 }
