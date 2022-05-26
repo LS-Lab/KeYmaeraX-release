@@ -95,8 +95,12 @@ class DLBelleParser(override val printer: BelleExpr => String,
       ~~ ("*" ~ integer | "*".! ~ !CharIn("0-9")).?
   ).map({case (t,None) => t case (t,Some(n:Integer)) => RepeatTactic(t,n) case (t,Some("*")) => SaturateTactic(t)})
 
-  def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ seqTac.rep(min=1,sep=","./) ~ ")")("<(tactic,tactic,...)",implicitly).
-    map(BranchTactic)
+  def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ (
+    seqTac.rep(min=1,sep=","./).
+      map(BranchTactic) |
+    (string.map(BelleLabel.fromString).map(_.head) ~ ":" ~ seqTac).rep(min=1,sep=","./).
+      map(CaseTactic)
+    ) ~ ")")("<(tactic,tactic,...)",implicitly)
 
   def repeatTac[_: P]: P[BelleExpr] = P(
     (parenTac ~ "*" ~ integer).map(pn=>RepeatTactic(pn._1,pn._2))
