@@ -704,7 +704,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "Expand" should "parse a simple definition expand" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f()\"", None,
       Declaration(scala.collection.immutable.Map((Name("f", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation)))))
-    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Function("f", None, Unit, Real), Some("f() ~> 3*2".asSubstitutionPair))
+    tactic shouldBe TactixLibrary.implyR(1) & expand("f()")
   }
 
   it should "elaborate variables to functions" in {
@@ -714,9 +714,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("g", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation))
       )
     ))
-    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Variable("f"), Some(SubstitutionPair(
-      FuncOf(Function("f", None, Unit, Real), Nothing), Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2)))
-    ))
+    tactic shouldBe TactixLibrary.implyR(1) & expand("f")
   }
 
   it should "elaborate variables to functions in tactic arguments" in {
@@ -738,9 +736,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("g", None), Signature(Some(Unit), Real, None, Some("0".asExpr), UnknownLocation))
       )
       ))
-    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Variable("f"), Some(SubstitutionPair(
-      FuncOf(Function("f", None, Unit, Real), Nothing), FuncOf(Function("g", None, Unit, Real), Nothing))
-    ))
+    tactic shouldBe TactixLibrary.implyR(1) & expand("f")
   }
 
   it should "elaborate functions to predicates per declarations" in {
@@ -750,9 +746,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         (Name("g", None), Signature(Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation))
       )
       ))
-    tactic shouldBe TactixLibrary.implyR(1) & expandFw(Variable("f"), Some(SubstitutionPair(
-      PredOf(Function("f", None, Unit, Bool), Nothing), PredOf(Function("g", None, Unit, Bool), Nothing))
-    ))
+    tactic shouldBe TactixLibrary.implyR(1) & expand("f")
   }
 
   it should "elaborate programconsts to systemconsts" in {
