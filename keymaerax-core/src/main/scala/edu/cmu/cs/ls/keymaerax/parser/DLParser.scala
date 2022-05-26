@@ -111,7 +111,6 @@ class DLParser extends Parser {
     */
   override def apply(input: String): Expression = exprParser(input)
 
-
   private def parseAndCompare[A](newParser: P[_] => P[A], oldParser: String => A, name: String): String => A =
     s => {
       val newres = fastparse.parse(s, newParser(_)) match {
@@ -204,7 +203,12 @@ class DLParser extends Parser {
 
   def fullExpression[_: P]: P[Expression] = P( Start ~ expression ~ End )
 
-  def expression[_: P]: P[Expression] = P( program | formula | term )
+  def expression[_: P]: P[Expression] = P(
+    program |
+      // Term followed by comparator should not be parsed as a term
+      &(term ~ !(comparator)) ~ term |
+      formula
+  )
 
   def fullSequent[_: P]: P[Sequent]   = P( Start ~ sequent ~ End )
 
