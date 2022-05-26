@@ -53,7 +53,7 @@ object DLParser extends DLParser {
     ParseException(tr.msg,
       location(f),
       found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
-      expect = formatStack(tr.input, tr.stack),
+      expect = formatStack(tr.input, List(tr.stack.last)),
       after = "" + tr.stack.headOption.getOrElse(""),
       // state = tr.longMsg,
       // state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
