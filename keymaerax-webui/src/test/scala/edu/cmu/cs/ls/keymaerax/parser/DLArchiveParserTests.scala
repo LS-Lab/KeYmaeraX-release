@@ -1701,8 +1701,8 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
          |  "Use":
          |    allL2R('L=="exp(exp(x()))=exp1(exp1(x()))");
          |    hideL('L=="exp(exp(x()))=exp1(exp1(x()))");
-         |    expand "exp2";
-         |    expand "exp1";
+         |    expand("exp2");
+         |    expand("exp1");
          |    diffUnfold("x()", "0", 'R=="exp2(x())=exp1(exp1(x()))"); <(
          |      "Init":
          |        QE,
@@ -1713,19 +1713,19 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
          |    ),
          |  "Show":
          |    hideR('R=="exp2(x())=exp(exp(x()))");
-         |    expand "exp1";
+         |    expand("exp1");
          |    cut("\forall y exp(y)=exp1(y)"); <(
          |      "Use":
          |        allLkeep("x()", 'L=="\forall y exp(y)=exp1(y)");
          |        allL2R('L=="exp(x())=exp1(x())");
          |        hideL('L=="exp(x())=exp1(x())");
          |        allL("exp1(x())", 'L=="\forall y exp(y)=exp1(y)");
-         |        expand "exp1";
+         |        expand("exp1");
          |        propClose,
          |      "Show":
          |        hideR('R=="exp(exp(x()))=exp1(exp1(x()))");
          |        allR('R=="\forall y exp(y)=exp1(y)");
-         |        expand "exp1";
+         |        expand("exp1");
          |        diffUnfold("y", "0", 'R=="exp(y)=exp1(y)"); <(
          |          "Init":
          |            QE,
@@ -1741,6 +1741,192 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
          |End.""".stripMargin
     ).loneElement
     //TODO: shouldBe
+  }
+
+  it should "parse FIDE21/01 exponential decay" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""Lemma "FIDE21/01-Exponential decay"
+           |  ProgramVariables
+           |    Real x;
+           |  End.
+           |
+           |  Problem
+           |    x>=0 -> [{x'=-x}]x>=0
+           |  End.
+           |
+           |  Tactic "Interactive proof"
+           |    implyR('R=="x>=0->[{x'=-x}]x>=0");
+           |    ODE('R=="[{x'=-x}]x>=0");
+           |    done
+           |  End.
+           |
+           |  Tactic "Automated proof"
+           |    autoClose
+           |  End.
+           |
+           |End.
+           |
+           |
+           |Lemma "FIDE21/02-Unsatisfied control guard"
+           |  Definitions     /* constants, functions, properties, programs */
+           |    Bool S(Real x);
+           |    Bool P(Real x);
+           |  End.
+           |
+           |  ProgramVariables                     /* variables */
+           |    Real x;
+           |  End.
+           |
+           |  Problem                              /* specification in dL */
+           |    S(x) -> [?!S(x);]P(x)
+           |  End.
+           |
+           |  Tactic "Interactive proof"
+           |    implyR('R=="S(x)->[?!S(x);]P(x)");
+           |    testb('R=="[?!S(x);]P(x)");
+           |    implyR('R=="!S(x)->P(x)");
+           |    notL('L=="!S(x)");
+           |    id using "S(x)";
+           |    done
+           |  End.
+           |
+           |  Tactic "Automated proof"
+           |    autoClose
+           |  End.
+           |
+           |End.
+           |
+           |Lemma "FIDE21/03-Induction step"
+           |
+           |  Definitions
+           |    Bool S(Real x) <-> x>=0;
+           |    HP ctrl ::= { if (S(x)) { x:=2*x; } };
+           |    HP ode ::= { {x'=-x} };
+           |  End.
+           |
+           |  ProgramVariables
+           |    Real x;
+           |  End.
+           |
+           |  Problem
+           |    S(x) -> [ctrl;ode;]S(x)
+           |  End.
+           |
+           |  Tactic "Interactive proof"
+           |  implyR('R=="S(x)->[ctrl{|^@|};ode{|^@|};]S(x)");
+           |  composeb('R=="[ctrl{|^@|};ode{|^@|};]S(x)");
+           |  expand("ctrl");
+           |  choiceb('R=="[?S(x);x:=2*x;++?!S(x);?true;][ode{|^@|};]S(x)");
+           |  andR('R=="[?S(x);x:=2*x;][ode{|^@|};]S(x)&[?!S(x);?true;][ode{|^@|};]S(x)"); <(
+           |    "[?S(x);x:=2*x;][ode{|^@|};]S(x)":
+           |      MR("S(x)", 'R=="[?S(x);x:=2*x;][ode{|^@|};]S(x)"); <(
+           |        "Use Q->P":
+           |          expand("S");
+           |          autoClose,
+           |        "Show [a]Q":
+           |          useLemma("FIDE21/01-Exponential decay", "US({`S(x)~>x>=0::ode{|^@|};~>{x'=-x}::nil`});unfold;id")
+           |      ),
+           |    "[?!S(x);?true;][ode{|^@|};]S(x)":
+           |      composeb('R=="[?!S(x);?true;][ode{|^@|};]S(x)");
+           |      useLemma("FIDE21/02-Unsatisfied control guard", "US({`P(x)~>[x:=x;][?true;][{x'=-x}]S(x)::nil`});unfold;id")
+           |  )
+           |  End.
+           |
+           |End.
+           |
+           |Theorem "FIDE21/04-Combine lemmas"
+           |
+           |  Definitions
+           |    Bool A(Real x) <-> x=2;
+           |    Bool S(Real x) <-> x>=0;
+           |    HP ctrl ::= { if (x>=0) { x:=2*x; } };
+           |    HP ode ::= { {x'=-x} };
+           |  End.
+           |
+           |  ProgramVariables
+           |    Real x;
+           |  End.
+           |
+           |  Problem
+           |    A(x) -> [{ctrl;ode;}*]S(x)
+           |  End.
+           |
+           |  Tactic "Interactive proof"
+           |  implyR('R=="A(x)->[{ctrl{|^@|};ode{|^@|};}*]S(x)");
+           |  loop("S(x)", 'R=="[{ctrl{|^@|};ode{|^@|};}*]S(x)"); <(
+           |    "Init":
+           |      expandAllDefs;
+           |      QE,
+           |    "Post":
+           |      id,
+           |    "Step":
+           |      expandAllDefs;
+           |      useLemma("FIDE21/03-Induction step", "prop")
+           |  )
+           |  End.
+           |
+           |End.
+           |
+           |Theorem "FIDE21/05-Parametric loop induction"
+           |
+           |  Problem
+           |    x=2 -> [{x:=1+(x-1)/2;}*]x>=-1
+           |  End.
+           |
+           |  Tactic "Interactive proof"
+           |    implyR('R=="x=2->[{x:=1+(x-1)/2;}*]x>=(-1)");
+           |    loop("J(x)", 'R=="[{x:=1+(x-1)/2;}*]x>=(-1)"); <(
+           |      "Init":
+           |        US("(J(.) ~> .>=1)");
+           |        QE,
+           |      "Post":
+           |        US("(J(.) ~> .>=1)");
+           |        QE,
+           |      "Step":
+           |        assignb('R=="[x:=1+(x-1)/2;]J(x)");
+           |        US("(J(.) ~> .>=1)");
+           |        QE
+           |    )
+           |  End.
+           |
+           |End.
+           |
+           |Theorem "FIDE21/06-Delayed modeling"
+           |
+           |  Problem    /* Reserved constant symbols A_ are allowed to be specified during the proof */
+           |    A__0() -> x>=0 -> [x:=x/y()^2;]x>=0
+           |  End.
+           |
+           |  Tactic "Interactive proof"
+           |    implyR('R=="A__0()->x>=0->[x:=x/y()^2;]x>=0");
+           |    implyR('R=="x>=0->[x:=x/y()^2;]x>=0");
+           |    assignb('R=="[x:=x/y()^2;]x>=0");
+           |    US("(A__0() ~> y()!=0)");
+           |    QE
+           |  End.
+           |
+           |End.
+           |
+           |Theorem "FIDE21/07-Temporary hiding"
+           |
+           |  Problem
+           |    (x<0 | x=0) & (y=x | y>0) -> x*y<=y^2
+           |  End.
+           |
+           |  Tactic "Interactive proof"
+           |    implyR('R=="(x < 0|x=0)&(y=x|y>0)->x*y<=y^2");
+           |    andL('L=="(x < 0|x=0)&(y=x|y>0)");
+           |    (orL('L)*; <(
+           |      QE,
+           |      skip
+           |    )) using "y=x|y>0 :: x*y<=y^2 :: nil";
+           |    QE
+           |  End.
+           |
+           |End.
+           |""".stripMargin
+    ).loneElement
+    // TODO: shouldBes
   }
 
 }
