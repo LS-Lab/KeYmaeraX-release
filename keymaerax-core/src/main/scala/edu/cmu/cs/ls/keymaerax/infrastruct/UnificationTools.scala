@@ -39,25 +39,28 @@ object UnificationTools {
     if (goal == have) USubst(List.empty)
     else {
       val (sg, ss, _) = FormulaTools.symbolsDiff(goal.ante ++ goal.succ, have.ante ++ have.succ)
-      val (exp, nonexp) = (sg ++ ss).partition(symbolDeps.contains)
-      val constifications =
-        if (haveIsProved) {
-          nonexp.groupBy(n => (n.name, n.index, n.sort)).filter(_._2.size > 1).flatMap({ case (_, s) => s.toList match {
-            case (v: Variable) :: (f@Function(_, _, Unit, Real, false)) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
-            case (f@Function(_, _, Unit, Real, false)) :: (v: Variable) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
-            case _ => None
-          } }).toList
-        } else List.empty
-      val expand = if (exp.nonEmpty) Some(exp.minBy(symbolDeps.indexOf)) else None
-      val subst = expand.map(e => USubst(substs.find({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).contains(e) }).toList)).getOrElse(USubst(List.empty)) ++ USubst(constifications)
-      assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbols " + sg.map(_.prettyString).mkString(",") +
-        " from goal\n  " + goal.prettyString + "\ndo not occur in sub-derivation\n  " + have.prettyString +
-        (if (ss.nonEmpty) " and symbols " + ss.map(_.prettyString).mkString(",") + " from sub-derivation to not occur in goal" else "") +
-        "\nand there is no substitution to address the difference" + (if (substs.nonEmpty) " in\n  " + substs.mkString(", ") else ""))
+      if (sg.isEmpty && ss.isEmpty) USubst(List.empty) //@note if `goal` and `have` formulas have the same symbols, but differ in order, or a similar other way
+      else {
+        val (exp, nonexp) = (sg ++ ss).partition(symbolDeps.contains)
+        val constifications =
+          if (haveIsProved) {
+            nonexp.groupBy(n => (n.name, n.index, n.sort)).filter(_._2.size > 1).flatMap({ case (_, s) => s.toList match {
+              case (v: Variable) :: (f@Function(_, _, Unit, Real, false)) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
+              case (f@Function(_, _, Unit, Real, false)) :: (v: Variable) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
+              case _ => None
+            }}).toList
+          } else List.empty
+        val expand = if (exp.nonEmpty) Some(exp.minBy(symbolDeps.indexOf)) else None
+        val subst = expand.map(e => USubst(substs.find({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).contains(e) }).toList)).getOrElse(USubst(List.empty)) ++ USubst(constifications)
+        assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbols " + sg.map(_.prettyString).mkString(",") +
+          " from goal\n  " + goal.prettyString + "\ndo not occur in sub-derivation\n  " + have.prettyString +
+          (if (ss.nonEmpty) " and symbols " + ss.map(_.prettyString).mkString(",") + " from sub-derivation to not occur in goal" else "") +
+          "\nand there is no substitution to address the difference" + (if (substs.nonEmpty) " in\n  " + substs.mkString(", ") else ""))
 
-      val substGoal = exhaustiveSubst(goal, subst)
-      val substHave = exhaustiveSubst(have, subst)
-      subst ++ collectSubstOrdered(substGoal, substHave, haveIsProved, substs.diff(subst.subsDefsInput), symbolDeps)
+        val substGoal = exhaustiveSubst(goal, subst)
+        val substHave = exhaustiveSubst(have, subst)
+        subst ++ collectSubstOrdered(substGoal, substHave, haveIsProved, substs.diff(subst.subsDefsInput), symbolDeps)
+      }
     }
   }
 }
