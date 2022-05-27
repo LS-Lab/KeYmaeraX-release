@@ -54,9 +54,6 @@ class ParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach wi
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    println("Expected: ",e.expect)
-    println("Found: ",e.found)
-    println("Hint: ",e.hint)
     e.expect shouldBe "\"Problem\" at 3:1"
     e.found shouldBe "\"End.\\n     \""
     e.hint shouldBe "Try (\"Description\" | \"Title\" | \"Link\" | \"Author\" | \"See\" | programVariables | definitions | \"Problem\")"
@@ -101,9 +98,6 @@ class ParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach wi
         |End asd.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    println(e.expect)
-    println(e.found)
-    println(e.hint)
     e.expect shouldBe "end label: Some(asd) is optional but should be the same as the start label: Some(asdf) at 5:9"
     e.found shouldBe "\"\\n      \""
     e.hint shouldBe "Try: end label: Some(asd) is optional but should be the same as the start label: Some(asdf)"
@@ -118,9 +112,6 @@ class ParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach wi
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    println(e.expect)
-    println(e.found)
-    println(e.hint)
     e.expect shouldBe "formula, but got term at 3:9"
     e.found shouldBe "\"}]x>=0\\nEnd\""
     // todo: maybe provide verbose suggestions here somehow??
@@ -136,12 +127,41 @@ class ParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach wi
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    println(e.expect)
-    println(e.found)
-    println(e.hint)
     e.expect shouldBe "formula at 3:9"
     e.found shouldBe "\"}]x>=0\\nEnd\""
     // todo: maybe provide verbose suggestions here somehow??
     e.hint shouldBe "Try (\"true\" | \"false\" | \"\\\\forall\" | \"\\\\exists\" | \"[\" | \"<\" | \"!\" | predicational | ident | \"(\" | term)"
   }
+
+  it should "give correct error location for disallowed identifier" in {
+    val input =
+      """ArchiveEntry "foo"
+        |Problem
+        |5 < 5+ax__
+        |End.
+        |End.
+      """.stripMargin
+    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+    print(e)
+    e.expect shouldBe "term at 3:5"
+    e.found shouldBe "\"ax__\\nEnd.\\n\""
+    e.hint should include("ident")
+  }
+
+  it should "give correct error location for invalid formula extension" in {
+    val input =
+      """ArchiveEntry "foo"
+        |Problem
+        |x=5+a<5
+        |End.
+        |End.
+      """.stripMargin
+    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+    //TODO: what to do?
+    e.msg should include("End")
+    e.expect shouldBe "problem at 3:4"
+    e.found shouldBe "<5\\nEnd.\""
+    e.hint should include("End")
+  }
+
 }

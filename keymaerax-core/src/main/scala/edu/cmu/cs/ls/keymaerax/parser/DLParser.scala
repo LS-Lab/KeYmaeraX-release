@@ -224,8 +224,7 @@ class DLParser extends Parser {
   /** parse a number literal */
   def number[_: P]: P[Number] = P(
     ("-".? ~~ CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
-  ).map(s => Number(BigDecimal(s))).
-    opaque("constant")
+  ).map(s => Number(BigDecimal(s)))
 
   /** matches keywords. An identifier cannot be a keyword. */
   def keywords: Set[String] = Set(
@@ -241,21 +240,14 @@ class DLParser extends Parser {
     * @note Index is normalized so that x_00 cannot be mentioned and confused with x_0.
     * @note Keywords are not allowed as identifiers. */
   def ident[_: P]: P[(String,Option[Int])] = P(
-    (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX).!.
+    (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX ~~ ("_" ~~ !(CharIn("0-9"))).?).!.
       flatMapX(id =>
         if (keywords.contains(id))
-          Fail.opaque(s"Keyword $id cannot be used as identifiers")
+          Fail./.opaque(s"Keyword $id cannot be used as identifiers")
         else Pass(id)
       ) ~~
-      (("_" ~~ ("_".? ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX)).!) |
-        "_".!).?
-    ).opaque("identifier").map({
-      case (s,None) => (s,None)
-      case (s,Some("_")) => (s+"_",None)
-      case (s,Some(n))=>
-        if (n.startsWith("_")) (s+"_",Some(n.drop(1).toInt))
-        else (s,Some(n.toInt))
-    })
+      ("_" ~~ normNatural).? ~~ (!CharIn("a-zA-Z_"))
+    )
 
   /** `.` or `._2`: dot parsing */
   def dot[_:P]: P[DotTerm] = P(
@@ -279,6 +271,11 @@ class DLParser extends Parser {
     CharIn("0-9").repX(1).!
   ).map(s => s.toInt)
 
+  /** "532": Parse a (nonnegative) natural number literal, normalized. */
+  def normNatural[_: P]: P[Int] = P(
+    ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!
+  )("normalized natural number",implicitly).
+    map(s => s.toInt)
 
 
   //*****************
@@ -328,11 +325,11 @@ class DLParser extends Parser {
       (left +: pows).reduceRight(Power)
     }
 
-  def baseTerm[_: P]: P[Term] = P(
+  def baseTerm[_: P]: P[Term] = (
       number./ | dot./ | function.flatMap(diff) | unitFunctional.flatMap(diff)
       /* This cut means that an identifier which is not followed by () or {} or (||)
        * will always be interpreted as a variable */
-      | variable./
+      | variable
       /* termList has a cut after (, but this is safe, because we
        * require that if the first available character is ( it is
        * unambiguously a term parenthesis */
