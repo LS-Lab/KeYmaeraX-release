@@ -120,48 +120,52 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[x:=0; {?(x^2 >= 0);}^@]true".asFormula
   }
 
-  "ode proof checking" should "prove trivial  system proof" in withMathematica { _ =>
+  "ode proof checking" should "prove trivial system proof" in withMathematica { _ =>
     val pfStr = "x' = y, y' = x;"
-    val pf = p(pfStr, pp.statement(_))
-    val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe "[{x'=y,y'=x&true}]true".asFormula
+    val pf = SSAPass(p(pfStr, pp.statement(_)))
+    val (_, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[{y_1:=y_0;x_1:=x_0;}{x_1'=y_1,y_1'=x_1}]true".asFormula
   }
 
   it should "ban diffghost with no body" in withMathematica { _ =>
     val pfStr = "/++ x' = y ++/;"
-    val pf = p(pfStr, pp.statement(_))
-    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
+    val pf = SSAPass(p(pfStr, pp.statement(_)))
+    the [ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should
+      have message "Ghost variable x_1 needs to be assigned right before differential ghost x_1'"
   }
 
   it should "prove inverse diffghost" in withMathematica { _ =>
     val pfStr = "/-- x' = y --/;"
-    val pf = p(pfStr, pp.statement(_))
-    val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe "[{x'=y&true}]true".asFormula
+    val pf = SSAPass(p(pfStr, pp.statement(_)))
+    val (_, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[{x_1:=x_0;}{x_1'=y_0&true}]true".asFormula
   }
 
   it should "prove diffweak" in withMathematica { _ =>
     val pfStr = "x' = y & /-- ?dc:(x > 0); --/;"
-    val pf = p(pfStr, pp.statement(_))
-    val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe "[{x'=y&x>0}]true".asFormula
+    val pf = SSAPass(p(pfStr, pp.statement(_)))
+    val (_, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[{x_1:=x_0;}{x_1'=y_0&x_1>0}]true".asFormula
   }
 
   it should "catch invalid dc-assign: not bound" in withMathematica { _ =>
     val pfStr = "x' = y & ?(t := T);"
-    val pf = p(pfStr, pp.statement(_))
-    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
+    val pf = SSAPass(p(pfStr, pp.statement(_)))
+    the [ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should
+      have message "ODE has duration T_0 but could not prove T_0 >= 0. To fix this, assert T >= 0 immediately before ODE"
   }
 
   it should "catch invalid dc-assign 2: not initialized" in withMathematica { _ =>
     val pfStr = "t' = 1, x' = y & ?(t := T);"
-    val pf = p(pfStr, pp.statement(_))
-    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
+    val pf = SSAPass(p(pfStr, pp.statement(_)))
+    the [ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should
+      have message "ODE has duration T_0 but could not prove T_0 >= 0. To fix this, assert T >= 0 immediately before ODE"
   }
 
   it should "catch invalid ODE variable names in non-SSA file" in withMathematica { _ =>
     val pfStr = "t:= 0; ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit xRange by solution;};"
     val pf = p(pfStr, pp.statement(_))
-    a[ODEAdmissibilityException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
+    the [ODEAdmissibilityException] thrownBy ProofChecker(Context.empty, pf) should
+      have message "Differential equation proof must be in SSA form, else variables (Set(t, x)) escape scope"
   }
 }

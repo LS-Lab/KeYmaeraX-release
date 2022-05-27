@@ -737,19 +737,19 @@ class ScriptedRequestTests extends TacticTestBase {
     )
   }}
 
-  it should "allow defined functions" in withDatabase { db =>
+  it should "allow defined functions" in withTactics { withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      FixedGenerator(Nil), Declaration(Map(Name("f", None) -> Signature(None, Real, None, Some("3+5".asTerm), null))))
+      FixedGenerator(Nil), Declaration(Map(Name("f", None) -> Signature(Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f()>0").
       getResultingResponses(t).loneElement
     response should have ('flag (true))
-  }
+  }}
 
-  it should "fail when defined functions are used without ()" in withDatabase { db =>
+  it should "fail when defined functions are used without ()" in withTactics { withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -759,7 +759,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement
     response should have ('flag (true))
-  }
+  }}
 
   "OpenProofRequest" should "populate the invariant supplier from annotations" in withTactics { withDatabase { db =>
     val userName = "opr"
