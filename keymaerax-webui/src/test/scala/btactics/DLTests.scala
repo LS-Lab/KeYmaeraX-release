@@ -432,6 +432,15 @@ class DLTests extends TacticTestBase {
     )
   }
 
+  it should "keep conjunctive constants around when pre is nil" in withTactics {
+    proveBy("x_0=0&y_0=1, x_0=x, y_0=y ==> [{y:=y+x;x:=x+1;}*]y>=0".asSequent, DLBySubst.loop("x>=0&y>=1".asFormula, nil)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x_0=0&y_0=1, x_0=x, y_0=y ==> x>=0&y>=1".asSequent,
+      /* use case */ "x>=0&y>=1, x_0=0&y_0=1 ==> y>=0".asSequent,
+      /* step */     "x>=0&y>=1, x_0=0&y_0=1 ==> [y:=y+x;x:=x+1;](x>=0&y>=1)".asSequent
+    )
+  }
+
   it should "FEATURE_REQUEST: keep constants around when definitions are not expanded" taggedAs TodoTest in withTactics {
     val defs = Declaration(Map(
       Name("initial") -> Signature(Some(Tuple(Real, Real)), Bool, Some(List(Name("x")->Real, Name("y")->Real)), Some("x>2 & y>0".asFormula), UnknownLocation),
