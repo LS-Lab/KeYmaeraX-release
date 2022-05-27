@@ -10,9 +10,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Derive.skip
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, Name, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
@@ -96,7 +95,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       "USMatch".! |
       "partial".! |
       "let".!
-      ).map(_ => skip)
+      ).map(_ => belleParser("skip"))
     )
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )("(tactic)", implicitly)
   def baseTac[_: P]: P[BelleExpr] = (

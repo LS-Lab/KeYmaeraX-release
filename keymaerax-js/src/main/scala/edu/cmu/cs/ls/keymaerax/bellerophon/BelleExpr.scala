@@ -4,8 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{Expression,Formula}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position,AntePosition,SuccPosition,PosInExpr}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, UnknownLocation}
 
 /** Empty placeholder for compiling. */
@@ -31,4 +31,5 @@ case class ParallelTactic(expr: List[BelleExpr]) extends BelleExpr
 case class SaturateTactic(child: BelleExpr) extends BelleExpr
 case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
+case class CaseTactic(children: Seq[(BelleLabel, BelleExpr)]) extends BelleExpr
 case class OnAll(e: BelleExpr) extends BelleExpr
