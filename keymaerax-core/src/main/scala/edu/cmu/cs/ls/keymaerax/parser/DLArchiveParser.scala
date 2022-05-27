@@ -133,7 +133,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** meta information */
   def metaInfo[_: P]: P[Map[String,String]] = P(
     DLParserUtils.repFold(Map.empty[String,String])(acc =>
-      (("Description" | "Title" | "Link" | "Author" | "See" | "Illustration").! ~~/ blank ~ string ~ ".").
+      (("Description" | "Title" | "Link" | "Author" | "See" | "Illustration" | "Citation").! ~~/ blank ~ string ~ ".").
         flatMap{case (key, value) =>
           if (acc.contains(key))
             Fail.opaque(s"MetaInfo key $key appears twice")
