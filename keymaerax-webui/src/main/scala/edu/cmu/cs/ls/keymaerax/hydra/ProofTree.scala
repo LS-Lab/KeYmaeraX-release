@@ -6,12 +6,11 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, Position, RenUSubst, RestrictedBiDiUnificationMatch, UnificationTools}
-import edu.cmu.cs.ls.keymaerax.parser.Location
+import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, SubstitutionClashException, SubstitutionPair, USubst, Variable}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, UnificationTools}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Location}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig, TermProvable}
@@ -652,7 +651,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   }
 
   /** @inheritdoc */
-  override def tactic: BelleExpr = BelleParser(tacticString(new VerboseTraceToTacticConverter(dbDefs))._1)
+  override def tactic: BelleExpr = ArchiveParser.tacticParser(tacticString(new VerboseTraceToTacticConverter(dbDefs))._1)
 
   /** Indicates whether or not the proof might be closed. */
   override def done: Boolean = dbProofInfo.closed
