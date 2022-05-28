@@ -25,7 +25,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   private def createInterpreter(proofId: Int, db: DBAbstraction, constructGlobalProvable: Boolean = true, defs: Declaration = Declaration(Map.empty)) = registerInterpreter(
     SpoonFeedingInterpreter(proofId, -1, db.createProof, defs, listener(db, constructGlobalProvable),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true)
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=true)
   )
 
   "Atomic tactic" should "be simply forwarded to the inner interpreter" in withDatabase { db => withMathematica { _ =>
@@ -34,7 +34,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = implyR(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
@@ -63,7 +63,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = andR(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some("==> x>0 -> x>0".asSequent)
@@ -89,7 +89,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & DebuggingTactics.printX("Two goals"),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser("implyR('R==\"x>0->x>0&x>0&x>0\"); andR('R==\"x>0&x>0&x>0\"); print(\"Two goals\"); <(\"x>0\": todo, \"x>0&x>0\": todo)")
@@ -103,7 +103,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & nil,
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -123,7 +123,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = implyR(1) & id
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
@@ -151,7 +151,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser("""pending("implyR(1)") ; pending("loop(\"x>0\", 1)") ; todo""")
   }}
@@ -163,7 +163,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser("""implyR('R=="x>0->x>0"); pending("loop(\"x>0\", 1)") ; todo""")
   }}
@@ -173,7 +173,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(implyR(1) & (andR(1) | id), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(implyR(1) & (andR(1) | id), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
@@ -199,7 +199,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(implyR(1) & (andR(1) | orR(1)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(implyR(1) & (andR(1) | orR(1)), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
@@ -211,7 +211,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(implyR(1) & (prop & done | done), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(implyR(1) & (prop & done | done), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
@@ -224,7 +224,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & Idioms.<(id, id),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser("""implyR('R=="x>0->x>0&x>0"); andR('R=="x>0&x>0"); <("L//x>0": id, "R//x>0": id)""")
@@ -236,8 +236,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))) match {
-      case BelleProvable(p, l, _) =>
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))) match {
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List(
           "x>0 ==> x>0".asSequent,
           "x>0 ==> x>-1".asSequent
@@ -258,9 +258,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         "x>0".asLabel -> id,
         "x>(-1)".asLabel -> cut("x>=0".asFormula)
       )),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))
     ) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List(
           "x>0 ==> x>-1, x>=0".asSequent,
           "x>0, x>=0 ==> x>-1".asSequent
@@ -293,9 +293,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           "Show".asLabel -> (hideR(1) & propClose)
         )))
       )),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))
     ) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p shouldBe 'proved
         l shouldBe 'empty
     }
@@ -313,15 +313,29 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |)""".stripMargin)
   }}
 
+  it should "delete labels of auto-closed goals" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables Real x,v,a; End. Problem x>=0 -> [{x'=v & v>=0 & a<=-5}](v>=0 & a<=0) End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = createInterpreter(proofId, db.db)
+    interpreter(
+      BelleParser.tacticParser("auto"),
+      BelleProvable.labeled(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)), Some(List(BelleTopLevelLabel("A label"))))
+    ) match {
+      case BelleProvable(p, l) =>
+        p shouldBe 'proved
+        l.toList.flatten shouldBe 'empty
+    }
+  }}
+
   it should "delete labels of closed goals" in withDatabase { db => withMathematica { _ =>
     val modelContent = "ProgramVariables Real x, eps; End. Problem true & !(-2<x&x<=1) & x<=1 -> !-2<x End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & label("Delete") & propClose,
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent)))
     ) match {
-      case BelleProvable(p, l, _) =>
+      case BelleProvable(p, l) =>
         p shouldBe 'proved
         l.value shouldBe 'empty
     }
@@ -336,7 +350,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & Idioms.<(id, andR(1) & Idioms.<(id, id)),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -358,7 +372,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & Idioms.<(nil, andR(1) & Idioms.<(id, nil) & id) & id,
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -380,7 +394,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & Idioms.<(id & done, skip),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 6
@@ -442,7 +456,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & Idioms.<(id & done, dW(1) & prop & done),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 7
@@ -504,7 +518,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(id & done, QE & done), QE & done),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.load()
@@ -535,7 +549,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & Idioms.<(skip, id & done),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.root.provable.subgoals should have size 1
@@ -561,7 +575,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) & Idioms.<(orL(-1) & Idioms.<(skip, id), skip),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
@@ -582,7 +596,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & andR(1) <(orL(-1) <(id, skip), skip),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
@@ -603,7 +617,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) <(andR(1) <(id, nil), andR(1)),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
@@ -627,7 +641,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) <(andR(1) <(id, skip), andR(1) <(skip, id)),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
@@ -651,7 +665,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) <((andR(1) <(id, skip))*2, andR(1) <(skip, andR(1) <(skip, id))),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
@@ -680,9 +694,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = s"ProgramVariables. R x. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false, recordInternal=true))
     interpreter(implyR(1) & loop("x>=0".asFormula)(1),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
@@ -733,9 +747,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = s"Definitions Real A,B,C; End. ProgramVariables Real x; End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false, recordInternal=true))
     interpreter(implyR(1) & loop("x>=0".asFormula)(1),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
@@ -799,7 +813,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "record id step" in withDatabase { db => withMathematica { _ =>
     val p = "x>=0 -> x>=0".asFormula
-    val ps = ProvableSig.startProof(p)
+    val ps = ProvableSig.startPlainProof(p)
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $p End."
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
@@ -818,7 +832,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & onAll(orR(1)) <(andR(1) <(id, andR(1)), id) & onAll(id),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
@@ -845,7 +859,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & onAll(orR(1)) <(andR(1) <(id, andR(1)), skip) & onAll(id),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
@@ -875,7 +889,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & onAll(orR(1)) <(andR(1) <(id, andR(1)), skip)
       <(skip, cut("x^2>=0".asFormula), skip) <(skip, skip, id, cohideR('Rlast)) <(skip, id, QE) & id,
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
@@ -915,14 +929,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         QE),
       QE //Expand(eq, None) & Expand(Function("one", None, Unit, Real), None) & QE
       ),
-      BelleProvable.withDefs(ProvableSig.startProof(problem.asFormula), defs))
+      BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
     tree.isProved shouldBe true
   }}
 
-  it should "FEATURE_REQUEST: combine substitutions (2)" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
+  it should "combine substitutions (2)" in withDatabase { db => withMathematica { _ =>
     val problem = "eq(x,one()) -> eq(x,x) & p(x)"
     val defs = "one()~>1 :: eq(x,y)~>x=y :: sq(x)~>x^2 :: p(x)~>eq(x,sq(x)) :: nil".asDeclaration
     val modelContent = s"Definitions Real one() = 1; Real sq(Real x)=x^2; Bool eq(Real x, Real y) <-> x=y; Bool p(Real x) <-> eq(x,sq(x)); End. ProgramVariables Real x, y; End. Problem $problem End."
@@ -931,11 +945,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val eq = Function("eq", None, Tuple(Real, Real), Bool)
     interpreter(implyR(1) & andR(1) <(
       cut("eq(x,1)".asFormula) <(
-        Expand(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT & DebuggingTactics.print("Branch 1 proved?"),
+        expandFw(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT & DebuggingTactics.print("Branch 1 proved?"),
         Using("eq(x,one()), eq(x,1)".asFormulaList, QE & DebuggingTactics.print("Branch 2 proved?"))) & DebuggingTactics.print("Both branches proved?"),
-      Expand(eq, None) & Expand(Function("one", None, Unit, Real), None) & QE
+      expandFw(eq, None) & expandFw(Function("one", None, Unit, Real), None) & QE
     ),
-      BelleProvable.withDefs(ProvableSig.startProof(problem.asFormula), defs))
+      BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
@@ -947,7 +961,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(implyR(1) & SaturateTactic(andL('L)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(implyR(1) & SaturateTactic(andL('L)), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 4
@@ -977,7 +991,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(SaturateTactic(nil), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(SaturateTactic(nil), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 2
@@ -996,7 +1010,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(SaturateTactic(Idioms.?(QE)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(SaturateTactic(Idioms.?(QE)), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
@@ -1019,7 +1033,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(implyR(1) & (andL('L)*2), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(implyR(1) & (andL('L)*2), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 4
@@ -1050,7 +1064,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(let("X()".asTerm, "x".asVariable, prop),
-      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+      BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 2
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None :: Some("let(X()=x in prop)") :: Nil
@@ -1067,12 +1081,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       (_: Int) => (_: String, _: Int, _: Int) => mockListener::Nil
 
     val interpreter = SpoonFeedingInterpreter(1, -1, (_: ProvableSig) => 1, Declaration(Map.empty), mockListenerFactory,
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true)
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true, recordInternal=false)
     BelleInterpreter.setInterpreter(interpreter)
-    BelleInterpreter(implyR(1) & dC("x>0".asFormula)(1, 1::Nil), BelleProvable.plain(ProvableSig.startProof("y>0 -> [x:=3;][{x'=4}]x>0".asFormula)))
+    BelleInterpreter(implyR(1) & dC("x>0".asFormula)(1, 1::Nil), BelleProvable.plain(ProvableSig.startPlainProof("y>0 -> [x:=3;][{x'=4}]x>0".asFormula)))
     //@note auxiliary inner proofs started by UnifyUSCalculus ruin database trace if reported to listeners
-    mockListener.beginnings shouldNot contain (BelleProvable.plain(ProvableSig.startProof("[{x'=4}]x>0".asFormula)) -> (QE & done))
-    mockListener.beginnings shouldNot contain (BelleProvable.plain(ProvableSig.startProof("(p_()<->q_())&q_()->p_()<->true".asFormula)) -> prop)
+    mockListener.beginnings shouldNot contain (BelleProvable.plain(ProvableSig.startPlainProof("[{x'=4}]x>0".asFormula)) -> (QE & done))
+    mockListener.beginnings shouldNot contain (BelleProvable.plain(ProvableSig.startPlainProof("(p_()<->q_())&q_()->p_()<->true".asFormula)) -> prop)
     //@note should also not contain the following, but not testable without huge effort since closeTrue is private and so is ProofRuleTactics
     //mockListener.beginnings shouldNot contain (BelleProvable(ProvableSig.startProof("[a{|^@|};]true <-> true".asFormula)) -> (equivR(1) <(closeTrue(SuccPos(1)), cohideR(1) & byUS("[]T system"))))
   }
@@ -1085,7 +1099,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tacticText = """implyR('R) & andL('L) & dC("v>=0", 1) & <(dW(1) & prop, dI(1))"""
     val tactic = BelleParser(tacticText)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val extractedTactic = db.extractTactic(proofId)
     extractedTactic shouldBe BelleParser(
@@ -1105,7 +1119,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = entry.tactics.head._3
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val extractedTactic = db.extractTactic(proofId)
     extractedTactic shouldBe BelleParser(
@@ -1144,7 +1158,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = entry.tactics.head._3
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1208,7 +1222,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = entry.tactics.head._3
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1245,7 +1259,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = entry.tactics.head._3
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 11
@@ -1274,7 +1288,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = entry.tactics.head._3
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
@@ -1342,7 +1356,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = createInterpreter(proofId, db.db)
 
     val tactic = entry.tactics.head._3
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
 
     //db.extractTactic(proofId) shouldBe tactic //@note not exactly the same, because repetitions are unrolled etc.
     val tree = DbProofTree(db.db, proofId.toString)
@@ -1466,7 +1480,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = BelleParser("""implyR(1); dC("x>=old(x)", 1); <(nil, dI(1))""")
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1484,7 +1498,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = BelleParser("""implyR(1); dC("x>=old(x)", 1); <(nil, dI(1)); dW(1); QE""")
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1504,7 +1518,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = BelleParser("""implyR(1); dC("x>=old(x)", 1); <(dW(1), dI(1)); QE""")
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1522,7 +1536,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = BelleParser("""implyR(1); dC("x>=old(x)", 1); <(cut("0<=1"); <(dW(1), cohideR(2); QE), dI(1)); QE""")
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1544,7 +1558,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = BelleParser("""implyR(1); dC("x>=old(x)", 1); <(dW(1); QE, nil); dI(1)""")
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1562,7 +1576,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val interpreter = createInterpreter(proofId, db.db)
     val tactic = BelleParser("""implyR(1); loop("x>=0", 1); <(QE, nil, master); QE""")
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes
@@ -1592,7 +1606,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         }
         val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, startStepIndex, db.db.createProof, Declaration(Map.empty),
           listener(db.db, constructGlobalProvable = true),
-          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true, recordInternal=false))
         val tactic = BelleParser("""dC("x>=old(x)", 1)""")
         n.stepTactic(db.user.userName, interpreter, tactic, wait=true)
     }
@@ -1611,8 +1625,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true))
-    interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true, recordInternal=true))
+    interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1629,10 +1643,10 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=true, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=true, convertPending=false, recordInternal=true))
     val fml = problem.asFormula
     val tactic = implyR('R) & diffInvariant("x>=0".asFormula)(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1661,10 +1675,10 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=true, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=true, convertPending=true, recordInternal=true))
     val fml = problem.asFormula
     val tactic = implyR('R) & diffInvariant("x>=old(x)".asFormula)(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
 
     //@todo let does not serialize
     val extractedTactic = db.extractTactic(proofId)
@@ -1689,10 +1703,10 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true, recordInternal=true))
     val fml = problem.asFormula
     val tactic = implyR(1) & dW(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
@@ -1713,10 +1727,10 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true, recordInternal=true))
     val fml = problem.asFormula
     val tactic = implyR(1) & SaturateTactic(andL('Llast)) & dW(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
@@ -1746,10 +1760,10 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true, recordInternal=true))
     val fml = ArchiveParser.parseAsFormula(modelContent)
     val tactic = implyR(1) & SaturateTactic(andL('Llast)) & dW(1)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
@@ -1777,7 +1791,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & DebuggingTactics.assertProvableSize(2) <(id, nil),
-      BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
@@ -1790,8 +1804,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))(
-      prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true, recordInternal=true))(
+      prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < 0->x>=0");
@@ -1807,8 +1821,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true))
-    interpreter(prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=true, recordInternal=true))
+    interpreter(prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     //@todo tactic extraction must be strict too (now removes nil)
     val tree = DbProofTree(db.db, proofId.toString)
@@ -1817,8 +1831,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true))(
-      prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true, recordInternal=false))(
+      prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("alphaRule /*implyR('R==\"x>=0->x>=0\")*/; id")
   }}
@@ -1829,8 +1843,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
-    interpreter(implyR(1) & id & onAll(nil), BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true, recordInternal=true))
+    interpreter(implyR(1) & id & onAll(nil), BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
   }}
@@ -1841,8 +1855,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true))
-    interpreter(master(), BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=false, recordInternal=true))
+    interpreter(master(), BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
@@ -1854,9 +1868,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false))
-    interpreter(prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula))) match {
-      case BelleProvable(p, l, _) =>
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false, recordInternal=true))
+    interpreter(prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula))) match {
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List("==> x>=0, x<y".asSequent)
         l.value should contain theSameElementsAs List("!x<y".asFormula.prettyString.asLabel)
     }
@@ -1872,8 +1886,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false))(
-      prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false, recordInternal=true))(
+      prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < y->x>=0");
         |orL('L=="x>=0|!x < y"); <(
@@ -1888,9 +1902,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=true, convertPending=false))
-    interpreter(prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula))) match {
-      case BelleProvable(p, l, _) =>
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=true, convertPending=false, recordInternal=true))
+    interpreter(prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula))) match {
+      case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List("==> x>=0, x<y".asSequent)
         l.value should contain theSameElementsAs List("!x<y".asFormula.prettyString.asLabel)
     }
@@ -1906,8 +1920,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=false))(
-      prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=false, recordInternal=true))(
+      prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < y->x>=0");
         |orLRule('L=="x>=0|!x < y"); <(
@@ -1922,8 +1936,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable=true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
-    interpreter(prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true, recordInternal=true))
+    interpreter(prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     DbProofTree(db.db, proofId.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|x < y->x>=0&x < y");
@@ -1947,8 +1961,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = true), 1, strict=false, convertPending=true))
-    interpreter(master(), BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = true), 1, strict=false, convertPending=true, recordInternal=true))
+    interpreter(master(), BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some("==> false".asSequent)
@@ -1956,12 +1970,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   private def stepInto(node: ProofTreeNode, expectedStep: String, depth: Int = 1)(db: DBAbstraction): (Int, BelleExpr) = {
-    val (localProvable, step) = (ProvableSig.startProof(node.conclusion), node.maker.getOrElse("nil"))
+    val (localProvable, step) = (ProvableSig.startPlainProof(node.conclusion), node.maker.getOrElse("nil"))
     step shouldBe expectedStep
     val localProofId = db.createProof(localProvable)
     val innerInterpreter = registerInterpreter(SpoonFeedingInterpreter(localProofId, -1, db.createProof, Declaration(Map.empty),
       listener(db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), depth, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), depth, strict=false, convertPending=true, recordInternal=true))
     innerInterpreter(BelleParser(step), BelleProvable.plain(localProvable))
     val innerId = innerInterpreter.innerProofId.getOrElse(localProofId)
     (localProofId, DbProofTree(db, innerId.toString).tactic)
@@ -1973,8 +1987,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
-    interpreter(implyR(1) & prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true, recordInternal=true))
+    interpreter(implyR(1) & prop, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString).load()
     tree.locate("(2,0)") match {
@@ -1998,7 +2012,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work in the middle of a proof with the in-memory DB" in withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x<y"
-    val provable = ProvableSig.startProof(problem.asFormula)
+    val provable = ProvableSig.startPlainProof(problem.asFormula)
     val db = new InMemoryDB()
     val proofId = db.createProof(provable)
     val interpreter = createInterpreter(proofId, db)
@@ -2028,7 +2042,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val problem = "x>=0|x<y -> x>=0&x<y"
     val db = new InMemoryDB()
 
-    val provable = ProvableSig.startProof(problem.asFormula)
+    val provable = ProvableSig.startPlainProof(problem.asFormula)
     val proofId = db.createProof(provable)
 
     val interpreter = createInterpreter(proofId, db)
@@ -2061,7 +2075,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = s"ProgramVariables. R x. R y. R z. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
-    interpreter(prop & unfoldProgramNormalize & QE, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
+    interpreter(prop & unfoldProgramNormalize & QE, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
 
     val tactic = db.extractTactic(proofId)
     tactic shouldBe BelleParser("prop ; unfold ; QE")
@@ -2097,7 +2111,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |->
         |  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
       """.stripMargin
-    val p = ProvableSig.startProof(problem.asFormula)
+    val p = ProvableSig.startPlainProof(problem.asFormula)
     implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = createInterpreter(proofId, db)
@@ -2149,7 +2163,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for simple dI" in withMathematica { _ =>
     val problem = "x>0 -> [{x'=3}]x>0".asFormula
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = createInterpreter(proofId, db)
@@ -2179,7 +2193,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for simple dI with constants" in withMathematica { _ =>
     val problem = "x>0 & a>=0 -> [{x'=a}]x>0".asFormula
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = createInterpreter(proofId, db)
@@ -2209,7 +2223,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for simple dI with non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "x>a -> [{x'=5}]x>a".asFormula
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = createInterpreter(proofId, db)
@@ -2238,13 +2252,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work when dI fails with non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "[{x'=5}]x>a".asFormula
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
 
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, Declaration(Map.empty),
       listener(db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true, recordInternal=true))
     interpreter(DifferentialEquationCalculus.dIX(1), BelleProvable.plain(p))
 
     val innerId = interpreter.innerProofId.getOrElse(proofId)
@@ -2270,13 +2284,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work when dI fails with multiple non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "[{x'=5}]x>a+b".asFormula
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
 
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, Declaration(Map.empty),
       listener(db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true, recordInternal=true))
     interpreter(DifferentialEquationCalculus.dIX(1), BelleProvable.plain(p))
 
     val innerId = interpreter.innerProofId.getOrElse(proofId)
@@ -2303,7 +2317,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "work for partial prop" in withMathematica { _ => withDatabase { sql =>
     val problem = "x=1 & y=2 -> x=3".asFormula
     val modelFile = s"ProgramVariables R x. R y. End.\n Problem. $problem End."
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     val pId = sql.createProof(modelFile, "model1")
     val tactic = prop & done
     intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("expected to have proved, but got open goals")
@@ -2313,7 +2327,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(p)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, Declaration(Map.empty),
       listener(db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true, recordInternal=true))
     interpreter(tactic, BelleProvable.plain(p))
     DbProofTree(db, proofId.toString).tactic shouldBe BelleParser("""implyR('R=="x=1&y=2->x=3"); andL('L=="x=1&y=2"); pending("done"); todo""")
   }}
@@ -2321,12 +2335,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   "Pending" should "execute and record successful tactic" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> x>0".asFormula
     val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""pending("implyR(1) ; id"); todo""")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true, recordInternal=false))
     interpreter(tactic, BelleProvable.plain(p))
     db.extractTactic(proofId) shouldBe BelleParser("implyR('R==\"x>0->x>0\"); id")
   }}
@@ -2334,12 +2348,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "try execute and record again as pending on failure" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> x>0".asFormula
     val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""pending("implyR(1) ; andR(1)"); todo""")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true, recordInternal=false))
     interpreter(tactic, BelleProvable.plain(p))
     db.extractTactic(proofId) shouldBe BelleParser("""implyR('R=="x>0->x>0"); pending("andR(1)"); todo""")
   }}
@@ -2347,12 +2361,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "not fail on nested tactic with arguments" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> [x:=x+1;]x>0".asFormula
     val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""pending("implyR(1) ; loop(\"x>0\", 1)"); todo""")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true, recordInternal=false))
     interpreter(tactic, BelleProvable.plain(p))
     db.extractTactic(proofId) shouldBe BelleParser("""implyR('R=="x>0->[x:=x+1;]x>0"); pending("loop(\"x>0\", 1)"); todo""")
   }}
@@ -2360,12 +2374,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "record innermost failed tactic as pending" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> [x:=x+1;]x>0".asFormula
     val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""implyR(1); cut("x>=0"); <("Use": hideL(-1); loop("x>0", 1), "Show": hideR(1); QE)""")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true, recordInternal=false))
     interpreter(tactic, BelleProvable.plain(p))
     db.extractTactic(proofId) shouldBe BelleParser(
       """implyR('R=="x>0->[x:=x+1;]x>0");
@@ -2378,7 +2392,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "record innermost failed tactic as pending (2)" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> [x:=x+1;]x>0".asFormula
     val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
-    val p = ProvableSig.startProof(problem)
+    val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser(
       """implyR(1); cut("x>=0"); <(
@@ -2387,7 +2401,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |)""".stripMargin)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true, recordInternal=false))
     interpreter(tactic, BelleProvable.plain(p))
     db.extractTactic(proofId) shouldBe BelleParser(
       """implyR('R=="x>0->[x:=x+1;]x>0");
@@ -2424,8 +2438,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ),
         |  ODE(1)
         |)""".stripMargin)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) =>
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _) =>
         p.subgoals should contain theSameElementsInOrderAs List(
           "x^2+y^2=r, r>0, r>1 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent,
           "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r, r>1".asSequent
@@ -2455,8 +2469,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ),
         |  ODE(1)
         |)""".stripMargin)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) =>
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _) =>
         p.subgoals should contain theSameElementsInOrderAs List(
           "x^2+y^2=r, r>0, r>1 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent,
           "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r, r>1".asSequent
@@ -2479,8 +2493,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  nil,
         |  unfold; QE
         |)""".stripMargin)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r(), true ==> x^2+y^2=r()".asSequent
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r(), true ==> x^2+y^2=r()".asSequent
     }
   }}
 
@@ -2497,7 +2511,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(
       SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs,
         listener(db.db, constructGlobalProvable = false),
-        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     val tactic = BelleParser.parseWithInvGen(
       """implyR(1); cut("r>0"); <(
         |  dC("sqsum(x, y)=r", 1); <(
@@ -2509,8 +2523,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ),
         |  expandAllDefs; ODE(1)
         |)""".stripMargin, defs=entry.defs, expandAll=false)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
     }
   }}
 
@@ -2527,7 +2541,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(
       SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs,
         listener(db.db, constructGlobalProvable = false),
-        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     val tactic = BelleParser.parseWithInvGen(
       """implyR(1); cut("r>0"); <(
         |  dC("sqsum(x, y)=r", 1); <(
@@ -2539,8 +2553,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  ),
         |  expandAllDefs; ODE(1)
         |)""".stripMargin, defs=entry.defs, expandAll=false)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
     }
   }}
 
@@ -2556,12 +2570,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(
       SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs,
         listener(db.db, constructGlobalProvable = false),
-        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     //@note dIRule constifies r,s
     val tactic = BelleParser.parseWithInvGen(
       """implyR(1); dIRule(1)""".stripMargin, defs=entry.defs, expandAll=false)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(p, _, _) =>
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _) =>
         p.subgoals should contain theSameElementsAs List(
           "x^2+y^2+s()=r(), true ==> x^2+y^2+s()=r()".asSequent,
           "x_0^2+y_0^2+s()=r(), true ==> [y':=-r()*x;][x':=r()*y;]2*x^(2-1)*x'+2*y^(2-1)*y'+0=0".asSequent
@@ -2584,12 +2598,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(
       SpoonFeedingInterpreter(proofId, -1, db.db.createProof, defs,
         listener(db.db, constructGlobalProvable = false),
-        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     //@note QE expands wUp and wLo
     val tactic = BelleParser.parseWithInvGen(
       """implyR(1); andL('L)*; implyL('L); <(QE, QE)""".stripMargin, defs=defs, expandAll=false)
-    interpreter(tactic, BelleProvable.withDefs(ProvableSig.startProof(s.asFormula), defs)) match {
-      case BelleProvable(p, _, _) => p shouldBe 'proved
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(s.asFormula, defs))) match {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
   }}
 
@@ -2605,7 +2619,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(
       SpoonFeedingInterpreter(proofId, -1, db.db.createProof, defs,
         listener(db.db, constructGlobalProvable = false),
-        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     //@note QE expands one()
     val tactic = BelleParser.parseWithInvGen(
       """implyR(1); andL('L)*; andR(1); <(
@@ -2615,8 +2629,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         | andL('Llast);
         | QE using "y>=0 :: z>=1 :: y/(z*one())>=0 & (b=0 -> b/z=0) :: nil"
         |)""".stripMargin, defs=defs, expandAll=false)
-    interpreter(tactic, BelleProvable.withDefs(ProvableSig.startProof(s.asFormula), defs)) match {
-      case BelleProvable(p, _, _) => p shouldBe 'proved
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(s.asFormula, defs))) match {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
   }}
 
@@ -2640,7 +2654,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |)""".stripMargin)
     //@todo see Interpreter.applySubDerivation which returns subderivation verbatim without applying to parent (because
     // it can't until constification is backsubstituted)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(entry.model.asInstanceOf[Formula]))) match {
       case p: BelleDelayedSubstProvable => p.p.subgoals should contain theSameElementsInOrderAs List()
     }
   }}
@@ -2668,9 +2682,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(
       SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs,
         listener(db.db, constructGlobalProvable = false),
-        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
-    interpreter(entry.tactics.head._3, BelleProvable.withDefs(ProvableSig.startProof(entry.sequent), entry.defs)) match {
-      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
+    interpreter(entry.tactics.head._3, BelleProvable.plain(ProvableSig.startProof(entry.sequent, entry.defs))) match {
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe
         """tau()>0, t=0, x^2+y^2=old(), old()>0
           |  ==>  \forall t \forall x \forall y (true&x^2+y^2>0->exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*(-((1*tau()-t*0)/tau()^2))*old()^(1/2)+2*tau()*(0-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*(-((1*tau()-t*0)/tau()^2)))-1/2*(x^2+y^2)^(1/2-1)*(2*x^(2-1)*(-x/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)-tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y))+2*y^(2-1)*(-y/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y)))>=(-1)/tau()*(exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*old()^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau()))-(x^2+y^2)^(1/2)))
           |""".stripMargin.asSequent

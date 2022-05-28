@@ -130,9 +130,9 @@ object CourseMain {
         /*val f = parseProblemFileOrFail(problem)*/
         /*val expr = parseTacticFileOrFail(solution)*/
 
-        val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f), None, Declaration(Map.empty)))
+        val result = BelleInterpreter(expr, BelleProvable.plain(ProvableSig.startPlainProof(f)))
         result match {
-          case BelleProvable(p, _, _) => {
+          case BelleProvable(p, _) => {
             if(!p.isProved) {
               println(s"ERROR: ${archiveFileStr} proof did not close on grading machine:")
               println(p.prettyString)
@@ -159,9 +159,9 @@ object CourseMain {
     val f = parseProblemFileOrFail(problem)
     val expr = parseTacticFileOrFail(solution)
 
-    val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f), None, Declaration(Map.empty)))
+    val result = BelleInterpreter(expr, BelleProvable.plain(ProvableSig.startPlainProof(f)))
     result match {
-      case BelleProvable(p, _, _) => {
+      case BelleProvable(p, _) => {
         if(!p.isProved) {
           println(s"Proof of ${fileExistsOrFail(problem)} using ${fileExistsOrFail(solution)} did not close. Remaining open goals follow:")
           println(p.prettyString)

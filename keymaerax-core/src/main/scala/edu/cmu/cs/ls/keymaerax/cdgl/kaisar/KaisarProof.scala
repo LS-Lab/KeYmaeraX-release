@@ -42,7 +42,7 @@ object KaisarProof {
   }
 
 
-  abstract class LocatedException (val msg: String = "", val cause: Throwable = null) extends Exception (cause) {
+  abstract class LocatedException (val msg: String = "", val cause: Throwable = null) extends Exception (msg, cause) {
     def location: Option[Int]
   }
 

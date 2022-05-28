@@ -40,10 +40,10 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
   }
 
   private def useToClose(pi: ProvableInfo): Unit = {
-    ProvableSig.startProof(pi.provable.conclusion)(pi.provable, 0) shouldBe 'proved
+    ProvableSig.startPlainProof(pi.provable.conclusion)(pi.provable, 0) shouldBe 'proved
     //@note same test as previous line, just to make sure the lemma can be used by substitution
-    theInterpreter(TactixLibrary.byUS(pi), BelleProvable.plain(ProvableSig.startProof(pi.provable.conclusion))) match {
-      case BelleProvable(provable, _, _) => provable shouldBe 'proved
+    theInterpreter(TactixLibrary.byUS(pi), BelleProvable.plain(ProvableSig.startPlainProof(pi.provable.conclusion))) match {
+      case BelleProvable(provable, _) => provable shouldBe 'proved
       case _ => fail()
     }
   }

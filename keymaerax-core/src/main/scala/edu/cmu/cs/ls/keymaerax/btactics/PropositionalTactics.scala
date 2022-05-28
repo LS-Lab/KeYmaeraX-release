@@ -2,22 +2,26 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper.timed
 import TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, RenUSubst, SuccPosition, UnificationMatchUSubstAboveURen}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, RenUSubst, SuccPosition, UnificationMatchUSubstAboveURen}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
+import scala.collection.immutable.{::, List, Nil}
 import scala.util.Try
 
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.
  */
-private object PropositionalTactics extends Logging {
+private[keymaerax] object PropositionalTactics extends Logging {
   /**
    * Inverse of [[SequentCalculus.implyR]].
    * @author Nathan Fulton
@@ -151,23 +155,21 @@ private object PropositionalTactics extends Logging {
         )
       case Some(_: Box) =>
         import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-        provable(US(Ax.monbaxiom.provable).result _, 0)
+        provable(US(Ax.monbaxiom.provable), 0)
       case Some(_: Diamond) =>
         import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-        provable(US(Ax.mondrule.provable).result _, 0)
-      case Some(_: Forall) => (provable
-        (FOQuantifierTactics.allSkolemize(SuccPos(0)).computeResult _, 0)
-        (FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)).computeResult _, 0)
-        )
-      case Some(_: Exists) => (provable
-        (FOQuantifierTactics.existsSkolemize(AntePos(0)).computeResult _, 0)
-        (FOQuantifierTactics.existsInstantiate(None, None)(SuccPos(0)).computeResult _, 0)
-        )
+        provable(US(Ax.mondrule.provable), 0)
+      case Some(_: Forall) => provable(
+        FOQuantifierTactics.allSkolemize(SuccPos(0)) andThen
+        FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)), 0)
+      case Some(_: Exists) => provable(
+        FOQuantifierTactics.existsSkolemize(AntePos(0)) andThen
+        FOQuantifierTactics.existsInstantiate(None, None)(SuccPos(0)), 0)
       case Some(e) => throw new TacticInapplicableFailure("Prop. CMon not applicable to " + e.prettyString)
       // redundant to exception raised by .at(...) in contract above
       case None => throw new IllFormedTacticApplicationException("Prop. CMon: no more formulas left to descend into " + at.prettyString)
     })
-      (propCMon(at.child).result _, 0)
+      (propCMon(at.child), 0)
       )
   }
 
@@ -177,7 +179,7 @@ private object PropositionalTactics extends Logging {
     val seq = pr.subgoals.head
     val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
     (pr(ImplyLeft(implication), 0)
-      (closeId(p, SuccPos(seq.succ.length)).computeResult _, 0)
+      (closeId(p, SuccPos(seq.succ.length)), 0)
       )
   }
 
@@ -194,13 +196,13 @@ private object PropositionalTactics extends Logging {
           val assms = (notsuccs ++ antes).reduceRightOption(And).getOrElse(True)
           val mpShow = Sequent(scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(Imply(assms, p)))
           //@todo tactic with timeouts results in proof repeatability issues
-          val mpLemma = proveBy(mpShow, SaturateTactic(implyR('R) | andL('L)) & EqualityTactics.expandAll & prop &
+          val mpLemma = proveBy(mpShow, SaturateTactic(implyR('R) | andL('L)) & EqualityTactics.expandAll & PropositionalTactics.prop &
             Idioms.doIf(_.subgoals.size <= 4)(OnAll(QEX(None, Some(Number(2))))))
 
           if (mpLemma.isProved) {
             cut(p) < (
               modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop) & SaturateTactic(hideL('L, p)),
-              useAt(mpLemma, PosInExpr(1 :: Nil))('Rlast) & prop & done)
+              useAt(mpLemma, PosInExpr(1 :: Nil))('Rlast) & PropositionalTactics.prop & done)
           } else throw new TacticInapplicableFailure("Failed to prove assumptions")
         }
       case _ => throw new TacticInapplicableFailure("Applicable only to implications at top-level in the antecedent")
@@ -257,6 +259,133 @@ private object PropositionalTactics extends Logging {
         }), 0)
         (if (sequent.ante.nonEmpty) Close(AntePos(sequent.ante.length-1), SuccPos(0)) else CloseTrue(SuccPos(0)), 0)
         )
+    }
+  }
+
+  /** Forward propositional tactic for internal use (does not create branch labels). */
+  val prop: BuiltInTactic = prop(alphaRules, betaRules)(List.empty, List.empty)
+
+  /** Returns the alpha rules for `fml`, applied at position `p`. */
+  def alphaRules(fml: Formula, p: SeqPos): List[PositionRule] = (fml, p) match {
+    case (_: Or,    sp: SuccPos) => List(OrRight(sp))
+    case (_: Imply, sp: SuccPos) => List(ImplyRight(sp))
+    case (_: Not,   sp: SuccPos) => List(NotRight(sp))
+    case (_: And,   ap: AntePos) => List(AndLeft(ap))
+    case (_: Not,   ap: AntePos) => List(NotLeft(ap))
+    case (True,     sp: SuccPos) => List(CloseTrue(sp))
+    case (False,    ap: AntePos) => List(CloseFalse(ap))
+    case _ => Nil
+  }
+
+  /** Returns the beta rules for `fml`, applied at position `p`. */
+  def betaRules(fml: Formula, p: SeqPos): List[PositionRule] = (fml, p) match {
+    case (_: And,   sp: SuccPos) => List(AndRight(sp))
+    case (_: Equiv, sp: SuccPos) => List(EquivRight(sp))
+    case (_: Or,    ap: AntePos) => List(OrLeft(ap))
+    case (_: Imply, ap: AntePos) => List(ImplyLeft(ap))
+    case (_: Equiv, ap: AntePos) => List(EquivLeft(ap))
+    case _ => Nil
+  }
+
+  /** Forward propositional tactic implementation with work stacks `alpha` and `beta`, and configuration */
+  def prop(alphaRules: (Formula, SeqPos) => List[PositionRule], betaRules: (Formula, SeqPos) => List[PositionRule])
+          (alpha: List[PositionRule], beta: List[PositionRule]): BuiltInTactic = anon { provable: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(provable, "PropositionalTactics.prop")
+
+    /** Repositions the beta rules in `r` a position up (to index-1) if they are after position `p`. */
+    def repositionBeta(r: List[PositionRule], p: SeqPos): List[PositionRule] = r.map({
+      case AndRight(rp)   if p.isSucc && rp.getIndex > p.getIndex => AndRight(rp.copy(rp.getIndex-1))
+      case EquivRight(rp) if p.isSucc && rp.getIndex > p.getIndex => EquivRight(rp.copy(rp.getIndex-1))
+      case OrLeft(rp)     if p.isAnte && rp.getIndex > p.getIndex => OrLeft(rp.copy(rp.getIndex-1))
+      case ImplyLeft(rp)  if p.isAnte && rp.getIndex > p.getIndex => ImplyLeft(rp.copy(rp.getIndex-1))
+      case EquivLeft(rp)  if p.isAnte && rp.getIndex > p.getIndex => EquivLeft(rp.copy(rp.getIndex-1))
+      case r => r
+    })
+
+    val s = provable.subgoals.head
+    s.ante.intersect(s.succ).toList.headOption match {
+      case Some(f) => provable(Close(AntePos(s.ante.indexOf(f)), SuccPos(s.succ.indexOf(f))), 0)
+      case None => alpha match {
+        case rule :: tail =>
+          val pos = rule.pos
+          s(pos) match {
+            case And(l, r) =>
+              assert(pos.isAnte)
+              provable(rule, 0)(prop(alphaRules, betaRules)(
+                alphaRules(r, AntePos(s.ante.length)) ++ alphaRules(l, AntePos(s.ante.length-1)) ++ tail,
+                betaRules(r, AntePos(s.ante.length)) ++ betaRules(l, AntePos(s.ante.length-1)) ++ repositionBeta(beta, pos)
+              ), 0)
+            case Or(l, r) =>
+              assert(pos.isSucc)
+              provable(rule, 0)(prop(alphaRules, betaRules)(
+                alphaRules(r, SuccPos(s.succ.length)) ++ alphaRules(l, SuccPos(s.succ.length-1)) ++ tail,
+                betaRules(r, SuccPos(s.succ.length)) ++ betaRules(l, SuccPos(s.succ.length-1)) ++ repositionBeta(beta, pos)
+              ), 0)
+            case Imply(l, r) =>
+              assert(pos.isSucc)
+              provable(rule, 0)(prop(alphaRules, betaRules)(
+                alphaRules(r, SuccPos(s.succ.length-1)) ++ alphaRules(l, AntePos(s.ante.length)) ++ tail,
+                betaRules(r, SuccPos(s.succ.length-1)) ++ betaRules(l, AntePos(s.ante.length)) ++ repositionBeta(beta, pos)
+              ), 0)
+            case Not(f) =>
+              val p = if (pos.isSucc) AntePos(s.ante.length) else SuccPos(s.succ.length)
+              provable(rule, 0)(prop(alphaRules, betaRules)(alphaRules(f, p) ++ tail, betaRules(f, p) ++ repositionBeta(beta, pos)), 0)
+            case True =>
+              assert(pos.isSucc)
+              provable(rule, 0)
+            case False =>
+              assert(pos.isAnte)
+              provable(rule, 0)
+          }
+        case Nil => beta match {
+          case rule :: tail =>
+            val pos = rule.pos
+            s(pos) match {
+              case And(l, r) =>
+                assert(pos.isSucc)
+                val propLeft = prop(alphaRules, betaRules)(alphaRules(l, pos), betaRules(l, pos) ++ tail)
+                val propRight = prop(alphaRules, betaRules)(alphaRules(r, pos), betaRules(r, pos) ++ tail)
+                provable(rule, 0)(propRight, 1)(propLeft, 0)
+              case Or(l, r) =>
+                assert(pos.isAnte)
+                val propLeft = prop(alphaRules, betaRules)(alphaRules(l, pos), betaRules(l, pos) ++ tail)
+                val propRight = prop(alphaRules, betaRules)(alphaRules(r, pos), betaRules(r, pos) ++ tail)
+                provable(rule, 0)(propRight, 1)(propLeft, 0)
+              case Imply(l, r) =>
+                assert(pos.isAnte)
+                val propLeft = prop(alphaRules, betaRules)(alphaRules(l, SuccPos(s.succ.length)), betaRules(l, SuccPos(s.succ.length)) ++ tail)
+                val propRight = prop(alphaRules, betaRules)(alphaRules(r, pos), betaRules(r, pos) ++ tail)
+                provable(rule, 0)(propRight, 1)(propLeft, 0)
+              case Equiv(l, r) =>
+                if (pos.isSucc) {
+                  //@see [[EquivRight]]
+                  val propLeft = prop(alphaRules, betaRules)(
+                    alphaRules(r, SuccPos(s.succ.length-1)) ++ alphaRules(l, AntePos(s.ante.length)),
+                    betaRules(r, SuccPos(s.succ.length-1)) ++ betaRules(l, AntePos(s.ante.length)) ++ tail
+                  )
+                  val propRight = prop(alphaRules, betaRules)(
+                    alphaRules(l, SuccPos(s.succ.length-1)) ++ alphaRules(r, AntePos(s.ante.length)),
+                    betaRules(l, SuccPos(s.succ.length-1)) ++ betaRules(r, AntePos(s.ante.length)) ++ tail
+                  )
+                  provable(rule, 0)(propRight, 1)(propLeft, 0)
+                } else {
+                  //@see [[EquivLeft]]
+                  val propLeft = prop(alphaRules, betaRules)(List(AndLeft(pos.asInstanceOf[AntePos])), tail)
+                  val propRight = prop(alphaRules, betaRules)(List(AndLeft(pos.asInstanceOf[AntePos])), tail)
+                  provable(rule, 0)(propRight, 1)(propLeft, 0)
+                }
+            }
+          case Nil =>
+            val alpha =
+              s.succ.zipWithIndex.flatMap({ case (fml, i) => alphaRules(fml, SuccPos(i)) }).reverse ++
+              s.ante.zipWithIndex.flatMap({ case (fml, i) => alphaRules(fml, AntePos(i)) }).reverse
+            val beta =
+              s.succ.zipWithIndex.flatMap({ case (fml, i) => betaRules(fml, SuccPos(i)) }).reverse ++
+              s.ante.zipWithIndex.flatMap({ case (fml, i) => betaRules(fml, AntePos(i)) }).reverse
+            if (alpha.nonEmpty || beta.nonEmpty) prop(alphaRules, betaRules)(alpha.toList, beta.toList).result(provable)
+            else provable
+        }
+      }
     }
   }
 
@@ -317,10 +446,10 @@ private object PropositionalTactics extends Logging {
 
         // step 2: input is p and output is postCut
         (p(Cut(fa), 0)
-          (closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)).computeResult _, 1)
+          (closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
           // step 3: input is postCut and output is instantiatedEquivalence
           (vars(fa).map(x => FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)).
-            foldLeft(_: ProvableSig)({ case (pr, r) => pr(r.computeResult _, 0)  }), 0)
+            foldLeft(_: ProvableSig)({ case (pr, r) => pr(r, 0)  }), 0)
           // step 4
           (instantiatedEquivRewritingImpl(_, cutPos, targetPos), 0)
           // step 5
@@ -472,4 +601,351 @@ private object PropositionalTactics extends Logging {
 
   //endregion
 
+  /** Proves equivalence of `p` and `q` by axiom `ax`(`subst`) after applying `trafos`. */
+  private def equivByAx(p: Formula, q: Formula,
+                        ax: AxiomInfo, subst: RenUSubst,
+                        trafos: List[ProvableSig=>ProvableSig] = List.empty): (Formula, ProvableSig) = {
+    (q, trafos.foldLeft(ProvableSig.startPlainProof(Equiv(p, q)))({
+      case (p, t) =>
+        val Equiv(l, r) = p.conclusion.succ.head
+        if (l != r) t(p)
+        else p
+    })(subst.toForward(ax.provable), 0))
+  }
+
+  private val fx = FuncOf(Function("f_", None, Unit, Real), Nothing)
+  private val gx = FuncOf(Function("g_", None, Unit, Real), Nothing)
+  private val px = PredOf(Function("p_", None, Unit, Bool), Nothing)
+  private val qx = PredOf(Function("q_", None, Unit, Bool), Nothing)
+  private val xx = Variable("x_")
+  private val ax = ProgramConst("a_")
+
+  /**
+   * Negation normal form with proof.
+   * @see [[FormulaTools.negationNormalForm]]
+   */
+  def negationNormalForm(fml: Formula): (Formula, ProvableSig) = fml match {
+    case p: AtomicFormula => (p, ProvableSig.startPlainProof(Equiv(p, p))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, p)))), 0))
+    case Not(g:AtomicFormula) => g match {
+      case Equal(a, b)        => equivByAx(fml, NotEqual(a, b),     Ax.notEqual,       RenUSubst(List((fx, a), (gx, b))))
+      case NotEqual(a, b)     => equivByAx(fml, Equal(a, b),        Ax.notNotEqual,    RenUSubst(List((fx, a), (gx, b))))
+      case Greater(a, b)      => equivByAx(fml, LessEqual(a, b),    Ax.notGreater,     RenUSubst(List((fx, a), (gx, b))))
+      case GreaterEqual(a, b) => equivByAx(fml, Less(a, b),         Ax.notGreaterEqual,RenUSubst(List((fx, a), (gx, b))))
+      case Less(a, b)         => equivByAx(fml, GreaterEqual(a, b), Ax.notLess,        RenUSubst(List((fx, a), (gx, b))))
+      case LessEqual(a, b)    => equivByAx(fml, Greater(a, b),      Ax.notLessEqual,   RenUSubst(List((fx, a), (gx, b))))
+      case True      => (False, ProvableSig.startPlainProof(Equiv(fml, False))(PropositionalTactics.prop, 0))
+      case False     => (True,  ProvableSig.startPlainProof(Equiv(fml, True))(PropositionalTactics.prop, 0))
+      case _: PredOf => (fml,   ProvableSig.startPlainProof(Equiv(fml, fml))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0))
+      case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
+    }
+    case Not(g: CompositeFormula) => g match {
+      case Not(p) =>
+        val pr = negationNormalForm(p)
+        equivByAx(fml, pr._1, Ax.doubleNegation, RenUSubst(List((px, p))), List(
+          CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1))))))
+      case And(p, q) =>
+        val pr = negationNormalForm(Not(p))
+        val qr = negationNormalForm(Not(q))
+        equivByAx(fml, Or(pr._1, qr._1), Ax.notAnd, RenUSubst(List((px, p), (qx, q))), List(
+          CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+          CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))))
+      case Or(p, q) =>
+        val pr = negationNormalForm(Not(p))
+        val qr = negationNormalForm(Not(q))
+        equivByAx(fml, And(pr._1, qr._1), Ax.notOr, RenUSubst(List((px, p), (qx, q))), List(
+          CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+          CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))))
+      case Imply(p, q) =>
+        val pr = negationNormalForm(p)
+        val qr = negationNormalForm(Not(q))
+        equivByAx(fml, And(pr._1, qr._1), Ax.notImply, RenUSubst(List((px, p), (qx, q))), List(
+          CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+          CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))))
+      case Equiv(p, q) =>
+        val pr = negationNormalForm(p)
+        val npr = negationNormalForm(Not(p))
+        val qr = negationNormalForm(q)
+        val nqr = negationNormalForm(Not(q))
+        equivByAx(fml, Or(And(pr._1, nqr._1), And(npr._1, qr._1)), Ax.notEquiv, RenUSubst(List((px, p), (qx, q))), List(
+          CEat(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))),
+          CEat(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))),
+          CEat(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))),
+          CEat(qr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1))))))
+      case Forall(vs, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Exists(vs, pr._1), Ax.notAll, RenUSubst(List((px, p), (xx, vs.head))), List(
+          CEat(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))))
+      case Exists(vs, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Forall(vs, pr._1), Ax.notExists, RenUSubst(List((px, p), (xx, vs.head))), List(
+          CEat(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))))
+      case Box(prg, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Diamond(prg, pr._1), Ax.notBox, RenUSubst(List((px, p), (ax, prg))), List(
+          CEat(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))))
+      case Diamond(prg, p) =>
+        val pr = negationNormalForm(Not(p))
+        equivByAx(fml, Box(prg, pr._1), Ax.notDiamond, RenUSubst(List((px, p), (ax, prg))), List(
+          CEat(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))))
+      case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
+    }
+    case Imply(p, q) =>
+      val pr = negationNormalForm(Not(p))
+      val qr = negationNormalForm(q)
+      equivByAx(fml, Or(pr._1, qr._1), Ax.implyExpand, RenUSubst(List((px, p), (qx, q))), List(
+        CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+        CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))))
+    case Equiv(p, q) =>
+      val pr = negationNormalForm(p)
+      val npr = negationNormalForm(Not(p))
+      val qr = negationNormalForm(q)
+      val nqr = negationNormalForm(Not(q))
+      equivByAx(fml, Or(And(pr._1, qr._1), And(npr._1, nqr._1)), Ax.equivExpandAnd, RenUSubst(List((px, p), (qx, q))), List(
+        CEat(pr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))),
+        CEat(qr._2,  PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))),
+        CEat(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))),
+        CEat(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1))))))
+    case f: BinaryCompositeFormula =>
+      val ar = negationNormalForm(f.left)
+      val br = negationNormalForm(f.right)
+      equivByAx(f, f.reapply(ar._1, br._1), Ax.equivReflexive, RenUSubst(List((px, f))), List(
+        CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+        CEat(br._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))))
+    case f: Quantified             =>
+      val ar = negationNormalForm(f.child)
+      equivByAx(f, f.reapply(f.vars, ar._1), Ax.equivReflexive, RenUSubst(List((px, f))), List(
+        CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))))
+    case f: Modal                  =>
+      val ar = negationNormalForm(f.child)
+      equivByAx(f, f.reapply(f.program, ar._1), Ax.equivReflexive, RenUSubst(List((px, f))), List(
+        CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))))
+    case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
+  }
+
+  /** Performs a right-associate proof step. */
+  private def rightAssociateStep(l: Formula, r: Formula,
+                                 split: Formula=>List[Formula], merge: (Formula, Formula)=>Formula,
+                                 prop: BuiltInTactic): (Formula, ProvableSig) = {
+    val components = split(l) ++ split(r)
+    val result = components.map(rightAssociate)
+    val resultFml = result.map(_._1).reduceRight(merge)
+    val resultAppliedSubproofs = (ProvableSig.startPlainProof(Equiv(merge(l, r), resultFml))
+      (applySubproofs(result.map(_._2), PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)
+      (applyTacticAbbrv(prop, prop, result.map(_._1)), 0)
+      )
+    (resultFml, resultAppliedSubproofs)
+  }
+
+  /** Propositional reasoning for only disjunctions. */
+  private val propOr = prop(
+    { case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
+    { case (_: Or, ap: AntePos) => List(OrLeft(ap))  case _ => List.empty })(List.empty, List.empty)
+
+  /** Propositional reasoning for only conjunctions. */
+  private val propAnd = prop(
+    { case (_: And, ap: AntePos) => List(AndLeft(ap))  case _ => List.empty },
+    { case (_: And, sp: SuccPos) => List(AndRight(sp)) case _ => List.empty })(List.empty, List.empty)
+
+  /** Propositional reasoning for only conjunctions and disjunctions. */
+  private val propAndOr = prop(
+    { case (_: And, ap: AntePos) => List(AndLeft(ap))  case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
+    { case (_: And, sp: SuccPos) => List(AndRight(sp)) case (_: Or, ap: AntePos) => List(OrLeft(ap))  case _ => List.empty })(List.empty, List.empty)
+
+  private val andOrAlpha = prop(
+    { case (_: And, ap: AntePos) => List(AndLeft(ap))  case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
+    { case _ => List.empty })(List.empty, List.empty)
+
+  /** Propositional reasoning for only conjunctions and disjunctions, and applies alpha rules only when right-hand side equal to `p`. */
+  private def propOrAnd(p: Formula) = PropositionalTactics.prop(
+    { case (_: Or, sp: SuccPos) => List(OrRight(sp)) case (And(_, pp), ap: AntePos) if pp == p => List(AndLeft(ap)) case _ => List.empty },
+    { case (_: Or, ap: AntePos) => List(OrLeft(ap)) case (And(_, pp), sp: SuccPos) if pp == p => List(AndRight(sp)) case _ => List.empty })(List.empty, List.empty)
+
+  /** Reassociates `fml` to default right-associativity.
+   * @see [[FormulaTools.reassociate]]
+   */
+  def rightAssociate(fml: Formula): (Formula, ProvableSig) = fml match {
+    case Or(l, r) => timed(rightAssociateStep(l, r, FormulaTools.disjuncts, Or, propOr), "Right associate step or")
+    case And(l, r) => timed(rightAssociateStep(l, r, FormulaTools.conjuncts, And, propAnd), "Right associate step and")
+    case _ => (fml, ProvableSig.startPlainProof(Equiv(fml, fml))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0))
+  }
+
+  /** Reassociates the formula at position `pos` to default right-associativity. */
+  @Tactic()
+  def rightAssociate: BuiltInPositionTactic = anon { (p: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(p, "PropositionalTactics.rightAssociate")
+    p.subgoals.head.sub(pos) match {
+      case Some(f: Formula) =>
+        val (_, rmp) = rightAssociate(f)
+        CEat(rmp, PosInExpr(List(0)))(pos).computeResult(p)
+      case f => throw new TacticInapplicableFailure("Expected a formula at position " + pos.prettyString + ", but got " + f.map(_.prettyString))
+    }
+  }
+
+  /** Apply sub-proofs at a right-associated goal. */
+  private def applySubproofs(subProofs: List[ProvableSig], key: PosInExpr): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+    timed(subProofs.zipWithIndex.foldRight(pr)({ case ((pi, i), po) =>
+      val Equiv(lp, rp) = pi.conclusion.succ.head
+      val subPos = if (i < subProofs.size-1) PosInExpr(List.fill(i)(1) :+ 0) else PosInExpr(List.fill(i)(1))
+      if (lp != rp) timed(CEat(pi, key)(pos ++ subPos).computeResult(po), "Applying subproof")
+      else po
+    }), "Applying subproofs")
+  }
+
+  /** Applies tactics `l`, `r` on the subgoals resulting from splitting the equivalence in the only subgoal of `pr`
+   * after abbreviating the formulas in `ps` to uninterpreted predicates. */
+  private def applyTacticAbbrv(l: ProvableSig=>ProvableSig,
+                               r: ProvableSig=>ProvableSig,
+                               ps: List[Formula]): BuiltInTactic = anon { (pr: ProvableSig) =>
+    assert(pr.subgoals.size == 1 && pr.subgoals.head.succ.size == 1 && pr.subgoals.head.succ.head.isInstanceOf[Equiv])
+    val subst = USubst(ps.zipWithIndex.map({ case (p, i) =>
+      SubstitutionPair(PredOf(Function("p_", Some(i), Unit, Bool, None), Nothing), p)
+    }))
+    val abbrv = timed(pr.subgoals.head.succ.head.replaceAll(subst.subsDefsInput.map(s => s.repl -> s.what).toMap), "Abbreviating " + subst.subsDefsInput.size + " predicates")
+    timed(ProvableSig.startPlainProof(abbrv)
+      (EquivRight(SuccPos(0)), 0)
+      (r, 1)
+      (l, 0)
+      (subst)
+      , "Applying tactics on abbreviated predicates")
+  }
+
+  /** Distributes disjunctions over conjunctions in `fml`. */
+  def orDistAnd(fml: Formula): (Formula, ProvableSig) = fml match {
+    case _: Or =>
+      val (conjunctions, others) = FormulaTools.disjuncts(fml).partition(_.isInstanceOf[And])
+      assert(others.forall({ case _: AtomicFormula => true case Not(f) => f.isInstanceOf[AtomicFormula] case _ => false}))
+      val inner = conjunctions.map(orDistAnd) ++ others.map(p => (p, ProvableSig.startPlainProof(Equiv(p, p))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, p)))), 0)))
+      val result = inner.map(_._1).reduceRight(Or)
+      val innerDisjuncts = inner.map(_._1).map(FormulaTools.disjuncts)
+      val resultProof = timed(ProvableSig.startPlainProof(Equiv(fml, result))
+        (applySubproofs(inner.map(_._2), PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)
+        (applyTacticAbbrv(propOr, propOr, innerDisjuncts.flatten), 0)
+        , "applySubproofs")
+      assert(resultProof.isProved)
+      (result, resultProof)
+    case _: And =>
+      val (disjunctions, others) = FormulaTools.conjuncts(fml).partition(_.isInstanceOf[Or])
+      assert(others.forall({ case _: AtomicFormula => true case Not(f) => f.isInstanceOf[AtomicFormula] case _ => false}))
+      if (disjunctions.nonEmpty) {
+        val inner = disjunctions.map(orDistAnd)
+        val innerDisjuncts = inner.map(_._1).map(FormulaTools.disjuncts)
+        val c = FormulaTools.combinations(innerDisjuncts).map(_.reduceRight(And))
+
+        if (others.nonEmpty) {
+          val o = others.reduceRight(And)
+          val result = c.map(And(_, o)).reduceRight(Or)
+
+          val dand = disjunctions.reduceRight(And)
+          val dAndO = And(dand, o)
+          val cor = c.reduceRight(Or)
+          val cOrO = And(cor, o)
+
+          // branch on disjunctions left (original formula) and close by assumption
+          val revA = anon { (pr: ProvableSig) =>
+            ProofRuleTactics.requireOneSubgoal(pr, "")
+            val r = pr(andOrAlpha, 0)
+            if (r.isProved) r
+            else {
+              val ror = r(propOr, 0)
+              val ralpha = ror.subgoals.indices.foldLeft(ror)({ case (p, i) => p(andOrAlpha, i) })
+              ralpha.subgoals.indices.foldRight(ralpha)({ case (i, p) =>
+                val s = p.subgoals(i)
+                val j = s.succ.indexOf(s.ante.reduceRight(And))
+                p(cohideOnlyR(SuccPos(j)), i)(propAnd, i)
+              })
+            }
+          }
+
+          // branch on conjunctions right (orDistAnd formula) and close by contradiction, simplifier uses !p -> (p <-> false)
+          val revB = anon { (pr: ProvableSig) =>
+            ProofRuleTactics.requireOneSubgoal(pr, "")
+            val r = pr(andOrAlpha, 0)
+            if (r.isProved) r
+            else {
+              val rand = r(propAnd, 0)
+              val ralpha = rand.subgoals.indices.foldLeft(rand)({ case (p, i) => p(andOrAlpha, i) })
+              ralpha.subgoals.indices.foldRight(ralpha)({ case (i, p) =>
+                p.subgoals(i).succ.indices.foldRight(p)({
+                  case (j, pi) =>
+                    val fml = pi.subgoals(i)(SuccPos(j))
+                    pi(CEat(Ax.doubleNegation.provable(USubst(List(SubstitutionPair(px, fml)))), PosInExpr(List(1)))(SuccPos(j)), i)(NotRight(SuccPos(j)), i)
+                })(SimplifierV3.simplify(AntePos(0)), i)(CloseFalse(AntePos(0)), i)
+              })
+            }
+          }
+
+          val orDistAndRevProof = timed(ProvableSig.startPlainProof(Equiv(dand, cor))
+            (applySubproofs(inner.map(_._2), PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0)))), 0)
+            (applyTacticAbbrv(revA, revB, innerDisjuncts.flatten), 0)
+            , "orDistAndReverse")
+          assert(orDistAndRevProof.isProved, "Expected proved orDistAndRev proof, but got open goals")
+
+          val combineProof = timed(ProvableSig.startPlainProof(Equiv(cOrO, dAndO))
+            (EquivRight(SuccPos(0)), 0)
+            (AndLeft(AntePos(0)), 1)
+            (AndRight(SuccPos(0)), 1)
+            (Close(AntePos(1), SuccPos(0)), 2)
+            (CEat(orDistAndRevProof, PosInExpr(List(1)))(SuccPos(0)), 1)
+            (Close(AntePos(0), SuccPos(0)), 1)
+            (AndLeft(AntePos(0)), 0)
+            (AndRight(SuccPos(0)), 0)
+            (Close(AntePos(1), SuccPos(0)), 1)
+            (CEat(orDistAndRevProof, PosInExpr(List(1)))(AntePos(0)), 0)
+            (Close(AntePos(0), SuccPos(0)), 0)
+            , "combineProof")
+          assert(combineProof.isProved)
+
+          val mixOProof = timed(ProvableSig.startPlainProof(Equiv(result, cOrO))
+            (applyTacticAbbrv(propOrAnd(o), propOrAnd(o), innerDisjuncts.flatten), 0)
+            , "mixOProof")
+          assert(mixOProof.isProved)
+
+          val resultProof = timed(ProvableSig.startPlainProof(Equiv(fml, result))
+            (CEat(mixOProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)
+            (CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)
+            (applyTacticAbbrv(propAnd, propAnd, innerDisjuncts.flatten), 0)
+            , "resultProof")
+          assert(resultProof.isProved)
+
+          (result, resultProof)
+        } else {
+          val result = c.reduceRight(Or)
+          val rearranged = disjunctions.reduceRight(And)
+          val disjuncts = disjunctions.flatMap(FormulaTools.disjuncts)
+          val combineProof = timed(ProvableSig.startPlainProof(Equiv(result, rearranged))
+            (applyTacticAbbrv(propAndOr, propAndOr, disjuncts), 0)
+            , "combineProof (2)")
+          assert(combineProof.isProved)
+
+          val resultProof = timed(ProvableSig.startPlainProof(Equiv(fml, result))
+            (CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)
+            (applyTacticAbbrv(propAnd, propAnd, disjuncts), 0)
+            , "resultProof (2)")
+          assert(resultProof.isProved)
+
+          (result, resultProof)
+        }
+      } else {
+        (fml, ProvableSig.startPlainProof(Equiv(fml, fml))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, fml)))), 0))
+      }
+    case f =>
+      assert(f match { case _: AtomicFormula => true case Not(_: AtomicFormula) => true case _ => false}, "Expected a (negated) atomic formula, but got: " + f.prettyString)
+      (f, ProvableSig.startPlainProof(Equiv(f, f))(Ax.equivReflexive.provable(USubst(List(SubstitutionPair(px, f)))), 0))
+  }
+
+  /** Turns `fml` into disjunctive normal form. */
+  def disjunctiveNormalForm(fml: Formula): (Formula, ProvableSig) = {
+    val nnf = PropositionalTactics.negationNormalForm(fml)
+    assert(nnf._2.isProved, "Expected proved negation normal form transformation, but got open goals")
+    val d = orDistAnd(nnf._1)
+    assert(d._2.isProved, "Expected proved orDistAnd proof, but got open goals")
+    val r = rightAssociate(d._1)
+    val rproof = (ProvableSig.startPlainProof(Equiv(fml, r._1))
+      (CEat(r._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)
+      (CEat(d._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)
+      (nnf._2, 0)
+      )
+    assert(rproof.isProved, "Expected proved disjunctive normal form proof, but got open goals")
+    (r._1, rproof)
+  }
 }

@@ -998,7 +998,7 @@ object SwitchedSystems {
               (lyaps zip wis).map(lyapwi =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & ExpandAll(Nil) & id,
+                  implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                     SaturateTactic(andL('L)) &
@@ -1259,7 +1259,7 @@ object SwitchedSystems {
               (invLess,wis).zipped.map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & ExpandAll(Nil) & id,
+                  implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                     implyRiLast & implyRiLast &
@@ -1601,7 +1601,7 @@ object SwitchedSystems {
 
               (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & ExpandAll(Nil) & id,
+                  implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                     implyRiLast & andL('Llast) & SaturateTactic(andL('L)) &
@@ -1880,7 +1880,7 @@ object SwitchedSystems {
               (invLess,wis).zipped.map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & ExpandAll(Nil) & id,
+                  implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                       hideL('Llast) & andL('Llast) & andL('Llast) &

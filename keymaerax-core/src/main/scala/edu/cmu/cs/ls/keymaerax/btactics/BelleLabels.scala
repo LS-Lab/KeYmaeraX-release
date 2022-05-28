@@ -47,4 +47,8 @@ object BelleLabels {
 
   val dIInit: BelleLabel = BelleTopLevelLabel("dI Init")
   val dIStep: BelleLabel = BelleTopLevelLabel("dI Step")
+
+  // dV existence and derivative
+  val dVexists: BelleLabel = BelleTopLevelLabel("dV existence")
+  val dVderiv: BelleLabel = BelleTopLevelLabel("dV derivative")
 }

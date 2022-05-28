@@ -26,7 +26,7 @@ case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumpti
  */
 trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) {
   /** Returns the post variable of `v` identified by name postfix `post`. */
-  val NAMED_POST_VAR: Variable=>Variable = (v: Variable) => BaseVariable(v.name + "post", v.index)
+  val NAMED_POST_VAR: Variable=>Variable = (v: Variable) => BaseVariable(if (v.name.endsWith("_")) v.name.stripSuffix("_") + "post_" else v.name + "post", v.index)
   /** Returns the post variable of `v` identified by index increase. */
   val INDEXED_POST_VAR: Variable=>Variable = (v: Variable) => BaseVariable(v.name, Some(v.index.map(_ + 1).getOrElse(0)))
 
@@ -46,6 +46,6 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def diamondTestRetainConditionT: DependentPositionTactic
   def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic],
+                                unobservable: List[_ <: NamedSymbol], simplifier: Option[BuiltInPositionTactic],
                                 postVar: Variable=>Variable = NAMED_POST_VAR): DependentPositionTactic
 }

@@ -41,7 +41,7 @@ class ProofTermCheckerTests extends TacticTestBase {
   private def checkIfPT(p: ProvableSig, f: Formula): Unit = {
     p match {
       case _: ElidingProvable => ()
-      case TermProvable(_, pt) =>
+      case TermProvable(_, pt, _) =>
         val checkResult = ProofChecker(pt)
         proves(checkResult, f) shouldBe true
     }
@@ -52,7 +52,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
     val t = ??? //US(USubst.apply(scala.collection.immutable.Seq()), label)
 
-    val provable = TermProvable.startProof(f)
+    val provable = TermProvable.startPlainProof(f)
     val tacticResult = proveBy(provable, t)
     println(tacticResult.prettyString)
     checkIfPT(tacticResult,f)
@@ -60,7 +60,7 @@ class ProofTermCheckerTests extends TacticTestBase {
 
   it should "work for prop tautologies with manual proof" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val f = "A() -> A()".asFormula
-    val provable = TermProvable.startProof(f)
+    val provable = TermProvable.startPlainProof(f)
     val tacticResult = proveBy(provable, TactixLibrary.implyR(1) & TactixLibrary.close(-1,1))
     println(tacticResult)
     checkIfPT(tacticResult, f)
@@ -68,7 +68,7 @@ class ProofTermCheckerTests extends TacticTestBase {
 
   it should "work for prop tautologies with propClose" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val f = "A() -> A()".asFormula
-    val provable = TermProvable.startProof(f)
+    val provable = TermProvable.startPlainProof(f)
     val tacticResult = proveBy(provable, TactixLibrary.propClose)
     println(tacticResult)
     checkIfPT(tacticResult, f)
@@ -125,7 +125,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         |    )
         |  )
         |""".stripMargin)
-    val provable = ProvableSig.startProof(fml)
+    val provable = ProvableSig.startPlainProof(fml)
     val tacticResult = proveBy(provable,tac)
     println(tacticResult)
     tacticResult match {
@@ -180,7 +180,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         |    )
         |  )
         |""".stripMargin)
-    val provable = ProvableSig.startProof(velCar2Fml)
+    val provable = ProvableSig.startPlainProof(velCar2Fml)
     val tacticResult = proveBy(provable,tac)
     println(tacticResult)
     tacticResult match {
@@ -211,7 +211,7 @@ class ProofTermCheckerTests extends TacticTestBase {
   it should "FEATURE_REQUEST: work for ETCS dI-ified proof" taggedAs TodoTest in withMathematica (_ => {
     val fml = "    v^2<=2*b()*(m-x) & v>=0  & A()>=0 & b()>0-> [{{?(2*b()*(m-x) >= v^2+(A()+b())*(A()*ep()^2+2*ep()*v)); a:=A(); ++ a:=-b(); } t := 0;{x'=v, v'=a, t'=1 & v>=0 & t<=ep()}}*@invariant(v^2<=2*b()*(m-x))] x <= m".asFormula
     val tac = BelleParser("implyR(1) ; loop({`v^2<=2*b()*(m-x)`}, 1) ; <(closeId, QE,composeb(1) ; choiceb(1) ;andR(1) ; <(composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; dC({`2*b()*(m-x)>=v^2+(A()+b())*(A()*(ep()-t)^2+2*(ep()-t)*v)`}, 1) ; <(dW(1) ; QE,dI(1)), assignb(1) ; composeb(1) ; assignb(1) ; dI(1)))")
-    val provable = ProvableSig.startProof(fml)
+    val provable = ProvableSig.startPlainProof(fml)
         val tacticResult = proveBy(provable,tac)
         tacticResult match {
           case pr:TermProvable =>
@@ -257,7 +257,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
     val t = ??? ///US(USubst.apply(scala.collection.immutable.Seq()), label)
-    proveBy(ProvableSig.startProof(f), t) match {
+    proveBy(ProvableSig.startPlainProof(f), t) match {
       case ptp: TermProvable =>
         val conv = new IsabelleConverter(ptp.pt)
         val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
@@ -268,7 +268,7 @@ class ProofTermCheckerTests extends TacticTestBase {
 
   it should "convert prop tautologies" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val f = "A() -> A()".asFormula
-    val provable = TermProvable.startProof(f)
+    val provable = TermProvable.startPlainProof(f)
     val t = TactixLibrary.implyR(1) & TactixLibrary.close(-1,1)
 
     proveBy(provable, t) match {
@@ -284,7 +284,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     //@note TermProvable throws DebugMeException on unfold (swallowed by interpreter, since unfold executes optional chase steps)
     val archive = "SharedDefinitions.\n  R A.\n  R B.\n  R T.\n\n  R SB(R vl, R vf) = ( vf*vf - vl*vl + (A()+B())*(A()*T()*T() + 2*T()*vf) ).\n\n  /* predicates */\n  B bounds() <-> ( A()>=0 & B()>0 & T()>=0 ).\n  B loopinv(R vl, R pl, R vf, R pf) <-> ( vl>=0 & vf>=0 & (pl-pf)*2*B()>=vf*vf-vl*vl & pl>=pf ).\n\n  /* differential invariants */\n  B vinv(R v, R a, R t) <-> ( v=old(v)+a*t ).\n  B pinv(R p, R v, R a, R t) <-> ( p=old(p)+old(v)*t+a*t^2/2 ).\n\n  /* programs */\n  HP ctrl ::= {\n    {   ?(posLead - posCtrl)*2*B() >= SB(velLead, velCtrl); accCtrl := A();\n     ++ accCtrl := -B();\n    };\n    t := 0;\n  }.\n\n  HP plant ::= {\n       { velCtrl' = accCtrl, velLead' =  A(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}\n    ++ { velCtrl' = accCtrl, velLead' = -B(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}\n  }.\nEnd.\n\nLemma \"Leader-Follower Preserves Invariant\".\n\nProgramVariables.\n  R velLead.\n  R velCtrl.\n  R posLead.\n  R posCtrl.\n  R accCtrl.\n  R accLead.\n  R t.\nEnd.\n\nProblem.\nbounds() & loopinv(velLead, posLead, velCtrl, posCtrl)\n->\n[\n  ctrl;\n  plant;\n]\nloopinv(velLead, posLead, velCtrl, posCtrl)\nEnd.\n\n\nTactic \"Proof Leader-Follower Preserves Loop Invariant\".\nunfold ; <(\n  diffInvariant({`vinv(velCtrl, A(), t)`}, 1);\n  diffInvariant({`vinv(velLead, A(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, A(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, A(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1);\n  implyR(1);\n  andL('L)*;\n  hideL(-3=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0`});\n  print({`Transforming`});\n  cut({`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*t*t+2*t*velCtrl_0)`}); <(\n    hideL(-7=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*T()*T()+2*T()*velCtrl_0)`}),\n    hideR(1);\n    hideL('L=={`posLead=posLead_0+velLead_0*t+A()*t^2/2`});\n    hideL('L=={`posCtrl=posCtrl_0+velCtrl_0*t+A()*t^2/2`});\n    hideL('L=={`velLead=velLead_0+A()*t`});\n    hideL('L=={`velCtrl=velCtrl_0+A()*t`});\n    hideL('L=={`velCtrl>=0`});\n    hideL('L=={`velLead>=0`});\n    QE\n  );\n  hideL('L=={`T()>=0`});\n  hideL('L=={`t<=T()`});\n  print({`Lead=A(), Follow=A()`}); master; print({`...done`})\n  ,\n  diffInvariant({`vinv(velCtrl, -B(), t)`}, 1);\n  diffInvariant({`vinv(velLead, A(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, -B(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, A(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1); print({`Lead=A(), Follow=-B()`}); master; print({`...done`})\n  ,\n  diffInvariant({`vinv(velCtrl, A(), t)`}, 1);\n  diffInvariant({`vinv(velLead, -B(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, A(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, -B(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1);\n  implyR(1);\n  andL('L)*;\n  hideL(-3=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0`});\n  print({`Transforming`});\n  cut({`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*t*t+2*t*velCtrl_0)`}); <(\n    hideL(-7=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*T()*T()+2*T()*velCtrl_0)`}),\n    hideR(1);\n    hideL('L=={`posLead=posLead_0+velLead_0*t+(-B())*t^2/2`});\n    hideL('L=={`posCtrl=posCtrl_0+velCtrl_0*t+A()*t^2/2`});\n    hideL('L=={`velLead=velLead_0+(-B())*t`});\n    hideL('L=={`velCtrl=velCtrl_0+A()*t`});\n    hideL('L=={`velCtrl>=0`});\n    hideL('L=={`velLead>=0`});\n    QE\n  );\n  hideL('L=={`T()>=0`});\n  hideL('L=={`t<=T()`});\n  print({`Lead=-B(), Follow=A()`}); master; print({`...done`})\n  ,\n  diffInvariant({`vinv(velCtrl, -B(), t)`}, 1);\n  diffInvariant({`vinv(velLead, -B(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, -B(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, -B(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1); print({`Lead=-B(), Follow=-B()`}); master; print({`...done`})\n)\nEnd.\n\nEnd.\n\nTheorem \"Leader-Follower Safety\".\n\nProgramVariables.\n  R velLead.\n  R velCtrl.\n  R posLead.\n  R posCtrl.\n  R accCtrl.\n  R accLead.\n  R t.\nEnd.\n\nProblem.\nbounds() & velLead=0 & velCtrl=0 & posLead>=posCtrl\n->\n[{\n   ctrl;\n   plant;\n }*@invariant(loopinv(velLead, posLead, velCtrl, posCtrl))\n]\nposLead>=posCtrl\nEnd.\n\nTactic \"Proof Leader-Follower Safety\".\nimplyR(1); loop({`loopinv(velLead, posLead, velCtrl, posCtrl)`}, 1); <(\n  QE,\n  QE,\n  useLemma({`Leader-Follower Preserves Invariant`}, {`prop`})\n)\nEnd.\n\nEnd."
     val ParsedArchiveEntry(name, kind, modelText, _, _, formula, parsedTactics, _, _) = ArchiveParser.parse(archive).head
-    val provable = TermProvable.startProof(formula.asInstanceOf[Formula])
+    val provable = TermProvable.startPlainProof(formula.asInstanceOf[Formula])
     proveBy(provable, parsedTactics.head._3) match {
       case ptp: TermProvable =>
         val size = ptp.pt.numCons
@@ -323,7 +323,7 @@ class ProofTermCheckerTests extends TacticTestBase {
             assignb(1) & assignb(1) & dI()(1)
           )
         )
-    val provable = TermProvable.startProof(f)
+    val provable = TermProvable.startPlainProof(f)
     proveBy(provable, t) match {
       case ptp: TermProvable =>
         val size = ptp.pt.numCons
@@ -348,7 +348,7 @@ class ProofTermCheckerTests extends TacticTestBase {
 
   it should "convert CPP'17 example" ignore withMathematica(_ => {
     val f = "A() >= 0 & v >= 0 -> [{v' = A(), x' = v & true}] v >= 0".asFormula
-    val provable = TermProvable.startProof(f)
+    val provable = TermProvable.startPlainProof(f)
     val t = TactixLibrary.implyR(1) & andL(-1) & dI()(1)
 
     proveBy(provable, t) match {
@@ -435,7 +435,7 @@ class ProofTermCheckerTests extends TacticTestBase {
                                 |  diffInvariant({`t>=0`}, 1);
                                 |  dW(1); print({`Lead=-B(), Follow=-B()`}); master; print({`...done`})
                                 |)""".stripMargin)
-    val provable = ProvableSig.startProof(lab2Fml)
+    val provable = ProvableSig.startPlainProof(lab2Fml)
     val tacticResult = proveBy(provable,lab2Tac)
     tacticResult match {
       case pr:TermProvable =>

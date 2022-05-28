@@ -45,8 +45,11 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
   private lazy val tutorialEntries = table({
     println("Reading " + url)
     if (url.endsWith(".json")) DatabasePopulator.readTutorialEntries(url)
-    else if (url.endsWith(".kya") || url.endsWith(".kyx")) DatabasePopulator.readKyx(url)
-    else throw new IllegalArgumentException(s"URL must end in either .json, .kya, or .kyx, but got $url")
+    else url.lastIndexOf('#') match {
+      case -1 if url.endsWith(".kya") || url.endsWith(".kyx") => DatabasePopulator.readKyx(url)
+      case i if url.substring(0, i).endsWith(".kya") || url.substring(0, i).endsWith(".kyx") => DatabasePopulator.readKyx(url)
+      case _ => throw new IllegalArgumentException(s"URL must be either .json, .kya, or .kyx, with optional #entry identifier, but got $url")
+    }
   })
 
   tutorialName should "parse all models" in withZ3 { _ =>

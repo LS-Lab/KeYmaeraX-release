@@ -28,8 +28,8 @@ import scala.collection.immutable
 object ProofChecker {
 
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
-  private def proofNode(phi : Formula) = ProvableSig.startProof(goalSequent(phi))
-  private def proofNode(phi : Sequent) = ProvableSig.startProof(phi)
+  private def proofNode(phi : Formula) = ProvableSig.startPlainProof(goalSequent(phi))
+  private def proofNode(phi : Sequent) = ProvableSig.startPlainProof(phi)
 
   /**
    * Converts proof term e for goal phi into a Provable iff e indeed justifies phi.
@@ -63,7 +63,7 @@ object ProofChecker {
         case ForwardNewConsequenceTerm(child, con, rule) => apply(child)(con, rule)
         case ProlongationTerm(child, pro) => apply(child)(apply(pro))
         case Sub(child, sub, i) => apply(child)(apply(sub), i)
-        case StartProof(goal) => ProvableSig.startProof(goal)
+        case StartProof(goal) => ProvableSig.startPlainProof(goal)
         case UsubstProvableTerm(child, sub) => apply(child)(sub)
         case URenameTerm(child, ren) => apply(child)(ren)
         case NoProof => throw ProofCheckException("Tried to check proof of " + phi + ", but it has NoProof")

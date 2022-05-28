@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -52,7 +53,7 @@ private object ToolTactics {
         if (!ToolProvider.isInitialized) throw new TacticAssertionError("Failed to switch to Z3: unable to initialize the connection; please check the configured path to Z3")
       case _ => throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
     }
-    nil
+    Idioms.nil
   }}
 
   /** Assert that there is no counter example. skip if none, error if there is. */
@@ -76,44 +77,63 @@ private object ToolTactics {
 
   /** Prepares a QE call with all pre-processing steps, uses `order` to form the universal closure and finishes the
     * remaining subgoals using `doQE`. */
-  def prepareQE(order: List[Variable], doQE: BelleExpr): BelleExpr = {
-    val closure = toSingleFormula & Idioms.doIf(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosure(order)(1))
+  def prepareQE(order: List[Variable], rcf: BuiltInTactic): BuiltInTactic = anon { (provable: ProvableSig) =>
+    val closure = toSingleFormula andThen
+      doIfFw(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosureFw(order)(1))
 
     // Expands abs/min/max
     val expand = EqualityTactics.expandAll
-//      if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
-//      else EqualityTactics.expandAll &
-//        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, Some(_)) => true case _ => false }),
-//          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
+//    if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
+//    else EqualityTactics.expandAll andThen
+//      assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted.isDefined case _ => false }),
+//        "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
-    Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
-      assertT(_.isFOL, "QE on FOL only") &
-        SaturateTactic(alphaRule | allR('R)) &
-        Idioms.doIf(!_.isProved)(
-          close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
+    if (!provable.isProved && provable.subgoals.forall(_.isFOL)) {
+      val alpha = provable(saturate(or(alphaRule, allR('R))), 0)
+      if (!alpha.isProved) {
+        alpha(or(
+          close,
+          doIfElseFw(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
             // if
-            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-              abbreviateUninterpretedFuncs & abbreviateInterpretedFuncs & closure & doQE
-            ,
+            EqualityTactics.applyEqualities andThen
+              hideTrivialFormulas andThen
+              abbreviateDifferentials andThen
+              expand andThen
+              abbreviateUninterpretedFuncs andThen
+              abbreviateInterpretedFuncs andThen
+              closure andThen
+              rcf,
             // else
-            anon { (s: Sequent) =>
-              val msg =
-                if (StaticSemantics.symbols(s).exists(n => n.name.startsWith("p_") || n.name.startsWith("q_"))) {
-                  "Sequent cannot be proved. Please try to unhide some formulas."
-                } else {
-                  "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
-                }
-              hidePredicates & hideQuantifiedFuncArgsFmls &
-                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
-                abbreviateUninterpretedFuncs & abbreviateInterpretedFuncs & closure &
-                Idioms.doIf(_ => doQE != nil)(
-                  doQE & done | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg) }
+            (pr: ProvableSig) => try {
+              pr(hidePredicates andThen
+                hideQuantifiedFuncArgsFmls andThen
+                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL,
+                  "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") andThen
+                EqualityTactics.applyEqualities andThen
+                hideTrivialFormulas andThen
+                abbreviateDifferentials andThen
+                expand andThen
+                abbreviateUninterpretedFuncs andThen
+                abbreviateInterpretedFuncs andThen
+                closure andThen
+                doIfFw(_ => rcf != skip)(
+                  rcf andThen doIfFw(!_.isProved)(fail)
                 )
+              )
+            } catch {
+              case ex@(_: TacticInapplicableFailure | _: BelleCEX) =>
+                val msg =
+                  if (StaticSemantics.symbols(pr.subgoals.head).exists(n => n.name.startsWith("p_") || n.name.startsWith("q_"))) {
+                    "Sequent cannot be proved. Please try to unhide some formulas."
+                  } else {
+                    "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
+                  }
+                throw new TacticInapplicableFailure(msg, ex)
             }
           )
-        )
-    )
+        ), 0)
+      } else alpha
+    } else provable
   }
 
   /** Performs QE and fails if the goal isn't closed. */
@@ -133,13 +153,12 @@ private object ToolTactics {
         classOf[TacticInapplicableFailure],
         (ex: TacticInapplicableFailure) =>
           if (StaticSemantics.symbols(seq).exists(defs.contains)) {
-            ExpandAll(defs.substs) & prepareQE(order, rcf(qeTool))
+            expandAllDefs(defs.substs) & prepareQE(order, rcf(qeTool))
           } else throw ex
       )
       ,
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
-      "qecache/" + qeTool.getClass.getSimpleName,
-      defs
+      "qecache/" + qeTool.getClass.getSimpleName
     ) & Idioms.doIf(!_.isProved)(anon ((s: Sequent) =>
       if (s.succ.head == False) label(BelleLabels.QECEX)
       else DebuggingTactics.done("QE was unable to prove: invalid formula"))
@@ -181,15 +200,21 @@ private object ToolTactics {
   }
 
   /** Hides duplicate formulas (expensive because needs to sort positions). */
-  private val hideDuplicates = anon ((seq: Sequent) => {
-    val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
-      filter({ case (_, l) => l.size > 1 })
-    val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t => (t._3, hide(t._3))) }).toList
-    tactics.sortBy({ case (pos, _) => pos.index0 }).map(_._2).reverse.reduceOption[BelleExpr](_&_).getOrElse(skip)
-  })
+  private val hideDuplicates: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireAtMostOneSubgoal(provable, "ToolTactics.hideDuplicates")
+    provable.subgoals.headOption.map(seq => {
+      val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
+        filter({ case (_, l) => l.size > 1 })
+      val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t =>
+        (t._3, if (t._3.isAnte) HideLeft(t._3.checkAnte.top) else HideRight(t._3.checkSucc.top))) }).toList
+      tactics.sortBy({ case (pos, _) => pos.index0 }).map(_._2).reverse.foldLeft(provable)({ case (p, t) => p(t, 0) })
+    }).getOrElse(provable)
+  }
 
   /** Hides useless trivial true/false formulas. */
-  private val hideTrivialFormulas = anon ((seq: Sequent) => {
+  private val hideTrivialFormulas: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "ToolTactics.hideTrivialFormulas")
+    val seq = provable.subgoals.head
     val hidePos = seq.zipWithPositions.filter({
       case (True, pos) => pos.isAnte
       case (False, pos) => pos.isSucc
@@ -200,9 +225,9 @@ private object ToolTactics {
       case (Less(l, r), pos) => pos.isSucc && l == r
       case (Greater(l, r), pos) => pos.isSucc && l == r
       case _ => false
-    }).map(p => hide(p._2)).reverse
-    hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
-  })
+    }).map(p => if (p._2.isAnte) HideLeft(p._2.checkAnte.top) else HideRight(p._2.checkSucc.top)).reverse
+    hidePos.foldLeft(provable)({ case (p, t) => p(t, 0) })
+  }
 
   /** Returns all sub-terms of expression `e` that are differentials or differential symbols. */
   private def differentialsOf(e: Expression): List[Term] = e.matchingTerms({
@@ -232,45 +257,54 @@ private object ToolTactics {
   }).reverse
 
   /** Abbreviates differentials and differential symbols to variables. */
-  private val abbreviateDifferentials = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
-    flatMap(differentialsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
-    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-  )
+  private val abbreviateDifferentials: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireAtMostOneSubgoal(provable, "ToolTactics.abbreviateDifferentials")
+    provable.subgoals.headOption.map(seq => {
+      val abbrv = (seq.ante ++ seq.succ).
+        flatMap(differentialsOf).distinct.map(d => (p: ProvableSig) => p(EqualityTactics.abbrv(d, None).result _, 0)(HideLeft(AntePos(seq.ante.size)), 0))
+      abbrv.foldLeft(provable)({ case (p, t) => p(t, 0) })
+    }).getOrElse(provable)
+  }
 
   /** Abbreviates uninterpreted functions with arity>0 to variables. */
-  private val abbreviateUninterpretedFuncs = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
-    flatMap(uninterpretedFuncsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
-    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-  )
+  private val abbreviateUninterpretedFuncs: BuiltInTactic = anon { (provable: ProvableSig) =>
+    ProofRuleTactics.requireAtMostOneSubgoal(provable, "ToolTactics.abbreviateUninterpretedFuncs")
+    provable.subgoals.headOption.map(seq => {
+      val abbrv = (seq.ante ++ seq.succ).
+        flatMap(uninterpretedFuncsOf).distinct.map(d => (p: ProvableSig) => p(EqualityTactics.abbrv(d, None).result _, 0)(HideLeft(AntePos(seq.ante.size)), 0))
+      abbrv.foldLeft(provable)({ case (p, t) => p(t, 0) })
+    }).getOrElse(provable)
+  }
 
   /** Abbreviates interpreted functions to variables. */
-  private val abbreviateInterpretedFuncsHelper = anon { (seq: Sequent) =>
+  private val abbreviateInterpretedFuncsHelper: BuiltInTactic = anon { (pr: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "ToolTactics.abbreviateInterpretedFuncsHelper")
+    val seq = pr.subgoals.head
     val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct.reverse
     val interpretedExcept = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOfExcept).distinct.reverse
 
-    if (interpreted.nonEmpty) {
-        (// Try full abbreviation and search for cex
-          interpreted.map(abbrvAll(_, None) & hideL('Llast)).
-            reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & assertNoCex |
-            // Otherwise, skip known functions but still abbrev
-            interpretedExcept.map(abbrvAll(_, None) & hideL('Llast)).
-              reduceRightOption[BelleExpr](_ & _).getOrElse(skip))
-    } else skip
+    // Try full abbreviation and search for cex
+    pr(or(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).
+      foldLeft(_)({ case (p, t) => p(t, 0) })(assertNoCex, 0)
+      ,
+      interpretedExcept.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).foldLeft(_)({ case (p, t) => p(t, 0) })), 0)
   }
 
   /** Abbreviates interpreted functions to variables with 1 layer of simplification. */
-  private val abbreviateInterpretedFuncs = anon { (seq: Sequent) =>
+  private val abbreviateInterpretedFuncs: BuiltInTactic = anon { (pr: ProvableSig) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "ToolTactics.abbreviateInterpretedFuncs")
+    val seq = pr.subgoals.head
     val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct.reverse
 
     if (interpreted.nonEmpty) {
       // Automatically apply simplifications when there are interpreted functions
-      SimplifierV3.fullSimplify &
+      pr(SimplifierV3.fullSimplify, 0)(
         // This tries to unfold initial conditions at least once
-        abbreviateInterpretedFuncsHelper
-    } else skip
+        abbreviateInterpretedFuncsHelper, 0)
+    } else pr
   }
 
-  def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE(Declaration(Map.empty), List.empty)(qeTool)
+  def fullQE(qeTool: => QETacticTool): BelleExpr = anons { (pr: ProvableSig) => fullQE(pr.defs, List.empty)(qeTool) }
 
   // Follows heuristic in C.W. Brown. Companion to the tutorial: Cylindrical algebraic decomposition, (ISSAC 2004)
   // www.usna.edu/Users/cs/wcbrown/research/ISSAC04/handout.pdf
@@ -365,20 +399,32 @@ private object ToolTactics {
 
   //Note: the same as fullQE except it uses computes the heuristic order in the middle
   def heuristicQE(qeTool: => QETacticTool, po: Ordering[Variable]=equalityOrder): BelleExpr = {
+    //@note labels not yet available in forward tactics
+    heuristicQEImpl(qeTool, po) & (done | anon ((s: Sequent) =>
+      if (s.succ.head == False) label(BelleLabels.QECEX)
+      else DebuggingTactics.done("QE was unable to prove: invalid formula"))
+      )
+  }
+
+  /** Heuristic QE forward implementation. */
+  private def heuristicQEImpl(qeTool: => QETacticTool, po: Ordering[Variable]=equalityOrder): BuiltInTactic= internal ("_hQE", (provable: ProvableSig) => {
+    require(provable.subgoals.forall(_.isFOL), "QE only on FOL formulas")
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    Idioms.NamedTactic("ordered QE",
-      //      DebuggingTactics.recordQECall() &
-      done | //@note don't fail QE if already proved
-        (SaturateTactic(alphaRule) &
-        (close |
-          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
-          hidePredicates &
-          toSingleFormula & orderedClosure(po) & rcf(qeTool) &
-            (done | anon ((s: Sequent) =>
-              if (s.succ.head == False) label(BelleLabels.QECEX)
-              else DebuggingTactics.done("QE was unable to prove: invalid formula"))
-              ))))
-    )}
+    provable.subgoals.toList match {
+      case Nil => provable
+      case _ => provable(
+        //onall
+        saturate(alphaRule) andThen or(
+          close,
+          saturate(EqualityTactics.atomExhaustiveEqL2R('L)) andThen
+            hidePredicates andThen
+            toSingleFormula andThen
+            orderedClosure(po) andThen
+            rcf(qeTool)
+          )
+        )
+    }
+  })
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
@@ -393,91 +439,88 @@ private object ToolTactics {
           SaturateTactic(andL('L)) & SimplifierV3.fullSimpTac(),
           QE & done
         ))
-       else nil)
+       else Idioms.nil)
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: => QETacticTool): BelleExpr = internal ("_rcf", (sequent: Sequent) => {
-    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
-    require(sequent.succ.head.isFOL, "QE only on FOL formulas")
+  def rcf(qeTool: => QETacticTool): BuiltInTactic = internal ("_rcf", (provable: ProvableSig) => {
+    ProofRuleTactics.requireAtMostOneSubgoal(provable, "ToolTactics.rcf")
+    provable.subgoals.headOption.map(sequent => {
+      require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+      assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
+      require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
-    //Run QE and extract the resulting provable and equivalence
-    //@todo how about storing the lemma, but also need a way of finding it again
-    //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
-    val qeFact = try {
-      qeTool.qe(sequent.succ.head).fact
-    } catch {
-      case ex: SMTQeException => throw new TacticInapplicableFailure(ex.getMessage, ex)
-      case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
-      case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
-    }
-
-    def leadingQuantOrder(fml: Formula): Seq[Variable] = fml match {
-      case Forall(v, p) => v ++ leadingQuantOrder(p)
-      case Exists(v, p) => v ++ leadingQuantOrder(p)
-      case _ => Nil
-    }
-
-    val optCloseT: BuiltInTactic = anon { provable: ProvableSig =>
-      provable.subgoals.head.succ.indexOf(True) match {
-        case -1 => provable
-        case i => provable(CloseTrue(SuccPos(i)), 0)
+      //Run QE and extract the resulting provable and equivalence
+      //@todo how about storing the lemma, but also need a way of finding it again
+      //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
+      val qeFact = try {
+        qeTool.qe(sequent.succ.head).fact
+      } catch {
+        case ex: SMTQeException => throw new TacticInapplicableFailure(ex.getMessage, ex)
+        case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
+        case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
       }
-    }
 
-    def satAndL: BuiltInTactic = anon { provable: ProvableSig =>
-      val andL = provable.subgoals.head.ante.zipWithIndex.filter({ case (_: And, _) => true case _ => false }).
-        reverseMap({ case (_, i) => AndLeft(AntePos(i)) })
-      if (andL.isEmpty) {
-        provable
-      } else {
-        (provable(andL.foldLeft(_: ProvableSig)({ (pr, r) => pr(r, 0) }), 0)
-          (satAndL.result _, 0)
-          )
+      def leadingQuantOrder(fml: Formula): Seq[Variable] = fml match {
+        case Forall(v, p) => v ++ leadingQuantOrder(p)
+        case Exists(v, p) => v ++ leadingQuantOrder(p)
+        case _ => Nil
       }
-    }
 
-    def applyFact(fact: Formula): BuiltInTactic = anon { (provable: ProvableSig) =>
-      val subs = FormulaTools.conjuncts(fact)
-      subs.map({ case Equiv(f, result) => (pr: ProvableSig) =>
-        (pr(toSingleFormula.result _, 0)
-          (FOQuantifierTactics.universalClosureFw(leadingQuantOrder(f).toList)(1).computeResult _, 0)
-          (cutLRFw(result)(1).computeResult _, 0)
+      val optCloseT: BuiltInTactic = anon { provable: ProvableSig =>
+        provable.subgoals.head.succ.indexOf(True) match {
+          case -1 => provable
+          case i => provable(CloseTrue(SuccPos(i)), 0)
+        }
+      }
+
+      def satAndL: BuiltInTactic = anon { provable: ProvableSig =>
+        val andL = provable.subgoals.head.ante.zipWithIndex.filter(_._1.isInstanceOf[And]).reverseMap({ case (_, i) => AndLeft(AntePos(i)) })
+        if (andL.isEmpty) provable
+        else andL.foldLeft(provable)({ case (p, r) => p(r, 0) })(satAndL, 0)
+      }
+
+      def applyFacts(facts: List[Formula]): BuiltInTactic = anon { (provable: ProvableSig) =>
+        facts.map({ case Equiv(f, result) => (pr: ProvableSig) =>
+          (pr(toSingleFormula, 0)
+          (FOQuantifierTactics.universalClosureFw(leadingQuantOrder(f).toList)(1), 0)
+          (cutLRFw(result)(1), 0)
           /* show */
           (EquivifyRight(SuccPos(0)), 1)
           (CommuteEquivRight(SuccPos(0)), 1)
           (Cut(qeFact.conclusion.succ.head), 1) // creates subgoals 1+2
           (CoHideRight(SuccPos(sequent.succ.length)), 2)
           (qeFact, 2)
-          (satAndL.result _, 1)
-          (close.result _, 1)
+          (satAndL, 1)
+          (close, 1)
           /* use */
-          (optCloseT.result _, 0)
+          (optCloseT, 0)
           )
-      }).zipWithIndex.reverse.foldLeft(provable)({ case (pr, (r, i)) => pr(r, i) })
-    }
+        }).zipWithIndex.reverse.foldLeft(provable)({ case (pr, (r, i)) => pr(r, i) })
+      }
 
-    def applySingleFact(result: Formula, fact: ProvableSig): BuiltInTactic = anon { provable: ProvableSig =>
-      (provable(cutLRFw(result)(SuccPos(0)).computeResult _, 0)
+      def applySingleFact(result: Formula, fact: ProvableSig): BuiltInTactic = anon { provable: ProvableSig =>
+        (provable(cutLRFw(result)(SuccPos(0)), 0)
         /* show */
         (EquivifyRight(SuccPos(0)), 1)
         (CommuteEquivRight(SuccPos(0)), 1)
         (fact, 1)
         /* use */
-        (optCloseT.result _, 0)
+        (optCloseT, 0)
         )
-    }
+      }
 
-    qeFact.conclusion.succ.head match {
-      case Equiv(_, result) => applySingleFact(result, qeFact)
-      case result: And =>
-        val facts = FormulaTools.conjuncts(result)
-        SaturateTactic(allR('R)) & (prop & Idioms.doIfElse(_.subgoals.size == facts.size)(
-          applyFact(result),
-          fail
-        ) | expandAll & prop & OnAll(applyEqualities) & applyFact(result))
-    }
+      qeFact.conclusion.succ.head match {
+        case Equiv(_, result) => applySingleFact(result, qeFact).result(provable)
+        case result: And =>
+          //@note apply same steps as QETacticTool to use `close` in applyFacts
+          val facts = FormulaTools.conjuncts(result)
+          val skolemized = provable(saturate(allR('R)))
+          val r = skolemized(PropositionalTactics.prop)
+          if (r.subgoals.size == facts.size) applyFacts(facts)(r)
+          else applyFacts(facts)(skolemized(expandAll andThen PropositionalTactics.prop, 0)(applyEqualities))
+      }
+    }).getOrElse(provable)
   })
 
   /** @see [[TactixLibrary.transform()]] */
@@ -746,7 +789,7 @@ private object ToolTactics {
     (sequent: Sequent) =>
       (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
         ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-        ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) }),
+        ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hidePredicates"
     )
   }
@@ -756,7 +799,7 @@ private object ToolTactics {
     (sequent: Sequent) =>
       (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
         ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-        ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) }),
+        ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hideQuantifiedFuncArgsFml"
     )
   }
@@ -766,7 +809,7 @@ private object ToolTactics {
     (sequent: Sequent) =>
       (    sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
         ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
-        ).foldLeft(provable)({ (pr, r) => pr(r.computeResult _, 0) }),
+        ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hideNonFOL"
     )
   }

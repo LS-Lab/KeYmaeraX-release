@@ -171,7 +171,11 @@ object HyDRAInitializer extends Logging {
 
     LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
-    KeYmaeraXStartup.initLemmaCache(logger.warn(_, _))
+    KeYmaeraXStartup.initLemmaCache((msg: String, ex: Throwable) => {
+      System.err.println(msg)
+      ex.printStackTrace(System.err)
+      logger.error(msg, ex)
+    })
 
     def proofUrl(userId: String, proofId: Int): String = {
       database.getUser(userId) match {

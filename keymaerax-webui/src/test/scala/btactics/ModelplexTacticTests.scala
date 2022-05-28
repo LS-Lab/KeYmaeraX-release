@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{proveBy, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
@@ -40,16 +40,9 @@ class ModelplexTacticTests extends TacticTestBase {
 
   def monitorSize(f: Formula): Int = Statistics.countFormulaOperators(f, arith = true)
 
-//  def numSteps(n: Provable): Int = if (n.subgoals.nonEmpty) n.subgoals.map(numSteps).min else 0
-//  def numSteps(s: ProofStep): Int = if (s.subgoals.nonEmpty) 1 + s.subgoals.map(numSteps).sum else 1
-//
-//  def numBranches(n: ProofNode): Int = if (n.children.nonEmpty) n.children.map(numBranches).min else 0
-//  def numBranches(s: ProofStep): Int = if (s.subgoals.nonEmpty) s.subgoals.map(numBranches).sum else 1
-
   private def report(result: Formula, proof: ProvableSig, name: String): Unit = {
     println(s"$name monitor size: " + monitorSize(result))
-//    println("Number of proof steps: " + numSteps(proof))
-//    println("Number of branches (open/all): " + proof.subgoals.size + "/" + numBranches(proof))
+    println("Number of proof steps: " + proof.steps)
   }
 
   "Simple modelplex" should "chase: find correct controller monitor by updateCalculus implicationally" in withTactics {
@@ -227,7 +220,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val inputs = CodeGenerator.getInputs(prg)
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = true)
     val code = (new CMonitorGenerator('resist, Declaration(Map.empty)))(testProg.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
-    code._1.trim shouldBe
+    code._1.trim should equal (
       """/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
         |verdict boundaryDist(state pre, state curr, const parameters* const params) {
         |  if (((-1.0L) <= curr.f) && (curr.f <= ((params->m)-(pre.l))/(params->ep))) {
@@ -256,12 +249,13 @@ class ModelplexTacticTests extends TacticTestBase {
         |
         |/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
         |state monitoredCtrl(state curr, const parameters* const params, const input* const in,
-        |                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {
+        |                    state (*ctrl)(state,const parameters* const,const input* const),
+        |                    state (*fallback)(state,const parameters* const,const input* const)) {
         |  state pre = curr;
         |  state post = (*ctrl)(pre,params,in);
         |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
         |  else return post;
-        |}""".stripMargin
+        |}""".stripMargin) (after being whiteSpaceRemoved)
 
     val monitorCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty)),
       True, Declaration(Map.empty)))(testProg2.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
@@ -670,7 +664,7 @@ class ModelplexTacticTests extends TacticTestBase {
   "ModelPlex for Veriphy" should "prove velocity car safety" in withMathematica { _ =>
     val Some(entry) = ArchiveParser.getEntry("Veriphy/Velocity Car Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs=entry.defs) shouldBe 'proved
   }
 
   it should "derive controller monitor for velocity car safety" in withMathematica { tool =>
@@ -696,7 +690,7 @@ class ModelplexTacticTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
     val fallback = "t:=0;v:=0;".asProgram
     val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._3,
-      Some(fallback), 'ctrl, None, synthesizeProofs = false)(entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula]))
+      Some(fallback), 'ctrl, None, synthesizeProofs = false, defs=entry.defs)(entry.model.asInstanceOf[Formula])
 
     sandbox shouldBe
       """d>=0&V>=0&ep>=0
@@ -714,7 +708,7 @@ class ModelplexTacticTests extends TacticTestBase {
         |    ++ tpost:=0;vpost:=0;?true;}
         |   {t:=tpost;v:=vpost;?true;}
         |   {dpost:=*;tpost:=*;?true;}
-        |   ?(d>=0&t=0&v=0->dpost>=0)&(d>=0&d>=V*ep&t=0->tpost>=0&dpost>=v*(ep-tpost))&tpost<=ep;
+        |   ?tpost>=0&dpost>=v*(ep-tpost)&dpost>=0&tpost<=ep;
         |   d:=dpost;t:=tpost;?true;
         | }*]d>=0
       """.stripMargin.asFormula
@@ -745,7 +739,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "prove fallback preserves controller monitor" in withMathematica { _ =>
     val Some(entry) = ArchiveParser.getEntry("Veriphy/Fallback Preserves Controller Monitor",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs=entry.defs) shouldBe 'proved
   }
 
   it should "check all archive entries" in withMathematica { _ =>
@@ -775,7 +769,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val ctrlInputs = CodeGenerator.getInputs(ctrlMonitorProg)
     val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs),
       init, entry.defs))(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
-    ctrlMonitorCode._1.trim shouldBe
+    ctrlMonitorCode._1.trim should equal (
       """/**************************
         | * Monitor.c
         | * Generated by KeYmaera X
@@ -803,7 +797,26 @@ class ModelplexTacticTests extends TacticTestBase {
         |/** Monitor verdict: `id` identifies the violated monitor sub-condition, `val` the safety margin (<0 violated, >=0 satisfied). */
         |typedef struct verdict { int id; long double val; } verdict;
         |
-        |
+        |bool bounds(const parameters* const params, long double V, long double ep) {
+        |  return (V >= 0.0L) && (ep >= 0.0L);
+        |}
+        |bool loopinv(const parameters* const params, long double d) {
+        |  return d >= 0.0L;
+        |}
+        |bool safe(const parameters* const params, long double d) {
+        |  return d >= 0.0L;
+        |}
+        |bool init(const parameters* const params, long double d, long double t, long double v, long double V, long double ep) {
+        |  return (d >= 0.0L) && ((v == 0.0L) && ((t == 0.0L) && (bounds(params,V,ep))));
+        |}
+        |bool throughoutinv(const parameters* const params, long double d, long double t, long double v, long double V, long double ep) {
+        |  return (d >= (v)*((ep)-(t))) && ((t >= 0.0L) && ((t <= ep) && ((0.0L <= v) && (v <= V))));
+        |}
+        |verdict checkInit(const state* const init, const parameters* const params) {
+        |  bool initOk = (init->d >= 0.0L) && ((init->v == 0.0L) && ((init->t == 0.0L) && ((params->V >= 0.0L) && (params->ep >= 0.0L))));
+        |  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
+        |  return result;
+        |}
         |
         |verdict OrLeft430835732(state pre, state curr, const parameters* const params) {
         |  if (pre.d >= (params->V)*(params->ep)) {
@@ -851,8 +864,8 @@ class ModelplexTacticTests extends TacticTestBase {
         |} else {
         |verdict result = { .id=-3, .val=((-1.0L))+(params->ep) }; return result;
         |}
-        |}""".stripMargin
-    ctrlMonitorCode._2.trim shouldBe
+        |}""".stripMargin) (after being whiteSpaceRemoved)
+    ctrlMonitorCode._2.trim should equal (
       """/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
         |verdict boundaryDist(state pre, state curr, const parameters* const params) {
         |  verdict leftDist = OrLeft430835732(pre,curr,params);
@@ -874,7 +887,7 @@ class ModelplexTacticTests extends TacticTestBase {
         |  state post = (*ctrl)(pre,params,in);
         |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
         |  else return post;
-        |}""".stripMargin
+        |}""".stripMargin) (after being whiteSpaceRemoved)
   }
 
   "Waypoint navigation" should "generate a controller monitor" in withMathematica { tool =>
@@ -1041,13 +1054,37 @@ class ModelplexTacticTests extends TacticTestBase {
       loneElement shouldBe """==> \forall x1_0 (x1_0=x1->x1_0>=0&\exists x1 x1>=2)""".asSequent
   }
 
-  "Reassociating formulas" should "be fast" in withTactics {
-    val p = "((v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost))|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x)))|(v+vpost=0&x=xpost)&(v>0&A() < 0|A()>0&v < 0)".asFormula
-    val (q, qp) = ModelPlex.reassociate(p)
+  "Reassociating formulas" should "be fast" taggedAs IgnoreInBuildTest in withTactics {
+    // run with -da -Xss20M
+    val predicates = (0 to 1000).map(i => PredOf(Function("p", Some(i), Unit, Bool), Nothing))
+    val p = predicates.reduceLeft(Or)
     val tic = System.currentTimeMillis()
-    proveBy(Equiv(p, q), TactixLibrary.byUS(qp)) shouldBe 'proved
+    val (q, proof) = PropositionalTactics.rightAssociate(p)
     val toc = System.currentTimeMillis()
-    (toc-tic) should be <= 200L
+    proof shouldBe 'proved
+    q shouldBe predicates.reduceRight(Or)
+    (toc-tic) should be <= 60000L
+  }
+
+  it should "be fast on a robot example" taggedAs IgnoreInBuildTest in withTactics {
+    // run with -da -Xss20M
+    val p = "((v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost))|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x)))|(v+vpost=0&x=xpost)&(v>0&A() < 0|A()>0&v < 0)".asFormula
+    val tic = System.currentTimeMillis()
+    val (q, proof) = PropositionalTactics.rightAssociate(p)
+    val toc = System.currentTimeMillis()
+    proof shouldBe 'proved
+    q shouldBe "v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost)|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x))|v+vpost=0&x=xpost&(v>0&A() < 0|A()>0&v < 0)".asFormula
+    (toc-tic) should be <= 1000L
+  }
+
+  "Disjunctive normal form" should "be fast on a robot example" taggedAs IgnoreInBuildTest in withTactics {
+    // run with -da -Xss20M
+    val fml = "(((((((((xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0|Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0)|(w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0&(-2)*w*xo+(-1)*Da*xo^2+2*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+2*v*yo+(-1)*Da*yo^2+(-2)*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)|((-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|(Da<=0&w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0)&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)|(Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&(-2)*w*xo+(-1)*Da*xo^2+2*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+2*v*yo+(-1)*Da*yo^2+(-2)*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(Da<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&2*w*xo+Da*xo^2+(-2)*w*xr+(-2)*Da*xo*xr+Da*xr^2+(-2)*v*yo+Da*yo^2+2*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)|(Da<=0&(-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0)&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&(0 < -accpost&-accpost<=Da)&(xr+w/(-accpost)-xo)^2+(yr-v/(-accpost)-yo)^2!=(v^2+w^2)/accpost^2&(xrpost+wpost/(-accpost)-xo)^2+(yrpost-vpost/(-accpost)-yo)^2!=(vpost^2+wpost^2)/accpost^2&yrpost_0=yr&vpost_0=v&xrpost_0=xr&apost=(-1)&wpost_0=w|(((((((((xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0|Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2=0)|(w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|((-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2!=0)|xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0&2*w*xo+(-1)*Da*xo^2+(-2)*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+(-2)*v*yo+(-1)*Da*yo^2+2*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)|(Da<=0&w*xo+(-1)*w*xr+(-1)*v*yo+v*yr<=0)&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)|(Da<=0&(-1)*w*xo+w*xr+v*yo+(-1)*v*yr<=0)&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)|(Da<=0&xo^2+(-2)*xo*xr+xr^2+yo^2+(-2)*yo*yr+yr^2 < 0)&2*w*xo+(-1)*Da*xo^2+(-2)*w*xr+2*Da*xo*xr+(-1)*Da*xr^2+(-2)*v*yo+(-1)*Da*yo^2+2*v*yr+2*Da*yo*yr+(-1)*Da*yr^2 < 0)|(Da<=0&(-1)*xo^2+2*xo*xr+(-1)*xr^2+(-1)*yo^2+2*yo*yr+(-1)*yr^2 < 0)&(-2)*w*xo+Da*xo^2+2*w*xr+(-2)*Da*xo*xr+Da*xr^2+2*v*yo+Da*yo^2+(-2)*v*yr+(-2)*Da*yo*yr+Da*yr^2 < 0)&(0 < accpost&accpost<=Da)&(xr+w/accpost-xo)^2+(yr-v/accpost-yo)^2!=(v^2+w^2)/accpost^2&(xrpost+wpost/accpost-xo)^2+(yrpost-vpost/accpost-yo)^2!=(vpost^2+wpost^2)/accpost^2&yrpost_0=yr&vpost_0=v&xrpost_0=xr&apost=1&wpost_0=w".asFormula
+    val tic = System.currentTimeMillis()
+    val (_, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    val toc = System.currentTimeMillis()
+    proof shouldBe 'proved
+    (toc-tic) should be <= 1000L
   }
 
 }

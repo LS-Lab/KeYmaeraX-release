@@ -278,7 +278,8 @@ object KeYmaeraX {
         Some(fallback),
         kind = 'ctrl,
         checkProvable =  None,
-        synthesizeProofs = false)(inputModel)
+        synthesizeProofs = false,
+        defs = inputEntry.defs)(inputModel)
       println("Done synthesizing sandbox and safety proof")
 
       val db = new TempDBTools(Nil)
@@ -398,9 +399,9 @@ object KeYmaeraX {
             val proofId = tempDB.createProof(e.fileContent, e.name, name)
             val interpreter = SpoonFeedingInterpreter(proofId, -1, tempDB.db.createProof, e.defs,
               DBTools.listener(tempDB.db, additionalListeners = additionalListeners),
-              ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 0, strict=false, convertPending=false)
+              ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 0, strict=false, convertPending=false, recordInternal=false)
             BelleInterpreter.setInterpreter(interpreter)
-            BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(e.model.asInstanceOf[Formula])))
+            BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(e.model.asInstanceOf[Formula], e.defs)))
             val tree = DbProofTree(tempDB.db, proofId.toString)
             val converter = how match {
               case "verboseTactics" => new VerboseTraceToTacticConverter(tree.info.defs(tempDB.db))

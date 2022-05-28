@@ -477,6 +477,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
                 readOnly: function() { return true; },
                 userId: function() { return undefined; },
                 proofId: function() { return undefined; },
+                nodeId: function() { return undefined; },
                 defaultPositionLocator: function() { return undefined; },
                 sequent: function() { return undefined; }
               }

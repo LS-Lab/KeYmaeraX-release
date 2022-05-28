@@ -271,7 +271,8 @@ private case class DOUBLE_QUOTES_STRING(var s: String) extends Terminal("<string
   override def regexp: Regex = DOUBLE_QUOTES_STRING_PAT.regexp
 }
 private object DOUBLE_QUOTES_STRING_PAT {
-  def regexp: Regex = """\"([^\"]*)\"""".r
+  // everything between "...", allows line breaks, \, and escaped \" as content
+  def regexp: Regex = """"(([^\\"]|\\"|\\(?!"))*+)"""".r //@note possessive quantifier *+ to disable backtracking between quotes
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private object PERIOD extends Terminal(".") {

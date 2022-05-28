@@ -5,7 +5,7 @@
 
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleTopLevelLabel, OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, SignAnalysis}
@@ -16,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
-
 import org.scalatest.LoneElement._
 
 /**
@@ -314,8 +313,12 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       abs(1, 0::Nil) & abs(-8, 0::Nil) & orL(-18) & OnAll(orL(-17)) &
       OnAll(SaturateTactic(andL('_))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)))
 
-    //@todo hideNonmatchingBounds does not yet work on the "middle" abs branches
-    val s = proveBy(fml, tactic <(ArithmeticSpeculativeSimplification.speculativeQE, skip, skip, ArithmeticSpeculativeSimplification.speculativeQE))
+    //@todo hideNonmatchingBounds does not yet work on the "middle" (<= vs. >=) abs branches
+    val s = proveBy(fml, tactic switch(
+      ("x_0-xo_0>=0&abs__0=x_0-xo_0//x-xo>=0&abs_=x-xo".asLabel, ArithmeticSpeculativeSimplification.speculativeQE),
+      ("x_0-xo_0 < 0&abs__0=-(x_0-xo_0)//x-xo>=0&abs_=x-xo".asLabel, skip),
+      ("x_0-xo_0 < 0&abs__0=-(x_0-xo_0)//x-xo < 0&abs_=-(x-xo)".asLabel, ArithmeticSpeculativeSimplification.speculativeQE),
+      ("x_0-xo_0>=0&abs__0=x_0-xo_0//x-xo < 0&abs_=-(x-xo)".asLabel, skip)))
     s.subgoals should have size 2
   }
 

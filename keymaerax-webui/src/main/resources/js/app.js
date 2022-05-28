@@ -170,7 +170,7 @@ keymaeraProofApp.config(['$routeProvider',
 // triggers for tooltip and popover
 keymaeraProofApp.config(['$uibTooltipProvider', function($uibTooltipProvider) {
   $uibTooltipProvider.setTriggers({
-    'rightClick': 'blur'
+    'rightClick': 'outsideClick' //@note hide trigger outsideClick does not actually work, have to manually hide see sequent.js
   });
 }]);
 

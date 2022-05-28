@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.implyRi
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.immutable
 import scala.collection.immutable.Nil
@@ -158,7 +159,7 @@ object ODELiveness {
     // The extra urename frees up y_
     val dgbU = dgb.fact(URename(dbxghostvar,ghostvar,semantic=true))(unifA)
 
-    val vdgrawimply = ElidingProvable(Provable.vectorialDG(dim)._1)
+    val vdgrawimply = ElidingProvable(Provable.vectorialDG(dim)._1, Declaration(Map.empty))
     val unifB = UnificationMatch.unifiable(cofF, ghostvar).get.usubst
     val vdg = vdgrawimply(unifB)
     // Turn c{|y_1,...y_n|} into c{|y_1,...,y_n|}
@@ -171,7 +172,7 @@ object ODELiveness {
     val dbx = Ax.DBXgt.provable(unifC)
 
     val unifD = UnificationMatch.unifiable("c".asDifferentialProgram,extODE).get.usubst
-    val commute = ElidingProvable(Provable.axioms(", commute")(unifD))
+    val commute = ElidingProvable(Provable.axioms(", commute")(unifD), Declaration(Map.empty))
 
     //TODO: change to "remember" when parsing is supported
     val pr = proveBy(Imply(inv,DDGimply),
@@ -188,7 +189,7 @@ object ODELiveness {
           useAt(getDDGhelperLemma,PosInExpr(1::Nil))(1) &
           useAt(Ax.DvarAxiom)(1,1::0::Nil) &
           useAt(commute,PosInExpr(0::Nil))(1) &
-          useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
+          useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true)), Declaration(Map.empty)))(1) &
           G(1) & DassignbCustom(1) &
           byUS(Ax.equalReflexive)
         ,
@@ -238,7 +239,7 @@ object ODELiveness {
     val resimply = vdgimplyren(unif.usubst)
     val resylpmi = vdgylpmiren(unif.usubst)
 
-    (ElidingProvable(resimply), ElidingProvable(resylpmi))
+    (ElidingProvable(resimply, Declaration(Map.empty)), ElidingProvable(resylpmi, Declaration(Map.empty)))
   }
 
   /** Helper that gets the appropriate DDG instance (already instantiated for the ghosts by renaming and friends)
@@ -305,7 +306,7 @@ object ODELiveness {
   private lazy val DESystemCustom: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
       val ax = Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,x,semantic=true))
-      useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos)
+      useAt(ElidingProvable(ax, Declaration(Map.empty)), PosInExpr(0::Nil))(pos)
     case _ => skip
   })
 
@@ -315,7 +316,7 @@ object ODELiveness {
   private lazy val DassignbCustom: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(Assign(xp@DifferentialSymbol(x),f0), p)) =>
       val ax = Provable.axioms("[':=] differential assign")(URename("x_".asVariable,x,semantic=true))
-      useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos) & DassignbCustom(pos)
+      useAt(ElidingProvable(ax, Declaration(Map.empty)), PosInExpr(0::Nil))(pos) & DassignbCustom(pos)
     case _ => skip
   })
 
@@ -747,7 +748,8 @@ object ODELiveness {
             compatODE(asmsys.ode,tarsys.ode, curdom, asmpost) match {
               case None => ()
               case Some(tac) => {
-                val pr = proveBy(Sequent(immutable.IndexedSeq(curdom), immutable.IndexedSeq(asmsys.constraint)), Idioms.?(prop) & Idioms.?(QE)) //todo: timeout?
+                val pr = proveBy(Sequent(immutable.IndexedSeq(curdom), immutable.IndexedSeq(asmsys.constraint)),
+                  Idioms.?(prop & done | Idioms.?(QE))) //todo: timeout?
 
                 if (pr.isProved) {
                   ls += ((asmsys.constraint, pr, asmpost, i, tac))
@@ -770,9 +772,7 @@ object ODELiveness {
         in & dC(f)(pos) <(
           skip,
           cohideOnlyL(AntePosition(i+1)) & cohideOnlyR(pos) &
-            //DebuggingTactics.print("before") &
             tac &
-            //DebuggingTactics.print("after") &
             dR(dom)(1) <( id,
             DifferentialTactics.diffWeakenG(1) & implyR(1) & by(pr) )
         )
@@ -1123,13 +1123,14 @@ object ODELiveness {
     //  throw new TacticInapplicableFailure("dVAuto failed to prove arithmetic condition: " + qe)
 
     cutR(qe)(pos) <(
-      tac ,
+      label(BelleLabels.dVderiv) & tac ,
       implyR(pos) & existsL('Llast) & andL('Llast) & dV(eps,true)(pos) &
         andR(pos) <(
           andR(pos) <(
             id,
             //hide the eps assumptions
-            hideL(-(seq.ante.length+1)) & hideL(-(seq.ante.length+1)) &
+            label(BelleLabels.dVexists) &
+              hideL(-(seq.ante.length+1)) & hideL(-(seq.ante.length+1)) &
               odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
           odeUnify(pos) &
             dR(lie,false)(pos) <(
@@ -1309,7 +1310,7 @@ object ODELiveness {
 
     starter & timetac &
       cutR(qe)(pos) <(
-        tac
+        label(BelleLabels.dVderiv) & tac
         ,
       implyR(pos) & existsL('Llast) & andL('Llast) &
       cut(Exists(List(oldp),inv)) <(
@@ -1319,8 +1320,8 @@ object ODELiveness {
       kDomainDiamond(oldpbound)(pos) <(
           hideL(-(seq.ante.length+3)) &
           useAt(axren,PosInExpr(1::Nil))(pos)& andR(pos) <(
-          ToolTactics.hideNonFOL & QE,
-          odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt))), // existence
+            ToolTactics.hideNonFOL & QE,
+            label(BelleLabels.dVexists) & odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt))), // existence
           dC(inv)(pos) <(
           DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
             dC(liecheck)(pos) <(
@@ -1537,7 +1538,8 @@ object ODELiveness {
       // Remove the saveBox to reduce clutter
       hideL('Llast),
       DifferentialTactics.dCClosure(pos)<(
-        hideL('Llast) & skip , odeUnify(pos) & hideL('Llast) )
+        hideL('Llast) & skip ,
+        odeUnify(pos) & hideL('Llast) )
     )
   }}
 

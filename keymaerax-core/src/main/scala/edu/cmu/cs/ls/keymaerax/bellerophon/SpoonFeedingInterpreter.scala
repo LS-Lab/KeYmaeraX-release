@@ -91,7 +91,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                                    inner: scala.collection.immutable.Seq[IOListener] => Interpreter,
                                    descend: Int,
                                    strict: Boolean,
-                                   convertPending: Boolean) extends Interpreter with Logging {
+                                   convertPending: Boolean,
+                                   recordInternal: Boolean) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
 
   private var runningInner: Interpreter = _
@@ -112,12 +113,13 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
     }
   }
 
-  /** Updates the labels `orig` at position `at` to include the labels `repl`. Keeps original labels if `repl`==None. */
-  private def updateLabels(orig: Option[List[BelleLabel]], at: Int, repl: Option[List[BelleLabel]]): Option[List[BelleLabel]] = repl match {
+  /** Updates the labels `orig` at position `at` to include the labels of `p`. Keeps original labels if `p.label`==None. */
+  private def updateLabels(orig: Option[List[BelleLabel]], at: Int, p: BelleProvable): Option[List[BelleLabel]] = p.label match {
     case Some(l) => Some(orig.map(_.patch(at, l, 1)).getOrElse(l))
-    case None => orig
+    case None => if (p.p.subgoals.isEmpty) orig.map(_.patch(at, List.empty, 1)) else orig
   }
-  private def updateLabels(orig: List[BelleLabel], at: Int, repl: Option[List[BelleLabel]]): List[BelleLabel] = updateLabels(Some(orig), at, repl).getOrElse(Nil)
+  /** Updates the labels `orig` at position `at` to include the labels of `p`. Keeps original labels if `p.label`==None. */
+  private def updateLabels(orig: List[BelleLabel], at: Int, p: BelleProvable): List[BelleLabel] = updateLabels(Some(orig), at, p).getOrElse(Nil)
 
   private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext, strict: Boolean,
                         convertPending: Boolean, executePending: Boolean): (BelleValue, ExecutionContext) = synchronized {
@@ -160,7 +162,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
         case SaturateTactic(child) =>
           var result: (BelleValue, ExecutionContext) = (goal, ctx)
             def progress(o: BelleValue, n: BelleValue) = (o, n) match {
-              case (BelleProvable(op, _, _), BelleProvable(np, _, _)) => np.subgoals != op.subgoals
+              case (BelleProvable(op, _), BelleProvable(np, _)) => np.subgoals != op.subgoals
               case _ => false
             }
 
@@ -190,7 +192,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           }
           result
         case CaseTactic(children) => goal match {
-          case BelleProvable(p, Some(labels), _) =>
+          case BelleProvable(p, Some(labels)) =>
             if (p.subgoals.size != labels.size) throw new BelleUnexpectedProofStateError("Number of labels does not match number of subgoals, got\nlabels  " + labels.map(_.prettyString).mkString("\n  ") + "\nfor " + p.prettyString, p.underlyingProvable)
             if (children.size != labels.size) throw new IllFormedTacticApplicationException("Number of cases does not match number of subgoals, got\ncases\n  " + children.map(_._1.prettyString).mkString("\n  ") + "\nfor\n  " + labels.map(_.prettyString).mkString("\n  "))
             def getBranchTactic(l: BelleLabel): BelleExpr = children.filter(c => l.endsWith(c._1)).toList match {
@@ -203,15 +205,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
         }
         case BranchTactic(children) if children.isEmpty => throw new IllFormedTacticApplicationException("Branching with empty children")
         case BranchTactic(children) if children.nonEmpty => goal match {
-          case BelleProvable(p, labels, defs) =>
+          case BelleProvable(p, labels) =>
             if (children.length != p.subgoals.length)
               throw new IllFormedTacticApplicationException("<(e)(v) is only defined when len(e) = len(v), but " +
                 children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
                 p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(tactic, "")
 
-            val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.zipWithIndex.map({
-              case (sg, i) => BelleProvable(ProvableSig.startProof(sg), labels.map(_(i) :: Nil), defs)
-            }))
+            val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.indices.map(i =>
+              BelleProvable(p.sub(i), labels.map(_(i) :: Nil))))
             val branchCtxs = ctx.branch(children.size)
 
             //@note execute in reverse for stable global subgoal indexing
@@ -229,9 +230,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     })
                     if (constification.nonEmpty) {
                       val subst = rp.p(USubst(constification))
-                      val result = rp.parent.map({ case (p, i) => p(USubst(remaining))(subst, i) }).getOrElse(subst)
-                      if (remaining.isEmpty) (BelleProvable(result, rp.label, rp.defs), rctx)
-                      else (new BelleDelayedSubstProvable(result, rp.label, rp.defs, USubst(remaining), None), rctx)
+                      val result = rp.parent.map({ case (p, i) => exhaustiveSubst(p, USubst(remaining))(subst, i) }).getOrElse(subst)
+                      if (remaining.isEmpty) (BelleProvable(result, rp.label), rctx)
+                      else (new BelleDelayedSubstProvable(result, rp.label, USubst(remaining), None), rctx)
                     } else r
                   } else r
                 case r => r
@@ -241,14 +242,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                 case bdp: BelleDelayedSubstProvable => bdp.parent match {
                   case Some((pp, i)) =>
                     assertSubMatchesModuloConstification(pp, bdp.p, i, bdp.subst)
-                    cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, pp, 0, bdp.subst) }
+                    cp match { case BelleProvable(cbp, _) => assertSubMatchesModuloConstification(cbp, pp, 0, bdp.subst) }
                     bdp.p.subgoals.size
                   case None =>
-                    cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bdp.p, 0, bdp.subst) }
+                    cp match { case BelleProvable(cbp, _) => assertSubMatchesModuloConstification(cbp, bdp.p, 0, bdp.subst) }
                     bdp.p.subgoals.size
                 }
-                case BelleProvable(bp, _, _) =>
-                  cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bp, 0, USubst(Nil)) }
+                case BelleProvable(bp, _) =>
+                  cp match { case BelleProvable(cbp, _) => assertSubMatchesModuloConstification(cbp, bp, 0, USubst(Nil)) }
                   bp.subgoals.size
                 case _: BelleThrowable => 1
               }
@@ -262,18 +263,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
 
             val (resultProvable, mergedLabels, _) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel], List[SubstitutionPair])]((p, origLabels, List.empty))({
               case ((p: BelleDelayedSubstProvable, i), (provable, labels, substs)) =>
-                // delete all labels of closed goals, even if p.label==None
-                val pl = if (p.p.subgoals.isEmpty) Some(p.label.getOrElse(List.empty)) else p.label
                 val combinedSubsts = combineSubsts(List(p.subst, USubst(substs)))
-                (applySubDerivation(provable, i, p.p, combinedSubsts)._2, updateLabels(labels, i, pl), combinedSubsts.subsDefsInput.toList)
-              case ((BelleProvable(cp, cl, _), i), (provable, labels, substs)) =>
-                // delete all labels of closed goals, even if cl==None
-                val cl2 = if (cp.subgoals.isEmpty) Some(cl.getOrElse(List.empty)) else cl
+                (applySubDerivation(provable, i, p.p, combinedSubsts)._2, updateLabels(labels, i, p), combinedSubsts.subsDefsInput.toList)
+              case ((sp@BelleProvable(cp, _), i), (provable, labels, substs)) =>
                 // provables may have expanded or not expanded definitions arbitrarily
-                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl2), substs)
+                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, sp), substs)
                 else {
-                  val (p, s) = applySub(provable, cp, i, defs)
-                  (p, updateLabels(labels, i, cl2), combineSubsts(List(s, USubst(substs))).subsDefsInput.toList)
+                  val (p, s) = applySub(provable, cp, i)
+                  (p, updateLabels(labels, i, sp), combineSubsts(List(s, USubst(substs))).subsDefsInput.toList)
                 }
             })
 
@@ -282,9 +279,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             //@note close branching in a graph t0; <(t1, ..., tn); tx with BranchPointer(parent, -1, _)
             val substs = provables.flatMap({ case p: BelleDelayedSubstProvable => Some(p.subst) case _ => None })
             val rp = if (substs.isEmpty) goal match {
-              case dp: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(resultProvable, resultLabels, defs, dp.subst, dp.parent)
-              case _: BelleProvable => BelleProvable(resultProvable, resultLabels, defs)
-            } else new BelleDelayedSubstProvable(resultProvable, resultLabels, defs, combineSubsts(substs),
+              case dp: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(resultProvable, resultLabels, dp.subst, dp.parent)
+              case _: BelleProvable => BelleProvable(resultProvable, resultLabels)
+            } else new BelleDelayedSubstProvable(resultProvable, resultLabels, combineSubsts(substs),
               goal match { case dp: BelleDelayedSubstProvable => dp.parent case _ => None })
             (rp, resultCtx.closeBranch())
           case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(tactic, "")
@@ -292,7 +289,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
 
         case t@USubstPatternTactic(children) =>
           val provable = goal match {
-            case BelleProvable(p, _, _) => p
+            case BelleProvable(p, _) => p
             case _ => throw new IllFormedTacticApplicationException("Cannot attempt US unification with a non-Provable value.").inContext(tactic, "")
           }
 
@@ -327,7 +324,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
 
         case OnAll(e) =>
           val provable = goal match {
-            case BelleProvable(p, _, _) => p
+            case BelleProvable(p, _) => p
             case _ => throw new IllFormedTacticApplicationException("Cannot attempt OnAll with a non-Provable value.").inContext(tactic, "")
           }
           //@todo actually it would be nice to throw without wrapping inside an extra BranchTactic context
@@ -340,8 +337,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           }
 
         case Let(abbr, value, innerTactic) =>
-          val (provable, lbl, defs) = goal match {
-            case BelleProvable(p, l, defs) => (p, l, defs)
+          val (provable, lbl) = goal match {
+            case BelleProvable(p, l) => (p, l)
             case _ => throw new IllFormedTacticApplicationException("Cannot attempt Let with a non-Provable value.").inContext(tactic, "")
           }
           if (provable.subgoals.length != 1)
@@ -362,7 +359,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                           repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
             case Let(a, v, c) => flattenLets(c, substs :+ subst(a, v), repls :+ v -> a)
             case t => (
-              ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
+              ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) }), provable.defs),
               USubst(substs),
               t
             )
@@ -378,28 +375,28 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           if (descend > 0) {
             val innerId = idProvider(in)
             innerProofId = Some(innerId)
-            val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, defs, listenerFactory, inner, descend, strict, convertPending)
-            val result = innerFeeder.runTactic(innerMost, BelleProvable(in, None, defs), level, DbAtomPointer(-1),
+            val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, defs, listenerFactory, inner, descend, strict, convertPending, recordInternal)
+            val result = innerFeeder.runTactic(innerMost, BelleProvable(in, None), level, DbAtomPointer(-1),
               strict, convertPending, executePending) match {
-              case (BelleProvable(derivation, _, defs), _) =>
+              case (BelleProvable(derivation, _), _) =>
                 val backsubst: ProvableSig = derivation(us)
                 //@todo store inner steps as part of this proof
-                (BelleProvable(provable(backsubst, 0), lbl, defs), ctx /*.store(tactic)*/ )
+                (BelleProvable(provable(backsubst, 0), lbl), ctx /*.store(tactic)*/ )
               case _ => throw new IllFormedTacticApplicationException("Let expected sub-derivation")
             }
             innerFeeder.kill()
             result
           } else {
             runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
-            runningInner(tactic, BelleProvable(provable.sub(0), lbl, defs)) match {
+            runningInner(tactic, BelleProvable(provable.sub(0), lbl)) match {
               case p: BelleDelayedSubstProvable =>
                 val r = applySubDerivation(provable, 0, p.p, p.subst) match {
-                  case (true, mergedProvable) => (new BelleDelayedSubstProvable(mergedProvable, lbl, defs, p.subst, p.parent), ctx.store(tactic))
+                  case (true, mergedProvable) => (new BelleDelayedSubstProvable(mergedProvable, lbl, p.subst, p.parent), ctx.store(tactic))
                 }
                 runningInner = null
                 r
-              case BelleProvable(innerProvable, _, defs) =>
-                val r = (BelleProvable(provable(innerProvable, 0), lbl, defs), ctx.store(tactic))
+              case BelleProvable(innerProvable, _) =>
+                val r = (BelleProvable(provable(innerProvable, 0), lbl), ctx.store(tactic))
                 runningInner = null
                 r
               case e: BelleThrowable => throw e
@@ -504,12 +501,12 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             runningInner(tactic, goal) match { case _: BelleProvable => runningInner = null }
             (goal, ctx)
           } else goal match { // record no-op tactics in strict mode
-            case BelleProvable(provable, _, _) if provable.subgoals.isEmpty =>
+            case BelleProvable(provable, _) if provable.subgoals.isEmpty =>
               runningInner = inner(Nil)
               val result = (runningInner(tactic, goal), ctx)
               runningInner = null
               result
-            case BelleProvable(provable, labels, defs) if provable.subgoals.nonEmpty =>
+            case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
               if (ctx.onBranch >= 0) tactic match {
                 case t: NoOpTactic if BelleExpr.isInternal(t.prettyString) =>
                   //@note execute but do not store anonymous no-op tactics
@@ -528,11 +525,11 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     //@todo record a NoOpTactic that operates on all subgoals (print, assert etc)
                     else result
                   } else {
-                    assert(!BelleExpr.isInternal(tactic.prettyString), "Unable to record internal tactic")
+                    assert(recordInternal || !BelleExpr.isInternal(tactic.prettyString), "Unable to record internal tactic")
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
-                    runningInner(tactic, BelleProvable(provable.sub(0), labels, defs)) match {
+                    runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
                       case p: BelleDelayedSubstProvable =>
-                        val resultLabels = updateLabels(labels, 0, p.label)
+                        val resultLabels = updateLabels(labels, 0, p)
                         val (wasMerged, mergedProvable) = applySubDerivation(provable, 0, p.p, p.subst)
                         val parent = p.parent match {
                           case None => if (!wasMerged) Some(provable -> 0) else None
@@ -542,18 +539,18 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                             //@todo pparent.conclusion constified subgoal need to first finish dIRule subproof to unconstify
                             else throw new NotImplementedError("Delayed substitution parent provables: missing implementation to merge " + pparent.prettyString + " with " + provable.prettyString)
                         }
-                        val result = (new BelleDelayedSubstProvable(mergedProvable, resultLabels, p.defs, p.subst, parent), ctx.store(tactic))
+                        val result = (new BelleDelayedSubstProvable(mergedProvable, resultLabels, p.subst, parent), ctx.store(tactic))
                         runningInner = null
                         result
-                      case BelleProvable(innerProvable, innerLabels, defs) =>
-                        val resultLabels = updateLabels(labels, 0, innerLabels)
+                      case sp@BelleProvable(innerProvable, _) =>
+                        val resultLabels = updateLabels(labels, 0, sp)
                         val result =
                           if (innerProvable.conclusion == provable.subgoals(0)) {
-                            (BelleProvable(provable(innerProvable, 0), resultLabels, defs), ctx.store(tactic))
+                            (BelleProvable(provable(innerProvable, 0), resultLabels), ctx.store(tactic))
                           } else {
                             // some tactics (e.g., QE, dI) internally expand definitions
-                            val (p, substs) = applySub(provable, innerProvable, 0, defs)
-                            (new BelleDelayedSubstProvable(p, resultLabels, defs, substs, None), ctx.store(tactic))
+                            val (p, substs) = applySub(provable, innerProvable, 0)
+                            (new BelleDelayedSubstProvable(p, resultLabels, substs, None), ctx.store(tactic))
                           }
                         runningInner = null
                         result
@@ -567,7 +564,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                   case DbBranchPointer(_, _, predStep, Nil) => DbAtomPointer(predStep)
                 }
                 runTactic(tactic, goal, level, newCtx, strict, convertPending, executePending) match {
-                  case (bp@BelleProvable(p, _, _), resultCtx) => ctx match {
+                  case (bp@BelleProvable(p, _), resultCtx) => ctx match {
                     // replaced the remaining goal of a branching tactic
                     case dbp@DbBranchPointer(_, _, predStep, openBranchesAfterExec) =>
                       val numSteps = (newCtx, resultCtx) match {
@@ -583,11 +580,11 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
               } else {
                 //@todo support additional cases for storing and reloading a trace with branch -1 (=merging point of a branching tactic)
                 (goal, ctx) match {
-                  case (BelleProvable(goalP, _, _), DbBranchPointer(_, _, _, openBranches)) =>
+                  case (BelleProvable(goalP, _), DbBranchPointer(_, _, _, openBranches)) =>
                     assert(goalP.subgoals.size == openBranches.size, "Open subgoals and expected open subgoals do not match")
                     val newCtx = DbAtomPointer(openBranches.last)
                     runTactic(tactic, goal, level, newCtx, strict, convertPending, executePending) match {
-                      case (bp@BelleProvable(resultP, _, _), resultCtx) => ctx match {
+                      case (bp@BelleProvable(resultP, _), resultCtx) => ctx match {
                         // replaced the previous goal with a new goal
                         case dbp@DbBranchPointer(_, _, predStep, openBranchesAfterExec) if openBranchesAfterExec.size == openBranches.size =>
                           val numSteps = (newCtx, resultCtx) match {
@@ -610,8 +607,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           case fp: BelleDelayedSubstProvable =>
             assert(p.parent.isEmpty || fp.parent.isEmpty || exhaustiveSubst(p.parent.get._1, p.subst ++ fp.subst) == exhaustiveSubst(fp.parent.get._1, p.subst ++ fp.subst),
               "Delayed substitution parents disagree")
-            new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst ++ fp.subst, fp.parent)
-          case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst, p.parent)
+            new BelleDelayedSubstProvable(fp.p, fp.label, p.subst ++ fp.subst, fp.parent)
+          case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.subst, p.parent)
           case _ => result
         }
         case _: BelleProvable => result
@@ -642,15 +639,15 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
 
   /** Applies `sub` to subgoal `i` of `goal`. Expands definitions `defs` and substitutions found by unification prior
    * to merging provables, if necessary. Returns the merged provable and the applied substitutions. */
-  private def applySub(goal: ProvableSig, sub: ProvableSig, i: Int, defs: Declaration): (ProvableSig, USubst) = {
+  private def applySub(goal: ProvableSig, sub: ProvableSig, i: Int): (ProvableSig, USubst) = {
     val allSymbols = StaticSemantics.symbols(goal.subgoals(i)) ++ StaticSemantics.symbols(sub.conclusion)
     val symbols = allSymbols -- StaticSemantics.symbols(goal.subgoals(i)).intersect(StaticSemantics.symbols(sub.conclusion))
-    val defSubsts = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
+    val defSubsts = USubst(goal.defs.substs.filter({ case SubstitutionPair(what, _) => symbols.intersect(StaticSemantics.symbols(what)).nonEmpty }))
     val substGoal = exhaustiveSubst(goal, defSubsts)
     val substSub = exhaustiveSubst(sub, defSubsts)
     if (substGoal.subgoals(i) == substSub.conclusion) (substGoal(substSub, i), defSubsts)
     else {
-      if (substGoal != goal || substSub != sub) applySub(substGoal, substSub, i, defs) match { case (p, s) => (p, defSubsts ++ s) }
+      if (substGoal != goal || substSub != sub) applySub(substGoal, substSub, i) match { case (p, s) => (p, defSubsts ++ s) }
       else {
         val proofSubsts = RestrictedBiDiUnificationMatch(substGoal.subgoals(i), substSub.conclusion).usubst
         (exhaustiveSubst(substGoal, proofSubsts)(exhaustiveSubst(substSub, proofSubsts), i), defSubsts ++ proofSubsts)

@@ -178,7 +178,7 @@ object DatabasePopulator extends Logging {
         globalProvable, branch, recursive = false, tacticName, constructGlobalProvable = false) :: Nil
     }
     def interpreter(orig: Seq[IOListener]) = LazySequentialInterpreter(orig ++ listeners, throwWithDebugInfo = false)
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, defs, listener, interpreter, 0, strict=true, convertPending=true)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, defs, listener, interpreter, 0, strict=true, convertPending=true, recordInternal=false)
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */
@@ -186,7 +186,7 @@ object DatabasePopulator extends Logging {
     val entry = ArchiveParser(model).head
     val interpreter = prepareInterpreter(db, proofId, entry.defs)
     val parsedTactic = BelleParser.parseBackwardsCompatible(tactic, entry.defs)
-    interpreter(parsedTactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(model))))
+    interpreter(parsedTactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(model))))
     interpreter.kill()
   }
 

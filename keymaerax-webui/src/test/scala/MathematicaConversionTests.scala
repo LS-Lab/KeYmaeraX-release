@@ -231,10 +231,23 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip "\\forall x x<y".asFormula
   }
 
-  it should "associate correctly" in {
-    round trip "\\forall x ((x<=y & y<=z) & z<0)".asFormula
+  it should "associate minus and negation correctly" in {
     KeYmaeraToMathematica("5--2".asTerm) shouldBe makeExpr(new MExpr(Expr.SYMBOL, "Subtract"),
       Array(new MExpr(BigInt(5).bigInteger), new MExpr(BigInt(-2).bigInteger)))
+  }
+
+  it should "left-associate nary arithmetic operators" in {
+    val rf = "x + (y + z)".asTerm
+    val lf = "(x + y) + z".asTerm
+    ml.run(KeYmaeraToMathematica(rf))._2 shouldBe lf
+    ml.run(KeYmaeraToMathematica(lf))._2 shouldBe lf
+  }
+
+  it should "right-associate nary propositional operators" in {
+    val rf = "\\forall x (x<=y & (y<=z & z<0))".asFormula
+    val lf = "\\forall x ((x<=y & y<=z) & z<0)".asFormula
+    ml.run(KeYmaeraToMathematica(rf))._2 shouldBe rf
+    ml.run(KeYmaeraToMathematica(lf))._2 shouldBe rf
   }
 
   it should "convert Apply()" in {

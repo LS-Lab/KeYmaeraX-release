@@ -5,10 +5,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, TacticInapplicableFailure}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, ExpressionTraversal, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, Position}
+
+import java.util.Date
 
 /**
   * Some commonly useful helper utilities for basic tactic implementations.
@@ -186,5 +187,15 @@ object TacticHelper {
           })
     }
     (repl, replPos, nextReplCandidate)
+  }
+
+  /** Executes the `task` with timing information printed to stdout. */
+  def timed[A](task: => A, msg: String): A = {
+    println(msg + "... " + new Date())
+    val tic = System.currentTimeMillis()
+    val result = task
+    val toc = System.currentTimeMillis()
+    println("...done (" + ((toc-tic)/1000) + "s)")
+    result
   }
 }

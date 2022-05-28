@@ -76,6 +76,14 @@ class CaseStudyTests extends Suites(
   new CaseStudyRegressionTester("ACAS X", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx.kyx"),
   new CaseStudyRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx"),
   new CaseStudyRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx"),
+  // ACAS-X games
+  new CaseStudyRegressionTester("ACAS X Games Bounded-Time Non-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Bounded-Time Safety for a Non-Maneuvering Intruder.kyx"),
+  new CaseStudyRegressionTester("ACAS X Games Bounded-Time Vertically-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Bounded-Time Safety for a Vertically-Maneuvering Intruder.kyx"),
+  new CaseStudyRegressionTester("ACAS X Games Infinite-Time Horizontally-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Infinite-Time Safety for a Horizontally-Maneuvering Intruder.kyx"),
+  new CaseStudyRegressionTester("ACAS X Games Infinite-Time Non-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Infinite-Time Safety for a Non-Maneuvering Intruder.kyx"),
+  new CaseStudyRegressionTester("ACAS X Games Infinite-Time Vertically-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Infinite-Time Safety for a Vertically-Maneuvering Intruder.kyx"),
+  new CaseStudyRegressionTester("ACAS X Games Safeability Non-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Safeability for a Non-Maneuvering Intruder with Upper Bound.kyx"),
+  new CaseStudyRegressionTester("ACAS X Games Safeability Vertically-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Safeability for a Vertically-Maneuvering Intruder with Upper Bound.kyx")
 )
 
 object TutorialTests {

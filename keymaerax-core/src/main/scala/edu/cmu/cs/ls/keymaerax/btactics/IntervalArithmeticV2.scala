@@ -405,7 +405,7 @@ object IntervalArithmeticV2 {
         }
       }
       case n: Number =>
-        val refl = (ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(n, n))))).
+        val refl = ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(n, n)))).
           apply(CoHideRight(SuccPos(0)), 0).
           apply(leRefl.apply(USubst(SubstitutionPair(t_F, n) :: Nil)), 0)
         (lowers.updated(n, refl), uppers.updated(n, refl))
@@ -433,13 +433,13 @@ object IntervalArithmeticV2 {
         val h_le = qeTool.qe(negDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
         val H_le = qeTool.qe(negUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
-        val h_prv = (CutHide(negDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+        val h_prv = (CutHide(negDown.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
           apply(negDown, 0).
           apply(AndRight(SuccPos(0)), 0).
           apply(CoHideRight(SuccPos(0)), 1).
           apply(h_le, 1).
           apply(F_prv, 0)
-        val H_prv = (CutHide(negUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, hH)))))).
+        val H_prv = (CutHide(negUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, hH)))))).
           apply(negUp, 0).
           apply(AndRight(SuccPos(0)), 0).
           apply(CoHideRight(SuccPos(0)), 1).
@@ -486,7 +486,7 @@ object IntervalArithmeticV2 {
             val h_le = qeTool.qe(plusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_le = qeTool.qe(plusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
-            val h_prv = (CutHide(plusDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+            val h_prv = (CutHide(plusDown.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(plusDown, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -494,7 +494,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(gg_prv, 1).  // be stable by operating on last subgoal
               apply(ff_prv, 0)
-            val H_prv = (CutHide(plusUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+            val H_prv = (CutHide(plusUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(plusUp, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -522,7 +522,7 @@ object IntervalArithmeticV2 {
             val h_le = qeTool.qe(minusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_le = qeTool.qe(minusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
-            val h_prv = (CutHide(minusDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+            val h_prv = (CutHide(minusDown.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(minusDown, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -530,7 +530,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(G_prv, 1).  // be stable by operating on last subgoal
               apply(ff_prv, 0)
-            val H_prv = (CutHide(minusUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+            val H_prv = (CutHide(minusUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(minusUp, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -554,7 +554,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_G, G) :: Nil))
             val h_le = qeTool.qe(multDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val ante = multDown.conclusion.ante(0)
-            val ff_f_F_gg_g_G = ProvableSig.startProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
+            val ff_f_F_gg_g_G = ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
               apply(AndRight(SuccPos(0)), 0).
               apply(AndRight(SuccPos(0)), 1).
               apply(G_prv, 2).
@@ -562,7 +562,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(F_prv, 1).
               apply(ff_prv, 0)
-            val h_prv = (CutHide(ante)(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+            val h_prv = (CutHide(ante)(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(multDown, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -578,7 +578,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
             val H_le = qeTool.qe(multUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val H_prv = (CutHide(multUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+            val H_prv = (CutHide(multUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(multUp, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -600,7 +600,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_G, G) :: Nil))
             val h_le = qeTool.qe(divideDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val ante = divideDown.conclusion.ante(0)
-            val ff_f_F_gg_g_G = ProvableSig.startProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
+            val ff_f_F_gg_g_G = ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
               apply(AndRight(SuccPos(0)), 0).
               apply(AndRight(SuccPos(0)), 1).
               apply(G_prv, 2).
@@ -608,7 +608,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(F_prv, 1).
               apply(ff_prv, 0)
-            val h_prv = (CutHide(ante)(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+            val h_prv = (CutHide(ante)(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(divideDown, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -624,7 +624,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
             val H_le = qeTool.qe(divideUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val H_prv = (CutHide(divideUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+            val H_prv = (CutHide(divideUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(divideUp, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -643,7 +643,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_f, f) ::
                 SubstitutionPair(t_F, F) :: Nil))
             val h_le = qeTool.qe(powerDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val h_prv = (CutHide(powerDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+            val h_prv = (CutHide(powerDown.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(powerDown, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -659,7 +659,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_f, f) ::
                 SubstitutionPair(t_F, F) :: Nil))
             val H_le = qeTool.qe(powerUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val H_prv = (CutHide(powerUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+            val H_prv = (CutHide(powerUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(powerUp, 0).
               apply(AndRight(SuccPos(0)), 0).
               apply(CoHideRight(SuccPos(0)), 1).
@@ -710,7 +710,7 @@ object IntervalArithmeticV2 {
           val h_le = qeTool.qe(minDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
           val H_le = qeTool.qe(minUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
-          val h_prv = (CutHide(minDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+          val h_prv = (CutHide(minDown.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
             apply(minDown, 0).
             apply(AndRight(SuccPos(0)), 0).
             apply(CoHideRight(SuccPos(0)), 1).
@@ -718,7 +718,7 @@ object IntervalArithmeticV2 {
             apply(AndRight(SuccPos(0)), 0).
             apply(gg_prv, 1).  // be stable by operating on last subgoal
             apply(ff_prv, 0)
-          val H_prv = (CutHide(minUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+          val H_prv = (CutHide(minUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
             apply(minUp, 0).
             apply(AndRight(SuccPos(0)), 0).
             apply(CoHideRight(SuccPos(0)), 1).
@@ -744,7 +744,7 @@ object IntervalArithmeticV2 {
           val h_le = qeTool.qe(maxDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
           val H_le = qeTool.qe(maxUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
-          val h_prv = (CutHide(maxDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+          val h_prv = (CutHide(maxDown.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
             apply(maxDown, 0).
             apply(AndRight(SuccPos(0)), 0).
             apply(CoHideRight(SuccPos(0)), 1).
@@ -752,7 +752,7 @@ object IntervalArithmeticV2 {
             apply(AndRight(SuccPos(0)), 0).
             apply(gg_prv, 1).  // be stable by operating on last subgoal
             apply(ff_prv, 0)
-          val H_prv = (CutHide(maxUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+          val H_prv = (CutHide(maxUp.conclusion.ante(0))(ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
             apply(maxUp, 0).
             apply(AndRight(SuccPos(0)), 0).
             apply(CoHideRight(SuccPos(0)), 1).
@@ -769,7 +769,7 @@ object IntervalArithmeticV2 {
   }
 
   private def extract_bound(assms: IndexedSeq[Formula], index: Int, conclusion: Formula, rule: ProvableSig, instantiation: List[(Term, Term)]) =
-    ProvableSig.startProof(Sequent(assms, IndexedSeq(conclusion))).
+    ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(conclusion))).
       apply(CoHide2(AntePos(index), SuccPos(0)), 0).
       apply(rule.apply(USubst(instantiation map (ab => SubstitutionPair(ab._1, ab._2)))), 0)
 
@@ -779,9 +779,9 @@ object IntervalArithmeticV2 {
       case ((lowers, uppers), (assm, i)) =>
         assm match {
           case LessEqual(t, n) if isNumeric(n) =>
-            (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
+            (lowers, uppers.updated(t, ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
           case LessEqual(n, t) if isNumeric(n) =>
-            (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
+            (lowers.updated(t, ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
           case Equal(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t) :: (t_g, n) :: Nil)),
               uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)))
@@ -874,7 +874,7 @@ object IntervalArithmeticV2 {
     val gg = gg_fml.left
     val F = F_fml.right
     val G = G_fml.right
-    val provable = ProvableSig.startProof(Sequent(assms, IndexedSeq(fml.reapply(f, g))))
+    val provable = ProvableSig.startPlainProof(Sequent(assms, IndexedSeq(fml.reapply(f, g))))
     (lowers, uppers,
       fml match {
         case _: LessEqual =>
@@ -909,7 +909,7 @@ object IntervalArithmeticV2 {
         case (Some(prv1), Some(prv2)) =>
           val fml1 = prv1.conclusion.succ(0)
           val fml2 = prv2.conclusion.succ(0)
-          (lowers2, uppers2, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(And(fml1, fml2))))(AndRight(SuccPos(0)), 0)(prv2, 1)(prv1, 0)))
+          (lowers2, uppers2, Some(ProvableSig.startPlainProof(Sequent(assms,IndexedSeq(And(fml1, fml2))))(AndRight(SuccPos(0)), 0)(prv2, 1)(prv1, 0)))
         case _ => (lowers2, uppers2, None)
       }
     case Or(a, b) =>
@@ -918,14 +918,14 @@ object IntervalArithmeticV2 {
         case Some(prv1) =>
           val fml1 = prv1.conclusion.succ(0)
           val fml2 = ssa.unfold(b)
-          (lowers1, uppers1, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(1)), 0)(prv1, 0)))
+          (lowers1, uppers1, Some(ProvableSig.startPlainProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(1)), 0)(prv1, 0)))
         case None =>
           val (lowers2, uppers2, prv2o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers1, uppers1, ssa)(b)
           prv2o match {
             case Some(prv2) =>
               val fml1 = ssa.unfold(a)
               val fml2 = prv2.conclusion.succ(0)
-              (lowers2, uppers2, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(0)), 0)(prv2, 0)))
+              (lowers2, uppers2, Some(ProvableSig.startPlainProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(0)), 0)(prv2, 0)))
           }
       }
     case cfml: ComparisonFormula =>
@@ -1110,7 +1110,7 @@ object IntervalArithmeticV2 {
         )
       ))
     val offset = context.length
-    (ProvableSig.startProof(Sequent(context, IndexedSeq(fml))).
+    (ProvableSig.startPlainProof(Sequent(context, IndexedSeq(fml))).
       apply(Skolemize(SuccPos(0)), 0).
       apply(Skolemize(SuccPos(0)), 0).
       apply(ImplyRight(SuccPos(0)), 0).
@@ -1140,7 +1140,7 @@ object IntervalArithmeticV2 {
         And(LessEqual(l, t), LessEqual(t, u))
       ))
     val offset = context.length
-    (ProvableSig.startProof(Sequent(context, IndexedSeq(fml))).
+    (ProvableSig.startPlainProof(Sequent(context, IndexedSeq(fml))).
       apply(Skolemize(SuccPos(0)), 0).
       apply(ImplyRight(SuccPos(0)), 0).
       apply(AndLeft(AntePos(offset + 0)), 0).

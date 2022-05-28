@@ -1712,28 +1712,35 @@ class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) 
   }
 }
 
-class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait: Boolean = false) extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
-    val proofInfo = db.getProofInfo(proofId)
-    val modelId = proofInfo.modelId
-    if (modelId.isEmpty) throw new Exception("Database consistency error: unable to open proof " + proofId + ", because it does not refer to a model")
-    else if (db.getModel(modelId.get).userId != userId) new PossibleAttackResponse("Permission denied")::Nil
-    else {
-      insist(db.getModel(proofInfo.modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
+class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait: Boolean = false)
+    //@note do not extend UserProofRequest since we are opening a proof which may not exist and we want a better error message
+    extends UserRequest(userId, (id: String) => Try(proofId.toInt).toOption.isDefined) with ReadRequest {
+  override final def resultingResponses(): List[Response] = {
+    if (db.proofExists(proofId.toInt)) {
+      assert(db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(userId, proofId))
+      val proofInfo = db.getProofInfo(proofId)
+      val modelId = proofInfo.modelId
+      if (modelId.isEmpty) throw new Exception("Database consistency error: unable to open proof " + proofId + ", because it does not refer to a model")
+      else if (db.getModel(modelId.get).userId != userId) new PossibleAttackResponse("Permission denied")::Nil
+      else {
+        insist(db.getModel(proofInfo.modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
 
-      proofInfo.modelId match {
-        case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
-        case Some(mId) =>
-          var products: Map[Expression, Seq[GenProduct]] = Map[Expression, Seq[GenProduct]]()
-          Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
-            products += (p -> (products.getOrElse(p, Nil) :+ (inv, None))))
-          val problem = ArchiveParser.parseProblem(db.getModel(mId).keyFile)
-          //@note add unexpanded (but elaborated) form, and fully expanded form to generator; generator itself also uses unification
-          val generator = ConfigurableGenerator.create(products, problem.defs)
-          session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
-          TactixInit.invSupplier = generator
-          OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+        proofInfo.modelId match {
+          case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
+          case Some(mId) =>
+            var products: Map[Expression, Seq[GenProduct]] = Map[Expression, Seq[GenProduct]]()
+            Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
+              products += (p -> (products.getOrElse(p, Nil) :+ (inv, None))))
+            val problem = ArchiveParser.parseProblem(db.getModel(mId).keyFile)
+            //@note add unexpanded (but elaborated) form, and fully expanded form to generator; generator itself also uses unification
+            val generator = ConfigurableGenerator.create(products, problem.defs)
+            session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
+            TactixInit.invSupplier = generator
+            OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+        }
       }
+    } else {
+      new ErrorResponse("Proof does not exist") :: Nil
     }
   }
 }
@@ -1980,16 +1987,16 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         new ErrorResponse("Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic")::Nil
       case Some(node) if node.maker.isDefined =>
         assert(node.maker.isDefined, "Unable to expand node without tactics")
-        val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
+        val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion, tree.info.defs(db)), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val proofSession = session(proofId).asInstanceOf[ProofSession]
         //@note add a copy of parent proof session under local proof ID to allow stepping deeper into tactics
         session += localProofId.toString -> proofSession.copy(proofId = localProofId.toString)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, proofSession.defs,
           RequestHelper.listenerFactory(db, proofSession),
-          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false, recordInternal=true)
         val parentTactic = BelleParser(parentStep)
-        innerInterpreter(parentTactic, BelleProvable(conjecture, None, tree.info.defs(db)))
+        innerInterpreter(parentTactic, BelleProvable.plain(conjecture))
         innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)
@@ -2217,7 +2224,7 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
     DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
       case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
       case Some(goal) =>
-        val provable = ProvableSig.startProof(goal)
+        val provable = ProvableSig.startPlainProof(goal)
         val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
         new KvpResponse("sequent", "Sequent: \n" + goal.toString + "\n\nFormula: \n" + goal.toFormula.prettyString + "\n\nProvable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
     }
@@ -2344,10 +2351,14 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
           val fnVarMismatch = hintFresh.map(fn => fn -> allowedSymbols.find(s => s.name == fn.name && s.index == fn.index)).
             filter(_._2.isDefined)
           if (fnVarMismatch.isEmpty) {
-            BooleanResponse(flag = false, Some("argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
+            BooleanResponse(flag=false, Some("argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
               (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
               else ", is it a typo?")))
-          } else BooleanResponse(flag=true)
+          } else BooleanResponse(flag=false, Some("function/variable mismatch between goal and argument " + arg.name + ": " + fnVarMismatch.map({
+            case (have, Some(expect)) =>
+              have.prettyString + "(" + have.getClass.getSimpleName + ") vs. " +
+              expect.prettyString + "(" + expect.getClass.getSimpleName + " in sequent)"
+          }).mkString(", ")))
         } else {
           BooleanResponse(flag=true)
         }
@@ -2536,7 +2547,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 private val proofSession = session(proofId.toString).asInstanceOf[ProofSession]
                 private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, proofSession.defs,
                   RequestHelper.listenerFactory(db, proofSession),
-                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true)
+                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true, recordInternal=false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                   inner(expr, v)
@@ -2571,10 +2582,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                   val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
                   RunBelleTermResponse(proofId, node.id.toString, taskId, "Executing custom tactic") :: Nil
                 } else {
-                  val localProvable = ProvableSig.startProof(sequent)
+                  val localProvable = ProvableSig.startProof(sequent, tree.info.defs(db))
                   val localProofId = db.createProof(localProvable)
                   val executor = BellerophonTacticExecutor.defaultExecutor
-                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable, node.label.map(_ :: Nil), tree.info.defs(db)), interpreter(localProofId, -1))
+                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable.labeled(localProvable, node.label.map(_ :: Nil)), interpreter(localProofId, -1))
                   RunBelleTermResponse(localProofId.toString, "()", taskId, "Executing internal steps of " + executionInfo(belleTerm)) :: Nil
                 }
               } else {
@@ -2655,7 +2666,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
       executor.getTask(taskId) match {
         case Some(task) =>
           val progressList = task.interpreter match {
-            case SpoonFeedingInterpreter(_, _, _, _, _, interpreterFactory, _, _, _) =>
+            case SpoonFeedingInterpreter(_, _, _, _, _, interpreterFactory, _, _, _, _) =>
               //@note the inner interpreters have CollectProgressListeners attached
               interpreterFactory(Nil).listeners.flatMap({
                 case l@CollectProgressListener(p) => Some(
@@ -3146,12 +3157,12 @@ object ProofValidationRunner extends Logging {
     new Thread(new Runnable() {
       override def run(): Unit = {
         logger.trace(s"Received request to validate $taskId. Running in separate thread.")
-        val provable = ElidingProvable( Provable.startProof(model) )
+        val provable = ElidingProvable(Provable.startProof(model), defs)
 
         try {
-          BelleInterpreter(proof, BelleProvable(provable, None, defs)) match {
-            case BelleProvable(p, _, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
-            case _                                    => results update (taskId, (model, proof, Some(false)))
+          BelleInterpreter(proof, BelleProvable.plain(provable)) match {
+            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
+            case _                                 => results update (taskId, (model, proof, Some(false)))
           }
         } catch {
           //Catch everything and indicate a failed proof attempt.

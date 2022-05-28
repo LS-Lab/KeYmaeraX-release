@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, LazySequentialInterpreter, ReflectiveExpressionBuilder, SeqTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ReflectiveExpressionBuilder, SeqTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Equal, FuncOf, Function, Greater, Number, Pair, Plus, Power, PredOf, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}

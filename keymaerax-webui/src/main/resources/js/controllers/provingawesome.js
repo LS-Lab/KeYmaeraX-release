@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 angular.module('keymaerax.controllers').controller('ProofCtrl',
-    function($scope, $rootScope, $http, $route, $routeParams, $q, $uibModal, $timeout,
+    function($scope, $rootScope, $http, $route, $routeParams, $q, $uibModal, $timeout, $location,
              sequentProofData, spinnerService, sessionService, derivationInfos) {
 
   $scope.userId = sessionService.getUser();
@@ -207,6 +207,20 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           $scope.definitions = defs;
         });
       }
+  }).catch(function(error) {
+      $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+              title: function() { return "Error loading proof"; },
+              message: function() { return error.data.textStatus; },
+              mode: function() { return "ok"; },
+              oktext: function() { return "Ok, take me back to models"; }
+          }
+      }).result.then(function() {
+          $location.path("/models");
+      });
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
 
@@ -682,7 +696,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var selected = sequentProofData.formulas.selectedIn(node.getSequent());
       if (selected.length >= node.getSequent().ante.length + node.getSequent().succ.length) selected = undefined;
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
-      var ignoreUsingWhen = ['chaseat','stepat'];
+      var ignoreUsingWhen = ['chaseat','stepat','hidel','hider'];
       if (selected && ignoreUsingWhen.indexOf(tacticId.toLowerCase()) < 0) {
         $scope.onTacticScript(tacticId + (formulaId ? '(' + formulaId + ')' : '') + ' using "' + selected.join('::') +
           (selected.length > 0 ? '::' : '') + 'nil"', false)
@@ -861,6 +875,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           readOnly: function() { return false; },
           userId: function() { return $scope.userId; },
           proofId: function() { return $scope.proofId; },
+          nodeId: function() { return nodeId; },
           defaultPositionLocator: function() { return positionLocator; },
           sequent: function() { return sequentProofData.proofTree.nodesMap[nodeId].getSequent(); }
         }

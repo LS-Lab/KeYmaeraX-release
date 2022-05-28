@@ -30,7 +30,7 @@ object IOListeners {
       if (s.ante.isEmpty && s.succ.size == 1) s.succ.head.universalClosure
       else s.toFormula.universalClosure
     override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
-      case BelleProvable(p, _, _) if logCondition(p, expr) && !StaticSemantics.freeVars(p.subgoals.head).isInfinite =>
+      case BelleProvable(p, _) if logCondition(p, expr) && !StaticSemantics.freeVars(p.subgoals.head).isInfinite =>
         val logSeq = Sequent(IndexedSeq(), IndexedSeq(qeFml(p.subgoals.head)))
         if (!logged.contains(logSeq)) {
           logger(p.conclusion, logSeq, s"QE ${logged.size}")
@@ -58,13 +58,13 @@ object IOListeners {
     def reset(): Unit = recordedDuration = 0
 
     override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
-      case BelleProvable(p, _, _) if logCondition(p, expr) && start.isEmpty =>
+      case BelleProvable(p, _) if logCondition(p, expr) && start.isEmpty =>
         start = Some((p, expr), System.currentTimeMillis())
       case _ => // do nothing
     }
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = (input, start) match {
       // do not record time in nested calls
-      case (BelleProvable(p, _, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
+      case (BelleProvable(p, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
         recordedDuration += System.currentTimeMillis() - startTime
         start = None
       case _ => // do nothing
@@ -109,7 +109,7 @@ object IOListeners {
           val nonNilSteps = s.filterNot(t => nilNames.contains(t.prettyString))
           executionStack = nonNilSteps.reverse.foldLeft(executionStack)({ case (stack, t) => (t->0) +: stack })
         case CaseTactic(children) => input match {
-          case BelleProvable(p, Some(labels), _) =>
+          case BelleProvable(p, Some(labels)) =>
             //@see [[BelleBaseInterpreter]]
             if (p.subgoals.size != labels.size) throw new BelleUnexpectedProofStateError("Number of labels does not match number of subgoals, got\nlabels  " + labels.map(_.prettyString).mkString("\n  ") + "\nfor " + p.prettyString, p.underlyingProvable)
             if (children.size != labels.size) throw new IllFormedTacticApplicationException("Number of cases does not match number of subgoals, got\ncases\n  " + children.map(_._1.prettyString).mkString("\n  ") + "\nfor\n  " + labels.map(_.prettyString).mkString("\n  "))
@@ -158,11 +158,11 @@ object IOListeners {
         }).map(_._1.asInstanceOf[NamedBelleExpr])
 
         val status = output match {
-          case Left(BelleProvable(p, _, _)) =>
+          case Left(BelleProvable(p, _)) =>
             if (p.isProved) "proved"
             else if (p.subgoals.head.succ.headOption.contains(False)) "disproved"
             else input match {
-              case BelleProvable(q, _, _) =>
+              case BelleProvable(q, _) =>
                 if (p.subgoals == q.subgoals) "no progress"
                 else {
                   val change = p.subgoals.diff(q.subgoals).size - q.subgoals.diff(p.subgoals).size
@@ -177,8 +177,6 @@ object IOListeners {
 
         expr match {
           case ApplyDefTactic(DefTactic(name, _)) => printer.println(name + " done (" + status + ")")
-          case Expand(name, _) => printer.println("Expanding " + name + " done (" + status + ")")
-          case ExpandAll(_) => printer.println("Expanding all definitions done (" + status + ")")
           case _: AppliedPositionTactic => printer.println("done (" + status + ")")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
             printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")

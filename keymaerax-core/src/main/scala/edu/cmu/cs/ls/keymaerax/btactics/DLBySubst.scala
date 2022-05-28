@@ -244,57 +244,67 @@ private object DLBySubst {
     conclusion = "Γ |- [x:=e]P, Δ",
     displayLevel = "all"
   )
-  private[btactics] val assignEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    //@note have already failed assigning directly so grab fresh name index otherwise
-    // [x:=f(x)]P(x)
-    case Some(Box(Assign(x, e), p)) =>
-      val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      val rename = x match {
-        case v: BaseVariable =>
-          if (universal) Ax.assignbeq.provable(URename("x_".asVariable, v, semantic=true))
-          else Ax.assignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
-        case DifferentialSymbol(v) =>
-          if (universal) Ax.Dassignbeq.provable(URename("x_".asVariable, v, semantic=true))
-          else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
-      }
-
-      val skolemize =
-        if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-        else ident
-
-      if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
-        if (StaticSemantics.freeVars(e).contains(x)) {
-          // case [x:=x+1;][prg;]
-          val unexpandedSymbols = StaticSemantics.symbols(p).
-            filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false })
-          unexpandedSymbols.map(n => Expand(n, None)).reduceRight[BelleExpr](_ & _) & assignEquality(pos)
-        } else {
-          // case [x:=y;][prg;]
-          useAt(rename)(pos) & skolemize
+  private[btactics] val assignEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assignEqualityFw")
+    val sequent = provable.subgoals.head
+    val (expand: (ProvableSig=>ProvableSig), assign: (ProvableSig=>ProvableSig)) = sequent.sub(pos) match {
+      //@note have already failed assigning directly so grab fresh name index otherwise
+      // [x:=f(x)]P(x)
+      case Some(Box(a@Assign(x, e), p)) =>
+        val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
+        val assignAx = x match {
+          case v: BaseVariable =>
+            if (universal) Ax.assignbeq.provable(URename("x_".asVariable, v, semantic = true))
+            else Ax.assignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
+          case DifferentialSymbol(v) =>
+            if (universal) Ax.Dassignbeq.provable(URename("x_".asVariable, v, semantic = true))
+            else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic = true))
         }
-      } else {
-        if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
-          useAt(rename)(pos) & skolemize &
-            (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
-            else if (pos.isTopLevel && pos.isAnte) eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length - 1))
-            else ident)
+
+        val skolemize: ProvableSig=>ProvableSig =
+          if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
+          else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL('Llast)
+          else ident
+
+        if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
+          if (StaticSemantics.freeVars(e).contains(x)) {
+            // case [x:=x+1;][prg;]
+            StaticSemantics.symbols(p).
+              filter({ case _: SystemConst | _: ProgramConst => true case _ => false }).
+              map(n => expandFw(n, None)).
+              reduceRightOption[ProvableSig=>ProvableSig](_ andThen _) match {
+              case Some(expand) => (expand, assignEquality(pos))
+              case None => throw new TacticInapplicableFailure("Assignment " + a.prettyString +
+                " prevented since " + e.prettyString + " overlaps with the bound and (infinite) free variables of " + p.prettyString)
+            }
+          } else {
+            // case [x:=y;][prg;]
+            (ident, useAt(assignAx)(pos) andThen skolemize)
+          }
         } else {
-          //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
-          x match {
-            case _: BaseVariable =>
-              if (StaticSemantics.freeVars(p).isInfinite) useAt(rename)(pos) & skolemize
-              else {
-                val y = TacticHelper.freshNamedSymbol(x, sequent)
-                ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) & skolemize
-              }
-            case _: DifferentialSymbol => useAt(rename)(pos) & skolemize
+          if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
+            (ident, useAt(assignAx)(pos) andThen skolemize andThen
+              (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) andThen hideL('Llast)
+              else if (pos.isTopLevel && pos.isAnte) eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) andThen hideL(AntePosition.base0(sequent.ante.length - 1))
+              else ident))
+          } else {
+            //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
+            x match {
+              case _: BaseVariable =>
+                if (StaticSemantics.freeVars(p).isInfinite) (ident, useAt(assignAx)(pos) andThen skolemize)
+                else {
+                  val y = TacticHelper.freshNamedSymbol(x, sequent)
+                  (ident, ProofRuleTactics.boundRenameFw(x, y)(pos) andThen useAt(assignAx)(pos) andThen ProofRuleTactics.uniformRenameFw(y, x) andThen skolemize)
+                }
+              case _: DifferentialSymbol => (ident, useAt(assignAx)(pos) andThen skolemize)
+            }
           }
         }
-      }
-    case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
-    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-  })
+      case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+    expand(provable)(expand andThen assign, 0)
+  }
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
   @Tactic(
@@ -305,21 +315,26 @@ private object DLBySubst {
     conclusion = "Γ |- ⟨x:=e⟩P, Δ",
     displayLevel = "all"
   )
-  private[btactics] val assigndEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    //@note have already failed assigning directly so grab fresh name index otherwise
-    // [x:=f(x)]P(x)
-    case Some(Diamond(Assign(x, t), p)) =>
-      val y = TacticHelper.freshNamedSymbol(x, sequent)
-      val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRename(x, y)(pos) &
-      (if (universal) useAt(Ax.assigndEqualityAll)(pos) else useAt(Ax.assigndEqualityAxiom)(pos)) &
-      ProofRuleTactics.uniformRename(y, x) &
-      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-       else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-       else ident)
-    case Some(e) => throw new TacticInapplicableFailure("assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString)
-    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-  })
+  private[btactics] val assigndEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assigndEquality")
+    val sequent = provable.subgoals.head
+    sequent.sub(pos) match {
+      //@note have already failed assigning directly so grab fresh name index otherwise
+      // [x:=f(x)]P(x)
+      case Some(Diamond(Assign(x, t), p)) =>
+        val y = TacticHelper.freshNamedSymbol(x, sequent)
+        val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
+        provable(
+          ProofRuleTactics.boundRenameFw(x, y)(pos) andThen
+          useAt(if (universal) Ax.assigndEqualityAll else Ax.assigndEqualityAxiom)(pos) andThen
+          ProofRuleTactics.uniformRenameFw(y, x) andThen
+          (if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
+           else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL('Llast)
+           else ident), 0)
+      case Some(e) => throw new TacticInapplicableFailure("assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+  }
 
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
@@ -422,7 +437,7 @@ private object DLBySubst {
         sequent.sub(pos) match {
           case Some(Box(Loop(a), _)) =>
             val toExpand = defs.transitiveSubstsFrom(a)
-            if (toExpand.nonEmpty) ExpandAll(toExpand)
+            if (toExpand.nonEmpty) expandAllDefs(toExpand)
             else skip
           case _ => skip
         }
@@ -446,13 +461,13 @@ private object DLBySubst {
 
             val expandInit = anon ((s: Sequent) => {
               val toExpand = defs.transitiveSubstsFrom(s.toFormula)
-              if (toExpand.nonEmpty) ExpandAll(toExpand)
+              if (toExpand.nonEmpty) expandAllDefs(toExpand)
               else skip
             })
             val expandPrg =
               if (consts.flatMap(StaticSemantics.symbols).exists(_.isInstanceOf[Variable]) && StaticSemantics.boundVars(a).isInfinite) {
                 val asymbols = StaticSemantics.symbols(a)
-                ExpandAll(defs.substs.filter({
+                expandAllDefs(defs.substs.filter({
                   case SubstitutionPair(p: ProgramConst, _) => asymbols.contains(p)
                   case SubstitutionPair(p: SystemConst, _) => asymbols.contains(p)
                   case _ => false
@@ -465,7 +480,7 @@ private object DLBySubst {
               /* c */ useAt(Ax.I)(pos) & andR(pos) <(
                 andR(pos) <(
                   label(replaceTxWith(initCase)),
-                  (andR(pos) <(expandInit & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
+                  (andR(pos) <(expandInit & pre & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
                     (andR(pos) <(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
                     notR(pos) & SaturateTactic(andL('L)) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
@@ -605,7 +620,7 @@ private object DLBySubst {
   def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = inputanon (con(x, J, SaturateTactic(alphaRule))(_: Position))
   def con(v: Variable, variant: Formula, pre: BelleExpr): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
-    require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
+    require(sequent(pos.top) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||), but got " + sequent(pos.top).prettyString + "\nin " + sequent.prettyString)
 
     pre & (inputanon {(pp, seq) => {
       seq.sub(pp) match {
@@ -765,13 +780,15 @@ private object DLBySubst {
   def discreteGhosts(trms: Set[Term], origSeq: Sequent,
                      cont: List[((Term, Variable), BelleExpr)] => BelleExpr): DependentPositionTactic = anon ((pos: Position) => {
     var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
-    val ghosts: List[((Term, Variable), BelleExpr)] = trms.map(old => {
+    val ghosts: List[((Term, Variable), BelleExpr)] = trms.zipWithIndex.map({ case (old, oi) =>
       val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
       freshOld = nextCandidate
       (old -> ghost,
         ghostPos match {
           case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-          case _ => discreteGhost(old, Some(ghost))(pos)
+          case _ =>
+            //@note discreteGhost does not yet keep positions stable, formula moves to last position in succedent after the first ghost
+            discreteGhost(old, Some(ghost))(if (oi > 0 && pos.isSucc) LastSucc(0, pos.inExpr) else Fixed(pos))
         })
     }).toList
     cont(ghosts)

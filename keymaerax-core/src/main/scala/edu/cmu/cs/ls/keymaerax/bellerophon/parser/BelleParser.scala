@@ -150,7 +150,7 @@ object BelleParser extends TacticParser with Logging {
                        defs: Declaration, expandAll: Boolean): BelleExpr = {
     val result = parseLoop(ParserState(Bottom, toks), tacticDefs, g, defs, expandAll)
     result.stack match {
-      case Bottom :+ BelleAccept(e) => if (expandAll && defs.substs.nonEmpty) ExpandAll(defs.substs) & e else e
+      case Bottom :+ BelleAccept(e) => if (expandAll && defs.substs.nonEmpty) TactixLibrary.expandAllDefs(defs.substs) & e else e
       case _ :+ BelleErrorItem(msg,loc,st) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st)
       case _ => throw new AssertionError(s"Parser terminated with unexpected stack ${result.stack}")
     }
@@ -398,7 +398,7 @@ object BelleParser extends TacticParser with Logging {
             case FuncOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
             case n: NamedSymbol => n.name == x.name && n.index == x.index
           }) match {
-            case Some(s) => ParserState(r :+ ParsedBelleExpr(Expand(x, s), loc.spanTo(identLoc), None), tail)
+            case Some(_) => ParserState(r :+ ParsedBelleExpr(TactixLibrary.expand(expr.undelimitedExprString), loc.spanTo(identLoc), None), tail)
             case None => throw BelleParseException(s"Expression definition not found: '${x.prettyString}'", st)
           }
       }
@@ -409,7 +409,7 @@ object BelleParser extends TacticParser with Logging {
           case _ => true
         })
         val modelSubsts = Declaration(modelDefs).substs
-        val modelExpand = if (modelSubsts.nonEmpty) Some(ExpandAll(modelSubsts)) else None
+        val modelExpand = if (modelSubsts.nonEmpty) Some(TactixLibrary.expandAllDefs(modelSubsts)) else None
         // use all defs and filter so that right-hand sides of proof definitions get correctly elaborated
         val proofsExpand = defs.substs.filter(_.what match {
           case FuncOf(ns: Function, _) => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
@@ -614,12 +614,12 @@ object BelleParser extends TacticParser with Logging {
         // backwards-compatibility with tactics that used definitions when they were auto-expanded immediately
         if (TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY && expandAll && defs.decls.exists(_._2.interpretation.nonEmpty)) {
           t.prettyString match {
-            case "QE" | "smartQE" | "master" => ExpandAll(defs.substs) & t
+            case "QE" | "smartQE" | "master" => TactixLibrary.expandAllDefs(defs.substs) & t
             case text =>
               if (text.startsWith("ODE") ||
                 text.startsWith("diffInvariant") ||
                 text.startsWith("dI")
-              ) ExpandAll(defs.substs) & t
+              ) TactixLibrary.expandAllDefs(defs.substs) & t
               else t
           }
         } else t

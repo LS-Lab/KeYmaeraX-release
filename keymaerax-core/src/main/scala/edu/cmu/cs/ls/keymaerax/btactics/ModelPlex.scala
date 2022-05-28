@@ -7,23 +7,25 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal, stop}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.mapSubpositions
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper.timed
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, SimplificationTool}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{Atom, OneOf, QETacticTool, SimplificationTool}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{List, ListMap, Nil}
+import scala.collection.mutable.ListBuffer
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
 
@@ -74,7 +76,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
 
     val proofStart = Platform.currentTime
-    val result = TactixLibrary.proveBy(ProvableSig.startProof(mxInputSequent), tactic)
+    val result = TactixLibrary.proveBy(ProvableSig.startPlainProof(mxInputSequent), tactic)
     val proofDuration = Platform.currentTime - proofStart
     logger.info("[proof time " + proofDuration + "ms]")
 
@@ -108,84 +110,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
     mxAutoInstantiate(assumptions, List.empty, Some(ModelPlex.mxSimplify))
   }
 
-  def mxAutoInstantiate(assumptions: List[Formula], unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic]): InputTactic = inputanon {
+  def mxAutoInstantiate(assumptions: List[Formula], unobservable: List[_ <: NamedSymbol], simplifier: Option[BuiltInPositionTactic]): InputTactic = inputanon {
     TryCatch(SaturateTactic(optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions, unobservable, simplifier)(1)),
       classOf[Throwable], (_: Throwable) => TactixLibrary.skip)
   }
 
-  /** Reassociates `fml` to default associativity.
-    * @param fml The formula to reassociate.
-    * @return The reassociated formula including a proof of equivalence to `fml`.
-    * @see [[FormulaTools.reassociate]]
-    */
-  def reassociate(fml: Formula): (Formula, ProvableSig) = fml match {
-    case Or(Or(ll, lr), r) =>
-      val ll2 = reassociate(ll)
-      val lr2 = reassociate(lr)
-      val r2 = reassociate(r)
-      val i = Or(ll2._1, Or(lr2._1, r2._1))
-      val ip = proveBy(Equiv(fml, i),
-        useAt(ll2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
-        useAt(lr2._2, PosInExpr(1::Nil))(1, 1::1::0::Nil) &
-        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::1::Nil) & equivR(1) <(
-          orR(1) & orR(2) & orL(-1) <(orL(-1) <(id, id), id),
-          orR(1) & orR(1) & orL(-1) <(id, orL(-1) <(id, id))
-        )
-      )
-      val result = reassociate(i)
-      val p = proveBy(Equiv(fml, result._1), useAt(result._2, PosInExpr(1::Nil))(1, 1::Nil) & byUS(ip))
-      (result._1, p)
-    case Or(l, r) =>
-      val l2 = reassociate(l)
-      val r2 = reassociate(r)
-      val result = Or(l2._1, r2._1)
-      val p = proveBy(Equiv(fml, result),
-        useAt(l2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
-        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::Nil) &
-        byUS(Ax.equivReflexive)
-      )
-      (result, p)
-    case And(And(ll, lr), r) =>
-      val ll2 = reassociate(ll)
-      val lr2 = reassociate(lr)
-      val r2 = reassociate(r)
-      val i = And(ll2._1, And(lr2._1, r2._1))
-      val ip = proveBy(Equiv(fml, i),
-        useAt(ll2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
-        useAt(lr2._2, PosInExpr(1::Nil))(1, 1::1::0::Nil) &
-        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::1::Nil) & equivR(1) <(
-          andL(-1) & andL(-1) & andR(1) <(id, andR(1) <(id, id)),
-          andL(-1) & andL(-2) & andR(1) <(andR(1) <(id, id), id)
-        )
-      )
-      val result = reassociate(i)
-      val p = proveBy(Equiv(fml, result._1), useAt(result._2, PosInExpr(1::Nil))(1, 1::Nil) & byUS(ip))
-      (result._1, p)
-    case And(l, r) =>
-      val l2 = reassociate(l)
-      val r2 = reassociate(r)
-      val result = And(l2._1, r2._1)
-      val p = proveBy(Equiv(fml, result),
-        useAt(l2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
-        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::Nil) &
-        byUS(Ax.equivReflexive)
-      )
-      (result, p)
-    case _ => (fml, proveBy(Equiv(fml, fml), byUS(Ax.equivReflexive)))
-  }
-
-  @Tactic(longDisplayName = "ModelPlex Reassociate Formulas")
-  def reassociate: BelleExpr = anon ((seq: Sequent) => {
-    val monitorFml = seq.succ.head
-    val (_, rmp) = reassociate(monitorFml)
-    useAt(rmp)(1)
-  })
-
   @Tactic(longDisplayName = "ModelPlex Monitor Shape Formatting")
   def mxFormatShape(shape: String): InputTactic = inputanon ((seq: Sequent) => shape match {
-    //@ performance bottleneck: prop
-    case "boolean" => reassociate
-    case "metricprg" => reassociate & ModelPlex.chaseToTests(combineTests = false)(1)*2
+    case "boolean" => PropositionalTactics.rightAssociate(SuccPos(0))
+    case "metricprg" => PropositionalTactics.rightAssociate(SuccPos(0)) & ModelPlex.chaseToTests(combineTests = false)(1)*2
     case "metricfml" => toMetricT(seq.succ.head)
   })
 
@@ -201,12 +134,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
   }
 
   /** Partitions the unobservable symbols into unobservable state variables and unknown model parameters. */
-  def partitionUnobservable(unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (ListMap[Variable, Option[Formula]], ListMap[(Function, Variable), Option[Formula]]) = {
+  def partitionUnobservable(unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (ListMap[Variable, Option[Formula]], ListMap[(Function, Variable), Option[Formula]], ListMap[(Function, Variable), Option[Formula]]) = {
     val unobservableStateVars: ListMap[Variable, Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Variable]).
       map({ case (k: Variable, v) => k -> v })
-    val unknownParams: ListMap[(Function, Variable), Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Function]).
+    val unknownParams: ListMap[(Function, Variable), Option[Formula]] = unobservable.filter({ case (Function(_, _, domain, _, _), _) => domain == Unit case _ => false }).
       map({ case (k: Function, v) => (k, Variable(k.name, k.index, k.sort)) -> v })
-    (unobservableStateVars, unknownParams)
+    val unknownFunctions: ListMap[(Function, Variable), Option[Formula]] = unobservable.filter({ case (Function(_, _, domain, _, _), _) => domain != Unit case _ => false }).
+      map({ case (k: Function, v) => (k, Variable(k.name, k.index, k.sort)) -> v })
+    (unobservableStateVars, unknownParams, unknownFunctions)
   }
 
   /**
@@ -226,22 +161,52 @@ object ModelPlex extends ModelPlexTrait with Logging {
     require(StaticSemantics.symbols(fml).intersect(vars.map(postVar).toSet).isEmpty,
       "ModelPlex post symbols must not occur in original formula")
 
-    val (unobservableStateVars, unknownParams) = partitionUnobservable(unobservable)
+    val (unobservableStateVars, unknownParams, unknownFunctions) = partitionUnobservable(unobservable)
 
     def conjectureOf(assumptions: Formula, prg: Program): (Formula, List[Formula]) = {
       val boundVars = StaticSemantics.boundVars(prg).symbols
       assert(boundVars.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
         "All bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
           "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.filterNot(_.isInstanceOf[DifferentialSymbol]) diff vars.toSet).mkString(", "))
-      val postEqs = unobservableStateVars.keys.
-        foldRight[Formula](vars.map(v => Equal(postVar(v), v)).
-          reduceRight(And))((v, f) => Exists(postVar(v)::Nil, f))
-      val estimator = unobservable.
-        filter(_._2.isDefined).map({ case (_, Some(e)) => e }).
+
+      val unknownFnApps = ListBuffer[FuncOf]()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case f@FuncOf(fn, _) =>
+            if (unknownFunctions.keySet.map(_._1).contains(fn)) unknownFnApps += f
+            Left(None)
+          case _ => Left(None)
+        }
+      }, prg)
+      val boundArgsFns = unknownFnApps.filter(fn => StaticSemantics.freeVars(fn).toSet.intersect(boundVars).nonEmpty)
+      require(boundArgsFns.isEmpty,
+        "Unable to make functions " + boundArgsFns.map(_.prettyString).mkString(",") +
+          " unobservable, because their arguments are bound in program; replace manually with non-deterministic assignments (e.g., replace x:=2; y:=f(x) with x:=2; fx:=*; y:=fx)")
+
+      val postEstimators = unobservableStateVars.
+        filter(_._2.isDefined).
+        map({ case (v, Some(e)) =>
+          (StaticSemantics.freeVars(e).toSet - v).toList match {
+            case Nil => ???
+            case sensorVar :: Nil => v -> e.replaceFree(v, postVar(v)).replaceFree(sensorVar, postVar(sensorVar))
+            case s => throw new IllegalArgumentException("Sensor specifications with multiple variables not supported, please use function symbols for uncertainty and other parameters")
+          }
+        })
+
+      val preEstimator = unobservable.
+        filter(_._2.isDefined).
+        map({ case (_, Some(e)) => e }).
         reduceRightOption(And).getOrElse(True)
-      val varConjectureBody = if (estimator == True) Diamond(prg, postEqs) else And(estimator, Diamond(prg, postEqs))
+
+      val postEqs = unobservableStateVars.keys.
+        foldRight[Formula](vars.map(v => Equal(postVar(v), v)).reduceRight(And))((v, f) => postEstimators.get(v) match {
+          case Some(e) => Exists(postVar(v)::Nil, And(e, f))
+          case _ => Exists(postVar(v)::Nil, f)
+        })
+
+      val varConjectureBody = if (preEstimator == True) Diamond(prg, postEqs) else And(preEstimator, Diamond(prg, postEqs))
       val varConjecture = unobservableStateVars.foldRight[Formula](varConjectureBody)((v, f) => Exists(v._1::Nil, f))
-      val conjecture = unknownParams.foldRight[Formula](varConjecture)({ case (((fn, v), _), f) =>
+      val conjecture = (unknownParams ++ unknownFunctions).foldRight[Formula](varConjecture)({ case (((fn, v), _), f) =>
         val args = fn.domain match {
           case Unit  => Nothing
           case d => d.toDots(0)._1
@@ -282,7 +247,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     //@todo encode in dL
     val ModelPlexConjecture(_, spec, assms) = createMonitorSpecificationConjecture(fml, vars, unobservable, NAMED_POST_VAR)
 
-    val (unobservableStateVars, unknownParams) = partitionUnobservable(unobservable)
+    val (unobservableStateVars, unknownParams, _) = partitionUnobservable(unobservable)
     val (ctx, specFml: Formula) = spec.at(PosInExpr(List.fill(unknownParams.keys.size)(0)))
     def ithMon(mon: Formula, vars: List[Variable], i: Int): Formula = {
       (vars.toSet -- unobservableStateVars.keySet).foldLeft(mon)({ case (f, v) =>
@@ -337,7 +302,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil) if t.pt.name == "loopAuto" && loopBranch.isEmpty =>
         loopBranch = Some(b)
       case t: AppliedDependentPositionTactic if t.name == "dW" => input match {
-        case BelleProvable(p, _, _) =>
+        case BelleProvable(p, _) =>
           val dwr = proveBy(p.subgoals.head, t)
           assert(dwr.subgoals.size == 1, "dW expected to result in a single subgoal")
           dWResult = Some(dwr.subgoals)
@@ -349,12 +314,19 @@ object ModelPlex extends ModelPlexTrait with Logging {
         invariant = Some(t.pt.inputs.head.asInstanceOf[Formula] -> None)
       case t: AppliedDependentPositionTactic if t.pt.name == "loopAuto" && invariant.isEmpty =>
         input match {
-          case BelleProvable(p, _, _) =>
+          case BelleProvable(p, _) =>
             invariant = TactixLibrary.invGenerator(p.subgoals(0), t.locator.toPosition(p).get).toList.headOption
         }
       case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" && !inDW => input match {
-        case BelleProvable(p, _, _) =>
-          val di = t.pt.inputs.head.asInstanceOf[List[Formula]].head
+        case BelleProvable(p, _) =>
+          val di = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+              case Equal(t, FuncOf(TacticReservedSymbols.const, Nothing)) =>
+                val oldified = x0.foldLeft(t)({ case (t, (v, v0)) => t.replaceFree(v, v0) })
+                Right(Equal(t, oldified))
+              case _ => Left(None)
+            }
+          }, t.pt.inputs.head.asInstanceOf[List[Formula]].head).get
           p.subgoals.head.sub(t.locator.toPosition(p).get) match {
             case Some(Box(ODESystem(ode, _), _)) if !diffInvariants.contains(ode) =>
               diffInvariants(ode) = (
@@ -369,7 +341,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           }
       }
       case b@BranchTactic(children) if loopBranch.contains(b) => input match {
-        case BelleProvable(p, _, _) =>
+        case BelleProvable(p, _) =>
           //@todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
           assert(3 <= children.size && children.size <= 4 && children.size == p.subgoals.size,
             "3 open goals expected after loop, 4 open goals expected after throughout")
@@ -377,7 +349,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         case _ =>
       }
       case t => input match {
-        case BelleProvable(p, _, _) if dWResult.contains(p.subgoals) =>
+        case BelleProvable(p, _) if dWResult.contains(p.subgoals) =>
           // close after dW
           assert(p.subgoals.size == 1, "dW expected on a single subgoal")
           def unsequentTac(a:Int,s:Int):BelleExpr = {
@@ -428,7 +400,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /** Creates a model with the ODE approximated by the evolution domain and diff. invariants from the `tactic`.
     * Returns the adapted model and a tactic to proof safety from the original proof. */
   def createNonlinearModelApprox(name: String, tactic: BelleExpr, defs: Declaration): Expression => (Formula, BelleExpr) =
-      (model: Expression) => defs.exhaustiveSubst(model) match {
+      (model: Expression) => model.exhaustiveSubst(USubst(defs.substs.filter(_.what match { case _: SystemConst | _: ProgramConst => true case _ => false }))) match {
     case fml@Imply(init, Box(Loop(prg), safe)) =>
       val (ctrl, plant, evolDomain, measure) = prg match {
         case Compose(c, p@ODESystem(_, q)) => (c, p, q, None)
@@ -439,11 +411,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val plantVars = StaticSemantics.boundVars(plant).toSet.filter(_.isInstanceOf[BaseVariable]).toList.sorted[NamedSymbol]
       val x0 = plantVars.map(v => v -> BaseVariable(v.name, TacticHelper.freshIndexInFormula(v.name, fml))).toMap
       val x0Ghosts = x0.toList.sortBy[NamedSymbol](_._1).map({ case (v, g) => Assign(g, v) }).reduceRight(Compose)
-      val nondetPlant = plantVars.map(AssignAny).sortBy[NamedSymbol](_.x).reduceRight(Compose)
 
       val pl = proofListener(name, plantVars.toSet, /*q, */x0)
-      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(model.asInstanceOf[Formula]), defs)) match {
-        case BelleProvable(proof, _, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
+      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(model.asInstanceOf[Formula], defs))) match {
+        case BelleProvable(proof, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
         case _ => assert(assertion = false, "Cannot derive a nonlinear model from unfinished proof")
       }
 
@@ -457,7 +428,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
       val olds = x0.map({ case (v, v0) => FuncOf(TacticReservedSymbols.old, v) -> v0 })
       val diffInvariants = replace(pushOld(combineDiffInvariants(pl.diffInvariants.toList, plant, Map())), olds)
+      val internalVars = StaticSemantics.freeVars(diffInvariants).toSet.filter(_.name.endsWith("_"))
 
+      //@note tactics (e.g., ODE's nilpotentsolve) may introduce internal symbols that become "plant" variables
+      val nondetPlant = (plantVars ++ internalVars).map(AssignAny).sortBy[NamedSymbol](_.x).reduceRight(Compose)
       val odeGuard = if (evolDomain == True) diffInvariants else And(evolDomain, diffInvariants)
       val guardedPlant = Compose(Test(odeGuard), Compose(nondetPlant, Test(odeGuard)))
       val body = measure match {
@@ -481,12 +455,18 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @param checkProvable Whether or not to check the ModelPlex provable.
     * @return The sandbox formula with a tactic to prove it, and a list of lemmas used in the proof.
     */
-  def createSandbox(name: String, tactic: BelleExpr, fallback: Option[Program], kind: Symbol,
-                    checkProvable: Option[(ProvableSig => Unit)], synthesizeProofs: Boolean,
+  def createSandbox(name: String,
+                    tactic: BelleExpr,
+                    fallback: Option[Program],
+                    kind: Symbol,
+                    checkProvable: Option[(ProvableSig => Unit)],
+                    synthesizeProofs: Boolean,
+                    defs: Declaration,
                     postVar: Variable=>Variable = NAMED_POST_VAR):
                     Formula => ((Formula,BelleExpr), List[(String,Formula,BelleExpr)]) = formula => {
     require(kind == 'ctrl, s"Unable to create a sandbox of kind $kind, so far only controller monitors supported")
-    val (initCond: Formula, sysPrg: Loop, ctrlPrg: Program, plant: ODESystem, ode: DifferentialProgram, q: Formula, safe: Formula) = formula match {
+    val expandedModel = defs.exhaustiveSubst(formula)
+    val (initCond: Formula, sysPrg: Loop, ctrlPrg: Program, plant: ODESystem, ode: DifferentialProgram, q: Formula, safe: Formula) = expandedModel match {
       case Imply(initCond, Box(sysPrg@Loop(Compose(ctrlPrg, plant@ODESystem(ode, q))), safe)) =>
         (initCond, sysPrg, ctrlPrg, plant, ode, q, safe)
       case Imply(initCond, Box(sysPrg@Loop(Compose(ctrlPrg, Compose(timeReset, plant@ODESystem(ode, q)))), safe)) =>
@@ -496,7 +476,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val free = StaticSemantics.symbols(Compose(Test(initCond),sysPrg))
     val bound = StaticSemantics.boundVars(sysPrg)
     val constVars = free.--(bound.toSet)
-    val vars: List[BaseVariable] = StaticSemantics.symbols(formula).
+    val vars: List[BaseVariable] = StaticSemantics.symbols(expandedModel).
       filter({case _: BaseVariable => true case _ => false}).
       --(constVars).
       map(_.asInstanceOf[BaseVariable]).
@@ -511,7 +491,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       filter(StaticSemantics.freeVars(_).intersect(StaticSemantics.boundVars(sysPrg)).isEmpty).
       map(replace(_, consts)).
       reduceRightOption(And).getOrElse(True)
-    val monitor = replace(apply(vars, kind, checkProvable)(formula), consts)
+    val monitor = replace(apply(vars, kind, checkProvable)(expandedModel), consts)
     val senseVars: List[Variable] = StaticSemantics.boundVars(ode).toSet.
       filterNot(StaticSemantics.isDifferential(_)).toList.sorted[NamedSymbol]
     val sensePostVars = senseVars.map(v => v -> postVar(v)).toMap
@@ -527,7 +507,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val olds = senseVars.map(v => FuncOf(Function("old", None, Real, Real), postVar(v)) -> v).toMap
 
     val pl = proofListener(name, senseVars.toSet, x0)
-    LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(formula)))
+    LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(formula, defs)))
 
     assert(pl.invariant.isDefined, "Proof of model " + name + " does not provide a loop invariant. Please use tactic loop({`inv`},...) in the proof.")
     assert(pl.diffInvariants.nonEmpty, "Proof of model " + name + " does not provide sufficient insight into invariant regions of the ODE dynamics. Please use differential cuts dC in the proof.")
@@ -918,7 +898,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   def eulerAllIn: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     val eulerAxiom = "<{x_'=f(x_)}>p(x_) <-> \\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x_);}*>(t_>=0 & \\exists y_ (abs(x_-y_) < e_ & p(y_))) ))))".asFormula
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
-      case (Diamond(_: ODESystem, _), pp) => Some(useAt(ProvableSig.startProof(eulerAxiom), PosInExpr(0::Nil))(pp))
+      case (Diamond(_: ODESystem, _), pp) => Some(useAt(ProvableSig.startPlainProof(eulerAxiom), PosInExpr(0::Nil))(pp))
       case _ => None
     })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
@@ -957,7 +937,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
       //@note OnAll necessary since the "show axiom" branches are left open by useAt (because we cut in the desired result, not use an actual axiom)
-      case (Diamond(ode: ODESystem, p), dpos) => Some(OnAll(useAt(ProvableSig.startProof(createEulerAxiom(ode, p)), PosInExpr(0::Nil))(dpos) | skip))
+      case (Diamond(ode: ODESystem, p), dpos) => Some(OnAll(useAt(ProvableSig.startPlainProof(createEulerAxiom(ode, p)), PosInExpr(0::Nil))(dpos) | skip))
       case _ => None
     })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
@@ -1026,48 +1006,32 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
   })
 
-  /**
-   * Returns a backward tactic for deriving controller monitors. Uses Opt. 1 immediately after nondeterministic
-   * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
-   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
-   * @return The tactic.
-   */
+  /** Axioms for translating programs into monitors (shared between controller and model monitor). */
+  private def monitorAxioms = List(
+    useAt(Ax.composed),
+    useAt(Ax.choiced),
+    anon ((p: Position) => useAt(Ax.randomd)(p)),
+    useAt(Ax.testd),
+    anon ((p: Position) => TryCatch(
+      useAt(Ax.assigndAxiom)(p),
+      classOf[SubstitutionClashException],
+      (_: SubstitutionClashException) => fail)
+    ),
+    anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p)),
+  )
+
+  /** Returns a backward tactic for deriving controller monitors. */
   def controllerMonitorT: DependentPositionTactic =
     anon ((pos: Position) =>
-      locateT(
-        useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
-        useAt(Ax.dDX, PosInExpr(1::Nil)) ::
-        useAt(Ax.composed) ::
-        useAt(Ax.choiced) ::
-        anon ((p: Position) => useAt(Ax.randomd)(p)) ::
-        useAt(Ax.testd) ::
-          anon ((p: Position) => TryCatch(
-            useAt(Ax.assigndAxiom)(p),
-            classOf[SubstitutionClashException],
-            (_: SubstitutionClashException) => fail)) ::
-        anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p)) ::
-        Nil)(pos))
+      locateT(List(
+        useAt(Ax.loopApproxd, PosInExpr(1::Nil)),
+        useAt(Ax.dDX, PosInExpr(1::Nil))) ++ monitorAxioms)(pos))
 
-  /**
-   * Returns a backward tactic for deriving model monitors. Uses Opt. 1 immediately after nondeterministic
-   * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
-   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
-   * @return The tactic.
-   */
+  /** Returns a backward tactic for deriving model monitors. */
   def modelMonitorT: DependentPositionTactic = anon ((pos: Position) =>
-    locateT(
-      useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
-        AxiomaticODESolver.axiomaticSolve() ::
-        useAt(Ax.composed) ::
-        useAt(Ax.choiced) ::
-        anon ((p: Position) => useAt(Ax.randomd)(p)) ::
-        useAt(Ax.testd) ::
-        anon ((p: Position) => TryCatch(
-          useAt(Ax.assigndAxiom)(p),
-          classOf[SubstitutionClashException],
-          (_: SubstitutionClashException) => fail)) ::
-        anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p)) ::
-        Nil)(pos))
+    locateT(List(
+      useAt(Ax.loopApproxd, PosInExpr(1::Nil)),
+      AxiomaticODESolver.axiomaticSolve()) ++ monitorAxioms)(pos))
 
   /**
    * Returns a tactic to solve two-dimensional differential equations. Introduces constant function symbols for
@@ -1122,55 +1086,258 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Abbreviates functions to nullary function symbols if all their arguments are free in `fml`,
    * expand according to `defs` the functions that have at least one if their arguments bound. Returns the formula
-   * with abbreviated/expanded functions and a Map telling which functions were abbreviated how. */
-  def mxAbbreviateFunctions(fml: Formula, defs: Declaration): (Formula, Map[FuncOf, FuncOf]) = {
+   * with abbreviated/expanded functions, and the substitutions telling which functions were expanded/abbreviated how. */
+  def mxAbbreviateFunctions(fml: Formula, defs: Declaration): (Formula, USubst) = {
     // Reduce/Resolve do not support arbitrary functions -> abbreviate to nullary functions for QE
     val is = scala.collection.mutable.Map.empty[Function, Int]
-    val vars = scala.collection.mutable.Map.empty[FuncOf, FuncOf]
     val bv = StaticSemantics.boundVars(fml)
+    var subst = USubst(List.empty)
 
     def replaceOrExpand[T <: Expression](expr: T): T = ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case pn@PredOf(f: Function, _) =>
+          defs.substs.find(_.what match {
+            case PredOf(wfn, _) => wfn == f
+            case _ => false
+          }) match {
+            case None => ???
+            case Some(d) =>
+              val s = USubst(List(d))
+              subst = subst ++ s
+              Right(replaceOrExpand(s(pn)))
+          }
+        case _ => Left(None)
+      }
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
         case fn@FuncOf(f@Function(n, i, d, _, None), args) if d != Unit =>
           if (StaticSemantics.freeVars(args).intersect(bv).isEmpty) {
             //@note can abbreviate, fn does not depend on any of the quantified variables
-            if (!vars.contains(fn)) {
+            if (!subst.subsDefsInput.exists(_.what == fn)) {
               is(fn.func) = is.get(fn.func).map(_ + 1).getOrElse(0)
-              vars(fn) = FuncOf(f.copy(
+              val abbrv = FuncOf(f.copy(
                 name = n + i.map(_.toString).getOrElse(""),
                 index = Some(is(fn.func)),
                 domain = Unit), Nothing)
-            }
-            Right(vars(fn))
+              subst = subst ++ USubst(List(SubstitutionPair(abbrv, fn)))
+              Right(abbrv)
+            } else Right(fn)
           } else {
             //@note expand fn to expose dependency on quantified variables
             defs.substs.find(s => s.what match {
               case FuncOf(wfn, _) => wfn == f
               case _ => false
             }) match {
-              case None => ???
-              case Some(d) => Right(replaceOrExpand(USubst(List(d))(fn)))
+              case None => throw new IllegalArgumentException("Function " + fn.prettyString + " depends on quantified variable " + bv + " and so must be expanded, but got no definition how to expand; please make unobservable")
+              case Some(d) =>
+                val s = USubst(List(d))
+                subst = subst ++ s
+                Right(replaceOrExpand(s(fn)))
             }
           }
         case _ => Left(None)
       }
     }, expr).get
 
-    (replaceOrExpand(fml), vars.toMap)
+    (replaceOrExpand(fml), subst)
   }
 
-  /** Partial QE on a formula that first abbreviates all uninterpreted function symbols to variables and
+  /** Partial QE on a formula that first expands/abbreviates all uninterpreted symbols and
     * then substitutes back in on the result. */
-  def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): Formula = {
-    val (fnified, vars) = mxAbbreviateFunctions(fml, defs)
-    //@todo sort vars topologically and use Let
-    proveBy(fnified, ToolTactics.partialQE(tool, reformatAssumptions=false)).subgoals.toList match {
-      case Nil => True
-      case Sequent(IndexedSeq(), IndexedSeq(g)) :: Nil =>
-        vars.map({ case (k, v) => v -> k }).foldLeft(g)({
-          case (fml, (v, fn)) => fml.replaceFree(v, fn)
-        })
+  def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = mxPartialQE(List(fml), defs, tool)
+  def mxPartialQE(fmlAlts: List[Formula], defs: Declaration, tool: QETacticTool, verified: Boolean = true): ProvableSig = {
+    val abbreviated = fmlAlts.map(mxAbbreviateFunctions(_, defs)).toMap
+    val goal = OneOf(abbreviated.map(f => Atom(f._1)).toSeq)
+    tool.qe(goal, continueOnFalse=false) match {
+      case (Atom(f), result) => abbreviated.get(f) match {
+        case Some(subst) => if (verified) tool.qe(f).fact(subst) else ProvableSig.startProof(Equiv(f, result), defs)(subst)
+        case None => throw new IllegalStateException("Unexpected parallel QE answer")
+      }
     }
+  }
+
+  /** Returns the position of the innermost quantifier of `fml`. */
+  private def innermostQuantifierPos(fml: Formula): PosInExpr = {
+    var innermost = PosInExpr.HereP
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case q: Quantified =>
+          if (StaticSemantics.boundVars(q.child).isEmpty) innermost = p
+          Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    innermost
+  }
+
+  /** Simplifies the right-hand side of the equivalence conclusion of `p`. */
+  private def simplifyEquivProof(p: ProvableSig): ProvableSig = {
+    val Equiv(orig, result) = p.conclusion.succ.head
+    SimplifierV3.formulaSimp(result, faxs=SimplifierV3.defaultFaxs, taxs=SimplifierV3.defaultTaxs) match {
+      case (simplifiedResult, Some((True, simpProof))) =>
+        val Imply(True, equiv) = simpProof.conclusion.succ.head
+        val uncondSimpProof = ProvableSig.startProof(equiv, p.defs)(
+          CEat(Ax.trueImply.provable(USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), equiv)))))(SuccPos(0)), 0)(
+          simpProof, 0)
+        ProvableSig.startProof(Equiv(orig, simplifiedResult), p.defs)(
+          CEat(uncondSimpProof, PosInExpr(1::Nil))(SuccPosition.base0(0, PosInExpr(1::Nil))), 0)(
+          p, 0)
+      case _ => p
+    }
+  }
+
+  /** Splits into separate partial QE calls and merges results.  */
+  def stepwisePartialQE(fml: Formula,
+                        assumptions: List[Formula],
+                        defs: Declaration,
+                        tool: QETacticTool with SimplificationTool,
+                        preQE: (Formula, Int)=>Unit = (_, _) => {},
+                        postQE: (Formula, Int)=>Unit = (_, _) => {}): ProvableSig = fml.at(innermostQuantifierPos(fml)) match {
+    case (ctx, exists@Exists(x, p)) =>
+      val (dnf, dnfProof) = timed(PropositionalTactics.disjunctiveNormalForm(p), "Computing disjunctive normal form")
+      assert(dnfProof.isProved, "Expected a finished disjunctive normal form proof, but proof not closed")
+
+      val monitorComponents = FormulaTools.disjuncts(dnf).map(Exists(x, _))
+      val componentResults = monitorComponents.zipWithIndex.map({ case (f, i) =>
+        //@note backend QE seems to not always handle f[] well in the context of existential quantifiers
+        preQE(f, i)
+        val consts = StaticSemantics.symbols(f).
+          filter({ case Function(_, _, Unit, Real, None) => true case _ => false }).
+          map({ case fn@Function(n, i, Unit, s, _) => FuncOf(fn, Nothing) -> Variable(n, i, s) }).toList
+        val varified = consts.foldLeft(f)({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
+        //@note first exhaustive subst, then varify, because exhaustive subst elaborates to functions and so would undo varification
+        val varifiedExpanded = consts.foldLeft(defs.exhaustiveSubst(f))({ case (fml, (fn, v)) => fml.replaceAll(fn, v) })
+        assert(StaticSemantics.symbols(varified).intersect(consts.map(_._1.func).toSet).isEmpty)
+        assert(StaticSemantics.symbols(varifiedExpanded).intersect(consts.map(_._1.func).toSet).isEmpty)
+
+        val qfVarifiedProof = timed({
+          val partialQEProof = ModelPlex.mxPartialQE(List(varified, varifiedExpanded), defs, tool)
+          //@todo
+          //tool.simplify(qfResult.subgoals.head.succ.head, assumptions)
+          simplifyEquivProof(partialQEProof)
+        }, "QE " + (i+1) + "/" + monitorComponents.size)
+
+        val result = qfVarifiedProof.conclusion.succ.head
+        val fnified = consts.foldLeft(result)({ case (fml, (fn, v)) => fml.replaceAll(v, fn) })
+
+        val qfProof = consts.foldLeft(ProvableSig.startProof(fnified, defs))({
+          case (p, c) => p(
+            FOQuantifierTactics.allInstantiateInverse(c)(SuccPos(0)) andThen
+            ProofRuleTactics.skolemizeR(SuccPos(0)), 0)
+        })(qfVarifiedProof, 0)
+
+        val Equiv(_, qfResult) = qfProof.conclusion.succ.head
+        postQE(qfResult, i)
+        qfProof
+      })
+
+      def mergeDisjuncts(pr: List[ProvableSig]): ProvableSig = pr match {
+        case p :: Nil => p
+        case _ =>
+          val (l, r) = pr.splitAt(pr.size/2)
+          val lproof = mergeDisjuncts(l)
+          val rproof = mergeDisjuncts(r)
+          val Equiv(Exists(x, p), pqf) = lproof.conclusion.succ.head
+          val Equiv(Exists(y, q), qqf) = rproof.conclusion.succ.head
+          assert(x == y)
+          val dot = DotTerm()
+          val merged = ProvableSig.startProof(Equiv(Exists(x, Or(p, q)), Or(pqf, qqf)), defs)(
+            CEat(RenUSubst(List(
+              (PredOf(Function("p_", None, Real, Bool), dot), p.replaceFree(x.head, dot)),
+              (PredOf(Function("q_", None, Real, Bool), dot), q.replaceFree(x.head, dot)),
+              (Variable("x_"), x.head))).toForward(Ax.existsOr.provable), PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0)))), 0)(
+            CEat(lproof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
+            CEat(rproof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 1)))), 0)(
+            Ax.equivReflexive.provable(USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Or(pqf, qqf))))), 0)
+          assert(merged.isProved, "Expected closed merge proof, but got open goals")
+          merged
+          //@todo
+          //timed(tool.simplify(d, assumptions), "Simplifying")
+      }
+
+      val mergedProof = timed(simplifyEquivProof(mergeDisjuncts(componentResults)), "Merging QE component results")
+      assert(mergedProof.isProved, "Expected a finished merge proof, but proof not closed")
+      val merged@Equiv(lq, rqf) = mergedProof.conclusion.succ.head
+      assert(StaticSemantics.boundVars(rqf).isEmpty, "Expected all quantifiers eliminated, but formula still has quantifiers: " + rqf.prettyString)
+
+      val (reassociated, reassociateProof) = timed({
+        val Exists(x, l) = lq
+        val (lr, lp) = PropositionalTactics.rightAssociate(l)
+        val (rr, rp) = PropositionalTactics.rightAssociate(rqf)
+        val result = Equiv(Exists(x, lr), rr)
+        val resultEquiv = Equiv(merged, result)
+        val subst = USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), result)))
+        val proof = timed(ProvableSig.startProof(resultEquiv, defs)(
+          CEat(lp, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0, 0)))), 0)(
+          CEat(rp, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 1)))), 0)(
+          Ax.equivReflexive.provable(subst), 0), "Applying reassociate subproofs")
+
+        assert(proof.isProved, "Expected a finished reassociation proof, but proof not closed")
+        (resultEquiv, proof)
+      }, "Reassociating")
+
+      val Equiv(_, Equiv(_, qfResult)) = reassociated
+      val es = StaticSemantics.symbols(exists)
+      val qfs = StaticSemantics.symbols(qfResult)
+
+      val expand = monitorComponents.zip(componentResults).map({ case (o, qfProof) =>
+        val Equiv(_, qf) = qfProof.conclusion.succ.head
+        StaticSemantics.symbols(o) -- StaticSemantics.symbols(qf)
+      }).reduce(_ ++ _)
+
+      println("Symbols: " + es.mkString(",") + "\nQF symbols: " + qfs.mkString(",") + "\nDiff: " + expand.mkString(","))
+      val subst = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty }))
+      println("Substitution: " + subst.subsDefsInput.mkString(","))
+
+      val innerProof = timed(ProvableSig.startProof(Equiv(exists, qfResult), defs)(
+        CEat(dnfProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
+        PropositionalTactics.rightAssociate(SuccPosition.base0(0, PosInExpr(List(0, 0)))), 0)(
+        subst)(
+        CEat(reassociateProof(subst), PosInExpr(List(1)))(SuccPosition.base0(0)), 0)(
+        mergedProof(subst), 0), "Inner proof")
+      assert(innerProof.isProved, "Expected closed inner proof, but got open goals")
+
+      val innermostPos = innermostQuantifierPos(fml)
+      println("Finished quantifier " + x + " at " + innermostPos.prettyString + ", advancing outwards")
+
+      val outerProof = stepwisePartialQE(ctx(qfResult), assumptions, defs, tool)(subst)
+      val Equiv(_, outerQf) = outerProof.conclusion.succ.head
+
+      val outerExpand = StaticSemantics.symbols(ctx(qfResult)) -- StaticSemantics.symbols(outerQf)
+      val outerSubst = USubst(defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(outerExpand).nonEmpty }))
+
+      val innerPos = PosInExpr(List(0)) ++ innermostPos
+      timed(ProvableSig.startProof(Equiv(fml, outerQf), defs)(
+        subst)(
+        CEat(innerProof, PosInExpr(List(0)))(SuccPosition.base0(0, innerPos)), 0)(
+        outerSubst)(
+        outerProof, 0), "Combining inner and outer proof")
+    case (ctx, p: Forall) =>
+      //@todo conjunctive normal form and split
+      val innerProof = ModelPlex.mxPartialQE(p, defs, tool)
+      val Equiv(_, qf) = innerProof.conclusion.succ.head
+
+      val innerExpand = StaticSemantics.symbols(p) -- StaticSemantics.symbols(qf)
+      val innerSubst = USubst(defs.substs.filter({
+        case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(innerExpand).nonEmpty
+      }))
+
+      //@todo
+      //stepwisePartialQE(ctx(timed(tool.simplify(qf, assumptions), "QE 1/1")), assumptions, defs, tool)
+      val outerProof = stepwisePartialQE(ctx(qf), assumptions, defs, tool)(innerSubst)
+      val Equiv(_, outerQf) = outerProof.conclusion.succ.head
+
+      val outerExpand = StaticSemantics.symbols(ctx(qf)) -- StaticSemantics.symbols(outerQf)
+      val outerSubst = USubst(defs.substs.filter({
+        case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(outerExpand).nonEmpty
+      }))
+
+      val innerPos = PosInExpr(List(0)) ++ innermostQuantifierPos(fml)
+      ProvableSig.startProof(Equiv(fml, outerQf), defs)(
+        innerSubst)(
+        CEat(innerProof, PosInExpr(List(0)))(SuccPosition.base0(0, innerPos)), 0)(
+        outerSubst)(
+        outerProof, 0)
+    case (ctx, f) => ProvableSig.startProof(Equiv(ctx(f), ctx(f)), defs)(byUS(Ax.equivReflexive.provable), 0)
   }
 
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
@@ -1184,10 +1351,25 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @see[[optimizationOneWithSearchAt]]
     */
   override def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                         unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic],
-                                         postVar: Variable=>Variable = NAMED_POST_VAR): DependentPositionTactic = anon ((pos: Position) => {
-    SaturateTactic(optimizationOneWithSearchImpl(tool, assumptions, unobservable, simplifier, postVar)(pos)) &
-      simplifier.map(_(pos)).getOrElse(skip)
+                                         unobservable: List[_ <: NamedSymbol],
+                                         simplifier: Option[BuiltInPositionTactic],
+                                         postVar: Variable=>Variable = NAMED_POST_VAR): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    val positions = new ListBuffer[PosInExpr]()
+
+    sequent.sub(pos) match {
+      case Some(fml) =>
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+            case _: Quantified =>
+              positions += p
+              Left(None)
+            case _ => Left(None)
+          }
+        }, fml)
+    }
+
+    positions.map(p => instantiateQuantifiers(tool, assumptions, unobservable, simplifier, postVar)(pos ++ p)).
+      reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & simplifier.map(_(pos)).getOrElse(skip)
   })
 
   /** Returns the polarity at `pos` in the `sequent`.
@@ -1198,88 +1380,86 @@ object ModelPlex extends ModelPlexTrait with Logging {
     (if (pos.isSucc) 1 else -1)*FormulaTools.polarityAt(sequent(pos.top), pos.inExpr)
   }
 
-  private def optimizationOneWithSearchImpl(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                            unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic],
-                                            postVar: Variable=>Variable): DependentPositionTactic =
-    anon ((pos: Position, sequent: Sequent) => {
-    // was "Optimization 1 with instance search"
-    def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function], assumptions: List[Formula])(pp: Position) = {
-      tool match {
-        case None => skip
-        case Some(t) =>
-          val simplified = t.simplify(qeFml, assumptions)
-          val backSubst = And(
-            assumptions.reduceOption(And).getOrElse(True),
-            signature.foldLeft[Formula](simplified)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing))))
-          val pqe = proveBy(Imply(backSubst, existsFml), QE & done)
-          cutAt(backSubst)(pp) < (skip, (if (pp.isSucc) cohideR(pp.topLevel) else cohideR('Rlast)) & CMon(pp.inExpr) & by(pqe))
-      }
-    }
+  private def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function],
+                         assumptions: List[Formula], tool: Option[SimplificationTool])(pp: Position) = tool match {
+    case None => skip
+    case Some(t) =>
+      val simplified = t.simplify(qeFml, assumptions)
+      val backSubst = And(
+        assumptions.reduceOption(And).getOrElse(True),
+        signature.foldLeft[Formula](simplified)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing))))
+      val pqe = proveBy(Imply(backSubst, existsFml), QE & done)
+      cutAt(backSubst)(pp) < (skip, (if (pp.isSucc) cohideR(pp.topLevel) else cohideR('Rlast)) & CMon(pp.inExpr) & by(pqe))
+  }
 
-    val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
-        case (Forall(xs, Imply(Equal(x, y), q)), pp) =>
-          if (polarityInSeq(sequent, pp) > 0 && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
-            Some(useAt(simplForall1, PosInExpr(1::Nil))(pp) & simplifier.map(_(pp)).getOrElse(skip))
-          } else None
-        case (Forall(xs, Imply(Equal(y, x: Variable), q)), pp) =>
-          if (polarityInSeq(sequent, pp) > 0 && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
-            Some(useAt(simplForall2, PosInExpr(1::Nil))(pp) & simplifier.map(_(pp)).getOrElse(skip))
-          } else None
+  private def instantiateQuantifiers(tool: Option[SimplificationTool],
+                                     assumptions: List[Formula],
+                                     unobservable: List[_ <: NamedSymbol],
+                                     simplifier: Option[BuiltInPositionTactic],
+                                     postVar: Variable=>Variable): DependentPositionTactic =
+    anon ((pos: Position, sequent: Sequent) => {
+      def instantiateODESolution(odeShape: Exists): BelleExpr = {
+        val signature = StaticSemantics.signature(odeShape).filter({
+          case Function(_, _, Unit, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
+        val edo = signature.foldLeft[Formula](odeShape)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
+        val transformed = proveBy(edo, partialQE)
+        solutionQE(odeShape, transformed.subgoals.head.succ.head, signature, assumptions, tool)(pos) & simplifier.map(_(pos)).getOrElse(skip) |
+          solutionQE(odeShape, transformed.subgoals.head.succ.head, signature, Nil, tool)(pos) & simplifier.map(_(pos)).getOrElse(skip) |
+          simplifier.map(_(pos ++ PosInExpr(0::Nil))).getOrElse(skip)
+      }
+
+      sequent.sub(pos) match {
+        case Some(Forall(xs, p)) if StaticSemantics.freeVars(p).intersect(xs.toSet).isEmpty => allV(pos)
+        case Some(Exists(xs, p)) if StaticSemantics.freeVars(p).intersect(xs.toSet).isEmpty => existsV(pos)
+        case Some(Forall(xs, Imply(Equal(x, y), q))) =>
+          if (polarityInSeq(sequent, pos) > 0 && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
+            useAt(simplForall1, PosInExpr(1::Nil))(pos) & simplifier.map(_(pos)).getOrElse(skip)
+          } else if (polarityInSeq(sequent, pos) > 0 && xs.contains(y) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(x)).isEmpty) {
+            useAt(simplForall2, PosInExpr(1::Nil))(pos) & simplifier.map(_(pos)).getOrElse(skip)
+          } else skip
         // @note shapes of ode solution
-        case (ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), q))), pp)
-            if tool.isDefined && polarityInSeq(sequent, pp) > 0 && t == "t_".asVariable && s == "s_".asVariable && StaticSemantics.boundVars(q).isEmpty =>
-          val signature = StaticSemantics.signature(ode).filter({
-            case Function(_, _, Unit, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
-          val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
-          val transformed = proveBy(edo, partialQE)
-          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
-               solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
-               simplifier.map(_(pp ++ PosInExpr(0::Nil))).getOrElse(skip))
-        case (ode@Exists(t::Nil, And(GreaterEqual(_, _), q)), pp)
-          if tool.isDefined && polarityInSeq(sequent, pp) > 0 && t == "t_".asVariable && StaticSemantics.boundVars(q).isEmpty =>
-          val signature = StaticSemantics.signature(ode).filter({
-            case Function(_, _, Unit, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
-          val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
-          val transformed = proveBy(edo, partialQE)
-          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
-            solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
-            simplifier.map(_(pp ++ PosInExpr(0::Nil))).getOrElse(skip))
-        case (Exists(_, q), pp) if polarityInSeq(sequent, pp) > 0 && StaticSemantics.boundVars(q).isEmpty =>
-          Some(optimizationOneWithSearchAt(unobservable, simplifier, postVar)(pp))
-        case (Forall(_, _), pp) if polarityInSeq(sequent, pp) < 0 =>
+        case Some(ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), q))))
+          if tool.isDefined && polarityInSeq(sequent, pos) > 0 && t == "t_".asVariable && s == "s_".asVariable && StaticSemantics.boundVars(q).isEmpty =>
+          instantiateODESolution(ode)
+        case Some(ode@Exists(t::Nil, And(GreaterEqual(_, _), q)))
+          if tool.isDefined && polarityInSeq(sequent, pos) > 0 && t == "t_".asVariable && StaticSemantics.boundVars(q).isEmpty =>
+          instantiateODESolution(ode)
+        case Some(e: Exists) if polarityInSeq(sequent, pos) > 0 /*&& StaticSemantics.boundVars(q).isEmpty*/ =>
+          val unobservableVars = unobservable.map({
+            case v: Variable => v
+            case Function(n, i, _, s, _) => Variable(n, i, s)
+          })
+          findWitness(sequent, pos, unobservableVars, simplifier, postVar) match {
+            case Some(w) => optimizationOneAt(unobservableVars, Some(w), postVar)(pos) & simplifier.map(_(pos)).getOrElse(skip)
+            case None => skip
+          }
+        case Some(Forall(_, _)) if polarityInSeq(sequent, pos) < 0 =>
           //@todo: Some(optimizationOneWithSearchAt(unobservable, simplifier)(pp)) not implemented for Forall
-          None
-        case _ => None
-      })
-    positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+          skip
+        case fml => skip
+      }
   })
 
-  /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
-    * somewhere in the quantified formula. */
-  private def optimizationOneWithSearchAt(unobservable: List[_ <: NamedSymbol],
-                                          simplifier: Option[DependentPositionTactic],
-                                          postVar: Variable=>Variable): DependentPositionTactic =
-      anon ((pos: Position, sequent: Sequent) => {
+  /** Finds a witness for the quantifier at position. */
+  private def findWitness(sequent: Sequent, pos: Position,
+                          unobservableVars: List[Variable],
+                          simplifier: Option[BuiltInPositionTactic],
+                          postVar: Variable=>Variable): Option[(Variable, Term)] = {
     //@note assumes that conjecture created existentially quantified variables for unobservable parameters (functions)
-    val unobservableVars = unobservable.map({
-      case v: Variable => v
-      case Function(n, i, _, s, _) => Variable(n, i, s)
-    })
-    // was "Optimization 1 with instance search at"
     val (ctx, quant) = sequent.at(pos)
-    sequent.sub(pos) match {
-      case Some(Exists(vars, phi)) if polarityInSeq(sequent, pos) > 0 && StaticSemantics.freeVars(phi).intersect(vars.toSet).isEmpty =>
-        useAt(Ax.existsV)(pos) & simplifier.map(_(pos)).getOrElse(skip)
-      case Some(Exists(vars, And(Equal(l, r), q))) if polarityInSeq(sequent, pos) > 0 && vars.contains(l) &&
+    quant match {
+      case Exists(vars, And(Equal(l, r), q)) if polarityInSeq(sequent, pos) > 0 && vars.contains(l) &&
         (unobservableVars ++ unobservableVars.map(postVar)).intersect(vars).isEmpty && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(r)).isEmpty =>
         // case from deterministic assignments
-        val equality: Option[(Variable, Term)] = Some(l.asInstanceOf[BaseVariable] -> r)
-        optimizationOneAt(unobservableVars, equality, postVar)(pos) & simplifier.map(_(pos)).getOrElse(skip)
-      case Some(Exists(vars, phi)) if polarityInSeq(sequent, pos) > 0 =>
+        Some(l.asInstanceOf[BaseVariable] -> r)
+      case Forall(vars, Imply(Equal(l, r), q)) if polarityInSeq(sequent, pos) < 0 && vars.contains(l) &&
+        (unobservableVars ++ unobservableVars.map(postVar)).intersect(vars).isEmpty && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(r)).isEmpty =>
+        Some(l.asInstanceOf[BaseVariable] -> r)
+      case Exists(vars, phi) if polarityInSeq(sequent, pos) > 0 =>
         // case from nondeterministic assignments
 
         class SynonymFinder(v: Variable) extends ExpressionTraversalFunction {
-          private val vs = v :: postVar(v) :: Nil
+          private val vs = if (v.name.endsWith("_")) List(v) else List(v, postVar(v))
           var synonyms: mutable.Map[Variable, Set[Term]] = mutable.Map(vs.map(_ -> Set[Term]()):_*)
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
             case Equal(l: Variable, r: Variable) =>
@@ -1303,7 +1483,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
           def flattenSynonyms(of: Variable): Set[Term] = {
             //@note if v synonyms empty but vpost contains a term: then v=f(vpost) because vpost synonyms are result of [:=] subst
-            if (synonyms(v).isEmpty) {
+            if (synonyms(v).isEmpty && synonyms.contains(postVar(v))) {
               synonyms(v) = synonyms(postVar(v)).map(s =>
                 if (!StaticSemantics.freeVars(s).contains(v)) {
                   s
@@ -1331,8 +1511,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val synonyms = vFinder.flattenSynonyms(v)
         val postEquality = {
           //@note conjecture for unobservable variables always created by named post variable since not observable over multiple states in the sliding window, see [[createSlidingMonitorSpec]]
-          if (unobservableVars.contains(v)) synonyms.find({ case r: BaseVariable => NAMED_POST_VAR(v) == r case _ => false })
-          else if (unobservableVars.map(NAMED_POST_VAR).contains(v)) synonyms.find({ case r: BaseVariable => NAMED_POST_VAR(r) == v case _ => false })
+          if (unobservableVars.contains(v) && !v.name.endsWith("_")) synonyms.find({ case r: BaseVariable => NAMED_POST_VAR(v) == r case _ => false })
+          else if (unobservableVars.filterNot(_.name.endsWith("_")).map(NAMED_POST_VAR).contains(v)) synonyms.find({ case r: BaseVariable => NAMED_POST_VAR(r) == v case _ => false })
           else synonyms.find({ case r: BaseVariable => postVar(v) == r || postVar(r) == v case _ => false })
         }
         val equality: Option[Term] = postEquality match {
@@ -1340,7 +1520,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           case _ =>
             if (unobservableVars.intersect(vars).nonEmpty) {
               //@note existential quantifier of an unobservable variable, e.g., \exists x ..., can instantiate x with terms that mention neither x nor xpost
-              synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet ++ Set(v, NAMED_POST_VAR(v))).isEmpty)
+              synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet ++ Set(v, postVar(v))).isEmpty)
             } else {
               //@note existential quantifier of anything else; includes unobservable post variable e.g., \exists x .... \exists xpost ..., can instantiate xpost with anything observable or quantified unobservable
               synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet -- StaticSemantics.boundVars(ctx(False)).toSet).isEmpty)
@@ -1348,12 +1528,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
         }
         //@note unobservable-post synonym is allowed to mention other unobservable variables, e.g. \exists x ... \exists xpost xpost=x+y*t
         if (StaticSemantics.boundVars(phi).intersect(equality.map(StaticSemantics.freeVars).getOrElse(SetLattice.bottom)).isEmpty) {
-          optimizationOneAt(unobservableVars, equality.map(v -> _), postVar)(pos) & simplifier.map(_(pos)).getOrElse(skip)
-        } else nil
-      case Some(e) => throw new TacticInapplicableFailure("'Optimization 1 with instance search at' only applicable to existential quantifiers, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+          equality.map(v -> _)
+        } else None
+      case e => throw new TacticInapplicableFailure("Finding witnesses only supported for existential quantifiers, but got " + e.prettyString)
     }
-  })
+  }
 
   /** Opt. 1 at a specific position */
   private def optimizationOneAt(unobservable: List[Variable], inst: Option[(Variable, Term)] = None,
@@ -1391,7 +1570,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Simplifies reflexive comparisons and implications/conjunctions/disjunctions with true. */
   // was "ModelPlex Simplify"
-  lazy val mxSimplify: DependentPositionTactic = SimplifierV3.simpTac(
+  lazy val mxSimplify: BuiltInPositionTactic = SimplifierV3.simpTac(
     taxs = SimplifierV3.composeIndex(SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs),
     faxs = SimplifierV3.defaultFaxs
   )

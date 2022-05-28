@@ -41,7 +41,7 @@ abstract class LemmaDBBase extends LemmaDB {
             }
           case None => NoProof
         }
-        Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), term), lemma.evidence, lemma.name)
+        Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable, lemma.fact.defs), term, lemma.fact.defs), lemma.evidence, lemma.name)
       } else {
         lemma
       }
@@ -109,7 +109,7 @@ abstract class LemmaDBBase extends LemmaDB {
   private def proofTermLemma(lemma: Lemma): Lemma = {
     if (ProvableSig.PROOF_TERMS_ENABLED) {
       //@todo QE cache
-      Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof), lemma.evidence, lemma.name)
+      Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable, lemma.fact.defs), NoProof, lemma.fact.defs), lemma.evidence, lemma.name)
     }
     else lemma
   } ensures(r => r.name == lemma.name && r.evidence == lemma.evidence && r.fact.underlyingProvable == lemma.fact.underlyingProvable)

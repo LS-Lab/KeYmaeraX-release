@@ -8,6 +8,7 @@ Bootstrap               MIT
 Jasny Bootstrap         Apache v2.0
 D3.js                   BSD 3-Clause
 es5-shim                MIT
+Fastparse               MIT
 Font Awesome            SIL OFL 1.1 and MIT
 Font Awesome Animation  MIT
 jQuery                  MIT
@@ -15,7 +16,9 @@ jsTree                  MIT
 MathJax                 Apache v2.0
 ngDialog                MIT
 RequireJS               BSD 3-Clause or MIT
+Rings                   Apache v2.0
 Scala                   BSD 3-Clause
+Scala-ARM               Scala License [https://github.com/jsuereth/scala-arm]
 ScalaTest               Apache v2.0
 Pegdown                 Apache v2.0
 ScalaMock               text [https://github.com/paulbutcher/ScalaMock/blob/master/core/src/main/scala/org/scalamock/package.scala]
@@ -24,6 +27,7 @@ Slick                   Text (BSD-like) [https://github.com/slick/slick/blob/mas
 ScalaQuery              Text (BSD-like) [https://github.com/szeiger/scala-query/blob/master/LICENSE.txt]
 SQLite JDBC             Apache v2.0
 Spray                   Apache v2.0
+Scala SMT-Lib           MIT
 JSON Schema Validator   Dual: LGPL v3.0 or Apache v2.0
 Akka                    Apache v2.0
 Z3                      MIT

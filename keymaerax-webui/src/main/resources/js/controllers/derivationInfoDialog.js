@@ -1,10 +1,11 @@
 angular.module('keymaerax.controllers').controller('DerivationInfoDialogCtrl',
-    function($scope, $uibModalInstance, tactics, readOnly, userId, proofId, defaultPositionLocator, sequent) {
+    function($scope, $uibModalInstance, tactics, readOnly, userId, proofId, nodeId, defaultPositionLocator, sequent) {
 
   $scope.tactic = tactics[0];
   $scope.readOnly = readOnly;
   $scope.userId = userId;
   $scope.proofId = proofId;
+  $scope.nodeId = nodeId;
   $scope.defaultPositionLocator = defaultPositionLocator;
   $scope.sequent = sequent;
 
@@ -18,6 +19,10 @@ angular.module('keymaerax.controllers').controller('DerivationInfoDialogCtrl',
 
   $scope.formulaSelected = function(formulaId, input) {
     $uibModalInstance.close({position: formulaId, input: input});
+  }
+
+  $scope.saveValue = function(input, newValue) {
+    return input.saveValue($scope.userId, $scope.proofId, $scope.nodeId, newValue);
   }
 
 });

@@ -91,7 +91,8 @@ object RestApi extends Logging {
       complete(Unauthorized, Nil, s"Session $t expired")
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
-      else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(new ErrorResponse("Unexpected internal error: default user lacks permission; please reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register an ordinary local login name.") :: Nil))
+      else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(
+        new ErrorResponse("KeYmaera X may not have finished starting; please try to refresh the page (may need to refresh several times). If the error persists, try to reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register a local login name.") :: Nil))
       else complete(Forbidden, Nil, s"Permission to this resource (${r.getClass.getCanonicalName}) is denied for session $t")
   }
 
@@ -118,7 +119,7 @@ object RestApi extends Logging {
     } catch {
       case ex: Throwable =>
         ex.printStackTrace()
-        new ErrorResponse("Error serializing response", ex).print
+        new ErrorResponse("Error generating response: " + ex.getMessage, ex).print
     }
   }
 

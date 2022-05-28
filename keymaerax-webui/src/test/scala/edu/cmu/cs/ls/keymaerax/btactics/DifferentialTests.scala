@@ -502,6 +502,11 @@ class DifferentialTests extends TacticTestBase {
     proveByS(entry.sequent, implyR(1) & dI(auto='full)(1), entry.defs) shouldBe 'proved
   }
 
+  it should "work as dIRule in existential context" in withMathematica { _ =>
+    proveBy("x>0 ==> \\exists y [{x'=-x,y'=1/2*y}]x*y^2=1".asSequent, dI(auto='diffInd)(1, 0::Nil)).subgoals.
+      loneElement shouldBe "x>0 ==> \\exists y (true->x*y^2=1&\\forall x \\forall y [y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y^(2-1)*y')=0)".asSequent
+  }
+
   "odeInvariant" should "prove STTT Example 9b invariant" in withQE { _ =>
     val seq = "Kp()=2, Kd()=3, v>=0, xm<=x, xr=(xm+S())/2, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2, true ==> [{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent
     proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe 'proved
@@ -654,6 +659,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>0 ==> y<0, [{x'=2 & true & x>0}]x>=0, z=0".asSequent
     result.subgoals(1) shouldBe "x>0 ==> y<0, z=0, [{x'=2}]x>0".asSequent
+  }
+
+  it should "retain context for showing condition (2)" in withQE { _ =>
+    val result = proveBy("x>0 ==> [{x'=2,y'=3}]x>=0, y<0, z=0".asSequent, dC("x>=old(x) & y>=old(y)".asFormula)(1))
+    result.subgoals should contain theSameElementsInOrderAs List(
+      "x_0>0, x_0=x, y_0=y ==> y_0<0, z=0, [{x'=2,y'=3 & true & x>=x_0&y>=y_0}]x>=0".asSequent,
+      "x_0>0, x_0=x, y_0=y ==> y_0<0, z=0, [{x'=2,y'=3}](x>=x_0 & y>=y_0)".asSequent)
   }
 
   it should "not branch formulas in context" in withQE { _ =>
@@ -1021,8 +1033,18 @@ class DifferentialTests extends TacticTestBase {
 
   it should "let us prove variable [x':=5;](x+y)'>=0" in withQE { _ =>
     //@note proof waited too long. Should have gone constant before diffind
-    TactixLibrary.proveBy("[x':=5;](x+y)'>=0".asFormula,
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
+    val result = TactixLibrary.proveBy("[x':=5;](x+y>=0)'".asFormula,
+      let(FuncOf(Function("y",None,Unit,Real),Nothing), Variable("y"), derive(1,1::Nil) & Dassignb(1) & QE))
+    result shouldBe 'proved
+    //@note result is the internal provable of a BelleDelayedSubstProvable
+    result.conclusion shouldBe "==> [x':=5;](x+y()>=0)'".asSequent
+    //@note delayed provable ultimately resolves once all the differentials are gone
+    val fullResult = TactixLibrary.proveBy("x+y>=0 ==> [{x'=5}]x+y>=0".asSequent, dI('none)(1) <(
+      id,
+      DifferentialTactics.DE(1) & abstractionb(1) & allR(1) & cohideR(1) & by(result)
+    ))
+    fullResult shouldBe 'proved
+    fullResult.conclusion shouldBe "x+y>=0 ==> [{x'=5}]x+y>=0".asSequent
   }
 
   it should "prove const [{x'=5}](x+c())'>=0" in withQE { _ =>
@@ -1837,6 +1859,11 @@ class DifferentialTests extends TacticTestBase {
     pr should not be 'proved
     //The automatically generated remainder term goal is left open
     pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
+  }
+
+  it should "prove work with constified" in withMathematica { _ =>
+    val seq = "y=0, x > 0 ==> [{x'=k*x+y}] x+y>0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("k".asVariable)(1)) shouldBe 'proved
   }
 
   "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>

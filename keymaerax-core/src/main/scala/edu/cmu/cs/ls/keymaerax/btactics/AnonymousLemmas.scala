@@ -25,21 +25,27 @@ object AnonymousLemmas {
   private val lemmaDB = LemmaDBFactory.lemmaDB
 
   /** A tactic `t` that caches its result in the lemma cache. */
-  def cacheTacticResult(t: => BelleExpr, namespace: String, defs: Declaration): BuiltInTactic = anons ((provable: ProvableSig) => {
-    val subderivations = provable.subgoals.map(remember(_, t, namespace).fact).zipWithIndex
+  def cacheTacticResult(t: => BelleExpr, namespace: String): BuiltInTactic = anons ((provable: ProvableSig) => {
+    val subderivations = provable.subgoals.indices.map(i => remember(provable.sub(i), t, namespace).fact).zipWithIndex
     subderivations.foldRight(provable)({ case ((sub, i), p) =>
-      val subst = UnificationTools.collectSubst(p.underlyingProvable, i, sub.underlyingProvable, defs.substs)
+      val subst = UnificationTools.collectSubst(p.underlyingProvable, i, sub.underlyingProvable, provable.defs.substs)
       p.reapply(ProvableHelper.exhaustiveSubst(p.underlyingProvable, subst))(sub, i)
     })
   })
 
-  /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). */
+  /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). Does not forward definitions to `t`! */
   def remember(fml: Formula, t: BelleExpr, namespace: String = ""): Lemma =
     remember(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(fml)), t, namespace)
 
-  /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). */
+  /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). Does not forward definitions to `t`! */
   def remember(s: Sequent, t: BelleExpr, namespace: String): Lemma =
     find(s, namespace).getOrElse(store(TactixLibrary.proveBy(s, t), namespace))
+
+  /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). */
+  def remember(p: ProvableSig, t: BelleExpr, namespace: String): Lemma = {
+    require(p.subgoals.size == 1)
+    find(p.subgoals.head, namespace).getOrElse(store(TactixLibrary.proveBy(p, t), namespace))
+  }
 
   /** Stores an anonymous lemma. */
   def store(p: ProvableSig, namespace: String): Lemma = {

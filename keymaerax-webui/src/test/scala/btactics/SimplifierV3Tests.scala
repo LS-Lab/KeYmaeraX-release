@@ -32,6 +32,12 @@ class SimplifierV3Tests extends TacticTestBase {
       Sequent(ctxt, IndexedSeq("R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&R()&Q()&Z()&Y()".asFormula))
   }
 
+  it should "simplify propositional" in withTactics {
+    proveBy("!p(), !q(), r()&p() | r()&q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
+    proveBy("r()&p() | r()&q(), !p(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
+    proveBy("!p(), r()&p() | r()&q(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
+  }
+
   it should "do dependent arithmetic simplification" in withMathematica { _ =>
     val fml = "ar > 0 -> (x - 0 + 0 * y + 0 + 0/ar >= 0 - k)".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))
@@ -319,6 +325,29 @@ class SimplifierV3Tests extends TacticTestBase {
     baseNormalize("false -> true".asFormula)._1 shouldBe "true|true".asFormula
     algNormalize("true -> x=4".asFormula)._1 shouldBe "1*(x-4)=0".asFormula
     maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "max((-1),x-5)>=0".asFormula
+  }
+
+  "simplify" should "find contradictions" in withMathematica { _ =>
+    proveBy("x=1, x!=1 ==>".asSequent, simplify(-1)).subgoals.loneElement shouldBe "false, x!=1 ==>".asSequent
+    proveBy("x=1, !x=1 ==>".asSequent, simplify(-1)).subgoals.loneElement shouldBe "false, !x=1 ==>".asSequent
+  }
+
+  "simplifyAllCtx" should "consider succedent when searching for contradictions" in withMathematica { _ =>
+    proveBy("(x=1 | x=2) | x=3 ==> x=1 | x=2 | x=3".asSequent, simplifyAllCtx(-1)).subgoals.
+      loneElement shouldBe "false, !x=3, !x=2, !x=1 ==>".asSequent
+  }
+
+  it should "simplify succedent" in withMathematica { _ =>
+    proveBy("(x=1 & y=2) & z=3 ==> x=1 & y=2 & z=3".asSequent, simplifyAllCtx(1)).subgoals.
+      loneElement shouldBe "z=3, x=1, y=2 ==> true".asSequent
+  }
+
+  it should "FEATURE_REQUEST: consider remaining succedent when simplifying a formula in the succedent" taggedAs TodoTest in withMathematica { _ =>
+    proveBy("x=1 ==> x=1 & y=2, y!=2".asSequent, simplifyAllCtx(1)) shouldBe 'proved
+  }
+
+  it should "FEATURE_REQUEST: find contradictions hidden in double negations" taggedAs TodoTest in withMathematica { _ =>
+    proveBy("x=1 ==> !x!=1".asSequent, simplifyAllCtx(-1)).subgoals.loneElement shouldBe "false, !!x!=1 ==>".asSequent
   }
 
 }

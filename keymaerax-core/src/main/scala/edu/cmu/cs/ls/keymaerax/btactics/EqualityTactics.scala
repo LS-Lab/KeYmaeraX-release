@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions, opt}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
@@ -337,10 +337,13 @@ private object EqualityTactics {
     ProofRuleTactics.requireOneSubgoal(provable, "abs")
     val sequent = provable.subgoals.head
     sequent.at(pos) match {
-    case (_, _: Formula) => mapSubpositions(pos, sequent, {
-      case (FuncOf(InterpretedSymbols.absF, _), pp) => Some(?(abs(pp).computeResult _)(_))
-      case _ => None
-    }).foldLeft(provable)({ (pr, r) => pr(r, 0) })
+    case (_, _: Formula) =>
+      val positions = mapSubpositions(pos, sequent, {
+        case (t@FuncOf(InterpretedSymbols.absF, _), pp) => Some((t, (pp, (abs(pp).computeResult _)(_))))
+        case _ => None
+      })
+      //@note take only the first position, because minmax itself abbreviates before expanding and so expands other positions with it; then reverse-sort by "posInExpr" length to work inside out
+      positions.groupBy(_._1).map(_._2.head._2).toList.sortBy(_._1.inExpr.pos.length).reverseMap(_._2).foldLeft(provable)({ (pr, r) => pr(r, 0) })
     case (ctx, abs@FuncOf(fn@InterpretedSymbols.absF, t)) =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshAbsIdx = TacticHelper.freshIndexInSequent(fn.name + "_", sequent)
@@ -475,14 +478,15 @@ private object EqualityTactics {
     ProofRuleTactics.requireOneSubgoal(provable, "minmax")
     val sequent = provable.subgoals.head
     sequent.at(pos) match {
-      case (_, _: Formula) => mapSubpositions(pos, sequent, {
-        //todo: should match the max/min interpretation exactly
-        case (FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), _), pp) =>
-          if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name) Some(?(minmax(pp).computeResult _)(_))
-          else None
-        case _ => None
-      }).foldLeft(provable)({ (pr, r) => pr(r, 0) })
-      //todo: should match the max/min interpretation exactly
+      case (_, _: Formula) =>
+        val positions = mapSubpositions(pos, sequent, {
+          case (t@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), _), pp) =>
+            if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name) Some((t, (pp, (minmax(pp).computeResult _)(_))))
+            else None
+          case _ => None
+        })
+        //@note take only the first position, because minmax itself abbreviates before expanding and so expands other positions with it; then reverse-sort by "posInExpr" length to work inside out
+        positions.groupBy(_._1).map(_._2.head._2).toList.sortBy(_._1.inExpr.pos.length).reverseMap(_._2).foldLeft(provable)({ (pr, r) => pr(r, 0) })
       case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), t: Pair))
           if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
         if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
@@ -624,9 +628,9 @@ private object EqualityTactics {
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
-        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(opt(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
         case _ => None
       })
     )
@@ -643,9 +647,9 @@ private object EqualityTactics {
     ProofRuleTactics.requireOneSubgoal(provable, "expandAllAt")
     val tactics =
       Idioms.mapSubpositions(pos, provable.subgoals.head, {
-        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
-        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos).computeResult _)(_))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(opt(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(opt(protectPos(minmax)(pos)))
         case _ => None
       })
     tactics.foldLeft(provable)({ (pr, r) => pr(r, 0) })

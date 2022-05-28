@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPositio
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Nil
@@ -21,7 +22,7 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "unify ODEs correctly" in withQE { _ =>
-      val ax = ElidingProvable(Provable.vectorialDG(2)._1)
+      val ax = ElidingProvable(Provable.vectorialDG(2)._1, Declaration(Map.empty))
       val pr = proveBy(
         ("[{y'=z,z'=-y,x'=1 & x <= 5}](y*y+z*z) <= x^2 ->" +
           "([{x'=1 & x <= 5}]x >= 5 <- [{y'=z,z'=-y,x'=1 & x <= 5}]x>=5)").asFormula,
@@ -351,6 +352,15 @@ class ODELivenessTests extends TacticTestBase {
   it should "support semialgebraic dV auto (disjunctive)" in withMathematica { _ =>
     val pr = proveBy("v!=0 -> v=0 | <{x'=v}> (x>100 | x < 100)".asFormula,
       implyR(1) & orR(1) & semialgdVAuto()(2)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "support semialgebraic dV auto 2" in withMathematica { _ =>
+    val pr = proveBy("<{u'=-u^3}>(-1<=u & u <=1 )".asFormula,
+      semialgdVAuto()(1)
     )
 
     println(pr)

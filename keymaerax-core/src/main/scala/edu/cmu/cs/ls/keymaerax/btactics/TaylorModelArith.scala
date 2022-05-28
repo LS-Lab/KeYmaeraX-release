@@ -53,7 +53,7 @@ object TaylorModelArith {
 
   private def weakenWith(context: IndexedSeq[Formula], prv: ProvableSig) : ProvableSig = {
     assert(prv.conclusion.ante.isEmpty)
-    ProvableSig.startProof(Sequent(context, prv.conclusion.succ)).apply(CoHideRight(SuccPos(0)), 0).apply(prv, 0)
+    ProvableSig.startPlainProof(Sequent(context, prv.conclusion.succ)).apply(CoHideRight(SuccPos(0)), 0).apply(prv, 0)
   }
 
   /** @note: these are only here because .provable is horribly slow */
@@ -204,7 +204,7 @@ object TaylorModelArith {
       val poly2 = polyFalse
       val newElemEq = Equal(newElem, Minus(elem, polyTrue.term))
       val newContext = context:+newElemEq
-      val newElemPrv = ProvableSig.startProof(Sequent(newContext, IndexedSeq(newElemEq)))(Close(AntePos(context.length), SuccPos(0)), 0)
+      val newElemPrv = ProvableSig.startPlainProof(Sequent(newContext, IndexedSeq(newElemEq)))(Close(AntePos(context.length), SuccPos(0)), 0)
       val inst = Seq(
         ("elem_", elem),
         ("poly_", rhsOf(poly.representation)),
@@ -429,7 +429,7 @@ object TaylorModelArith {
       val prettyLower = if (l1 == l2) Number(l1) else lower
       val prettyUpper = if (u1 == u2) Number(u1) else upper
       val prettyRepresentation = poly.resetTerm.prettyRepresentation
-      proveBy(ProvableSig.startProof(Sequent(context, IndexedSeq(tmFormula(elem, rhsOf(prettyRepresentation),
+      proveBy(ProvableSig.startPlainProof(Sequent(context, IndexedSeq(tmFormula(elem, rhsOf(prettyRepresentation),
         prettyLower, prettyUpper)))).apply(CutRight(prv.conclusion.succ(0), SuccPos(0)), 0).
         apply(CoHideRight(SuccPos(0)), 1).
         apply(ImplyRight(SuccPos(0)), 1),
@@ -474,7 +474,7 @@ object TaylorModelArith {
 
     def weakenContext(formula: Formula) = {
       val l = prv.conclusion.ante.length
-      val newPrv = ProvableSig.startProof(Sequent(prv.conclusion.ante++Seq(formula), prv.conclusion.succ)).
+      val newPrv = ProvableSig.startPlainProof(Sequent(prv.conclusion.ante++Seq(formula), prv.conclusion.succ)).
         apply(HideLeft(AntePos(l)), 0).
         apply(prv, 0)
       TM(elem, poly, lower, upper, newPrv)

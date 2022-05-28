@@ -235,6 +235,14 @@ class FOQuantifierTests extends TacticTestBase {
       subgoals.loneElement shouldBe "y_0'=4, y'=z+1, [y':=y'+1;]y'>0 ==> ".asSequent
   }
 
+  "all instantiate inverse" should "introduce a universal quantifier for a variable" in withTactics {
+    proveBy("==> x=4".asSequent, allInstantiateInverse("x".asTerm -> "y".asVariable)(1)).subgoals.loneElement shouldBe "==> \\forall y y=4".asSequent
+  }
+
+  it should "weaken any term to a universal quantifier" in withTactics {
+    proveBy("==> x=4".asSequent, allInstantiateInverse("4".asTerm -> "y".asVariable)(1)).subgoals.loneElement shouldBe "==> \\forall y x=y".asSequent
+  }
+
   "existsR" should "instantiate simple formula" in withTactics {
     val result = proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),

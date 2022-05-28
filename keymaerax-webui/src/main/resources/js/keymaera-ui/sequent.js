@@ -1,6 +1,6 @@
 angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies', 'angularSpinners'])
-  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', 'sequentProofData', 'derivationInfos',
-      function($rootScope, $uibModal, $http, spinnerService, sequentProofData, derivationInfos) {
+  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', '$document', 'spinnerService', 'sequentProofData', 'derivationInfos',
+      function($rootScope, $uibModal, $http, $document, spinnerService, sequentProofData, derivationInfos) {
     return {
         restrict: 'AE',
         scope: {
@@ -103,10 +103,11 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                 resolve: {
                   tactics: function() { return tactics; },
                   readOnly: function() { return false; },
-                  userId: function() { return undefined; },
-                  proofId: function() { return undefined; },
+                  userId: function() { return scope.userId; },
+                  proofId: function() { return scope.proofId; },
+                  nodeId: function() { return scope.nodeId; },
                   defaultPositionLocator: function() { return undefined; },
-                  sequent: function() { return undefined; }
+                  sequent: function() { return sequentProofData.proofTree.nodesMap[scope.nodeId].getSequent(); }
                 }
               });
 
@@ -145,16 +146,19 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.formulaAxiomsMap = {};
             scope.tacticPopover = {
               openFormulaId: undefined,
-              isOpen: function(formulaId) {
-                // open if formulaId is prefix of openFormulaId (prefix elements separated by ,)
-                return scope.tacticPopover.openFormulaId &&
-                  (scope.tacticPopover.openFormulaId.length == formulaId.length ||
-                   scope.tacticPopover.openFormulaId.charAt(formulaId.length) == ',') &&
-                  scope.tacticPopover.openFormulaId.startsWith(formulaId);
-              },
               open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
-              close: function() { scope.derivationInfos.infos = []; scope.tacticPopover.openFormulaId = undefined; }
+              close: function() {
+                  //@note manually dispatch the popover hide trigger
+                  if (scope.tacticPopover.openFormulaId) {
+                      var i = scope.tacticPopover.openFormulaId.indexOf(',')
+                      var fid = i >= 0 ? scope.tacticPopover.openFormulaId.substring(0, i) : scope.tacticPopover.openFormulaId
+                      document.getElementById(fid).dispatchEvent(new Event('outsideClick'));
+                      $document.off('click', scope.onDocumentClick);
+                      scope.derivationInfos.infos = [];
+                      scope.tacticPopover.openFormulaId = undefined;
+                  }
+              }
             }
 
             scope.fetchFormulaAxioms = function(formulaId, axiomsHandler) {
@@ -203,9 +207,22 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.onExprRightClick = function(formulaId) {
+              scope.tacticPopover.close()
               scope.fetchFormulaAxioms(formulaId, function() {
                 scope.tacticPopover.open(formulaId);
+                //@note dispatch popover trigger on correct element and register document click to detect outsideClick
+                var i = formulaId.indexOf(',')
+                var fid = i >= 0 ? formulaId.substring(0, i) : formulaId
+                document.getElementById(fid).dispatchEvent(new Event('rightClick'));
+                $document.on('click', scope.onDocumentClick)
               });
+            }
+
+            scope.onDocumentClick = function(e) {
+                var popover = $document.find('body')[0].querySelector('.popover'); //@note the axiom popover is added to the body
+                if (!elem[0].contains(e.target) && !popover.contains(e.target)) {
+                    scope.tacticPopover.close()
+                }
             }
 
             scope.derivationInfos = {

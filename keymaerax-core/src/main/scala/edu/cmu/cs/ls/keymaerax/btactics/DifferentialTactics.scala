@@ -148,9 +148,9 @@ private object DifferentialTactics extends Logging {
               interp.nonEmpty || defs.decls.get(Name(n, i)).exists(_.interpretation.isDefined)
             case _ => false
           }).map({
-            case fn@Function(_, _, _, _, interp) =>
-              if (interp.nonEmpty) EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
-              else Expand(fn, None)
+            case fn@Function(_, _, _, _, interpreted) =>
+              if (interpreted.nonEmpty) EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
+              else expandFw(fn, None)
           }).reduceRightOption[BelleExpr](_ & _)
         case _ => None
       }
@@ -707,8 +707,8 @@ private object DifferentialTactics extends Logging {
   @Tactic(names="x'",
     conclusion="__(x)'__ = x",
     displayLevel="internal")
-  private[btactics] lazy val Dvariable: DependentPositionTactic = anon ( (pos:Position, sequent:Sequent) => {
-
+  private[btactics] lazy val Dvariable: BuiltInPositionTactic = anon { (pr: ProvableSig, pos:Position) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "Dvariable")
     val OPTIMIZED = true
     val axiom: AxiomInfo = Ax.DvariableCommutedAxiom
     val (_, keyPart) = axiom.formula.at(PosInExpr(1::Nil))
@@ -722,26 +722,35 @@ private object DifferentialTactics extends Logging {
       }
     }
 
+    val sequent = pr.subgoals.head
     sequent.sub(pos) match {
-        case Some(Differential(x: Variable)) =>
-          if (OPTIMIZED) {
-            logger.debug("Dvariable " + keyPart + " on " + x)
-            val fact = UnificationMatch.apply(keyPart, Differential(x)).toForward(axiom.provable)
-            CEat(fact)(pos)
-          } else {
-            val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x))
-            val axiom = Forall(List(x), Equal(Differential(x), DifferentialSymbol(x)))
-            cutLR(withxprime)(pos.topLevel) <(
-              /* use */ skip,
-              /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.top), pos.inExpr)) & cut(axiom) <(
-              useAt(Ax.alle)(-1) & eqL2R(-1)(1) & useAt(Ax.implySelf)(1) & close,
-              cohide('Rlast) & byUS(Ax.DvariableAxiom))
-              )
-          }
-        case Some(e) => throw new TacticInapplicableFailure("Dvariable only applicable to Differentials, but got " + e.prettyString)
-        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-      }
-  })
+      case Some(Differential(x: Variable)) =>
+        if (OPTIMIZED) {
+          logger.debug("Dvariable " + keyPart + " on " + x)
+          val fact = UnificationMatch.apply(keyPart, Differential(x)).toForward(axiom.provable)
+          pr(CEat(fact)(pos), 0)
+        } else {
+          val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x))
+          val axiom = Forall(List(x), Equal(Differential(x), DifferentialSymbol(x)))
+          pr(cutLRFw(withxprime)(pos.topLevel), 0)(
+            // use case (goal 0) remains open
+            // show cut withxprime
+            cohide(pos.top), 1)(
+            CMonFw(formulaPos(sequent(pos.top), pos.inExpr)), 1)(
+            Cut(axiom), 1)(
+            // show cut axiom
+            cohide('Rlast), 2)(
+            byUS(Ax.DvariableAxiom.provable), 2)(
+            // use cut axiom
+            useAt(Ax.alle)(-1), 1)(
+            eqL2R(-1)(1), 1)(
+            useAt(Ax.implySelf.provable)(1), 1)(
+            close, 1)
+        }
+      case Some(e) => throw new TacticInapplicableFailure("Dvariable only applicable to Differentials, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+  }
 
   /**
    * Unpacks the evolution domain of an ODE at time zero. Useful for proofs that rely on contradictions with other
@@ -1254,7 +1263,7 @@ private object DifferentialTactics extends Logging {
 
     // expand abbreviations of interpreted symbols
     val interpreted = defs.substs.filter(_.repl match { case FuncOf(Function(_, _, _, _, Some(_)), _) => true case _ => false })
-    if (interpreted.nonEmpty) ExpandAll(interpreted) & ode
+    if (interpreted.nonEmpty) expandAllDefsFw(interpreted) & ode
     else ode
   })
 
@@ -1320,8 +1329,8 @@ private object DifferentialTactics extends Logging {
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
-    val property = seq.sub(pos) match {
-      case Some(Box(_: ODESystem, property)) => property
+    val (ode,property) = seq.sub(pos) match {
+      case Some(Box(ode: ODESystem, property)) => (ode,property)
       case Some(e) => throw new TacticInapplicableFailure("dbx only applicable to box ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
@@ -1333,13 +1342,14 @@ private object DifferentialTactics extends Logging {
       case e => throw new TacticInapplicableFailure(s"Not sure what to do with shape ${e.prettyString}, dgDbx requires 0 on RHS")
     }
 
+    val qcoRepl = ODEInvariance.replaceODEfree(p,qco,ode.ode)
     val (dbxRw,subst) = pop match {
-      case Equal(_,_) => (Ax.DBXeq,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
-      case GreaterEqual(_,_) => (Ax.DBXge,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
-      case LessEqual(_,_) => (Ax.DBXle,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
-      case Greater(_,_) => (Ax.DBXgtOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
-      case Less(_,_) => (Ax.DBXltOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
-      case NotEqual(_,_) => (Ax.DBXneOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
+      case Equal(_,_) => (Ax.DBXeq,RenUSubst(("g(|y_,z_|)".asTerm, qcoRepl) :: Nil))
+      case GreaterEqual(_,_) => (Ax.DBXge,RenUSubst(("g(|y_,z_|)".asTerm, qcoRepl) :: Nil))
+      case LessEqual(_,_) => (Ax.DBXle,RenUSubst(("g(|y_,z_|)".asTerm, qcoRepl) :: Nil))
+      case Greater(_,_) => (Ax.DBXgtOpen,RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
+      case Less(_,_) => (Ax.DBXltOpen,RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
+      case NotEqual(_,_) => (Ax.DBXneOpen,RenUSubst(("g(|y_|)".asTerm, qcoRepl) :: Nil))
       case _ =>  ??? // caught by exception in previous case match
     }
 

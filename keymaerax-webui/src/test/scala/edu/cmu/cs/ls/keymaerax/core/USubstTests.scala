@@ -140,7 +140,7 @@ class USubstTests extends TacticTestBase {
     val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm()), GreaterEqual(Power(DotTerm(), Number(5)), Number(0)))))
     val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
-    ProvableSig.startProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
+    ProvableSig.startPlainProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
 
   it should "old substitute simple sequent p(x) <-> ! ! p(- - x)" in {
@@ -175,7 +175,7 @@ class USubstTests extends TacticTestBase {
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm()), GreaterEqual(DotTerm(), Number(2))),
       SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
     val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
-    ProvableSig.startProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
+    ProvableSig.startPlainProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
   it should "old substitute simple sequent [a]p(x) <-> [a](p(x)&true)" in {
     val p = Function("p", None, Real, Bool)
@@ -287,7 +287,7 @@ class USubstTests extends TacticTestBase {
     UniformSubstitutionRule(s, Sequent(IndexedSeq(), IndexedSeq(prem)))(Sequent(IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(IndexedSeq(), IndexedSeq(prem))))
   }
 
-  it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
+  it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in withQE { _ =>
     val x = Variable("x_",None,Real)
     val fml = GreaterEqual(x, Number(0))
     val prem = Ax.allV.provable
@@ -653,7 +653,7 @@ class USubstTests extends TacticTestBase {
       UniformRenaming(y, Variable("x")))
     inst2 shouldBe 'proved
     inst2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected2))
-    val inst3 = (ProvableSig.startProof(expected2)
+    val inst3 = (ProvableSig.startPlainProof(expected2)
       (UniformRenaming(y, Variable("x")), 0)
       (inst, 0)
       )

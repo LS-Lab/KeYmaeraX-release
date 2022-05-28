@@ -54,17 +54,37 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
 
   //@todo have pollers register here
   var pollRequests = [ '/isLocal', 'tools/vitalSigns' ];
+  var errorDialogOpened = false;
 
   var responseInterceptor = {
     loginPromise: null,
     response: function(response) {
-      if (response.data !== undefined && response.data !== null && response.data.type === 'error') {
+      if (response.data && (response.data.type === 'error' || response.data.type === 'uncaught')) {
         console.error(response.data.textStatus);
+        if (!errorDialogOpened) {
+          // show error report dialog (but only one to prevent lots of error dialogs)
+          var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
+          var modalInstance = $uibModal.open({
+            templateUrl: 'partials/error_alert.html',
+            controller: 'ErrorAlertCtrl',
+            size: 'lg',
+            resolve: {
+              url: function() { return response.config.url; },
+              message: function () { return response.data.textStatus; },
+              error: function () { return response.data; },
+              context: function () { return {}; }
+            }
+          });
+          errorDialogOpened = true;
+          modalInstance.result.then(function () {
+            errorDialogOpened = false;
+          }, function () {
+            errorDialogOpened = false;
+          });
+        }
         // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
         return $q.reject(response);
-      } else if (response.data !== undefined && response.data !== null && response.data.type === 'uncaught') {
-        console.error(response.data.textStatus);
-        // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
+      } else if (response.data && response.data.type === 'tacticerror') {
         return $q.reject(response);
       }
       return response;
@@ -92,20 +112,29 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
         $http.get("tools/cancel");
       } else if (rejection.status === 500) {
         // report uncaught server-side exception
-        var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
-        var modalInstance = $uibModal.open({
-          templateUrl: 'partials/error_alert.html',
-          controller: 'ErrorAlertCtrl',
-          size: 'lg',
-          resolve: {
-            url: function() { return rejection.config.url; },
-            message: function () { return rejection.data.textStatus; },
-            error: function () { return rejection.data; },
-            context: function () { return {}; }
-          }
-        });
-        // response handled here, prevent further calls
-        return rejection;
+        console.error(rejection.data.textStatus);
+        if (!errorDialogOpened) {
+          var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
+          var modalInstance = $uibModal.open({
+            templateUrl: 'partials/error_alert.html',
+            controller: 'ErrorAlertCtrl',
+            size: 'lg',
+            resolve: {
+              url: function() { return rejection.config.url; },
+              message: function () { return rejection.data.textStatus; },
+              error: function () { return rejection.data; },
+              context: function () { return {}; }
+            }
+          });
+          errorDialogOpened = true;
+          modalInstance.result.then(function () {
+            errorDialogOpened = false;
+          }, function () {
+            errorDialogOpened = false;
+          });
+        }
+        // forward to .catch handlers
+        return $q.reject(rejection);
       } else if (rejection.status === 401 || rejection.status === 403) {
         // session expired or user does not have privileges to access data -> display login
         var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency

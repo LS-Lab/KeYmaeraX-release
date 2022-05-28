@@ -165,7 +165,7 @@ class Compbased extends TacticTestBase {
 
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(entry.model.asInstanceOf[Formula],
       List("po","po0","so","t","t0").map(Variable(_)), ListMap.empty)
-    val monitor = proveBy(modelplexInput, ExpandAll(entry.defs.substs) & ModelPlex.modelMonitorByChase(1) &
+    val monitor = proveBy(modelplexInput, expandAllDefs(entry.defs.substs) & ModelPlex.modelMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1), defs = entry.defs)
     monitor.subgoals.loneElement shouldBe "==> (0<=sopost&sopost<=S())&true&(((t0post<=tpost&t=t0post)&sopost=sopost)&po+sopost*tpost=popost+sopost*t)&po=po0post".asSequent
 
@@ -222,7 +222,7 @@ class Compbased extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val entry = ArchiveParser.getEntry("Remote-Controlled Robot System Avoids Obstacles",
         io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-      proveBy(entry.model.asInstanceOf[Formula], ExpandAll(entry.defs.substs) & proveSystem(
+      proveBy(entry.model.asInstanceOf[Formula], expandAllDefs(entry.defs.substs) & proveSystem(
         "robotcomponents/Robot Obstacle",
         "robotcomponents/Robot Base Case",
         "robotcomponents/Robot Use Case",

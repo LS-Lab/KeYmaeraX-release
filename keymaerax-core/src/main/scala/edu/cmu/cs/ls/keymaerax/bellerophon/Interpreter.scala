@@ -41,13 +41,17 @@ trait Interpreter {
 
   /** Compares provables ignoring labels. */
   protected def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
-    case (BelleProvable(pPrev, _, _), BelleProvable(pCurr, _, _)) => pCurr != pPrev
+    case (BelleProvable(pPrev, _), BelleProvable(pCurr, _)) => pCurr != pPrev
     case _ => curr != prev
   }
 
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
-  protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration): USubst =
-    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, defs.substs)
+  protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig): USubst =
+    UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, goal.defs.substs)
+
+  /** Collects substitutions (of `defs`) that are needed to make `have` fit `goal`. */
+  protected def collectSubst(goal: Sequent, have: Sequent, haveIsProved: Boolean, defs: Declaration): USubst =
+    UnificationTools.collectSubst(goal, have, haveIsProved, defs.substs)
 
 
   /** Applies substitutions `s` to provable `p` exhaustively. */
@@ -83,16 +87,15 @@ trait Interpreter {
     }
   } ensures(r => r match {
     case (rmerged: Boolean, rp: ProvableSig) =>
-      ((!rmerged && rp==subderivation) ||
+      (!rmerged && rp==subderivation) ||
        ( rmerged && exhaustiveSubst(rp, subst).conclusion == exhaustiveSubst(original, subst).conclusion &&
          (if (subderivation.isProved) {
            rp.subgoals.size == original.subgoals.size - 1
          } else {
-           rp.subgoals(n) == subderivation.subgoals(0) &&
-             rp.subgoals.takeRight(subderivation.subgoals.size - 1) == subderivation.subgoals.tail
+           subst(rp.subgoals(n)) == subst(subderivation.subgoals(0)) &&
+             rp.subgoals.takeRight(subderivation.subgoals.size - 1).map(subst(_)) == subderivation.subgoals.tail.map(subst(_))
          })
        )
-      )
   })
 
   /** Assert that the conclusion of provable `sub` matches the subgoal `n` of provable `parent` either verbatim or

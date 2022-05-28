@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ProverSetupException}
+import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -13,11 +13,22 @@ import scala.collection.immutable.List
 case class Name(name: String, index: Option[Int] = None) {
   def prettyString: String = name + index.map("_" + _).getOrElse("")
 }
-/** Signature is a domain sort, codomain sort, argument names, expression used as interpretation, location that starts the declaration. */
+/** Signature is a domain sort, codomain sort, argument names, expression used as interpretation, location that starts the declaration.
+  * The signature of a function/predicate/program symbol.
+  * @param domain the source domain required as an argument (if any).
+  * @param codomain the resulting target domain.
+  * @param arguments the list of named arguments (and their sorts which are compatible with `domain`).
+  * @param interpretation uninterpreted symbol if None, or the interpretation of interpreted symbols.
+  * @param loc the location in the model archive file where this was declared.
+  */
+//@todo check whether domain sort is compatible with sorts of arguments
 case class Signature(domain: Option[Sort], codomain: Sort, arguments: Option[List[(Name, Sort)]],
                      interpretation: Option[Expression], loc: Location)
 
-/** A parsed declaration, which assigns a signature to names. */
+/** A parsed declaration, which assigns a signature to names.
+  * This is the central data structure remembering which name belongs to which function/predicate/program symbol declaration
+  * of a model in an archive.
+  */
 case class Declaration(decls: Map[Name, Signature]) {
   /** The declarations as topologically sorted substitution pairs. */
   lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2.interpretation.isDefined).map({
@@ -243,6 +254,23 @@ object Declaration {
         }
     }
   }
+
+  /** Converts a list of substitution pairs `s` into a declaration. */
+  def fromSubst(s: List[SubstitutionPair]): Declaration = {
+    def argsFromExpr(t: Expression): Option[List[(Name, Sort)]] = {
+      val symbols = StaticSemantics.symbols(t)
+      if (symbols.isEmpty) None
+      else Some(StaticSemantics.symbols(t).map(s => Name(s.name, s.index) -> s.sort).toList)
+    }
+    Declaration(s.map({
+      case SubstitutionPair(af: ApplicationOf, r) =>
+        Name(af.func.name, af.func.index) -> Signature(Some(af.func.domain), af.func.sort, argsFromExpr(af.child), Some(r), UnknownLocation)
+      case SubstitutionPair(s: SystemConst, r) =>
+        Name(s.name, s.index) -> Signature(None, s.sort, None, Some(r), UnknownLocation)
+      case SubstitutionPair(s: ProgramConst, r) =>
+        Name(s.name, s.index) -> Signature(None, s.sort, None, Some(r), UnknownLocation)
+    }).toMap)
+  }
 }
 
 /** The entry name, kyx file content (model), definitions, parsed model, and parsed named tactics. */
@@ -303,7 +331,10 @@ object ArchiveParser extends ArchiveParser {
   private[this] var p: ArchiveParser = _
 
   /** The parser that is presently used per default. */
-  def parser: ArchiveParser = p
+  def parser: ArchiveParser = {
+    if (p != null) p
+    else throw new ProverSetupException("No archive parser set. Please check the command line during startup for error messages.")
+  }
 
   /** Set a new parser. */
   def setParser(parser: ArchiveParser): Unit = { p = parser }

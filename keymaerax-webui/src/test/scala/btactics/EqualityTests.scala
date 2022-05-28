@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, SaturateTactic, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -373,6 +372,11 @@ class EqualityTests extends TacticTestBase {
       subgoals.loneElement shouldBe "a=2&five=abs_, -5>=0&abs_=-5 | -5 < 0&abs_=-(-5) ==>".asSequent
   }
 
+  it should "expand nested" in withQE { _ =>
+    proveBy("x <= abs(abs(x)) + abs(abs(x))".asFormula, abs(1)).subgoals.
+      loneElement shouldBe "x>=0&abs_=x|x < 0&abs_=-x, abs_>=0&abs__0=abs_|abs_ < 0&abs__0=-abs_ ==> x<=abs__0+abs__0".asSequent
+  }
+
   "min" should "expand min(x,y) in succedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x<=y&min_=x | x>y&min_=y ==> min_>=5".asSequent
@@ -412,18 +416,23 @@ class EqualityTests extends TacticTestBase {
 
   it should "expand exhaustively when applied to a formula" in withQE { _ =>
     proveBy("min(x,max(y,y^2)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
-      """y>=y^2&max_=y | y < y^2&max_=y^2,
-        |x<=y^2&min_=x | x>y^2&min_=y^2,
-        |x<=max_&min__0=x | x>max_&min__0=max_
+      """x<=max_&min_=x|x>max_&min_=max_,
+        |x<=y^2&min__0=x|x>y^2&min__0=y^2,
+        |y>=y^2&max_=y|y < y^2&max_=y^2
         |==>
-        |min__0+min_<=2*max_""".stripMargin.asSequent
+        |min_+min__0<=2*max_""".stripMargin.asSequent
     proveBy("min(x,max(y,z)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
-      """y>=y^2&max_=y | y < y^2&max_=y^2,
-        |x<=y^2&min_=x | x>y^2&min_=y^2,
-        |y>=z&max__0=y | y < z&max__0=z,
-        |x<=max__0&min__0=x | x>max__0&min__0=max__0
+      """y>=z&max_=y|y < z&max_=z,
+        |x<=max_&min_=x|x>max_&min_=max_,
+        |x<=y^2&min__0=x|x>y^2&min__0=y^2,
+        |y>=y^2&max__0=y|y < y^2&max__0=y^2
         |==>
-        |min__0+min_<=2*max_""".stripMargin.asSequent
+        |min_+min__0<=2*max__0""".stripMargin.asSequent
+  }
+
+  it should "expand same nested" in withQE { _ =>
+    proveBy("0 <= min(min(x,y), z) + min(min(x,y), z)".asFormula, minmax(1)).subgoals.
+      loneElement shouldBe "x<=y&min_=x|x>y&min_=y, min_<=z&min__0=min_|min_>z&min__0=z ==> 0<=min__0+min__0".asSequent
   }
 
   "max" should "expand max(x,y) in succedent" in withQE { _ =>

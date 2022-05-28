@@ -9,7 +9,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.ProverSetupException
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.util.Try
@@ -85,7 +85,10 @@ object Parser extends (String => Expression) {
   private[this] var p: Parser = ParserInit.fromConfig()
 
   /** The parser that is presently used per default. */
-  def parser: Parser = p
+  def parser: Parser = {
+    if (p != null) p
+    else throw new ProverSetupException("No parser set. Please check the command line during startup for error messages.")
+  }
 
   /** Set a new parser. */
   def setParser(parser: Parser): Unit = { p = parser }

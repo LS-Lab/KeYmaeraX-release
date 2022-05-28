@@ -140,14 +140,23 @@ class KMComparator(val l: MExpr) {
   /** equality modulo some limited form of associativity that Mathematica implicitly converts into n-ary operators */
   private def naryEquals(l: MExpr, r: MExpr, expectedHead: MExpr): Boolean = {
     // Op[Op[a,b], c] === Op[a,b,c]
-    def checkBinary(l: MExpr, r: MExpr, i: Int): Boolean = {
-      (l.head() === r.head() && l.args().length == 2 && l.args().last === r.args().reverse(i) &&
-        (if (hasHead(l.args().head, expectedHead)) checkBinary(l.args().head, r, i+1)
-         else l.args().head === r.args().reverse(i+1))) ||
-      // List of Ands: first argument could be an Inequality, don't recurse
-      (i == r.args().length-1 && l === r.args().reverse(i))
+    def flattenBinaryL(e: MExpr): List[MExpr] = {
+      if (e.head() == expectedHead) flattenBinaryL(e.args().head) :+ e.args()(1)
+      else List(e)
     }
-    checkBinary(l, r, 0)
+    // Op[a, Op[b,c]] === Op[a,b,c]
+    def flattenBinaryR(e: MExpr): List[MExpr] = {
+      if (e.head() == expectedHead) e.args().head +: flattenBinaryR(e.args()(1))
+      else List(e)
+    }
+
+    val lf = flattenBinaryL(l)
+    if (lf.size == r.args().length) lf.zip(r.args()).forall({ case (r, l) => r === l})
+    else {
+      val rf = flattenBinaryR(l)
+      if (rf.size == r.args().length) rf.zip(r.args()).forall({ case (r, l) => r === l})
+      else false
+    }
   }
 }
 

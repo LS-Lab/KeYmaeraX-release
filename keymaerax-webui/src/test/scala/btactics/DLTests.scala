@@ -91,6 +91,11 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> \\forall x [x':=2;](x>0)'".asSequent
   }
 
+  it should "work on ODEs in existential context" in withMathematica { _ =>
+    proveBy("x>0 ==> \\exists y (true->x*y^2=1&[{x'=-x,y'=1/2*y}][y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y*y')=0)".asSequent, abstractionb(1, 0::1::1::Nil)).
+      subgoals.loneElement shouldBe "x>0 ==> \\exists y (true->x*y^2=1&\\forall x \\forall y [y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y*y')=0)".asSequent
+  }
+
   it should "work with ODEs followed by diff assigns, multi-var case" in withMathematica { _ =>
     val result = proveBy("[{x'=2,y'=3,z'=4}][x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asFormula, abstractionb(1))
     result.subgoals.loneElement shouldBe "==> \\forall x \\forall y \\forall z [x':=2;][y':=3;][z':=4;](x>0&y=17&z<4)'".asSequent
@@ -427,6 +432,15 @@ class DLTests extends TacticTestBase {
     )
   }
 
+  it should "keep conjunctive constants around when pre is nil" in withTactics {
+    proveBy("x_0=0&y_0=1, x_0=x, y_0=y ==> [{y:=y+x;x:=x+1;}*]y>=0".asSequent, DLBySubst.loop("x>=0&y>=1".asFormula, nil)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x_0=0&y_0=1, x_0=x, y_0=y ==> x>=0&y>=1".asSequent,
+      /* use case */ "x>=0&y>=1, x_0=0&y_0=1 ==> y>=0".asSequent,
+      /* step */     "x>=0&y>=1, x_0=0&y_0=1 ==> [y:=y+x;x:=x+1;](x>=0&y>=1)".asSequent
+    )
+  }
+
   it should "FEATURE_REQUEST: keep constants around when definitions are not expanded" taggedAs TodoTest in withTactics {
     val defs = Declaration(Map(
       Name("initial") -> Signature(Some(Tuple(Real, Real)), Bool, Some(List(Name("x")->Real, Name("y")->Real)), Some("x>2 & y>0".asFormula), UnknownLocation),
@@ -671,9 +685,9 @@ class DLTests extends TacticTestBase {
 
     val proofId = db.createProof(model)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
 
-    val BelleProvable(result, _, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
+    val BelleProvable(result, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(fml)))
     result.subgoals.size shouldBe 3
     val finalTree = DbProofTree(db.db, proofId.toString).load()
     finalTree.openGoals.flatMap(_.goal) should contain theSameElementsAs result.subgoals
@@ -956,6 +970,13 @@ class DLTests extends TacticTestBase {
     //@todo last step (implyR) in assignEquality step used in discreteGhost changes position
     val result = proveBy("a=1 ==> b=2, [x:=5+0;]x>0, c=3".asSequent, discreteGhost("0".asTerm, Some("z".asVariable))(2))
     result.subgoals.loneElement shouldBe "a=1, z=0 ==> b=2, [x:=5+z;]x>z, c=3".asSequent
+  }
+
+  it should "move formula reliably to end until positions are stable for a set of ghosts" in withTactics {
+    val s = "==> [{x'=a,y'=b,a'=c}]x>=0, P(x), Q(y)".asSequent
+    val result = proveBy(s, DLBySubst.discreteGhosts(Set("a".asVariable, "b".asVariable), s,
+      (g: List[((Term, Variable), BelleExpr)]) => g.map(_._2).reduceRight(_ & _))(1))
+    result.subgoals.loneElement shouldBe "a_0=a, b_0=b ==> P(x), Q(y), [{x'=a,y'=b_0,a'=c}]x>=0".asSequent
   }
 
   it should "introduce differential symbol ghosts" in withTactics {

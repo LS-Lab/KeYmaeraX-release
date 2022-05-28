@@ -137,7 +137,7 @@ object TaylorModelTactics extends Logging {
               }
               case _ => false
             })
-            poss.foldRight(fail){ case (subpos, a) => useAt(prv, PosInExpr(0 :: Nil))(pos ++ subpos) | a }
+            poss.foldRight[BelleExpr](fail){ case (subpos, a) => useAt(prv, PosInExpr(0 :: Nil))(pos ++ subpos) | a }
           case _ => throw new TacticInapplicableFailure("rewriteFormula not on Formula.")
         }
       case _ => throw new InputFormatFailure("rewriteFormula expects an Equiv as single conclusion of provable but got:\\n" + prv)

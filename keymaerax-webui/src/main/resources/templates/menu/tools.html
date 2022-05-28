@@ -17,13 +17,13 @@
             ng-if="tool=='mathematica' || tool=='wolframengine' || tool=='wolframscript'"
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true" hide-long-help="true"
-            name="... in Mathematica" code-name="QE('M')"
+            name="... in Mathematica" code-name="QE"
             exec="doInputTactic(undefined, codeName, [{ param: 'tool', type: 'string', value: 'M' }])"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="tool=='mathematica'||tool=='wolframengine'||tool=='wolframscript'"
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true" hide-long-help="true"
-            name="... in Z3" code-name="QE('Z3')"
+            name="... in Z3" code-name="QE"
             exec="doInputTactic(undefined, codeName, [{ param: 'tool', type: 'string', value: 'Z3' }])"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"

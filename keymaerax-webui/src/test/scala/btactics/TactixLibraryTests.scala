@@ -465,6 +465,10 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(s, unfoldProgramNormalize).subgoals.loneElement shouldBe "x>=0, x+1>=0, x>=-2 -> x<=2 -> x^2<=4 ==>".asSequent
   }
 
+  it should "not unfold diamond loops" in withQE { _ =>
+    proveBy("==> x>=0 -> <{x:=x+1;}*>x>=4".asSequent, unfoldProgramNormalize).subgoals.loneElement shouldBe "x>=0 ==> <{x:=x+1;}*>x>=4".asSequent
+  }
+
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
@@ -521,6 +525,7 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "exhaustively apply propositional" in withTactics {
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
+    proveBy("true<->(p()<->q())&q()->p()".asFormula, PropositionalTactics.prop) shouldBe 'proved
   }
 
   it should "inherit labels from core rules with prop" in {
@@ -768,15 +773,32 @@ class TactixLibraryTests extends TacticTestBase {
   it should "use recorded substitutions" in withTactics {
     val lemmaName = "tests/useLemma/tautology2"
     val defs = "f(x) ~> x^2".asDeclaration
-    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(USubst(defs.substs)) & prop, defs = defs)
+    // emulate entry without definition, but proof introduces user-provided substitutions
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, USX(defs.substs) & prop)
     lemma shouldBe 'proved
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil),
       Some("user" + File.separator + lemmaName)))
+    // using lemma verbatim should work
     proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
-    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None))
+    // but insist on a definition when lemma is used non-verbatim, since otherwise might be difficult for user to follow
+    // (conclusion would change after applying the lemma)
+    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), defs)
     result shouldBe 'proved
     result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+
+    // report missing substitution/definition
+    the [IllFormedTacticApplicationException] thrownBy proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None)) should
+      have message """Unable to create input tactic 'expandAllDefs', cause: assertion failed: Unexpected empty substitution since symbols f from goal
+                     |  ==> 1:  f(x)>0->f(x)>0	Imply
+                     |do not occur in sub-derivation
+                     |  ==> 1:  x^2>0->x^2>0	Imply
+                     |and there is no substitution to address the difference""".stripMargin
+
+    // report conflicting substitution/definition
+    val otherDefs = "f(x) ~> x+1".asDeclaration
+    the [IllFormedTacticApplicationException] thrownBy proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), otherDefs) should
+      have message "Substitutions disagree: (f(.)~>.^2) vs. (f(.)~>.+1)"
   }
 
   it should "use definitions" in withTactics {
@@ -789,15 +811,19 @@ class TactixLibraryTests extends TacticTestBase {
         |End.""".stripMargin).head
     val subst = USubst(entry.defs.substs)
     val s@SubstitutionPair(FuncOf(f, _), _) = subst.subsDefsInput.head
-    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, Expand(f, s) & prop, defs = entry.defs)
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, expand("f") & prop, defs = entry.defs)
     lemma shouldBe 'proved
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, ToolEvidence(List("model" -> entry.fileContent, "tactic" -> """expand "f"; prop"""))::Nil),
       Some("user" + File.separator + lemmaName)))
-    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
-    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None))
+    // insist on providing definitions also where lemma is used to detect conflicts between lemma definition and other definition
+    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None), entry.defs) shouldBe 'proved
+    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), entry.defs)
     result shouldBe 'proved
     result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+    val otherDefs = "f(.) ~> .+1 :: nil".asDeclaration
+    the [IllFormedTacticApplicationException] thrownBy proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), otherDefs) should
+      have message "Substitutions disagree: (f(.)~>.^2) vs. (f(.)~>.+1)"
   }
 
   it should "cut in lemma conclusion as assumption when lemma doesn't close" in withTactics {

@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExp
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -142,8 +143,8 @@ object TactixLibrary extends HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id |
-      DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil))
+    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)('R) | doStep(index)('L) | id |
+      DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil)))
   }
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
@@ -158,10 +159,11 @@ object TactixLibrary extends HilbertCalculus
       case (f: Imply, true) => if (f.isPredicateFreeFOL) None else Some(PropositionalTactics.autoMPInfo)
       case (_: Or, true) => None
       case (_: Equiv, _) => None
+      case (Diamond(Loop(_), _), _) => None
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil))
+    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil)))
   }
 
   @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true, displayLevel = "menu")
@@ -257,7 +259,7 @@ object TactixLibrary extends HilbertCalculus
           if (pp.isTopLevel) {
             if (q.isFOL) Some(odeR(pp))
             //@note chase may make progress on some but not all postconditions (e.g. not on loops)
-            else Some(ExpandAll(Nil) & chase(pp ++ PosInExpr(1::Nil)) & SimplifierV3.simplify(pp ++ PosInExpr(1::Nil)) & odeR(pp))
+            else Some(expandAllDefs(Nil) & chase(pp ++ PosInExpr(1::Nil)) & SimplifierV3.simplify(pp ++ PosInExpr(1::Nil)) & odeR(pp))
           } else Some(solve(pp)) //@note doesn't work in context of equivalence
         case _ => None
       })
@@ -282,7 +284,7 @@ object TactixLibrary extends HilbertCalculus
         filter({ case _: ProgramConst | _: SystemConst => true case _ => false }).toList.
         sortBy(n => FormulaTools.posOf(fml, n).get.pos.size) match {
           case Nil => nil
-          case hp :: _ => Expand(hp, None)
+          case hp :: _ => expandFw(hp, None)
         }
     })
 
@@ -291,7 +293,7 @@ object TactixLibrary extends HilbertCalculus
       SaturateTactic(onAll(doStep(index)('R))) | SaturateTactic(onAll(doStep(index)('L))) |
       Idioms.doIf(_.subgoals.exists(!_.isFOL))(
         loop('R) |
-        ExpandAll(Nil) & odeR('R) | solve('R) | solve('L) |
+        expandAllDefs(Nil) & odeR('R) | solve('R) | solve('L) |
         DLBySubst.safeabstractionb('R) |
         odeInContext(odeR)('R) | odeInContext(odeR)('L) |
         hpExpand
@@ -301,12 +303,12 @@ object TactixLibrary extends HilbertCalculus
 
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
-      SaturateTactic(onAll(autoStep)) &
+      SaturateTactic(onAll(Idioms.doIf(!_.isProved)(autoStep))) &
         Idioms.doIf(!_.isProved)(onAll(
           propClose |
           //@note apply equalities inside | to undo in case branches do not close
-          ExpandAll(Nil) & EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done |
-          ?(ExpandAll(Nil) & EqualityTactics.applyEqualities & QE & (if (keepQEFalse) nil else done)))
+          expandAllDefs(Nil) & EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done |
+          ?(expandAllDefs(Nil) & EqualityTactics.applyEqualities & QE & (if (keepQEFalse) nil else done)))
         )
     ))
   }
@@ -577,7 +579,7 @@ object TactixLibrary extends HilbertCalculus
             if (dwPropBase.subgoals.size <= 8) List(AllOf(dwPropBase.subgoals.map(g => Atom(g.succ.head))))
             else List.empty
 
-          t.qe(OneOf(List(diAttempt, dwSmartAttempt, dwPlainAttempt) ++ dwPropAttempts)) match {
+          t.qe(OneOf(List(diAttempt, dwSmartAttempt, dwPlainAttempt) ++ dwPropAttempts), continueOnFalse=true) match {
             case (_, False) => fail
             case (g, True) =>
               if (g == diAttempt) DifferentialTactics.Dconstify(by(di) & OnAll(RCF))(pos)
@@ -981,7 +983,7 @@ object TactixLibrary extends HilbertCalculus
     //    pQE -----------
     conclusion="Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
     displayLevel="browse")
-  def RCF: BelleExpr = anon { ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))}
+  def RCF: BuiltInTactic = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -1033,6 +1035,71 @@ object TactixLibrary extends HilbertCalculus
       elseT
   )
 
+  // region Expand definitions
+
+  /** Applies substitutions `substs` to the products of `generator` and returns a new generator that includes both
+   * original and substituted products */
+  def substGenerator[A](generator: Generator[A], substs: List[USubst]): Generator[A] = generator match {
+    case c: ConfigurableGenerator[(Formula, Option[InvariantGenerator.ProofHint])] =>
+      new ConfigurableGenerator(c.products ++ c.products.map(p =>
+        substs.foldRight[(Expression, scala.collection.Seq[(Formula, Option[InvariantGenerator.ProofHint])])](p)({ case (s, p) => s(p._1) -> p._2.map({ case (f: Formula, h) => s(f) -> h })}))).asInstanceOf[Generator[A]]
+    case c: FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])] =>
+      FixedGenerator(c.list ++ c.list.map(p =>
+        substs.foldRight[(Formula, Option[InvariantGenerator.ProofHint])](p)({ case (s, p) => s(p._1) -> p._2}))).asInstanceOf[Generator[A]]
+    case _ => generator // other generators do not include predefined invariants; they produce their results when asked
+  }
+
+  @Tactic(("Expand", "expand"), codeName = "expand")
+  def expand(n: String): StringInputTactic = inputanonS { (p: ProvableSig) => expandFw(n.asNamedSymbol, None)(p) }
+
+  /** Expands symbol `n` according to its definition in the provable, or if no definition is found, by uniform substitution `s`.
+   * @see [[USubstOne]] */
+  def expandFw(n: NamedSymbol, s: Option[SubstitutionPair]): BuiltInTactic = anon { (pr: ProvableSig) =>
+    val subst = pr.defs.substs.find(_.what match {
+      case FuncOf(fn, _) => fn.name == n.name && fn.index == n.index
+      case PredOf(fn, _) => fn.name == n.name && fn.index == n.index
+      case PredicationalOf(fn, _) => fn.name == n.name && fn.index == n.index
+      case fn: NamedSymbol => fn.name == n.name && fn.index == n.index
+      case fn => fn == n
+    }) match {
+      case Some(pd) => s match {
+        case None => USubst(List(pd))
+        case Some(sd) =>
+          if (pd.repl == sd.repl) USubst(List(pd))
+          else throw new IllFormedTacticApplicationException("Expand " + n.prettyString + " substitutions disagree: " + sd.repl.prettyString + " != " + pd.repl.prettyString)
+      }
+      case None => s match {
+        case Some(sd) => USubst(List(sd))
+        case None => throw new IllFormedTacticApplicationException("Unknown symbol " + n.prettyString + ": neither file definitions nor proof definitions provide information how to expand")
+      }
+    }
+    TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, List(subst))
+    US(subst)(pr)
+  }
+
+  @Tactic()
+  def expandAllDefs(defs: List[SubstitutionPair]): InputTactic = inputanon { expandAllDefsFw(defs) }
+
+  /** Expands all definitions in `pr` exhaustively according to definitions `defs`. Expands all definitions carried
+   * by the provable if `defs` is empty. */
+  def expandAllDefsFw(defs: List[SubstitutionPair]): BuiltInTactic = anon { (pr: ProvableSig) =>
+    val substs =
+      if (defs.nonEmpty) {
+        val diff = defs.map({ case sp@SubstitutionPair(what, _) => sp -> pr.defs.substs.find(_.what == what) }).filterNot({
+          case (argDef, prDef) => prDef.forall(_.repl == argDef.repl)
+        })
+        if (diff.isEmpty) defs.map(s => USubst(List(s)))
+        else throw new IllFormedTacticApplicationException("Substitutions disagree: " + diff.map(d => d._1 + " vs. " + d._2.getOrElse("<undefined>")).mkString(",\n"))
+      } else pr.defs.substs.map(s => USubst(List(s)))
+    if (substs.nonEmpty) {
+      TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
+      // sort substs topologically
+      substs.map(US).reduce[ProvableSig=>ProvableSig](_ andThen _)(pr)
+    } else pr
+  }
+
+  // endregion
+
   // Generate a provable with a tactic
 
   /**
@@ -1049,7 +1116,7 @@ object TactixLibrary extends HilbertCalculus
     *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
     * }}}
     */
-  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal), tactic)
+  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal, Declaration(Map.empty)), tactic)
   /**
     * Prove the new goal by the given tactic, returning the resulting Provable
     *
@@ -1074,15 +1141,14 @@ object TactixLibrary extends HilbertCalculus
     * @see [[TactixLibrary.by(Provable)]]
     * @see [[proveBy()]]
     */
-  def proveBy(goal: ProvableSig, tactic: BelleExpr, defs: Declaration): ProvableSig = {
-    val v = BelleProvable(goal, None, defs)
+  def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = {
+    val v = BelleProvable(goal, None)
     BelleInterpreter(tactic, v) match {
-      case BelleProvable(provable, _, _) => provable
+      case BelleProvable(provable, _) => provable
 //      //@note there is no other case at the moment
 //      case r => throw BelleIllFormedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
     }
   }
-  def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = proveBy(goal, tactic, Declaration(Map.empty))
 
   // lemmas
 
@@ -1160,9 +1226,9 @@ object TactixLibrary extends HilbertCalculus
 
     adapt match {
       case None | Some(TactixLibrary.nil) =>
-        ExpandAll(recordedSubsts) & Idioms.doIfElse(p =>
+        expandAllDefs(recordedSubsts) & Idioms.doIfElse(p =>
           subst.map(_ (p.subgoals.head)).getOrElse(p.subgoals.head) == subst.map(_ (lemma.fact.conclusion)).getOrElse(lemma.fact.conclusion))(byLemma, cutLemma(nil))
-      case Some(t) => ExpandAll(recordedSubsts) & cutLemma(t)
+      case Some(t) => expandAllDefs(recordedSubsts) & cutLemma(t)
     }
   }
 

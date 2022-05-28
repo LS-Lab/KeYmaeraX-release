@@ -84,16 +84,16 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       case Some(id) => id
       case None => createProof(archiveContent, modelName)
     }
-    val globalProvable = ProvableSig.startProof(entry.model.asInstanceOf[Formula])
+    val globalProvable = ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs)
     val expectedSubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.expandedModel.asInstanceOf[Formula]))
     val expectedUnsubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.model.asInstanceOf[Formula]))
     val listener = new TraceRecordingListener(db, pId, None,
       globalProvable, 0 /* start from single provable */, recursive = false, "custom", constructGlobalProvable = false)
     val listeners = listener::Nil ++ additionalListeners
     BelleInterpreter.setInterpreter(interpreter(listeners))
-    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]), None, entry.defs)) match {
-      case BelleProvable(provable, _, _) =>
-        assert(provable.conclusion == expectedSubstConclusion, "The proved conclusion must match the input model")
+    BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
+      case BelleProvable(provable, _) =>
+        assert(entry.defs.exhaustiveSubst(provable.conclusion) == expectedSubstConclusion, "The proved expanded conclusion must match the input model")
         //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
         if (provable.isProved) {
           // check that database thinks so too
@@ -104,7 +104,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
             case None =>
               // delayed substitution: conclusion of input provable is not yet substituted, but conclusion of combined (proved) provable is
               assert(n.conclusion == expectedUnsubstConclusion, "The input conclusion of the root node must match the input model, but conclusion\n" + n.conclusion.prettyString + "\ndoes not match\n" + expectedUnsubstConclusion.prettyString)
-              assert(n.provable.conclusion == expectedSubstConclusion, "The proved conclusion of the root node must match the expanded input model, but conclusion\n" + n.provable.conclusion.prettyString + "\ndoes not match\n" + expectedSubstConclusion.prettyString)
+              assert(entry.defs.exhaustiveSubst(n.provable.conclusion) == expectedSubstConclusion, "The proved expanded conclusion of the root node must match the expanded input model, but conclusion\n" + n.provable.conclusion.prettyString + "\ndoes not match\n" + expectedSubstConclusion.prettyString)
             case Some(parent) =>
             //@todo throughout tactic records goal index and parent provables wrong
             //@todo delayed substitution
@@ -132,8 +132,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
         case Some(tactic) =>
           val localProofId = db.createProof(node.localProvable)
           val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, node.proof.info.defs(db), DBTools.listener(db),
-            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true)
-          interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion), None, node.proof.info.defs(db)))
+            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true, recordInternal=true)
+          interpreter(BelleParser(tactic), BelleProvable.plain(ProvableSig.startProof(node.localProvable.conclusion, node.proof.info.defs(db))))
           extractTactic(localProofId)
       }
     }
@@ -152,7 +152,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
         val proofId = createProof(modelContent)
         val currInterpreter = BelleInterpreter.interpreter
         val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, Declaration(Map.empty), DBTools.listener(db),
-          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true)
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false)
         def interpreter(listeners: Seq[IOListener]): Interpreter = {
           //@note ignore listeners provided by db.proveByWithProofId, use own trace recording listener
           theInterpreter

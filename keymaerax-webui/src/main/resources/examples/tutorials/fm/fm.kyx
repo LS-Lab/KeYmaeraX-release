@@ -89,11 +89,11 @@ loop("x<=m", 'R=="[{{?m-x>=sb;a:=A;++a:=-b;}t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}}*]x
       "[?m-x>=sb;a:=A;][t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}]x<=m":
         solve('R=="[{x'=v,v'=A,t'=1&v>=0&t<=ep}]x<=m");
         pQE;
-        transform("m-x>=A/2*ep^2+ep*v", 'R=="(v < 0|v=0&(A<=0|A>0&(m < 1/2*(A*ep^2+2*x)&sb>m+-x|m>=1/2*(A*ep^2+2*x))))|v>0&(m < 1/2*(A*ep^2+2*ep*v+2*x)&sb>m+-x|m>=1/2*(A*ep^2+2*ep*v+2*x))"),
+        transform("m-x>=A/2*ep^2+ep*v", 'R=="v < 0|v=0&(A<=0|A>0&(m < 1/2*(A*ep^2+2*x)&sb>m+-x|m>=1/2*(A*ep^2+2*x)))|v>0&(m < 1/2*(A*ep^2+2*ep*v+2*x)&sb>m+-x|m>=1/2*(A*ep^2+2*ep*v+2*x))"),
       "[a:=-b;][t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}]x<=m":
         solve('R=="[{x'=v,v'=-b,t'=1&v>=0&t<=ep}]x<=m");
         pQE;
-        transform("m-x>=v^2/(2*b)", 'R=="v<=0|v>0&((b < ep^(-1)*v&m>=1/2*((-b)*ep^2+2*ep*v+2*x)|b=ep^(-1)*v&(m=1/2*((-b)*ep^2+2*ep*v+2*x)|m>1/2*b^(-1)*(v^2+2*b*x)))|b>ep^(-1)*v&m>=1/2*b^(-1)*(v^2+2*b*x))")
+        transform("m-x>=v^2/(2*b)", 'R=="v<=0|v>0&(b < ep^(-1)*v&m>=1/2*((-b)*ep^2+2*ep*v+2*x)|b=ep^(-1)*v&(m=1/2*((-b)*ep^2+2*ep*v+2*x)|m>1/2*b^(-1)*(v^2+2*b*x))|b>ep^(-1)*v&m>=1/2*b^(-1)*(v^2+2*b*x))")
     )
 ) partial
 End.

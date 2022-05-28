@@ -11,6 +11,7 @@ KeYmaera X features a minimal core of just about 2000 lines of code that isolate
 * [KeYmaera X Tutorial](https://keymaeraX.org/Xtutorial.html)
 * [KeYmaera X Releases](https://github.com/LS-Lab/KeYmaeraX-release/releases)
 * [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/) textbook
+* [KeYmaera X API Documentation](https://keymaerax.org/scaladoc)
 
 Installation
 ============

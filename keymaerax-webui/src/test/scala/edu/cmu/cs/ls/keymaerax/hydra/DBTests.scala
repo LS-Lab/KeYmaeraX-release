@@ -4,9 +4,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedDependentPositionTactic, AppliedDependentPositionTacticWithAppliedInput, AppliedPositionTactic, BelleExpr, BranchTactic, CaseTactic, EitherTactic, Find, SaturateTactic, SeqTactic}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, UnknownLocation}
+import org.scalactic.Uniformity
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
@@ -30,14 +32,16 @@ class DBTests extends TacticTestBase {
       val tacticString = BellePrettyPrinter(tactic)
       val modelId = db.db.createModel(db.user.userName, name, fileContent, "", None, None, None, Some(tacticString))
       modelId shouldBe 'defined
-      val storedTactic = db.db.getModel(modelId.get).tactic
+      val modelEntry = db.db.getModel(modelId.get)
+      val storedTactic = modelEntry.tactic
       storedTactic shouldBe 'defined
-      BelleParser(storedTactic.get) shouldBe tactic
+      //@note compare pretty printed because text locations differ when tactic is read from a file vs. from stored tactic
+      BellePrettyPrinter(BelleParser(storedTactic.get)) shouldBe BellePrettyPrinter(tactic)
 
       val proofId = db.db.createProofForModel(modelId.get, name, "", "", Some(tacticString))
       val storedProofTactic = db.db.getProofInfo(proofId).tactic
       storedProofTactic shouldBe 'defined
-      BelleParser(storedProofTactic.get) shouldBe tactic
+      BellePrettyPrinter(BelleParser(storedProofTactic.get)) shouldBe BellePrettyPrinter(tactic)
     }
 
   }}

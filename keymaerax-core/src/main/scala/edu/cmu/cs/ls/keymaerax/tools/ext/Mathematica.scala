@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleCEX, OnAll}
-import edu.cmu.cs.ls.keymaerax.btactics.{InvGenTool, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{InvGenTool, PropositionalTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
@@ -150,7 +150,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
           case None if qeMaxTimeout != 0 => doMaxQE(formula)
           case Some(cex) =>
             //@note only return Lemma if no open goals (but CEX tool not trusted, so impossible to create)
-            throw BelleCEX("QE counterexample", cex, Sequent(IndexedSeq(), IndexedSeq(formula)))
+            throw BelleCEX("QE counterexample:\n  formula: " + formula.prettyString + "\n  CEX: " + cex, cex, Sequent(IndexedSeq(), IndexedSeq(formula)))
         }
     }
   }
@@ -162,26 +162,28 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
       // ask parallel QE to find out how to prove, then follow that recipe to get lemmas and return combined
       // result; double the work but prefers soundness over splitting soundness-critically inside QETool and
       // directly believing that result
-      val lemmas = qe(splitFormula(formula)) match {
+      val lemmas = qe(splitFormula(formula), continueOnFalse=true) match {
         case (Atom(fml), _) => List(mQE.run(ProvableSig.proveArithmeticLemma(_, fml)))
         case (AllOf(fmls), _) => fmls.map({
           case Atom(fml) => mQE.run(ProvableSig.proveArithmeticLemma(_, fml))
           case g => throw ToolExecutionException("Unable to split goal " + g + " into separate QE calls")
         })
       }
-      val combined = ProvableSig.startProof(lemmas.map(_.fact.conclusion.succ.head).reduceRight(And))
+      val combined = ProvableSig.startProof(lemmas.map(_.fact.conclusion.succ.head).reduceRight(And), lemmas.map(_.fact.defs).reduce(_ ++ _))
       val result = lemmas.init.foldLeft(combined)({ case (c, l) => c(AndRight(SuccPos(0)), 0)(l.fact, 0) })(lemmas.last.fact, 0)
       Lemma(result, Nil)
     } else mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
   }
 
-  override def qe(goal: Goal): (Goal, Formula) = firstResultQE(goal)
+  /** @inheritdoc */
+  override def qe(goal: Goal, continueOnFalse: Boolean): (Goal, Formula) = firstResultQE(goal, continueOnFalse)
 
   private val INDEX = Variable("i")
   private val RESULT = PredOf(Function("result", None, Unit, Bool, None), Nothing)
 
-  /** Returns the result of the first QE call to succeed among the formulas in `fmls`. */
-  private def firstResultQE(goal: Goal): (Goal, Formula) = {
+  /** Returns the result of the first QE call to succeed among the options in `goal`. Continues executing options when
+   * option succeeds with result=false when continueOnFalse is set. */
+  private def firstResultQE(goal: Goal, continueOnFalse: Boolean): (Goal, Formula) = {
     val ids = ListBuffer.empty[Goal]
     // {res, id, eids} = WaitNext[...]; AbortKernels[]; res
     val input = goal match {
@@ -204,12 +206,22 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             case OneOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: nested OneOf in OneOf")
           }):_*))
         ),
-        compoundExpr(
-          mwhile(and(equal(part(symbol("res"), int(2)), bool(false)), greater(ExtMathematicaOpSpec.length(symbol("res")), int(0))),
-            set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids")))),
-          abortKernels(),
-          symbol("res")
-        )
+        if (continueOnFalse) {
+          compoundExpr(
+            mwhile(and(equal(part(symbol("res"), int(2)), bool(false)), greater(ExtMathematicaOpSpec.length(symbol("res")), int(0))),
+              set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids")))),
+            abortKernels(),
+            closeKernels(),
+            symbol("res")
+          )
+        } else {
+          compoundExpr(
+            set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids"))),
+            abortKernels(),
+            closeKernels(),
+            symbol("res")
+          )
+        }
       )
       case AllOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: top-level AllOf")
     }
@@ -246,9 +258,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private def splitFormula(fml: Formula): Goal = fml match {
     case Forall(x, p) => applyTo(splitFormula(p), Forall(x, _))
     case _: Imply =>
-      val propSubgoals = TactixLibrary.proveBy(fml, TactixLibrary.prop).subgoals
-      val expandedSubgoals = TactixLibrary.proveBy(fml, TactixLibrary.expandAll & TactixLibrary.prop &
-        OnAll(TactixLibrary.applyEqualities)).subgoals
+      val propSubgoals = ProvableSig.startPlainProof(fml)(PropositionalTactics.prop, 0).subgoals
+      val expandedSubgoals = ProvableSig.startPlainProof(fml)(TactixLibrary.expandAll andThen PropositionalTactics.prop, 0)(TactixLibrary.applyEqualities).subgoals
       if (propSubgoals.size > 1) {
         if (expandedSubgoals.size > 1) OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula))), AllOf(expandedSubgoals.map(p => Atom(p.toFormula)))))
         else OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula)))))

@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.ext.Z3
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
@@ -116,10 +117,10 @@ object Ax extends Logging {
         }
     }
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
-    val npt = ElidingProvable(fact.underlyingProvable)
+    val npt = ElidingProvable(fact.underlyingProvable, fact.defs)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        TermProvable(npt, AxiomTerm(lemmaName))
+        TermProvable(npt, AxiomTerm(lemmaName), fact.defs)
       } else {
         npt
       }
@@ -294,7 +295,10 @@ object Ax extends Logging {
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormTimes",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormDivide",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideEven",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd"
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powZero",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerZero",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivide0"
         )
       case _ => Set.empty
     }
@@ -1101,7 +1105,7 @@ object Ax extends Logging {
   @Axiom(("↔R","<->R"), conclusion = "__p↔p__",
     key = "", recursor = "", unifier = "full")
   lazy val equivReflexive: DerivedAxiomInfo = derivedFact("<-> reflexive",
-    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)), Declaration(Map.empty))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (Close(AntePos(0),SuccPos(0)), 1)
@@ -1166,6 +1170,20 @@ object Ax extends Logging {
     prop
   )
 
+  /**
+   * {{{Axiom "| distributes over &".
+   *  (p() & (q() | r())) <-> ((p() & q()) | (p() & r()))
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom(("∨∧","|&"))
+  lazy val orDistAnd: DerivedAxiomInfo = derivedAxiom("| distributes over &",
+    Sequent(IndexedSeq(), IndexedSeq("(p_() & (q_()|r_())) <-> ((p_()&q_()) | (p_()&r_()))".asFormula)),
+    prop
+  )
+
 
   /**
     * CONGRUENCE AXIOMS (for constant terms)
@@ -1222,7 +1240,7 @@ object Ax extends Logging {
   @Axiom(("¬¬","!!"), conclusion ="__¬¬p__↔p",
     key = "0", recursor = "*", unifier = "surjlinear")
   lazy val doubleNegation: DerivedAxiomInfo = derivedFact("!! double negation",
-    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)), Declaration(Map.empty))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (NotRight(SuccPos(0)), 1)
@@ -2679,6 +2697,17 @@ object Ax extends Logging {
   lazy val andCommute: DerivedAxiomInfo = derivedAxiom("& commute", Sequent(IndexedSeq(), IndexedSeq("(p_() & q_()) <-> (q_() & p_())".asFormula)), prop)
 
   /**
+   * {{{Axiom "| commute".
+   *    (p() | q()) <-> (q() | p())
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom(("∨C","|C"), key = "0", recursor = "*", unifier = "surjlinear")
+  lazy val orCommute: DerivedAxiomInfo = derivedAxiom("| commute", Sequent(IndexedSeq(), IndexedSeq("(p_() | q_()) <-> (q_() | p_())".asFormula)), prop)
+
+  /**
     * {{{Axiom "& associative".
     *    ((p() & q()) & r()) <-> (p() & (q() & r()))
     * End.
@@ -2688,6 +2717,17 @@ object Ax extends Logging {
     */
   @Axiom(("∧A","&A"), key = "0", recursor = "*", unifier = "surjlinear")
   lazy val andAssoc: DerivedAxiomInfo = derivedAxiom("& associative", Sequent(IndexedSeq(), IndexedSeq("((p_() & q_()) & r_()) <-> (p_() & (q_() & r_()))".asFormula)), prop)
+
+  /**
+   * {{{Axiom "| associative".
+   *    ((p() | q()) | r()) <-> (p() | (q() | r()))
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom(("∨A","|A"), key = "0", recursor = "*", unifier = "surjlinear")
+  lazy val orAssoc: DerivedAxiomInfo = derivedAxiom("| associative", Sequent(IndexedSeq(), IndexedSeq("((p_() | q_()) | r_()) <-> (p_() | (q_() | r_()))".asFormula)), prop)
 
   /**
     * {{{Axiom "& reflexive".
@@ -4092,7 +4132,7 @@ object Ax extends Logging {
     */
   @Axiom("x'",  conclusion = "__(x)'__=x'")
   lazy val DvariableAxiom: DerivedAxiomInfo = derivedFact("x' derive variable",
-    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)), Declaration(Map.empty))
     (Skolemize(SuccPos(0)), 0)
     (DerivedAxiomProvableSig.axioms("x' derive var"), 0)
   )

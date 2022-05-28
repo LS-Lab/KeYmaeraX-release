@@ -6,11 +6,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, IllFormedTacticApplicationException}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -225,6 +226,27 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "L_()=LL_(), A_() ==> L_()+R_()=LL_()+R_()".asSequent
   }
 
+  "Builtin prop" should "handle implication in succedent" in withTactics { succImplication(PropositionalTactics.prop) }
+  it should "handle disjunction in succedent" in withTactics { succDisjunction(PropositionalTactics.prop) }
+  it should "handle negation in succedent" in withTactics { succNegation(PropositionalTactics.prop) }
+  it should "handle conjunction in antecedent" in withTactics { anteConjunction(PropositionalTactics.prop) }
+  it should "handle negation in antecedent" in withTactics { anteNegation(PropositionalTactics.prop) }
+  it should "handle implication in antecedent" in withTactics { anteImplication(PropositionalTactics.prop) }
+  it should "handle disjunction in antecedent" in withTactics { anteDisjunction(PropositionalTactics.prop) }
+  it should "handle conjunction in succedent" in withTactics { succConjunction(PropositionalTactics.prop) }
+  it should "handle equivalence in antecedent" in withTactics {
+    val result = proveBy(Sequent(IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), PropositionalTactics.prop)
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "x>1, y>1 ==> ".asSequent
+    result.subgoals(1) shouldBe "==> y>1, x>1".asSequent
+  }
+  it should "handle equivalence in succedent" in withTactics { succEquivalence(PropositionalTactics.prop) }
+  it should "handle nested branching" in withTactics { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, PropositionalTactics.prop) shouldBe 'proved }
+  it should "handle more nested branching" in withTactics {
+    val result = proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, PropositionalTactics.prop)
+    result.subgoals.loneElement shouldBe "L_()=LL_(), A_() ==> L_()+R_()=LL_()+R_()".asSequent
+  }
+
   "Normalize" should "handle implication in succedent" in withTactics { succImplication(normalize) }
   it should "handle disjunction in succedent" in withTactics { succDisjunction(normalize) }
   it should "not FOL negate in succedent" in withTactics { succNegation(normalize, Some(_.subgoals.loneElement shouldBe "==> !y>1".asSequent)) }
@@ -335,5 +357,125 @@ class PropositionalTests extends TacticTestBase {
   it should "report when contexts don't match" in withTactics {
     the [IllegalArgumentException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=3 -> z>=3)".asFormula), IndexedSeq("\\exists x (a=2 -> z>=1)".asFormula)),
       propCMon(PosInExpr(0::1::Nil))) should have message "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1, but got \\exists x (a=3->z>=3)\n  ==>  \\exists x (a=2->z>=1)\n\\exists x (a=3->⎵) != \\exists x (a=2->⎵)"
+  }
+
+  "Negation normal" should "produce a proof" in withTactics {
+    val fml = "!!p() & !q() | !(r() -> s())".asFormula
+    val (dnf, proof) = PropositionalTactics.negationNormalForm(fml)
+    dnf shouldBe "p()&!q()|r()&!s()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (2)" in withTactics {
+    val fml = "!!p() & !x=1 | !(r() -> y>=2)".asFormula
+    val (dnf, proof) = PropositionalTactics.negationNormalForm(fml)
+    dnf shouldBe "p()&x!=1 | r()&y<2".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  "Right-associate" should "produce a proof" in withTactics {
+    val fml = "(p() & q()) & r()".asFormula
+    val (r, proof) = PropositionalTactics.rightAssociate(fml)
+    r shouldBe "p() & q() & r()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, r)))
+  }
+
+  "Distribute or over and" should "produce a proof (1)" in withTactics {
+    val fml = "p() & (q() | r())".asFormula
+    val (dist, proof) = PropositionalTactics.orDistAnd(fml)
+    dist shouldBe "q()&p() | r()&p()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dist)))
+  }
+
+  it should "produce a proof (2)" in withTactics {
+    val fml = "p_1()&(q()|r()) | p_2()&(q()|r())".asFormula
+    val (dist, proof) = PropositionalTactics.orDistAnd(fml)
+    dist shouldBe "(q()&p_1() | r()&p_1()) | (q()&p_2()|r()&p_2())".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dist)))
+  }
+
+  it should "produce a proof (3)" in withTactics {
+    val fml = "p_1()&(q()|r()) | p_2()&(q()|r()) | p_3()&(q()|r()) | p_4()".asFormula
+    val (dist, proof) = PropositionalTactics.orDistAnd(fml)
+    dist shouldBe "(q()&p_1() | r()&p_1()) | (q()&p_2()|r()&p_2()) | (q()&p_3()|r()&p_3()) | p_4()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dist)))
+  }
+
+//  "Distribute or over and reverse" should "produce a proof (1)" in withTactics {
+//    val fml = "p() & (q() | r())".asFormula
+//    val reversed = ProvableSig.startProof(Equiv(fml, "q()&p() | r()&p()".asFormula))(PropositionalTactics.orDistAndReverse(fml)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
+//    //@todo rearrange disjunctions, close by equivReflexive
+//    reversed shouldBe 'proved
+//  }
+//
+//  it should "produce a proof (2)" in withTactics {
+//    val fml = "p_1()&(q()|r()) | p_2()&(q()|r()) | p_3()&(q()|r()) | p_4()".asFormula
+//    val reversed = ProvableSig.startProof(Equiv(fml, "(q()&p_1() | r()&p_1()) | (q()&p_2()|r()&p_2()) | (q()&p_3()|r()&p_3()) | p_4()".asFormula))(PropositionalTactics.orDistAndReverse(fml)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
+//    reversed shouldBe 'proved
+//  }
+//
+//  it should "work on a water tank example" in withTactics {
+//    val src = "(cpost<=ep()&ep()>=0)&(lpost>=0&(fd=0|ep()*fd+l>0&fd>=0)|(fd < 0&cpost*fd+l>=0)&ep()*fd+l=0)|(cpost < ep()&ep()>0)&((fd < 0&cpost*fd+l>=0)&ep()*fd+l<=0|fd>0&lpost>=0)".asFormula
+//
+//    //val (q, _) = orDistAnd(src)
+//
+//    val fml =
+//      """((ep()*fd+l>0&fd>=0)&lpost>=0)&cpost<=ep()&ep()>=0 |
+//        |(fd=0&lpost>=0)&cpost<=ep()&ep()>=0 |
+//        |((fd < 0&cpost*fd+l>=0)&ep()*fd+l=0)&cpost<=ep()&ep()>=0 |
+//        |((fd < 0&cpost*fd+l>=0)&ep()*fd+l<=0)&cpost < ep()&ep()>0 |
+//        |(fd>0&lpost>=0)&cpost < ep()&ep()>0
+//        |""".stripMargin.asFormula
+//    val reversed = ProvableSig.startProof(Equiv(src, fml))(PropositionalTactics.orDistAndReverse(src)(SuccPosition.base0(0, PosInExpr(List(1)))).computeResult _, 0)
+//    reversed(UnifyUSCalculus.byUS(Ax.equivReflexive.provable).result _, 0) shouldBe 'proved
+//  }
+
+  "Disjunctive normal form" should "produce a proof (1)" in withTactics {
+    val fml = "p() | q()".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "p() | q()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (2)" in withTactics {
+    val fml = "(p() | q()) & r()".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "(p() & r()) | (q() & r())".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (3)" in withTactics {
+    val fml = "p() & (q_1() | q_2()) & (r_1() | r_2())".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "q_1()&r_1()&p() | q_1()&r_2()&p() | q_2()&r_1()&p() | q_2()&r_2()&p()".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (4)" in withTactics {
+    val fml = "p_1() & (q_1() | q_2()) & (r_1() | r_2()) & p_2() & (s_1() | s_2() | s_3())".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe
+      """q_1()&r_1()&s_1()&p_1()&p_2() | q_1()&r_1()&s_2()&p_1()&p_2() | q_1()&r_1()&s_3()&p_1()&p_2() | q_1()&r_2()&s_1()&p_1()&p_2() | q_1()&r_2()&s_2()&p_1()&p_2() | q_1()&r_2()&s_3()&p_1()&p_2() |
+        |q_2()&r_1()&s_1()&p_1()&p_2() | q_2()&r_1()&s_2()&p_1()&p_2() | q_2()&r_1()&s_3()&p_1()&p_2() | q_2()&r_2()&s_1()&p_1()&p_2() | q_2()&r_2()&s_2()&p_1()&p_2() | q_2()&r_2()&s_3()&p_1()&p_2()
+        |""".stripMargin.asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
+  }
+
+  it should "produce a proof (5)" in withTactics {
+    val fml = "(x=0 & y=1 | x=1 & !y=3) <-> (!z<4 & a+b!=5)".asFormula
+    val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
+    dnf shouldBe "x=0&y=1&z>=4&a+b!=5|x=1&y!=3&z>=4&a+b!=5|x!=0&x!=1&z < 4|x!=0&x!=1&a+b=5|x!=0&y=3&z < 4|x!=0&y=3&a+b=5|y!=1&x!=1&z < 4|y!=1&x!=1&a+b=5|y!=1&y=3&z < 4|y!=1&y=3&a+b=5".asFormula
+    proof shouldBe 'proved
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
   }
 }

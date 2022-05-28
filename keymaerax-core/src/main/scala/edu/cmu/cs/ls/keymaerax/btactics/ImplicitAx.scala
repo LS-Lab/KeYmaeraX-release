@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ODEToInterpreted}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.List
@@ -231,7 +231,7 @@ object ImplicitAx {
   // Prove the partial derivative -> compose axiom
   lazy val DcomposeFull : Lemma = {
     val ss = USubst(List(SubstitutionPair("f()".asTerm, "1".asTerm)))
-    val pr1 = ElidingProvable(Ax.Dassignby.provable.underlyingProvable(ss))
+    val pr1 = Ax.Dassignby.provable(ss)
 
     val assignby = proveBy("[y_:=f();]p(y_) <-> p(f())".asFormula,
       byUS(Ax.assignbAxiom))
@@ -261,7 +261,7 @@ object ImplicitAx {
   // Flip the direction of partial derivative axiom
   lazy val flipPartial : Lemma = {
     val ss1 = USubst(List(SubstitutionPair("f()".asTerm, "-(1)".asTerm)))
-    val pr1 = ElidingProvable(Ax.Dassignby.provable.underlyingProvable(ss1))
+    val pr1 = Ax.Dassignby.provable(ss1)
 
     val assignby = proveBy("[y_:=t;]p(y_) <-> p(t)".asFormula,
       byUS(Ax.assignbAxiom))
@@ -557,7 +557,7 @@ object ImplicitAx {
     val xDom = PredOf(Function("q_", None, sort, Bool), RHSxarg)
     val yDom = PredOf(Function("q_", None, sort, Bool), RHSyarg)
 
-    val diffadj = ElidingProvable(Provable.diffAdjoint(dim))
+    val diffadj = ElidingProvable(Provable.diffAdjoint(dim), Declaration(Map.empty))
 
     val fml = Imply(px, Box(ODESystem(xODE, xDom), Diamond(ODESystem(xODER, xDom), px)))
 
@@ -1147,6 +1147,6 @@ object ImplicitAx {
     )
 
     val pr2 = proveBy(Exists(x::Nil, subst(interp)), byUS(pr)).underlyingProvable
-    ElidingProvable(Provable.implicitFunc(f,pr2))
+    ElidingProvable(Provable.implicitFunc(f,pr2), Declaration(Map.empty))
   }
 }

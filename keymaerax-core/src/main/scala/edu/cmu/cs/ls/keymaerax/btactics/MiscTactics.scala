@@ -252,10 +252,28 @@ object Idioms {
 
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = t | TactixLibrary.nil
-  def ?(t: ProvableSig=>ProvableSig)(pr: ProvableSig): ProvableSig = try {
+  def opt(t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => try {
     t(pr)
   } catch {
     case _: BelleProofSearchControl => pr
+  }
+
+  /** Saturate tactic `t` until no longer applicable. */
+  def saturate(t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => {
+    val r = pr(opt(t))
+    if (r != pr) r(saturate(t))
+    else r
+  }
+
+  /** Executes tactic `t` `n` times. */
+  def times(t: ProvableSig=>ProvableSig, n: Int): ProvableSig=>ProvableSig = (pr: ProvableSig) => {
+    if (n > 0) times(t, n-1)(pr(t))
+    else pr
+  }
+
+  /** Try `s` and recover from proof search control failure with `t`. */
+  def or(s: ProvableSig=>ProvableSig, t: ProvableSig=>ProvableSig): ProvableSig=>ProvableSig = (pr: ProvableSig) => {
+    try { s(pr) } catch { case _: BelleProofSearchControl => t(pr) }
   }
 
   /** Execute ts by branch order. */
@@ -787,6 +805,11 @@ object TacticFactory {
   def inputanonnoop(t: => BelleExpr): InputTactic = ANON byWithInputsNoop(Nil, t)
 
   def internal(name: String, t: Sequent => BelleExpr): DependentTactic = {
+    assert(BelleExpr.isInternal(name), "Name is not an internal name, must start with " + BelleExpr.INTERNAL_NAME_PREFIX)
+    name by t
+  }
+
+  def internal(name: String, t: ProvableSig => ProvableSig): BuiltInTactic = {
     assert(BelleExpr.isInternal(name), "Name is not an internal name, must start with " + BelleExpr.INTERNAL_NAME_PREFIX)
     name by t
   }

@@ -51,6 +51,8 @@ class InMemoryDB extends DBAbstraction {
   override def updateConfiguration(config: ConfigurationPOJO): Unit = { configs(config.name) = config }
 
   //Proofs and Proof Nodes
+  override def proofExists(proofId: Int): Boolean = synchronized { proofs.contains(proofId) }
+
   override def getProofInfo(proofId: Int): ProofPOJO = synchronized { proofs(proofId)._2 }
 
   // Users
@@ -124,7 +126,7 @@ class InMemoryDB extends DBAbstraction {
     val proofId = proofs.keys.size
     val provableId = provables.keys.size
     val model = ArchiveParser.parseAsFormula(models(modelId).keyFile)
-    val provable = ProvableSig.startProof(model)
+    val provable = ProvableSig.startPlainProof(model)
     provables(provableId) = provable
     proofs(proofId) = (provable, ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,
       Some(provableId), temporary=false, tactic))

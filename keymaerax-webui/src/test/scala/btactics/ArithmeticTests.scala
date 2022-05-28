@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.tools.ext.{CounterExampleTool, Goal, QETacticTool}
@@ -38,11 +39,11 @@ class ArithmeticTests extends TacticTestBase {
     }
 
     override def qe(formula: Formula): Lemma = {
-      val p = ElidingProvable(Provable.proveArithmetic(new MockQETool(), formula))
+      val p = ElidingProvable(Provable.proveArithmetic(new MockQETool(), formula), Declaration(Map.empty))
       Lemma(p, Lemma.requiredEvidence(p))
     }
 
-    override def qe(g: Goal): (Goal, Formula) = ???
+    override def qe(g: Goal, continueOnFalse: Boolean): (Goal, Formula) = ???
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
       formula shouldBe expected

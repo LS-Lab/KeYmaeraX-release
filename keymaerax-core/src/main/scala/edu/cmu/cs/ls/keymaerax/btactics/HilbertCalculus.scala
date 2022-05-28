@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.saturate
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -115,7 +116,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CMon()]]
     */
   //@todo flexibilize via cohide2 first
-  @Tactic(premises = "P |- Q", conclusion = "<a>P |- <a>Q")
+  @Tactic(premises = "P |- Q", conclusion = "&langle;a&rangle;P |- &langle;a&rangle;Q")
   lazy val mond               : BuiltInTactic         = anon { US(Ax.mondrule.provable).result _ }
 
   //
@@ -162,9 +163,20 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[DLBySubst.assignEquality]] */
   @Tactic("[:=]", revealInternalSteps = true, conclusion = "__[x:=e]p(x)__↔p(e)")
-  lazy val assignb            : DependentPositionTactic = anon { (pos:Position) =>
-    if (INTERNAL) useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) /*|! useAt(DerivedAxioms.assignbup)(pos)*/
-    else useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) |! DLBySubst.assignEquality(pos)
+  lazy val assignb            : BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+    if (INTERNAL) try {
+      useAt(Ax.assignbAxiom)(pos)(pr)
+    } catch {
+      case _: Throwable => useAt(Ax.selfassignb)(pos)(pr)
+    } else try {
+      useAt(Ax.assignbAxiom)(pos)(pr)
+    } catch {
+      case _: Throwable => try {
+        useAt(Ax.selfassignb)(pos)(pr)
+      } catch {
+        case _: Throwable => DLBySubst.assignEquality(pos)(pr)
+      }
+    }
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
@@ -379,10 +391,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus.chase]]
     */
   @Tactic("()'", revealInternalSteps = false /* uninformative as useFor proof */)
-  lazy val derive: DependentPositionTactic = anon {(pos: Position, _: Sequent) =>
+  lazy val derive: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "derive")
+
     val chaseNegations = anon { (provable: ProvableSig, pos: Position) =>
-      val seq = provable.subgoals.head
-      seq.sub(pos) match {
+      ProofRuleTactics.requireOneSubgoal(provable, "derive.chaseNegations")
+      provable.subgoals.head.sub(pos) match {
         case Some(post: Formula) =>
           val notPositions = ListBuffer.empty[PosInExpr]
           ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
@@ -396,8 +410,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
       }
     }
 
-    SaturateTactic(chaseNegations(pos) & deepChase(pos)) & anon { (seq: Sequent) => {
-      seq.sub(pos) match {
+    val deriveVars = anon { (provable: ProvableSig, pos: Position) =>
+      ProofRuleTactics.requireOneSubgoal(provable, "derive.deriveVars")
+      provable.subgoals.head.sub(pos) match {
         case Some(e: Expression) =>
           val dvarPositions = ListBuffer.empty[PosInExpr]
           ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
@@ -406,11 +421,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
               case _ => Left(None)
             }
           }, e)
-          dvarPositions.map(p => DifferentialTactics.Dvariable(pos ++ p)).
-            reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
-        case _ => skip
+          dvarPositions.foldLeft(provable)({ case (pr, p) => pr(DifferentialTactics.Dvariable(pos ++ p), 0) })
+        case _ => provable
       }
-    }}
+    }
+
+    pr(saturate(chaseNegations(pos) andThen deepChase(pos)), 0)(deriveVars(pos), 0)
   }
 
   //

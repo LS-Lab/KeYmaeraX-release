@@ -40,13 +40,13 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
       * }}}
       */
     // proved premise |- \forall x p(||) -> \forall x p(||)
-    val prem = ProvableSig.startProof(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall x p(||)".asFormula)))(
+    val prem = ProvableSig.startPlainProof(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall x p(||)".asFormula)))(
       Close(AntePos(0),SuccPos(0)), 0
     )
     prem shouldBe 'proved
     // assumed premise |- \forall x p(||) -> \forall y p(||)
     // unsound conclusion y>=0 |- \forall x y>=0 -> \forall y y>=0
-    val conc = ProvableSig.startProof(Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))(
+    val conc = ProvableSig.startPlainProof(Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))(
       HideLeft(AntePos(0)), 0) (
       ImplyRight(SuccPos(0)), 0
     )
@@ -86,13 +86,13 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
       * x^2>=y -> \forall y x^2>=y nonsense
       * }}}
       */
-    val prem = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
+    val prem = ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
     prem should not be 'proved
-    a [RenamingClashException] shouldBe thrownBy {ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
+    a [RenamingClashException] shouldBe thrownBy {ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
       UniformRenaming(Variable("y"),Variable("x")), 0
     )}
     a [RenamingClashException] shouldBe thrownBy {
-      val clash = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
+      val clash = ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
         UniformRenaming(Variable("y"),Variable("x")), 0
       )
       // wouldBe from now on
@@ -106,21 +106,21 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
   }
 
   it should "rename conclusions forward but keep subgoals of unproved provables" in {
-    val p = RenUSubst.UniformRenamingForward(ProvableSig.startProof("[x:=*;]x>=0".asFormula), "x".asVariable, "y".asVariable)
+    val p = RenUSubst.UniformRenamingForward(ProvableSig.startPlainProof("[x:=*;]x>=0".asFormula), "x".asVariable, "y".asVariable)
     p.subgoals.loneElement shouldBe "==> [x:=*;]x>=0".asSequent
     p.conclusion shouldBe "==> [y:=*;]y>=0".asSequent
   }
 
   it should "refuse semantic renaming forward of unproved provables" in {
     the [RenamingClashException] thrownBy RenUSubst.UniformRenamingForward(
-      ProvableSig.startProof("[x:=*;][a;]x>=0".asFormula), "x".asVariable, "y".asVariable) should have message
+      ProvableSig.startPlainProof("[x:=*;][a;]x>=0".asFormula), "x".asVariable, "y".asVariable) should have message
       """Cannot replace semantic dependencies syntactically: ProgramConstant a
         |Renaming a via URename{x~>y}
         |in """.stripMargin
   }
 
   it should "allow semantic renaming forward of proved provables" in {
-    val p = ProvableSig.startProof("[a;]x>=0 -> [a;]x>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0)
+    val p = ProvableSig.startPlainProof("[a;]x>=0 -> [a;]x>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0)
     p shouldBe 'proved
     RenUSubst.UniformRenamingForward(p, "x".asVariable, "y".asVariable).conclusion shouldBe "==> [a;]y>=0 -> [a;]y>=0".asSequent
   }

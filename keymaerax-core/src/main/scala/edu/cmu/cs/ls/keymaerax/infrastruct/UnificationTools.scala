@@ -4,33 +4,63 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Provable, StaticSemantics, SubstitutionPair, USubst}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ProvableHelper.exhaustiveSubst
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+
 
 object UnificationTools {
+  private val expansible = (t: Expression) => t match { case _: DotTerm => false case _: Variable => false case _ => true }
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
   def collectSubst(goal: Provable, i: Int, sub: Provable, substs: List[SubstitutionPair]): USubst = {
-    //@note prefer to expand definitions from goal towards sub (in analogy to what happens in the proof)
-    //@todo performance will degrade with depth of nested definitions
-    if (goal.subgoals(i) == sub.conclusion) USubst(List.empty)
+    collectSubst(goal.subgoals(i), sub.conclusion, sub.isProved, substs)
+  }
+
+  /** Collects substitutions (of `defs`) that are needed to make `have` fit `goal`. */
+  def collectSubst(goal: Sequent, have: Sequent, haveIsProved: Boolean, substs: List[SubstitutionPair]): USubst = {
+    if (goal == have) USubst(List.empty)
     else {
-      val (sg, ss, _) = FormulaTools.symbolsDiff(goal.subgoals(i).ante ++ goal.subgoals(i).succ, sub.conclusion.ante ++ sub.conclusion.succ)
-      val downSubst = USubst(substs.filter({ case SubstitutionPair(what, _) => sg.intersect(StaticSemantics.symbols(what)).nonEmpty }))
-      val downSubstGoal = exhaustiveSubst(goal, downSubst)
-      val downSubstSub = exhaustiveSubst(sub, downSubst)
-      if (downSubstGoal.subgoals(i) == downSubstSub.conclusion) downSubst
-      else if (downSubst.subsDefsInput.nonEmpty) downSubst ++ collectSubst(downSubstGoal, i, downSubstSub, substs) // expand nested definitions
-      else if (ss.nonEmpty) {
-        //@note if even after expanding all nested definitions from goal towards sub there are still differences,
-        // then goal may have a symbol expanded but sub hasn't; can happen when applying a general lemma
-        val upSubst = USubst(substs.filter({ case SubstitutionPair(what, _) => ss.intersect(StaticSemantics.symbols(what)).nonEmpty }))
-        val upSubstGoal = exhaustiveSubst(downSubstGoal, upSubst)
-        val upSubstSub = exhaustiveSubst(downSubstSub, upSubst)
-        if (upSubstGoal.subgoals(i) == upSubstSub.conclusion) downSubst ++ upSubst
-        else if (upSubst.subsDefsInput.nonEmpty) downSubst ++ upSubst ++ collectSubst(upSubstGoal, i, upSubstSub, substs) // expand nested definitions
-        else downSubst ++ upSubst ++ RestrictedBiDiUnificationMatch(upSubstGoal.subgoals(i), upSubstSub.conclusion).usubst
-      } else downSubst ++ RestrictedBiDiUnificationMatch(downSubstGoal.subgoals(i), downSubstSub.conclusion).usubst
+      // order substitutions by dependency
+      val adj = substs.map(sp =>
+        StaticSemantics.symbols(sp.what).filter(expansible).head -> StaticSemantics.symbols(sp.repl).filter(expansible)
+      ).groupBy(_._1).map({ case (v, e) => v -> e.flatMap(_._2).toSet })
+      val symbolDeps = DependencyAnalysis.dfs(adj)
+
+      collectSubstOrdered(goal, have, haveIsProved, substs, symbolDeps)
+    }
+  }
+
+  /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. Uses `symbolDeps` to determine in which order to expand symbols. */
+  private def collectSubstOrdered(goal: Provable, i: Int, sub: Provable, substs: List[SubstitutionPair], symbolDeps: List[NamedSymbol]): USubst = {
+    collectSubstOrdered(goal.subgoals(i), sub.conclusion, sub.isProved, substs, symbolDeps)
+  }
+
+  /** Collects substitutions (of `defs`) that are needed to make `have` fit `goal`. Uses `symbolDeps` to determine in which order to expand symbols. */
+  private def collectSubstOrdered(goal: Sequent, have: Sequent, haveIsProved: Boolean, substs: List[SubstitutionPair], symbolDeps: List[NamedSymbol]): USubst = {
+    if (goal == have) USubst(List.empty)
+    else {
+      val (sg, ss, _) = FormulaTools.symbolsDiff(goal.ante ++ goal.succ, have.ante ++ have.succ)
+      if (sg.isEmpty && ss.isEmpty) USubst(List.empty) //@note if `goal` and `have` formulas have the same symbols, but differ in order, or a similar other way
+      else {
+        val (exp, nonexp) = (sg ++ ss).partition(symbolDeps.contains)
+        val constifications =
+          if (haveIsProved) {
+            nonexp.groupBy(n => (n.name, n.index, n.sort)).filter(_._2.size > 1).flatMap({ case (_, s) => s.toList match {
+              case (v: Variable) :: (f@Function(_, _, Unit, Real, None)) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
+              case (f@Function(_, _, Unit, Real, None)) :: (v: Variable) :: Nil => Some(SubstitutionPair(FuncOf(f, Nothing), v))
+              case _ => None
+            }}).toList
+          } else List.empty
+        val expand = if (exp.nonEmpty) Some(exp.minBy(symbolDeps.indexOf)) else None
+        val subst = expand.map(e => USubst(substs.find({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).contains(e) }).toList)).getOrElse(USubst(List.empty)) ++ USubst(constifications)
+        assert(subst.subsDefsInput.nonEmpty, "Unexpected empty substitution since symbols " + sg.map(_.prettyString).mkString(",") +
+          " from goal\n  " + goal.prettyString + "\ndo not occur in sub-derivation\n  " + have.prettyString +
+          (if (ss.nonEmpty) " and symbols " + ss.map(_.prettyString).mkString(",") + " from sub-derivation to not occur in goal" else "") +
+          "\nand there is no substitution to address the difference" + (if (substs.nonEmpty) " in\n  " + substs.mkString(", ") else ""))
+
+        val substGoal = exhaustiveSubst(goal, subst)
+        val substHave = exhaustiveSubst(have, subst)
+        subst ++ collectSubstOrdered(substGoal, substHave, haveIsProved, substs.diff(subst.subsDefsInput), symbolDeps)
+      }
     }
   }
 }

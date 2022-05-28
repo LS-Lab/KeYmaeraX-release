@@ -44,12 +44,12 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
 
     //@note expensive: labels are temporary, need to rerun tactic to create labels
     val labels = if (node.children.size > 1) {
-      node.goal.map(s => BelleProvable(ProvableSig.startProof(s), None, defs)) match {
+      node.goal.map(s => BelleProvable.plain(ProvableSig.startProof(s, defs))) match {
         case Some(p) =>
           node.children.headOption.flatMap(_.maker.map(m => tacticDefs.getOrElse(m, BelleParser.parseWithInvGen(m, None, defs)))) match {
             case Some(t) =>
               LazySequentialInterpreter()(t, p) match {
-                case BelleProvable(_, Some(labels), _) => labels
+                case BelleProvable(_, Some(labels)) => labels
                 case _ => Nil
               }
             case None =>
