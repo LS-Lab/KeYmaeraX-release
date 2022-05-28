@@ -9,7 +9,7 @@ import fastparse._
 import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLTacticParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{DLTacticParser, TacticParser}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted.FromProgramException
 
@@ -59,6 +59,12 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   override def parseAsFormula(input: String): Formula = problemOrFormulaParser(input)
 
   override def parseFromFile(file: String): List[ParsedArchiveEntry] = ???
+
+  /** @inheritdoc */
+  override def exprParser: Parser = expParser
+
+  /** @inheritdoc */
+  override def tacticParser: TacticParser = tacticParser
 
   val archiveParser: String => List[ParsedArchiveEntry] = input => fastparse.parse(input, archiveEntries(_)) match {
     case Parsed.Success(value, index) => (if (value.length==1)

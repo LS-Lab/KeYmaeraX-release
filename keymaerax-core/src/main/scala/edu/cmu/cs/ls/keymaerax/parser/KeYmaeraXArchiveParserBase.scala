@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, TacticParser}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
@@ -203,6 +204,12 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
   }
+
+  /** @inheritdoc */
+  override def exprParser: Parser = KeYmaeraXParser
+
+  /** @inheritdoc */
+  override def tacticParser: TacticParser = BelleParser
 
   /** Repeatedly perform parseStep until a final parser item is produced. */
   @tailrec

@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.TacticParser
+
 import java.io.InputStream
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
@@ -324,6 +326,12 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** Indicates whether or not the model represents an exercise. */
   def isExercise(model: String): Boolean = model.contains("__________")
+
+  /** The expression parser used in this archive parser. */
+  def exprParser: Parser
+
+  /** The tactic parser used in this archive parser. */
+  def tacticParser: TacticParser
 }
 
 object ArchiveParser extends ArchiveParser {
@@ -345,6 +353,12 @@ object ArchiveParser extends ArchiveParser {
   override def parse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = parser.parse(input, parseTactics)
 
   override def parseFromFile(file: String): List[ParsedArchiveEntry] = parser.parseFromFile(file)
+
+  /** @inheritdoc */
+  override def exprParser: Parser = parser.exprParser
+
+  /** @inheritdoc */
+  override def tacticParser: TacticParser = parser.tacticParser
 
   private[parser] object BuiltinDefinitions {
     val defs: Declaration =
