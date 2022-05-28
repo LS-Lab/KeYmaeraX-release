@@ -2048,8 +2048,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma("Entry 1")""",
-      expandFw("gt".asNamedSymbol, Some(SubstitutionPair("gt(._0,._1)".asFormula, "._0>._1".asFormula))) &
-        TactixLibrary.useLemmaX("Entry 1", None))::Nil
+      expand("gt") & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
