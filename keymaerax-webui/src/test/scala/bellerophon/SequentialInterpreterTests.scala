@@ -171,7 +171,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "trace in the database" in withDatabase { db => withMathematica { _ =>
     val fml = "[x:=3;](x>0 & x>1 & x>2)".asFormula
-    val modelContent = s"ProgramVariables Real x; End.\n Problem ${fml.prettyString} End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n Problem ${fml.prettyString} End. End."""
     db.createProof(modelContent, "saturateTest")
     db.proveBy(modelContent, SaturateTactic(onAll(boxAnd('R) & andR('R))) & master()) shouldBe 'proved
   }}
