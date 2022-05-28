@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.io.FileOutputStream
 import java.nio.channels.Channels
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma._
@@ -543,7 +543,7 @@ object SQLite {
 
       val substTactic = tactic match {
         case None => None
-        case Some(t) => Some(BellePrettyPrinter(BelleParser.parseWithInvGen(t, None, d)))
+        case Some(t) => Some(BellePrettyPrinter(ArchiveParser.tacticParser(t)))
       }
 
       val provable = ProvableSig.startProof(problem, d)
