@@ -1,7 +1,7 @@
 Theorem "IJCAR22/Arctan Identity"
 
 Definitions
-  implicit Real arctan(Real t) '= {{arctan:=0;t:=0;}; {arctan'=1/(1+t^2),t'=1}};
+  implicit Real arctan(Real t) = {{arctan:=0;t:=0;}; {arctan'=1/(1+t^2),t'=1}};
   Real tan(Real x) = sin(x)/cos(x);
   Real x;
 End.
@@ -11,8 +11,8 @@ Problem
 End.
 
 Tactic "IJCAR22/Arctan Identity Proof"
-expand "arctan";
-expand "tan";
+expand("arctan");
+expand("tan");
 diffUnfold("x()", "0", 'R=="arctan(sin(x())/cos(x()))=x()"); <(
   "Init":
     QE,
@@ -146,9 +146,9 @@ End.
 Theorem "IJCAR22/Double Iterated Exponential"
 
 Definitions
-  implicit Real exp1(Real t) '= {{exp1:=1;}; {exp1'=exp1}};
+  implicit Real exp1(Real t) = {{exp1:=1;}; {exp1'=exp1}};
   Real E = exp1(1);
-  implicit Real exp2(Real t) '= {{exp2:=E;t:=0;}; {exp2'=exp1(t)*exp2,t'=1}};
+  implicit Real exp2(Real t) = {{exp2:=E;t:=0;}; {exp2'=exp1(t)*exp2,t'=1}};
   Real x;
 End.
 
@@ -161,8 +161,8 @@ cut("exp(exp(x()))=exp1(exp1(x()))"); <(
   "Use":
     allL2R('L=="exp(exp(x()))=exp1(exp1(x()))");
     hideL('L=="exp(exp(x()))=exp1(exp1(x()))");
-    expand "exp2";
-    expand "exp1";
+    expand("exp2");
+    expand("exp1");
     diffUnfold("x()", "0", 'R=="exp2(x())=exp1(exp1(x()))"); <(
       "Init":
         QE,
@@ -173,19 +173,19 @@ cut("exp(exp(x()))=exp1(exp1(x()))"); <(
     ),
   "Show":
     hideR('R=="exp2(x())=exp(exp(x()))");
-    expand "exp1";
+    expand("exp1");
     cut("\forall y exp(y)=exp1(y)"); <(
       "Use":
         allLkeep("x()", 'L=="\forall y exp(y)=exp1(y)");
         allL2R('L=="exp(x())=exp1(x())");
         hideL('L=="exp(x())=exp1(x())");
         allL("exp1(x())", 'L=="\forall y exp(y)=exp1(y)");
-        expand "exp1";
+        expand("exp1");
         propClose,
       "Show":
         hideR('R=="exp(exp(x()))=exp1(exp1(x()))");
         allR('R=="\forall y exp(y)=exp1(y)");
-        expand "exp1";
+        expand("exp1");
         diffUnfold("y", "0", 'R=="exp(y)=exp1(y)"); <(
           "Init":
             QE,
@@ -203,7 +203,7 @@ End.
 Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)"
 
 Definitions
-  implicit Real tanh(Real t) '=
+  implicit Real tanh(Real t) =
      {{tanh:=0;}; {tanh'=1-tanh^2}};
 
   Real f;
@@ -214,7 +214,7 @@ Problem
 End.
 
 Tactic "IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1) Proof"
-expand "tanh";
+expand("tanh");
 diffUnfold("f()", "0", 'R=="tanh(f())^2 < 1"); <(
   "Init":
     QE,
@@ -230,7 +230,7 @@ End.
 Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)"
 
 Definitions
-  implicit Real tanh(Real t) '=
+  implicit Real tanh(Real t) =
      {{tanh:=0;}; {tanh'=1-tanh^2}};
 
   Real tau;
@@ -271,7 +271,7 @@ cut("init=0|init>0"); <(
                         ODE('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}]t>=0")
                     ),
                   "Show":
-                    expandAllDefs;
+                    expandAllDefs("nil");
                     dRI('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x=0&y=0)")
                 ),
               "Show":
@@ -293,7 +293,7 @@ cut("init=0|init>0"); <(
                     QE,
                   "Show":
                     cohideR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1");
-                    expand "tanh";
+                    expand("tanh");
                     andR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
                       "tanh(lambda()*x)^2 < 1":
                         useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "master"),
@@ -307,7 +307,7 @@ cut("init=0|init>0"); <(
           "Show":
             MR("!(x=0&y=0)", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}]x^2+y^2>0"); <(
               "Use Q->P":
-                expandAllDefs;
+                expandAllDefs("nil");
                 dgVdbxAuto('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](!(x=0&y=0))");
                 dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(((y!=0|x!=0)|tanh(lambda()*x)!=0)|tanh(lambda()*y)!=0)}](!(x=0&y=0))");
                 QE,
@@ -326,7 +326,7 @@ End.
 Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14"
 
 Definitions
-  implicit Real tanh(Real t) '=
+  implicit Real tanh(Real t) =
      {{tanh:=0;}; {tanh'=1-tanh^2}};
 
   Real tau;    /* Characteristic time constant (see Khalil Ex. 2.28) */
@@ -459,9 +459,9 @@ Problem
 End.
 
 Tactic "IJCAR22/Longitudinal Motion of an Airplane Invariant Proof"
-expand "inv";
+expand("inv");
 unfold;
-expand "motion";
+expand("motion");
 dC("inv3(theta,q)=0", 'R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()}](inv1(z,u,w,theta,q)=0&inv2(x,u,w,theta,q)=0&inv3(theta,q)=0)"); <(
   "Use":
     boxAnd('R=="[{x'=cos(theta)*u+sin(theta)*w,z'=-sin(theta)*u+cos(theta)*w,u'=X()/m()-g()*sin(theta)-q*w,w'=Z()/m()+g()*cos(theta)+q*u,theta'=q,q'=M()/Iyy()&true&inv3(theta,q)=0}](inv1(z,u,w,theta,q)=0&inv2(x,u,w,theta,q)=0&inv3(theta,q)=0)");
@@ -621,7 +621,7 @@ loop("loopinv(x,y,v,xo,yo)", 'R=="[{{{a:=-b();++?v=0;a:=0;w:=0;++a:=A();w:=*;?-W
                     dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,t'=1&(((t<=ep()&v>=0)&t>=0)&v=v_0+A()*t)&(-t*(v_0+A()/2*t)<=x-x_0&x-x_0<=t*(v_0+A()/2*t))&-t*(v_0+A()/2*t)<=y-y_0&y-y_0<=t*(v_0+A()/2*t)}]loopinv(x,y,v,xo,yo)");
                     unfold;
                     hideL('L=="loopinv(x_0,y_0,v_0,xo_0,yo_0)");
-                    expand "loopinv";
+                    expand("loopinv");
                     andR('R=="v>=0&(abs(x-xo)>stopDist(v)|abs(y-yo)>stopDist(v))"); <(
                       "v>=0":
                         id,
@@ -800,7 +800,7 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
   "Init":
     QE,
   "Post":
-    expand "loopinv";
+    expand("loopinv");
     andL('L)*;
     implyR('R=="v>0->(x-xo)^2+(y-yo)^2>0|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0) < gamma()");
     simplify('L=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()") using "v>0";
@@ -832,7 +832,7 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
                                 allR2L('L=="yo_1=yo");
                                 allR2L('L=="xo_1=xo");
                                 dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&((((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t))&(-t*(v+b()/2*t)<=x-x_1&x-x_1<=t*(v+b()/2*t))&-t*(v+b()/2*t)<=y-y_1&y-y_1<=t*(v+b()/2*t)}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)");
-                                expand "loopinv";
+                                expand("loopinv");
                                 andL('L)*;
                                 simplify('R=="v>=0&r!=0&(v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma())") using "r!=0 :: v>=0 :: nil";
                                 implyR('R=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
@@ -854,7 +854,7 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
                                     QE using "theta=theta_1+t*(w+1/2*b()/r*t) :: v_0>0 :: v=v_0-b()*t :: r!=0 :: b()>0 :: w*r=v :: V()>=0 :: t>=0 :: gamma()>0 :: v>=0 :: v>0 :: abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma() :: abs(theta-theta_0)+stopDist(v)/abs(r) < gamma() :: nil"
                                 ),
                               "Show":
-                                expand "loopinv";
+                                expand("loopinv");
                                 andL('L)*;
                                 hideL('L=="v_0>0->(abs(x_1-xo)>stopMargin(v_0)|abs(y_1-yo)>stopMargin(v_0))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta_1-theta_0)+stopDist(v_0)/abs(r) < gamma()");
                                 boxAnd('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t)&theta=theta_1+t*(w+1/2*b()/r*t)}]((-t*(v+b()/2*t)<=x-x_1&x-x_1<=t*(v+b()/2*t))&-t*(v+b()/2*t)<=y-y_1&y-y_1<=t*(v+b()/2*t))");
@@ -866,7 +866,7 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
                                 )
                             ),
                           "Show":
-                            expand "loopinv";
+                            expand("loopinv");
                             andL('L)*;
                             dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0-b()*t}]theta=theta_1+t*(w+1/2*b()/r*t)") using "b()>0 :: w*r=v_0 :: v_0=v :: theta_1=theta :: v_0>=0 :: r!=0 :: nil"
                         ),
@@ -883,7 +883,7 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
                                 allR2L('L=="yo_1=yo");
                                 allR2L('L=="xo_1=xo");
                                 dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&((((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0)&theta=theta_1)&x=x_1&y=y_1}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)");
-                                expand "loopinv";
+                                expand("loopinv");
                                 andL('L)*;
                                 simplify('R=="v>=0&r!=0&(v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma())") using "r!=0 :: v>=0 :: nil";
                                 implyR('R=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
@@ -894,7 +894,7 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
                                 dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0)&theta=theta_1}](x=x_1&y=y_1)") using "b()>0 :: ep()>0 :: v_0=0 :: t=0 :: w*r=v_0 :: v_0=v :: x_1=x :: y_1=y :: [{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&(((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0)&theta=theta_1}](x=x_1&y=y_1) :: nil"
                             ),
                           "Show":
-                            expand "loopinv";
+                            expand("loopinv");
                             andL('L)*;
                             edit("w=0", 'L=="w*r=v_0") using "v_0=0 :: r!=0 :: nil";
                             dIClose('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=0,theta'=w,w'=0/r,xo'=vxo,yo'=vyo,t'=1&((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0}]theta=theta_1") using "w=0 :: theta_1=theta :: r!=0 :: nil"
@@ -912,7 +912,7 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
                                 allR2L('L=="yo_1=yo");
                                 allR2L('L=="xo_1=xo");
                                 dW('R=="[{x'=-v*sin(theta),y'=v*cos(theta),v'=A(),theta'=w,w'=A()/r,xo'=vxo,yo'=vyo,t'=1&((((((t<=ep()&v>=0)&t>=0)&w*r=v)&(-t*V()<=xo-xo_1&xo-xo_1<=t*V())&-t*V()<=yo-yo_1&yo-yo_1<=t*V())&v=v_0+A()*t)&theta=theta_0+t*(w-1/2*A()/r*t))&(-t*(v-A()/2*t)<=x-x_0&x-x_0<=t*(v-A()/2*t))&-t*(v-A()/2*t)<=y-y_0&y-y_0<=t*(v-A()/2*t)}]loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)");
-                                expand "loopinv";
+                                expand("loopinv");
                                 andL('L)*;
                                 simplify('R=="v>=0&r!=0&(v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma())") using "v>=0 :: r!=0 :: nil";
                                 implyR('R=="v>0->(abs(x-xo)>stopMargin(v)|abs(y-yo)>stopMargin(v))|!isVisible(xo_0,yo_0,x_0,y_0,theta_0)&abs(theta-theta_0)+stopDist(v)/abs(r) < gamma()");
@@ -932,15 +932,15 @@ loop("loopinv(x,y,v,r,theta,xo,yo,x_0,y_0,theta_0,xo_0,yo_0)", 'R=="[{{{vxo:=*;v
                                   "abs(x_0-xo_0)>admissibleSeparation(v_0)|abs(y_0-yo_0)>admissibleSeparation(v_0)":
                                     orL('L=="abs(x_0-xo_0)>admissibleSeparation(v_0)|abs(y_0-yo_0)>admissibleSeparation(v_0)"); <(
                                       "abs(x_0-xo_0)>admissibleSeparation(v_0)":
-                                        expand "admissibleSeparation";
-                                        expand "accelMargin";
-                                        expand "accelComp";
+                                        expand("admissibleSeparation");
+                                        expand("accelMargin");
+                                        expand("accelComp");
                                         edit("abs(x_0-xo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V())", 'L=="abs(x_0-xo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*ep()^2+ep()*v_0)+(A()/b()+1)*ep()*V())") using "v_0>=0 :: A()>=0 :: v=v_0+A()*t :: b()>0 :: ep()>0 :: V()>=0 :: t>=0 :: t<=ep() :: v>=0 :: nil";
                                         QE using "v_0>=0 :: A()>=0 :: v=v_0+A()*t :: -t*(v-A()/2*t)<=x-x_0 :: x-x_0<=t*(v-A()/2*t) :: -t*(v-A()/2*t)<=y-y_0 :: y-y_0<=t*(v-A()/2*t) :: b()>0 :: V()>=0 :: t>=0 :: -t*V()<=xo-xo_0 :: xo-xo_0<=t*V() :: -t*V()<=yo-yo_0 :: yo-yo_0<=t*V() :: v>=0 :: abs(x_0-xo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V()) :: v>0 :: abs(x-xo)>stopMargin(v) :: nil",
                                       "abs(y_0-yo_0)>admissibleSeparation(v_0)":
-                                        expand "admissibleSeparation";
-                                        expand "accelMargin";
-                                        expand "accelComp";
+                                        expand("admissibleSeparation");
+                                        expand("accelMargin");
+                                        expand("accelComp");
                                         edit("abs(y_0-yo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V())", 'L=="abs(y_0-yo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*ep()^2+ep()*v_0)+(A()/b()+1)*ep()*V())") using "v_0>=0 :: A()>=0 :: b()>0 :: ep()>0 :: V()>=0 :: t>=0 :: t<=ep() :: v>=0 :: nil";
                                         QE using "v_0>=0 :: A()>=0 :: v=v_0+A()*t :: -t*(v-A()/2*t)<=x-x_0 :: x-x_0<=t*(v-A()/2*t) :: -t*(v-A()/2*t)<=y-y_0 :: y-y_0<=t*(v-A()/2*t) :: b()>0 :: V()>=0 :: t>=0 :: -t*V()<=xo-xo_0 :: xo-xo_0<=t*V() :: -t*V()<=yo-yo_0 :: yo-yo_0<=t*V() :: v>=0 :: abs(y_0-yo_0)>stopMargin(v_0)+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V()) :: abs(y-yo)>stopMargin(v) :: nil"
                                     )

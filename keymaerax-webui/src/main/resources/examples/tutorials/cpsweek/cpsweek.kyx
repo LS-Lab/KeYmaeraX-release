@@ -1,4 +1,4 @@
-ArchiveEntry "CPSWeek16/Tutorial Example 1".
+ArchiveEntry "CPSWeek16/Tutorial Example 1"
   Description "Simple model of straight-line driving that avoids collision with cars ahead. Car can either apply full brakes or maximum acceleration, if safe.".
   Title "1-dimensional car".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=59".
@@ -41,7 +41,7 @@ End.
 
 End.
 
-ArchiveEntry "CPSWeek16/Tutorial Example 2".
+ArchiveEntry "CPSWeek16/Tutorial Example 2"
   Description "Proving unsolvable ODEs with differential invariants.".
   Title "Damped oscillator".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=127".
@@ -69,7 +69,7 @@ End.
 
 End.
 
-ArchiveEntry "CPSWeek16/Tutorial Example 3".
+ArchiveEntry "CPSWeek16/Tutorial Example 3"
   Description "Proving unsolvable ODEs with differential invariants.".
   Title "Motzkin".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=128".
@@ -93,7 +93,7 @@ End.
 
 End.
 
-ArchiveEntry "CPSWeek16/Tutorial Example 4".
+ArchiveEntry "CPSWeek16/Tutorial Example 4"
   Description "Simple model of steering, car avoids collision with other cars.".
   Title "2-dimensional car".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=148".
