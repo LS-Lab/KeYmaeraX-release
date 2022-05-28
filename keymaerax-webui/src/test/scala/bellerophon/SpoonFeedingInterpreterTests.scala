@@ -29,7 +29,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   )
 
   "Atomic tactic" should "be simply forwarded to the inner interpreter" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -58,7 +58,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "record pending if not applicable" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -84,7 +84,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "FEATURE_REQUEST: apply print to all subgoals" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>0&x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -98,7 +98,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "FEATURE_REQUEST: apply nil to all subgoals" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>0&x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -117,7 +117,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   "Sequential tactic" should "be split into atomics before being fed to inner" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -145,7 +145,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "be recorded as pending on failure" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 & x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 & x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -157,7 +157,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "record only RHS as pending on failure" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -169,7 +169,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   "Either tactic" should "be explored and only successful outcome stored in database" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -195,7 +195,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "be explored and stored pending if failing" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -207,7 +207,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "discard previously recorded tactic steps when recording alternatives" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>=0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>=0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -219,7 +219,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   "Branch tactic" should "work simple top-level" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -231,7 +231,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "preserve labels" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>-1 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -250,7 +250,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "preserve nested labels" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>-1 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -282,7 +282,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "delete labels of closed branches" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>-1 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -314,7 +314,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "delete labels of auto-closed goals" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables Real x,v,a; End. Problem x>=0 -> [{x'=v & v>=0 & a<=-5}](v>=0 & a<=0) End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x,v,a; End. Problem x>=0 -> [{x'=v & v>=0 & a<=-5}](v>=0 & a<=0) End. End."
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(
@@ -328,7 +328,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "delete labels of closed goals" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables Real x, eps; End. Problem true & !(-2<x&x<=1) & x<=1 -> !-2<x End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x, eps; End. Problem true & !(-2<x&x<=1) & x<=1 -> !-2<x End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -345,7 +345,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "work nested branching top-level" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>0&x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -367,7 +367,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "support nested branching with unconventional closing" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>0&x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -389,7 +389,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "work top-level" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>=0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>=0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -451,7 +451,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "work top-level and support complicated branch tactics" taggedAs SlowTest in withMathematica { _ => withDatabase { db =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&[{x'=1&x>=0}]x>=0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&[{x'=1&x>=0}]x>=0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -513,7 +513,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "work with nested branching when every branch is closed" in withMathematica { _ => withDatabase { db =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0|x>1 -> x>0&x>=0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0|x>1 -> x>0&x>=0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -544,7 +544,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "work when early branches remain open and later ones close" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>1|x>0 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>1|x>0 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -570,7 +570,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "work with nested branching when branches stay open 1" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>1|x>0 -> x>0&x>=0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>1|x>0 -> x>0&x>=0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -591,7 +591,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "work with nested branching when branches stay open 2" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End.\n\n Problem. x>0|x>1 -> x>0&x>=0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End.\n\n Problem x>0|x>1 -> x>0&x>=0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -613,7 +613,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work with nested branching when branching stay open 3" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x<y"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) <(andR(1) <(id, nil), andR(1)),
@@ -637,7 +637,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work with nested branching when branching stay open 4" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x<y"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) <(andR(1) <(id, skip), andR(1) <(skip, id)),
@@ -661,7 +661,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work with nested branching and repeat" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&(x>=0&x<y)"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) <((andR(1) <(id, skip))*2, andR(1) <(skip, andR(1) <(skip, id))),
@@ -691,7 +691,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work with loop tactic" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 -> [{x:=x+1;}*]x>=0"
-    val modelContent = s"ProgramVariables. R x. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false, recordInternal=true))
@@ -744,7 +744,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work with loop tactic that preserves constants" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 & A>0&B>0&C>0 -> [{x:=x+B;}*]x>=0"
-    val modelContent = s"Definitions Real A,B,C; End. ProgramVariables Real x; End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" Definitions Real A,B,C; End. ProgramVariables Real x; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=true, convertPending=false, recordInternal=true))
@@ -814,7 +814,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "record id step" in withDatabase { db => withMathematica { _ =>
     val p = "x>=0 -> x>=0".asFormula
     val ps = ProvableSig.startPlainProof(p)
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $p End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $p End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     val tac = implyR(1) & id
@@ -828,7 +828,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "close left-over branching with follow-up branches" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x>=0&x>=0|x<y"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & onAll(orR(1)) <(andR(1) <(id, andR(1)), id) & onAll(id),
@@ -855,7 +855,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "close left-over branching with follow-up branches (2)" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x>=0&x>=0|x<y"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & onAll(orR(1)) <(andR(1) <(id, andR(1)), skip) & onAll(id),
@@ -884,7 +884,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "close left-over branching with follow-up branches (3)" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x>=0&x>=0|x<y"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & onAll(orR(1)) <(andR(1) <(id, andR(1)), skip)
@@ -919,7 +919,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "combine substitutions" in withDatabase { db => withMathematica { _ =>
     val problem = "eq(x,1) -> eq(x,x) & p(x)"
     val defs = "one()~>1 :: eq(x,y)~>x=y :: sq(x)~>x^2 :: p(x)~>eq(x,sq(x)) :: nil".asDeclaration
-    val modelContent = s"Definitions Real one() = 1; Real sq(Real x)=x^2; Bool eq(Real x, Real y) <-> x=y; Bool p(Real x) <-> eq(x,sq(x)); End. ProgramVariables Real x, y; End. Problem $problem End."
+    val modelContent = s"""ArchiveEntry "Test" Definitions Real one() = 1; Real sq(Real x)=x^2; Bool eq(Real x, Real y) <-> x=y; Bool p(Real x) <-> eq(x,sq(x)); End. ProgramVariables Real x, y; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db, constructGlobalProvable=false, defs=defs)
     val eq = Function("eq", None, Tuple(Real, Real), Bool)
@@ -939,7 +939,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "combine substitutions (2)" in withDatabase { db => withMathematica { _ =>
     val problem = "eq(x,one()) -> eq(x,x) & p(x)"
     val defs = "one()~>1 :: eq(x,y)~>x=y :: sq(x)~>x^2 :: p(x)~>eq(x,sq(x)) :: nil".asDeclaration
-    val modelContent = s"Definitions Real one() = 1; Real sq(Real x)=x^2; Bool eq(Real x, Real y) <-> x=y; Bool p(Real x) <-> eq(x,sq(x)); End. ProgramVariables Real x, y; End. Problem $problem End."
+    val modelContent = s"""ArchiveEntry "Test" Definitions Real one() = 1; Real sq(Real x)=x^2; Bool eq(Real x, Real y) <-> x=y; Bool p(Real x) <-> eq(x,sq(x)); End. ProgramVariables Real x, y; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db, constructGlobalProvable=false, defs=defs)
     val eq = Function("eq", None, Tuple(Real, Real), Bool)
@@ -957,7 +957,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   "Saturation" should "record each iteration as step" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0&x>1&x>2 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0&x>1&x>2 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -987,7 +987,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "not recurse on nil" in withMathematica { _ => withDatabase { db =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>1 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>1 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1006,7 +1006,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "recurse only on change" in withMathematica { _ => withDatabase { db =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>1 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>1 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1029,7 +1029,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   "Repeat" should "record each iteration as step" in withDatabase {db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0&x>1&x>2&x>3 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0&x>1&x>2&x>3 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1059,7 +1059,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   "Let" should "be recorded plain" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>0&x>1&x>2&x>3 -> x>0 End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0&x>1&x>2&x>3 -> x>0 End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1475,7 +1475,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for branching tactic that results in a sole open goal" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1493,7 +1493,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for branching tactic when following sole open goal" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1513,7 +1513,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for branching tactic when continuing on sole open goal" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1531,7 +1531,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for branching tactic when continuing on sole open goal of a nested branching tactic" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1553,7 +1553,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for branching tactic when following sole second open goal" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1571,7 +1571,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for branching tactic when following sole middle open goal" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x:=x+1;}*]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1591,7 +1591,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   "Continuing a proof" should "work for atomic tactic" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
 
     val tree = DbProofTree(db.db, proofId.toString)
@@ -1621,7 +1621,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   "Revealing internal steps" should "work for diffInvariant" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1639,7 +1639,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for multiple levels of diffInvariant without let" in withZ3 { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1671,7 +1671,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "FEATURE_REQUEST: work for multiple levels of diffInvariant" taggedAs TodoTest in withZ3 { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
-    val modelContent = s"ProgramVariables. R x. End. Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1699,7 +1699,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for simple diffWeaken" in withZ3 { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1 & x>0}]x>=0"
-    val modelContent = s"ProgramVariables Real x; End. Problem $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1723,7 +1723,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for diffWeaken" in withZ3 { _ => withDatabase { db =>
     val problem = "x>=0 & y>=0 & z>=0 -> [{x'=y+z & x>=0}]x>=0"
-    val modelContent = s"ProgramVariables Real x, y, z; End. Problem $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x, y, z; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1756,7 +1756,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for Bouncing Ball diffWeaken" in withZ3 { _ => withDatabase { db =>
     val problem = "2*g*x<=2*g*H-v_0^2 & x>=0 & g>0 & 1>=c & c>=0 & r>=0 & x=0 & v=-c*v_0 -> [{x'=v,v'=-g-r*v^2 & x>=0&v>=0}](2*g*x<=2*g*H-v^2 & x>=0)"
-    val modelContent = s"Definitions Real c, g, r, H; End. ProgramVariables Real x, v, v_0; End. Problem $problem End."
+    val modelContent = s"""ArchiveEntry "Test" Definitions Real c, g, r, H; End. ProgramVariables Real x, v, v_0; End. Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1785,9 +1785,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     proveBy(fml, tree.tactic).subgoals shouldBe proveBy(fml, tactic).subgoals
   }}
 
-  it should "work with assertions/print/debug on multi-subgoal provables" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: work with assertions/print/debug on multi-subgoal provables" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|!x<0 -> x>=0"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(implyR(1) & orL(-1) & DebuggingTactics.assertProvableSize(2) <(id, nil),
@@ -1817,7 +1817,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for prop on a simple example" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 -> x>=0"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1839,7 +1839,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work with onAll without branches" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 -> x>=0"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1851,7 +1851,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for master on a simple example" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 -> x>=0"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1862,9 +1862,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
   }}
 
-  it should "work for prop on a left-branching example" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: work for prop on a left-branching example" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|!x<y -> x>=0"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1898,7 +1898,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for prop on a left-branching example with depth 2" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|!x<y -> x>=0"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1930,9 +1930,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |)""".stripMargin)
   }}
 
-  it should "work for prop with nested branching" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: work for prop with nested branching" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x<y"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable=true),
@@ -1957,7 +1957,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for master on failing QE" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 -> x>=2"
-    val modelContent = s"ProgramVariables Real x; End.\n\n Problem $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -1966,7 +1966,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some("==> false".asSequent)
-    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=2\"); applyEqualities; QE; todo")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=2\"); expandAllDefs(\"nil\"); applyEqualities; QE; todo")
   }}
 
   private def stepInto(node: ProofTreeNode, expectedStep: String, depth: Int = 1)(db: DBAbstraction): (Int, BelleExpr) = {
@@ -1983,7 +1983,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work in the middle of a proof" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|x<y -> x>=0&x<y"
-    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty),
       listener(db.db, constructGlobalProvable = true),
@@ -2072,7 +2072,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "FEATURE_REQUEST: work on a typical example" taggedAs TodoTest in withDatabase { db => withZ3 { _ =>
     val problem = "x>=0 & y>=1 & z<=x+y & 3>2  -> [x:=x+y;]x>=z"
-    val modelContent = s"ProgramVariables. R x. R y. R z. End.\n\n Problem. $problem End."
+    val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; Real z; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = createInterpreter(proofId, db.db)
     interpreter(prop & unfoldProgramNormalize & QE, BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)))
@@ -2316,7 +2316,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for partial prop" in withMathematica { _ => withDatabase { sql =>
     val problem = "x=1 & y=2 -> x=3".asFormula
-    val modelFile = s"ProgramVariables R x. R y. End.\n Problem. $problem End."
+    val modelFile = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n Problem $problem End. End."""
     val p = ProvableSig.startPlainProof(problem)
     val pId = sql.createProof(modelFile, "model1")
     val tactic = prop & done
@@ -2334,7 +2334,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   "Pending" should "execute and record successful tactic" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> x>0".asFormula
-    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val modelFile = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n Problem $problem End. End."""
     val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""pending("implyR(1) ; id"); todo""")
@@ -2347,7 +2347,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "try execute and record again as pending on failure" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> x>0".asFormula
-    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val modelFile = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n Problem $problem End. End."""
     val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""pending("implyR(1) ; andR(1)"); todo""")
@@ -2360,7 +2360,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "not fail on nested tactic with arguments" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> [x:=x+1;]x>0".asFormula
-    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val modelFile = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n Problem $problem End. End."""
     val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""pending("implyR(1) ; loop(\"x>0\", 1)"); todo""")
@@ -2373,7 +2373,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "record innermost failed tactic as pending" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> [x:=x+1;]x>0".asFormula
-    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val modelFile = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n Problem $problem End. End."""
     val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""implyR(1); cut("x>=0"); <("Use": hideL(-1); loop("x>0", 1), "Show": hideR(1); QE)""")
@@ -2391,7 +2391,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "record innermost failed tactic as pending (2)" in withQE { _ => withDatabase { db =>
     val problem = "x>0 -> [x:=x+1;]x>0".asFormula
-    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val modelFile = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n Problem $problem End. End."""
     val p = ProvableSig.startPlainProof(problem)
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser(
@@ -2498,7 +2498,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
-  it should "expand definitions after applying backsubstitutions from constification" in withMathematica { _ => withDatabase { db =>
+  it should "FEATURE_REQUEST: expand definitions after applying backsubstitutions from constification" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution from dIRule"
         |Definitions Real sqsum(Real x, Real y) = x^2+y^2; End.
@@ -2528,7 +2528,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
-  it should "expand definitions exhaustively after applying backsubstitutions from constification" in withMathematica { _ => withDatabase { db =>
+  it should "FEATURE_REQUEST: expand definitions exhaustively after applying backsubstitutions from constification" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution from dIRule"
         |Definitions Real dosqsum(Real x, Real y) = x^2+y^2; Real sqsum(Real x, Real y) = dosqsum(x,y); End.
@@ -2584,40 +2584,64 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "support tactic-internal definition expansion" in withMathematica { _ => withDatabase { db =>
-    val defs = "wUp()~>-1 :: wLo()~>1 :: maxI(v,w,vlo)~>max(0, w*(vlo-v)) :: nil".asDeclaration
     val s =
-      """(w=wUp()|w=wLo()) &
+      """ArchiveEntry "Test"
+        |Definitions
+        |  Real wUp()= -1;
+        |  Real wLo()=  1;
+        |  Real alo, hp, rp;
+        |  Real maxI(Real v, Real w, Real vlo) = max(0, w*(vlo-v));
+        |End.
+        |ProgramVariables
+        |  Real h, w, v, vlo, r, rv;
+        |End.
+        |Problem
+        |(w=wUp()|w=wLo()) &
         |(0 < maxI(v,w,vlo)/alo() | 0>=maxI(v,w,vlo)/alo() & 0=-w*maxI(v,w,vlo)^2/(2*alo())
         |   -> abs(r)>rp()|w*h < -hp()) &
         |rp()>=0 & hp()>0 & rv>=0 & alo()>0
         |->
         |abs(r)>rp() | abs(h)>hp()
+        |End.
+        |End.
         |""".stripMargin
+
+    val entry = ArchiveParser.parse(s).head
 
     val proofId = db.createProof(s)
     val interpreter = registerInterpreter(
-      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, defs,
+      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs,
         listener(db.db, constructGlobalProvable = false),
         ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     //@note QE expands wUp and wLo
     val tactic = BelleParser.parseWithInvGen(
-      """implyR(1); andL('L)*; implyL('L); <(QE, QE)""".stripMargin, defs=defs, expandAll=false)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(s.asFormula, defs))) match {
+      """implyR(1); andL('L)*; implyL('L); <(QE, QE)""".stripMargin, defs=entry.defs, expandAll=false)
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
       case BelleProvable(p, _) => p shouldBe 'proved
     }
   }}
 
   it should "correctly plug into branch parents when tactics expand definitions internally" in withMathematica { _ => withDatabase { db =>
-    val defs = "one()~>1 :: nil".asDeclaration
     val s =
-      """y>=0 & f()=1 ->
+      """ArchiveEntry "Test"
+        |Definitions
+        |  Real f;
+        |  Real one = 1;
+        |End.
+        |ProgramVariables Real a, b, x, y, z; End.
+        |Problem
+        |y>=0 & f()=1 ->
         |((x>=0 -> y*x>=0) & (a=0 -> y*a=0)) &
         |(z>=1&z<=2 -> (y/(z*one())>=0 & (b=0 -> b/z=0)))
+        |End.
+        |End.
         |""".stripMargin
+
+    val entry = ArchiveParser.parse(s).head
 
     val proofId = db.createProof(s)
     val interpreter = registerInterpreter(
-      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, defs,
+      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs,
         listener(db.db, constructGlobalProvable = false),
         ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     //@note QE expands one()
@@ -2628,8 +2652,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         | implyR(1);
         | andL('Llast);
         | QE using "y>=0 :: z>=1 :: y/(z*one())>=0 & (b=0 -> b/z=0) :: nil"
-        |)""".stripMargin, defs=defs, expandAll=false)
-    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(s.asFormula, defs))) match {
+        |)""".stripMargin, defs=entry.defs, expandAll=false)
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs))) match {
       case BelleProvable(p, _) => p shouldBe 'proved
     }
   }}
@@ -2663,7 +2687,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val entry = ArchiveParser(
       """ArchiveEntry "Implicit interpreted function definition"
         |Definitions
-        |implicit Real tanh(Real t) '= {{tanh:=0;}; {tanh'=1-tanh^2}}; Real tau; Real lambda;
+        |implicit Real tanh(Real t) = {{tanh:=0;}; {tanh'=1-tanh^2}}; Real tau; Real lambda;
         |End.
         |ProgramVariables Real x,y,old; End.
         |Problem
@@ -2673,7 +2697,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |Tactic "Steps"
         |unfold;
         |dbx("(-1)/tau()", 1); /* causes a delayed substitution step, has a "delayed" parent */
-        |expandAllDefs         /* creates a child delayed substitution provable, does not have a "delayed" parent */
+        |expandAllDefs("nil")  /* creates a child delayed substitution provable, does not have a "delayed" parent */
         |End.
         |End.
         |""".stripMargin).head
