@@ -67,10 +67,11 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   override def tacticParser: TacticParser = tacticParser
 
   val archiveParser: String => List[ParsedArchiveEntry] = input => fastparse.parse(input, archiveEntries(_)) match {
-    case Parsed.Success(value, index) => (if (value.length==1)
-      List(value.head.withProblemContent(input.trim))
-    else
-      value).map(e => e.withFileContent(input.trim))
+    case Parsed.Success(value, index) =>
+      if (value.length==1)
+        List(value.head.withProblemContent(input.trim))
+      else
+        value
     case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
   }
 
@@ -92,15 +93,21 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
 
   /** Convenience: Parse a single problem or a single formula */
-  def problemOrFormula[_: P]: P[Formula] = P( Start ~ (problem | formula) ~ End )
+  def problemOrFormula[_: P]: P[Formula] = P( Start ~ (problem.map(_._1) | formula) ~ End )
 
 
 
   /** Parse a list of archive entries */
-  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = ( Start ~
+  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = (
+    Start ~
     sharedDefinitions.? ~
-    archiveEntry.rep(1) ~
-    End).map({case (shared,entries) => entries.toList})
+    DLParserUtils.captureWithValue(archiveEntry).rep(1) ~
+    End
+  ).map({ case (shared,entries) =>
+    entries.map({case (entry,content) =>
+      entry.withFileContent(content)
+    }).toList
+  })
   //@todo add sharedDefinition to all entries
 
   /** Parse a single archive entry. */
@@ -112,8 +119,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     tacticProof.rep ~
     metaInfo ~
     ("End" ~ label.? ~ ".")
-  ).flatMap(
-    {case (kind, label, name, meta, decl, prob, tacs, moremeta, endlabel) =>
+  ).flatMapX(
+    {case (kind, label, name, meta, decl, (prob,probString), tacs, moremeta, endlabel) =>
       if (endlabel.isDefined && endlabel != label)
         Fail.opaque("end label: " + endlabel +" is optional but should be the same as the start label: " + label)
       else Pass(
@@ -122,7 +129,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
           name = name,
           kind = kind,
           fileContent = "???",
-          problemContent = "???",
+          problemContent = probString,
           defs = decl,
           model = prob,
           tactics = tacs.map(tac => (tac._1.getOrElse("<undefined>"),"<source???>",tac._2)).toList,
@@ -235,7 +242,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def programVariables[_: P]: P[Declaration] = P ("ProgramVariables" ~~ blank ~/
     //@todo retain location information
     //@todo how to ensure there is some whitespace between sort and baseVariable?
-    (sort ~ ident ~ ("," ~ ident).rep ~ ";").map({case (ty,x,xs) => (xs.+:(x)).toList.map(v=>v->ty)})
+    (sort ~/ ident ~ (","./ ~ ident).rep ~ ";").map({case (ty,x,xs) => (xs.+:(x)).toList.map(v=>v->ty)})
       .rep.map(xs => Declaration(xs.flatten.map(x=>Name(x._1._1, x._1._2)->Signature(None,x._2,None,None,UnknownLocation)).toMap))
     ~ "End." )
 
@@ -334,7 +341,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   */
 
   /** `Problem  formula  End.` parsed. */
-  def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )
+  def problem[_: P]: P[(Formula,String)] = P("Problem" ~~ blank ~/ DLParserUtils.captureWithValue(formula) ~ "End." )
 
   def tacticProof[_: P]: P[(Option[String],BelleExpr)] = P( "Tactic" ~~ blank ~/ string.? ~ tactic ~ "End.")
 
