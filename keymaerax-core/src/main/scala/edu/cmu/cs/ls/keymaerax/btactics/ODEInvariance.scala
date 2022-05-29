@@ -1365,7 +1365,7 @@ object ODEInvariance {
     */
   private lazy val lemPosMul = remember("a() >= 0 -> b() <= c() -> b()*a() <= c()*a()".asFormula,QE).fact
   private lazy val lemTrans = remember("a() <= b() -> b() <= c() -> a() <= c()".asFormula,QE).fact
-  private lazy val lemDist = remember("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
+  private lazy val lemDist = remember("a() <= b()*e() & c() <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
   private lazy val lemUb = remember("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a()<= (b()+1)*c()".asFormula,QE).fact
   private lazy val lemLb = remember("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a() >= -(b()+1)*c()".asFormula,QE).fact
 
