@@ -457,7 +457,8 @@ class DLParser extends Parser {
       map{case ("[",p,"]", f) => Box(p, f)
       case ("<",p,">", f) => Diamond(p, f)} |
     ("!" ~/ baseF ).map(f => Not(f)) |
-    predicational
+    predicational |
+    "⎵".!.map(_ => DotFormula)
 
   /** Parses a comparison, given the left-hand term */
   def comparison[_: P]: P[Formula] = P(
