@@ -533,7 +533,7 @@ class DLParser extends Parser {
   })
 
   /** Parses an annotation */
-  def annotation[_: P]: P[Seq[Formula]] = "@invariant" ~/ "(" ~/ formula.rep(min=1,sep=","./).map(_.toList) ~ ")"
+  def annotation[_: P]: P[Seq[Formula]] = ("@invariant" | "@variant") ~/ "(" ~/ formula.rep(min=1,sep=","./).map(_.toList) ~ ")"
 
   def sequence[_: P]: P[Program] = ( (dual ~/ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
