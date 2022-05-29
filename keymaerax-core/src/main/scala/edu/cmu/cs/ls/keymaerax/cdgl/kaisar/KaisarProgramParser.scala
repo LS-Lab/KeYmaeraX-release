@@ -8,20 +8,18 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Kaisar.{MAX_CHAR, result}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Kaisar.MAX_CHAR
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import fastparse.Parsed.Success
 import fastparse._
 // allow Scala-style comments and ignore newlines
 import ScalaWhitespace._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ParserCommon._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofParser.atomicStatement
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse.Parsed.{Failure, TracedFailure}
 import fastparse.internal.Msgs
-
-import scala.collection.immutable.StringOps
 
 object ParserCommon {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "let", "match", "print", "for", "while", "true", "false")
@@ -69,16 +67,16 @@ object ParserCommon {
 
 object ExpressionParser {
   // for parsing extended kaisar expression + pattern syntax
-  def wild[_: P]: P[FuncOf] = (Index ~ P("*")). // TODO: what ???
-    map(i => FuncOf(Function("wild", domain = Unit, sort = Unit, interp = Some(True)), Nothing))
+  def wild[_: P]: P[FuncOf] = (Index ~ P("*")).
+    map(i => FuncOf(Function("wild", domain = Unit, sort = Unit, interp = None), Nothing))
 
   private def nargs(args: Seq[Term]): Term = args match {case Nil => Nothing case _ => args.reduceRight[Term](Pair)}
   private def ntypes(args: Seq[Sort]): Sort = args match {case Nil => Unit case _ => args.reduceRight[Sort](Tuple)}
   def funcOf[_: P]: P[FuncOf] =
     // note: user-specified let definitions can have 0 args
     (ident ~ "(" ~ term.rep(min = 0, sep = ",") ~ ")").map({case (f, args) =>
-      // TODO: fix interpreted funcs
-      val fn = Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Real)
+      val fn = InterpretedSymbols.builtin.find(fn => fn.name == f.name && fn.index == f.index).getOrElse(
+        Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Real))
       FuncOf(fn, nargs(args))
     })
 
@@ -484,7 +482,7 @@ object ProofParser {
 object KaisarProgramParser {
   val unmatchedClosingBraceMessage: String =  "braces to be matched but found unmatched closing brace"
 
-  def expression[_: P]: P[Expression] = literal.map(KeYmaeraXParser(_))
+  def expression[_: P]: P[Expression] = literal.map(Parser(_))
   def formula[_: P]: P[Formula] = expression.map(_.asInstanceOf[Formula])
   def program[_: P]: P[Program] = expression.map(_.asInstanceOf[Program])
   def differentialProgram[_: P]: P[DifferentialProgram] = expression.map(_.asInstanceOf[DifferentialProgram])

@@ -81,35 +81,31 @@ object KaisarProof {
     }
   }
 
-  // TODO: Fix every reference to interp in this section
   // Kaisar extends the syntax of expressions with located expressions  f@L.
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
   // we elaborate to the core expression syntax
   // "init" is an example label-function which can be passed for the second argument of at()
   // In concrete proofs, the label function name is generated from; the labels in the proof.
-  val at: Function = Function("at", domain = Tuple(Real, Unit), sort = Real, interp = Some(True))
-  val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interp = Some(True)), Nothing)
+  val at: Function = Function("at", domain = Tuple(Real, Unit), sort = Real, interp = None)
+  val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interp = None), Nothing)
   // Stable is the counterpart to "at", which says that at(stable(x_i), L) should always be x_i
-  val stable: Function = Function("stable", domain = Real, sort = Real, interp = Some(
-    Equal(FuncOf(at, Pair(DotTerm(), Nothing)),
-      DotTerm(idx=Some(0)))
-  ))
+  val stable: Function = Function("stable", domain = Real, sort = Real, interp = None)
 
   // Construct a located term f@L
   def makeAt(f: Term, lr: LabelRef): Term = {
-    val labelFun = FuncOf(Function(lr.label, None, rN(lr.args.length), Unit, interp = Some(True)), termsToTuple(lr.args))
+    val labelFun = FuncOf(Function(lr.label, None, rN(lr.args.length), Unit, interp = None), termsToTuple(lr.args))
     FuncOf(at, Pair(f, labelFun))
   }
 
   def makeAt(f: Formula, lr: LabelRef): Formula = {
-    val labelFml = PredOf(Function(lr.label, None, rN(lr.args.length), Bool, interp = Some(True)), termsToTuple(lr.args))
+    val labelFml = PredOf(Function(lr.label, None, rN(lr.args.length), Bool, interp = None), termsToTuple(lr.args))
     PredicationalOf(Function("at", None, Bool, Bool), And(f, labelFml))
   }
 
   // Pattern match a located term  f@L
   def getAt(t: Term, node: ASTNode = Triv()): Option[(Term, LabelRef)] = {
     t match {
-      case FuncOf(Function("at", _index, _domain, _sort, interp @ Some(True)), Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
+      case FuncOf(Function("at", _index, _domain, _sort, interp @ None), Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
         Some(e, LabelRef(label, tupleToTerms(args, node)))
       case _ => None
     }
@@ -163,12 +159,12 @@ object KaisarProof {
 
   // We reuse expression syntax for patterns over expressions. We use an interpreted function wild() for the wildcard
   // patttern "*" or "_". This is elaborated before proofchecking
-  val wild: FuncOf = FuncOf(Function("wild", domain = Unit, sort = Unit, interp = Some(True)), Nothing)
+  val wild: FuncOf = FuncOf(Function("wild", domain = Unit, sort = Unit, interp = None), Nothing)
 
   /** [[askLaterT]] is strictly used in the internal representation. If a term cannot be elaborated until a later
     * proof-checking pass, then symbol [[askLaterT]] is used to represent a dummy term */
-  val askLaterTF: Function = Function("askLater", domain = Unit, sort = Real, interp = Some(True))
-  val askLaterPF: Function = Function("askLater", domain = Unit, sort = Bool, interp = Some(True))
+  val askLaterTF: Function = Function("askLater", domain = Unit, sort = Real, interp = None)
+  val askLaterPF: Function = Function("askLater", domain = Unit, sort = Bool, interp = None)
   val askLaterT: FuncOf = FuncOf(askLaterTF, Nothing)
   val askLaterP: PredOf = PredOf(askLaterPF, Nothing)
   val builtin: Set[Function] = Set(min, max, abs, askLaterTF, askLaterPF, wild.func, init.func, stable, at)
