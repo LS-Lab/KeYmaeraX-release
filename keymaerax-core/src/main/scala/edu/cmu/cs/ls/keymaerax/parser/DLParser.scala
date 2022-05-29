@@ -210,7 +210,7 @@ class DLParser extends Parser {
     program |
       // Term followed by comparator, or ambiguous term followed by formula operators,
       // should not be parsed as a term
-      !(term ~ (comparator | StringIn("->","<-","<->","&","|"))) ~ term |
+      !(term ~ (comparator | StringIn("->","<-","<->","&","|","→","←","↔","∧","∨"))) ~ term |
       formula
   )
 
@@ -376,28 +376,28 @@ class DLParser extends Parser {
 
   /* <-> (lowest prec, non-assoc) */
   def biimplication[_: P]: P[Formula] =
-    (backImplication ~ ("<->" ~/ backImplication).?).
+    (backImplication ~ (("<->"|"↔") ~/ backImplication).?).
       map{ case (left,None) => left case (left,Some(r)) => Equiv(left,r) }
 
   /* <- (left-assoc) */
   def backImplication[_: P]: P[Formula] =
-    (implication ~ ("<-" ~ !">" ~/ implication).rep).
+    (implication ~ (("<-"|"←") ~ !">" ~/ implication).rep).
       map{ case (left, hyps) =>
         hyps.foldLeft(left){case (acc,hyp) => Imply(hyp,acc)} }
 
   /* -> (right-assoc) */
   def implication[_: P]: P[Formula] =
-    (disjunct ~ ("->" ~/ disjunct).rep).
+    (disjunct ~ (("->"|"→") ~/ disjunct).rep).
       map{ case (left, concls) => (left +: concls).reduceRight(Imply) }
 
   /* | (right-assoc) */
   def disjunct[_: P]: P[Formula] =
-    (conjunct ~ ("|" ~/ conjunct).rep).
+    (conjunct ~ (("|"|"∨") ~/ conjunct).rep).
       map{ case (left, conjs) => (left +: conjs).reduceRight(Or) }
 
   /* & (right-assoc) */
   def conjunct[_: P]: P[Formula] =
-    (baseF ~ ("&" ~/ baseF).rep).
+    (baseF ~ (("&"|"∧") ~/ baseF).rep).
       map{ case (left, forms) => (left +: forms).reduceRight(And) }
 
   /** Base formulas */
@@ -448,10 +448,10 @@ class DLParser extends Parser {
       "true".!.map(_ => True) | "false".!.map(_ => False) |
     /* Note we cannot cut after true/false because it could also
      * be the start of an identifier */
-    ( ("\\forall"|"\\exists").! ~~/ blank ~ variable ~ baseF ).
+    ( ("\\forall"|"\\exists"|"∀"|"∃").! ~~/ blank ~ variable ~ baseF ).
       map{
-        case ("\\forall",x, f) => Forall(x::Nil, f)
-        case ("\\exists",x, f) => Exists(x::Nil, f)
+        case ("\\forall"|"∀",x, f) => Forall(x::Nil, f)
+        case ("\\exists"|"∃",x, f) => Exists(x::Nil, f)
       } |
     ( (("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF ).
       map{case ("[",p,"]", f) => Box(p, f)
@@ -464,15 +464,15 @@ class DLParser extends Parser {
   def comparison[_: P]: P[Formula] = P(
     (term ~ comparator.! ~/ term).map {
       case (left, "=", right) => Equal(left, right)
-      case (left, "!=", right) => NotEqual(left, right)
-      case (left, ">=", right) => GreaterEqual(left, right)
+      case (left, "!=" | "≠", right) => NotEqual(left, right)
+      case (left, ">=" | "≥", right) => GreaterEqual(left, right)
       case (left, ">", right) => Greater(left, right)
-      case (left, "<=", right) => LessEqual(left, right)
+      case (left, "<=" | "≤", right) => LessEqual(left, right)
       case (left, "<", right) => Less(left, right)
     }
   )
 
-  def comparator[_: P]: P[Unit] = P("=" ~~ !"=" | "!=" | ">=" | ">" | "<=" | "<" ~~ !"-")
+  def comparator[_: P]: P[Unit] = P("=" ~~ !"=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<" ~~ !"-")
 
   /** Unit predicationals c(||) */
   def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
