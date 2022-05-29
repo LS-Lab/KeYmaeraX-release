@@ -468,8 +468,7 @@ object ArchiveParser extends ArchiveParser {
 
     // analyze and report annotations
     val elaboratedAnnotations = elaborateAnnotations(entry.annotations, elaboratedDefs)
-    val expandedAnnotations = elaborateAnnotations(expandAnnotations(entry.annotations, elaboratedDefs), elaboratedDefs)
-    (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
+    elaboratedAnnotations.distinct.foreach({
       case (e: Program, a: Formula) =>
         if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         else typeAnalysis(entry.name, declarationsOf(entry.model) ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
