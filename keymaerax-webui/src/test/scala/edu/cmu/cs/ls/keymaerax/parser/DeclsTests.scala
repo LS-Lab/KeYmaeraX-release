@@ -12,7 +12,8 @@ import org.scalatest.LoneElement._
 class DeclsTests extends TacticTestBase {
   "Archive parser" should "parse declarations of z, z_0 as two separate declarations" in {
     val input =
-      """ProgramVariables
+      """ArchiveEntry "Test"
+        |ProgramVariables
         |Real x;
         |Real z;
         |Real z_0;
@@ -21,13 +22,14 @@ class DeclsTests extends TacticTestBase {
         |Problem
         |x + z + z_0 = z_0 + z + x
         |End.
+        |End.
       """.stripMargin
     ArchiveParser.parseAsFormula(input)
   }
 
   "Problem/Solution Block" should "parse correctly" in withTactics {
     val input =
-      """
+      """ArchiveEntry "Test"
         |Definitions
         |  Bool A();
         |End.
@@ -36,6 +38,7 @@ class DeclsTests extends TacticTestBase {
         |End.
         |Tactic "t"
         |  implyR(1)
+        |End.
         |End.
       """.stripMargin
 
@@ -47,12 +50,13 @@ class DeclsTests extends TacticTestBase {
 
   "function domain" should "parse correctly" in {
     val input =
-      """
+      """ArchiveEntry "Test"
         |Definitions
         |  Bool Cimpl(Real x, Real y, Real z);
         |End.
         |Problem
         |  Cimpl(0,1,2) <-> true
+        |End.
         |End.
       """.stripMargin
 
@@ -63,12 +67,13 @@ class DeclsTests extends TacticTestBase {
 
   it should "fail to parse when the function application has the wrong assoc" in {
     val input =
-      """
+      """ArchiveEntry "Test"
         |Definitions
         |  Bool Cimpl(Real x, Real y, Real z);
         |End.
         |Problem
         |  Cimpl((0,1),2) <-> true
+        |End.
         |End.
       """.stripMargin
 
@@ -77,12 +82,13 @@ class DeclsTests extends TacticTestBase {
 
   it should "fail to parse when the function def'n has the wrong assoc" in {
     val input =
-      """
+      """ArchiveEntry "Test"
         |Definitions
         |  Bool Cimpl((Real x, Real y), Real z);
         |End.
         |Problem
         |  Cimpl(0,1,2) <-> true
+        |End.
         |End.
       """.stripMargin
 
@@ -91,12 +97,13 @@ class DeclsTests extends TacticTestBase {
 
   it should "substitute in definitions" in {
     val input =
-      """
+      """ArchiveEntry "Test"
         |Definitions
         |  Bool Pred(Real x, Real y, Real z) <-> x + y <= z;
         |End.
         |Problem
         |  Pred(0,1,2) <-> true
+        |End.
         |End.
       """.stripMargin
 
@@ -110,7 +117,8 @@ class DeclsTests extends TacticTestBase {
   }
 
   "Declarations type analysis" should "elaborate variables to no-arg functions per declaration" in {
-    val model = """Definitions
+    val model = """ArchiveEntry "Test"
+                  |Definitions
                   |  Real b();
                   |  Real m();
                   |End.
@@ -123,6 +131,7 @@ class DeclsTests extends TacticTestBase {
                   |
                   |Problem
                   |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
+                  |End.
                   |End.
                   |""".stripMargin
     val m = FuncOf(Function("m", None, Unit, Real), Nothing)
@@ -136,7 +145,8 @@ class DeclsTests extends TacticTestBase {
   }
 
   it should "not allow variables refer to functions with parameters" in {
-    val model = """Definitions
+    val model = """ArchiveEntry "Test"
+                  |Definitions
                   |  Real b(Real x);
                   |  Real m(Real x, Real y);
                   |End.
@@ -150,12 +160,14 @@ class DeclsTests extends TacticTestBase {
                   |Problem
                   |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
                   |End.
+                  |End.
                   |""".stripMargin
     a[ParseException] should be thrownBy ArchiveParser.parseAsFormula(model)
   }
 
   it should "succeed when ()'s are used." in {
-    val model = """Definitions
+    val model = """ArchiveEntry "Test"
+                  |Definitions
                   |  Real b();
                   |  Real m();
                   |End.
@@ -168,6 +180,7 @@ class DeclsTests extends TacticTestBase {
                   |
                   |Problem
                   |  x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()
+                  |End.
                   |End.
                   |""".stripMargin
     ArchiveParser.parseAsFormula(model) shouldBe "x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()".asFormula
