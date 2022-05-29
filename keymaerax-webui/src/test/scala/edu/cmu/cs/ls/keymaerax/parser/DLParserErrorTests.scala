@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.FixedGenerator
 
 import scala.collection.immutable._
 
-class ParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
+class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
@@ -162,6 +162,12 @@ class ParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach wi
     e.expect shouldBe "problem at 3:4"
     e.found shouldBe "<5\\nEnd.\""
     e.hint should include("End")
+  }
+
+  it should "report too many End tokens" in {
+    val input = """ArchiveEntry "Test" Problem 1>=0 End. End. End."""
+    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+    e.found should include("End")
   }
 
 }
