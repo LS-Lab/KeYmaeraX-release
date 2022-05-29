@@ -48,10 +48,11 @@ class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, wit
 
     val defsBlock = printDefsBlock(entry.defs, symbols)
 
-    val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrinter(entry.model).print(entry.model.prettyString), printedTactics)
+    val interpretationSanitized = entry.model.prettyString.replaceAll("<<.*>>", "")
+    val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrinter(entry.model).print(interpretationSanitized), printedTactics)
 
     val finalPrint = if (withComments) {
-      assert(ArchiveParser(printed).map(_.model) == ArchiveParser(entry.problemContent).map(_.model),
+      assert(ArchiveParser(printed).map(_.model) == ArchiveParser(entry.fileContent).map(_.model),
         "Expected printed entry and stored problem content to reparse to same model")
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^"]*"[^"]*"""".r.findFirstIn(entry.problemContent) match {
