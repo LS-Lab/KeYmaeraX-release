@@ -49,29 +49,39 @@ object DLParser extends DLParser {
       stack.map{case (s, i) => s"$s at ${input.prettyIndex(i)}"}.mkString(" / ")
     }
 
+    def formatFound(input: ParserInput, index: Int): String = {
+      val endIdx = Math.min(input.length, index+10)
+      val slice = input.slice(index, endIdx)
+      // Cut off early if we encounter a \n
+      val slice2 = if (slice.indexOf('\n') >= 0) slice.take(slice.indexOf('\n')) else slice
+      // Escape "s and surround with "s
+      "\"" + slice2.replaceAllLiterally("\"","\\\"") + "\""
+    }
+
+    /** The location of a parse failure. */
+    def location(f: Parsed.Failure): Location = try {
+      f.extra.input.prettyIndex(f.index).split(':').toList match {
+        case line::col::Nil => Region(line.toInt, col.toInt)
+        case line::col::unexpected => Region(line.toInt, col.toInt)
+        case unexpected => UnknownLocation
+      }
+    } catch {
+      case _: NumberFormatException => UnknownLocation
+    }
+
     ParseException(
-      msg = "Error while parsing " + (tr.stack.lastOption match {
+      msg = "Error parsing " + (tr.stack.lastOption match {
         case None => "input"
         case Some(last) => formatStack(tr.input, List(last))
       }),
       location(f),
-      found = f.extra.input.slice(f.index, Math.min(f.index+10, f.extra.input.length)),
+      found = formatFound(f.extra.input, f.index),
       expect = tr.groupAggregateString,
       after = "" + tr.stack.lastOption.getOrElse(""),
       // state = tr.longMsg,
       // state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
-      hint = "Try " + tr.terminalAggregateString).inInput(inputString, None)
-  }
-
-  /** The location of a parse failure. */
-  private[keymaerax] def location(f: Parsed.Failure): Location = try {
-    f.extra.input.prettyIndex(f.index).split(':').toList match {
-      case line::col::Nil => Region(line.toInt, col.toInt)
-      case line::col::unexpected => Region(line.toInt, col.toInt)
-      case unexpected => UnknownLocation
-    }
-  } catch {
-    case _: NumberFormatException => UnknownLocation
+      hint = "Try " + tr.terminalAggregateString
+    ).inInput(inputString, None)
   }
 
   /** parse from a parser with more friendly error reporting */
@@ -329,7 +339,7 @@ class DLParser extends Parser {
       (left +: pows).reduceRight(Power)
     }
 
-  def baseTerm[_: P]: P[Term] = (
+  def baseTerm[_: P]: P[Term] = P(
       number./ | dot./ | function.flatMap(diff) | unitFunctional.flatMap(diff)
       /* This cut means that an identifier which is not followed by () or {} or (||)
        * will always be interpreted as a variable */
