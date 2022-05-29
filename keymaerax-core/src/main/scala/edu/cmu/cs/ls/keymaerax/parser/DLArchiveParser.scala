@@ -235,7 +235,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** `HP name ::= {program};` | `HG name ::= {program};` program definition. */
     //@todo better return type with ProgramConst/SystemConst instead of Name
   def progDef[_: P]: P[(Name,Signature)] = P(
-    ("HP" | "HG") ~~ blank ~/ ident ~ "::=" ~ "{" ~/ (NoCut(program) | odeprogram) ~ "}" ~ ";".?
+    ("HP" | "HG") ~~ blank ~/ ident ~ "::=" ~ "{" ~/ (NoCut(program) | odeprogram) ~ "}" ~ ";"
   ).map({case (s,idx,p) => (Name(s,idx), Signature(Some(Unit), Trafo, None, Some(p), UnknownLocation))})
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
