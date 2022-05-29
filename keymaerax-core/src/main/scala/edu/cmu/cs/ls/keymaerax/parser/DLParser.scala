@@ -52,7 +52,7 @@ object DLParser extends DLParser {
 
     ParseException(tr.msg,
       location(f),
-      found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
+      found = f.extra.input.slice(f.index, Math.min(f.index+10, f.extra.input.length)),
       expect = formatStack(tr.input, List(tr.stack.last)),
       after = "" + tr.stack.headOption.getOrElse(""),
       // state = tr.longMsg,
@@ -205,8 +205,9 @@ class DLParser extends Parser {
 
   def expression[_: P]: P[Expression] = P(
     program |
-      // Term followed by comparator should not be parsed as a term
-      &(term ~ !(comparator)) ~ term |
+      // Term followed by comparator, or ambiguous term followed by formula operators,
+      // should not be parsed as a term
+      !(term ~ (comparator | StringIn("->","<-","<->","&","|"))) ~ term |
       formula
   )
 
@@ -256,9 +257,12 @@ class DLParser extends Parser {
 
   // terminals not used here but provided for other DL parsers
 
+  def stringInterior[_: P]: P[String] =
+    (!CharIn("\\\"") ~~ AnyChar./ | "\\\""./ | "\\").repX.!
+
   /** "whatevs": Parse a string literal. (([^\\"]|\\"|\\(?!"))*+) */
   def string[_: P]: P[String] = P(
-    "\"" ~~/ (!CharIn("\\\"") ~~ AnyChar | "\\\"" | "\\" ~~ !"\"").repX.! ~~ "\""
+    "\"" ~~/ stringInterior ~~ "\""
   )
 
   /** "-532": Parse an integer literal, unnormalized. */
@@ -497,10 +501,11 @@ class DLParser extends Parser {
     })
 
   def assign[_: P]: P[AtomicProgram] = (
-    (variable ~ ":="./).flatMap(x =>
-      "*".!.map(_ => AssignAny(x))
-        | term.map(t => Assign(x,t))
-    ) ~ ";"
+    (variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term.map(Right(_)))  ~ ";").
+      map({
+        case (x, Left("*")) => AssignAny(x)
+        case (x, Right(t)) => Assign(x, t)
+      })
   )
   def test[_: P]: P[Test] = ( "?" ~/ formula ~ ";").map(f => Test(f))
   def braceP[_: P]: P[Program] = ( "{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).
