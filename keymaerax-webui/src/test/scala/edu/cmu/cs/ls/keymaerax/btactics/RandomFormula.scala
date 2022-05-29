@@ -72,11 +72,11 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
 
   // dot generators default to no diffs
-  def nextDotTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size, dots=true, diffs=false, funcs=false)
+  def nextDotTerm(size : Int): Term = nextT(nextNames("z", size / 3 + 1), size, dots=true, diffs=false, funcs=false)
 
-  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, modals=true, dotTs=true, dotFs=true, diffs=false, funcs=false, duals=isGame)
+  def nextDotFormula(size : Int): Formula = nextF(nextNames("z", size / 3 + 1), size, modals=true, dotTs=true, dotFs=true, diffs=false, funcs=false, duals=isGame)
 
-  def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, dotTs=true, dotFs=false, diffs=false, funcs=false, duals=isGame)
+  def nextDotProgram(size : Int): Program = nextP(nextNames("z", size / 3 + 1), size, dotTs=true, dotFs=false, diffs=false, funcs=false, duals=isGame)
 
   def nextDotExpression(size: Int): Expression = rand.nextInt(3) match {
     case 0 => nextDotTerm(size)
@@ -339,7 +339,10 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         //@todo avoid 0^0
       case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs), Number(BigDecimal(rand.nextInt(6))))
       case it if (60 until 70 contains it) && diffs => DifferentialSymbol(vars(rand.nextInt(vars.length)))
-      case it if (70 until 80 contains it) && diffs => Differential(nextT(vars, n-1, dots=dots, diffs=false, funcs=funcs))
+      case it if (70 until 80 contains it) && diffs => nextT(vars, n-1, dots=dots, diffs=false, funcs=funcs) match {
+        case n: Number => n
+        case t => Differential(t)
+      }
       case it if (80 until 84 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length))+ "0",None,Unit,Real),Nothing)
       case it if (84 until 88 contains it) && funcs => FuncOf(Function(funcNames(rand.nextInt(funcNames.length)),None,Real,Real), nextT(vars, n-1, dots=dots,diffs=diffs,funcs=funcs))
       case it if (88 until 95 contains it) && funcs => UnitFunctional(funcNames(rand.nextInt(funcNames.length)).toUpperCase,AnyArg,Real)
