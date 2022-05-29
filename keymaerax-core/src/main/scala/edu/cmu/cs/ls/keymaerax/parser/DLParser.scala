@@ -10,7 +10,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.DLParser.ambiguousBaseF
 import fastparse._
 
 import scala.collection.immutable._
@@ -512,13 +511,16 @@ class DLParser extends Parser {
     map({
       case (p,None) => p
       case (p,Some(("*",None))) => Loop(p)
-      case (p,Some(("*",Some(inv)))) => reportAnnotation(Loop(p),inv); Loop(p)
+      case (p,Some(("*",Some(inv)))) => inv.foreach(reportAnnotation(Loop(p),_)); Loop(p)
       case (p,Some(("×", _))) => Dual(Loop(Dual(p)))
     })
   def odeprogram[_: P]: P[ODESystem] = ( diffProgram ~ ("&" ~/ formula).?).
     map({case (p,f) => ODESystem(p,f.getOrElse(True))})
   def odesystem[_: P]: P[ODESystem] = ( "{" ~ odeprogram ~ "}" ~/ annotation.?).
-    map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
+    map({
+      case (p,None) => p
+      case (p,Some(inv)) => inv.foreach(reportAnnotation(p,_)); p
+    })
 
   def baseP[_: P]: P[Program] = (
     systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP
@@ -531,7 +533,7 @@ class DLParser extends Parser {
   })
 
   /** Parses an annotation */
-  def annotation[_: P]: P[Formula] = "@invariant" ~/ "(" ~/ formula ~ ")"
+  def annotation[_: P]: P[Seq[Formula]] = "@invariant" ~/ "(" ~/ formula.rep(min=1,sep=","./).map(_.toList) ~ ")"
 
   def sequence[_: P]: P[Program] = ( (dual ~/ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
