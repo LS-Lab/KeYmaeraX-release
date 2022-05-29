@@ -112,7 +112,8 @@ class DLBelleParser(override val printer: BelleExpr => String,
         case (args, Some(pos)) => (tacName, args.map(Left(_)) :+ Right(pos))
       })
     }) ~ ")"
-  ).map({case (t,args) => tacticProvider(t, args.toList, defs)})
+  )("tactic(...)",implicitly).
+    map({case (t,args) => tacticProvider(t, args.toList, defs)})
 
   def builtinTactic[_: P]: P[BelleExpr] = (
     ("doall".! ~~/ "(" ~ tactic ~ ")").
