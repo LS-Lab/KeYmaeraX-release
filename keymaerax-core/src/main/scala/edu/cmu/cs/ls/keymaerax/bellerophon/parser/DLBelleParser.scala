@@ -99,7 +99,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   //@note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
   def at[_: P]: P[BelleExpr] = P(
     (tacticSymbol ~~ "(")./.flatMap(tacName => {
-      val argInfos = DerivationInfo(tacName).persistentInputs
+      val argInfos = DerivationInfo.ofCodeName(tacName).persistentInputs
       if (argInfos.isEmpty)
         locator.?.map(loc =>
           (tacName, loc.map(Right(_)).toList)
