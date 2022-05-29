@@ -281,19 +281,19 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
   it should "prove cheat sheet example" in withQE { _ => {
     val f = ArchiveParser.parseAsFormula(
       """
-        |/* Example from KeYmaera X Cheat Sheet */
-        |Functions.        /* function symbols cannot change their value */
-        |    R A.          /* real-valued maximum acceleration constant */
-        |    R B.          /* real-valued maximum braking constant */
+        |ArchiveEntry "Example from KeYmaera X Cheat Sheet"
+        |Definitions        /* function symbols cannot change their value */
+        |    Real A;          /* real-valued maximum acceleration constant */
+        |    Real B;          /* real-valued maximum braking constant */
         |End.
         |
-        |ProgramVariables. /* program variables may change their value over time */
-        |    R x.          /* real-valued position */
-        |    R v.          /* real-valued velocity */
-        |    R a.          /* current acceleration chosen by controller */
+        |ProgramVariables /* program variables may change their value over time */
+        |    Real x;          /* real-valued position */
+        |    Real v;          /* real-valued velocity */
+        |    Real a;          /* current acceleration chosen by controller */
         |End.
         |
-        |Problem.                               /* conjecture in differential dynamic logic */
+        |Problem                                /* conjecture in differential dynamic logic */
         |    v>=0 & A>0 & B>0                   /* initial condition */
         |  ->                                   /* implies */
         |  [                                    /* all runs of hybrid system dynamics */
@@ -303,19 +303,20 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
         |    }* @invariant(v>=0)                /* loop repeats, with invariant contract */
         |  ] v>=0                               /* safety/postcondition */
         |End.
+        |End.
       """.stripMargin
     )
 
     val t =
       """
-        |implyR(1) ; andL(-1) ; andL(-2) ; loop({`v>=0`}, 1) ; <(
-        |  master,
-        |  master,
+        |implyR(1) ; andL(-1) ; andL(-2) ; loop("v>=0", 1) ; <(
+        |  auto,
+        |  auto,
         |  composeb(1) ; choiceb(1) ; andR(1) ; <(
         |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; ODE(1),
         |    choiceb(1) ; assignb(1.0) ; assignb(1.1) ; andR(1) ; <(
-        |      solve(1) ; master,
-        |      solve(1) ; master
+        |      solve(1) ; auto,
+        |      solve(1) ; auto
         |      )
         |    )
         |  )
