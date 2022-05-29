@@ -49,11 +49,15 @@ object DLParser extends DLParser {
       stack.map{case (s, i) => s"$s at ${input.prettyIndex(i)}"}.mkString(" / ")
     }
 
-    ParseException(tr.msg,
+    ParseException(
+      msg = "Error while parsing " + (tr.stack.lastOption match {
+        case None => "input"
+        case Some(last) => formatStack(tr.input, List(last))
+      }),
       location(f),
       found = f.extra.input.slice(f.index, Math.min(f.index+10, f.extra.input.length)),
-      expect = formatStack(tr.input, List(tr.stack.last)),
-      after = "" + tr.stack.headOption.getOrElse(""),
+      expect = tr.groupAggregateString,
+      after = "" + tr.stack.lastOption.getOrElse(""),
       // state = tr.longMsg,
       // state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
       hint = "Try " + tr.terminalAggregateString).inInput(inputString, None)
@@ -240,14 +244,11 @@ class DLParser extends Parser {
     * @note Index is normalized so that x_00 cannot be mentioned and confused with x_0.
     * @note Keywords are not allowed as identifiers. */
   def ident[_: P]: P[(String,Option[Int])] = P(
-    (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX ~~ ("_" ~~ !(CharIn("0-9"))).?).!.
-      flatMapX(id =>
-        if (keywords.contains(id))
-          Fail./.opaque(s"Keyword $id cannot be used as identifiers")
-        else Pass(id)
-      ) ~~
-      ("_" ~~ normNatural).? ~~ (!CharIn("a-zA-Z_"))
-    )
+    DLParserUtils.filterWithMsg(
+      (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX ~~ ("_" ~~ !(CharIn("0-9"))).?).!
+    )(!keywords.contains(_))("Keywords cannot be used as identifiers")
+      ~~ ("_" ~~ normNatural).? ~~ (!CharIn("a-zA-Z_"))
+  )
 
   /** `.` or `._2`: dot parsing */
   def dot[_:P]: P[DotTerm] = P(
@@ -428,23 +429,19 @@ class DLParser extends Parser {
         }
     }
     /* unit predicational OR unit functional */
-    |  ( ident ~~ space ~ "'".!.?).flatMap {
-      case (name, idx, args, diff) =>
-        if (idx.isDefined)
-          Fail.opaque("Unit predicationals cannot have indices")
-        else {
+    | DLParserUtils.filterWithMsg( ident ~~ space ~ "'".!.?)(_._2.isEmpty)("Unit predicationals cannot have indices").map({
+        case (name, _, args, diff) =>
           val p = UnitPredicational(name, args)
-          Pass(diff match {
+          diff match {
             case None => p
             case Some("'") => DifferentialFormula(p)
-          })
-        }
-    }
+          }
+      })
     /* parenthesized formula OR term */
-    | ("(" ~ rec ~ ")" ~ "'".!.?).map {
-      case (form,None) => form
-      case (form,Some("'")) => DifferentialFormula(form)
-    }
+    | ("(" ~ rec ~ ")" ~ "'".!.?).map({
+        case (form,None) => form
+        case (form,Some("'")) => DifferentialFormula(form)
+      })
   )
 
   def unambiguousBaseF[_: P]: P[Formula] =
@@ -487,17 +484,21 @@ class DLParser extends Parser {
   // program parser
   //*****************
 
-  def programSymbol[_: P]: P[AtomicProgram] = P(ident ~~ odeSpace.? ~ ";").flatMap({
-    case (s,None,taboo) => Pass(ProgramConst(s, taboo.getOrElse(AnyArg)))
-    case (s,Some(i),_) => Fail.opaque("Program symbols cannot have an index: " + s + "_" + i)
-  })
+  def programSymbol[_: P]: P[AtomicProgram] = P(
+    DLParserUtils.filterWithMsg(ident ~~ odeSpace.? ~ ";")
+        (_._2.isEmpty)("Program symbols cannot have an index").
+      map({ case (s,None,taboo) =>
+        ProgramConst(s, taboo.getOrElse(AnyArg))
+      })
+  )
   //@todo combine system symbol and space taboo
-  def systemSymbol[_: P]: P[AtomicProgram] =
-    P( ident  ~~ "{|^@" ~/ variable.rep(sep=","./) ~ "|}" ~ ";").
-    flatMap({
-      case (s,None,taboo) => Pass(SystemConst(s, if (taboo.isEmpty) AnyArg else Except(taboo.to)))
-      case (s,Some(i),_) => Fail.opaque("System symbols cannot have an index: " + s + "_" + i)
-    })
+  def systemSymbol[_: P]: P[AtomicProgram] = P(
+    DLParserUtils.filterWithMsg(ident  ~~ "{|^@" ~/ variable.rep(sep=","./) ~ "|}" ~ ";")
+      (_._2.isEmpty)("System symbols cannot have an index").
+      map({ case (s,None,taboo) =>
+        SystemConst(s, if (taboo.isEmpty) AnyArg else Except(taboo.to))
+      })
+  )
 
   def assign[_: P]: P[AtomicProgram] = (
     (variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term.map(Right(_)))  ~ ";").
@@ -561,11 +562,13 @@ class DLParser extends Parser {
   //*****************
 
   def ode[_: P]: P[AtomicODE] = P( diffVariable ~ "=" ~/ term).map({case (x,t) => AtomicODE(x,t)})
-  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] =
-    P( ident ~~ odeSpace.?).flatMap({
-      case (s, None, None)     => Pass(DifferentialProgramConst(s))
-      case (s, None, Some(sp)) => Pass(DifferentialProgramConst(s,sp))
-      case (s, Some(i), _)     => Fail.opaque("Differential program symbols cannot have an index: " + s + "_" + i)})
+  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P(
+    DLParserUtils.filterWithMsg(ident ~~ odeSpace.?)(_._2.isEmpty)
+                  ("Differential program symbols cannot have an index").map({
+      case (s, None, None) => DifferentialProgramConst(s)
+      case (s, None, Some(sp)) => DifferentialProgramConst(s, sp)
+    })
+  )
   def atomicDP[_: P]: P[AtomicDifferentialProgram] = ( ode | diffProgramSymbol )
 
   /** {|x1,x2,x3|} parses a space declaration */
