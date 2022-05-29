@@ -44,4 +44,9 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     annotations.length shouldBe 2
   }
 
+  it should "parse parenthesized" in {
+    Parser("(x+1)") shouldBe Parser("x+1")
+    Parser("(x>=0)") shouldBe Parser("x>=0")
+  }
+
 }

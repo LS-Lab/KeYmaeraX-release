@@ -334,9 +334,8 @@ class DLParser extends Parser {
       /* This cut means that an identifier which is not followed by () or {} or (||)
        * will always be interpreted as a variable */
       | variable
-      /* termList has a cut after (, but this is safe, because we
-       * require that if the first available character is ( it is
-       * unambiguously a term parenthesis */
+      /* termList cannot have a cut after (, because otherwise backtracking into
+      * parenthesized formulas is disallowed. */
       | termList.flatMap(diff)
   )
 
@@ -362,7 +361,7 @@ class DLParser extends Parser {
     "'".!.?.map{case None => left case Some("'") => Differential(left)}
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
-  def termList[_: P]: P[Term] = P("(" ~~ !"|" ~/ term.rep(sep=","./) ~ ")").
+  def termList[_: P]: P[Term] = P("(" ~~ !"|" ~ term.rep(sep=","./) ~ ")").
     map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
