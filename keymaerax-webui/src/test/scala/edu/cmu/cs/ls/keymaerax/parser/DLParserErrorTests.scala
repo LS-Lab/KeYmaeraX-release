@@ -1,17 +1,16 @@
-package edu.cmu.cs.ls.keymaerax.parser
-
 /**
   * Copyright (c) Carnegie Mellon University.
   * See LICENSE.txt for the conditions of this license.
   */
+package edu.cmu.cs.ls.keymaerax.parser
+
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Cancellable, LazySequentialInterpreter, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest._
 import org.scalamock.scalatest.MockFactory
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.btactics.FixedGenerator
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, ToolProvider, Z3ToolProvider}
 
 import scala.collection.immutable._
 
@@ -19,6 +18,8 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
+    ToolProvider.setProvider(new Z3ToolProvider)
+    ToolProvider.init()
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
       KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
@@ -38,13 +39,17 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "dL parser" should "report expected term on rhs" in {
     val input = "(( (( f_() )) + #"
     val ex = the [ParseException] thrownBy Parser.parser.termParser(input)
-    ex.msg should include("baseTerm")
+    ex.msg should include("Error while parsing term at 1:4")
+    ex.found shouldBe "#"
+    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"-\")"
   }
 
   it should "report expected term on rhs FROM FORMULA" in {
     val input = "(( (( f_() )) + #"
     val ex = the [ParseException] thrownBy Parser.parser.formulaParser(input)
-    ex.msg should include("baseTerm")
+    ex.msg should include("Error while parsing term at 1:4")
+    ex.found shouldBe "#"
+    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"-\")"
   }
 
   "dL archive parser" should "report missing problem" in {
@@ -54,9 +59,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe "\"Problem\" at 3:1"
-    e.found shouldBe "\"End.\\n     \""
-    e.hint shouldBe "Try (\"Description\" | \"Title\" | \"Link\" | \"Author\" | \"See\" | programVariables | definitions | \"Problem\")"
+    e.expect shouldBe "(\"Description\" | \"Title\" | \"Link\" | \"Author\" | \"See\" | \"Illustration\" | \"Citation\" | programVariables | definitions | \"Problem\")"
+    e.found shouldBe "End.\n     "
+    e.hint shouldBe "Try (\"Description\" | \"Title\" | \"Link\" | \"Author\" | \"See\" | \"Illustration\" | \"Citation\" | \"ProgramVariables\" | \"Definitions\" | \"Problem\")"
   }
 
   it should "report wrong sort" in {
@@ -83,9 +88,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       """.stripMargin
 
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe "Start of ArchiveEntry at 1:1"
-    e.found shouldBe "\"BadEntry\\nE\""
-    e.hint shouldBe "Try (sharedDefinitions | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
+    e.expect shouldBe "(sharedDefinitions | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
+    e.found shouldBe "BadEntry\nE"
+    e.hint shouldBe "Try (\"SharedDefinitions\" | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
   }
 
   // TODO is this still a required feature?
@@ -98,9 +103,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End asd.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe "end label: Some(asd) is optional but should be the same as the start label: Some(asdf) at 5:9"
-    e.found shouldBe "\"\\n      \""
-    e.hint shouldBe "Try: end label: Some(asd) is optional but should be the same as the start label: Some(asdf)"
+    e.expect shouldBe "end label: Some(asd) is optional but should be the same as the start label: Some(asdf)"
+    e.found shouldBe "\n      "
+    e.hint shouldBe "Try end label: Some(asd) is optional but should be the same as the start label: Some(asdf)"
   }
 
   it should "domain missing" in {
@@ -112,10 +117,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe "formula, but got term at 3:9"
-    e.found shouldBe "\"}]x>=0\\nEnd\""
-    // todo: maybe provide verbose suggestions here somehow??
-    e.hint shouldBe "Try: >, < ... et"
+    e.expect shouldBe """("_" | "{" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")"""
+    e.found shouldBe "}]x>=0\nEnd"
+    e.hint shouldBe """Try ([a-zA-Z0-9] | "_" | "{" | "(" | "(|" | "<<" | "'" | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")"""
   }
 
   it should "domain missing 2" in {
@@ -127,10 +131,10 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe "formula at 3:9"
-    e.found shouldBe "\"}]x>=0\\nEnd\""
+    e.expect shouldBe """("true" | "false" | "\\forall" | "\\exists" | "[" | "<" | "!" | predicational | &(ident | Unit predicationals cannot have indices | "(") | &term | ident | Unit predicationals cannot have indices | "(")"""
+    e.found shouldBe "}]x>=0\nEnd"
     // todo: maybe provide verbose suggestions here somehow??
-    e.hint shouldBe "Try (\"true\" | \"false\" | \"\\\\forall\" | \"\\\\exists\" | \"[\" | \"<\" | \"!\" | predicational | ident | \"(\" | term)"
+    e.hint shouldBe "Try (\"true\" | \"false\" | \"\\\\forall\" | \"\\\\exists\" | \"[\" | \"<\" | \"!\" | [a-zA-Z] | \"(\" | \"-\" | [0-9] | \".\")"
   }
 
   it should "give correct error location for disallowed identifier" in {
@@ -143,9 +147,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
     print(e)
-    e.expect shouldBe "term at 3:5"
-    e.found shouldBe "\"ax__\\nEnd.\\n\""
-    e.hint should include("ident")
+    e.expect shouldBe """(number | dot | function | unitFunctional | variable | termList | "-")"""
+    e.found shouldBe "ax__\nEnd.\n"
+    e.hint shouldBe """Try ("-" | [0-9] | "." | "(")"""
   }
 
   it should "give correct error location for invalid formula extension" in {
@@ -157,10 +161,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    //TODO: what to do?
-    e.msg should include("End")
-    e.expect shouldBe "problem at 3:4"
-    e.found shouldBe "<5\\nEnd.\""
+    e.msg shouldBe "Error while parsing problem at 2:1"
+    e.expect shouldBe """("_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "&" | "|" | "->" | "<-" | "<->" | "End.")"""
+    e.found shouldBe "<5\nEnd.\nEn"
     e.hint should include("End")
   }
 
