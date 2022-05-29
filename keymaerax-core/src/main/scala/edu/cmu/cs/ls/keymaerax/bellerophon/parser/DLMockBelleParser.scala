@@ -25,13 +25,11 @@ class DLMockBelleParser(override val printer: BelleExpr => String,
   override val tacticParser: String => BelleExpr = this
   override val expressionParser: Parser = DLParser
 
-  /** Parse the input string as a Bellerophon tactic.
-    *
-    * @param input the string to parse as a bellerophon tactic.
-    * @ensures apply(printer(\result)) == \result
-    * @throws ParseException if `input` is not a well-formed bellerophon tactic.
-    */
-  override def apply(input: String): BelleExpr = belleParser(input)
+  /** @inheritdoc */
+  override def apply(input: String, defs: Declaration): BelleExpr = {
+    setDefs(defs)
+    belleParser(input)
+  }
 
   /** Sets the definitions to be used when parsing tactic expressions. Expected to be set
     * before [[apply]] or [[tactic]] are used. */

@@ -39,7 +39,15 @@ trait TacticParser extends (String => BelleExpr) {
     * @ensures apply(printer(\result)) == \result
     * @throws ParseException if `input` is not a well-formed Bellerophon tactic.
     */
-  def apply(input: String): BelleExpr
+  final def apply(input: String): BelleExpr = apply(input, Declaration(Map.empty))
+
+  /** Parse the input string in the concrete syntax of Bellerophon tactics.
+    * @param input the string to parse as a Bellerophon tactic.
+    * @param defs the definitions to elaborate variables/functions/predicates to their expected type.
+    * @ensures apply(printer(\result)) == \result
+    * @throws ParseException if `input` is not a well-formed Bellerophon tactic.
+    */
+  def apply(input: String, defs: Declaration): BelleExpr
 
   /** Parse the input string in the concrete syntax as a Bellerophon tactic */
   val tacticParser: (String => BelleExpr)

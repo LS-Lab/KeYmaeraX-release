@@ -51,8 +51,8 @@ object BelleParser extends TacticParser with Logging {
   override val expressionParser: Parser = Parser.parser
   override val printer: BelleExpr => String = BellePrettyPrinter
 
-  /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators and does not expand definitions. */
-  override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
+  /** @inheritdoc */
+  override def apply(input: String, defs: Declaration): BelleExpr = parseWithInvGen(input, None, defs)
 
   /** Parses `t` backwards-compatible with definitions `defs` expanded in tactic arguments depending on
     * whether `t` expands symbols or uses substitutions explicitly or not. */
@@ -213,8 +213,6 @@ object BelleParser extends TacticParser with Logging {
           case Some(BelleToken(ON_ALL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(TACTIC, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(LET, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-          case Some(BelleToken(EXPANDALLDEFS, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-          case Some(BelleToken(EXPAND, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(_) => throw BelleParseException("A combinator should be followed by a full tactic expression", st)
           case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
         }
@@ -379,60 +377,6 @@ object BelleParser extends TacticParser with Logging {
       }
       //endregion
 
-      //region def
-      case r :+ BelleToken(EXPAND, loc) => st.input match {
-        case BelleToken(all@IDENT("All"), allLoc) :: tail =>
-          // resolve clash with builtin tactic expandAll
-          val parsedExpr = constructTactic(EXPAND.img+all.name, None, loc.spanTo(allLoc), tacticDefs, g, defs, expandAll)
-          ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(allLoc), None), tail)
-        case BelleToken(expr: EXPRESSION, identLoc) :: tail =>
-          val x: NamedSymbol = expr.undelimitedExprString.asExpr match {
-            case v: Variable => v
-            case FuncOf(fn, _) => fn
-            case PredOf(fn, _) => fn
-            case p: ProgramConst => p
-            case s: SystemConst => s
-          }
-          defs.substs.find(sp => sp.what match {
-            case PredOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
-            case FuncOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
-            case n: NamedSymbol => n.name == x.name && n.index == x.index
-          }) match {
-            case Some(_) => ParserState(r :+ ParsedBelleExpr(TactixLibrary.expand(expr.undelimitedExprString), loc.spanTo(identLoc), None), tail)
-            case None => throw BelleParseException(s"Expression definition not found: '${x.prettyString}'", st)
-          }
-      }
-      case r :+ BelleToken(EXPANDALLDEFS, loc) =>
-        //@note uses location information to distinguish file definitions from proof definitions (e.g., abstract loop invariant J(x))
-        val (modelDefs, proofDefs) = defs.decls.partition({
-          case (_, Signature(_, _, _, _, UnknownLocation)) => false
-          case _ => true
-        })
-        val modelSubsts = Declaration(modelDefs).substs
-        val modelExpand = if (modelSubsts.nonEmpty) Some(TactixLibrary.expandAllDefs(modelSubsts)) else None
-        // use all defs and filter so that right-hand sides of proof definitions get correctly elaborated
-        val proofsExpand = defs.substs.filter(_.what match {
-          case FuncOf(ns: Function, _) => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
-          case PredOf(ns: Function, _) => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
-          case ns: ProgramConst => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
-          case ns: SystemConst => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
-          case _ => false
-        }).map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).reduceRightOption[BelleExpr](_ & _)
-        val expand = (modelExpand, proofsExpand) match {
-          case (Some(me), Some(pe)) => Some(pe & me)
-          case (Some(me), None) => Some(me)
-          case (None, Some(pe)) => Some(pe)
-          case (None, None) => None
-        }
-        expand match {
-          case Some(e) => ParserState(r :+ ParsedBelleExpr(e, loc, None), st.input)
-          case None => st.input match {
-            case BelleToken(SEQ_COMBINATOR, _) :: rest => ParserState(r, rest)
-            case _ => ParserState(r, st.input)
-          }
-        }
-      //endregion
-
       //region using
 
       case r :+ ParsedBelleExpr(expr, eLoc, l) :+ BelleToken(USING, _) => st.input match {
@@ -574,8 +518,6 @@ object BelleParser extends TacticParser with Logging {
     case ON_ALL => true
     case LET => true
     case TACTIC => true
-    case EXPANDALLDEFS => true
-    case EXPAND => true
     case _ => false
   }
 
