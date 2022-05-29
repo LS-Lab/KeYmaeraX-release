@@ -10,7 +10,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArgBase, FormulaArg, GeneratorArg, ListArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, FormulaArg, GeneratorArg, ListArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, DLParserUtils, Declaration, ParseException, Parser}
 import fastparse._
@@ -120,7 +120,6 @@ class DLBelleParser(override val printer: BelleExpr => String,
     ("doall".! ~~/ "(" ~ tactic ~ ")").
       map({case ("doall", t) => OnAll(t)}) |
     ( /*todo: lots of builtins to implement */
-      "expand".! ~~ blank ~/ argument |
       "USMatch".! |
       "partial".! |
       "let".!
