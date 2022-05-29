@@ -10,7 +10,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.DLParser.ambiguousBaseF
 import fastparse._
 
 import scala.collection.immutable._
@@ -52,7 +51,7 @@ object DLParser extends DLParser {
 
     ParseException(tr.msg,
       location(f),
-      found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
+      found = f.extra.input.slice(f.index, Math.min(f.index+10, f.extra.input.length)),
       expect = formatStack(tr.input, List(tr.stack.last)),
       after = "" + tr.stack.headOption.getOrElse(""),
       // state = tr.longMsg,
@@ -205,8 +204,9 @@ class DLParser extends Parser {
 
   def expression[_: P]: P[Expression] = P(
     program |
-      // Term followed by comparator should not be parsed as a term
-      &(term ~ !(comparator)) ~ term |
+      // Term followed by comparator, or ambiguous term followed by formula operators,
+      // should not be parsed as a term
+      !(term ~ (comparator | StringIn("->","<-","<->","&","|"))) ~ term |
       formula
   )
 
@@ -256,9 +256,12 @@ class DLParser extends Parser {
 
   // terminals not used here but provided for other DL parsers
 
+  def stringInterior[_: P]: P[String] =
+    (!CharIn("\\\"") ~~ AnyChar./ | "\\\""./ | "\\").repX.!
+
   /** "whatevs": Parse a string literal. (([^\\"]|\\"|\\(?!"))*+) */
   def string[_: P]: P[String] = P(
-    "\"" ~~/ (!CharIn("\\\"") ~~ AnyChar | "\\\"" | "\\" ~~ !"\"").repX.! ~~ "\""
+    "\"" ~~/ stringInterior ~~ "\""
   )
 
   /** "-532": Parse an integer literal, unnormalized. */
@@ -497,23 +500,27 @@ class DLParser extends Parser {
     })
 
   def assign[_: P]: P[AtomicProgram] = (
-    (variable ~ ":="./).flatMap(x =>
-      "*".!.map(_ => AssignAny(x))
-        | term.map(t => Assign(x,t))
-    ) ~ ";"
+    (variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term.map(Right(_)))  ~ ";").
+      map({
+        case (x, Left("*")) => AssignAny(x)
+        case (x, Right(t)) => Assign(x, t)
+      })
   )
   def test[_: P]: P[Test] = ( "?" ~/ formula ~ ";").map(f => Test(f))
   def braceP[_: P]: P[Program] = ( "{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).
     map({
       case (p,None) => p
       case (p,Some(("*",None))) => Loop(p)
-      case (p,Some(("*",Some(inv)))) => reportAnnotation(Loop(p),inv); Loop(p)
+      case (p,Some(("*",Some(inv)))) => inv.foreach(reportAnnotation(Loop(p),_)); Loop(p)
       case (p,Some(("×", _))) => Dual(Loop(Dual(p)))
     })
   def odeprogram[_: P]: P[ODESystem] = ( diffProgram ~ ("&" ~/ formula).?).
     map({case (p,f) => ODESystem(p,f.getOrElse(True))})
   def odesystem[_: P]: P[ODESystem] = ( "{" ~ odeprogram ~ "}" ~/ annotation.?).
-    map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
+    map({
+      case (p,None) => p
+      case (p,Some(inv)) => inv.foreach(reportAnnotation(p,_)); p
+    })
 
   def baseP[_: P]: P[Program] = (
     systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP
@@ -526,7 +533,7 @@ class DLParser extends Parser {
   })
 
   /** Parses an annotation */
-  def annotation[_: P]: P[Formula] = "@invariant" ~/ "(" ~/ formula ~ ")"
+  def annotation[_: P]: P[Seq[Formula]] = "@invariant" ~/ "(" ~/ formula.rep(min=1,sep=","./).map(_.toList) ~ ")"
 
   def sequence[_: P]: P[Program] = ( (dual ~/ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))

@@ -10,8 +10,9 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArgBase, FormulaArg, GeneratorArg, ListArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLParser, DLParserUtils, Declaration, ParseException, Parser}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
@@ -78,15 +79,43 @@ class DLBelleParser(override val printer: BelleExpr => String,
   )
 
   def locator[_: P]: P[PositionLocator] = P( position.map(pos => Fixed(pos)) | searchLocator )
-  def argument[_: P]: P[Expression] = P("\"" ~~/ expression ~~ "\"")
+
+  def argument[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
+    argInfo match {
+      case FormulaArg(name, allowsFresh) => formula.map(List(_))
+      case TermArg(name, allowsFresh) => term.map(List(_))
+      case VariableArg(name, allowsFresh) => DLParser.variable.map(List(_))
+      case GeneratorArg(name) => ???
+      case StringArg(name, allowsFresh) => DLParser.stringInterior.log("string!").map(List(_))
+      case SubstitutionArg(name, allowsFresh) => ???
+      case PosInExprArg(name, allowsFresh) => ???
+      case OptionArg(arg) => argument(arg)
+      case ListArg(arg) => ((argument(arg) ~ "::"./).rep ~ "nil").map(_.toList)
+    }
+  )
 
   def tacticSymbol[_: P]: P[String] = P(ident).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
   def atomicTactic[_: P]: P[BelleExpr] = ( tacticSymbol ~ !"(").map(t => tacticProvider(t, Nil, defs))
   //@note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
-  def at[_: P]: P[BelleExpr] = ( tacticSymbol ~~ "("
-    ~/ (argument.map(arg => Left(Seq(arg))::Nil) | locator.map(j => Right(j)::Nil)).rep(min = 1, sep = ","./)
-    ~ ")" ).
-    map({case (t,args) => tacticProvider(t, args.flatten.toList, defs)})
+  def at[_: P]: P[BelleExpr] = P(
+    (tacticSymbol ~~ "(")./.flatMap(tacName => {
+      val argInfos = DerivationInfo(tacName).persistentInputs
+      if (argInfos.isEmpty)
+        locator.?.map(loc =>
+          (tacName, loc.map(Right(_)).toList)
+        )
+      else (
+        DLParserUtils.mapJoin(argInfos)
+          (ai => "\"" ~/ argument(ai) ~ "\"")
+          (","./) ~
+          (","./ ~ locator).?
+      ).map({
+        case (args, None) => (tacName, args.map(Left(_)))
+        case (args, Some(pos)) => (tacName, args.map(Left(_)) :+ Right(pos))
+      })
+    }) ~ ")"
+  ).map({case (t,args) => tacticProvider(t, args.toList, defs)})
+
   def builtinTactic[_: P]: P[BelleExpr] = (
     ("doall".! ~~/ "(" ~ tactic ~ ")").
       map({case ("doall", t) => OnAll(t)}) |
@@ -97,11 +126,6 @@ class DLBelleParser(override val printer: BelleExpr => String,
       "let".!
       ).map(_ => belleParser("skip"))
     )
-  def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )("(tactic)", implicitly)
-  def baseTac[_: P]: P[BelleExpr] = (
-    (builtinTactic | atomicTactic | at | branchTac | parenTac)
-      ~~ ("*" ~ integer | "*".! ~ !CharIn("0-9")).?
-  ).map({case (t,None) => t case (t,Some(n:Integer)) => RepeatTactic(t,n) case (t,Some("*")) => SaturateTactic(t)})
 
   def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ (
     seqTac.rep(min=1,sep=","./).
@@ -110,10 +134,22 @@ class DLBelleParser(override val printer: BelleExpr => String,
       map(CaseTactic)
     ) ~ ")")("<(tactic,tactic,...)",implicitly)
 
-  def repeatTac[_: P]: P[BelleExpr] = P(
-    (parenTac ~ "*" ~ integer).map(pn=>RepeatTactic(pn._1,pn._2))
-    | (parenTac ~ "*" ~ !CharIn("0-9")).map(SaturateTactic)
-  )("tactic*",implicitly)
+  def parenTac[_: P]: P[BelleExpr] = P(
+    ("(" ~/ tactic ~ ")" ~ ("*".! ~ (integer.map(Left(_)) | (!CharIn("0-9")).map(Right(_)))).?).
+      map {
+        case (tac, Some(("*", Left(iters)))) => RepeatTactic(tac, iters)
+        case (tac, Some(("*", Right(())))) => SaturateTactic(tac)
+        case (tac, None) => tac
+      }
+  )("(tactic)*",implicitly)
+
+  def baseTac[_: P]: P[BelleExpr] = P(
+    (branchTac | parenTac | builtinTactic | atomicTactic | at) ~~
+      (blank ~ "using" ~~ blank ~/ "\"" ~ ((expression ~ "::"./).rep ~ "nil") ~ "\"").?
+  ).map({
+      case (tac, None) => tac
+      case (tac, Some(es)) => Using(es.toList, tac)
+    })
 
   def seqTac[_: P]: P[BelleExpr] = P( baseTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
     map(SeqTactic.apply)
@@ -131,9 +167,6 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def tactic[_: P]: P[BelleExpr] = P( eitherTac )
 
 
-  // externals
-  //@todo or just import if no dynamic forwarding needed
-
   def escapedString[_: P]: P[String] = P(string).map(_.replaceAllLiterally("\\\"","\""))
 
   def escapedPositionExpression[_: P]: P[(Expression, PosInExpr)] = P(escapedString)./.
@@ -149,7 +182,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
         fastparse.parse(str, fullExpression(_)) match {
           case Parsed.Success(value, _) => Pass((value, HereP))
           case failure: Parsed.Failure =>
-            failure.trace()
+            val tr = failure.trace()
             // What information do we expose here??
             Fail.opaque("escaped expression string")
         }
@@ -159,13 +192,13 @@ class DLBelleParser(override val printer: BelleExpr => String,
         val noHashes = str.substring(0, hashStart) ++ sub ++ str.substring(hashEnd+1,str.length)
         fastparse.parse(noHashes, fullExpression(_)) match {
           case failure: Parsed.Failure =>
-            failure.trace()
+            val tr = failure.trace()
             // What information do we expose here??
             Fail.opaque("escaped expression string")
           case Parsed.Success(expr, _) =>
             fastparse.parse(sub, fullExpression(_)) match {
               case failure: Parsed.Failure =>
-                failure.trace()
+                val tr = failure.trace()
                 // What information do we expose here??
                 Fail.opaque("escaped expression string")
               case Parsed.Success(sub, _) =>
@@ -181,6 +214,10 @@ class DLBelleParser(override val printer: BelleExpr => String,
         }
       }
     })
+
+  // externals
+  //@todo or just import if no dynamic forwarding needed
+
 
   /** Explicit nonempty whitespace terminal from [[expParser]]. */
   def blank[_:P]: P[Unit] = expParser.blank

@@ -5,19 +5,18 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ReflectiveExpressionBuilder, SeqTactic}
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ReflectiveExpressionBuilder}
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Equal, FuncOf, Function, Greater, Number, Pair, Plus, Power, PredOf, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Equal, FuncOf, Number, Plus, Power, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.Inside.inside
 import org.scalatest.LoneElement._
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers, PrivateMethodTester}
 import org.scalatest.matchers.{MatchResult, Matcher}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
@@ -160,7 +159,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse simple predicate declaration" taggedAs TodoTest in {
+  it should "parse simple predicate declaration" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -233,7 +232,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse simple unary predicate definition" taggedAs TodoTest in {
+  it should "parse simple unary predicate definition" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
