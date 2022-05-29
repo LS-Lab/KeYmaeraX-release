@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.prop.TableDrivenPropertyChecks._
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable
@@ -26,9 +27,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   Configuration.setConfiguration(FileConfiguration)
 
   private val pp = KeYmaeraXPrettyPrinter
-  private val parser =
-//    KeYmaeraXParser
-  DLParser
+  private lazy val parser = ArchiveParser.exprParser
 
   private val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7",true))
 
@@ -270,7 +269,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("x-y- -z","(x-y)-(-z)"),
     ("x- -y- -z","(x-(-y))-(-z)"),
     ("-x- -y- -z","((-x)-(-y))-(-z)"),
-    ("x*-y*z",if (!weakNeg) "(x*(-y))*x" else "x*(-(y*z))"),   // subtle (x*(-y))*z
+    ("x*-y*z",if (!weakNeg) "(x*(-y))*z" else "x*(-(y*z))"),   // subtle (x*(-y))*z
     ("-x*y*z",if (!weakNeg) "((-x)*y)*z" else "-((x*y)*z)"),        // subtle ((-x)*y)*z
     ("x*y*-z","(x*y)*(-z)"),
 
@@ -813,7 +812,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   }
 
   def pairParse(expected: List[(String,String)], parser: String=>Expression): Unit = {
-    for ((s1, s2) <- expected) {
+    forEvery(Table(("Input", "Expected"), expected:_*))({ (s1, s2) =>
       println("\ninput:    " + s1)
       if (s2 == unparseable) {
         // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
@@ -832,7 +831,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
         pp(p1) shouldBe pp(p2)
         if (uipp.isDefined) println(uipp.get(p1))
       }
-    }
+    })
   }
 
   "Reparsing Pretty-printed Expressions" should "reparse (-2)" in {reparse(Number(BigDecimal("-2")))}
