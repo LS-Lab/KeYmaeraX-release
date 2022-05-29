@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{AtomicODE, DifferentialSymbol, ODESystem, True}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -15,9 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tags.UsualTest
   */
 @UsualTest
 class BelleParserRoundtripTests extends TacticTestBase {
-  private val belleParser: String=>BelleExpr =
-    if (false) BelleParser
-    else new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
+  private lazy val belleParser: String=>BelleExpr = ArchiveParser.tacticParser
 
   private def roundTrip(tactic: String): Unit = BellePrettyPrinter(belleParser(tactic)) shouldBe tactic
   private def roundTrip(tactic: BelleExpr): Unit = belleParser(BellePrettyPrinter(tactic)) shouldBe tactic
@@ -107,9 +106,8 @@ class BelleParserRoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.cohide2(-1, 1), "coHide2(-1, 1)")
   }
 
-  it should "two-position tactic equivRewriting" ignore {
+  it should "two-position tactic equivRewriting" in withTactics {
     //@todo test with BelleExpr data structure, but PropositionalTactics is private
-    //@todo don't know how to print DependentTwoPositionTactics
     roundTrip("equivRewriting(-1, 1)")
   }
 
