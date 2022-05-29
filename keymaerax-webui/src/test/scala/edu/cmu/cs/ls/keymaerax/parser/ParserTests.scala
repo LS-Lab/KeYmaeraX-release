@@ -1,10 +1,10 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Cancellable, LazySequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -14,12 +14,11 @@ import org.scalatest._
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import org.scalatest.OptionValues._
+import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalamock.scalatest.MockFactory
+import testHelper.KeYmaeraXTestTags.TodoTest
 
-import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable._
-import scala.concurrent.{Await, TimeoutException}
-import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
   override def beforeAll(): Unit = {
@@ -32,11 +31,12 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
   // type declaration header for tests
-  def makeInput(program : String) : String = {
-    "Functions. B a. B b. B c. End." +
-    "ProgramVariables. R p. R q. R r. R s. R r_0. End." +
-    "Problem." + program + "\nEnd."
-  }
+  def makeInput(program : String) : String = s"""
+       |ArchiveEntry "Test"
+       |Definitions Bool a, b, c; End.
+       |ProgramVariables Real p, q, r, s, r_0; End.
+       |Problem $program End.
+       |End.""".stripMargin
 
   private val x = Variable("x", None, Real)
   private val y = Variable("y", None, Real)
@@ -44,11 +44,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   "The problem parser" should "reject strings containing non-ASCII characters" in {
     def input(s: String) =
       s"""
-        |ProgramVariables.
-        |  R x.
-        |End.
-        |Problem.
-        |  [x := $s;]x > 3
+        |ArchiveEntry "Test"
+        |ProgramVariables Real x; End.
+        |Problem [x := $s;]x > 3 End.
         |End.
       """.stripMargin
     ArchiveParser.parser(input("1")) //the problem should be exactly the fact that we pass in some unicode.
@@ -57,14 +55,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
 
   it should "parse nullary predicate definitions" in {
     val input = """
-      |Definitions.
-      |  B J() <-> ( 1>=0 ).
+      |ArchiveEntry "Test"
+      |Definitions
+      |  Bool J() <-> 1>=0;
       |End.
-      |ProgramVariables.
-      |  R x.
+      |ProgramVariables
+      |  Real x;
       |End.
-      |Problem.
+      |Problem
       |  J() -> [{x:=x+1;}*@invariant(J())]J()
+      |End.
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
@@ -74,14 +74,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
 
   it should "parse unary predicate definitions" in {
     val input = """
-      |Definitions.
-      |  B J(R x) <-> ( x>=0 ).
+      |ArchiveEntry "Test"
+      |Definitions
+      |  Bool J(Real x) <-> x>=0;
       |End.
-      |ProgramVariables.
-      |  R x.
+      |ProgramVariables
+      |  Real x;
       |End.
-      |Problem.
+      |Problem
       |  J(x) -> [{x:=x+1;}*@invariant(J(x))]J(x)
+      |End.
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
@@ -97,15 +99,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
 
   it should "parse binary predicate definitions" in {
     val input = """
-      |Definitions.
-      |  B J(R x, R y) <-> ( x>=y ).
+      |ArchiveEntry "Test"
+      |Definitions
+      |  Bool J(Real x, Real y) <-> x>=y;
       |End.
-      |ProgramVariables.
-      |  R x.
-      |  R y.
+      |ProgramVariables
+      |  Real x, y;
       |End.
-      |Problem.
+      |Problem
       |  J(x,y) -> [{x:=x+1;}*@invariant(J(x,y))]J(x,y)
+      |End.
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
@@ -121,14 +124,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
 
   it should "parse program definitions" in {
     val input = """
-      |Definitions.
-      |  HP prg ::= { x:=x+1; }.
+      |ArchiveEntry "Test"
+      |Definitions
+      |  HP prg ::= { x:=x+1; };
       |End.
-      |ProgramVariables.
-      |  R x.
+      |ProgramVariables
+      |  Real x;
       |End.
-      |Problem.
+      |Problem
       |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+      |End.
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
@@ -143,71 +148,103 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   }
 
   it should "report useful message on missing semicolon in program variable declaration" in {
-    val input = """ProgramVariables.
-                  |  R x
+    val input = """ArchiveEntry "Test"
+                  |ProgramVariables
+                  |  Real x
                   |End.
-                  |Problem.
+                  |Problem
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
+                  |End.
                 """.stripMargin
-    the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """3:1 Unexpected token in ProgramVariables block
-        |Found:    End at 3:1 to 3:3
+    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
+      """4:1 Unexpected token in ProgramVariables block
+        |Found:    End at 4:1 to 4:3
         |Expected: ;
         |      or: ,""".stripMargin
+      or have message
+      """4:1 Error while parsing programVariables at 2:1
+        |Found:    End.
+        |Probl at 4:1
+        |Expected: ("," | ";")
+        |Hint: Try ("," | ";")""".stripMargin)
   }
 
   it should "report useful message on missing semicolon in function definitions" in {
-    val input = """Definitions.
-                  |  R func() = ( 4 )
+    val input = """ArchiveEntry "Test"
+                  |Definitions
+                  |  Real func() = 4
                   |End.
-                  |ProgramVariables.
-                  |  R x.
+                  |ProgramVariables
+                  |  Real x;
                   |End.
-                  |Problem.
+                  |Problem
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
+                  |End.
                 """.stripMargin
-    the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """3:1 Unexpected token in definition
-        |Found:    End at 3:1 to 3:3
+    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
+      """4:1 Unexpected token in definition
+        |Found:    End at 4:1 to 4:3
         |Expected: ;
         |      or: <FollowsExpression>""".stripMargin
+      or have message
+      """4:1 Error while parsing definitions at 2:1
+        |Found:    End.
+        |Progr at 4:1
+        |Expected: ("^" | "*" | "/" | "+" | "-" | ";")
+        |Hint: Try ("^" | "*" | "/" | "+" | "-" | ";")""".stripMargin)
   }
 
   it should "report useful message on missing semicolon in program definitions" in {
-    val input = """Definitions.
+    val input = """ArchiveEntry "Test"
+                  |Definitions
                   |  HP prg ::= { x:=x+1; }
                   |End.
-                  |ProgramVariables.
-                  |  R x.
+                  |ProgramVariables
+                  |  Real x;
                   |End.
-                  |Problem.
+                  |Problem
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
+                  |End.
                 """.stripMargin
-    the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """3:1 Unexpected token in program definition
-        |Found:    End at 3:1 to 3:3
+    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
+      """4:1 Unexpected token in program definition
+        |Found:    End at 4:1 to 4:3
         |Expected: ::=
         |      or: ;""".stripMargin
+      or have message
+      """4:1 Error while parsing progDef at 3:3
+        |Found:    End.
+        |Progr at 4:1
+        |Expected: ";"
+        |Hint: Try ";"""".stripMargin)
   }
 
   it should "report useful message on missing braces in program definitions" in {
-    val input = """Definitions.
+    val input = """ArchiveEntry "Test"
+                  |Definitions
                   |  HP prg ::= x:=x+1;
                   |End.
-                  |ProgramVariables.
-                  |  R x.
+                  |ProgramVariables
+                  |  Real x;
                   |End.
-                  |Problem.
+                  |Problem
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
+                  |End.
                 """.stripMargin
-    the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """2:14 Missing program definition start delimiter
-        |Found:    ID("x") at 2:14
+    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
+      """3:14 Missing program definition start delimiter
+        |Found:    ID("x") at 3:14
         |Expected: {""".stripMargin
+      or have message
+      """3:14 Error while parsing progDef at 3:3
+        |Found:    x:=x+1;
+        |En at 3:14
+        |Expected: "{"
+        |Hint: Try "{"""".stripMargin)
   }
 
   "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
@@ -326,65 +363,111 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   }
 
   it should "parse implicit functions" in {
-    Parser("exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(x)") shouldBe FuncOf(InterpretedSymbols.expF,Variable("x"))
-    Parser("exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>( (x+exp<<<{exp:=._0;t_:=._1;}{{exp'=-exp,t_'=-(1)}++{exp'=exp,t_'=1}}>(t_=0&exp=1)>>(y)) )") shouldBe FuncOf(InterpretedSymbols.expF,Plus(Variable("x"),FuncOf(InterpretedSymbols.expF,Variable("y"))))
+    Parser("exp<<<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0)>>(x)") shouldBe FuncOf(InterpretedSymbols.expF,Variable("x"))
+    Parser("exp<<<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0)>>( (x+exp<<<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0)>>(y)) )") shouldBe FuncOf(InterpretedSymbols.expF,Plus(Variable("x"),FuncOf(InterpretedSymbols.expF,Variable("y"))))
   }
 
   it should "generate legible error messages for program consts" in {
-    the [ParseException] thrownBy Parser("{a;b}*") should have message
+    the [ParseException] thrownBy Parser("{a;b}*") should (have message
       """1:6 Syntax error. Expression b is not a program: change to b; for a program constant, or to {b} for a differential program constant.
         |Found:    * at 1:6
         |Expected: """.stripMargin
+      or have message
+      """1:4 Error while parsing program at 1:1
+        |Found:    b}* at 1:4
+        |Expected: ("^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")
+        |Hint: Try ("^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")""".stripMargin)
 
-    the [ParseException] thrownBy Parser("{a;{d;}*b;{c}*}*") should have message
+    the [ParseException] thrownBy Parser("{a;{d;}*b;{c}*}*") should (have message
       """1:12 Unexpected token cannot be parsed
         |Found:    {c}* at 1:12 to 1:14
         |Expected: {c;}* (loop of program constant)
         |      or: {{c}}* (loop of differential program constant)""".stripMargin
+      or have message
+      """1:14 Error while parsing program at 1:1
+        |Found:    *}* at 1:14
+        |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")
+        |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | [a-zA-Z] | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")""".stripMargin)
 
-    the [ParseException] thrownBy Parser("{a;{c;}*b}*") should have message
+    the [ParseException] thrownBy Parser("{a;{c;}*b}*") should (have message
       """1:11 Syntax error. Expression b is not a program: change to b; for a program constant, or to {b} for a differential program constant.
         |Found:    * at 1:11
         |Expected: """.stripMargin
+      or have message
+      """1:9 Error while parsing program at 1:1
+        |Found:    b}* at 1:9
+        |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")
+        |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")""".stripMargin)
 
-    the [ParseException] thrownBy Parser("(A1 & A2) -> {sys} B1 & B2") should have message
+    the [ParseException] thrownBy Parser("(A1 & A2) -> {sys} B1 & B2") should (have message
       """1:15 Unexpected token cannot be parsed
         |Found:    {sys} at 1:15 to 1:17
         |Expected: [{sys}]
         |      or: <{sys}>""".stripMargin
+      or have message
+      """1:5 Error while parsing comparator at 1:5
+        |Found:    & A2) -> { at 1:5
+        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")
+        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "-" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")""".stripMargin)
 
     //@note {sys} is an ODESystem with differential program constant sys and doesn't require ;
-    the [ParseException] thrownBy Parser("A1;{sys}B1") should have message
+    the [ParseException] thrownBy Parser("A1;{sys}B1") should (have message
       """1:11 Unexpected token cannot be parsed
         |Found:    <EOF> at 1:11 to EOF$
         |Expected: ;""".stripMargin
+      or have message
+      """1:9 Error while parsing fullExpression at 1:1
+        |Found:    B1 at 1:9
+        |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | end-of-input)
+        |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | end-of-input)""".stripMargin)
 
-    //@todo not great yet
-    // parsing fails on &, but
-    // parser l. 730ff case r :+ Expr(t1, sl) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2, el)
-    // needs to be permissive to support implicit parentheses (e.g., allows stack "p>0 & q" because "<=4" might follow)
-    // and additionally elaboration of term A1 to a predicate happens only after the right-hand side of -> is a formula
-    the [ParseException] thrownBy Parser("(A1 -> {sys} B1) & (A2 -> {sys} B2)") should have message
+    the [ParseException] thrownBy Parser("(A1 -> {sys} B1) & (A2 -> {sys} B2)") should (have message
+      //@todo not great yet
+      // parsing fails on &, but
+      // parser l. 730ff case r :+ Expr(t1, sl) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2, el)
+      // needs to be permissive to support implicit parentheses (e.g., allows stack "p>0 & q" because "<=4" might follow)
+      // and additionally elaboration of term A1 to a predicate happens only after the right-hand side of -> is a formula
       """1:18 Operator -> at 1:5 to 1:6 may connect non-matching kinds: A1->{sys} (Term->Program)
         |Found:    & at 1:18
         |Expected: """.stripMargin
+      or have message
+      // better, but still not pointing to the missing ; after sys
+      """1:5 Error while parsing comparator at 1:5
+        |Found:    -> {sys} B at 1:5
+        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" ~ !">" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")
+        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")""".stripMargin)
 
-    the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should have message
+    the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should (have message
       """1:7 Unexpected token cannot be parsed
         |Found:    ] at 1:7
         |Expected: ;""".stripMargin
+      or have message
+      """1:2 Error while parsing program at 1:2
+        |Found:    sense][ctr at 1:2
+        |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+        |Hint: Try ("?" | "if" | "{")""".stripMargin)
 
-    the [ParseException] thrownBy Parser("[sense;][ctrl;plant]x>y") should have message
+    the [ParseException] thrownBy Parser("[sense;][ctrl;plant]x>y") should (have message
       """1:20 Unexpected token cannot be parsed
         |Found:    ] at 1:20
         |Expected: ;""".stripMargin
+      or have message
+      """1:15 Error while parsing formula at 1:1
+        |Found:    plant]x>y at 1:15
+        |Expected: ("^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "]")
+        |Hint: Try ("^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "]")""".stripMargin)
   }
 
   it should "now swallow parse exceptions when parsing sequents" in {
-    the [ParseException] thrownBy "==> [x'=:=2*y;][y':=-4*x;]4*(2*x*x')+2*(2*y*y')=0".asSequent should have message
+    the [ParseException] thrownBy "==> [x'=:=2*y;][y':=-4*x;]4*(2*x*x')+2*(2*y*y')=0".asSequent should (have message
       """1:5 Missing right-hand side x'=
         |Found:    := at 1:5 to 1:6
         |Expected: $$$T""".stripMargin
+      or have message
+      """1:6 Error while parsing program at 1:6
+        |Found:    x'=:=2*y;] at 1:6
+        |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+        |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
@@ -425,12 +508,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       "test.key" ::
       "unity.key" :: Nil
 
-    for(testFile <- files) {
-      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + testFile)).mkString
-      withSafeClue(testFile) {
-        ArchiveParser.parser(src) //test fails on exception.
-      }
-    }
+    forEvery(Table(("filename"), files:_*))({ fn =>
+      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + fn)).mkString
+      ArchiveParser.parser(src) //test fails on exception.
+    })
   }
 
   it should "parse predicates using functions" in {
@@ -440,34 +521,34 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
 
   it should "not parse any negative examples" in {
     val files =
-      ("finishparse.key", """<somewhere> assertion failed: Cannot elaborate:
-                            |  Symbol x used with inconsistent kinds x:Trafo,x:Real
-                            |Found:    <unknown> at <somewhere>
-                            |Expected: <unknown>""".stripMargin) ::
-      ("scolon1.key", "6:10 Unexpected token cannot be parsed\nFound:    > at 6:10") ::
-      ("scolon2.key", "6:12 Unexpected token cannot be parsed\nFound:    = at 6:12") ::
-      ("scolon3.key", "6:12 Unexpected token cannot be parsed\nFound:    > at 6:12") :: Nil
+      ("finishparse.key",
+        """<somewhere> assertion failed: Cannot elaborate:
+          |  Symbol x used with inconsistent kinds x:Trafo,x:Real
+          |Found:    <unknown> at <somewhere>
+          |Expected: <unknown>""".stripMargin,
+        """<somewhere> assertion failed: Cannot elaborate:
+          |  Symbol x used with inconsistent kinds x:Trafo,x:Real
+          |Found:    <unknown> at <somewhere>
+          |Expected: <unknown>""".stripMargin) ::
+      ("scolon1.key", "8:10 Unexpected token cannot be parsed\nFound:    > at 8:10", "8:10 Error while parsing program at 8:5\nFound:    > = 0") ::
+      ("scolon2.key", "8:12 Unexpected token cannot be parsed\nFound:    = at 8:12", "8:10 Error while parsing program at 8:5\nFound:    > = 0") ::
+      ("scolon3.key", "8:12 Unexpected token cannot be parsed\nFound:    > at 8:12", "8:5 Error while parsing program at 8:5\nFound:    a' = 0 > =") :: Nil
       //("UndeclaredVariables.key", "TODO") :: Nil //@note not yet caught (LAX?)
 
-    for((testFile, message) <- files) {
-      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + testFile)).mkString
-      try {
-        ArchiveParser.parser(src)
-        fail("A negative file parsed correctly: " + testFile)
-      }
-      catch {
-        case e: Throwable =>
-          withSafeClue(testFile) { e.getMessage should startWith (message) }
-      }
-    }
+    forEvery(Table(("filename", "msg1", "msg2"), files:_*))({ (fn, m1, m2) =>
+      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + fn)).mkString
+      val ex = the [ParseException] thrownBy ArchiveParser.parser(src)
+      ex.getMessage should (startWith (m1) or startWith (m2))
+    })
   }
 
   it should "elaborate variables to function in type analysis" in {
     val input =
-      """
-        |Functions. R A. End.
-        |ProgramVariables. R x. End.
-        |Problem. A>=0 -> [x:=A;]x>=0 End.
+      """ArchiveEntry "Test"
+        |Definitions Real A; End.
+        |ProgramVariables Real x; End.
+        |Problem A>=0 -> [x:=A;]x>=0 End.
+        |End.
       """.stripMargin
 
     val fml = ArchiveParser.parser(input).loneElement.model
@@ -480,10 +561,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
 
   it should "not elaborate bound variables to functions in type analysis" in {
     val input =
-      """
-        |Functions. R A. End.
-        |ProgramVariables. R x. End.
-        |Problem. A>=0 -> [x:=A;A:=2;]x>=0 End.
+      """ArchiveEntry "Test"
+        |Definitions Real A; End.
+        |ProgramVariables Real x; End.
+        |Problem A>=0 -> [x:=A;A:=2;]x>=0 End.
+        |End.
       """.stripMargin
 
     the [ParseException] thrownBy ArchiveParser.parser(input) should have message
@@ -523,9 +605,15 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |if (x>0) { x:=x; }
         |else if (x<0) { x:=-x; }
         |else { x:=7; }
-      """.stripMargin) should have message """3:6 Unexpected token cannot be parsed
-                                             |Found:    if at 3:6 to 3:7
-                                             |Expected: {""".stripMargin
+      """.stripMargin) should (have message
+        """3:6 Unexpected token cannot be parsed
+          |Found:    if at 3:6 to 3:7
+          |Expected: {""".stripMargin
+        or have message
+        """3:6 Error while parsing program at 2:1
+          |Found:    if (x<0) { at 3:6
+          |Expected: "{"
+          |Hint: Try "{"""".stripMargin)
   }
 
   it should "parse a comma-separated list of expressions" in {
@@ -539,13 +627,23 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       "[{x'=y,y'=f(x,y) & <{x'=4,t'=1}>x>=2*g(x,t)}]P(x,z) -> [{x'=-3,y'=-2};?P(x,y,z);]x>=2".asFormula,
       "x>=2".asFormula)
     the [ParseException] thrownBy Parser.parseExpressionList("f(x,y") should
-      have message """1:2 Imbalanced parenthesis
+      (have message """1:2 Imbalanced parenthesis
                      |Found:    ( at 1:2
                      |Expected: """.stripMargin
+        or have message
+        """1:6 Error while parsing termList at 1:2
+          |Found:     at 1:6
+          |Expected: ("_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "(|" | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
     the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
-      have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
+      (have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
                      |Found:    , at 1:12 to EOF$
                      |Expected: Term""".stripMargin
+        or have message
+        """1:9 Error while parsing termList at 1:2
+          |Found:    >=2 at 1:9
+          |Expected: ("_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "(|" | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
   }
 
   "Annotation parsing" should "populate easy loop annotations" in {
@@ -557,51 +655,47 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   }
 
   it should "add () to functions used as variables" in {
-    val input = "Functions. R y(). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
+    val input = "ArchiveEntry \"Test\" Definitions Real y(); End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "report functions both non-expanded and expanded to their definition" in {
-    val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
-    val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7+1".asFormula).once
-    Parser.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
-  }
-
-  it should "report functions both non-expanded and expanded recursively to their definition" in {
-    val input = "Functions. R y() = (3+z()). R z() = (7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
-    val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7+1".asFormula).once
-    Parser.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
-  }
-
-  //@todo
-  it should "detect cycles when expanding functions recursively to their definition" ignore {
-    val input = "Functions. R y() = (3+z()). R z() = (7*y()). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
+  it should "report functions non-expanded" in {
+    val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "add () and report functions both non-expanded and expanded to their definition" in {
-    val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
+  it should "report functions non-expanded (2)" in {
+    val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+z(); Real z() = 7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7+1".asFormula).once
+    Parser.parser.setAnnotationListener(listener)
+    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+  }
+
+  it should "FEATURE_REQUEST: detect cycles when expanding functions recursively to their definition" taggedAs TodoTest ignore {
+    val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+z(); Real z() = 7*y(); End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    Parser.parser.setAnnotationListener(listener)
+    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+  }
+
+  it should "add () and report functions non-expanded" in {
+    val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End. End."
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
   it should "not expand properties to their definition" in {
-    val input = "Definitions Bool init() <-> x>=2; Bool safe(Real x) <-> x=0; End. ProgramVariables Real x; End. Problem init() -> [{x:=x+1;}*]safe(x) End."
+    val input = "ArchiveEntry \"Test\" Definitions Bool init() <-> x>=2; Bool safe(Real x) <-> x=0; End. ProgramVariables Real x; End. Problem init() -> [{x:=x+1;}*]safe(x) End. End."
     val entry = ArchiveParser.parser(input).loneElement
     inside (entry.defs.decls(Name("init", None))) {
       case Signature(domain, sort, argNames, expr, _) =>
@@ -620,29 +714,26 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     entry.model shouldBe "init() -> [{x:=x+1;}*]safe(x)".asFormula
   }
 
-  it should "report properties both non-expanded and expanded to their definition in annotations" in {
-    val input = "Functions. B inv() <-> (x>=1). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
+  it should "report properties non-expanded in annotations" in {
+    val input = "ArchiveEntry \"Test\" Definitions Bool inv() <-> x>=1; End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=1".asFormula).once
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
-  it should "report functions in properties both non-expanded and expanded" in {
-    val input = "Functions. R y() = (3+7). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
+  it should "report functions in properties non-expanded" in {
+    val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+7; Bool inv() <-> x>=y(); End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7".asFormula).once
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
   it should "add () to functions in properties" in {
-    val input = "Functions. R b. R y() = (3+b). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+b;}*@invariant(inv())]x>=0 End."
+    val input = "ArchiveEntry \"Test\" Definitions Real b; Real y() = 3+b; Bool inv() <-> x>=y(); End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+b;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once
-    (listener.apply _).expects("{x:=x+b();}*".asProgram, "x>=3+b()".asFormula).once
     Parser.parser.setAnnotationListener(listener)
     val entry = ArchiveParser.parser(input).loneElement
     inside (entry.defs.decls(Name("inv", None))) {
@@ -663,27 +754,42 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   }
 
   it should "complain about sort mismatches in function declaration and operator" in {
-    val input = "Functions. R y() <-> (3+7). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
-    the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """1:18 Function must be defined by equality
-        |Found:    <-> at 1:18 to 1:20
+    val input = "ArchiveEntry \"Test\" Definitions Real y() <-> 3+7; End. ProgramVariables Real x; End. Problem x>=2 -> x>=0 End. End."
+    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
+      """1:42 Function must be defined by equality
+        |Found:    <-> at 1:42 to 1:44
         |Expected: =""".stripMargin
+      or have message
+      """1:49 Error while parsing comparator at 1:49
+        |Found:    ; End. Pro at 1:49
+        |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")
+        |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")""".stripMargin)
   }
 
   it should "complain about sort mismatches" in {
-    val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
-    the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """1:20 Expected a Term but got the Formula 3>2
-        |Found:    (3>2) at 1:20 to 1:24
+    val input = "ArchiveEntry \"Test\" Definitions Real y() = 3>2; End. ProgramVariables Real x; End. Problem x>=2 -> x>=0 End. End."
+    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
+      """1:44 Expected a Term but got the Formula 3>2
+        |Found:    3>2 at 1:44 to 1:46
         |Expected: Term""".stripMargin
+      or have message
+      """1:45 Error while parsing definitions at 1:21
+        |Found:    >2; End. P at 1:45
+        |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")
+        |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")""".stripMargin)
   }
 
   it should "complain about non-delimited definitions" in {
-    val input = "Functions. R y() = (3>2. End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
-    the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """1:26 Unexpected token in definition
-        |Found:    End at 1:26 to 1:28
+    val input = "ArchiveEntry \"Test\" Definitions Real y() = (3>2; End. ProgramVariables Real x; End. Problem x>=2 -> x>=0 End. End."
+    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
+      """1:44 Imbalanced parenthesis
+        |Found:    ( at 1:44
         |Expected: """.stripMargin
+      or have message
+      """1:46 Error while parsing termList at 1:44
+        |Found:    >2; End. P at 1:46
+        |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "," | ")")
+        |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
   }
 
   it should "populate easy ODE annotations" in {
