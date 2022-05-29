@@ -51,6 +51,121 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
         )
     }
 
+  "DLBelleParser" should "parse postfix \"using\"" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""Theorem "Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)"
+           |
+           |Definitions
+           |  implicit Real tanh(Real t) =
+           |     {{tanh:=0;}; {tanh'=1-tanh^2}};
+           |
+           |  Real f;
+           |End.
+           |
+           |Problem
+           |  tanh(f)^2 < 1
+           |End.
+           |
+           |Tactic "Khalil Exercise 2.28 and 3.14 (tanh^2 < 1): Proof"
+           |   QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"
+           |End.
+           |
+           |End.""".stripMargin
+    )
+    //TODO: shouldBes
+  }
+
+  it should "parse implications correctly" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""Theorem "Robot collision avoidance: static safety"
+           |
+           |Problem
+           |  assumptions(x,y,v,xo,yo)->true
+           |End.
+           |
+           |Tactic "Scripted proof"
+           |implyR('R=="assumptions(x,y,v,xo,yo)->true")
+           |End.
+           |
+           |End.""".stripMargin
+    ).loneElement
+  }
+
+  it should "parse useLemma" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""Theorem "Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)"
+           |
+           |Definitions
+           |  implicit Real tanh(Real t) =
+           |     {{tanh:=0;}; {tanh'=1-tanh^2}};
+           |
+           |  Real f;
+           |End.
+           |
+           |Problem
+           |  tanh(f)^2 < 1
+           |End.
+           |
+           |Tactic "Khalil Exercise 2.28 and 3.14 (tanh^2 < 1): Proof"
+           |       useLemma("Khalil Exercise 2.28 and 3.14 (bound)", "prop")
+           |End.
+           |
+           |End.""".stripMargin
+    )
+    //TODO: shouldBes
+  }
+
+  it should "parse integer position locators" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""ArchiveEntry "Example"
+           |
+           |Problem
+           |  true
+           |End.
+           |
+           |Tactic
+           |  hideL(-3=="\forall x1 \forall x2 (x1*x1+x2*x2=eps*eps->x1^2/2+x2^4/4>=k)")
+           |End.
+           |
+           |End.""".stripMargin
+    )
+    //TODO: shouldBes
+  }
+
+  it should "parse tactic argument list syntax" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""ArchiveEntry "Example"
+           |
+           |Problem
+           |  true
+           |End.
+           |
+           |Tactic
+           |  hideFactsAbout("kA1::kB1::nil")
+           |End.
+           |
+           |End.""".stripMargin
+    )
+    //TODO: shouldBes
+  }
+
+  it should "parse tactic argument list syntax and position locators" in {
+    val parsed = ArchiveParser.parser.parse(
+      raw"""ArchiveEntry "Example"
+           |
+           |Problem
+           |  true
+           |End.
+           |
+           |Tactic
+           |  stabilityStateMLF("4331*x1^2/1000000+x1*x2/200000+87*x2^2/200000::217*x1^2/500000-x1*x2/200000+2161*x2^2/500000::nil", 'R=="\forall eps (eps>0->\exists del (del>0&\forall x1 \forall x2 (x1^2+x2^2 < del^2->[{{x1'=-x1+10*x2,x2'=(-100)*x1-x2&x1+x2>=0}++{x1'=-x1+100*x2,x2'=(-10)*x1-x2&x1+x2<=0}}*]x1^2+x2^2 < eps^2)))")
+           |End.
+           |
+           |End.""".stripMargin
+    )
+    //TODO: shouldBes
+  }
+
   "Archive parser" should "parse a model only entry" in {
     val input =
       """ArchiveEntry "Entry 1"
