@@ -45,7 +45,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "[{x'=y, y'=z & x>0}]x>0",
       "[{x'=y, y'=z, z'=3 & z>1 & z>2}]x>0")
 
-    forAll(exprs) { e =>
+    forEvery(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
@@ -60,7 +60,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "[{x:=2; {x'=y}}*]x>0",
     )
 
-    forAll(exprs) { e =>
+    forEvery(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
@@ -74,7 +74,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "[x:=0;{x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;};x:=40;]x>0",
       "[{x:=1; ++ x:=2;}++x:=3;]x>0")
 
-    forAll(exprs) { e =>
+    forEvery(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
@@ -85,13 +85,13 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "[{x:=1;x:=2;};x:=3;]x>0",
       "[{{x:=1;x:=2;};x:=3;} {{x:=4;};x:=5;}]x>0")
 
-    forAll(exprs) { e =>
+    forEvery(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
-  it should "not print and parse a formula with if then else as variable names." in {
+  it should "not print and parse a formula with if then else as variable names." ignore {
     val exprs = Table(
       "if = then",
       "then = else",
@@ -99,7 +99,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "else = then",
       "then = if")
 
-    forAll(exprs) { e =>
+    forEvery(exprs) { e =>
       a [ParseException] should be thrownBy Parser(e)
     }
   }
@@ -114,7 +114,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "<if (x = 0) {x := 1; y := 0;} else {y := 3;} a := a + 5; ?(x = x);>x != y",
       "x = 0 -> [if (x = 0){ x := 1; y := 0; }else {y := 3;} a := a + 5; ?(x = x);]x > y")
 
-    forAll(exprs) { e =>
+    forEvery(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
