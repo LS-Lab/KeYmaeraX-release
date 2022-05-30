@@ -206,7 +206,7 @@ class QETests extends TacticTestBase {
       have message "QE requires Z3, but got None"
   }
 
-  it should "switch between tools" in withDatabase { db =>
+  it should "switch between tools" in withTactics { withDatabase { db =>
     val provider = MultiToolProvider(
       new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
@@ -223,9 +223,9 @@ class QETests extends TacticTestBase {
         |  "\exists s x*s^2>0": QE("Mathematica")
         |)""".stripMargin)
     interpreter.kill()
-  }
+  }}
 
-  it should "use the default tool" in withDatabase { db =>
+  it should "use the default tool" in withTactics { withDatabase { db =>
     val provider = MultiToolProvider(
       new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
@@ -241,9 +241,9 @@ class QETests extends TacticTestBase {
         |  "x>=0": QE,
         |  "x>=(-1)": QE
         |)""".stripMargin)
-  }
+  }}
 
-  it should "switch between tools from parsed tactic" in {
+  it should "switch between tools from parsed tactic" in withTactics {
     val provider = MultiToolProvider(
       new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
@@ -251,14 +251,14 @@ class QETests extends TacticTestBase {
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved
   }
 
-  "QE with timeout" should "reset timeout when done" in withDatabase{ db => withQE { _ =>
+  "QE with timeout" should "reset timeout when done" in withTactics { withDatabase{ db => withQE { _ =>
     val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>1 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     interpreter(QEX(None, Some(Number(7))), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"7\")")
-  }}
+  }}}
 
   it should "omit timeout reset when no timeout" in withDatabase{ db => withQE { _ =>
     val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>1 -> x>0 End. End."""
@@ -269,14 +269,14 @@ class QETests extends TacticTestBase {
     db.extractTactic(proofId) shouldBe BelleParser("QE")
   }}
 
-  it should "use the right tool" in withDatabase{ db => withQE { tool: Tool =>
+  it should "use the right tool" in withTactics { withDatabase{ db => withQE { tool: Tool =>
     val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>1 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))
     interpreter(QEX(Some(tool.name), Some(Number(7))), BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"" + tool.name + "\", \"7\")")
-  }}
+  }}}
 
   it should "complain about the wrong tool" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QEX(Some("Mathematica"), Some(Number(7)))) should have message "QE requires Mathematica, but got None"
