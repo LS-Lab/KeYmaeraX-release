@@ -539,8 +539,7 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
     val cexVars = StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interp) => interp.isEmpty case _ => true})
 
-    // todo: allow whatever Mathematica can handle
-    if(StaticSemantics.symbols(fml).exists({ case Function(_, _, _, _, interp) => interp.isDefined case _ => false})) None
+    if (StaticSemantics.symbols(fml).exists({ case fn@Function(_, _, _, _, Some(_)) => !MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn) case _ => false})) None
     else if (cexVars.nonEmpty) {
       val input = ExtMathematicaOpSpec.findInstance(
         k2m.convert(Left(fml match { case Imply(a, b) => And(a, Not(b)) case _ => Not(fml) })),
