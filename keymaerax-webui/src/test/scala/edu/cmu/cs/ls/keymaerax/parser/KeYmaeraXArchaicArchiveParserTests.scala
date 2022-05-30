@@ -1990,7 +1990,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
         | ProgramVariables Real x, y; End.
         | Problem gt(x,y) -> geq(x,y) End.
-        | Tactic "Proof Entry 2". expand "gt" ; useLemma("Entry 1") End.
+        | Tactic "Proof Entry 2". expand("gt") ; useLemma("Entry 1") End.
         |End.""".stripMargin
     val entries = parse(input)
     entries should have size 2
@@ -2036,7 +2036,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
         | ProgramVariables Real x, y; End.
         | Problem gt(x,y) -> geq(x,y) End.
-        | Tactic "Proof Entry 2". expand "gt" ; useLemma("Entry 1") End.
+        | Tactic "Proof Entry 2". expand("gt") ; useLemma("Entry 1") End.
         |End.""".stripMargin
     entry2.defs should beDecl(
       Declaration(Map(
@@ -2047,7 +2047,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       )))
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma("Entry 1")""",
+    entry2.tactics shouldBe ("Proof Entry 2", """expand("gt") ; useLemma("Entry 1")""",
       expand("gt") & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
@@ -2304,7 +2304,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       |  ProgramVariables Real y; End.
       |  Problem [y:=y;]y=y End.
       |End.""".stripMargin
-    inside (parse(input)) {
+    inside (parser.parse(input)) {
       case e1 :: e2 :: Nil =>
         e1.fileContent shouldBe
           """SharedDefinitions
@@ -2325,7 +2325,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
             Name("discincy", None) -> Signature(Some(Unit), Trafo, None, Some("y:=y+1;".asProgram), UnknownLocation),
             Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Some("{y'=1}".asProgram), UnknownLocation),
             Name("incy", None) -> Signature(Some(Unit), Trafo, None, Some("{contincy{|^@|}; ++ discincy{|^@|};}".asProgram), UnknownLocation),
-            Name("sq", None) -> Signature(Some(Real), Real, Some(List((Name("x", None), Real))), Some(".^2+(.')^2".asTerm), UnknownLocation),
+            Name("sq", None) -> Signature(Some(Real), Real, Some(List((Name("x", None), Real))), Some(".^2+((.)')^2".asTerm), UnknownLocation),
             Name("nonneg", None) -> Signature(Some(Real), Bool, Some(List((Name("x", None), Real))), Some(".>=0".asFormula), UnknownLocation),
             Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
             Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
@@ -2349,7 +2349,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
             Name("discincy", None) -> Signature(Some(Unit), Trafo, None, Some("y:=y+1;".asProgram), UnknownLocation),
             Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Some("{y'=1}".asProgram), UnknownLocation),
             Name("incy", None) -> Signature(Some(Unit), Trafo, None, Some("{contincy{|^@|}; ++ discincy{|^@|};}".asProgram), UnknownLocation),
-            Name("sq", None) -> Signature(Some(Real), Real, Some(List((Name("x", None), Real))), Some(".^2+(.')^2".asTerm), UnknownLocation),
+            Name("sq", None) -> Signature(Some(Real), Real, Some(List((Name("x", None), Real))), Some(".^2+((.)')^2".asTerm), UnknownLocation),
             Name("nonneg", None) -> Signature(Some(Real), Bool, Some(List((Name("x", None), Real))), Some(".>=0".asFormula), UnknownLocation),
             Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
           )))
