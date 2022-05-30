@@ -679,7 +679,7 @@ class DLTests extends TacticTestBase {
 
   it should "use close correctly" in withTactics { withDatabase { db =>
     //@note regression test for bug where listeners were not notified correctly because of exception in close
-    val model = "ProgramVariables. R x. End.\nProblem. x>0 -> [{x:=x+1;}*]x>0 End."
+    val model = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> [{x:=x+1;}*]x>0 End. End."""
     val fml = ArchiveParser.parseAsFormula(model)
     val tactic = implyR('R) & loop("x>0".asFormula)('R)
 
