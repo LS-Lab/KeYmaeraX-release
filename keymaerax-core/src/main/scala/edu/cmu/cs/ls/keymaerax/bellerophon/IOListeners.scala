@@ -146,6 +146,7 @@ object IOListeners {
         }
         case _ =>
       }
+      printer.flush()
     }
 
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
@@ -198,6 +199,7 @@ object IOListeners {
           println("WARNING end of unrecorded beginning " + expr.prettyString)
         }
       }
+      printer.flush()
     }
 
     override def kill(): Unit = {}
