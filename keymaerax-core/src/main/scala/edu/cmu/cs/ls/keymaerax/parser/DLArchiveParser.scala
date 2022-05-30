@@ -164,11 +164,24 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def allDeclarations[_: P]: P[Declaration] =
     (programVariables | definitions).rep.map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
 
+  /** Merges `newDecls` into `curDecls`, but checks that no duplicate symbol names occur. */
+  private def uniqueDecls(curDecls: Declaration, newDecls: List[(Name, Signature)])(implicit ctx: P[_]) = {
+    val nn = newDecls.map(_._1)
+    //@todo Fail messages show up in Expected and Hint
+    nn.diff(nn.distinct) match {
+      case Nil =>
+        val ix = curDecls.decls.keySet.intersect(nn.toSet)
+        if (ix.isEmpty) Pass(curDecls ++ Declaration(newDecls.toMap))
+        else Fail.opaque("Unique name (" + ix.map(_.prettyString).mkString(",") + " not unique)")
+      case d => Fail.opaque("Unique name (" + d.map(_.prettyString).mkString(",") + " not unique)")
+    }
+  }
+
   /** `SharedDefinitions declOrDef End.` parsed. */
   def sharedDefinitions[_: P]: P[Declaration] = P(
     "SharedDefinitions" ~~/ blank ~
       DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
-        declOrDef(curDecls).map(newDecls => curDecls ++ Declaration(newDecls.toMap))
+        declOrDef(curDecls).flatMap(newDecls => uniqueDecls(curDecls, newDecls))
       ) ~ "End."
   )
 
@@ -176,7 +189,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def definitions[_: P]: P[Declaration] = P(
     "Definitions" ~~/ blank ~
       DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
-        declOrDef(curDecls).map(newDecls => curDecls ++ Declaration(newDecls.toMap))
+        declOrDef(curDecls).flatMap(newDecls => uniqueDecls(curDecls, newDecls))
       ) ~ "End."
   )
 
@@ -248,7 +261,12 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     //@todo retain location information
     //@todo how to ensure there is some whitespace between sort and baseVariable?
     (sort ~/ ident ~ (","./ ~ ident).rep ~ ";").map({case (ty,x,xs) => (xs.+:(x)).toList.map(v=>v->ty)})
-      .rep.map(xs => Declaration(xs.flatten.map(x=>Name(x._1._1, x._1._2)->Signature(None,x._2,None,None,UnknownLocation)).toMap))
+      .rep.flatMap(xs => {
+      val ns = xs.flatten.map(x=>Name(x._1._1, x._1._2)->Signature(None,x._2,None,None,UnknownLocation))
+      val n = ns.map(_._1)
+      if (n.size == n.distinct.size) Pass(Declaration(ns.toMap))
+      else Fail.opaque("Unique name (" + n.diff(n.distinct).map(_.prettyString).mkString(",") + " not unique)")
+    })
     ~ "End." )
 
   /** implicit ...
