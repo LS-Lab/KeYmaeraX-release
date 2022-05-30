@@ -118,7 +118,7 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "prove a DRI SAS Ex 12" in withQE { _ =>
     val polys = List("x1^2+x2^2-1","x3-x1").map( s => s.asTerm)
 
-    val system = "x1'=-x2,x2'=x3,x3'=-x2".asProgram.asInstanceOf[ODESystem]
+    val system = "{x1'=-x2,x2'=x3,x3'=-x2}".asProgram.asInstanceOf[ODESystem]
     val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
     val pr = proveBy("x1^2+x2^2-1=0 & x3-x1=0 -> [{x1'=-x2,x2'=x3,x3'=-x2}](x1^2+x2^2-1=0 & x3-x1=0)".asFormula,
       implyR(1) & dgVdbx(cofactors,polys)(1) & dW(1) & QE)
