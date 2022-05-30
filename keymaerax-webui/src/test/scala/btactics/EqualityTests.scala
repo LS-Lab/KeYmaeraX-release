@@ -416,16 +416,16 @@ class EqualityTests extends TacticTestBase {
 
   it should "expand exhaustively when applied to a formula" in withQE { _ =>
     proveBy("min(x,max(y,y^2)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
-      """x<=max_&min_=x|x>max_&min_=max_,
-        |x<=y^2&min__0=x|x>y^2&min__0=y^2,
-        |y>=y^2&max_=y|y < y^2&max_=y^2
+      """y>=y^2&max_=y|y < y^2&max_=y^2,
+        |x<=y^2&min_=x|x>y^2&min_=y^2,
+        |x<=max_&min__0=x|x>max_&min__0=max_
         |==>
-        |min_+min__0<=2*max_""".stripMargin.asSequent
+        |min__0+min_<=2*max_""".stripMargin.asSequent
     proveBy("min(x,max(y,z)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
       """y>=z&max_=y|y < z&max_=z,
+        |y>=y^2&max__0=y|y < y^2&max__0=y^2,
         |x<=max_&min_=x|x>max_&min_=max_,
-        |x<=y^2&min__0=x|x>y^2&min__0=y^2,
-        |y>=y^2&max__0=y|y < y^2&max__0=y^2
+        |x<=y^2&min__0=x|x>y^2&min__0=y^2
         |==>
         |min_+min__0<=2*max__0""".stripMargin.asSequent
   }
@@ -576,10 +576,10 @@ class EqualityTests extends TacticTestBase {
       subgoals should contain theSameElementsInOrderAs List(
       "[{y'=y}]y>=0, !y!=y ==> [{y'=y}]y>=0".asSequent,
       "[{x'=x}]x>=0, !x!=y ==> [{y'=y}]y>=0, x=y".asSequent)
-    proveBy("[{x'=x}]x>=0, ==> x!=y, [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
+    proveBy("[{x'=x}]x>=0 ==> x!=y, [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
       subgoals should contain theSameElementsInOrderAs List(
-      "[{y'=y}]y>=0, ==> y!=y, [{y'=y}]y>=0".asSequent,
-      "[{x'=x}]x>=0, ==> x!=y, [{y'=y}]y>=0, x=y".asSequent)
+      "[{y'=y}]y>=0 ==> y!=y, [{y'=y}]y>=0".asSequent,
+      "[{x'=x}]x>=0 ==> x!=y, [{y'=y}]y>=0, x=y".asSequent)
   }
 
   it should "automate equality cut when what is mustbound" in withQE { _ =>
