@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArg, FormulaArg, GeneratorArg, ListArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArg, FormulaArg, GeneratorArg, ListArg, NumberArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, DLParserUtils, Declaration, ParseException, Parser}
 import fastparse._
@@ -116,6 +116,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case PosInExprArg(name, allowsFresh) => Fail.opaque("unimplemented: PosInExpr argument")
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
       case ListArg(arg) => argList(argumentInterior(arg))
+      case NumberArg(_, _) => DLParser.number.map(List(_))
     }
   )
 
