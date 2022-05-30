@@ -542,7 +542,7 @@ class ImplicitAxTests extends TacticTestBase {
   it should "expand abbreviations of interpreted symbols in ODE" in withMathematica { _ =>
     val entry = ArchiveParser(
       """ArchiveEntry "exp"
-        |Definitions implicit Real e(Real t) '= {{e:=1;t:=2;}; {e'=-e,t'=1}}; End.
+        |Definitions implicit Real e(Real t) = {{e:=1;t:=2;}; {e'=-e,t'=1}}; End.
         |ProgramVariables Real x; End.
         |Problem e(x) > 0 End.
         |End.
