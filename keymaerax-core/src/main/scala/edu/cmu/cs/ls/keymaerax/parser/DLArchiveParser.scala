@@ -295,20 +295,20 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   def implicitDefODE[_: P](curDecls: Declaration): P[List[(Name,Signature)]] = (
     (declPartList ~ "=" ~/ "{" ~ program ~ "}")
-      .map{case (sigs, preProg) =>
-        if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
-          throw ParseException("Implicit ODE declarations can only declare real-valued " +
+      .flatMap{case (sigs, preProg) =>
+        if (sigs.exists(s => !s._2.domain.contains(Real) || s._2.codomain != Real))
+          return Fail.opaque("Implicit ODE declarations can only declare real-valued " +
             "functions of a single real variable.")
 
         val (t,Real) = sigs.head._2.arguments.get.head
         if (sigs.exists(_._2.arguments.get.head._1 != t))
-          throw ParseException("Implicit ODE declarations should all use the same " +
+          return Fail.opaque("Implicit ODE declarations should all use the same " +
             "time argument.")
 
         val nameSet = sigs.map(_._1).toSet
 
         if (nameSet.size != sigs.size)
-          throw ParseException("Tried declaring same function twice in an implicit ODE definition")
+          return Fail.opaque("Tried declaring same function twice in an implicit ODE definition")
 
         // Hack: expand prior declarations in the program, to allow programs containing prior
         // definitions in block
@@ -317,19 +317,22 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         val interpFuncs = try {
           ODEToInterpreted.fromProgram(prog,Variable(t.name,t.index))
         } catch {
-          case FromProgramException(s) => throw ParseException("Failed to parse implicit definition by ODE: " + s)
+          case FromProgramException(s) => return Fail.opaque("Failed to parse implicit definition by ODE: " + s)
         }
 
-        interpFuncs.map{f =>
-          if (!nameSet.contains(Name(f.name, f.index)))
-            throw ParseException("ODE variable missing from implicit declaration")
+        if (interpFuncs.exists(f => !nameSet.contains(Name(f.name, f.index))))
+          return Fail.opaque("ODE variable missing from implicit declaration")
 
+        val redef = InterpretedSymbols.builtin.intersect(interpFuncs)
+        if (redef.nonEmpty)
+          return Fail.opaque("Not redefining builtin symbols (" + redef.map(f => Name(f.name, f.index).prettyString).mkString(",") + " redefined)")
+
+        Pass(interpFuncs.map{f =>
           Name(f.name, f.index) -> Signature(
-              domain = Some(Real), codomain = Real, arguments = Some(List((t,Real))),
-              interpretation = Some(FuncOf(f, Variable(t.name, t.index, Real))),
-              loc = UnknownLocation
-          )
-        }.toList
+            domain = Some(Real), codomain = Real, arguments = Some(List((t,Real))),
+            interpretation = Some(FuncOf(f, Variable(t.name, t.index, Real))),
+            loc = UnknownLocation)
+        }.toList)
       }
   )
 
