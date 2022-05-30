@@ -842,8 +842,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 }
 
-/** A partial tactic is allowed to leave its subgoals around as unproved */
-@deprecated("Replace with something else -- either assertProved or some sort of branch indicator?", "4.2")
+/** A partial tactic marks an unclosed proof (mainly for testing purposes to not insist on a closed proof).
+  * To check for closed subgoals, use [[TactixLibrary.done]]. */
 case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) extends BelleExpr {
   override def prettyString: String = label match {
     case Some(theLabel) => s"partial(${child.prettyString})@(${theLabel.prettyString})"

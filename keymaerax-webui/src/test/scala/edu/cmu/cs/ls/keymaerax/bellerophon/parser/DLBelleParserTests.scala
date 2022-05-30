@@ -5,8 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, LazySequentialInterpreter, ReflectiveExpressionBuilder}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixInit
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SeqTactic, Using}
+import edu.cmu.cs.ls.keymaerax.btactics.{TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Parser}
@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
   * Tests the DLBelleParser.
@@ -35,11 +36,9 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   private def parse(input: String) = parser.belleParser(input)
 
   "DLBelleParser" should "parse postfix \"using\"" in {
-    val parsed = parse(
-      raw"""QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"
-           |""".stripMargin
-    )
-    //TODO: shouldBes
+    parse(raw"""QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"""".stripMargin) shouldBe Using(List("x^2+y^2=init".asFormula, "init=0".asFormula, "x=0&y=0".asFormula), TactixLibrary.QE)
+    parse(raw"""implyR(1); QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"""".stripMargin) shouldBe
+      SeqTactic(List(TactixLibrary.implyR(1), Using(List("x^2+y^2=init".asFormula, "init=0".asFormula, "x=0&y=0".asFormula), TactixLibrary.QE)))
   }
 
   it should "parse implications correctly" in {
@@ -57,7 +56,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     //TODO: shouldBes
   }
 
-  it should "parse integer position locators" in {
+  it should "FEATURE_REQUEST: parse integer position locators" taggedAs TodoTest in {
     val parsed = parse(
       raw"""hideL(-3=="\forall x1 \forall x2 (x1*x1+x2*x2=eps*eps->x1^2/2+x2^4/4>=k)")
            |""".stripMargin
@@ -81,7 +80,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     //TODO: shouldBes
   }
 
-  it should "parse PosInExpr attached to locator" in {
+  it should "FEATURE_REQUST: parse PosInExpr attached to locator" taggedAs TodoTest in {
     val parsed = parse(
       raw"""derive('Rlast.1)
            |""".stripMargin
@@ -92,6 +91,12 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "parse hash locators" in {
     val t = parse("""trueAnd('R=="[x:=1;]#true&x=1#")""").asInstanceOf[AppliedPositionTactic]
     t.locator shouldBe Find.FindR(0, Some("[x:=1;](true&x=1)".asFormula), PosInExpr(1::Nil), exact=true, defs=Declaration(Map.empty))
+  }
+
+  it should "parse suffix partial" in {
+    parse("""implyR(1) partial""") shouldBe PartialTactic(TactixLibrary.implyR(1))
+    parse("""QE using "x>=0::nil" partial""") shouldBe PartialTactic(Using(List("x>=0".asFormula), TactixLibrary.QE))
+    parse("""implyR(1); andL(-1) partial""") shouldBe SeqTactic(List(TactixLibrary.implyR(1), PartialTactic(TactixLibrary.andL(-1))))
   }
 
 }

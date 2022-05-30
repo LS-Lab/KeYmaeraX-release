@@ -208,7 +208,12 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case (tac, Some(es)) => Using(es, tac)
     })
 
-  def seqTac[_: P]: P[BelleExpr] = P( usingTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
+  def partialTac[_: P]: P[BelleExpr] = (usingTac ~~ (blank ~ "partial").map(_ => "partial").?).map({
+    case (t, None) => t
+    case (t, Some(_)) => PartialTactic(t)
+  })
+
+  def seqTac[_: P]: P[BelleExpr] = P( partialTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
     map(SeqTactic.apply)
 
   def eitherTac[_: P]: P[BelleExpr] = P( seqTac.rep(min=1,sep="|"./) )("tactic|tactic",implicitly).
