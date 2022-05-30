@@ -125,7 +125,7 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   it should "consider constants when fast-checking invariants with LZZ" in withMathematica { tool =>
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "5")) {
-      val entry = ArchiveParser.getEntry("STTT Tutorial: Example 9a", io.Source.fromInputStream(
+      val entry = ArchiveParser.getEntry("Benchmarks/Basic/STTT Tutorial: Example 9a", io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).head
 
       a[MathematicaComputationAbortedException] should be thrownBy tool.lzzCheck(
