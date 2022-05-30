@@ -49,9 +49,10 @@ object DLParserUtils {
     val res2 =
       if (!res.isSuccess) ctx
       else if (f(ctx.successValue.asInstanceOf[A])) ctx
-      else ctx.freshFailure(startIndex)
-
-    if (ctx.verboseFailures) ctx.setMsg(startIndex, () => errMsg)
+      else {
+        ctx.freshFailure(startIndex)
+        if (ctx.verboseFailures) ctx.setMsg(startIndex, () => errMsg)
+      }
 
     res2.asInstanceOf[P[A]]
   }
