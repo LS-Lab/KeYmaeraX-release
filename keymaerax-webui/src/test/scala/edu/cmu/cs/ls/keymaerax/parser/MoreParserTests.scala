@@ -108,17 +108,14 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Power" should "give useful location information" in {
     val ex = the [ParseException] thrownBy "((f(||)^(c()))'".asTerm
-    ex.getMessage should include ("1:1 Imbalanced parenthesis")
-    ex.getMessage should include ("Found:    ( at 1:1")
+    ex.getMessage should (include ("1:1 Imbalanced parenthesis") or include ("1:16 Error parsing termList at 1:1"))
+    ex.getMessage should (include ("Found:    ( at 1:1") or include ("Found:    \"\" at 1:16"))
   }
 
   "Abs" should "parse" in {
     "abs(x)".asTerm shouldBe FuncOf(InterpretedSymbols.absF, Variable("x"))
     "abs_0".asTerm shouldBe Variable("abs", Some(0))
-    the [ParseException] thrownBy "abs_0()".asTerm should have message
-      """1:8 Interpreted symbol abs: expected domain Real but got Unit
-        |Found:    Unit at 1:8 to EOF$
-        |Expected: Real""".stripMargin
+    "abs_0()".asTerm shouldBe FuncOf(Function("abs", Some(0), Unit, Real, interp=None), Nothing)
   }
 
   ///
