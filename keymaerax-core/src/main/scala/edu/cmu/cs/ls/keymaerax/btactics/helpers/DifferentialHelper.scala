@@ -408,7 +408,7 @@ object DifferentialHelper {
 
   private def derive(t : Term, odes: Map[BaseVariable,Term]) : Term = {
     t match {
-      case n:Number => Number(0) //c'=0
+      case _:Number => Number(0) //c'=0
       case x:BaseVariable => odes.getOrElse(x,Number(0)) //x'
       case Neg(t) => Neg(derive(t,odes)) //(-e)' = -(e')
       case Times(l,r) =>
@@ -428,10 +428,10 @@ object DifferentialHelper {
         Plus(derive(l,odes),derive(r,odes))
       case Minus(l,r) => // (l-r)' = l'-r'
         Minus(derive(l,odes),derive(r,odes))
-      case FuncOf(f,Nothing) => Number(0)
-      case FuncOf(f,arg) if f.interp.isDefined => {
+      case FuncOf(_, Nothing) => Number(0)
+      case FuncOf(f@Function(_, _, _, _, Some(_)), arg) =>
         val dAx = ImplicitAx.getDiffAx(f)
-        if(dAx.isEmpty)
+        if (dAx.isEmpty)
           throw new IllegalArgumentException("Unable to derive: "+t)
         // todo: hardcoded removal of |t_| space
         val concl = dAx.get.provable.conclusion.succ(0).replaceAll("g(|t_|)".asTerm,"g(||)".asTerm)
@@ -443,7 +443,6 @@ object DifferentialHelper {
 
         val u = RenUSubst(USubst(lhs.asInstanceOf[Term] ~> arg :: Nil))
         Times(u(rhsL),derive(u(rhsR),odes))
-      }
       //case FuncOf(_,args) =>
       //  //note: this handles both
       //  // (c())'=0 and
@@ -474,8 +473,8 @@ object DifferentialHelper {
     * @return The variable x or else nothing.
     */
   def hasExp(dp: DifferentialProgram): Option[Variable] = {
-    val expODE = DifferentialHelper.atomicOdes(dp).find(_ match {
-      case AtomicODE(DifferentialSymbol(x1), x2) if(x1.equals(x2)) => true //@todo QE-check x1=x2 instead of syntactic check.
+    val expODE = DifferentialHelper.atomicOdes(dp).find({
+      case AtomicODE(DifferentialSymbol(x1), x2) => x1 == x2 //@todo QE-check x1=x2 instead of syntactic check.
       case _ => false
     })
 
