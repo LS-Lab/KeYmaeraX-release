@@ -244,7 +244,7 @@ class DLParser extends Parser {
 
   /** matches keywords. An identifier cannot be a keyword. */
   def keywords: Set[String] = Set(
-    "true", "false", "Real", "Bool",
+    "true", "false", "Real", "Bool", "HP", "HG",
     "Axiom", "End", "Functions", "Definitions", "ProgramVariables", "Variables",
     "Problem", "Tactic",
     "implicit", "Sequent", "Formula", "Lemma", "Tool", "SharedDefinitions",
