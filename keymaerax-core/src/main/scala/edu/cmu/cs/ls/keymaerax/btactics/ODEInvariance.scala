@@ -877,7 +877,7 @@ object ODEInvariance {
     }
 
     try {
-      var gb = absGroebnerBasis(polys ++ domainEqualities(ode.constraint,false))
+      var gb = absGroebnerBasis(polys ++ domainEqualities(ode.constraint, dropFuncs=true))
       var rank = 1
       //remainder after each round of polynomial reduction
       var remaining = polys
