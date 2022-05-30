@@ -134,12 +134,15 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
       Using("x>=0 | x<=0".asFormula :: Nil, TactixLibrary.unfoldProgramNormalize) &
         OnAll(Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.QE))
     the [ParseException] thrownBy parser(""" unfold using "x>0::y>0" """) should
-      (have message """1:15 Formula list in using "x>0::y>0" must end in :: nil
-                     |Found:    "x>0::y>0" at 1:15 to 1:24
-                     |Expected: "x>0::y>0::nil"""".stripMargin
+      (have message
+        """1:15 Formula list in using "x>0::y>0" must end in :: nil
+          |Found:    "x>0::y>0" at 1:15 to 1:24
+          |Expected: "x>0::y>0::nil"""".stripMargin
         or have message
-        """todo
-          |""".stripMargin)
+        """1:24 Error parsing argList at 1:16
+          |Found:    "\" " at 1:24
+          |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | "::")
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | "::")""".stripMargin)
   }
 
   it should "bind strong" in withTactics {
