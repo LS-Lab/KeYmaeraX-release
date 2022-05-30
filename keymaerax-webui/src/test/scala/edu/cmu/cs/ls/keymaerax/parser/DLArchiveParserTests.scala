@@ -6,17 +6,13 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ReflectiveExpressionBuilder}
-import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Equal, FuncOf, Number, Plus, Power, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
@@ -25,15 +21,8 @@ import testHelper.KeYmaeraXTestTags.TodoTest
   * @author Andre Platzer
   * @author James Gallicchio
   */
-class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
+class DLArchiveParserTests extends TacticTestBase {
 
-  override def beforeAll(): Unit = {
-    Configuration.setConfiguration(FileConfiguration)
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
-    ))
-  }
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
   private def parse(input: String): List[ParsedArchiveEntry] =
@@ -429,7 +418,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse lots of definitions before variables" taggedAs TodoTest in {
+  it should "parse lots of definitions before variables" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -464,13 +453,17 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
         | ProgramVariables Real x; End.
         | Problem x=1 -> x<=x() End.
         |End.""".stripMargin
-    the [ParseException] thrownBy parse(input) should have message
+    the [ParseException] thrownBy parse(input) should (have message
       """<somewhere> Semantic analysis error
         |semantics: Expect unique names_index that identify a unique type.
         |ambiguous: x:Unit->Real and x:Real
         |symbols:   x, x
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
+      or have message
+      """3:24 Duplicate symbol 'x': already defined at 2:14 to 2:26
+        |Found:    x at 3:24
+        |Expected: <unique name>""".stripMargin)
   }
 
   it should "parse simple definitions after variables" in {
@@ -497,7 +490,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse lots of definitions after variables" taggedAs TodoTest in {
+  it should "parse lots of definitions after variables" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -550,32 +543,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse definitions with dot arguments" taggedAs TodoTest in {
-    val input =
-      """ArchiveEntry "Entry 1"
-        | Definitions Real f(Real); Real g(Real,Real); Real h(Real) = (.+2); End.
-        | ProgramVariables Real x; Real y; End.
-        | Problem f(x)>g(x,y) & h(x)>5 End.
-        |End.""".stripMargin
-    val entry = parse(input).loneElement
-    entry.name shouldBe "Entry 1"
-    entry.kind shouldBe "theorem"
-    entry.defs should beDecl(
-      Declaration(Map(
-        Name("f", None) -> Signature(Some(Real), Real, Some((Name("\\cdot", Some(0)), Real) :: Nil), None, UnknownLocation),
-        Name("g", None) -> Signature(Some(Tuple(Real, Real)), Real, Some((Name("\\cdot", Some(0)), Real) :: (Name("\\cdot", Some(1)), Real) :: Nil), None, UnknownLocation),
-        Name("h", None) -> Signature(Some(Real), Real, Some((Name("\\cdot", Some(0)), Real) :: Nil), Some(".+2".asTerm), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
-      )))
-    entry.model shouldBe "f(x)>g(x,y) & h(x)>5".asFormula
-    entry.expandedModel shouldBe "f(x)>g(x,y) & x+2>5".asFormula
-    entry.tactics shouldBe empty
-    entry.info shouldBe empty
-    entry.fileContent shouldBe input.trim()
-  }
-
-  it should "FEATURE_REQUEST: parse definitions without parentheses" taggedAs TodoTest in {
+  it should "parse definitions without parentheses" in {
     val input = """ArchiveEntry "Entry 1"
                   | Definitions Real f() = 5; Bool p(Real x) <-> x>0; End.
                   | Problem p(f()) End.
@@ -617,51 +585,39 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  //TODO: Are we sure about this?
-  it should "accept reserved identifiers" in {
-    parse(
+  it should "not accept reserved identifiers" in {
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real Real; End.
         | Problem true End.
         |End.""".stripMargin
-    ).loneElement.defs should beDecl(
-      Declaration(Map(
-        Name("Real", None) -> Signature(None, Real, None, None, UnknownLocation)
-      ))
-    )
+    ) should have message
+      """2:24 Error parsing ident at 2:24
+        |Found:    "Real; End." at 2:24
+        |Expected: ident
+        |Hint: Try ()""".stripMargin
 
-    parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real R; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ).loneElement.defs  should beDecl(
-      Declaration(Map(
-        Name("R", None) -> Signature(None, Real, None, None, UnknownLocation)
-      ))
-    )
-
-    parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real Bool; End.
         | Problem true End.
         |End.""".stripMargin
-    ).loneElement.defs  should beDecl(
-      Declaration(Map(
-        Name("Bool", None) -> Signature(None, Real, None, None, UnknownLocation)
-      ))
-    )
+    ) should have message
+      """2:24 Error parsing ident at 2:24
+        |Found:    "Bool; End." at 2:24
+        |Expected: ident
+        |Hint: Try ()""".stripMargin
 
-    parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real HP; End.
         | Problem true End.
         |End.""".stripMargin
-    ).loneElement.defs  should beDecl(
-      Declaration(Map(
-        Name("HP", None) -> Signature(None, Real, None, None, UnknownLocation)
-      ))
-    )
+    ) should have message
+      """2:24 Error parsing ident at 2:24
+        |Found:    "HP; End." at 2:24
+        |Expected: ident
+        |Hint: Try ()""".stripMargin
   }
 
   it should "parse a problem without variables" in {
@@ -683,7 +639,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: allow comma-separated simple function definitions" taggedAs TodoTest in {
+  it should "allow comma-separated simple function definitions" in {
     val input =
       """ArchiveEntry "Entry 1"
         | Definitions Real f(), g; End.
@@ -771,36 +727,24 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse a plain problem format" taggedAs TodoTest in {
+  it should "not parse a plain problem format" in {
     val input =
       """ProgramVariables Real x; Real y; End.
         |Problem x>y -> x>=y End.
       """.stripMargin
-    val entry = parse(input).loneElement
-    entry.name shouldBe "<undefined>"
-    entry.kind shouldBe "theorem"
-    entry.problemContent shouldBe input.trim()
-    entry.defs should beDecl(
-      Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
-      )))
-    entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe empty
-    entry.info shouldBe empty
-    entry.fileContent shouldBe input.trim()
+    the [ParseException] thrownBy parse(input).loneElement should have message
+      """1:1 Error parsing archiveStart at 1:1
+        |Found:    "ProgramVar" at 1:1
+        |Expected: (sharedDefinitions | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
+        |Hint: Try ("SharedDefinitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: parse a problem without declarations" taggedAs TodoTest in {
+  it should "parse a problem without declarations" in {
     val input = "ArchiveEntry \"Test\" Problem x>y -> x>=y End. End."
     val entry = parse(input).loneElement
     entry.name shouldBe "Test"
     entry.kind shouldBe "theorem"
-    entry.defs should beDecl(
-      Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
-      )))
+    entry.defs.decls shouldBe 'empty
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -808,7 +752,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
 
-  it should "FEATURE_REQUEST: refuse mixed plain and named entries" taggedAs TodoTest in {
+  it should "refuse mixed plain and named entries" in {
     val input =
       """ProgramVariables Real x; Real y; End.
         |Problem x>y -> x>=y End.
@@ -818,11 +762,14 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
         |  Problem x>0 End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy parse(input)
-    ex.msg should include ("Archives that start with an anonymous entry may not contain any other entries, but found ArchiveEntry")
+    the [ParseException] thrownBy parse(input) should have message
+      """1:1 Error parsing archiveStart at 1:1
+        |Found:    "ProgramVar" at 1:1
+        |Expected: (sharedDefinitions | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
+        |Hint: Try ("SharedDefinitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: detect duplicate variable definitions" taggedAs TodoTest in {
+  it should "detect duplicate variable definitions" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -830,47 +777,59 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
         | Problem x>y -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy parse(input)
-    ex.msg should include ("Duplicate variable 'x'")
+    the [ParseException] thrownBy parse(input) should have message
+      """3:43 Error parsing programVariables at 3:2
+        |Found:    "End." at 3:43
+        |Expected: Unique name (x not unique)
+        |Hint: Try ("Real" | "Bool" | "HP" | "HG" | Unique name (x not unique))""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: detect duplicate function names" taggedAs TodoTest in {
+  it should "detect duplicate function names" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | Definitions Real f() = (1); Real f() = (2); End.
+        | Definitions Real f() = 1; Real f() = 2; End.
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy parse(input)
-    ex.msg should include ("Duplicate symbol 'f'")
+    the [ParseException] thrownBy parse(input) should have message
+      """3:42 Error parsing definitions at 3:2
+        |Found:    "End." at 3:42
+        |Expected: Unique name (f not unique)
+        |Hint: Try Unique name (f not unique)""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: detect duplicate predicate names" taggedAs TodoTest in {
+  it should "detect duplicate predicate names" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | Definitions Bool p() <-> (1>0). Bool p() <-> (2>1); End.
+        | Definitions Bool p() <-> 1>0; Bool p() <-> 2>1; End.
         | ProgramVariables Real x; Real y; End.
         | Problem p() -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy parse(input)
-    ex.msg should include ("Duplicate symbol 'p'")
+    the [ParseException] thrownBy parse(input) should have message
+      """3:50 Error parsing definitions at 3:2
+        |Found:    "End." at 3:50
+        |Expected: Unique name (p not unique)
+        |Hint: Try Unique name (p not unique)""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: detect duplicate program names" taggedAs TodoTest in {
+  it should "detect duplicate program names" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | Definitions HP a ::= { ?true; }. HP a ::= { ?false; }; End.
+        | Definitions HP a ::= { ?true; }; HP a ::= { ?false; }; End.
         | ProgramVariables Real x; Real y; End.
         | Problem [a;]true End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy parse(input)
-    ex.msg should include ("Duplicate symbol 'a'")
+    the [ParseException] thrownBy parse(input) should have message
+      """3:57 Error parsing definitions at 3:2
+        |Found:    "End." at 3:57
+        |Expected: Unique name (a not unique)
+        |Hint: Try Unique name (a not unique)""".stripMargin
   }
 
   it should "not elaborate to program constants when definitions contain duals" in {
@@ -897,7 +856,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse a list of model and tactic entries" taggedAs TodoTest in {
+  it should "FEATURE_REQUEST: parse a list of model and tactic entries" taggedAs TodoTest in withTactics {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -948,7 +907,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
                                   |End.""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems" taggedAs TodoTest in {
+  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems" taggedAs TodoTest in withTactics {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1040,7 +999,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
                                   |End.""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" taggedAs TodoTest in {
+  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" taggedAs TodoTest in withTactics {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1176,7 +1135,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.fileContent shouldBe input.trim
   }
 
-  it should "FEATURE_REQUEST: split blocks by whole word only (lemma used in tactic)" taggedAs TodoTest in {
+  it should "FEATURE_REQUEST: split blocks by whole word only (lemma used in tactic)" taggedAs TodoTest in withTactics {
     val input =
       """Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1186,7 +1145,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
         |Theorem "Entry 2"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic "Proof Entry 2" useLemma({`Entry 1`}) End.
+        | Tactic "Proof Entry 2" useLemma("Entry 1") End.
         |End.""".stripMargin
     val entries = parse(input)
     entries should have size 2
@@ -1260,12 +1219,12 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
         |End.""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: parse meta information at any position" taggedAs TodoTest in {
+  it should "parse meta information at beginning or end" in {
     val input =
       """Lemma "Entry 1"
         | Description "The description of entry 1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables Real x; Real y; End.
-        | Link "http://web.keymaerax.org/show/entry1".
         | Problem x>y -> y<x End.
         | Title "A short entry 1 title".
         | Illustration "https://lfcps.org/example.png".
@@ -1283,39 +1242,18 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
     entry.info shouldBe Map(
       "Description" -> "The description of entry 1",
       "Title" -> "A short entry 1 title",
-      "Link" -> "http://web.keymaerax.org/show/entry1",
+      "Link" -> "https://web.keymaerax.org/show/entry1",
       "Illustration" -> "https://lfcps.org/example.png"
     )
     entry.fileContent shouldBe
       """Lemma "Entry 1"
         | Description "The description of entry 1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables Real x; Real y; End.
-        | Link "http://web.keymaerax.org/show/entry1".
         | Problem x>y -> y<x End.
         | Title "A short entry 1 title".
         | Illustration "https://lfcps.org/example.png".
         |End.""".stripMargin
-  }
-
-  it should "FEATURE_REQUEST: replace tabs with spaces in model-only entry" taggedAs TodoTest in {
-    // tabs throw off the position computation in the lexer (especially before \n). in archives without tactics, this leads to faulty model extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End. End.").loneElement
-    entry.name shouldBe "Replace tabs"
-    entry.kind shouldBe "theorem"
-    entry.defs should beDecl(
-      Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
-      )))
-    entry.model shouldBe "x>0".asFormula
-    entry.tactics shouldBe empty
-    entry.info shouldBe empty
-    entry.fileContent shouldBe
-      s"""ArchiveEntry "Replace tabs"
-         |ProgramVariables${"  "}
-         |Real x;
-         |End.
-         |Problem
-         |x>0 End. End.""".stripMargin
   }
 
   "implicit definitions" should "parse implicit ODE function definition" in {
@@ -1369,7 +1307,6 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   it should "disallow redefinition of builtins" in {
-
     val input =
       """
         |ArchiveEntry "Entry"
@@ -1381,7 +1318,11 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
         | Problem exp(y) > 0 End.
         |End.
       """.stripMargin
-    assertThrows[ParseException](parse(input))
+    the [ParseException] thrownBy parse(input) should have message
+      """5:29 Error parsing implicitDef at 4:4
+        |Found:    ";" at 5:29
+        |Expected: Not redefining builtin symbols (exp redefined)
+        |Hint: Try Not redefining builtin symbols (exp redefined)""".stripMargin
   }
 
   it should "allow explicit initial times" in {
