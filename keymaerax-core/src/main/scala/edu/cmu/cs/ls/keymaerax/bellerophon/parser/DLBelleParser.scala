@@ -245,9 +245,9 @@ class DLBelleParser(override val printer: BelleExpr => String,
             Fail
         }
       } else {
-        // Has hashes; extract subexpression and find its position in full expression
+        // Has hashes; extract subexpression and find its position in full expression (hashes act as parentheses)
         val sub = str.substring(hashStart+1,hashEnd)
-        val noHashes = str.substring(0, hashStart) ++ sub ++ str.substring(hashEnd+1,str.length)
+        val noHashes = str.substring(0, hashStart) + "(" + sub + ")" + str.substring(hashEnd+1,str.length)
         fastparse.parse(noHashes, fullExpression(_)) match {
           case failure: Parsed.Failure =>
             val tr = failure.trace()
@@ -264,9 +264,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
                   case Some(posIn) =>
                     Pass((expr, posIn))
                   case None =>
-                    assert(assertion = false, "Parsed a position locator with subexpression successfully, " +
-                                  "but could not find subexpression in expression")
-                    ???
+                    Fail.opaque("Parsed a position locator with subexpression successfully, but could not find subexpression: " + sub.prettyString + " in expression " + expr.prettyString)
                 }
             }
         }

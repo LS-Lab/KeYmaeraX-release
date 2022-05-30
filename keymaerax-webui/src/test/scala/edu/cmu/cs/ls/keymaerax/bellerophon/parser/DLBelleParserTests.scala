@@ -5,9 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ReflectiveExpressionBuilder}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, LazySequentialInterpreter, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixInit
-import edu.cmu.cs.ls.keymaerax.parser.Parser
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
@@ -85,6 +87,11 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
            |""".stripMargin
     )
     //TODO: shouldBes
+  }
+
+  it should "parse hash locators" in {
+    val t = parse("""trueAnd('R=="[x:=1;]#true&x=1#")""").asInstanceOf[AppliedPositionTactic]
+    t.locator shouldBe Find.FindR(0, Some("[x:=1;](true&x=1)".asFormula), PosInExpr(1::Nil), exact=true, defs=Declaration(Map.empty))
   }
 
 }
