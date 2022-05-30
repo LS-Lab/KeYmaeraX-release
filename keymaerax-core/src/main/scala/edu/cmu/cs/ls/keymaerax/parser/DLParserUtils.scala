@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
-import fastparse.{Fail, Index, P, Pass}
+import fastparse.{Fail, Index, P, ParsingRun, Pass}
 
 object DLParserUtils {
   /** Like the .rep parser combinator, but with an accumulator term */
@@ -26,7 +26,17 @@ object DLParserUtils {
 
   /** Runs p, and returns the return value from p in addition to the parsed input substring */
   def captureWithValue[A](p: => P[A])(implicit whitespace: P[_] => P[Unit], ctx: P[Any]): P[(A, String)] = {
-    (Index ~~ p ~~ Index).map({case (start, res, end) => (res, ctx.input.slice(start, end))})
+
+    val start = ctx.index
+    p match { case lhs =>
+      if (!lhs.isSuccess) lhs.asInstanceOf[ParsingRun[(A,String)]]
+      else {
+        val end = ctx.index
+        val this2 = lhs.asInstanceOf[ParsingRun[(A,String)]]
+        this2.successValue = (lhs.successValue, ctx.input.slice(start, end))
+        this2
+      }
+    }
   }
 
   /** Like .filter, but accepting a more descriptive failure message */
@@ -39,9 +49,10 @@ object DLParserUtils {
     val res2 =
       if (!res.isSuccess) ctx
       else if (f(ctx.successValue.asInstanceOf[A])) ctx
-      else ctx.freshFailure(startIndex)
-
-    if (ctx.verboseFailures) ctx.setMsg(startIndex, () => errMsg)
+      else {
+        if (ctx.verboseFailures) ctx.setMsg(startIndex, () => errMsg)
+        ctx.freshFailure(startIndex)
+      }
 
     res2.asInstanceOf[P[A]]
   }

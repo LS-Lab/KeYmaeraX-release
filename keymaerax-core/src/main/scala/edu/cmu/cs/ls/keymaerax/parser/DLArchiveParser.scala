@@ -140,19 +140,24 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       )}
   )
 
-  def archiveStart[_: P]: P[String] = P(("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.
-    map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"}))
+  def archiveStart[_: P]: P[String] = P(
+    ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.
+      map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"})
+  )
 
   /** meta information */
   def metaInfo[_: P]: P[Map[String,String]] = P(
     DLParserUtils.repFold(Map.empty[String,String])(acc =>
-      (("Description" | "Title" | "Link" | "Author" | "See" | "Illustration" | "Citation").! ~~/ blank ~ string ~ ".").
+      (metaInfoKey ~~/ blank ~ string ~ ".").
         flatMap{case (key, value) =>
           if (acc.contains(key))
             Fail.opaque(s"MetaInfo key $key appears twice")
           else
             Pass(acc + (key -> value))
         })
+  )
+  def metaInfoKey[_: P]: P[String] = P(
+    ("Description" | "Title" | "Link" | "Author" | "See" | "Illustration" | "Citation").!
   )
 
   /** Functions and ProgramVariables block in any order */
@@ -187,7 +192,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         Pass(decls) ~ ";"./
         | (decls match {
           case (id,sig)::Nil =>
-            ("="./ ~ term ~ ";").map(e => (id, sig.copy(interpretation = Some(e)))::Nil) |
+            ("="./ ~ term(true) ~ ";").map(e => (id, sig.copy(interpretation = Some(e)))::Nil) |
             ("<->" ~ formula ~ ";").map(f => (id, sig.copy(interpretation = Some(f)))::Nil)
           case _ => Fail
         })
@@ -360,7 +365,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def baseVariable[_: P]: P[BaseVariable] = expParser.baseVariable
 
   /** term: Parses a dL term from [[expParser]]. */
-  def term[_: P]: P[Term] = expParser.term
+  def term[_: P](doAmbigCuts: Boolean): P[Term] = expParser.term(doAmbigCuts)
 
   /** formula: Parses a dL formula from [[expParser]]. */
   def formula[_: P]: P[Formula] = expParser.formula

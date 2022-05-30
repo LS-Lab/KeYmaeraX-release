@@ -10,7 +10,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, FormulaArg, GeneratorArg, ListArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArg, FormulaArg, GeneratorArg, ListArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, DLParserUtils, Declaration, ParseException, Parser}
 import fastparse._
@@ -49,12 +50,14 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   //@todo store the parser for speed
-  val belleParser: String => BelleExpr = (s => fastparse.parse(s, tactic(_)) match {
+  val belleParser: String => BelleExpr = (s => fastparse.parse(s, fullTactic(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
   })
 
   import JavaWhitespace._
+
+  def fullTactic[_: P]: P[BelleExpr] = (Start ~ tactic ~ End)
 
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
   def searchLocator[_: P]: P[PositionLocator] = P(
@@ -78,48 +81,101 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def locator[_: P]: P[PositionLocator] = P( position.map(pos => Fixed(pos)) | searchLocator )
 
-  def argument[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
+  def substPair[_: P]: P[SubstitutionPair] = P(
+    // If the left side of the substitution is a term, so must the right hand side be,
+    // BUT perhaps the left side is ambiguous and the right side is a formula. So in
+    // this case both must be false. :(
+    (formula ~ "~>" ~ formula |
+      term(false) ~ "~>" ~ term(false)).
+      map(pair => SubstitutionPair(pair._1, pair._2))
+  )
+
+  def argList[_: P,A](p: => P[A]): P[List[A]] = P(
+    // Can be nil and nothing else (note this is before trying p,
+    // because p may also accept nil, but we should prefer this case)
+    "nil".!.map(_ => Nil) |
+      // Or it's a single p
+      // which might be followed by (:: p)* (:: nil)
+      (p ~/ (("::" ~ !"nil" ~/ p).rep ~ "::"./ ~ "nil").?).map({
+        case (fst, None) => List(fst)
+        case (fst, Some(rest)) => fst :: rest.toList
+      })
+    )
+
+  def argumentInterior[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
     argInfo match {
       case FormulaArg(name, allowsFresh) => formula.map(List(_))
-      case TermArg(name, allowsFresh) => term.map(List(_))
+      case TermArg(name, allowsFresh) => term(true).map(List(_))
+      case ExpressionArg(name, allowsFresh) =>
+        // I feel like we should never actually hit this because of the cases before it, but ???
+        expression.map(List(_))
       case VariableArg(name, allowsFresh) => DLParser.variable.map(List(_))
-      case GeneratorArg(name) => ???
-      case StringArg(name, allowsFresh) => DLParser.stringInterior.log("string!").map(List(_))
-      case SubstitutionArg(name, allowsFresh) => ???
-      case PosInExprArg(name, allowsFresh) => ???
-      case OptionArg(arg) => argument(arg)
-      case ListArg(arg) => ((argument(arg) ~ "::"./).rep ~ "nil").map(_.toList)
+      case GeneratorArg(name) => Fail.opaque("unimplemented: generator argument")
+      case StringArg(name, allowsFresh) => DLParser.stringInterior.map(List(_))
+      case SubstitutionArg(name, allowsFresh) => ("(" ~/ substPair ~ ")").map(List(_))
+      case PosInExprArg(name, allowsFresh) => Fail.opaque("unimplemented: PosInExpr argument")
+      case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
+      case ListArg(arg) => argList(argumentInterior(arg))
+    }
+  )
+
+  def argument[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
+    "\"" ~/ argumentInterior(argInfo) ~ "\""
+  )(s"Argument ${argInfo.name}: ${argInfo.sort}",implicitly)
+
+  //@note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
+  // I believe this is really intended to represent
+  //      (List[Seq[Any]], Option[PositionLocator])
+  // but squished together, thus why this parser has this type    (- JG)
+  def argumentList[_: P](isStart: Boolean, args: List[ArgInfo]): P[(List[Seq[Any]],Option[PositionLocator])] = P(
+    // If isStart, then we don't expect preceeding ","
+    // before each arg, but if not isStart then we do.
+    args match {
+      case Nil => // No more arguments, try parsing a position locator
+        (if (isStart) locator else ","./ ~ locator).?.
+          map(loc => (Nil, loc))
+      case OptionArg(arg) :: rest => // Optional argument
+        for {
+          // Try parsing argument
+          arg <- (if (isStart) argument(arg) else ","./ ~ argument(arg)).?
+          // Then the rest of the arguments (note if arg is Some(..) then we are no longer at the start)
+          pair <- argumentList(isStart && arg.isEmpty, rest)
+        } yield (arg.toSeq.flatten.map(List(_)).toList ++ pair._1, pair._2)
+      case arg :: rest =>
+        for {
+          // Parse argument (no longer optional)
+          arg <- if (isStart) argument(arg) else ","./ ~ argument(arg)
+          // We can't be at the start now
+          pair <- argumentList(isStart = false, rest)
+        } yield (arg :: pair._1, pair._2)
     }
   )
 
   def tacticSymbol[_: P]: P[String] = P(ident).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
-  def atomicTactic[_: P]: P[BelleExpr] = ( tacticSymbol ~ !"(").map(t => tacticProvider(t, Nil, defs))
-  //@note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
+  def atomicTactic[_: P]: P[BelleExpr] = ( tacticSymbol ~ !"("./).map(t => tacticProvider(t, Nil, defs))
+
   def at[_: P]: P[BelleExpr] = P(
-    (tacticSymbol ~~ "(")./.flatMap(tacName => {
+    (tacticSymbol ~~ "("./).flatMap(tacName => {
       val argInfos = DerivationInfo.ofCodeName(tacName).persistentInputs
-      if (argInfos.isEmpty)
-        locator.?.map(loc =>
-          (tacName, loc.map(Right(_)).toList)
-        )
-      else (
-        DLParserUtils.mapJoin(argInfos)
-          (ai => "\"" ~/ argument(ai) ~ "\"")
-          (","./) ~
-          (","./ ~ locator).?
-      ).map({
+      argumentList(isStart = true, argInfos).map({
         case (args, None) => (tacName, args.map(Left(_)))
-        case (args, Some(pos)) => (tacName, args.map(Left(_)) :+ Right(pos))
+        case (args, Some(pos)) => (tacName, args.map(Left(_)) :+ (Right(pos)))
       })
     }) ~ ")"
-  ).map({case (t,args) => tacticProvider(t, args.toList, defs)})
+  )("tactic(...)",implicitly).
+    map({case (t,args) => tacticProvider(t, args, defs)})
 
   def builtinTactic[_: P]: P[BelleExpr] = (
-    ("doall".! ~~/ "(" ~ tactic ~ ")").
+    ("doall".! ~ "(" ~/ tactic ~ ")").
       map({case ("doall", t) => OnAll(t)}) |
+    ("partial".! ~ "(" ~/ tactic ~ ")").
+      map({case ("partial",t) => PartialTactic(t)}) |
+    ("pending".! ~ "(" ~/ escapedString ~ ")").
+      map({case ("pending",t) =>
+        DebuggingTactics.pending(t)
+      }) |
     ( /*todo: lots of builtins to implement */
       "USMatch".! |
-      "partial".! |
       "let".!
       ).map(_ => belleParser("skip"))
     )
@@ -131,24 +187,27 @@ class DLBelleParser(override val printer: BelleExpr => String,
       map(CaseTactic)
     ) ~ ")")("<(tactic,tactic,...)",implicitly)
 
-  def parenTac[_: P]: P[BelleExpr] = P(
-    ("(" ~/ tactic ~ ")" ~ ("*".! ~ (integer.map(Left(_)) | (!CharIn("0-9")).map(Right(_)))).?).
-      map {
+  def parenTac[_: P]: P[BelleExpr] = P("(" ~/ tactic ~ ")")("(tactic)",implicitly)
+
+  def baseTac[_: P]: P[BelleExpr] = P(branchTac | parenTac | builtinTactic | atomicTactic | at)
+
+  def repTac[_: P]: P[BelleExpr] =
+    (baseTac ~ ("*".! ~ (integer.map(Left(_)) | (!CharIn("0-9")).map(Right(_)))).?).
+      map({
         case (tac, Some(("*", Left(iters)))) => RepeatTactic(tac, iters)
         case (tac, Some(("*", Right(())))) => SaturateTactic(tac)
         case (tac, None) => tac
-      }
-  )("(tactic)*",implicitly)
+      })
 
-  def baseTac[_: P]: P[BelleExpr] = P(
-    (branchTac | parenTac | builtinTactic | atomicTactic | at) ~~
-      (blank ~ "using" ~~ blank ~/ "\"" ~ ((expression ~ "::"./).rep ~ "nil") ~ "\"").?
-  ).map({
+  def usingTac[_: P]: P[BelleExpr] =
+    (repTac ~~
+      (blank ~ "using" ~~ blank ~/ "\"" ~ argList(expression) ~ "\"").?
+    ).map({
       case (tac, None) => tac
-      case (tac, Some(es)) => Using(es.toList, tac)
+      case (tac, Some(es)) => Using(es, tac)
     })
 
-  def seqTac[_: P]: P[BelleExpr] = P( baseTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
+  def seqTac[_: P]: P[BelleExpr] = P( usingTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
     map(SeqTactic.apply)
 
   def eitherTac[_: P]: P[BelleExpr] = P( seqTac.rep(min=1,sep="|"./) )("tactic|tactic",implicitly).
@@ -164,7 +223,9 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def tactic[_: P]: P[BelleExpr] = P( eitherTac )
 
 
-  def escapedString[_: P]: P[String] = P(string).map(_.replaceAllLiterally("\\\"","\""))
+  def escapedString[_: P]: P[String] = P(string).map(
+    _.replaceAllLiterally("\\\"","\"")
+  )
 
   def escapedPositionExpression[_: P]: P[(Expression, PosInExpr)] = P(escapedString)./.
     flatMap(str => {
@@ -173,7 +234,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       val hashEnd = str.lastIndexOf('#')
 
       if (hashStart == hashEnd && hashStart != -1)
-        Fail.opaque("Mismatched # delimiters")
+        Fail
       else if (hashStart == -1) {
         // No hashes, just return Here for PosIn
         fastparse.parse(str, fullExpression(_)) match {
@@ -181,7 +242,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
           case failure: Parsed.Failure =>
             val tr = failure.trace()
             // What information do we expose here??
-            Fail.opaque("escaped expression string")
+            Fail
         }
       } else {
         // Has hashes; extract subexpression and find its position in full expression
@@ -191,13 +252,13 @@ class DLBelleParser(override val printer: BelleExpr => String,
           case failure: Parsed.Failure =>
             val tr = failure.trace()
             // What information do we expose here??
-            Fail.opaque("escaped expression string")
+            Fail
           case Parsed.Success(expr, _) =>
             fastparse.parse(sub, fullExpression(_)) match {
               case failure: Parsed.Failure =>
                 val tr = failure.trace()
                 // What information do we expose here??
-                Fail.opaque("escaped expression string")
+                Fail
               case Parsed.Success(sub, _) =>
                 FormulaTools.posOf(expr, sub) match {
                   case Some(posIn) =>
@@ -210,7 +271,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
             }
         }
       }
-    })
+    }).opaque("escaped expression string")
 
   // externals
   //@todo or just import if no dynamic forwarding needed
@@ -233,7 +294,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def expression[_: P]: P[Expression] = expParser.expression
 
   /** term: Parses a dL term from [[expParser]]. */
-  def term[_: P]: P[Term] = expParser.term
+  def term[_: P](doAmbigCuts: Boolean): P[Term] = expParser.term(doAmbigCuts)
 
   /** formula: Parses a dL formula from [[expParser]]. */
   def formula[_: P]: P[Formula] = expParser.formula

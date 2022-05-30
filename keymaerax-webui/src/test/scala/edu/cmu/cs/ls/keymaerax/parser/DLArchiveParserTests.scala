@@ -1854,12 +1854,12 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
            |  implyR('R=="A(x)->[{ctrl{|^@|};ode{|^@|};}*]S(x)");
            |  loop("S(x)", 'R=="[{ctrl{|^@|};ode{|^@|};}*]S(x)"); <(
            |    "Init":
-           |      expandAllDefs;
+           |      expandAllDefs("nil");
            |      QE,
            |    "Post":
            |      id,
            |    "Step":
-           |      expandAllDefs;
+           |      expandAllDefs("nil");
            |      useLemma("FIDE21/03-Induction step", "prop")
            |  )
            |  End.
@@ -1924,7 +1924,7 @@ class DLArchiveParserTests extends FlatSpec with Matchers with BeforeAndAfterEac
            |
            |End.
            |""".stripMargin
-    ).loneElement
+    )
     // TODO: shouldBes
   }
 

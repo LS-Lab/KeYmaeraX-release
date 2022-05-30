@@ -163,9 +163,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: ;
         |      or: ,""".stripMargin
       or have message
-      """4:1 Error while parsing programVariables at 2:1
-        |Found:    End.
-        |Probl at 4:1
+      """4:1 Error parsing programVariables at 2:1
+        |Found:    "End." at 4:1
         |Expected: ("," | ";")
         |Hint: Try ("," | ";")""".stripMargin)
   }
@@ -189,9 +188,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: ;
         |      or: <FollowsExpression>""".stripMargin
       or have message
-      """4:1 Error while parsing definitions at 2:1
-        |Found:    End.
-        |Progr at 4:1
+      """4:1 Error parsing definitions at 2:1
+        |Found:    "End." at 4:1
         |Expected: ("^" | "*" | "/" | "+" | "-" | ";")
         |Hint: Try ("^" | "*" | "/" | "+" | "-" | ";")""".stripMargin)
   }
@@ -215,9 +213,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: ::=
         |      or: ;""".stripMargin
       or have message
-      """4:1 Error while parsing progDef at 3:3
-        |Found:    End.
-        |Progr at 4:1
+      """4:1 Error parsing progDef at 3:3
+        |Found:    "End." at 4:1
         |Expected: ";"
         |Hint: Try ";"""".stripMargin)
   }
@@ -240,9 +237,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    ID("x") at 3:14
         |Expected: {""".stripMargin
       or have message
-      """3:14 Error while parsing progDef at 3:3
-        |Found:    x:=x+1;
-        |En at 3:14
+      """3:14 Error parsing progDef at 3:3
+        |Found:    "x:=x+1;" at 3:14
         |Expected: "{"
         |Hint: Try "{"""".stripMargin)
   }
@@ -373,8 +369,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    * at 1:6
         |Expected: """.stripMargin
       or have message
-      """1:4 Error while parsing program at 1:1
-        |Found:    b}* at 1:4
+      """1:4 Error parsing program at 1:1
+        |Found:    "b}*" at 1:4
         |Expected: ("^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")
         |Hint: Try ("^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")""".stripMargin)
 
@@ -384,8 +380,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: {c;}* (loop of program constant)
         |      or: {{c}}* (loop of differential program constant)""".stripMargin
       or have message
-      """1:14 Error while parsing program at 1:1
-        |Found:    *}* at 1:14
+      """1:14 Error parsing program at 1:1
+        |Found:    "*}*" at 1:14
         |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")
         |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | [a-zA-Z] | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")""".stripMargin)
 
@@ -394,8 +390,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    * at 1:11
         |Expected: """.stripMargin
       or have message
-      """1:9 Error while parsing program at 1:1
-        |Found:    b}* at 1:9
+      """1:9 Error parsing program at 1:1
+        |Found:    "b}*" at 1:9
         |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")
         |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "}")""".stripMargin)
 
@@ -405,10 +401,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: [{sys}]
         |      or: <{sys}>""".stripMargin
       or have message
-      """1:5 Error while parsing comparator at 1:5
-        |Found:    & A2) -> { at 1:5
-        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")
-        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "-" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")""".stripMargin)
+      """1:14 Error parsing formula at 1:1
+        |Found:    "{sys} B1 &" at 1:14
+        |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "(")""".stripMargin)
 
     //@note {sys} is an ODESystem with differential program constant sys and doesn't require ;
     the [ParseException] thrownBy Parser("A1;{sys}B1") should (have message
@@ -416,8 +412,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    <EOF> at 1:11 to EOF$
         |Expected: ;""".stripMargin
       or have message
-      """1:9 Error while parsing fullExpression at 1:1
-        |Found:    B1 at 1:9
+      """1:9 Error parsing fullExpression at 1:1
+        |Found:    "B1" at 1:9
         |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | end-of-input)
         |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | end-of-input)""".stripMargin)
 
@@ -432,18 +428,18 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: """.stripMargin
       or have message
       // better, but still not pointing to the missing ; after sys
-      """1:5 Error while parsing comparator at 1:5
-        |Found:    -> {sys} B at 1:5
-        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" ~ !">" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")
-        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "," | ")" | "=" | "!=" | ">=" | ">" | "<=" | "<")""".stripMargin)
+      """1:8 Error parsing formula at 1:2
+        |Found:    "{sys} B1) " at 1:8
+        |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "(")""".stripMargin)
 
     the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should (have message
       """1:7 Unexpected token cannot be parsed
         |Found:    ] at 1:7
         |Expected: ;""".stripMargin
       or have message
-      """1:2 Error while parsing program at 1:2
-        |Found:    sense][ctr at 1:2
+      """1:2 Error parsing program at 1:2
+        |Found:    "sense][ctr" at 1:2
         |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
         |Hint: Try ("?" | "if" | "{")""".stripMargin)
 
@@ -452,8 +448,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    ] at 1:20
         |Expected: ;""".stripMargin
       or have message
-      """1:15 Error while parsing formula at 1:1
-        |Found:    plant]x>y at 1:15
+      """1:15 Error parsing formula at 1:1
+        |Found:    "plant]x>y" at 1:15
         |Expected: ("^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "]")
         |Hint: Try ("^@" | ";" | "?" | "if" | "{" | "++" | "∪" | "--" | "∩" | "]")""".stripMargin)
   }
@@ -464,8 +460,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    := at 1:5 to 1:6
         |Expected: $$$T""".stripMargin
       or have message
-      """1:6 Error while parsing program at 1:6
-        |Found:    x'=:=2*y;] at 1:6
+      """1:6 Error parsing program at 1:6
+        |Found:    "x'=:=2*y;]" at 1:6
         |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
         |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
@@ -530,9 +526,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
           |  Symbol x used with inconsistent kinds x:Trafo,x:Real
           |Found:    <unknown> at <somewhere>
           |Expected: <unknown>""".stripMargin) ::
-      ("scolon1.key", "8:10 Unexpected token cannot be parsed\nFound:    > at 8:10", "8:10 Error while parsing program at 8:5\nFound:    > = 0") ::
-      ("scolon2.key", "8:12 Unexpected token cannot be parsed\nFound:    = at 8:12", "8:10 Error while parsing program at 8:5\nFound:    > = 0") ::
-      ("scolon3.key", "8:12 Unexpected token cannot be parsed\nFound:    > at 8:12", "8:5 Error while parsing program at 8:5\nFound:    a' = 0 > =") :: Nil
+      ("scolon1.key", "8:10 Unexpected token cannot be parsed\nFound:    > at 8:10", "8:10 Error parsing program at 8:5\nFound:    \"> = 0\"") ::
+      ("scolon2.key", "8:12 Unexpected token cannot be parsed\nFound:    = at 8:12", "8:10 Error parsing program at 8:5\nFound:    \"> = 0\"") ::
+      ("scolon3.key", "8:12 Unexpected token cannot be parsed\nFound:    > at 8:12", "8:5 Error parsing program at 8:5\nFound:    \"a' = 0 > =\"") :: Nil
       //("UndeclaredVariables.key", "TODO") :: Nil //@note not yet caught (LAX?)
 
     forEvery(Table(("filename", "msg1", "msg2"), files:_*))({ (fn, m1, m2) =>
@@ -610,8 +606,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
           |Found:    if at 3:6 to 3:7
           |Expected: {""".stripMargin
         or have message
-        """3:6 Error while parsing program at 2:1
-          |Found:    if (x<0) { at 3:6
+        """3:6 Error parsing program at 2:1
+          |Found:    "if (x<0) {" at 3:6
           |Expected: "{"
           |Hint: Try "{"""".stripMargin)
   }
@@ -631,19 +627,19 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
                      |Found:    ( at 1:2
                      |Expected: """.stripMargin
         or have message
-        """1:6 Error while parsing termList at 1:2
-          |Found:     at 1:6
-          |Expected: ("_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "(|" | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
+        """1:2 Error parsing fullExpression at 1:1
+          |Found:    "(x,y" at 1:2
+          |Expected: ([a-zA-Z0-9] | "_" | "{|^@" | odeSpace | ";" | "'" | ":=" | "<<" | space | "^" | "*" | "/" | "+" | "-" | end-of-input)
+          |Hint: Try ([a-zA-Z0-9] | "_" | "{|^@" | "{|" | ";" | "'" | ":=" | "<<" | "(|" | "^" | "*" | "/" | "+" | "-" | end-of-input)""".stripMargin)
     the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
       (have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
                      |Found:    , at 1:12 to EOF$
                      |Expected: Term""".stripMargin
-        or have message
-        """1:9 Error while parsing termList at 1:2
-          |Found:    >=2 at 1:9
-          |Expected: ("_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "(|" | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
+        or have message // Not great but...
+        """1:2 Error parsing fullExpression at 1:1
+          |Found:    "(x,y, x>=2" at 1:2
+          |Expected: ([a-zA-Z0-9] | "_" | "{|^@" | odeSpace | ";" | "'" | ":=" | "<<" | space | "^" | "*" | "/" | "+" | "-" | end-of-input)
+          |Hint: Try ([a-zA-Z0-9] | "_" | "{|^@" | "{|" | ";" | "'" | ":=" | "<<" | "(|" | "^" | "*" | "/" | "+" | "-" | end-of-input)""".stripMargin)
   }
 
   "Annotation parsing" should "populate easy loop annotations" in {
@@ -760,8 +756,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    <-> at 1:42 to 1:44
         |Expected: =""".stripMargin
       or have message
-      """1:49 Error while parsing comparator at 1:49
-        |Found:    ; End. Pro at 1:49
+      """1:49 Error parsing comparator at 1:49
+        |Found:    "; End. Pro" at 1:49
         |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")
         |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")""".stripMargin)
   }
@@ -773,8 +769,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    3>2 at 1:44 to 1:46
         |Expected: Term""".stripMargin
       or have message
-      """1:45 Error while parsing definitions at 1:21
-        |Found:    >2; End. P at 1:45
+      """1:45 Error parsing definitions at 1:21
+        |Found:    ">2; End. P" at 1:45
         |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")
         |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")""".stripMargin)
   }
@@ -786,8 +782,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Found:    ( at 1:44
         |Expected: """.stripMargin
       or have message
-      """1:46 Error while parsing termList at 1:44
-        |Found:    >2; End. P at 1:46
+      """1:46 Error parsing termList at 1:44
+        |Found:    ">2; End. P" at 1:46
         |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "," | ")")
         |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
   }

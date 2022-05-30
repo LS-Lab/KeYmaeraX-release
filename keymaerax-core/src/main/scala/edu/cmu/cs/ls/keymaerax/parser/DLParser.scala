@@ -49,29 +49,39 @@ object DLParser extends DLParser {
       stack.map{case (s, i) => s"$s at ${input.prettyIndex(i)}"}.mkString(" / ")
     }
 
+    def formatFound(input: ParserInput, index: Int): String = {
+      val endIdx = Math.min(input.length, index+10)
+      val slice = input.slice(index, endIdx)
+      // Cut off early if we encounter a \n
+      val slice2 = if (slice.indexOf('\n') >= 0) slice.take(slice.indexOf('\n')) else slice
+      // Escape "s and surround with "s
+      "\"" + slice2.replaceAllLiterally("\"","\\\"") + "\""
+    }
+
+    /** The location of a parse failure. */
+    def location(f: Parsed.Failure): Location = try {
+      f.extra.input.prettyIndex(f.index).split(':').toList match {
+        case line::col::Nil => Region(line.toInt, col.toInt)
+        case line::col::unexpected => Region(line.toInt, col.toInt)
+        case unexpected => UnknownLocation
+      }
+    } catch {
+      case _: NumberFormatException => UnknownLocation
+    }
+
     ParseException(
-      msg = "Error while parsing " + (tr.stack.lastOption match {
+      msg = "Error parsing " + (tr.stack.lastOption match {
         case None => "input"
         case Some(last) => formatStack(tr.input, List(last))
       }),
       location(f),
-      found = f.extra.input.slice(f.index, Math.min(f.index+10, f.extra.input.length)),
+      found = formatFound(f.extra.input, f.index),
       expect = tr.groupAggregateString,
       after = "" + tr.stack.lastOption.getOrElse(""),
       // state = tr.longMsg,
       // state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
-      hint = "Try " + tr.terminalAggregateString).inInput(inputString, None)
-  }
-
-  /** The location of a parse failure. */
-  private[keymaerax] def location(f: Parsed.Failure): Location = try {
-    f.extra.input.prettyIndex(f.index).split(':').toList match {
-      case line::col::Nil => Region(line.toInt, col.toInt)
-      case line::col::unexpected => Region(line.toInt, col.toInt)
-      case unexpected => UnknownLocation
-    }
-  } catch {
-    case _: NumberFormatException => UnknownLocation
+      hint = "Try " + tr.terminalAggregateString
+    ).inInput(inputString, None)
   }
 
   /** parse from a parser with more friendly error reporting */
@@ -195,7 +205,7 @@ class DLParser extends Parser {
   // Whitespace is the usual ' \t\n\r' but also comments /* ... */ and // ...
   import JavaWhitespace._
 
-  def fullTerm[_: P]: P[Term]   = P( Start ~ term ~ End )
+  def fullTerm[_: P]: P[Term]   = P( Start ~ term(true) ~ End )
   def fullFormula[_: P]: P[Formula]   = P( Start ~ formula ~ End )
   def fullProgram[_: P]: P[Program]   = P( Start ~ program ~ End )
   def fullDifferentialProgram[_: P]: P[DifferentialProgram]   = {
@@ -210,7 +220,9 @@ class DLParser extends Parser {
     program |
       // Term followed by comparator, or ambiguous term followed by formula operators,
       // should not be parsed as a term
-      !(term ~ (comparator | StringIn("->","<-","<->","&","|","→","←","↔","∧","∨"))) ~ term |
+      !(term(true) ~ (comparator | StringIn("->","<-","<->","&","|","→","←","↔","∧","∨"))) ~
+        // Even then, if ambiguous we still want to backtrack
+        term(false) |
       formula
   )
 
@@ -258,7 +270,7 @@ class DLParser extends Parser {
   // terminals not used here but provided for other DL parsers
 
   def stringInterior[_: P]: P[String] =
-    (!CharIn("\\\"") ~~ AnyChar./ | "\\\""./ | "\\").repX.!
+    (CharPred(c => c != '\\' && c != '\"')./ | "\\\""./ | "\\").repX.!
 
   /** "whatevs": Parse a string literal. (([^\\"]|\\"|\\(?!"))*+) */
   def string[_: P]: P[String] = P(
@@ -299,14 +311,24 @@ class DLParser extends Parser {
   //*****************
 
   /** Parse a term.
-   * If the leftmost character is ( it is interpreted as a term parenthesis,
-   * and a cut is made. Should only be used in contexts where the first
-   * character must be a part of a term. */
-  def term[_: P]: P[Term] = P(
-    signed(summand) ~
+   *
+   * Some terms are ambiguous with formulas, in particular
+   *    - Parentheses (term parens vs function parens)
+   *    - Functions vs predicates
+   *    - UnitFunctionals vs UnitPredicationals
+   * So, we want to allow backtracking on these ambiguous
+   * syntax forms if we are not sure whether the input is
+   * a term or a formula.
+   *
+   * If doAmbigCuts is true, we assume the input is a term, and
+   * perform all permissible cuts. If it is false, we only perform
+   * cuts that are unambiguous indicators the input is a term.
+   */
+  def term[_: P](doAmbigCuts: Boolean): P[Term] = P(
+    signed(summand(doAmbigCuts)) ~
     // Note: the summand is signed, rather than the first multiplicand
     // in `summand`, because -5*6 is parsed as -(5*6)
-    (("+" | "-" ~ !">").!./ ~ signed(summand)).rep
+    (("+" | "-" ~ !">").!./ ~ signed(summand(doAmbigCuts))).rep
   ).map { case (left, sums) =>
     sums.foldLeft(left) {
       case (m1, ("+", m2)) => Plus(m1, m2)
@@ -314,9 +336,9 @@ class DLParser extends Parser {
     }
   }
 
-  def summand[_: P]: P[Term] =
+  def summand[_: P](doAmbigCuts: Boolean): P[Term] =
     // Lookahead is to avoid /* */ comments
-    (multiplicand ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand)).rep).
+    (multiplicand(doAmbigCuts) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).
       map { case (left, mults) =>
         mults.foldLeft(left) {
           case (m1, ("*", m2)) => Times(m1, m2)
@@ -324,22 +346,27 @@ class DLParser extends Parser {
         }
       }
 
-  def multiplicand[_: P]: P[Term] =
-    (baseTerm ~ ("^"./ ~ signed(baseTerm)).rep).map{ case (left, pows) =>
+  def multiplicand[_: P](doAmbigCuts: Boolean): P[Term] =
+    (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(baseTerm(doAmbigCuts))).rep).map{ case (left, pows) =>
       (left +: pows).reduceRight(Power)
     }
 
-  def baseTerm[_: P]: P[Term] = (
-      number./ | dot./ | function.flatMap(diff) | unitFunctional.flatMap(diff)
-      /* This cut means that an identifier which is not followed by () or {} or (||)
-       * will always be interpreted as a variable */
+  def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] = P(
+      number./ | dot./ | function(doAmbigCuts).flatMap(diff) | unitFunctional(doAmbigCuts).flatMap(diff)
       | variable
-      /* termList cannot have a cut after (, because otherwise backtracking into
-      * parenthesized formulas is disallowed. */
-      | termList.flatMap(diff)
+      | termList(doAmbigCuts).flatMap(diff)
   )
 
-  def function[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
+  def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
+    // Note interpretations can only appear on functions (not predicates)
+    // so that cut is safe
+    ident ~~ ("<<" ~/ formula ~ ">>").? ~~
+      // Note that ident(termList) can still be ambiguous even if termList
+      // is unambiguously a term (it will always be unambiguously a term)
+      // so in the doAmbigCuts == false case we want to ignore those cuts
+      (if (doAmbigCuts) termList(true)
+      else NoCut(termList(true)))
+  ).map({case (s,idx,interp,ts) =>
     FuncOf(
       interp match {
         case Some(i) => Function(s,idx,ts.sort,Real,Some(i))
@@ -348,7 +375,9 @@ class DLParser extends Parser {
       ts)
   })
 
-  def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
+  def unitFunctional[_: P](doAmbigCuts: Boolean): P[UnitFunctional] = P(
+    ident ~~ (if (doAmbigCuts) space else NoCut(space))
+  ).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
 
   /** `p | -p`: possibly signed occurrences of what is parsed by parser `p`
    * Note we try `p` before `-p` because some parsers (like `number`)
@@ -361,12 +390,19 @@ class DLParser extends Parser {
     "'".!.?.map{case None => left case Some("'") => Differential(left)}
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
-  def termList[_: P]: P[Term] = P("(" ~~ !"|" ~ term.rep(sep=","./) ~ ")").
+  def termList[_: P](doAmbigCuts: Boolean): P[Term] = P(
+    "(" ~~ !"|" ~ (if (doAmbigCuts) Pass./ else Pass) ~
+      // Note that a single-element termList can be ambiguous with formulas,
+      // but a multi-element termList must be a term
+      (if (doAmbigCuts) term(true) else NoCut(term(true))).rep(sep=","./) ~
+      ")"
+  ).
     map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
-  def space[_: P]: P[Space] = P( "(|" ~/ variable.rep(sep=",") ~ "|)" ).
-    map(ts => if (ts.isEmpty) AnyArg else Except(ts.to))
+  def space[_: P]: P[Space] = P(
+    "(|" ~ variable.rep(sep=",") ~ "|)"
+  ).map(ts => if (ts.isEmpty) AnyArg else Except(ts.to))
 
   //*****************
   // formula parser
@@ -402,24 +438,26 @@ class DLParser extends Parser {
 
   /** Base formulas */
   def baseF[_: P]: P[Formula] = (
+    // First try unambiguously formula things
     unambiguousBaseF |
-      // Cut is safe -- we handle all viable cases here
-      &(recAmbiguousBaseF)./ ~ (
-        &(recAmbiguousBaseF ~ ("+" | "-" ~ !">" | "*" | "/" ~~ !"*" | "^" | comparator))./ ~~ comparison |
-        recAmbiguousBaseF
-        ) |
-      // Now we know that the following baseF is either a comparison
-      // (which starts with an unambiguous term)
-      &(term) ~/ comparison |
-      // or an ambiguous formula (which doesn't start with a term)
-      ambiguousBaseF(formula)
+      // Now we try parsing a comparison, which will fail & backtrack
+      // if it can't parse a term
+      comparison |
+      // Since we already tried (and failed) to parse a term, now we
+      // can safely try the ambiguous cases
+      ambiguousBaseF
   )
 
-  def recAmbiguousBaseF[_: P]: P[Formula] = ambiguousBaseF(recAmbiguousBaseF)
-
-  def ambiguousBaseF[_: P](rec: => P[Formula]): P[Formula] = (
+  // Ambiguous base formula cases. Note that we still do not cut on
+  // the ambiguous constructions, because we want error aggregates to
+  // still allow for these ambiguous cases to actually be terms
+  def ambiguousBaseF[_: P]: P[Formula] = (
+    /* variables */
+    (ident ~~ !"(").map{
+      case (name, idx) => PredOf(Function(name, idx, Unit, Bool), Nothing)
+    } |
     /* predicate OR function */
-    ( ident ~~ termList ~ "'".!.? ).map {
+    ( ident ~~ NoCut(termList(true)) ~ "'".!.? ).map {
       case (name, idx, args, diff) =>
         val p = PredOf(Function(name, idx, args.sort, Bool), args)
         diff match {
@@ -428,7 +466,7 @@ class DLParser extends Parser {
         }
     }
     /* unit predicational OR unit functional */
-    | DLParserUtils.filterWithMsg( ident ~~ space ~ "'".!.?)(_._2.isEmpty)("Unit predicationals cannot have indices").map({
+    | DLParserUtils.filterWithMsg( ident ~~ NoCut(space) ~ "'".!.?)(_._2.isEmpty)("Unit predicationals cannot have indices").map({
         case (name, _, args, diff) =>
           val p = UnitPredicational(name, args)
           diff match {
@@ -437,7 +475,7 @@ class DLParser extends Parser {
           }
       })
     /* parenthesized formula OR term */
-    | ("(" ~ rec ~ ")" ~ "'".!.?).map({
+    | ("(" ~ formula ~ ")" ~ "'".!.?).map({
         case (form,None) => form
         case (form,Some("'")) => DifferentialFormula(form)
       })
@@ -462,7 +500,9 @@ class DLParser extends Parser {
 
   /** Parses a comparison, given the left-hand term */
   def comparison[_: P]: P[Formula] = P(
-    (term ~ comparator.! ~/ term).map {
+    // We don't know if the starting input is a term, but after
+    // seeing the comparator we know the RHS must be a term
+    (term(false) ~ comparator.! ~/ term(true)).map {
       case (left, "=", right) => Equal(left, right)
       case (left, "!=" | "≠", right) => NotEqual(left, right)
       case (left, ">=" | "≥", right) => GreaterEqual(left, right)
@@ -501,7 +541,7 @@ class DLParser extends Parser {
   )
 
   def assign[_: P]: P[AtomicProgram] = (
-    (variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term.map(Right(_)))  ~ ";").
+    (variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term(true).map(Right(_)))  ~ ";").
       map({
         case (x, Left("*")) => AssignAny(x)
         case (x, Right(t)) => Assign(x, t)
@@ -561,7 +601,7 @@ class DLParser extends Parser {
   // differential program parser
   //*****************
 
-  def ode[_: P]: P[AtomicODE] = P( diffVariable ~ "=" ~/ term).map({case (x,t) => AtomicODE(x,t)})
+  def ode[_: P]: P[AtomicODE] = P( diffVariable ~ "=" ~/ term(true)).map({case (x,t) => AtomicODE(x,t)})
   def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P(
     DLParserUtils.filterWithMsg(ident ~~ odeSpace.?)(_._2.isEmpty)
                   ("Differential program symbols cannot have an index").map({

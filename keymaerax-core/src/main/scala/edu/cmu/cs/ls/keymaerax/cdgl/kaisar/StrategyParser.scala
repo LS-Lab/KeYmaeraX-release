@@ -27,7 +27,7 @@ object StrategyParser {
 
   def stest[_: P]: P[STest] = (P("STest") ~ maybeId ~ DLParser.formula ~ P(")")).map({ case (id, fml) => alloc(id, STest(fml)) })
 
-  def sassign[_: P]: P[SAssign] = (P("SAssign") ~ maybeId ~ DLParser.variable ~ "," ~ DLParser.term ~ ")").map({ case (id, x, y) => alloc(id, SAssign((x), y)) })
+  def sassign[_: P]: P[SAssign] = (P("SAssign") ~ maybeId ~ DLParser.variable ~ "," ~ DLParser.term(true) ~ ")").map({ case (id, x, y) => alloc(id, SAssign((x), y)) })
 
   def sassignAny[_: P]: P[SAssignAny] = (P("SAssignAny") ~ maybeId ~ DLParser.variable ~ ")").map({ case (id, x) => alloc(id, SAssignAny((x))) })
 
@@ -42,13 +42,13 @@ object StrategyParser {
   def aloop[_: P]: P[ALoop] = (P("ALoop") ~ maybeId ~ DLParser.formula ~ "," ~ angelStrategy ~ ")").map({ case (id, x, y) => alloc(id, ALoop(x, y)) })
 
   def aforloop[_: P]: P[AForLoop] =
-    (P("AForLoop") ~ maybeId ~ DLParser.variable ~ "," ~ DLParser.term ~ "," ~ DLParser.formula ~ "," ~ angelStrategy ~ "," ~ DLParser.term ~ ("," ~ DLParser.term).?).map({
+    (P("AForLoop") ~ maybeId ~ DLParser.variable ~ "," ~ DLParser.term(true) ~ "," ~ DLParser.formula ~ "," ~ angelStrategy ~ "," ~ DLParser.term(true) ~ ("," ~ DLParser.term(true)).?).map({
       case (id, idx, idx0, conv, body, idxup, delta) => alloc(id, AForLoop(idx, idx0, conv, body, idxup, delta))
     })
 
   def aswitch[_: P]: P[ASwitch] = (P("ASwitch") ~ maybeId ~ branch.rep(sep = ",") ~ ")").map({ case (id, brs) => alloc(id, ASwitch(brs.toList)) })
 
-  def aode[_: P]: P[AODE] = (P("AODE") ~ maybeId ~ DLParser.odesystem ~ "," ~ DLParser.term ~ ")").map({ case (id, x, y) => alloc(id, AODE(x, y)) })
+  def aode[_: P]: P[AODE] = (P("AODE") ~ maybeId ~ DLParser.odesystem ~ "," ~ DLParser.term(true) ~ ")").map({ case (id, x, y) => alloc(id, AODE(x, y)) })
 
   def branch[_: P]: P[(Formula, AngelStrategy)] = "(" ~ DLParser.formula ~ "," ~ angelStrategy ~ ")"
 
