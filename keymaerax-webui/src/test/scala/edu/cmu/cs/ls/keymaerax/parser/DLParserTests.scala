@@ -49,4 +49,8 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     Parser("(x>=0)") shouldBe Parser("x>=0")
   }
 
+  it should "parse formula constants" in {
+    Parser("x & y") shouldBe Parser("x() & y()")
+  }
+
 }

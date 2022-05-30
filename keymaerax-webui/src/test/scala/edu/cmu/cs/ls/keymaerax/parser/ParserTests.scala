@@ -401,10 +401,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: [{sys}]
         |      or: <{sys}>""".stripMargin
       or have message
-      """1:5 Error parsing comparator at 1:5
-        |Found:    "& A2) -> {" at 1:5
-        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" | "," | ")" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<")
-        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "-" | "," | ")" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<")""".stripMargin)
+      """1:14 Error parsing formula at 1:1
+        |Found:    "{sys} B1 &" at 1:14
+        |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "(")""".stripMargin)
 
     //@note {sys} is an ODESystem with differential program constant sys and doesn't require ;
     the [ParseException] thrownBy Parser("A1;{sys}B1") should (have message
@@ -428,10 +428,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: """.stripMargin
       or have message
       // better, but still not pointing to the missing ; after sys
-      """1:5 Error parsing comparator at 1:5
-        |Found:    "-> {sys} B" at 1:5
-        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" ~ !">" | "," | ")" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<")
-        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "," | ")" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<")""".stripMargin)
+      """1:8 Error parsing formula at 1:2
+        |Found:    "{sys} B1) " at 1:8
+        |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "(")""".stripMargin)
 
     the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should (have message
       """1:7 Unexpected token cannot be parsed
@@ -627,19 +627,19 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
                      |Found:    ( at 1:2
                      |Expected: """.stripMargin
         or have message
-        """1:6 Error parsing termList at 1:2
-          |Found:    "" at 1:6
-          |Expected: ([a-zA-Z0-9] | "_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "(|" | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
+        """1:2 Error parsing fullExpression at 1:1
+          |Found:    "(x,y" at 1:2
+          |Expected: ([a-zA-Z0-9] | "_" | "{|^@" | odeSpace | ";" | "'" | ":=" | "<<" | space | "^" | "*" | "/" | "+" | "-" | end-of-input)
+          |Hint: Try ([a-zA-Z0-9] | "_" | "{|^@" | "{|" | ";" | "'" | ":=" | "<<" | "(|" | "^" | "*" | "/" | "+" | "-" | end-of-input)""".stripMargin)
     the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
       (have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
                      |Found:    , at 1:12 to EOF$
                      |Expected: Term""".stripMargin
-        or have message
-        """1:9 Error parsing termList at 1:2
-          |Found:    ">=2" at 1:9
-          |Expected: ("_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "(|" | "'" | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
+        or have message // Not great but...
+        """1:2 Error parsing fullExpression at 1:1
+          |Found:    "(x,y, x>=2" at 1:2
+          |Expected: ([a-zA-Z0-9] | "_" | "{|^@" | odeSpace | ";" | "'" | ":=" | "<<" | space | "^" | "*" | "/" | "+" | "-" | end-of-input)
+          |Hint: Try ([a-zA-Z0-9] | "_" | "{|^@" | "{|" | ";" | "'" | ":=" | "<<" | "(|" | "^" | "*" | "/" | "+" | "-" | end-of-input)""".stripMargin)
   }
 
   "Annotation parsing" should "populate easy loop annotations" in {
