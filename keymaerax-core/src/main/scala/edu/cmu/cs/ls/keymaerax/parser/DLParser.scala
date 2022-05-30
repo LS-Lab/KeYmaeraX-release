@@ -264,7 +264,7 @@ class DLParser extends Parser {
 
   /** `.` or `._2`: dot parsing */
   def dot[_:P]: P[DotTerm] = P(
-    "." ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!).?
+    ("." | "•") ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!).?
   ).map(idx => DotTerm(Real, idx.map(_.toInt)))
 
   // terminals not used here but provided for other DL parsers
