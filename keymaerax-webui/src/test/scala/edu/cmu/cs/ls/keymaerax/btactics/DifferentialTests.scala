@@ -5,12 +5,13 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import testHelper.CustomAssertions._
@@ -19,8 +20,9 @@ import testHelper.KeYmaeraXTestTags
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
-import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
-import org.scalatest.prop.Tables._
+import org.scalatest.prop.TableDrivenPropertyChecks._
+
+import scala.util.Try
 
 /**
   * Basic differential equation proving technology tests
@@ -397,18 +399,15 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "prove x >= 0 & y >= 0 & z >= 0 -> [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0" in withQE { _ =>
-    val input = """ProgramVariables.
-                  |  R x.
-                  |  R y.
-                  |  R z.
-                  |End.
-                  |Problem.
-                  |  x >= 0 & y >= 0 & z >= 0
-                  |  ->
-                  |  [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0
-                  |End.
-                  |""".stripMargin
-
+    val input =
+      """ArchiveEntry "Test"
+        |ProgramVariables Real x, y, z; End.
+        |Problem
+        |  x >= 0 & y >= 0 & z >= 0
+        |  ->
+        |  [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0
+        |End.
+        |End.""".stripMargin
     proveBy(ArchiveParser.parseAsFormula(input), implyR(1) & dI('full)(1)) shouldBe 'proved
   }
 
@@ -2022,73 +2021,61 @@ class DifferentialTests extends TacticTestBase {
     res.subgoals(1) shouldBe "G(x_0), r(x), !p(x) ==> T(x_0), S(x_0), [{x'=f(x)&r(x)}](!p(x))".asSequent
   }
 
-  "Derive" should "correctly derive" taggedAs IgnoreInBuildTest in withMathematica { tool =>
+  "Derive" should "correctly derive" in withMathematica { tool =>
     val vx = Variable("x")
     val vy = Variable("y")
     val vz = Variable("z")
     val vars = IndexedSeq(vx,vy,vz)
 
-    for (i <- 1 to randomTrials) {
-      //@todo avoid divisions by zero
-      val inv = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
+    def powZeroFree[T <: Expression](e: T): T = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case Power(_, Number(n)) if n==0 => Right(Number(1))
+        case _ => Left(None)
+      }
+    }, e).getOrElse(e)
 
+    def makeTask: (Term, Term, Term, Term) = {
+      //@todo avoid divisions by zero (but can be nested, e.g., x/((y-y)/(1*1-1^5))
+      val inv = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
       val dx = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
       val dy = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
       val dz = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
+      (powZeroFree(inv), dx, dy, dz)
+    }
 
-      val ode =
+    val tasks = Table(("inv", "dx", "dy", "dz"), (1 to randomTrials).map(_ => makeTask).toList:_*)
+    forEvery(tasks)({ case (inv, dx, dy, dz) =>
+      val ode = DifferentialProduct(
+        AtomicODE(DifferentialSymbol(vx), dx),
         DifferentialProduct(
-          AtomicODE(DifferentialSymbol(vx), dx),
-          DifferentialProduct(
           AtomicODE(DifferentialSymbol(vy), dy),
           AtomicODE(DifferentialSymbol(vz), dz))
-        )
-
+      )
       //Uses dI
-      val l1 =
-        try {
-          Some(DifferentialHelper.lieDerivative(ode,inv))
-        }
-        catch {
-          case ex: BelleThrowable => None
-        }
-      val l2 =
-        try {
-          Some(DifferentialHelper.simplifiedLieDerivative(ode,inv,None))
-        }
-        catch {
-          case ex: ToolException => None
-        }
-      val l3 =
-        try {
-          Some(Plus(
-            Times(tool.deriveBy(inv, vx), dx),
-            Plus(Times(tool.deriveBy(inv, vy), dy), Times(tool.deriveBy(inv, vz), dz))))
-        }
-        catch {
-          case ex: ToolException => None
-        }
+      val l1 = Try(DifferentialHelper.lieDerivative(ode, inv)).toOption
+      val l2 = Try(DifferentialHelper.simplifiedLieDerivative(ode, inv, None)).toOption
+      val l3 = Try(Plus(
+        Times(tool.deriveBy(inv, vx), dx),
+        Plus(Times(tool.deriveBy(inv, vy), dy), Times(tool.deriveBy(inv, vz), dz)))
+      ).toOption
 
-      (l1,l2,l3) match {
-        case (Some(r1),Some(r2),Some(r3)) =>
+      (l1, l2, l3) match {
+        case (Some(r1), Some(r2), Some(r3)) =>
           try {
-            val pr1 = proveBy(Equal(r1, r2), QE)
-            val pr2 = proveBy(Equal(r2, r3), QE)
-            val pr3 = proveBy(Equal(r3, r1), QE) //this should be unnecessary
-
-            (pr1.isProved,pr2.isProved,pr3.isProved) shouldBe (true,true,true)
-          }
-          catch {
-            case ex: BelleThrowable =>
+            proveBy(Equal(r1, r2), QE) shouldBe 'proved
+            proveBy(Equal(r2, r3), QE) shouldBe 'proved
+            proveBy(Equal(r3, r1), QE) shouldBe 'proved //this should be unnecessary
+          } catch {
+            case _: BelleThrowable =>
               // Ignores failures due to division by 0
-              println("Lie derivatives mismatch (QE fails) on: ", ode, inv)
-              println(l1,l2,l3)
+              println("Lie derivatives mismatch (QE fails) on: " + ode + ", " + inv)
+              println(l1, l2, l3)
           }
         case _ =>
-          // Ignores failures due to ^0
-          println("Lie derivatives mismatch (Calculation) on: ",ode,inv)
-          println(l1,l2,l3)
+          // Ignores failures due to ^0 or division by 0
+          println("Lie derivatives mismatch (Calculation) on: " + ode + ", " + inv)
+          println(l1, l2, l3)
       }
-    }
+    })
   }
 }
