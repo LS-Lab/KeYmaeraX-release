@@ -82,7 +82,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def locator[_: P]: P[PositionLocator] = P( position.map(pos => Fixed(pos)) | searchLocator )
 
   def substPair[_: P]: P[SubstitutionPair] = P(
-    (formula ~ "~>" ~ formula | term ~ "~>" ~ term).
+    // If the left side of the substitution is a term, so must the right hand side be,
+    // BUT perhaps the left side is ambiguous and the right side is a formula. So in
+    // this case both must be false. :(
+    (formula ~ "~>" ~ formula |
+      term(false) ~ "~>" ~ term(false)).
       map(pair => SubstitutionPair(pair._1, pair._2))
   )
 
@@ -101,7 +105,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def argumentInterior[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
     argInfo match {
       case FormulaArg(name, allowsFresh) => formula.map(List(_))
-      case TermArg(name, allowsFresh) => term.map(List(_))
+      case TermArg(name, allowsFresh) => term(true).map(List(_))
       case ExpressionArg(name, allowsFresh) =>
         // I feel like we should never actually hit this because of the cases before it, but ???
         expression.map(List(_))
@@ -111,7 +115,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case SubstitutionArg(name, allowsFresh) => ("(" ~/ substPair ~ ")").map(List(_))
       case PosInExprArg(name, allowsFresh) => Fail.opaque("unimplemented: PosInExpr argument")
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
-      case ListArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
+      case ListArg(arg) => argList(argumentInterior(arg))
     }
   )
 
@@ -290,7 +294,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def expression[_: P]: P[Expression] = expParser.expression
 
   /** term: Parses a dL term from [[expParser]]. */
-  def term[_: P]: P[Term] = expParser.term
+  def term[_: P](doAmbigCuts: Boolean): P[Term] = expParser.term(doAmbigCuts)
 
   /** formula: Parses a dL formula from [[expParser]]. */
   def formula[_: P]: P[Formula] = expParser.formula

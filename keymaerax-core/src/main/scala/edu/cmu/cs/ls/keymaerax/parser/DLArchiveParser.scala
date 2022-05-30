@@ -192,7 +192,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         Pass(decls) ~ ";"./
         | (decls match {
           case (id,sig)::Nil =>
-            ("="./ ~ term ~ ";").map(e => (id, sig.copy(interpretation = Some(e)))::Nil) |
+            ("="./ ~ term(true) ~ ";").map(e => (id, sig.copy(interpretation = Some(e)))::Nil) |
             ("<->" ~ formula ~ ";").map(f => (id, sig.copy(interpretation = Some(f)))::Nil)
           case _ => Fail
         })
@@ -365,7 +365,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def baseVariable[_: P]: P[BaseVariable] = expParser.baseVariable
 
   /** term: Parses a dL term from [[expParser]]. */
-  def term[_: P]: P[Term] = expParser.term
+  def term[_: P](doAmbigCuts: Boolean): P[Term] = expParser.term(doAmbigCuts)
 
   /** formula: Parses a dL formula from [[expParser]]. */
   def formula[_: P]: P[Formula] = expParser.formula
