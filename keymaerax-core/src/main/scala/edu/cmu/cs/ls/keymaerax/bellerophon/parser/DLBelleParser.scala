@@ -10,6 +10,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArg, FormulaArg, GeneratorArg, ListArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, DLParserUtils, Declaration, ParseException, Parser}
@@ -110,7 +111,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case SubstitutionArg(name, allowsFresh) => ("(" ~/ substPair ~ ")").map(List(_))
       case PosInExprArg(name, allowsFresh) => Fail.opaque("unimplemented: PosInExpr argument")
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
-      case ListArg(arg) => argList(argumentInterior(arg))
+      case ListArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
     }
   )
 
@@ -163,8 +164,12 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def builtinTactic[_: P]: P[BelleExpr] = (
     ("doall".! ~ "(" ~/ tactic ~ ")").
       map({case ("doall", t) => OnAll(t)}) |
-      ("partial".! ~ "(" ~/ tactic ~ ")").
-        map({case ("partial",t) => PartialTactic(t)}) |
+    ("partial".! ~ "(" ~/ tactic ~ ")").
+      map({case ("partial",t) => PartialTactic(t)}) |
+    ("pending".! ~ "(" ~/ escapedString ~ ")").
+      map({case ("pending",t) =>
+        DebuggingTactics.pending(t)
+      }) |
     ( /*todo: lots of builtins to implement */
       "USMatch".! |
       "let".!
@@ -214,7 +219,9 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def tactic[_: P]: P[BelleExpr] = P( eitherTac )
 
 
-  def escapedString[_: P]: P[String] = P(string).map(_.replaceAllLiterally("\\\"","\""))
+  def escapedString[_: P]: P[String] = P(string).map(
+    _.replaceAllLiterally("\\\"","\"")
+  )
 
   def escapedPositionExpression[_: P]: P[(Expression, PosInExpr)] = P(escapedString)./.
     flatMap(str => {
@@ -223,7 +230,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       val hashEnd = str.lastIndexOf('#')
 
       if (hashStart == hashEnd && hashStart != -1)
-        Fail.opaque("Mismatched # delimiters")
+        Fail
       else if (hashStart == -1) {
         // No hashes, just return Here for PosIn
         fastparse.parse(str, fullExpression(_)) match {
@@ -231,7 +238,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
           case failure: Parsed.Failure =>
             val tr = failure.trace()
             // What information do we expose here??
-            Fail.opaque("escaped expression string")
+            Fail
         }
       } else {
         // Has hashes; extract subexpression and find its position in full expression
@@ -241,13 +248,13 @@ class DLBelleParser(override val printer: BelleExpr => String,
           case failure: Parsed.Failure =>
             val tr = failure.trace()
             // What information do we expose here??
-            Fail.opaque("escaped expression string")
+            Fail
           case Parsed.Success(expr, _) =>
             fastparse.parse(sub, fullExpression(_)) match {
               case failure: Parsed.Failure =>
                 val tr = failure.trace()
                 // What information do we expose here??
-                Fail.opaque("escaped expression string")
+                Fail
               case Parsed.Success(sub, _) =>
                 FormulaTools.posOf(expr, sub) match {
                   case Some(posIn) =>
@@ -260,7 +267,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
             }
         }
       }
-    })
+    }).opaque("escaped expression string")
 
   // externals
   //@todo or just import if no dynamic forwarding needed

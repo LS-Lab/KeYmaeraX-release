@@ -268,7 +268,7 @@ class DLParser extends Parser {
   // terminals not used here but provided for other DL parsers
 
   def stringInterior[_: P]: P[String] =
-    (!CharIn("\\\"") ~~ AnyChar./ | "\\\""./ | "\\").repX.!
+    (CharPred(c => c != '\\' && c != '\"')./ | "\\\""./ | "\\").repX.!
 
   /** "whatevs": Parse a string literal. (([^\\"]|\\"|\\(?!"))*+) */
   def string[_: P]: P[String] = P(
