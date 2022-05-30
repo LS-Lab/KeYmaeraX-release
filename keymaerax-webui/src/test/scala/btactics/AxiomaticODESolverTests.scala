@@ -27,7 +27,7 @@ import org.scalatest.LoneElement._
   * @author Stefan Mitsch
   */
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
-  private val dgc = PrivateMethod[DependentPositionTactic]('DGC)
+  private val dgc = PrivateMethod[BuiltInPositionTactic]('DGC)
 
   "Selection sort" should "not have a match error" in withMathematica { _ =>
     val ode = "[{posLead'=velLead,velLead'=A,posCtrl'=velCtrl,velCtrl'=a,t'=1}] true".asFormula
@@ -325,7 +325,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "work on the single integrator x'=v in negative polarity" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
-    val f = "x=-1, v=-2, ==> !<{x'=v}>x^3>=1".asSequent
+    val f = "x=-1, v=-2 ==> !<{x'=v}>x^3>=1".asSequent
     val t = AxiomaticODESolver()(1, 0::Nil)
     val result = proveBy(f, t)
     result.subgoals.loneElement shouldBe "x=-1, v=-2 ==> !\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asSequent
