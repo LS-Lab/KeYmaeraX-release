@@ -256,7 +256,12 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
 
   /** Splits formula `fml` into QE goals that can potentially be executed concurrently. */
   private def splitFormula(fml: Formula): Goal = fml match {
-    case Forall(x, p) => applyTo(splitFormula(p), Forall(x, _))
+    case Forall(x, p) =>
+      val universalClosure = (f: Formula) => x.intersect(StaticSemantics.freeVars(f).toSet.toList) match {
+        case Nil => f
+        case x => Forall(x, f)
+      }
+      applyTo(splitFormula(p), universalClosure)
     case _: Imply =>
       val propSubgoals = ProvableSig.startPlainProof(fml)(PropositionalTactics.prop, 0).subgoals
       val expandedSubgoals = ProvableSig.startPlainProof(fml)(TactixLibrary.expandAll andThen PropositionalTactics.prop, 0)(TactixLibrary.applyEqualities).subgoals

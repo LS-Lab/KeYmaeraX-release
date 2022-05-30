@@ -517,7 +517,13 @@ private object ToolTactics {
           val facts = FormulaTools.conjuncts(result)
           val skolemized = provable(saturate(allR('R)))
           val r = skolemized(PropositionalTactics.prop)
-          if (r.subgoals.size == facts.size) applyFacts(facts)(r)
+          //@todo sometimes expandAll does not create additional subgoals, need a better check whether to expand
+          if (r.subgoals.size == facts.size) try {
+            applyFacts(facts)(r)
+          } catch {
+            // unexpanded definitions result in inapplicable close
+            case _: TacticInapplicableFailure => applyFacts(facts)(skolemized(expandAll andThen PropositionalTactics.prop, 0)(applyEqualities))
+          }
           else applyFacts(facts)(skolemized(expandAll andThen PropositionalTactics.prop, 0)(applyEqualities))
       }
     }).getOrElse(provable)
