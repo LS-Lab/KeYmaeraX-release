@@ -856,7 +856,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "FEATURE_REQUEST: parse a list of model and tactic entries" taggedAs TodoTest in withTactics {
+  it should "parse a list of model and tactic entries" in withTactics {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -907,7 +907,7 @@ class DLArchiveParserTests extends TacticTestBase {
                                   |End.""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems" taggedAs TodoTest in withTactics {
+  it should "parse a list of mixed entries, lemmas, and theorems" in withTactics {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -999,7 +999,7 @@ class DLArchiveParserTests extends TacticTestBase {
                                   |End.""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" taggedAs TodoTest in withTactics {
+  it should "parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" in withTactics {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1135,7 +1135,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.fileContent shouldBe input.trim
   }
 
-  it should "FEATURE_REQUEST: split blocks by whole word only (lemma used in tactic)" taggedAs TodoTest in withTactics {
+  it should "split blocks by whole word only (lemma used in tactic)" in withTactics {
     val input =
       """Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1176,13 +1176,13 @@ class DLArchiveParserTests extends TacticTestBase {
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemmaX("Entry 1", None))::Nil
+    entry2.tactics shouldBe ("Proof Entry 2", "useLemma(\"Entry 1\")", TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """Theorem "Entry 2"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic "Proof Entry 2" useLemma({`Entry 1`}) End.
+        | Tactic "Proof Entry 2" useLemma("Entry 1") End.
         |End.""".stripMargin
   }
 
@@ -1191,7 +1191,7 @@ class DLArchiveParserTests extends TacticTestBase {
       """Lemma "Entry 1"
         | Description "The description of entry 1".
         | Title "A short entry 1 title".
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> y<x End.
         |End.""".stripMargin
@@ -1208,12 +1208,12 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.info shouldBe Map(
       "Description" -> "The description of entry 1",
       "Title" -> "A short entry 1 title",
-      "Link" -> "http://web.keymaerax.org/show/entry1")
+      "Link" -> "https://web.keymaerax.org/show/entry1")
     entry.fileContent shouldBe
       """Lemma "Entry 1"
         | Description "The description of entry 1".
         | Title "A short entry 1 title".
-        | Link "http://web.keymaerax.org/show/entry1".
+        | Link "https://web.keymaerax.org/show/entry1".
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> y<x End.
         |End.""".stripMargin

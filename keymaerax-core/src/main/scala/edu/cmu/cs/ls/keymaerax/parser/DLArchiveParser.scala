@@ -110,8 +110,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   })
   //@todo add sharedDefinition to all entries
 
-  /** Parse a single archive entry. */
-  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( archiveStart ~~/ blank ~
+  /** Parse a single archive entry without source. */
+  def archiveEntryNoSource[_: P]: P[ParsedArchiveEntry] = P(archiveStart ~~/ blank ~
     (label ~ ":").? ~ string ~
     metaInfo ~
     allDeclarations ~
@@ -128,17 +128,22 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         ArchiveParser.elaborate(ParsedArchiveEntry(
           name = name,
           kind = kind,
-          fileContent = "???",
-          problemContent = probString,
+          fileContent = "<undefined>",
+          problemContent = probString.trim,
           defs = decl,
           model = prob,
-          tactics = tacs.map(tac => (tac._1.getOrElse("<undefined>"),"<source???>",tac._2)).toList,
+          tactics = tacs.map({ case (tn, (t, ts)) => (tn.getOrElse("<undefined>"), ts.trim, t) }).toList,
           annotations = Nil, //@todo fill annotations
           //@todo check that there are no contradictory facts in the meta and moremeta
           info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
         ))
       )}
   )
+
+  /** Parses a single archive entry */
+  def archiveEntry[_: P]: P[ParsedArchiveEntry] = DLParserUtils.captureWithValue(archiveEntryNoSource).map({
+    case (e, s) => e.copy(fileContent = s.trim)
+  })
 
   def archiveStart[_: P]: P[String] = P(
     ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.
@@ -369,7 +374,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** `Problem  formula  End.` parsed. */
   def problem[_: P]: P[(Formula,String)] = P("Problem" ~~ blank ~/ DLParserUtils.captureWithValue(formula) ~ "End." )
 
-  def tacticProof[_: P]: P[(Option[String],BelleExpr)] = P( "Tactic" ~~ blank ~/ string.? ~ tactic ~ "End.")
+  def tacticProof[_: P]: P[(Option[String],(BelleExpr,String))] = P( "Tactic" ~~ blank ~/ string.? ~ DLParserUtils.captureWithValue(tactic) ~ "End.")
 
 
   // externals
