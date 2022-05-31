@@ -106,6 +106,15 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "parse substitutions" in {
     parse("""US("J(.) ~> .>=0")""") shouldBe TactixLibrary.USX(
       List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
+    parse("""US("(J(.) ~> .>=0)")""") shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
+    parse("""US("f(.) ~> 2+.")""") shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), Plus(Number(2), DotTerm()))))
+    parse("""US("(J(.) ~> .>=0)::(f(.) ~> 2+.)::nil")""") shouldBe TactixLibrary.USX(
+      List(
+        SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0))),
+        SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), Plus(Number(2), DotTerm()))
+      ))
   }
 
   it should "parse dC" in {

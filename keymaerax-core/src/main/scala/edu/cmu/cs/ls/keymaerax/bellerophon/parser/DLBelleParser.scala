@@ -111,7 +111,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
     // If the left side of the substitution is a term, so must the right hand side be,
     // BUT perhaps the left side is ambiguous and the right side is a formula. So in
     // this case both must be false. :(
-    (formula ~ "~>" ~ formula |
+    (NoCut(formula ~ "~>" ~ formula) |
       term(false) ~ "~>" ~ term(false)).
       map(pair => SubstitutionPair(pair._1, pair._2))
   )
@@ -138,7 +138,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case VariableArg(name, allowsFresh) => DLParser.variable.map(List(_))
       case GeneratorArg(name) => Fail.opaque("unimplemented: generator argument")
       case StringArg(name, allowsFresh) => DLParser.stringInterior.map(List(_))
-      case SubstitutionArg(name, allowsFresh) => substPair.map(List(_))
+      case SubstitutionArg(name, allowsFresh) => (("(" ~/ substPair ~ ")") | substPair).map(List(_))
       case PosInExprArg(name, allowsFresh) => Fail.opaque("unimplemented: PosInExpr argument")
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
       case ListArg(arg) => argList(argumentInterior(arg)).map(_.flatten)
