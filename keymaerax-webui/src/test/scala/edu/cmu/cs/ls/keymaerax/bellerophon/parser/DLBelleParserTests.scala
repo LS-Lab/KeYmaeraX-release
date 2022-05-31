@@ -114,6 +114,12 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     parse("""dC("x>=0", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula))(1)
   }
 
+  it should "parse dG" in {
+    parse("""dG("t'=1", 1)""") shouldBe TactixLibrary.dG("t'=1".asFormula, None)(1)
+    parse("""dG("{t'=1}", 1)""") shouldBe TactixLibrary.dG("{t'=1}".asProgram, None)(1)
+    parse("""dG("{y'=-y}", "x*y^2=1", 1)""") shouldBe TactixLibrary.dG("{y'=-y}".asProgram, Some("x*y^2=1".asFormula))(1)
+  }
+
   it should "parse strings" in {
     parse("""print("Test")""") shouldBe DebuggingTactics.printX("Test")
   }

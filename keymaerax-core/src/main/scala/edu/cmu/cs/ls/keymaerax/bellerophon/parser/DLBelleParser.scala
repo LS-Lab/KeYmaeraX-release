@@ -155,7 +155,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   //      (List[Seq[Any]], Option[PositionLocator])
   // but squished together, thus why this parser has this type    (- JG)
   def argumentList[_: P](isStart: Boolean, args: List[ArgInfo]): P[(List[Seq[Any]],Option[PositionLocator])] = P(
-    // If isStart, then we don't expect preceeding ","
+    // If isStart, then we don't expect preceding ","
     // before each arg, but if not isStart then we do.
     args match {
       case Nil => // No more arguments, try parsing a position locator
@@ -163,8 +163,8 @@ class DLBelleParser(override val printer: BelleExpr => String,
           map(loc => (Nil, loc))
       case OptionArg(arg) :: rest => // Optional argument
         for {
-          // Try parsing argument
-          arg <- (if (isStart) argument(arg) else ","./ ~ argument(arg)).?
+          // Try parsing argument, @note no cut after , because subsequent argumentList expects again , if optional argument does not succeed
+          arg <- (if (isStart) argument(arg) else "," ~ argument(arg)).?
           // Then the rest of the arguments (note if arg is Some(..) then we are no longer at the start)
           pair <- argumentList(isStart && arg.isEmpty, rest)
         } yield (arg.toSeq.flatten.map(List(_)).toList ++ pair._1, pair._2)
