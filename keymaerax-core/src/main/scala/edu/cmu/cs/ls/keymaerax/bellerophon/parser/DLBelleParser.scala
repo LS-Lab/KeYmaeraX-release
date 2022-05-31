@@ -87,8 +87,8 @@ class DLBelleParser(override val printer: BelleExpr => String,
       p.inExpr.prettyString + " != " + posIn.prettyString + ")")
   })
   def searchLocator[_: P]: P[PositionLocator] = P(
-    "'Llast".!./.map(_ => LastAnte(0))
-      | "'Rlast".!./.map(_ => LastSucc(0))
+    ("'Llast".! ~~ ("." ~~/ natural).repX)./.map({ case (_, js) => LastAnte(0, PosInExpr(js.toList)) })
+      | ("'Rlast".! ~~ ("." ~~/ natural).repX)./.map({ case (_, js) => LastSucc(0, PosInExpr(js.toList)) })
       | (("'L" | "'R").!./ ~ shape.?).map({
         case ("'L",None) =>
           Find.FindL(0, None, HereP, exact = true, defs)

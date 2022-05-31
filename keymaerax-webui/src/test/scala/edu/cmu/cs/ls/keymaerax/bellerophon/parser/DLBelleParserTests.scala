@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, Fixed, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SeqTactic, Using}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, Fixed, LastAnte, LastSucc, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SeqTactic, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
@@ -87,12 +87,9 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     //TODO: shouldBes
   }
 
-  it should "FEATURE_REQUST: parse PosInExpr attached to locator" taggedAs TodoTest in {
-    val parsed = parse(
-      raw"""derive('Rlast.1)
-           |""".stripMargin
-    )
-    //TODO: shouldBes
+  it should "parse PosInExpr attached to locator" taggedAs TodoTest in {
+    parse("derive('Rlast.1)") should have ('locator (LastSucc(0, PosInExpr(1::Nil))))
+    parse("derive('Llast.1.0.1)") should have ('locator (LastAnte(0, PosInExpr(1::0::1::Nil))))
   }
 
   it should "parse hash locators" in {
