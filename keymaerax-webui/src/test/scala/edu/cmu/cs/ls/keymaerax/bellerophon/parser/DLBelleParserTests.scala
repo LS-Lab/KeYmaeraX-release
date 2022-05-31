@@ -48,11 +48,8 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "parse useLemma" in {
-    val parsed = parse(
-      raw"""useLemma("Khalil Exercise 2.28 and 3.14 (bound)", "prop")
-           |""".stripMargin
-    )
-    //TODO: shouldBes
+    parse("""useLemma("A lemma")""") shouldBe TactixLibrary.useLemmaX("A lemma", None)
+    parse("""useLemma("A lemma", "prop")""") shouldBe TactixLibrary.useLemmaX("A lemma", Some("prop"))
   }
 
   it should "parse integer position locators" in {
@@ -72,10 +69,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "parse tactic argument list syntax" in {
-    val parsed = parse(
-      raw"""hideFactsAbout("kA1::kB1::nil")
-           |""".stripMargin
-    )
+    parse("""hideFactsAbout("kA1::kB1::nil")""")
     //TODO: shouldBes
   }
 
@@ -131,6 +125,18 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   it should "parse strings" in {
     parse("""print("Test")""") shouldBe DebuggingTactics.printX("Test")
+  }
+
+  it should "parse 0-position tactics" in {
+    parse("id") shouldBe TactixLibrary.id
+  }
+
+  it should "parse 1-position tactics" in {
+    parse("implyR(1)") shouldBe TactixLibrary.implyR(1)
+  }
+
+  it should "parse two-position tactics" in {
+    parse("closeId(-1, 1)") shouldBe TactixLibrary.closeId(-1, 1)
   }
 
 }

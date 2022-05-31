@@ -154,26 +154,25 @@ class DLBelleParser(override val printer: BelleExpr => String,
   // I believe this is really intended to represent
   //      (List[Seq[Any]], Option[PositionLocator])
   // but squished together, thus why this parser has this type    (- JG)
-  def argumentList[_: P](isStart: Boolean, args: List[ArgInfo]): P[(List[Seq[Any]],Option[PositionLocator])] = P(
+  def argumentList[_: P](isStart: Boolean, args: List[ArgInfo], numPosArgs: Int): P[(List[Seq[Any]],List[PositionLocator])] = P(
     // If isStart, then we don't expect preceding ","
     // before each arg, but if not isStart then we do.
     args match {
       case Nil => // No more arguments, try parsing a position locator
-        (if (isStart) locator else ","./ ~ locator).?.
-          map(loc => (Nil, loc))
+        ",".rep(exactly=if (isStart || numPosArgs == 0) 0 else 1) ~/ locator.rep(exactly=numPosArgs, sep=",").map(loc => (Nil, loc.toList))
       case OptionArg(arg) :: rest => // Optional argument
         for {
           // Try parsing argument, @note no cut after , because subsequent argumentList expects again , if optional argument does not succeed
           arg <- (if (isStart) argument(arg) else "," ~ argument(arg)).?
           // Then the rest of the arguments (note if arg is Some(..) then we are no longer at the start)
-          pair <- argumentList(isStart && arg.isEmpty, rest)
+          pair <- argumentList(isStart && arg.isEmpty, rest, numPosArgs)
         } yield (arg.toSeq.flatten.map(List(_)).toList ++ pair._1, pair._2)
       case arg :: rest =>
         for {
           // Parse argument (no longer optional)
           arg <- if (isStart) argument(arg) else ","./ ~ argument(arg)
           // We can't be at the start now
-          pair <- argumentList(isStart = false, rest)
+          pair <- argumentList(isStart = false, rest, numPosArgs)
         } yield (arg :: pair._1, pair._2)
     }
   )
@@ -183,10 +182,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def at[_: P]: P[BelleExpr] = P(
     (tacticSymbol ~~ "("./).flatMap(tacName => {
-      val argInfos = DerivationInfo.ofCodeName(tacName).persistentInputs
-      argumentList(isStart = true, argInfos).map({
-        case (args, None) => (tacName, args.map(Left(_)))
-        case (args, Some(pos)) => (tacName, args.map(Left(_)) :+ (Right(pos)))
+      val di = DerivationInfo.ofCodeName(tacName)
+      val argInfos = di.persistentInputs
+      val numPosArgs = di.numPositionArgs
+      argumentList(isStart = true, argInfos, numPosArgs).map({
+        case (args, pos) => (tacName, args.map(Left(_)) ++ pos.map(Right(_)))
       })
     }) ~ ")"
   )("tactic(...)",implicitly).
