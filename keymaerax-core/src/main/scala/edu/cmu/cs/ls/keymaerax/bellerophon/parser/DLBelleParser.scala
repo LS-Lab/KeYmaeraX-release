@@ -69,8 +69,9 @@ class DLBelleParser(override val printer: BelleExpr => String,
     }
   }
 
+  def posInExpr[_: P]: P[PosInExpr] = P(("." ~~/ natural).repX.map(is => PosInExpr(is.toList)))
   def shape[_: P]: P[(String, (Expression, PosInExpr))] = P( ("==" | "~=").!./ ~ escapedPositionExpression )
-  def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX).map({ case (j,js) => Position(j, js.toList) })
+  def position[_: P]: P[Position] = P( integer ~~ posInExpr).map({ case (j,js) => Position(j) ++ js })
   def positionLocator[_: P]: P[PositionLocator] = P( position ~~ shape.?).flatMap({
     case (p,None) => Pass(Fixed(p))
     case (p,Some(("==",(expr,posIn)))) if p.isTopLevel || posIn.pos.isEmpty =>
@@ -87,8 +88,8 @@ class DLBelleParser(override val printer: BelleExpr => String,
       p.inExpr.prettyString + " != " + posIn.prettyString + ")")
   })
   def searchLocator[_: P]: P[PositionLocator] = P(
-    ("'Llast".! ~~ ("." ~~/ natural).repX)./.map({ case (_, js) => LastAnte(0, PosInExpr(js.toList)) })
-      | ("'Rlast".! ~~ ("." ~~/ natural).repX)./.map({ case (_, js) => LastSucc(0, PosInExpr(js.toList)) })
+    ("'Llast".! ~~ posInExpr)./.map({ case (_, js) => LastAnte(0, js) })
+      | ("'Rlast".! ~~ posInExpr)./.map({ case (_, js) => LastSucc(0, js) })
       | (("'L" | "'R").!./ ~ shape.?).map({
         case ("'L",None) =>
           Find.FindL(0, None, HereP, exact = true, defs)
@@ -139,7 +140,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case GeneratorArg(name) => Fail.opaque("unimplemented: generator argument")
       case StringArg(name, allowsFresh) => DLParser.stringInterior.map(List(_))
       case SubstitutionArg(name, allowsFresh) => (("(" ~/ substPair ~ ")") | substPair).map(List(_))
-      case PosInExprArg(name, allowsFresh) => Fail.opaque("unimplemented: PosInExpr argument")
+      case PosInExprArg(name, allowsFresh) => posInExpr.map(List(_))
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
       case ListArg(arg) => argList(argumentInterior(arg)).map(_.flatten)
       case NumberArg(_, _) => DLParser.number.map(List(_))

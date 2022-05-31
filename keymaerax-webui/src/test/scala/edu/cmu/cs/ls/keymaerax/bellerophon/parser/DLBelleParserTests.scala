@@ -139,4 +139,8 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     parse("closeId(-1, 1)") shouldBe TactixLibrary.closeId(-1, 1)
   }
 
+  it should "parse PosInExpr arguments" in {
+    parse("""CMonCongruence(".1")""") shouldBe TactixLibrary.CMon(PosInExpr(1::Nil))
+  }
+
 }

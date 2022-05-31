@@ -134,7 +134,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       case Left(x :: xs) => Some((x :: xs).flatMap(c => argPrinter(Left(c))).map(_.stripPrefix(DOUBLE_QUOTE).stripSuffix(DOUBLE_QUOTE)).
         mkString(DOUBLE_QUOTE, DOUBLE_COLON, DOUBLE_COLON + LIST_END + DOUBLE_QUOTE))
       case Left(expr: Expression) => Some(DOUBLE_QUOTE + exprPP(expr) + DOUBLE_QUOTE)
-      case Left(pie: PosInExpr) => Some(DOUBLE_QUOTE + pie.pos.mkString(".") + DOUBLE_QUOTE)
+      case Left(pie: PosInExpr) => Some(DOUBLE_QUOTE + pie.prettyString + DOUBLE_QUOTE)
       case Left(Some(expr)) => argPrinter(Left(expr))
       case Left(expr) => Some(DOUBLE_QUOTE + expr + DOUBLE_QUOTE)
       case Right(loc) => Some(loc.prettyString)
