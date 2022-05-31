@@ -36,12 +36,12 @@ class DBTests extends TacticTestBase {
       val storedTactic = modelEntry.tactic
       storedTactic shouldBe 'defined
       //@note compare pretty printed because text locations differ when tactic is read from a file vs. from stored tactic
-      BellePrettyPrinter(BelleParser(storedTactic.get)) shouldBe BellePrettyPrinter(tactic)
+      BellePrettyPrinter(ArchiveParser.tacticParser(storedTactic.get)) shouldBe BellePrettyPrinter(tactic)
 
       val proofId = db.db.createProofForModel(modelId.get, name, "", "", Some(tacticString))
       val storedProofTactic = db.db.getProofInfo(proofId).tactic
       storedProofTactic shouldBe 'defined
-      BellePrettyPrinter(BelleParser(storedProofTactic.get)) shouldBe BellePrettyPrinter(tactic)
+      BellePrettyPrinter(ArchiveParser.tacticParser(storedProofTactic.get)) shouldBe BellePrettyPrinter(tactic)
     }
 
   }}
