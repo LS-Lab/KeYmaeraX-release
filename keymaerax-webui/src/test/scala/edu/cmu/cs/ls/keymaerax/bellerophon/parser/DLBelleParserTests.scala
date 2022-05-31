@@ -6,7 +6,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SeqTactic, Using}
-import edu.cmu.cs.ls.keymaerax.btactics.{TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Parser}
@@ -32,7 +33,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
-  private var parser: DLBelleParser = null
+  private var parser: DLBelleParser = _
   private def parse(input: String) = parser.belleParser(input)
 
   "DLBelleParser" should "parse postfix \"using\"" in {
@@ -97,6 +98,21 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     parse("""implyR(1) partial""") shouldBe PartialTactic(TactixLibrary.implyR(1))
     parse("""QE using "x>=0::nil" partial""") shouldBe PartialTactic(Using(List("x>=0".asFormula), TactixLibrary.QE))
     parse("""implyR(1); andL(-1) partial""") shouldBe SeqTactic(List(TactixLibrary.implyR(1), PartialTactic(TactixLibrary.andL(-1))))
+  }
+
+  it should "parse substitutions" in {
+    parse("""US("J(.) ~> .>=0")""") shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
+  }
+
+  it should "parse dC" in {
+    parse("""dC("x>=0 :: y=1 :: nil", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula, "y=1".asFormula))(1)
+    parse("""dC("x>=0 :: nil", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula))(1)
+    parse("""dC("x>=0", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula))(1)
+  }
+
+  it should "parse strings" in {
+    parse("""print("Test")""") shouldBe DebuggingTactics.printX("Test")
   }
 
 }

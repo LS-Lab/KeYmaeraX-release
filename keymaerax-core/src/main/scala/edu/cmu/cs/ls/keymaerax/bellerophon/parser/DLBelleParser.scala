@@ -112,10 +112,10 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case VariableArg(name, allowsFresh) => DLParser.variable.map(List(_))
       case GeneratorArg(name) => Fail.opaque("unimplemented: generator argument")
       case StringArg(name, allowsFresh) => DLParser.stringInterior.map(List(_))
-      case SubstitutionArg(name, allowsFresh) => ("(" ~/ substPair ~ ")").map(List(_))
+      case SubstitutionArg(name, allowsFresh) => substPair.map(List(_))
       case PosInExprArg(name, allowsFresh) => Fail.opaque("unimplemented: PosInExpr argument")
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
-      case ListArg(arg) => argList(argumentInterior(arg))
+      case ListArg(arg) => argList(argumentInterior(arg)).map(_.flatten)
       case NumberArg(_, _) => DLParser.number.map(List(_))
     }
   )
