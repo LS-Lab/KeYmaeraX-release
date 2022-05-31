@@ -5,12 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SeqTactic, Using}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, Fixed, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SeqTactic, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParseException, Parser}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
@@ -43,10 +43,8 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "parse implications correctly" in {
-    val parsed = parse(
-      raw"""implyR('R=="assumptions(x,y,v,xo,yo)->true")
-           |""".stripMargin
-    )
+    parse("""implyR('R=="assumptions(x,y,v,xo,yo)->true")""") shouldBe
+      TactixLibrary.implyR(Find.FindRPlain("assumptions(x,y,v,xo,yo)->true".asFormula))
   }
 
   it should "parse useLemma" in {
@@ -57,12 +55,20 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     //TODO: shouldBes
   }
 
-  it should "FEATURE_REQUEST: parse integer position locators" taggedAs TodoTest in {
-    val parsed = parse(
-      raw"""hideL(-3=="\forall x1 \forall x2 (x1*x1+x2*x2=eps*eps->x1^2/2+x2^4/4>=k)")
-           |""".stripMargin
-    )
-    //TODO: shouldBes
+  it should "parse integer position locators" in {
+    parse("""hideL(-3=="x>=0")""") should have ('locator (Fixed(AntePos(2), Some("x>=0".asFormula))))
+    parse("""hideR(2~="x>=0")""") should have ('locator (Fixed(SuccPos(1), Some("x>=0".asFormula), exact=false)))
+    parse("""trueAnd(2.1.1=="true&x=2")""") should have ('locator
+      (Fixed(SuccPosition.base0(1, PosInExpr(1::1::Nil)), Some("true&x=2".asFormula), exact=true)))
+    parse("""trueAnd(2~="[x:=2;]#(true&x=2)#")""") should have ('locator
+      (Fixed(SuccPosition.base0(1, PosInExpr(1::Nil)), Some("true&x=2".asFormula), exact=false)))
+    parse("""trueAnd(2.1=="[x:=2;]#(true&x=2)#")""") should have ('locator
+      (Fixed(SuccPosition.base0(1, PosInExpr(1::Nil)), Some("true&x=2".asFormula), exact=true)))
+    the [ParseException] thrownBy parse("""trueAnd(2.1.1=="[x:=2;]#(true&x=2)#")""") should have message
+      """1:37 Error parsing locator at 1:9
+        |Found:    ")" at 1:37
+        |Expected: Non-conflicting sub-positions (but .1.1 != .1)
+        |Hint: Try Non-conflicting sub-positions (but .1.1 != .1)""".stripMargin
   }
 
   it should "parse tactic argument list syntax" in {

@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArg, FormulaArg, GeneratorArg, ListArg, NumberArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, DLParserUtils, Declaration, ParseException, Parser}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
@@ -59,11 +60,36 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def fullTactic[_: P]: P[BelleExpr] = (Start ~ tactic ~ End)
 
-  def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
+  private def fixedLocator[_: P](expr: Expression, p: Position, locator: (Position, Expression) => Fixed): P[Fixed] = {
+    expr.sub(p.inExpr) match {
+      case Some(e) => Pass(locator(p, e))
+      case None =>
+        // should never happen because either posIn is top-level or was parsed from expr
+        Fail.opaque("Sub-position " + p.inExpr.prettyString + " to point to a formula or term inside " + expr.prettyString)
+    }
+  }
+
+  def shape[_: P]: P[(String, (Expression, PosInExpr))] = P( ("==" | "~=").!./ ~ escapedPositionExpression )
+  def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX).map({ case (j,js) => Position(j, js.toList) })
+  def positionLocator[_: P]: P[PositionLocator] = P( position ~~ shape.?).flatMap({
+    case (p,None) => Pass(Fixed(p))
+    case (p,Some(("==",(expr,posIn)))) if p.isTopLevel || posIn.pos.isEmpty =>
+      if (p.isTopLevel) fixedLocator(expr, p ++ posIn, (p, e) => Fixed(p, Some(e), exact=true)) // check #...# sub-locator
+      else Pass(Fixed(p, Some(expr), exact=true)) //@note expr already points verbatim to the sub-position, e.g. 2.1.1=="x"
+    case (p,Some(("==",(expr,posIn)))) if p.inExpr == posIn =>
+      fixedLocator(expr, p, (p, e) => Fixed(p, Some(e), exact=true)) //@note check e.g. 2.1=="[x:=1;]#x=1#" consistent
+    case (p,Some(("~=",(expr,posIn)))) if p.isTopLevel || posIn.pos.isEmpty =>
+      if (p.isTopLevel) fixedLocator(expr, p ++ posIn, (p, e) => Fixed(p, Some(e), exact=false)) // check #...# sub-locator
+      else Pass(Fixed(p, Some(expr), exact=false)) //@note expr already points verbatim to the sub-position, e.g. 2.1.1~="x"
+    case (p,Some(("~=",(expr,posIn)))) if p.inExpr == posIn =>
+      fixedLocator(expr, p, (p, e) => Fixed(p, Some(e), exact=false)) //@note check e.g. 2.1~="[x:=1;]#x=1#" consistent
+    case (p,Some((_, (_, posIn)))) => Fail.opaque("Non-conflicting sub-positions (but " +
+      p.inExpr.prettyString + " != " + posIn.prettyString + ")")
+  })
   def searchLocator[_: P]: P[PositionLocator] = P(
     "'Llast".!./.map(_ => LastAnte(0))
       | "'Rlast".!./.map(_ => LastSucc(0))
-      | (("'L" | "'R").!./ ~ (("==" | "~=").!./ ~ escapedPositionExpression).?).map({
+      | (("'L" | "'R").!./ ~ shape.?).map({
         case ("'L",None) =>
           Find.FindL(0, None, HereP, exact = true, defs)
         case ("'R",None) =>
@@ -79,7 +105,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       })
   )
 
-  def locator[_: P]: P[PositionLocator] = P( position.map(pos => Fixed(pos)) | searchLocator )
+  def locator[_: P]: P[PositionLocator] = P( positionLocator | searchLocator )
 
   def substPair[_: P]: P[SubstitutionPair] = P(
     // If the left side of the substitution is a term, so must the right hand side be,
