@@ -31,26 +31,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefSc
   * @see [[DLArchiveParser]]
   */
 object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
-  /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
-  override def parseFromFile(file: String): List[ParsedArchiveEntry] = {
-    file.split('#').toList match {
-      case fileName :: Nil =>
-        val src = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
-        try {
-          parse(src.mkString)
-        } finally {
-          src.close()
-        }
-      case fileName :: entryName :: Nil =>
-        val src = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
-        try {
-          getEntry(entryName, src.mkString).
-            getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
-        } finally {
-          src.close()
-        }
-    }
-  }
 
   override protected def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = try {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))

@@ -291,16 +291,33 @@ case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, p
     scala.collection.immutable.IndexedSeq(),
     scala.collection.immutable.IndexedSeq(model.asInstanceOf[Formula]))
   /** Return an archive with modified problem contents, otherwise identical./ */
-  def withProblemContent(newProblemContent: String): ParsedArchiveEntry =
-    ParsedArchiveEntry(name, kind, fileContent, newProblemContent, defs, model, tactics, annotations, info)
+  def withProblemContent(newProblemContent: String): ParsedArchiveEntry = copy(problemContent = newProblemContent)
   /** Return an archive with modified file contents, otherwise identical./ */
-  def withFileContent(newFileContent: String): ParsedArchiveEntry =
-    ParsedArchiveEntry(name, kind, newFileContent, problemContent, defs, model, tactics, annotations, info)
+  def withFileContent(newFileContent: String): ParsedArchiveEntry = copy(fileContent = newFileContent)
 }
 
 trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def parse(input: String, parseTactics: Boolean = true): List[ParsedArchiveEntry]
-  def parseFromFile(file: String): List[ParsedArchiveEntry]
+  /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
+  def parseFromFile(file: String): List[ParsedArchiveEntry] = {
+    file.split('#').toList match {
+      case fileName :: Nil =>
+        val src = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
+        try {
+          parse(src.mkString)
+        } finally {
+          src.close()
+        }
+      case fileName :: entryName :: Nil =>
+        val src = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
+        try {
+          getEntry(entryName, src.mkString).
+            getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+        } finally {
+          src.close()
+        }
+    }
+  }
 
   /** Returns the first entry in `input` as formula. */
   def parseAsFormula(input: String): Formula = parse(input, parseTactics=false).head.model.asInstanceOf[Formula]
@@ -472,6 +489,7 @@ object ArchiveParser extends ArchiveParser {
       case (e: Program, a: Formula) =>
         if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         else typeAnalysis(entry.name, declarationsOf(entry.model) ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
+        //@todo Parser
         KeYmaeraXParser.annotationListener(e, a)
       case (_: Program, a) => throw ParseException("Unsupported annotation " + a.prettyString + " of kind " + a.kind +
         " encountered, please provide a formula", UnknownLocation)
@@ -482,6 +500,7 @@ object ArchiveParser extends ArchiveParser {
     entry.copy(
       model = elaboratedModel,
       defs = elaboratedDefs.elaborateWithDots,
+      annotations = elaboratedAnnotations
     )
   }
 
@@ -628,7 +647,7 @@ object ArchiveParser extends ArchiveParser {
         val Signature(declaredDomain, declaredSort, _, _, loc: Location) = d.decls.get(Name(f.name,f.index)) match {
           case Some(decl) => decl
           case None => throw ParseException.typeError(name + ": undefined function symbol", f, f.sort + "", UnknownLocation,
-            "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
+            "Make sure to declare all variables in ProgramVariables and all symbols in Definitions block.")
         }
         if (f.sort != declaredSort) throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + " function", f.sort + "", loc)
         else if (!declaredDomain.contains(f.domain)) {
