@@ -1049,7 +1049,7 @@ object ImplicitAx {
     cutR(fml)(pos) <(skip, cohideR(pos) & implyR(1) & mond)
   }}
 
-  private val tEx1 = remember("y()>=t__0  ==>  <{t__0'=--(1)}>y()=t__0".asSequent,
+  private lazy val tEx1 = remember("y()>=t__0  ==>  <{t__0'=--(1)}>y()=t__0".asSequent,
     ODELiveness.kDomainDiamond("t__0 > y()".asFormula)(1) <(
       cohideR(1) & solve(1) & QE,
       ODE(1)
@@ -1057,7 +1057,7 @@ object ImplicitAx {
     namespace
   )
 
-  private val tEx2 = remember("y()<=t__0  ==>  <{t__0'=-(1)}>y()=t__0".asSequent,
+  private lazy val tEx2 = remember("y()<=t__0  ==>  <{t__0'=-(1)}>y()=t__0".asSequent,
     ODELiveness.kDomainDiamond("t__0 < y()".asFormula)(1) <(
       cohideR(1) & solve(1) & QE,
       ODE(1)
