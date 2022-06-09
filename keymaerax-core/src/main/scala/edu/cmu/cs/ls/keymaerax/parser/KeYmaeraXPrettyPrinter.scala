@@ -234,7 +234,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   }
 
   /** True if negative numbers should get extra parentheses */
-  private[parser] val negativeBrackets = true && OpSpec.negativeNumber
+  private[parser] val negativeBrackets = OpSpec.negativeNumber
 
   /**@note The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
@@ -266,11 +266,12 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case DifferentialSymbol(x)  => x.asString + ppOp(term)
     case x: Variable            => x.asString
     // disambiguate (-2)' versus (-(2))' versus ((-2))'
+    // @note duplicates Differential(Number) to avoid accidental side-effect of changing Differential/Number when overriding pp
     case Differential(Number(n)) if negativeBrackets =>
       if (n < 0) "((" + n.bigDecimal.toPlainString + "))" + ppOp(term)
-      else n.bigDecimal.toPlainString + ppOp(term)
+      else "(" + n.bigDecimal.toPlainString + ")" + ppOp(term)
     case Differential(t)        => "(" + pp(q++0, t) + ")" + ppOp(term)
-      // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
+    // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
     case Number(n)              => if (negativeBrackets) {
       if (n < 0) "(" + n.bigDecimal.toPlainString + ")"
       else n.bigDecimal.toPlainString
