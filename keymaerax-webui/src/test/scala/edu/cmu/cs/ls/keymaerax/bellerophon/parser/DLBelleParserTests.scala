@@ -112,6 +112,10 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       ))
   }
 
+  it should "parse nil and empty list syntax" in {
+    parse("expandAllDefs(\"nil\")") shouldBe parse("expandAllDefs()")
+  }
+
   it should "parse dC" in {
     parse("""dC("x>=0 :: y=1 :: nil", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula, "y=1".asFormula))(1)
     parse("""dC("x>=0 :: nil", 1)""") shouldBe TactixLibrary.dC(List("x>=0".asFormula))(1)

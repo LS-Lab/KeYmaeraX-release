@@ -149,7 +149,8 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case SubstitutionArg(name, allowsFresh) => (("(" ~/ substPair ~ ")") | substPair).map(List(_))
       case PosInExprArg(name, allowsFresh) => posInExpr.map(List(_))
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
-      case ListArg(arg) => argList(argumentInterior(arg)).map(_.flatten)
+      case ListArg(arg) =>
+        argList(argumentInterior(arg)).map(_.flatten)
       case NumberArg(_, _) => DLParser.number.map(List(_))
     }
   )
@@ -168,7 +169,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
     args match {
       case Nil => // No more arguments, try parsing a position locator
         ",".rep(exactly=if (isStart || numPosArgs == 0) 0 else 1) ~/ locator.rep(exactly=numPosArgs, sep=",").map(loc => (Nil, loc.toList))
-      case ListArg(arg) :: Nil if isStart => // sole list argument may omit "nil"
+      case (arg: ListArg) :: Nil if isStart => // sole list argument may omit "nil"
         for {
           arg <- argument(arg).?.map({ case Some(l) => l case None => Seq.empty[Any] })
           // Then the position locator (note if arg is Some(..) then we are no longer at the start)
