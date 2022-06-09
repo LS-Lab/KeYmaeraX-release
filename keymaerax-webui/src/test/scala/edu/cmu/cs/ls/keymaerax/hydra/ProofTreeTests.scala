@@ -23,7 +23,7 @@ import testHelper.KeYmaeraXTestTags.TodoTest
 class ProofTreeTests extends TacticTestBase {
 
   "Empty tree" should "have a single goal" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
@@ -34,7 +34,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   "Tactic execution" should "create a tree with one open goal from implyR" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -61,7 +61,7 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   it should "create a proved tree from QE" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -92,7 +92,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   it should "not forget about open goals when a step fails" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> [x:=x+1;]x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> [x:=x+1;]x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -107,7 +107,7 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   it should "create a proved tree from implyR ; QE" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -147,7 +147,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   it should "create a tree with two open goals with a cut" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -176,7 +176,7 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   it should "continue on the correct subgoal after a cut" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -211,7 +211,7 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   "Tactic suggestion" should "return single-pos tactics" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
@@ -222,7 +222,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   it should "return single-pos tactics with input suggestions" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem [{x:=x+1;}*@invariant(x>7)]x>5 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem [{x:=x+1;}*@invariant(x>7)]x>5 End. End."""
     val proofId = db.createProof(modelContent)
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
@@ -233,7 +233,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   it should "return two-pos tactics" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0->x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0->x>0 End. End."""
     val proofId = db.createProof(modelContent)
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), implyR(1), "implyR", wait=true)
@@ -242,7 +242,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   "Proof loading" should "create the same tree as ripple loading from empty proof" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0->x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0->x>0 End. End."""
     val proofId = db.createProof(modelContent)
     val st = DbProofTree(db.db, proofId.toString)
     val ft = st.load(withProvables=true)
@@ -253,7 +253,7 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   it should "create the same tree as ripple loading from proof with steps" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0->x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0->x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     val numStepsPerProof = 5
@@ -272,7 +272,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   it should "create the same tree as ripple loading from proof with steps that do not have provables" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0->x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0->x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     val numStepsPerProof = 5
@@ -292,7 +292,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   "Pruning" should "work at the root" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -313,7 +313,7 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   it should "prune all subgoals when pruning a cut" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -342,7 +342,7 @@ class ProofTreeTests extends TacticTestBase {
   }
 
   it should "prune only one subgoal of a cut" in withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
@@ -388,7 +388,7 @@ class ProofTreeTests extends TacticTestBase {
     p
   }
 
-  "Delayed substitution" should "create a provable with expanded definitions from expand/expandAllDefs" in withDatabase { db => withMathematica { _ =>
+  "Delayed substitution" should "create a provable with expanded definitions from expand/expandAllDefs" in withTactics { withDatabase { db => withMathematica { _ =>
     val modelContent =
       """
         |ArchiveEntry "Delayed Substitution"
@@ -411,9 +411,9 @@ class ProofTreeTests extends TacticTestBase {
         |
         |Tactic "Delayed Substitution Test: Proof"
         |implyR(1) ; loop("inv(x)", 1) ; <(
-        |  expandAllDefs ; QE,
-        |  expand "inv" ; expand "safe" ; id,
-        |  expand "inv" ; expand "inc" ; unfold ; QE
+        |  expandAllDefs(); QE,
+        |  expand("inv"); expand("safe"); id,
+        |  expand("inv"); expand("inc"); unfold ; QE
         |  )
         |End.
         |
@@ -423,7 +423,7 @@ class ProofTreeTests extends TacticTestBase {
 
     val tactic = ArchiveParser(modelContent).loneElement.tactics.loneElement._3
     checkTree(db.db, proofId, tactic, "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent)
-  }}
+  }}}
 
   it should "create a provable with expanded definitions from US tactic" in withDatabase { db => withMathematica { _ =>
     val modelContent =
@@ -517,7 +517,7 @@ class ProofTreeTests extends TacticTestBase {
         |End.
         |
         |Tactic "Lemma Proof"
-        |  expandAllDefs; implyR(1); id
+        |  expandAllDefs(); implyR(1); id
         |End.
         |
         |End.
@@ -535,7 +535,7 @@ class ProofTreeTests extends TacticTestBase {
         |Tactic "Delayed Substitution Test with Lemmas: Proof"
         |implyR(1) ; andR(1) ; <(
         |  useLemma("tests/Lemma 1", "prop"),
-        |  expand "gt"; abbrv("sq(y)"); hideL('Llast); QE
+        |  expand("gt"); abbrv("sq(y)"); hideL('Llast); QE
         |  )
         |End.
         |
@@ -574,7 +574,7 @@ class ProofTreeTests extends TacticTestBase {
         |End.
         |
         |Tactic "Lemma Proof"
-        |  implyR(1); expand "sq"; id
+        |  implyR(1); expand("sq"); id
         |End.
         |
         |End.
@@ -592,7 +592,7 @@ class ProofTreeTests extends TacticTestBase {
         |Tactic "Delayed Substitution Test with Lemmas: Proof"
         |implyR(1) ; andR(1) ; <(
         |  useLemma("tests/Lemma 1", "prop"),
-        |  expand "gt"; abbrv("sq(y)"); hideL('Llast); QE
+        |  expand("gt"); abbrv("sq(y)"); hideL('Llast); QE
         |  )
         |End.
         |
@@ -633,8 +633,8 @@ class ProofTreeTests extends TacticTestBase {
         |
         |Tactic "Delayed Substitution Test with Lemmas: Proof"
         |implyR(1) ; andR(1) ; <(
-        |  expand "gtsq"; id,
-        |  expand "gtsq"; expand "gt"; id
+        |  expand("gtsq"); id,
+        |  expand("gtsq"); expand("gt"); id
         |  )
         |End.
         |
@@ -674,7 +674,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   "Performance" should "not degrade when doing the usual interaction (without tactic extraction) in a loop" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End.\nProblem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     val numStepsPerProof = 1000
@@ -721,7 +721,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   it should "not degrade too much when doing the usual interaction with tactic extraction in a loop" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
     val numStepsPerProof = 200
@@ -763,7 +763,7 @@ class ProofTreeTests extends TacticTestBase {
   }}
 
   it should "not degrade over multiple proofs" in withTactics { withDatabase { db =>
-    val modelContent = "ProgramVariables Real x; End. Problem x>0 -> x>0 End."
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
 
     val numProofs = 10
     val numStepsPerProof = 100
