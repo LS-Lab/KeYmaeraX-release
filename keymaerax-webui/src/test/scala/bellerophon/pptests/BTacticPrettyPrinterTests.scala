@@ -79,8 +79,8 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   "useLemmaAt" should "print key correctly" in withTactics {
     BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", None)(1)) shouldBe "useLemmaAt(\"the lemma\", 1)"
     roundTrip("useLemmaAt(\"the lemma\", 1)")
-    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1::Nil)))(1)) shouldBe "useLemmaAt(\"the lemma\", \"1\", 1)"
-    roundTrip("useLemmaAt(\"the lemma\", \"1\", 1)")
+    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1::Nil)))(1)) shouldBe "useLemmaAt(\"the lemma\", \".1\", 1)"
+    roundTrip("useLemmaAt(\"the lemma\", \".1\", 1)")
   }
 
   "Operator precedence" should "bind saturate * stronger than ;" in withTactics { roundTrip("implyR(1) ; andL('L)*") }
