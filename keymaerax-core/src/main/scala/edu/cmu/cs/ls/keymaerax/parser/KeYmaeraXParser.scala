@@ -321,7 +321,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def elaborate(st : ParseState, tok1:Token, op:TernaryOpSpec[Expression], e1: Expression, e2:Expression, e3:Expression, lax: Boolean): Expression =
     op.const(tok1.tok.img, elaborate(st, tok1, op, op.kind._1, e1, lax), elaborate(st, tok1, op, op.kind._2, e2, lax), elaborate(st, tok1, op, op.kind._3, e3, lax))
 
-  private[parser] var annotationListener: (Program,Formula) => Unit = {
+  private[parser] var theAnnotationListener: (Program,Formula) => Unit = {
     (p,inv) => logger.trace("Annotation: " + p + " @invariant(" + inv + ")")
   }
   /**
@@ -330,10 +330,13 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     * @todo this design is suboptimal.
     */
   override def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
-    this.annotationListener = listener
+    this.theAnnotationListener = listener
+
+  /** @inheritdoc */
+  override def annotationListener: (Program, Formula) => Unit = theAnnotationListener
 
   /** Report an @invariant @annotation to interested parties */
-  private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
+  private def reportAnnotation(p: Program, invariant: Formula): Unit = theAnnotationListener(p,invariant)
 
   /** Whether p is compatible with @annotation */
   @tailrec
@@ -570,14 +573,15 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (la == LPAREN) shift(st) else error(st, List(LPAREN))
 
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
-      case r :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
+      case r :+ Token(LPAREN, _) :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
         loc1.adjacentTo(loc) =>
         assert(r.isEmpty || !r.top.isInstanceOf[Expr], "Can no longer have an expression on the stack, which would cause a binary operator")
         if (la == LPAREN || la == LBRACE) error(st, List(FOLLOWSTERM))
-        else reduce(st, 2, Number(BigDecimal("-" + n)), loc1.spanTo(loc), r)
+        else if (la == RPAREN) reduce(st, 2, Number(BigDecimal("-" + n)), loc1.spanTo(loc), r)
+        else shift(st)
 
       case r :+ Token(NUMBER(value), loc) =>
-        if (la == LPAREN || la == LBRACE) error(st, List(FOLLOWSTERM))
+        if (la == LPAREN || la == LBRACE || la == PRIME) error(st, List(FOLLOWSTERM))
         else reduce(st, 1, Number(BigDecimal(value)), loc, r)
 
 

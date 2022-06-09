@@ -43,7 +43,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |End. End.""".stripMargin
 
     val ex = the [ParseException] thrownBy ArchiveParser.parser(f)
-    ex.found should (be ("x") or be ("x; y := 2y"))
+    ex.found should (be ("x") or be ("\"x; y := 2y\""))
     ex.expect should (be ("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term")
       or be ("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
     ex.loc.begin.line shouldBe 9
@@ -76,7 +76,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |End. End.""".stripMargin
 
     val ex = the [ParseException] thrownBy ArchiveParser.parseAsFormula(f)
-    ex.found should (be ("x") or be ("x; y := 2y"))
+    ex.found should (be ("x") or be ("\"x; y := 2y\""))
     ex.expect should (be ("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term")
       or be ("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
     ex.loc.begin.line shouldBe 16
@@ -101,7 +101,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |""".stripMargin
 
     val ex = the [ParseException] thrownBy ArchiveParser.parseAsFormula(f)
-    ex.found should (be ("x") or be ("x; y := 2y"))
+    ex.found should (be ("x") or be ("\"x; y := 2y\""))
     ex.expect should (
       be ("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term")
         or be ("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
@@ -456,7 +456,8 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
       argNames shouldBe 'empty
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
-    annotations.toList should contain theSameElementsInOrderAs List("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula)
+    entry.annotations should contain theSameElementsInOrderAs List(("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula))
+    annotations should contain theSameElementsInOrderAs entry.annotations
     entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }
 
@@ -480,8 +481,8 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |End.
       """.stripMargin
 
-    var annotation: Option[(Program, Formula)] = None
-    Parser.parser.setAnnotationListener((prg, fml) => annotation = Some(prg -> fml))
+    val annotations = ListBuffer.empty[(Program, Formula)]
+    Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
     entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
@@ -496,9 +497,8 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
       argNames shouldBe 'empty
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
-    annotation shouldBe 'defined
-    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody{|^@|};}*".asProgram))
-    annotation.get._2 should (be ("x>=1".asFormula) or be ("p(x,1)".asFormula))
+    entry.annotations should contain theSameElementsInOrderAs List(("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula))
+    annotations should contain theSameElementsInOrderAs entry.annotations
     entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }
 }

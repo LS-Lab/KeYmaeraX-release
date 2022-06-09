@@ -404,7 +404,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       """1:14 Error parsing formula at 1:1
         |Found:    "{sys} B1 &" at 1:14
         |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
-        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "(")""".stripMargin)
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "•" | "(")""".stripMargin)
 
     //@note {sys} is an ODESystem with differential program constant sys and doesn't require ;
     the [ParseException] thrownBy Parser("A1;{sys}B1") should (have message
@@ -431,7 +431,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       """1:8 Error parsing formula at 1:2
         |Found:    "{sys} B1) " at 1:8
         |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
-        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "(")""".stripMargin)
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "•" | "(")""".stripMargin)
 
     the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should (have message
       """1:7 Unexpected token cannot be parsed
@@ -758,8 +758,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       or have message
       """1:49 Error parsing comparator at 1:49
         |Found:    "; End. Pro" at 1:49
-        |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")
-        |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | ">=" | ">" | "<=" | "<")""".stripMargin)
+        |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<")
+        |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<")""".stripMargin)
   }
 
   it should "complain about sort mismatches" in {

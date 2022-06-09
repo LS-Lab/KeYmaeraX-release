@@ -287,14 +287,17 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("x^-y^z","x^(-(y^z))"),
 
     ("-x'", "-(x')"),
-    ("2'", "(2')"),
+    ("2'", unparseable),
     ("x+y'", "x+(y')"),
     ("x-y'", "x-(y')"),
     ("x*y'", "x*(y')"),
     ("x/y'", "x/(y')"),
-    ("x^2^4'", "x^(2^(4'))"),
+    ("x^2^4'", unparseable),
     ("x^y'", "x^(y')"),
-    ("x^2'", "x^(2')"),
+    ("x^2'", unparseable),
+
+    ("(0)'", "(0)'"),
+    ("(-0)'", "(-(0))'"),
 
  // more tests
 
@@ -351,8 +354,8 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("-1*x", if (weakNeg || !numNeg) "-(1*x)" else "(-1)*x"),
     ("-10*x", if (weakNeg || !numNeg) "-(10*x)" else "(-10)*x"),
     ("0-2*x", "0-(2*x)"),
-    ("5'","((5))'"),
-    ("-5'","-((5)')"),
+    ("5'", unparseable),
+    ("-5'", unparseable),
 
     ("001", "1"),
     ("000001", "1"),
@@ -682,8 +685,9 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("[x:=0;](f())=16", "[x:=0;](((f()))=16)"),
     ("z3>=((-63))'", "z3>=((-63))'"),
     ("z3>=(-(63))'", "z3>=(-(63))'"),
-    ("z3>=(-63)'", "z3>=((-63))'"),
-    ("(18'!=58-z2'&[z2':=(-57);]1>=(-86)<->(\\forall z2 1/1>=z3<->1<=1*1-z3'))<->-26'*z1>0", "((18)'!=58-(z2')&[z2':=(-57);](1>=(-86))<->((\\forall z2 ((1/1)>=z3))<->(1<=(1*1)-(z3'))))<->(-(((26)')*z1))>0"),
+    ("z3>=(-63)'", "z3>=(-(63))'"),
+    ("z3>=((-63))'", "z3>=((-63))'"),
+    ("((18)'!=58-z2'&[z2':=(-57);]1>=(-86)<->(\\forall z2 1/1>=z3<->1<=1*1-z3'))<->-(26)'*z1>0", "((18)'!=58-(z2')&[z2':=(-57);](1>=(-86))<->((\\forall z2 ((1/1)>=z3))<->(1<=(1*1)-(z3'))))<->(-(((26)')*z1))>0"),
 
     ("[x:=*;]x^2>=0","[x := * ;] x^2>=0"),  // issue #171 space within random assignments
     ("[x:=*;]x^2>=0","[x:= * ;] x^2>=0"),

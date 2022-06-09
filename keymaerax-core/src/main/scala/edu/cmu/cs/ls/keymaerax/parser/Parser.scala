@@ -78,6 +78,9 @@ trait Parser extends (String => Expression) {
 
   /** Sets a listener to be informed when parsing annotations. */
   def setAnnotationListener(listener: (Program,Formula) => Unit): Unit = {}
+
+  /** Returns the annotation listener. */
+  def annotationListener: (Program, Formula) => Unit
 }
 
 object Parser extends (String => Expression) {

@@ -11,6 +11,7 @@ import org.scalatest._
 import org.scalamock.scalatest.MockFactory
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, ToolProvider, Z3ToolProvider}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 
@@ -108,7 +109,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     e.hint shouldBe "Try end label: Some(asd) is optional but should be the same as the start label: Some(asdf)"
   }
 
-  it should "domain missing" in {
+  it should "FEATURE_REQUEST: domain missing" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "foo"
         |Problem
@@ -117,6 +118,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+    //@todo at the moment detected in semantic analysis; would need to collect variables while parsing to tell formula parser to not parse x as predicate x()
     e.expect shouldBe """("_" | "{" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | comparator)"""
     e.found shouldBe "\"}]x>=0\""
     e.hint shouldBe """Try ([a-zA-Z0-9] | "_" | "{" | "(" | "(|" | "<<" | "'" | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<" | comparator)"""
@@ -131,10 +133,10 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe """("true" | "false" | quantifier | "[" | "<" | "!" | predicational | "⎵" | &(ident | "(") | &term | ident | "(")"""
+    e.expect shouldBe """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")"""
     e.found shouldBe "\"}]x>=0\""
     // todo: maybe provide verbose suggestions here somehow??
-    e.hint shouldBe "Try (\"true\" | \"false\" | \"\\\\forall\" | \"\\\\exists\" | \"[\" | \"<\" | \"!\" | [a-zA-Z] | \"(\" | \"-\" | [0-9] | \".\")"
+    e.hint shouldBe """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "•" | "(")"""
   }
 
   it should "give correct error location for disallowed identifier" in {
@@ -146,9 +148,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe """(number | dot | function | unitFunctional | variable | termList | "-")"""
+    e.expect shouldBe """(baseTerm | "-")"""
     e.found shouldBe "\"ax__\""
-    e.hint shouldBe """Try ("-" | [0-9] | "." | "(")"""
+    e.hint shouldBe """Try ("-" | [0-9] | "." | "•" | "(")"""
   }
 
   it should "give correct error location for invalid formula extension" in {
@@ -160,8 +162,8 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.msg shouldBe "Error while parsing problem at 2:1"
-    e.expect shouldBe """("_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "&" | "|" | "->" | "<-" | "<->" | "End.")"""
+    e.msg shouldBe "Error parsing problem at 2:1"
+    e.expect shouldBe """([a-zA-Z0-9] | "_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | "End.")"""
     e.found shouldBe "\"<5\""
     e.hint should include("End")
   }

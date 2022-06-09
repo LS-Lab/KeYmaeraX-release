@@ -11,7 +11,9 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse._
+import fastparse.internal.Util
 
+import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
 
 /**
@@ -137,8 +139,8 @@ class DLParser extends Parser {
       }
       if (oldres != newres && (oldres.isRight || newres.isRight)) {
         println(s"Parser disagreement ($name): `$s`")
-        println(s"KYXParser:\n${oldres match {case Left(x) => x.toString case Right(x) => x.toString}}")
-        println(s"DLParser:\n${newres match {case Left(x) => x.toString case Right(x) => x.toString}}")
+        println(s"KYXParser:\n${oldres match {case Left(x) => x.toString case Right(x: Expression) => x.prettyString case Right(x) => x.toString}}")
+        println(s"DLParser:\n${newres match {case Left(x) => x.toString case Right(x: Expression) => x.prettyString case Right(x) => x.toString}}")
       }
       newres match {
         case Left(e) => throw e
@@ -183,14 +185,17 @@ class DLParser extends Parser {
     * @todo this design is suboptimal.
     */
   override def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
-    this.annotationListener = listener
+    this.theAnnotationListener = listener
+
+  /** @inheritdoc */
+  override def annotationListener: (Program, Formula) => Unit = theAnnotationListener
 
   // internals
 
-  private[parser] var annotationListener: ((Program,Formula) => Unit) = {(p,inv) => }
+  private[parser] var theAnnotationListener: ((Program,Formula) => Unit) = {(p,inv) => }
 
   /** Report an @invariant @annotation to interested parties */
-  private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
+  private def reportAnnotation(p: Program, invariant: Formula): Unit = theAnnotationListener(p,invariant)
 
   /** `true` has unary negation `-` bind weakly like binary subtraction.
     * `false` has unary negation `-` bind strong just shy of power `^`. */
@@ -202,8 +207,50 @@ class DLParser extends Parser {
   // implementation
   //*****************
 
-  // Whitespace is the usual ' \t\n\r' but also comments /* ... */ and // ...
-  import JavaWhitespace._
+  // Whitespace is the usual ' \t\n\r' but also comments /* ... */
+  private object DLWhitespace {
+    implicit val whitespace = {implicit ctx: ParsingRun[_] =>
+      val input = ctx.input
+      val startIndex = ctx.index
+      @tailrec def rec(current: Int, state: Int): ParsingRun[Unit] = {
+        if (!input.isReachable(current)) {
+          if (state == 0) ctx.freshSuccessUnit(current)
+          else if (state == 1)  ctx.freshSuccessUnit(current - 1)
+          else {
+            ctx.cut = true
+            val res = ctx.freshFailure(current)
+            if (ctx.verboseFailures) ctx.setMsg(startIndex, () => Util.literalize("*/"))
+            res
+          }
+        } else {
+          val currentChar = input(current)
+          (state: @switch) match{
+            case 0 =>
+              (currentChar: @switch) match{
+                case ' ' | '\t' | '\n' | '\r' => rec(current + 1, state)
+                case '/' => rec(current + 1, state = 1)
+                case _ => ctx.freshSuccessUnit(current)
+              }
+            case 1 =>
+              (currentChar: @switch) match{
+                case '*' => rec(current + 1, state = 2)
+                case _ => ctx.freshSuccessUnit(current - 1)
+              }
+            case 2 => rec(current + 1, state = if (currentChar == '*') 3 else state)
+            case 3 =>
+              (currentChar: @switch) match{
+                case '/' => rec(current + 1, state = 0)
+                case '*' => rec(current + 1, state = 3)
+                case _ => rec(current + 1, state = 2)
+              }
+          }
+        }
+      }
+      rec(current = ctx.index, state = 0)
+    }
+  }
+
+  import DLWhitespace._
 
   def fullTerm[_: P]: P[Term]   = P( Start ~ term(true) ~ End )
   def fullFormula[_: P]: P[Formula]   = P( Start ~ formula ~ End )
@@ -214,7 +261,7 @@ class DLParser extends Parser {
     P( Start ~ ("{" ~ diffProgram ~ "}" | diffProgram) ~ End )
   }
 
-  def fullExpression[_: P]: P[Expression] = P( Start ~ expression ~ End )
+  def fullExpression[_: P]: P[Expression] = P( Start ~ (NoCut(program) ~ End | NoCut(term(false)) ~ End | NoCut(formula) ~ End ) )
 
   def expression[_: P]: P[Expression] = P(
     program |
@@ -237,9 +284,14 @@ class DLParser extends Parser {
   /** Explicit nonempty whitespace terminal. */
   def blank[_:P]: P[Unit] = P( CharsWhileIn(" \t\r\n", 1) )
 
-  /** parse a number literal */
-  def number[_: P]: P[Number] = P(
+  /** parse a number literal enclosed in (), which is allowed to be a negative number */
+  def numberLiteral[_: P]: P[Number] = "(" ~ P(
     ("-".? ~~ CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
+  ).map(s => Number(BigDecimal(s))) ~ ")" ~~ !"'"
+
+  /** parses a number literal */
+  def number[_: P]: P[Number] = P(
+    (CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
   ).map(s => Number(BigDecimal(s)))
 
   /** matches keywords. An identifier cannot be a keyword. */
@@ -257,7 +309,7 @@ class DLParser extends Parser {
     * @note Keywords are not allowed as identifiers. */
   def ident[_: P]: P[(String,Option[Int])] = P(
     DLParserUtils.filterWithMsg(
-      (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX ~~ ("_" ~~ !(CharIn("0-9"))).?).!
+      (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX ~~ ("_" ~~ !CharIn("0-9")).?).!
     )(!keywords.contains(_))("Keywords cannot be used as identifiers")
       ~~ ("_" ~~ normNatural).? ~~ (!CharIn("a-zA-Z_"))
   )
@@ -338,7 +390,10 @@ class DLParser extends Parser {
 
   def summand[_: P](doAmbigCuts: Boolean): P[Term] =
     // Lookahead is to avoid /* */ comments
-    (multiplicand(doAmbigCuts) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).
+    (multiplicand(doAmbigCuts) ~ (("*" | "/" ~~ !"*").!./ ~
+      { if (weakNeg) ("-" ~ summand(doAmbigCuts)).map(Neg) | multiplicand(doAmbigCuts) // weak negation is like 0 - term
+        else signed(multiplicand(doAmbigCuts))
+      }).rep).
       map { case (left, mults) =>
         mults.foldLeft(left) {
           case (m1, ("*", m2)) => Times(m1, m2)
@@ -347,12 +402,12 @@ class DLParser extends Parser {
       }
 
   def multiplicand[_: P](doAmbigCuts: Boolean): P[Term] =
-    (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(baseTerm(doAmbigCuts))).rep).map{ case (left, pows) =>
+    (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(multiplicand(doAmbigCuts))).rep).map{ case (left, pows) =>
       (left +: pows).reduceRight(Power)
     }
 
   def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] = P(
-      number./ | dot./ | function(doAmbigCuts).flatMap(diff) | unitFunctional(doAmbigCuts).flatMap(diff)
+      numberLiteral | number./ | dot./ | function(doAmbigCuts).flatMap(diff) | unitFunctional(doAmbigCuts).flatMap(diff)
       | variable
       | termList(doAmbigCuts).flatMap(diff)
   )
@@ -383,7 +438,7 @@ class DLParser extends Parser {
    * Note we try `p` before `-p` because some parsers (like `number`)
    * also consume -s. */
   def signed[_: P](p: => P[Term]): P[Term] =
-    p | (("-".! ~~ !">") ~ signed(p)).map{case ("-",t) => Neg(t)}
+    p | (("-" ~~ !">") ~ signed(p)).map(Neg)
 
   /** Parses term' */
   def diff[_: P](left: Term): P[Term] =
@@ -408,7 +463,7 @@ class DLParser extends Parser {
   // formula parser
   //*****************
 
-  def formula[_: P] = P(biimplication)
+  def formula[_: P]: P[Formula] = P(biimplication)
 
   /* <-> (lowest prec, non-assoc) */
   def biimplication[_: P]: P[Formula] =
@@ -494,7 +549,7 @@ class DLParser extends Parser {
     ( (("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF ).
       map{case ("[",p,"]", f) => Box(p, f)
       case ("<",p,">", f) => Diamond(p, f)} |
-    ("!" ~/ baseF ).map(f => Not(f)) |
+    ("!" ~/ baseF ).map(Not) |
     predicational |
     "⎵".!.map(_ => DotFormula)
 
