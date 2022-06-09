@@ -10,17 +10,17 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArg, FormulaArg, GeneratorArg, ListArg, NumberArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
-import edu.cmu.cs.ls.keymaerax.parser.{DLParser, DLParserUtils, Declaration, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, Parser}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.{fullExpression, parseException}
 
 import scala.collection.immutable._
+import scala.util.Try
 
 /**
   * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of
@@ -35,6 +35,9 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   /** Which formula/term/program parser this archive parser uses. */
   private val expParser = DLParser
+
+  /** Stores defined tactics. */
+  private val tactics = scala.collection.mutable.Map.empty[String, DefTactic]
 
   override val tacticParser: String => BelleExpr = this
   override val expressionParser: Parser = DLParser
@@ -52,13 +55,16 @@ class DLBelleParser(override val printer: BelleExpr => String,
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   //@todo store the parser for speed
   val belleParser: String => BelleExpr = (s => fastparse.parse(s, fullTactic(_)) match {
-    case Parsed.Success(value, index) => value
+    case Parsed.Success(value, _) => value
     case f: Parsed.Failure => throw parseException(f)
   })
 
   import JavaWhitespace._
 
-  def fullTactic[_: P]: P[BelleExpr] = (Start ~ tactic ~ End)
+  def fullTactic[_: P]: P[BelleExpr] = {
+    tactics.clear
+    Start ~ tactic ~ End
+  }
 
   private def fixedLocator[_: P](expr: Expression, p: Position, locator: (Position, Expression) => Fixed): P[Fixed] = {
     expr.sub(p.inExpr) match {
@@ -113,7 +119,8 @@ class DLBelleParser(override val printer: BelleExpr => String,
     // BUT perhaps the left side is ambiguous and the right side is a formula. So in
     // this case both must be false. :(
     (NoCut(formula ~ "~>" ~ formula) |
-      term(false) ~ "~>" ~ term(false)).
+      term(false) ~ "~>" ~ term(false) |
+      (DLParser.systemSymbol | DLParser.programSymbol) ~ "~>" ~ program).
       map(pair => SubstitutionPair(pair._1, pair._2))
   )
 
@@ -131,11 +138,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def argumentInterior[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
     argInfo match {
-      case FormulaArg(name, allowsFresh) => formula.map(List(_))
-      case TermArg(name, allowsFresh) => term(true).map(List(_))
+      case FormulaArg(name, allowsFresh) => formula.map(f => List(defs.elaborateToSystemConsts(defs.elaborateToFunctions(f))))
+      case TermArg(name, allowsFresh) => term(true).map(t => List(defs.elaborateToFunctions(t)))
       case ExpressionArg(name, allowsFresh) =>
         // I feel like we should never actually hit this because of the cases before it, but ???
-        expression.map(List(_))
+        expression.map(e => List(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))))
       case VariableArg(name, allowsFresh) => DLParser.variable.map(List(_))
       case GeneratorArg(name) => Fail.opaque("unimplemented: generator argument")
       case StringArg(name, allowsFresh) => DLParser.stringInterior.map(List(_))
@@ -161,6 +168,12 @@ class DLBelleParser(override val printer: BelleExpr => String,
     args match {
       case Nil => // No more arguments, try parsing a position locator
         ",".rep(exactly=if (isStart || numPosArgs == 0) 0 else 1) ~/ locator.rep(exactly=numPosArgs, sep=",").map(loc => (Nil, loc.toList))
+      case ListArg(arg) :: Nil if isStart => // sole list argument may omit "nil"
+        for {
+          arg <- argument(arg).?.map({ case Some(l) => l case None => Seq.empty[Any] })
+          // Then the position locator (note if arg is Some(..) then we are no longer at the start)
+          pair <- argumentList(isStart && arg.isEmpty, Nil, numPosArgs)
+        } yield ( List(arg) ++ pair._1, pair._2)
       case OptionArg(arg) :: rest => // Optional argument
         for {
           // Try parsing argument, @note no cut after , because subsequent argumentList expects again , if optional argument does not succeed
@@ -179,7 +192,13 @@ class DLBelleParser(override val printer: BelleExpr => String,
   )
 
   def tacticSymbol[_: P]: P[String] = P(ident).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
-  def atomicTactic[_: P]: P[BelleExpr] = ( tacticSymbol ~ !"("./).map(t => tacticProvider(t, Nil, defs))
+  def atomicTactic[_: P]: P[BelleExpr] = P(tacticSymbol ~ !"("./).map(t => try {
+    tacticProvider(t, Nil, defs)
+  } catch {
+    case _: ReflectiveExpressionBuilderExn =>
+      ApplyDefTactic(tactics(t))
+      //@todo Pass/Fail does not compile here
+  })
 
   def at[_: P]: P[BelleExpr] = P(
     (tacticSymbol ~~ "("./).flatMap(tacName => {
@@ -194,24 +213,29 @@ class DLBelleParser(override val printer: BelleExpr => String,
     map({case (t,args) => tacticProvider(t, args, defs)})
 
   def builtinTactic[_: P]: P[BelleExpr] = (
-    ("doall".! ~ "(" ~/ tactic ~ ")").
-      map({case ("doall", t) => OnAll(t)}) |
-    ("partial".! ~ "(" ~/ tactic ~ ")").
-      map({case ("partial",t) => PartialTactic(t)}) |
-    ("pending".! ~ "(" ~/ escapedString ~ ")").
-      map({case ("pending",t) =>
-        DebuggingTactics.pending(t)
-      }) |
+    ("doall" ~ "(" ~/ tactic ~ ")").map(OnAll) |
+    ("partial" ~ "(" ~/ tactic ~ ")").map(PartialTactic(_, None)) |
+    ("let" ~ "(" ~ "\"" ~/ DLParser.comparison ~ "\"" ~ ")" ~ "in" ~ "(" ~/ tactic ~ ")").flatMap({
+      case (Equal(l, r), t) => Pass(Let(l, r, t))
+      case (c, _) => Fail("Abbreviation of the shape f()=e (but got " + c.prettyString + ")")
+    }) |
+    ("tactic" ~ tacticSymbol ~ "as" ~/ baseTac).flatMapX({ case (s, t) =>
+      if (tactics.contains(s)) Fail("Unique name " + s)
+      else if (Try(tacticProvider(s, Nil, defs)).toOption.isDefined) Fail("Tactic name " + s + " is builtin, please use a different name")
+      else {
+        tactics += (s -> DefTactic(s, t))
+        Pass(tactics(s))
+      }
+    }) |
     ( /*todo: lots of builtins to implement */
-      "USMatch".! |
-      "let".!
-      ).map(_ => belleParser("skip"))
+      "USMatch".!
+      ).map(_ => fastparse.parse("skip", atomicTactic(_)).get.value)
     )
 
   def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ (
-    seqTac.rep(min=1,sep=","./).
+    eitherTac.rep(min=2,sep=","./).
       map(BranchTactic) |
-    (string.map(BelleLabel.fromString).map(_.head) ~ ":" ~ seqTac).rep(min=1,sep=","./).
+    (string.map(BelleLabel.fromString).map(_.head) ~ ":" ~ eitherTac).rep(min=2,sep=","./).
       map(CaseTactic)
     ) ~ ")")("<(tactic,tactic,...)",implicitly)
 
@@ -220,10 +244,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def baseTac[_: P]: P[BelleExpr] = P(branchTac | parenTac | builtinTactic | atomicTactic | at)
 
   def repTac[_: P]: P[BelleExpr] =
-    (baseTac ~ ("*".! ~ (integer.map(Left(_)) | (!CharIn("0-9")).map(Right(_)))).?).
+    (baseTac ~ (("*".! ~ (integer.map(Left(_)) | (!CharIn("0-9")).map(Right(_)))) | "+".!.map(s => (s, Right(())))).?).
       map({
         case (tac, Some(("*", Left(iters)))) => RepeatTactic(tac, iters)
         case (tac, Some(("*", Right(())))) => SaturateTactic(tac)
+        case (tac, Some(("+", Right(())))) => SeqTactic(tac, SaturateTactic(tac))
         case (tac, None) => tac
       })
 
@@ -235,12 +260,17 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case (tac, Some(es)) => Using(es, tac)
     })
 
-  def partialTac[_: P]: P[BelleExpr] = (usingTac ~~ (blank ~ "partial").map(_ => "partial").?).map({
+  def partialTac[_: P]: P[BelleExpr] = (eitherTac ~~ (blank ~ "partial").map(_ => "partial").?).map({
     case (t, None) => t
     case (t, Some(_)) => PartialTactic(t)
   })
 
-  def seqTac[_: P]: P[BelleExpr] = P( partialTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
+  def optionTac[_: P]: P[BelleExpr] = ("?".?.! ~~ usingTac).map({
+    case ("?", t) => EitherTactic(t, fastparse.parse("nil", atomicTactic(_)).get.value)
+    case (_, t) => t
+  })
+
+  def seqTac[_: P]: P[BelleExpr] = P( optionTac.rep(min=1,sep=CharIn(";&")./) )("tactic;tactic",implicitly).
     map(SeqTactic.apply)
 
   def eitherTac[_: P]: P[BelleExpr] = P( seqTac.rep(min=1,sep="|"./) )("tactic|tactic",implicitly).
@@ -253,7 +283,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
 
   /** tactic: Parses a dL Bellerophon tactic. */
-  def tactic[_: P]: P[BelleExpr] = P( eitherTac )
+  def tactic[_: P]: P[BelleExpr] = P( partialTac )
 
 
   def escapedString[_: P]: P[String] = P(string).map(
@@ -271,7 +301,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
       else if (hashStart == -1) {
         // No hashes, just return Here for PosIn
         fastparse.parse(str, fullExpression(_)) match {
-          case Parsed.Success(value, _) => Pass((value, HereP))
+          case Parsed.Success(value, _) =>
+            defs.elaborateToSystemConsts(defs.elaborateToFunctions(value)) match {
+              case f: Formula => Pass((f, HereP))
+              case FuncOf(fn, arg) => Pass((PredOf(fn.copy(sort=Bool), arg), HereP)) //@note for ambiguous locators, e.g. 'R=="p(x)"
+            }
           case failure: Parsed.Failure =>
             val tr = failure.trace()
             // What information do we expose here??
@@ -280,7 +314,13 @@ class DLBelleParser(override val printer: BelleExpr => String,
       } else {
         // Has hashes; extract subexpression and find its position in full expression (hashes act as parentheses)
         val sub = str.substring(hashStart+1,hashEnd)
-        val noHashes = str.substring(0, hashStart) + "(" + sub + ")" + str.substring(hashEnd+1,str.length)
+        val (lp, rp) = fastparse.parse(sub, fullExpression(_)) match {
+          case Parsed.Success(_: Program, _) => ("{", "}")
+          case Parsed.Success(_: Formula, _) => ("(", ")")
+          case Parsed.Success(_: Term, _) => ("(", ")")
+          case _: Parsed.Failure => return Fail
+        }
+        val noHashes = str.substring(0, hashStart) + lp + sub + rp + str.substring(hashEnd+1,str.length)
         fastparse.parse(noHashes, fullExpression(_)) match {
           case failure: Parsed.Failure =>
             val tr = failure.trace()
@@ -293,9 +333,18 @@ class DLBelleParser(override val printer: BelleExpr => String,
                 // What information do we expose here??
                 Fail
               case Parsed.Success(sub, _) =>
-                FormulaTools.posOf(expr, sub) match {
-                  case Some(posIn) =>
-                    Pass((expr, posIn))
+                val posIn = if (noHashes.indexOf(sub) != hashStart+1) {
+                  // marked sub-expression is not leftmost in expr, mark with "hash" placeholder function/predicate/program
+                  val (markedStr, placeholder) = PositionLocator.withMarkers(noHashes, sub, hashStart, hashEnd - hashStart + 1)
+                  val markedExpr = fastparse.parse(markedStr, fullExpression(_)).get.value
+                  FormulaTools.posOf(markedExpr, placeholder)
+                } else {
+                  FormulaTools.posOf(expr, sub)
+                }
+
+                posIn match {
+                  case Some(pi) =>
+                    Pass((defs.elaborateToSystemConsts(defs.elaborateToFunctions(expr)), pi))
                   case None =>
                     Fail.opaque("Parsed a position locator with subexpression successfully, but could not find subexpression: " + sub.prettyString + " in expression " + expr.prettyString)
                 }

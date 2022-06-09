@@ -37,6 +37,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   private def parse(input: String) = parser.belleParser(input)
 
   "DLBelleParser" should "parse postfix \"using\"" in {
+    parse(raw"""QE using "x^2+y^2=init"""".stripMargin) shouldBe Using(List("x^2+y^2=init".asFormula), TactixLibrary.QE)
     parse(raw"""QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"""".stripMargin) shouldBe Using(List("x^2+y^2=init".asFormula, "init=0".asFormula, "x=0&y=0".asFormula), TactixLibrary.QE)
     parse(raw"""implyR(1); QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"""".stripMargin) shouldBe
       SeqTactic(List(TactixLibrary.implyR(1), Using(List("x^2+y^2=init".asFormula, "init=0".asFormula, "x=0&y=0".asFormula), TactixLibrary.QE)))
@@ -94,7 +95,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "parse suffix partial" in {
     parse("""implyR(1) partial""") shouldBe PartialTactic(TactixLibrary.implyR(1))
     parse("""QE using "x>=0::nil" partial""") shouldBe PartialTactic(Using(List("x>=0".asFormula), TactixLibrary.QE))
-    parse("""implyR(1); andL(-1) partial""") shouldBe SeqTactic(List(TactixLibrary.implyR(1), PartialTactic(TactixLibrary.andL(-1))))
+    parse("""implyR(1); andL(-1) partial""") shouldBe PartialTactic(SeqTactic(List(TactixLibrary.implyR(1), TactixLibrary.andL(-1))))
   }
 
   it should "parse substitutions" in {
