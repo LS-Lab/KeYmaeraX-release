@@ -349,7 +349,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passivesafetyabs" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model
     val vars =
       Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
         Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
@@ -381,7 +381,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate metric C code for passivesafetyabs" in withMathematica { _ =>
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = ModelPlex.toMetric(io.Source.fromInputStream(inputFile).mkString.asFormula)
+    val monitorExp = ModelPlex.toMetric(ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model.asInstanceOf[Formula])
     val vars =
       Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
         Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
@@ -481,7 +481,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     CodeGenTestTools.compileC(CodeGenTestTools.augmentMonitorMain(code._1 + "\n\n" + code._2, hasParams=true, hasInputs=false))
   }
 
-  "Waypoint navigation" should "generate metric C code" in withMathematica { tool =>
+  "Waypoint navigation" should "generate metric C code" in withTactics { withMathematica { tool =>
     val entry = ArchiveParser.getEntry("RAL19/Theorem 1: Safety", io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString, parseTactics=false).head
 
     //@todo export non-expanded monitor with definitions, see Python exporter
@@ -662,11 +662,11 @@ class CCodeGeneratorTests extends TacticTestBase {
     val inputs = CodeGenerator.getInputs(testProg)
     val monitorCode = generator(testProg, stateVars.toSet, inputs, "Monitor")
     println(monitorCode)
-  }
+  }}
 
   "Compiled controller monitor" should "FEATURE_REQUEST: evaluate boolean correctly" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model
     val vars = List("a","dx","dy","r","v","w","x","y","xo","yo","dxo","dyo","t","a_0","dxo_0","dyo_0","r_0","w_0",
       "xo_0","yo_0").map(_.asVariable.asInstanceOf[BaseVariable]).toSet
     val genCode = generator(monitorExp, vars)

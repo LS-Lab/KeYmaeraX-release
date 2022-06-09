@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -28,6 +27,8 @@ import scala.collection.immutable._
  * @author Nathan Fulton
  */
 class SequentialInterpreterTests extends TacticTestBase {
+
+  private lazy val tacticParser = ArchiveParser.tacticParser
 
   "Locators" should "apply searchy with sub-positions" in withTactics {
     inside(theInterpreter(composeb(Find.FindRPlain("[x:=2;][y:=*;?y>=x;]y>=2".asFormula, PosInExpr(1::Nil))),
@@ -446,7 +447,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   "Let" should "fail (but not horribly) when inner proof cannot be started" in withMathematica { _ =>
     val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
-    the [IllFormedTacticApplicationException] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
+    the [IllFormedTacticApplicationException] thrownBy proveBy(fml, tacticParser("let (\"f()=f\") in (nil)")) should have message
       "Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
   }
 

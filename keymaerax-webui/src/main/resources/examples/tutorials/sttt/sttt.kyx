@@ -211,7 +211,7 @@ Description "A hybrid car model where the controller runs when the car is about 
 Title "Pitfalls in event-triggered car control: vacuous proof for faulty controller".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=12".
 
-Functions.
+Definitions
   Real A;
   Real V;
 End.
@@ -602,7 +602,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 10"
-implyR(1) ; (andL('L)*) ; loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()", 1) <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()", 1); <(
   QE ; done,
   QE ; done,
   chase('R) ; normalize ; <(

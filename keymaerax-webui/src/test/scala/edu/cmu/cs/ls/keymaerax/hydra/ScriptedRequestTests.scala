@@ -37,12 +37,18 @@ class ScriptedRequestTests extends TacticTestBase {
     val request = new UploadArchiveRequest(db.db, "guest", modelContents, Some("Simple"))
     val response = request.resultingResponses().loneElement
     response shouldBe a [ModelUploadResponse]
-    response should have (
-      'errorText (Some(
+    response should (have ('errorText (Some(
         """2:22 Expected ";":2:22, found "]x=1 End. "
           |Found:    "]x=1 End. " at 2:22
           |Expected: program at 2:16
-          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")""".stripMargin))
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")""".stripMargin)))
+      or have (
+      'errorText (Some (
+        """2:22 Error parsing program at 2:16
+          |Found:    "]x=1 End. " at 2:22
+          |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")""".stripMargin
+      )))
     )
     db.db.getModelList("guest").head.keyFile shouldBe modelContents
   }
@@ -380,10 +386,10 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, l1::l2::Nil, _, _, _, _) =>
         root should have ('goal (Some("==> [{x'=4}]x>=0".asSequent)))
-        leaves(0) should have ('goal (Some("==> [{x'=4 & true & [{x'=2,y'=3}]P(x,y)}]x>=0".asSequent)))
-        leaves(1) should have ('goal (Some("==> [{x'=4}][{x'=2,y'=3}]P(x,y)".asSequent)))
+        l1 should have ('goal (Some("==> [{x'=4 & true & [{x'=2,y'=3}]P(x,y)}]x>=0".asSequent)))
+        l2 should have ('goal (Some("==> [{x'=4}][{x'=2,y'=3}]P(x,y)".asSequent)))
     }
   }}
 
