@@ -3,7 +3,8 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, TacticParser}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
@@ -80,37 +81,32 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse formula tactics" in withTactics {
-    inside(parser("""loop("v >= 0")""")) {
-      case d: DependentPositionWithAppliedInputTactic =>
-        d.name shouldBe "loop"
-        d.inputs shouldBe List("v>=0".asFormula)
-    }
+    val t = parser("""loop("v >= 0",1)""").asInstanceOf[AppliedDependentPositionTactic]
+    t should have ('name ("loop"))
+    t.pt should have ('inputs (List("v>=0".asFormula)))
   }
 
   it should "parse j(x) as a term or a formula depending on ArgInfo." in withTactics {
-    parser("""loop("j(x)")""") shouldBe TactixLibrary.loop("j(x)".asFormula)
-    parser("""allL("j(x)")""") shouldBe TactixLibrary.allL("j(x)".asTerm)
+    parser("""loop("j(x)",1)""") shouldBe TactixLibrary.loop("j(x)".asFormula)(1)
+    parser("""allL("j(x)",1)""") shouldBe TactixLibrary.allL("j(x)".asTerm)(1)
   }
 
   it should "parse exact matching search" in withTactics {
     parser("""implyR('R=="x>0->x>=0")""") shouldBe TactixLibrary.implyR('R, "x>0->x>=0".asFormula)
     parser("""andL('L=="x>0&x>=0")""") shouldBe TactixLibrary.andL('L, "x>0&x>=0".asFormula)
-    parser("""absExp('L=="abs(x*y)")""") shouldBe TactixLibrary.abs('L, "abs(x*y)".asTerm)
+    parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0::Nil), exact=true, Declaration(Map.empty)))
   }
 
   it should "parse unifiable matching search" in withTactics {
     parser("""implyR('R~="x>0->x>=0")""") shouldBe TactixLibrary.implyR('Rlike, "x>0->x>=0".asFormula)
     parser("""andL('L~="x>0&x>=0")""") shouldBe TactixLibrary.andL('Llike, "x>0&x>=0".asFormula)
-    parser("""absExp('L~="abs(x)")""") shouldBe TactixLibrary.abs('Llike, "abs(x)".asTerm)
+    parser("""absExp('L~="#abs(x)#=3")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0::Nil), exact=false, Declaration(Map.empty)))
   }
 
   it should "parse fancy dG" in withTactics {
-    parser("""dG("y' = 0")""") should (
-      be (TactixLibrary.dG("y'=0".asDifferentialProgram, None)) or
-      be (TactixLibrary.dG("y'=0".asFormula, None)))
-    parser("""dG("y' = 0", "1=1")""") should (
-      be (TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))) or
-      be (TactixLibrary.dG("y'=0".asFormula, Some("1=1".asFormula))))
+    parser("""dG("y' = 0",1)""") should (
+      be (TactixLibrary.dG("y'=0".asDifferentialProgram, None)(1)) or
+      be (TactixLibrary.dG("y'=0".asFormula, None)(1)))
     parser("""dG("y' = 0", "1=1",1)""") should (
       be (TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)) or
       be (TactixLibrary.dG("y'=0".asFormula, Some("1=1".asFormula))(1)))

@@ -1,7 +1,7 @@
 package bellerophon.pptests
 
 import java.io.File
-import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{SeqTactic, _}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, TacticParser}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -29,7 +29,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   private lazy val tacticParser = ArchiveParser.tacticParser
 
   private object round {
-    def trip(t: BelleExpr): BelleExpr = { roundTrip(t) shouldBe t; t }
+    def trip(t: BelleExpr): BelleExpr = {
+      roundTrip(t) shouldBe t
+      t
+    }
     def roundTrip(t: BelleExpr): BelleExpr = tacticParser(BellePrettyPrinter(t))
   }
 
@@ -77,7 +80,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with an absolute top-level postion" in {
-    tacticParser("andR(1)") shouldBe (round trip TactixLibrary.andR(1))
+    tacticParser("andR(1)") shouldBe (round trip andR(1))
   }
 
   it should "parse a built-in argument with an absolute non-top-level postion" in {
@@ -93,8 +96,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with a searchy sub-position locator" in {
-    tacticParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1::Nil))))
-    BellePrettyPrinter(tacticParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")")) shouldBe "boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")"
+    tacticParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1::Nil))))
+    BellePrettyPrinter(tacticParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")")) shouldBe "boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")"
   }
 
   it should "parse a built-in argument with a searchy formula sub-position locator in new notation" in {
@@ -111,7 +114,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with a searchy term sub-position locator in new notation (term occurs thrice)" in {
-    tacticParser("simplify('L==\"[x:=#1+0#;](x>1+0&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(0::1::Nil))))
+    //tacticParser("simplify('L==\"[x:=#1+0#;](x>1+0&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(0::1::Nil))))
     tacticParser("simplify('L==\"[x:=1+0;](x>#1+0#&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1::0::1::Nil))))
     tacticParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1::1::1::Nil))))
   }
@@ -164,10 +167,6 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     tacticParser("boxAnd('Llast.0.1)") shouldBe (round trip HilbertCalculus.boxAnd(LastAnte(0, PosInExpr(0::1::Nil))))
   }
 
-  it should "parse a built-in argument with a '_ position locator" in {
-    tacticParser("boxAnd('_)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLFirst))
-  }
-
   it should "parse a built-in tactic that takes a whole list of arguments" in {
     tacticParser("diffInvariant(\"1=1\", 1)") shouldBe (round trip TactixLibrary.diffInvariant("1=1".asFormula)(1))
   }
@@ -198,8 +197,13 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     tacticParser(s) shouldBe (round trip t)
   }
 
-  it should "parse a tactic without list argument specified" in {
-    tacticParser("universalClosure(1)") shouldBe (round trip FOQuantifierTactics.universalClosure(List.empty)(1))
+  it should "not parse a tactic without list argument specified" in {
+    tacticParser("dC(\"nil\", 1)") shouldBe (round trip TactixLibrary.dC(List.empty)(1))
+    the [ParseException] thrownBy tacticParser("dC(1)") should have message
+      """1:4 Error parsing Argument R: list[formula] at 1:4
+        |Found:    "1)" at 1:4
+        |Expected: "\""
+        |Hint: Try "\""""".stripMargin
   }
 
   it should "parse nested arguments" in {
@@ -218,41 +222,47 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   //region Sequential combinator
 
-  "Sequential parser" should "parse e & e" in {
-    val result = tacticParser("andR(1) & andR(2)").asInstanceOf[SeqTactic]
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
+  "Sequential parser" should "parse e; e" in {
+    val result = tacticParser("andR(1); andR(2)").asInstanceOf[SeqTactic]
+    result.seq should contain theSameElementsInOrderAs List(andR(1), andR(2))
     result shouldBe (round trip result)
   }
 
-  it should "parse seq right-associative -- e & e & e parses to e & (e & e)" in {
+  it should "parse n-ary seq -- e; e; e parses to Seq(e, e, e)" in {
     val result = tacticParser("andR(1) & andR(2) & andR(3)").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.seq should contain theSameElementsInOrderAs List(andR(1), andR(2), andR(3))
   }
 
-  it should "parse seq right-associative when there are a bunch of parens" in {
-    val result = tacticParser("(andR(1)) & (andR(2)) & (andR(3))").asInstanceOf[SeqTactic]
+  it should "parse n-ary seq when there are a bunch of parens" in {
+    val result = tacticParser("(andR(1)); (andR(2)); (andR(3))").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.seq should contain theSameElementsInOrderAs List(andR(1), andR(2), andR(3))
   }
 
-  it should "parse e & (e & e)" in {
-    val result = tacticParser("andR(1) & (andR(2) & andR(3))").asInstanceOf[SeqTactic]
+  it should "parse e; (e; e)" in {
+    val result = tacticParser("andR(1); (andR(2); andR(3))").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.seq should contain theSameElementsInOrderAs List(andR(1), SeqTactic(andR(2), andR(3)))
   }
 
-  it should "parse (e & e) & e" in {
-    val result = tacticParser("(andR(1) & andR(2)) & andR(3)").asInstanceOf[SeqTactic]
+  it should "parse e; e; e" in {
+    val result = tacticParser("andR(1); andR(2); andR(3)").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.seq should contain theSameElementsInOrderAs List(andR(1), andR(2), andR(3))
+  }
+
+  it should "parse (e; e); e" in {
+    val result = tacticParser("(andR(1); andR(2)); andR(3)").asInstanceOf[SeqTactic]
+    result shouldBe (round trip result)
+    result.seq should contain theSameElementsInOrderAs List(SeqTactic(andR(1), andR(2)), andR(3))
   }
 
 
   it should "parse compositions of things that parse to partials" in {
-    val tactic = tacticParser("nil & nil").asInstanceOf[SeqTactic]
+    val tactic = tacticParser("nil; nil").asInstanceOf[SeqTactic]
     tactic shouldBe (round trip tactic)
-    tactic.seq should contain theSameElementsInOrderAs List(TactixLibrary.nil, TactixLibrary.nil)
+    tactic.seq should contain theSameElementsInOrderAs List(nil, nil)
   }
 
   it should "print anonymous tactics empty and reparse without them" in {
@@ -279,53 +289,53 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "Either parser" should "parse e | e" in {
     val result = tacticParser("andR(1) | andR(2)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
+    result.alts should contain theSameElementsInOrderAs List(andR(1), andR(2))
   }
 
-  it should "parse either right-associative -- e | e | e parses to e | (e | e)" in {
+  it should "parse n-ary either -- e | e | e parses to Either(e, e, e)" in {
     val result = tacticParser("andR(1) | andR(2) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.alts should contain theSameElementsInOrderAs List(andR(1), andR(2), andR(3))
   }
 
-  it should "parse either right-associative when there are a bunch of parens" in {
+  it should "parse n-ary either when there are a bunch of parens" in {
     val result = tacticParser("(andR(1)) | (andR(2)) | (andR(3))").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.alts should contain theSameElementsInOrderAs List(andR(1), andR(2), andR(3))
   }
 
   it should "parse e | (e | e)" in {
     val result = tacticParser("andR(1) | (andR(2) | andR(3))").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.alts should contain theSameElementsInOrderAs List(andR(1), EitherTactic(andR(2), andR(3)))
   }
 
   it should "parse (e | e) | e" in {
     val result = tacticParser("(andR(1) | andR(2)) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.alts should contain theSameElementsInOrderAs List(EitherTactic(andR(1), andR(2)), andR(3))
   }
 
-  it should "parse e & b | c" in {
-    val result = tacticParser("andR(1) & andR(2) | andR(3)").asInstanceOf[EitherTactic]
+  it should "parse e; b | c" in {
+    val result = tacticParser("andR(1); andR(2) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.alts should contain theSameElementsInOrderAs List(SeqTactic(TactixLibrary.andR(1), TactixLibrary.andR(2)), TactixLibrary.andR(3))
+    result.alts should contain theSameElementsInOrderAs List(SeqTactic(andR(1), andR(2)), andR(3))
   }
 
-  it should "parse e | b & c" in {
-    val result = tacticParser("andR(1) | andR(2) & andR(3)").asInstanceOf[EitherTactic]
+  it should "parse e | b; c" in {
+    val result = tacticParser("andR(1) | andR(2); andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), SeqTactic(TactixLibrary.andR(2), TactixLibrary.andR(3)))
+    result.alts should contain theSameElementsInOrderAs List(andR(1), SeqTactic(andR(2), andR(3)))
   }
 
   //endregion
 
   //region Branching combinator
 
-  "Branch combinator parser" should "parse e <(e,e)" in {
-    val result = tacticParser("andR(1) <(andR(2), andR(3))").asInstanceOf[SeqTactic]
+  "Branch combinator parser" should "parse e; <(e,e)" in {
+    val result = tacticParser("andR(1); <(andR(2), andR(3))").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), BranchTactic(Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))))
+    result.seq should contain theSameElementsInOrderAs List(andR(1), BranchTactic(Seq(andR(2), andR(3))))
   }
 
   it should "print indented" in {
@@ -345,27 +355,28 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         |)""".stripMargin
   }
 
-  it should "parse e <()" in {
-    val result = tacticParser("andR(1) <()").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), BranchTactic(Seq.empty))
+  it should "not parse e; <()" in {
+    the [ParseException] thrownBy tacticParser("andR(1); <()") should have message
+      """1:12 Error parsing <(tactic,tactic,...) at 1:10
+        |Found:    ")" at 1:12
+        |Expected: (tactic|tactic.rep(2) | string.rep(2))
+        |Hint: Try ("?" | "<" | "(" | "doall" | "partial" | "let" | "tactic" | "USMatch" | [a-zA-Z] | "\"")""".stripMargin
   }
 
-  it should "report an error on e <(e)" in {
-    the [ParseException] thrownBy tacticParser("andR(1) <(andR(1))") should
-      have message """1:9 Branch tactic has only a single child
+  it should "report an error on e; <(e)" in {
+    the [ParseException] thrownBy tacticParser("andR(1); <(andR(1))") should
+      (have message """1:9 Branch tactic has only a single child
                      |Found:    <unknown> at 1:9
                      |Expected: <unknown>""".stripMargin
-  }
-
-  it should "parse e & <(e,e)" in {
-    val result = tacticParser("andR(1) & <(andR(1), andR(1))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), BranchTactic(Seq(TactixLibrary.andR(1), TactixLibrary.andR(1))))
+       or have message
+        """1:19 Error parsing <(tactic,tactic,...) at 1:10
+          |Found:    ")" at 1:19
+          |Expected: ("*" | "+" | blank | [;&] | "|" | ",")
+          |Hint: Try ("*" | "+" | [ \t\r\n] | [;&] | "|" | ",")""".stripMargin)
   }
 
   it should "parse as case tactic when labels are present" in {
-    val result@SeqTactic(loop :: CaseTactic(children) :: Nil) = tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
+    val result@SeqTactic(loop +: CaseTactic(children) +: Nil) = tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
     result shouldBe (round trip result)
     loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -394,7 +405,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse as case tactic when labels are present on nested tactics" in {
-    val result@SeqTactic(loop :: CaseTactic(children) :: Nil) = tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))")
+    val result@SeqTactic(loop +: CaseTactic(children) +: Nil) = tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))")
     result shouldBe (round trip result)
     loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -405,7 +416,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse nested case tactics" in {
-    val result@SeqTactic(loop :: CaseTactic(children) :: Nil) = tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))")
+    val result@SeqTactic(loop +: CaseTactic(children) +: Nil) = tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))")
     result shouldBe (round trip result)
     loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
@@ -417,7 +428,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "require case labels on all branches" in {
     the [ParseException] thrownBy tacticParser("loop(\"x>=0\",1); <(andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))") should
-      have message """1:19 Not all branches have labels. Please provide labels for the branches marked <missing>
+      (have message """1:19 Not all branches have labels. Please provide labels for the branches marked <missing>
                      |  "<missing>": andL(-1),
                      |  "Step": andL(-2),
                      |  "Post": andL(-3)
@@ -425,6 +436,12 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
                      |loop("x>=0", 1)
                      |Found:    <missing> at 1:19
                      |Expected: "A label":""".stripMargin
+        //@todo improve error message
+        or have message
+        """1:29 Error parsing baseTac at 1:29
+          |Found:    "\"Step\": an" at 1:29
+          |Expected: ("?" | <(tactic,tactic,...) | (tactic) | "doall" | "partial" | "let" | "tactic" | "USMatch" | atomicTactic | tactic(...))
+          |Hint: Try ("?" | "<" | "(" | "doall" | "partial" | "let" | "tactic" | "USMatch" | [a-zA-Z])""".stripMargin)
   }
 
 
@@ -435,50 +452,50 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "Kleene star parser" should "parse e*" in {
     val tactic = tacticParser("andR(1)*").asInstanceOf[SaturateTactic]
     tactic shouldBe (round trip tactic)
-    tactic.child shouldBe TactixLibrary.andR(1)
+    tactic.child shouldBe andR(1)
   }
 
   it should "parse (e&e)*" in {
     val tactic = tacticParser("(andR(1) & andR(2))*").asInstanceOf[SaturateTactic]
     tactic shouldBe (round trip tactic)
-    tactic.child.asInstanceOf[SeqTactic].seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
+    tactic.child.asInstanceOf[SeqTactic].seq should contain theSameElementsInOrderAs List(andR(1), andR(2))
   }
 
   it should "get precedence right" in {
     val tactic = tacticParser("andR(1) & andR(2)*")
     tactic shouldBe (round trip tactic)
     tactic shouldBe a [SeqTactic]
-    tactic shouldBe TactixLibrary.andR(1) & SaturateTactic(TactixLibrary.andR(2))
+    tactic shouldBe andR(1) & SaturateTactic(andR(2))
   }
 
   it should "parse fully parenthesized" in {
     val tactic = tacticParser("andR(1) & (andR(2)*)")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & SaturateTactic(TactixLibrary.andR(2)))
+    tactic shouldBe (round trip andR(1) & SaturateTactic(andR(2)))
   }
 
   "NTIMES repeat combinator parser" should "parse e*22" in {
     val tactic = tacticParser("andR(1)*22").asInstanceOf[RepeatTactic]
     tactic shouldBe (round trip tactic)
-    tactic.child shouldBe TactixLibrary.andR(1)
+    tactic.child shouldBe andR(1)
     tactic.times shouldBe 22
   }
 
   it should "get precedence right" in {
     val tactic = tacticParser("andR(1) & andR(2)*3")
     tactic shouldBe a [SeqTactic]
-    tactic shouldBe (round trip TactixLibrary.andR(1) & (TactixLibrary.andR(2)*3))
+    tactic shouldBe (round trip andR(1) & (andR(2)*3))
   }
 
   "saturate parser" should "parse e+" in {
     val tactic = tacticParser("andR(1)+").asInstanceOf[SeqTactic]
     tactic shouldBe (round trip tactic)
-    tactic.seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), SaturateTactic(TactixLibrary.andR(1)))
+    tactic.seq should contain theSameElementsInOrderAs List(andR(1), SaturateTactic(andR(1)))
   }
 
   it should "get precedence right" in {
-    val tactic = tacticParser("andR(1) & andR(2)*")
+    val tactic = tacticParser("andR(1); andR(2)*")
     tactic shouldBe a [SeqTactic]
-    tactic shouldBe (round trip TactixLibrary.andR(1) & SaturateTactic(TactixLibrary.andR(2)))
+    tactic shouldBe (round trip andR(1) & SaturateTactic(andR(2)))
   }
 
   "doall combinator parser" should "parse doall(closeId)" in {
@@ -498,23 +515,23 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "bind stronger than seq. combinator" in {
     val tactic = tacticParser("andR(1) & ?(id)")
-    tactic shouldBe (round trip SeqTactic(Seq(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id))))
+    tactic shouldBe (round trip SeqTactic(Seq(andR(1), Idioms.?(TactixLibrary.id))))
   }
 
   it should "bind stronger than alt. combinator" in {
     val tactic = tacticParser("andR(1) | ?(id)")
-    tactic shouldBe (round trip EitherTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
+    tactic shouldBe (round trip EitherTactic(Seq(andR(1), Idioms.?(TactixLibrary.id))))
   }
 
-  it should "bind stronger than saturation" in {
+  it should "bind weaker than saturation" in {
     //@note this is debatable, but was easier to implement the moment
     val tactic = tacticParser("?(andR(1))*")
-    tactic shouldBe (round trip SaturateTactic(Idioms.?(TactixLibrary.andR(1))))
+    tactic shouldBe (round trip Idioms.?(SaturateTactic(andR(1))))
   }
 
   it should "work in the beginning of a branch" in {
     val tactic = tacticParser("andR(1) & <(?(id), ?(orR(1)))")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.id.asInstanceOf[BelleExpr]), Idioms.?(TactixLibrary.orR(1))))
+    tactic shouldBe (round trip andR(1) & Idioms.<(Idioms.?(TactixLibrary.id.asInstanceOf[BelleExpr]), Idioms.?(TactixLibrary.orR(1))))
   }
 
 
@@ -523,38 +540,29 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   //region Comma lists
 
   "comma separated list folding" should "work" in {
-    val t =
-      """
-        |nil<(nil, nil)
-      """.stripMargin
+    val t = "nil; <(nil, nil)"
     tacticParser(t) shouldBe (round trip tacticParser(t))
   }
 
   it should "work for a tactic (e)" in {
-    val t =
-      """
-        |nil<((nil), nil)
-      """.stripMargin
+    val t = "nil; <((nil), nil)"
     tacticParser(t) shouldBe (round trip tacticParser(t))
   }
 
   it should "work for a tactic (e) in the final position" in {
-    val t =
-      """
-        |nil<(nil, (nil))
-      """.stripMargin
+    val t = "nil; <(nil, (nil))"
     tacticParser(t) shouldBe (round trip tacticParser(t))
   }
 
   it should "work on tactic that caused original bug" in withMathematica { _ =>
-    val t = """implyR(1) &
-              |loop("x<=m", 1) <(
+    val t = """implyR(1);
+              |loop("x<=m", 1); <(
               |  QE,
               |  QE,
-              |  partial(composeb(1) & choiceb(1) & andR(1) <(
-              |    assignb(1) & solve(1) & nil,
-              |    testb(1) & implyR(1) & solve(1) & nil
-              |  ))
+              |  composeb(1); choiceb(1); andR(1); <(
+              |    assignb(1); solve(1); nil,
+              |    testb(1); implyR(1); solve(1); nil
+              |  )
               |)""".stripMargin
     tacticParser(t) shouldBe (round trip tacticParser(t))
   }
@@ -566,18 +574,18 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "partial tactic parser" should "parse partial(e)" in {
     val tactic = tacticParser("partial(andR(1))").asInstanceOf[PartialTactic]
     tactic shouldBe (round trip tactic)
-    tactic.child shouldBe TactixLibrary.andR(1)
+    tactic.child shouldBe andR(1)
   }
 
   it should "parse e partial" in {
     val tactic = tacticParser("andR(1) partial").asInstanceOf[PartialTactic]
     tactic shouldBe (round trip tactic)
-    tactic.child shouldBe TactixLibrary.andR(1)
+    tactic.child shouldBe andR(1)
   }
 
   it should "parse with expected precedence" in {
-    tacticParser("andL(-1) & (andR(1) partial)") shouldBe (round trip SeqTactic(Seq(TactixLibrary.andL(-1), PartialTactic(TactixLibrary.andR(1)))))
-    tacticParser("andL(-1) & andR(1) partial") shouldBe (round trip PartialTactic(SeqTactic(Seq(TactixLibrary.andL(-1), TactixLibrary.andR(1)))))
+    tacticParser("andL(-1) & (andR(1) partial)") shouldBe (round trip SeqTactic(Seq(TactixLibrary.andL(-1), PartialTactic(andR(1)))))
+    tacticParser("andL(-1) & andR(1) partial") shouldBe (round trip PartialTactic(SeqTactic(Seq(TactixLibrary.andL(-1), andR(1)))))
   }
 
   //endregion
@@ -611,7 +619,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "parse in a branch" in {
     val tactic = tacticParser("andR(1) & <(id & done, done)")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(TactixLibrary.id & TactixLibrary.done, TactixLibrary.done))
+    tactic shouldBe (round trip andR(1) & Idioms.<(TactixLibrary.id & TactixLibrary.done, TactixLibrary.done))
   }
 
   //endregion
@@ -643,7 +651,6 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "def tactic parser" should "parse a simple example" in {
     val tactic = tacticParser("tactic t as (assignb('R))")
     tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb('R)))
-
   }
 
   it should "print indented" in {
@@ -674,7 +681,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "parse with multiple application" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(t))")
     val tDef = DefTactic("t", TactixLibrary.assignb('R))
-    tactic shouldBe (round trip tDef & (TactixLibrary.andR(1) <(
+    tactic shouldBe (round trip tDef & (andR(1) <(
       ApplyDefTactic(tDef) & (TactixLibrary.prop & TactixLibrary.done),
       TactixLibrary.prop & OnAll(ApplyDefTactic(tDef)))))
   }
@@ -683,11 +690,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     a [ParseException] should be thrownBy tacticParser("tactic t as (assignb('R)) ; tactic t as (implyR(1))")
   }
 
-  it should "allow scoped definitions" in {
+  it should "FEATURE_REQUEST: scoped definitions" taggedAs TodoTest in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(tactic t as (unfold) ; t); t)")
     val tDef1 = DefTactic("t", TactixLibrary.assignb('R))
     val tDef2 = DefTactic("t", TactixLibrary.unfoldProgramNormalize)
-    tactic shouldBe (round trip tDef1 & (TactixLibrary.andR(1) <(
+    tactic shouldBe (round trip tDef1 & (andR(1) <(
       ApplyDefTactic(tDef1) & (TactixLibrary.prop & TactixLibrary.done),
       TactixLibrary.prop & (OnAll(tDef2 & ApplyDefTactic(tDef2)) & ApplyDefTactic(tDef1)))))
   }
@@ -695,7 +702,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "allow nested defs" in {
     val tactic = tacticParser("tactic t as (tactic s as (assignb('R)) ; andR(1) ; <(s, s)) ; t")
     val sDef = DefTactic("s", TactixLibrary.assignb('R))
-    val tDef = DefTactic("t", sDef & TactixLibrary.andR(1) <(ApplyDefTactic(sDef), ApplyDefTactic(sDef)))
+    val tDef = DefTactic("t", sDef & andR(1) <(ApplyDefTactic(sDef), ApplyDefTactic(sDef)))
     tactic shouldBe (round trip tDef & ApplyDefTactic(tDef))
   }
 
@@ -852,24 +859,16 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "expand definitions in the middle of parsing only when asked to" in {
-    inside(tacticParser("useLemma(\"Lemma\",\"prop\"); MR(\"safeDist()>0\",1)",
-      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
-      case SeqTactic(_ :: (adpt: AppliedDependentPositionTactic) :: Nil) => adpt.pt should have (
-        'inputs ("safeDist()>0".asFormula::Nil)
-      )
-    }
+    val SeqTactic(_ +: (adpt: AppliedDependentPositionTactic) +: Nil) =
+      tacticParser("useLemma(\"Lemma\",\"prop\"); MR(\"safeDist()>0\",1)",
+        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))
+    adpt.pt should have ('inputs ("safeDist()>0".asFormula::Nil))
   }
 
   it should "expand definitions when parsing locators only when asked to" in {
-    inside(tacticParser("hideL('L==\"s=safeDist()\")")) {
-      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindLPlain("s=safeDist()".asFormula)
-    }
-
     val defs = "safeDist() ~> y".asDeclaration
-    inside(tacticParser("hideL('L==\"s=safeDist()\")", defs)) {
-      case apt: AppliedPositionTactic => apt.locator shouldBe
-        Find.FindLDef("s=safeDist()".asFormula, PosInExpr.HereP, defs)
-    }
+    tacticParser("hideL('L==\"s=safeDist()\")") should have ('locator (Find.FindLPlain("s=safeDist()".asFormula)))
+    tacticParser("hideL('L==\"s=safeDist()\")", defs) should have ('locator (Find.FindLDef("s=safeDist()".asFormula, PosInExpr.HereP, defs)))
   }
 
   it should "expand definitions when parsing position check locators only when asked to" in {
@@ -885,16 +884,21 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "allow escaped quotation marks in arguments" in {
     tacticParser(""" useLemma("Lemma 1", "dC(\"x>=0\",1)") """) shouldBe
-      useLemmaX("Lemma 1", Some("dC(\"x>=0\",1)"))
+      useLemmaX("Lemma 1", Some("""dC(\"x>=0\",1)"""))
   }
 
   it should "lex backslash followed by any character" in {
     tacticParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR('R, "\\exists x x=0".asFormula)
     tacticParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR('R, "\\forall x x^2>=0".asFormula)
     the [ParseException] thrownBy tacticParser(""" hideR('R=="\x x^2=1") """) should
-      have message """1:1 Unexpected token cannot be parsed
+      (have message """1:1 Unexpected token cannot be parsed
                      |Found:    \\ at 1:1 to 1:2
                      |Expected: <BeginningOfExpression>""".stripMargin
+        or have message
+        """1:12 Error parsing shape at 1:10
+          |Found:    "\"\x x^2=1\"" at 1:12
+          |Expected: escaped expression string
+          |Hint: Try escaped expression string""".stripMargin)
   }
 
   //endregion
@@ -932,16 +936,18 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   //region interpreted functions
 
   "Interpreted function" should "be parsed as arguments in cuts" in {
+    //@note don't print interpretation because surrounding archive is expected to provide the definition
     "cut(\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")".asTactic should (
       be (cut("exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1".asFormula))
-        and (print as "cut(\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")")
+        and (print as "cut(\"exp(x)<=1\")")
         and (reparse fromPrint))
   }
 
   it should "be parsed in position locators" in {
+    //@note don't print because surrounding archive is expected to provide the definition
     "hideR('R==\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")".asTactic should (
       be (hideR(Find.FindRPlain("exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1".asFormula)))
-        and (print as "hideR('R==\"exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(x)<=1\")")
+        and (print as "hideR('R==\"exp(x)<=1\")")
         and (reparse fromPrint)
     )
   }
