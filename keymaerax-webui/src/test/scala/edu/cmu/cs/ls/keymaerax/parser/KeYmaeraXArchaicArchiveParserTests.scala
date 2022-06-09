@@ -182,6 +182,31 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.info shouldBe empty
   }
 
+  it should "FEATURE_REQUEST: parse definitions with dot arguments" taggedAs TodoTest in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f(Real); Real g(Real,Real); Real h(Real) = (.+2); End.
+        | ProgramVariables Real x; Real y; End.
+        | Problem f(x)>g(x,y) & h(x)>5 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("f", None) -> Signature(Some(Real), Real, Some((Name("\\cdot", Some(0)), Real) :: Nil), None, UnknownLocation),
+        Name("g", None) -> Signature(Some(Tuple(Real, Real)), Real, Some((Name("\\cdot", Some(0)), Real) :: (Name("\\cdot", Some(1)), Real) :: Nil), None, UnknownLocation),
+        Name("h", None) -> Signature(Some(Real), Real, Some((Name("\\cdot", Some(0)), Real) :: Nil), Some(".+2".asTerm), UnknownLocation),
+        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "f(x)>g(x,y) & h(x)>5".asFormula
+    entry.expandedModel shouldBe "f(x)>g(x,y) & x+2>5".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
   it should "complain when variable and function have same name" in {
     val input =
       """ArchiveEntry "Entry 1"

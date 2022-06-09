@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted.FromProgramException
 
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
 
 /**
   * Parse a differential dynamic logic archive file string to a list of archive entries.
@@ -58,8 +59,6 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
   override def parseAsFormula(input: String): Formula = problemOrFormulaParser(input)
 
-  override def parseFromFile(file: String): List[ParsedArchiveEntry] = ???
-
   /** @inheritdoc */
   override def exprParser: Parser = expParser
 
@@ -98,50 +97,58 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
 
   /** Parse a list of archive entries */
-  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = (
-    Start ~
-    sharedDefinitions.? ~
-    DLParserUtils.captureWithValue(archiveEntry).rep(1) ~
-    End
-  ).map({ case (shared,entries) =>
-    entries.map({case (entry,content) =>
-      entry.withFileContent(content)
+  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] =
+    for {
+      shared <- Start ~ DLParserUtils.captureWithValue(sharedDefinitions).?
+      entries <- DLParserUtils.captureWithValue(archiveEntry(shared.map(_._1))).rep(1) ~ End
+    } yield entries.map({ case (entry, content) =>
+      entry.withFileContent(shared.map(_._2).getOrElse("") + content)
     }).toList
-  })
-  //@todo add sharedDefinition to all entries
 
   /** Parse a single archive entry without source. */
-  def archiveEntryNoSource[_: P]: P[ParsedArchiveEntry] = P(archiveStart ~~/ blank ~
-    (label ~ ":").? ~ string ~
-    metaInfo ~
-    allDeclarations ~
-    problem ~
-    tacticProof.rep ~
-    metaInfo ~
-    ("End" ~ label.? ~ ".")
-  ).flatMapX(
-    {case (kind, label, name, meta, decl, (prob,probString), tacs, moremeta, endlabel) =>
-      if (endlabel.isDefined && endlabel != label)
-        Fail.opaque("end label: " + endlabel +" is optional but should be the same as the start label: " + label)
-      else Pass(
-        // definitions elaboration to replace arguments by dots and do type analysis
-        ArchiveParser.elaborate(ParsedArchiveEntry(
-          name = name,
-          kind = kind,
-          fileContent = "<undefined>",
-          problemContent = probString.trim,
-          defs = decl,
-          model = prob,
-          tactics = tacs.map({ case (tn, (t, ts)) => (tn.getOrElse("<undefined>"), ts.trim, t) }).toList,
-          annotations = Nil, //@todo fill annotations
-          //@todo check that there are no contradictory facts in the meta and moremeta
-          info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
-        ))
-      )}
-  )
+  def archiveEntryNoSource[_: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = {
+    val al = Parser.parser.annotationListener
+    val annotations = ListBuffer.empty[(Program, Formula)]
+    Parser.parser.setAnnotationListener((p: Program, f: Formula) => annotations.append((p, f)))
+    try {
+      P(archiveStart ~~/ blank ~
+        (label ~ ":").? ~ string ~
+        metaInfo ~
+        allDeclarations ~
+        problem ~
+        tacticProof.rep ~
+        metaInfo ~
+        ("End" ~ label.? ~ ".")
+      ).flatMapX(
+        { case (kind, label, name, meta, decl, (prob, probString), tacs, moremeta, endlabel) =>
+          if (endlabel.isDefined && endlabel != label)
+            Fail.opaque("end label: " + endlabel + " is optional but should be the same as the start label: " + label)
+          else {
+            val result = // definitions elaboration to replace arguments by dots and do type analysis
+              ArchiveParser.elaborate(ParsedArchiveEntry(
+                name = name,
+                kind = kind,
+                fileContent = "<undefined>",
+                problemContent = probString.trim,
+                defs = shared.map(_ ++ decl).getOrElse(decl),
+                model = prob,
+                tactics = tacs.map({ case (tn, (t, ts)) => (tn.getOrElse("<undefined>"), ts.trim, t) }).toList,
+                annotations = annotations.toList,
+                //@todo check that there are no contradictory facts in the meta and moremeta
+                info = (if (label.isDefined) Map("id" -> label.get) else Map.empty) ++ meta ++ moremeta
+              ))
+            result.annotations.foreach({ case (p: Program, f: Formula) => al(p, f) })
+            Pass(result)
+          }
+        }
+      )
+    } finally {
+      Parser.parser.setAnnotationListener(al)
+    }
+  }
 
   /** Parses a single archive entry */
-  def archiveEntry[_: P]: P[ParsedArchiveEntry] = DLParserUtils.captureWithValue(archiveEntryNoSource).map({
+  def archiveEntry[_: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = DLParserUtils.captureWithValue(archiveEntryNoSource(shared)).map({
     case (e, s) => e.copy(fileContent = s.trim)
   })
 
