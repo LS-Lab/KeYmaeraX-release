@@ -1157,7 +1157,7 @@ object ODEInvariance {
     dgVdbx(cofactors,groebner, negate)(pos)
   })
 
-  private val cauchy_schwartz_lem = remember("b()>=0 & c()>=0 & a()*a() <= b()*c() -> (a()+u()*v())*(a()+u()*v()) <= (b()+u()*u())*(c()+v()*v())".asFormula,QE).fact
+  private lazy val cauchy_schwartz_lem = remember("b()>=0 & c()>=0 & a()*a() <= b()*c() -> (a()+u()*v())*(a()+u()*v()) <= (b()+u()*u())*(c()+v()*v())".asFormula,QE).fact
   /**
     * Pre-prove the symbolic lemmas for n-dimensional Cauchy Schwartz
     * Note: this lemma proves pretty quickly e.g. for n=10
@@ -1431,9 +1431,9 @@ object ODEInvariance {
   }
 
   // Proves SOS >= 0 by naive sum decomposition
-  private val sqPos1 = remember("a_()^2 >= 0".asFormula,QE)
-  private val sqPos2 = remember("a_()*a_() >= 0".asFormula,QE)
-  private val plusPos = remember("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
+  private lazy val sqPos1 = remember("a_()^2 >= 0".asFormula,QE)
+  private lazy val sqPos2 = remember("a_()*a_() >= 0".asFormula,QE)
+  private lazy val plusPos = remember("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
   private def prove_sos_positive : BelleExpr = {
     SaturateTactic(OnAll(andR(1) |
     TryCatch(byUS(sqPos1), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with sqPos1", ex)) |
@@ -2320,9 +2320,9 @@ object ODEInvariance {
     )
   })
 
-  private val and_imp = remember("p() & q() <-> p() & (p() -> q())".asFormula,prop)
-  private val imp_and = remember("(r() -> p() & q()) <-> ((r() -> p()) & (r() -> q()))".asFormula,prop)
-  private val not_imp = remember("!(p() -> q()) <-> (p() & !q())".asFormula,prop)
+  private lazy val and_imp = remember("p() & q() <-> p() & (p() -> q())".asFormula,prop)
+  private lazy val imp_and = remember("(r() -> p() & q()) <-> ((r() -> p()) & (r() -> q()))".asFormula,prop)
+  private lazy val not_imp = remember("!(p() -> q()) <-> (p() & !q())".asFormula,prop)
 
 
   /** Get the correct instantiation of diff adjoints from a list of atomic ODEs
