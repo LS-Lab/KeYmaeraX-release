@@ -22,6 +22,7 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
   }
 
   override def afterEach(): Unit = {
@@ -57,8 +58,33 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
         |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | end-of-input)""".stripMargin
   }
 
-  it should "parse primes" in {
+  it should "parse exponentials" in {
     DLParser("-2^4") shouldBe Neg(Power(Number(2), Number(4)))
+  }
+
+  it should "parse numbers" in {
+    DLParser("-1") shouldBe (if (Parser.numNeg) Number(-1) else Neg(Number(1)))
+    DLParser("(-1)") shouldBe Number(-1)
+    DLParser("(-1)*10") shouldBe Times(Number(-1), Number(10))
+    DLParser("-1*10") shouldBe (if (Parser.numNeg) Times(Number(-1), Number(10)) else Neg(Times(Number(1), Number(10))))
+    DLParser("-1*x") shouldBe (if (Parser.numNeg) Times(Number(-1), Variable("x")) else Neg(Times(Number(1), Variable("x"))))
+  }
+
+  it should "parse sums" in {
+    DLParser("-2-3") shouldBe (if (Parser.numNeg) Minus(Number(-2), Number(3)) else Minus(Neg(Number(2)), Number(3)))
+  }
+
+  it should "parse divisions with negations correctly" in {
+    DLParser("2/-3*4") shouldBe (if (Parser.numNeg) Times(Divide(Number(2), Number(-3)), Number(4)) else Times(Divide(Number(2), Neg(Number(3))), Number(4)))
+    DLParser("2/-x*y") shouldBe Times(Divide(Number(2), Neg(Variable("x"))), Variable("y"))
+  }
+
+  it should "parse exponentials correctly" in {
+    DLParser("x^-y^z") shouldBe Power(Variable("x"), Neg(Power(Variable("y"), Variable("z"))))
+  }
+
+  it should "parse negations correctly" in {
+    DLParser("x*-y*z") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Variable("z"))))
   }
 
   it should "parse number differentials" in {
@@ -89,7 +115,11 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
   }
 
   it should "not parse x//y" in {
-    the [ParseException] thrownBy DLParser("x//y") should have message ""
+    the [ParseException] thrownBy DLParser("x//y") should have message
+      """1:3 Error parsing term at 1:1
+        |Found:    "/y" at 1:3
+        |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "-")
+        |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "-")""".stripMargin
   }
 
 }

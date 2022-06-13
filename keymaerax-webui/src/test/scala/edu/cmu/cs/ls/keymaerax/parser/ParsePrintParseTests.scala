@@ -137,8 +137,14 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   "Prettier printer" should "print spaces to disambiguate negation from negative number" in {
-    new KeYmaeraXPrettierPrinter(50)("-(1*10)<=20".asFormula) shouldBe "-(1 * 10) <= 20"
-    new KeYmaeraXPrettierPrinter(50)("-1*10<=20".asFormula) shouldBe "(-1) * 10 <= 20"
+    new KeYmaeraXPrettierPrinter(50)("-(1*10)<=20".asFormula) shouldBe (
+      if (Parser.numNeg) "-(1 * 10) <= 20"
+      else "-1 * 10 <= 20"
+    )
+    new KeYmaeraXPrettierPrinter(50)("(-1)*10<=20".asFormula) shouldBe (
+      if (Parser.numNeg) "-1 * 10 <= 20"
+      else "(-1) * 10 <= 20"
+    )
     new KeYmaeraXPrettierPrinter(50)("-x<=20".asFormula) shouldBe "-x <= 20"
   }
 }

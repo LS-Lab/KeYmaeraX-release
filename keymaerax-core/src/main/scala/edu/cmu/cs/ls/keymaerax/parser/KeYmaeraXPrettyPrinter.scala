@@ -234,7 +234,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   }
 
   /** True if negative numbers should get extra parentheses */
-  private[parser] val negativeBrackets = OpSpec.negativeNumber
+  private[parser] val negativeBrackets = !OpSpec.negativeNumber
 
   /**@note The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "

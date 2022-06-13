@@ -149,7 +149,7 @@ object OpSpec {
   private[parser] val statementSemicolon = true
 
   /** Whether to accept negative numbers as negative numbers as opposed to unary negation applied to a number. */
-  private[parser] val negativeNumber = true
+  private[parser] val negativeNumber = false //@note parses -1 to (-1), but also -2^4 to (-2)^4 when true!
 
   /** no notation */
   private val none = PSEUDO

@@ -56,11 +56,11 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   /** `true` has unary negation `-` bind weakly like binary subtraction.
     * `false` has unary negation `-` bind strong just shy of power `^`. */
-  private val weakNeg: Boolean = true
+  private val weakNeg: Boolean = Parser.weakNeg
 
   /** `true` when negative numbers are picked out specially, e.g. `-2*x` is `(-2)*x`.
     * `false` when negative numbers are handled like unary `-`. */
-  private val numNeg: Boolean = false
+  private val numNeg: Boolean = Parser.numNeg
 
   /** A special swearing string indicating that the other string cannot be parsed. */
   private val unparseable: String = "@#%@*!!!"
@@ -254,6 +254,9 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("x*-y/z",if (!weakNeg) "(x*(-y))/z" else "x*(-(y/z))"),     // subtle  (x*(-y))/z
     ("x/y/-z","(x/y)/(-z)"),
     ("x/y*-z","(x/y)*(-z)"),
+    ("x/-y*z","(x/-y)*z"),
+    ("x/-y_0*z","(x/-(y_0))*z"),
+    ("x/-f()*z","(x/-(f()))*z"),
     ("x*-/y", unparseable),
 
     ("-x+y^z","(-x)+(y^z)"),
@@ -356,6 +359,8 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("0-2*x", "0-(2*x)"),
     ("5'", unparseable),
     ("-5'", unparseable),
+    ("2/-3", if (weakNeg || !numNeg) "2/(-(3))" else "2/(-3)"),
+    ("2/-3*4", if (weakNeg || !numNeg) "(2/(-(3)))*4" else "(2/(-3))*4)"),
 
     ("001", "1"),
     ("000001", "1"),
@@ -841,6 +846,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   "Reparsing Pretty-printed Expressions" should "reparse (-2)" in {reparse(Number(BigDecimal("-2")))}
   it should "reparse (-2)*x" in {reparse(Times(Number(BigDecimal("-2")), Variable("x")))}
   it should "reparse -(2*x)" in {reparse(Neg(Times(Number(BigDecimal("2")), Variable("x"))))}
+  it should "reparse -2^4" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("4")))))}
   it should "reparse (-2)^4" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("4"))))}
   it should "reparse (- 2)^4" in {reparse(Power(Neg(Number(BigDecimal("2"))), Number(BigDecimal("4"))))}
   it should "reparse -(2^4)" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("4")))))}

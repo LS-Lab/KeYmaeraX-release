@@ -735,7 +735,7 @@ class DLArchiveParserTests extends TacticTestBase {
     the [ParseException] thrownBy parse(input).loneElement should have message
       """1:1 Error parsing archiveStart at 1:1
         |Found:    "ProgramVar" at 1:1
-        |Expected: (sharedDefinitions | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
+        |Expected: ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
         |Hint: Try ("SharedDefinitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
   }
 
@@ -765,7 +765,7 @@ class DLArchiveParserTests extends TacticTestBase {
     the [ParseException] thrownBy parse(input) should have message
       """1:1 Error parsing archiveStart at 1:1
         |Found:    "ProgramVar" at 1:1
-        |Expected: (sharedDefinitions | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
+        |Expected: ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
         |Hint: Try ("SharedDefinitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
   }
 
@@ -1350,7 +1350,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.defs should beDecl(
       Declaration(Map(
         Name("exp1",None) ->
-          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=(-2)) >>(.)".asTerm), UnknownLocation),
+          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=-(2)) >>(.)".asTerm), UnknownLocation),
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
   }
@@ -1795,12 +1795,12 @@ class DLArchiveParserTests extends TacticTestBase {
            |  implyR('R=="A(x)->[{ctrl{|^@|};ode{|^@|};}*]S(x)");
            |  loop("S(x)", 'R=="[{ctrl{|^@|};ode{|^@|};}*]S(x)"); <(
            |    "Init":
-           |      expandAllDefs("nil");
+           |      expandAllDefs();
            |      QE,
            |    "Post":
            |      id,
            |    "Step":
-           |      expandAllDefs("nil");
+           |      expandAllDefs();
            |      useLemma("FIDE21/03-Induction step", "prop")
            |  )
            |  End.

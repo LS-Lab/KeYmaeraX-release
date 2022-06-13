@@ -572,13 +572,33 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case _ :+ Token(_: IDENT, _) :+ Token(LDDIA, _) :+ Expr(_: Formula, _) :+ Token(RDDIA, el) =>
         if (la == LPAREN) shift(st) else error(st, List(LPAREN))
 
+      // special case for negative number/term after division/power x/-3*y should be (x/(-(3)))*y, NOT x/(-(3*y)), BUT: x/-3/y is x/(-(3/y))
+      case r :+ Token(op, _) :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if (op == SLASH || op == POWER) && la != op && !isNotPrefix(st) =>
+        if (la == LPAREN || la == LBRACE) error(st, List(FOLLOWSTERM))
+        else if (OpSpec.negativeNumber) reduce(st, 2, Number(BigDecimal("-" + n)), loc1.spanTo(loc), r)
+        else reduce(st, 2, Neg(Number(BigDecimal(n))), loc1.spanTo(loc), r)
+      case r :+ Token(op, _) :+ Token(MINUS, loc1) :+ Expr(t: Term, loc) if (op == SLASH || op == POWER) && la != op && !isNotPrefix(st) =>
+        reduce(st, 2, Neg(t), loc1.spanTo(loc), r)
+
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
-      case r :+ Token(LPAREN, _) :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
+      case r :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
         loc1.adjacentTo(loc) =>
         assert(r.isEmpty || !r.top.isInstanceOf[Expr], "Can no longer have an expression on the stack, which would cause a binary operator")
         if (la == LPAREN || la == LBRACE) error(st, List(FOLLOWSTERM))
-        else if (la == RPAREN) reduce(st, 2, Number(BigDecimal("-" + n)), loc1.spanTo(loc), r)
-        else shift(st)
+        else reduce(st, 2, Number(BigDecimal("-" + n)), loc1.spanTo(loc), r)
+
+      // "parenthesized" number, but actually argument of function/predicate symbol
+      case _ :+ Token(_: IDENT, _) :+ Token(LPAREN, _) :+ Token(MINUS, _) :+ Token(NUMBER(_), _) => shift(st)
+
+      // parenthesized number, not argument of function/predicate symbol
+      case r :+ (lp@Token(LPAREN, _)) :+ (neg@Token(MINUS, loc1)) :+ Token(NUMBER(n), loc) if !OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
+        loc1.adjacentTo(loc) =>
+        assert(r.isEmpty || !r.top.isInstanceOf[Expr], "Can no longer have an expression on the stack, which would cause a binary operator")
+        if (la == LPAREN || la == LBRACE || la == PRIME) error(st, List(FOLLOWSTERM))
+        else if (la == RPAREN) shift(st) match {
+          case s@ParseState(_, Token(PRIME, _) :: _) => reduce(s, 4, Neg(Number(BigDecimal(n))), loc1.spanTo(loc), r)
+          case s => reduce(s, 4, Number(BigDecimal("-" + n)), loc1.spanTo(loc), r)
+        } else reduce(st, 1, Number(BigDecimal(n)), loc1.spanTo(loc), r :+ lp :+ neg)
 
       case r :+ Token(NUMBER(value), loc) =>
         if (la == LPAREN || la == LBRACE || la == PRIME) error(st, List(FOLLOWSTERM))

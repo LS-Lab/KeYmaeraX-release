@@ -37,7 +37,7 @@ import scala.collection.immutable._
   */
 object DLParser extends DLParser {
   assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
-  assert(OpSpec.negativeNumber, "This parser accepts negative number literals although it does not give precedence to them")
+  assert(!OpSpec.negativeNumber, "This parser accepts negative number literals although it does not give precedence to them")
 
   /** Converts Parsed.Failure to corresponding ParseException to throw. */
   private[keymaerax] def parseException(f: Parsed.Failure): ParseException = {
@@ -197,12 +197,6 @@ class DLParser extends Parser {
   /** Report an @invariant @annotation to interested parties */
   private def reportAnnotation(p: Program, invariant: Formula): Unit = theAnnotationListener(p,invariant)
 
-  /** `true` has unary negation `-` bind weakly like binary subtraction.
-    * `false` has unary negation `-` bind strong just shy of power `^`. */
-  //TODO: Not used (do we need to support it?)
-  private val weakNeg: Boolean = true
-
-
   //*****************
   // implementation
   //*****************
@@ -261,7 +255,13 @@ class DLParser extends Parser {
     P( Start ~ ("{" ~ diffProgram ~ "}" | diffProgram) ~ End )
   }
 
-  def fullExpression[_: P]: P[Expression] = P( Start ~ (NoCut(program) ~ End | NoCut(term(false)) ~ End | NoCut(formula) ~ End ) )
+  def fullExpression[_: P]: P[Expression] = P( Start ~
+    // try if the entire string parses as program, term, or formula, backtrack to start for each attempt since
+    // cuts in program/term may prevent parsing a perfectly well-shaped term/formula
+    (NoCut(program) ~ End | NoCut(term(false)) ~ End | NoCut(formula) ~ End )
+    // but if all of those fail, try parsing with cuts for better error message
+    | expression ~ End
+  )
 
   def expression[_: P]: P[Expression] = P(
     program |
@@ -390,27 +390,42 @@ class DLParser extends Parser {
 
   def summand[_: P](doAmbigCuts: Boolean): P[Term] =
     // Lookahead is to avoid /* */ comments
-    (multiplicand(doAmbigCuts) ~ (("*" | "/" ~~ !"*").!./ ~
-      { if (weakNeg) ("-" ~ summand(doAmbigCuts)).map(Neg) | multiplicand(doAmbigCuts) // weak negation is like 0 - term
-        else signed(multiplicand(doAmbigCuts))
-      }).rep).
-      map { case (left, mults) =>
-        mults.foldLeft(left) {
-          case (m1, ("*", m2)) => Times(m1, m2)
-          case (m1, ("/", m2)) => Divide(m1, m2)
+    (multiplicand(doAmbigCuts) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).map {
+      case (left, (op1, t1@Neg(c)) +: r1) if Parser.weakNeg =>
+        op1 match {
+          case "*" =>
+            Times(left, Neg(r1.foldLeft(c) {
+              case (m1, ("*", m2)) => Times(m1, m2)
+              case (m1, ("/", m2)) => Divide(m1, m2)
+            }))
+          case "/" => r1 match {
+            case Nil => Divide(left, t1)
+            case ("/", _) +: _ =>
+              Divide(left, Neg(r1.foldLeft[Term](c) {
+                case (m1, ("*", m2)) => Times(m1, m2)
+                case (m1, ("/", m2)) => Divide(m1, m2)
+              }))
+            case ("*", _) +: _ =>
+              r1.foldLeft[Term](Divide(left, t1)) {
+                case (m1, ("*", m2)) => Times(m1, m2)
+                case (m1, ("/", m2)) => Divide(m1, m2)
+              }
+          }
         }
+      case (left, mults) => mults.foldLeft(left) {
+        case (m1, ("*", m2)) => Times(m1, m2)
+        case (m1, ("/", m2)) => Divide(m1, m2)
       }
+    }
 
   def multiplicand[_: P](doAmbigCuts: Boolean): P[Term] =
     (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(multiplicand(doAmbigCuts))).rep).map{ case (left, pows) =>
       (left +: pows).reduceRight(Power)
     }
 
-  def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] = P(
-      numberLiteral | number./ | dot./ | function(doAmbigCuts).flatMap(diff) | unitFunctional(doAmbigCuts).flatMap(diff)
-      | variable
-      | termList(doAmbigCuts).flatMap(diff)
-  )
+  def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
+      numberLiteral | number./ | dot./ | function(doAmbigCuts).flatMap(diff) | unitFunctional(doAmbigCuts).flatMap(diff) |
+        variable | termList(doAmbigCuts).flatMap(diff)
 
   def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
     // Note interpretations can only appear on functions (not predicates)

@@ -155,10 +155,10 @@ private object REVIMPLY extends OPERATOR("<-")
 private object REVIMPLY_UNICODE extends OPERATOR("←")
 
 private object FORALL  extends OPERATOR("\\forall") {
-  override def regexp: Regex = """\\forall""".r
+  override def regexp: Regex = """\\forall """.r
 }
 private object EXISTS  extends OPERATOR("\\exists") {
-  override def regexp: Regex = """\\exists""".r
+  override def regexp: Regex = """\\exists """.r
 }
 
 private object EQ      extends OPERATOR("=")
