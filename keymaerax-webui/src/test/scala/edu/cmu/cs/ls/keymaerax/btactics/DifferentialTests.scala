@@ -1210,17 +1210,17 @@ class DifferentialTests extends TacticTestBase {
     proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
       subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+3}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+-3}]x>0".asSequent
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+(-3)}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+3}]x>0".asSequent
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=(-2)*y+3}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y-z}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+-z}]x>0".asSequent
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=(-2)*y+-z}]x>0".asSequent
 
     //ay,-ay
     proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
       subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+0}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+0}]x>0".asSequent
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=(-2)*y+0}]x>0".asSequent
 
     //+b,-b
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
@@ -1232,21 +1232,21 @@ class DifferentialTests extends TacticTestBase {
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
       subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1*t+3}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1*t+-3}]x>0".asSequent
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1*t+(-3)}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1*t+3}]x>0".asSequent
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(-1)*t+3}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1*t+-3}]x>0".asSequent
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(-1)*t+(-3)}]x>0".asSequent
 
     //division
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t/2+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
       subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1/2*t+3}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t/2-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1/2*t+-3}]x>0".asSequent
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1/2*t+(-3)}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t/2+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(- 1/2)*t+3}]x>0".asSequent
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(-1/2)*t+3}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t/2-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
-      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(- 1/2)*t+-3}]x>0".asSequent
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(-1/2)*t+(-3)}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t/2}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
       subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1/2*t+0}]x>0".asSequent
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t/2}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
@@ -1263,7 +1263,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "auto-cut avoid singularities" in withMathematica { _ =>
     proveBy("x>1 ==> [{x'=x+1}]x>1".asSequent, dG("{y'=(-1/2*(x+1)/(x-1))*y}".asDifferentialProgram, Some("(x-1)*y^2=1".asFormula))(1)).
-      subgoals.loneElement shouldBe "x>1 ==> \\exists y [{x'=x+1,y'=(-1)/2*(x+1)/(x-1)*y+0&true&x-1!=0}](x-1)*y^2=1".asSequent
+      subgoals.loneElement shouldBe "x>1 ==> \\exists y [{x'=x+1,y'=(-1/2*(x+1)/(x-1))*y+0&true&x-1!=0}](x-1)*y^2=1".asSequent
   }
 
   it should "not allow non-linear ghosts (1)" in withTactics {

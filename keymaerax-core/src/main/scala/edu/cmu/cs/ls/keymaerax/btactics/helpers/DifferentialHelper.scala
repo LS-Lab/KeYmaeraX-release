@@ -96,39 +96,64 @@ object DifferentialHelper {
 
   /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
   def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
+    val y = Variable("y_")
+    val yp = DifferentialSymbol(y)
+    val a = UnitFunctional("a", Except(y :: Nil), Real)
+    val b = UnitFunctional("b", Except(y :: Nil), Real)
+
+    def neg(t: Term): Term = t match {
+      case Number(n) => Number(BigDecimal("-" + n))
+      case Neg(t) => t
+      case t => Neg(t)
+    }
+
     //Four cases contain both a and b: +a+b, +a-b, -a+b, -a-b
     //y' = ay + b
     {
-      val shape = "{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Plus(Times(a, y), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], s(a), s(b))
         case None =>
       }
     }
 
     //y' = ay - b
     {
-      val shape = "{y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Minus(Times(a, y), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], s(a), neg(s(b)))
         case None =>
       }
     }
 
     //y' = -ay + b
     {
-      val shape = "{y_'=-a(|y_|)*y_+b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Plus(Neg(Times(a, y)), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape) == ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
+        case Some(s) if s(shape) == ghost => return (s(y).asInstanceOf[Variable], neg(s(a)), s(b))
+        case None =>
+      }
+    }
+    {
+      val shape = AtomicODE(yp, Plus(Times(Neg(a), y), b))
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape) == ghost => return (s(y).asInstanceOf[Variable], neg(s(a)), s(b))
         case None =>
       }
     }
 
     //y' = -ay - b
     {
-      val shape = "{y_'=-a(|y_|)*y_-b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Minus(Neg(Times(a, y)), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(a)), neg(s(b)))
+        case None =>
+      }
+    }
+    {
+      val shape = AtomicODE(yp, Minus(Times(Neg(a), y), b))
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(a)), neg(s(b)))
         case None =>
       }
     }
@@ -136,36 +161,50 @@ object DifferentialHelper {
     //Four cases contain both 1/a and b: +1/a+b, +1/a-b, -1/a+b, -1/a-b
     //y' = y/a + b
     {
-      val shape = "{y_'=y_/a(|y_|)+b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Plus(Divide(y, a), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), s("b(|y_|)".asTerm))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], s(Divide(Number(1), a)), s(b))
         case None =>
       }
     }
 
     //y' = y/a - b
     {
-      val shape = "{y_'=y_/a(|y_|)-b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Minus(Divide(y, a), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], s(Divide(Number(1), a)), neg(s(b)))
         case None =>
       }
     }
 
     //y' = -y/a + b
     {
-      val shape = "{y_'=-y_/a(|y_|)+b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Plus(Neg(Divide(y, a)), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(Divide(Number(1), a))), s(b))
+        case None =>
+      }
+    }
+    {
+      val shape = AtomicODE(yp, Plus(Divide(Neg(y), a), b))
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(Divide(Number(1), a))), s(b))
         case None =>
       }
     }
 
     //y' = -y/a - b
     {
-      val shape = "{y_'=-y_/a(|y_|)-b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Minus(Neg(Divide(y, a)), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(Divide(Number(1), a))), neg(s(b)))
+        case None =>
+      }
+    }
+    {
+      val shape = AtomicODE(yp, Minus(Divide(Neg(y), a), b))
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(Divide(Number(1), a))), neg(s(b)))
         case None =>
       }
     }
@@ -173,36 +212,36 @@ object DifferentialHelper {
     //4 cases contain implicit a=1 and b: +y+b, +y-b, -y+b, -y-b
     //y' = y + b
     {
-      val shape = "{y_'=y_+b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Plus(y, b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, s("b(|y_|)".asTerm))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(1), s(b))
         case None =>
       }
     }
 
     //y' = y - b
     {
-      val shape = "{y_'=y_-b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Minus(y, b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, Neg(s("b(|y_|)".asTerm)))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(1), neg(s(b)))
         case None =>
       }
     }
 
     //y' = -y + b
     {
-      val shape = "{y_'=-y_+b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Plus(Neg(y), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, s("b(|y_|)".asTerm))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(-1), s(b))
         case None =>
       }
     }
 
     //y' = -y - b
     {
-      val shape = "{y_'=-y_-b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Minus(Neg(y), b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, Neg(s("b(|y_|)".asTerm)))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(-1), neg(s(b)))
         case None =>
       }
     }
@@ -210,19 +249,26 @@ object DifferentialHelper {
     //2 cases contain just a: +a and -a
     //y' = ay
     {
-      val shape = "{y_'=a(|y_|)*y_}".asDifferentialProgram
+      val shape = AtomicODE(yp, Times(a, y))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
         case Some(s) if s(shape) == ghost =>
-          return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
+          return (s(y).asInstanceOf[Variable], s(a), Number(0))
         case _ =>
       }
     }
 
     //y' = -ay
     {
-      val shape = "{y_'=-a(|y_|)*y_}".asDifferentialProgram
+      val shape = AtomicODE(yp, Neg(Times(a, y)))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("-a(|y_|)".asTerm), "0".asTerm)
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(a)), Number(0))
+        case None =>
+      }
+    }
+    {
+      val shape = AtomicODE(yp, Times(Neg(a), y))
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(a)), Number(0))
         case None =>
       }
     }
@@ -230,18 +276,25 @@ object DifferentialHelper {
     //2 cases contain just 1/a: +1/a and -1/a
     //y' = ay
     {
-      val shape = "{y_'=y_/a(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Divide(y, a))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), "0".asTerm)
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], s(Divide(Number(1), a)), Number(0))
         case None =>
       }
     }
 
-    //y' = -ay
+    //y' = -a/y
     {
-      val shape = "{y_'=-y_/a(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Neg(Divide(y, a)))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("-1/a(|y_|)".asTerm), "0".asTerm)
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(Divide(Number(1), a))), Number(0))
+        case None =>
+      }
+    }
+    {
+      val shape = AtomicODE(yp, Divide(Neg(y), a))
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], neg(s(Divide(Number(1), a))), Number(0))
         case None =>
       }
     }
@@ -249,17 +302,17 @@ object DifferentialHelper {
     //2 cases contain just b: +b and -b
     //y' = b
     {
-      val shape = "{y_'=b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, b)
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(0), s(b))
         case None =>
       }
     }
     //y' = b
     {
-      val shape = "{y_'=-b(|y_|)}".asDifferentialProgram
+      val shape = AtomicODE(yp, Neg(b))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, Neg(s("b(|y_|)".asTerm)))
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(0), neg(s(b)))
         case None =>
       }
     }
@@ -267,18 +320,18 @@ object DifferentialHelper {
     //Two cases contain neither a or b: y'=y and y'=-y
     //y' = y
     {
-      val shape = "{y_'=y_}".asDifferentialProgram
+      val shape = AtomicODE(yp, y)
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(1), Number(0))
         case None =>
       }
     }
 
     //y' = -y
     {
-      val shape = "{y_'=-y_}".asDifferentialProgram
+      val shape = AtomicODE(yp, Neg(y))
       Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
-        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
+        case Some(s) if s(shape)==ghost => return (s(y).asInstanceOf[Variable], Number(-1), Number(0))
         case None =>
       }
     }
