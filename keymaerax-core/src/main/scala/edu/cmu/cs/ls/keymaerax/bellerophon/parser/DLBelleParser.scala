@@ -171,10 +171,10 @@ class DLBelleParser(override val printer: BelleExpr => String,
         ",".rep(exactly=if (isStart || numPosArgs == 0) 0 else 1) ~/ locator.rep(exactly=numPosArgs, sep=",").map(loc => (Nil, loc.toList))
       case (arg: ListArg) :: Nil if isStart => // sole list argument may omit "nil"
         for {
-          arg <- argument(arg).?.map({ case Some(l) => l case None => Seq.empty[Any] })
+          arg <- argument(arg).?
           // Then the position locator (note if arg is Some(..) then we are no longer at the start)
           pair <- argumentList(isStart && arg.isEmpty, Nil, numPosArgs)
-        } yield ( List(arg) ++ pair._1, pair._2)
+        } yield ( List(arg.getOrElse(Seq.empty[Any])) ++ pair._1, pair._2)
       case OptionArg(arg) :: rest => // Optional argument
         for {
           // Try parsing argument, @note no cut after , because subsequent argumentList expects again , if optional argument does not succeed

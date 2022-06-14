@@ -2,7 +2,7 @@ package bellerophon.pptests
 
 import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon.{SeqTactic, _}
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, TacticParser}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -197,13 +197,9 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     tacticParser(s) shouldBe (round trip t)
   }
 
-  it should "not parse a tactic without list argument specified" in {
+  it should "parse a tactic without sole list argument specified" in {
     tacticParser("dC(\"nil\", 1)") shouldBe (round trip TactixLibrary.dC(List.empty)(1))
-    the [ParseException] thrownBy tacticParser("dC(1)") should have message
-      """1:4 Error parsing Argument R: list[formula] at 1:4
-        |Found:    "1)" at 1:4
-        |Expected: "\""
-        |Hint: Try "\""""".stripMargin
+    tacticParser("dC(1)") shouldBe tacticParser("dC(\"nil\", 1)")
   }
 
   it should "parse nested arguments" in {
