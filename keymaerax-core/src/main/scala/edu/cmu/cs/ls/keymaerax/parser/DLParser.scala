@@ -424,8 +424,8 @@ class DLParser extends Parser {
     }
 
   def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
-      numberLiteral | number./ | dot./ | function(doAmbigCuts).flatMap(diff) | unitFunctional(doAmbigCuts).flatMap(diff) |
-        variable | termList(doAmbigCuts).flatMap(diff)
+      numberLiteral | number./ | dot./ | function(doAmbigCuts).flatMapX(diff) | unitFunctional(doAmbigCuts).flatMapX(diff) |
+        variable | termList(doAmbigCuts).flatMapX(diff)
 
   def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
     // Note interpretations can only appear on functions (not predicates)
@@ -487,7 +487,7 @@ class DLParser extends Parser {
 
   /* <- (left-assoc) */
   def backImplication[_: P]: P[Formula] =
-    (implication ~ (("<-"|"←") ~ !">" ~/ implication).rep).
+    (implication ~~ (((blank ~ "<-" ~~ blank).opaque("\" <- \"")|(blank.? ~ "←").opaque("\"←\"")) ~/ implication).rep).
       map{ case (left, hyps) =>
         hyps.foldLeft(left){case (acc,hyp) => Imply(hyp,acc)} }
 

@@ -106,12 +106,25 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
 
   it should "not parse p->q<-r" in {
     the [ParseException] thrownBy DLParser("p()->q()<-r()") should have message
-      """1:1 Error parsing fullExpression at 1:1
-        |Found:    "p()->q()<-" at 1:1
-        |Expected: (program | term ~ end-of-input | formula ~ end-of-input)
-        |Hint: Try ("?" | "if" | "{" | "(" | [0-9] | "." | "•" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | "⎵")""".stripMargin
-    DLParser("(p()->q())<-r()") shouldBe Imply(PredOf(Function("r", None, Unit, Bool), Nothing),
+      """1:9 Error parsing fullExpression at 1:1
+        |Found:    "<-r()" at 1:9
+        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" | comparator | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | end-of-input)
+        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | end-of-input)""".stripMargin
+    //@note disallowed even though unambiguous because can't tell whether a formula was parenthesized once it's parsed
+    the [ParseException] thrownBy DLParser("(p()->q())<-r()") should have message
+      """1:11 Error parsing fullExpression at 1:1
+        |Found:    "<-r()" at 1:11
+        |Expected: ("'" | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | end-of-input)
+        |Hint: Try ("'" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | end-of-input)""".stripMargin
+
+    DLParser("(p()->q()) <- r()") shouldBe Imply(PredOf(Function("r", None, Unit, Bool), Nothing),
       Imply(PredOf(Function("p", None, Unit, Bool), Nothing), PredOf(Function("q", None, Unit, Bool), Nothing)))
+  }
+
+  it should "parse reverse implication of base terms" in {
+    val x = FuncOf(Function("x", None, Unit, Real), Nothing)
+    val y = Variable("y")
+    DLParser("y>x() <- x()<y") shouldBe Imply(Less(x, y), Greater(y, x))
   }
 
   it should "not parse x//y" in {

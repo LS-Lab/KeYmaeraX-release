@@ -388,7 +388,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("p()->q()<->r()", "(p()->q())<->r()"),
     ("p()<->q()->r()", "p()<->(q()->r())"),
     ("p()->q()<->r()", "(p()->q())<->r()"),
-    ("p()<->q()<-r()", "p()<->(q()<-r())"),
+    ("p()<->q()<-r()", unparseable), // could be read as p()<->(q() < -r())
 
     // prop meet table
     ("p()&q()&r()", "p()&(q()&r())"),
@@ -626,7 +626,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("x + y*z + 3*(x+y) >= 3+x+7  &  x+1 < 2   ->   x^2 >= (x-1)^2  |  5 > 1", "((((x+(y*z))+(3*(x+y)))>=((3+x)+7))&((x+1)<2))->((x^2)>=(((x-1)^2))|(5>1))"),
     ("2 + 3*x >= 2   ->   [{x:=x+1; x:=2*x;   ++  x:=0;}*] 3*x >= 0", "((2+(3*x))>=2)->([{{x:=(x+1);x:=(2*x);}++{x:=0;}}*]((3*x)>=0))"),
 
-    ("p()<-q()", "(p()) <- (q())"),
+    ("p()<-q()", unparseable), // could be read as p() < -q()
     ("p()< -q()", "(p()) < (-(q()))"),
 
     ("true", "true"),
@@ -737,7 +737,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("p()<->q() &\nx>0 &&\ny<2", unparseable),
 
     ("p()<->q()<->r()", unparseable),
-    ("p()<-q()<-r()", "(p()<-q())<-r()"), // could be read as (p() < (-q())) <- r()
+    ("p()<-q()<-r()", unparseable), // could be read as (p() < (-q())) <- r()
     ("p()->q()<-r()", unparseable),  // could be read as p() -> (q() < (- r()))
     ("p()<-q()->r()", unparseable),  // could be read as (p() < (-q())) -> r()
 
