@@ -247,8 +247,14 @@ object OpSpec {
   val sTest         = lUnaryOpSpecF[Program](TEST,    200, PrefixFormat, unfmlprog, (f:Formula) => Test(f))
   val sIfThenElse   = TernaryOpSpec[Program](IF, LBRACE, ELSE, 260, TernaryPrefixFormat, (FormulaKind,ProgramKind,ProgramKind), (_:String, e1:Expression, e2:Expression, e3:Expression) => {
       val p = e1.asInstanceOf[Formula]
-      Choice(Compose(Test(p), e2.asInstanceOf[Program]),
-        Compose(Test(Not(p)), e3.asInstanceOf[Program]))
+      e3 match {
+        case Test(True) =>
+          Choice(Compose(Test(p), e2.asInstanceOf[Program]),
+            Test(Not(p)))
+        case prg =>
+          Choice(Compose(Test(p), e2.asInstanceOf[Program]),
+            Compose(Test(Not(p)), prg.asInstanceOf[Program]))
+      }
     })
   assert(sTest>sEquiv, "tests bind weaker than their constituent formulas")
   //@note same = operator so use sEqual.prec as precedence
