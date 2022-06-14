@@ -361,6 +361,7 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     ("-5'", unparseable),
     ("2/-3", if (weakNeg || !numNeg) "2/(-(3))" else "2/(-3)"),
     ("2/-3*4", if (weakNeg || !numNeg) "(2/(-(3)))*4" else "(2/(-3))*4)"),
+    ("abs(-3)", if (!numNeg) "abs(-(3))" else "abs((-3))"),
 
     ("001", "1"),
     ("000001", "1"),

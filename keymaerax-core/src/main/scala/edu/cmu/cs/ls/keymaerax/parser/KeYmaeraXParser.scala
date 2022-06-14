@@ -588,7 +588,9 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         else reduce(st, 2, Number(BigDecimal("-" + n)), loc1.spanTo(loc), r)
 
       // "parenthesized" number, but actually argument of function/predicate symbol
-      case _ :+ Token(_: IDENT, _) :+ Token(LPAREN, _) :+ Token(MINUS, _) :+ Token(NUMBER(_), _) => shift(st)
+      case r :+ (i@Token(_: IDENT, _)) :+ (lp@Token(LPAREN, _)) :+ Token(MINUS, loc1) :+ Token(NUMBER(n), loc) =>
+        if (la == RPAREN) reduce(st, 2, Neg(Number(BigDecimal(n))), loc1.spanTo(loc), r :+ i :+ lp)
+        else shift(st)
 
       // parenthesized number, not argument of function/predicate symbol
       case r :+ (lp@Token(LPAREN, _)) :+ (neg@Token(MINUS, loc1)) :+ Token(NUMBER(n), loc) if !OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
