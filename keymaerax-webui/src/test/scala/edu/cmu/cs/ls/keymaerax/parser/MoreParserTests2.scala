@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 
@@ -302,14 +303,26 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "refuse primed variables in evolution domain constraint" in {
-    the [ParseException] thrownBy parser("[{x'=v,v'=3 & v'>0}]x=0") should have message
-      """1:13 No differentials can be used in evolution domain constraints
-        |Found:    v'>0 at 1:13 to 1:19
-        |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
-    the [ParseException] thrownBy parser("[{x'=v,v'=3 & (x+v)'>0}]x=0") should have message
-      """1:13 No differentials can be used in evolution domain constraints
-        |Found:    (x+v)'>0 at 1:13 to 1:23
-        |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
+    the [ParseException] thrownBy parser("[{x'=v,v'=3 & v'>0}]x=0") should
+      (have message
+        """1:13 No differentials can be used in evolution domain constraints
+          |Found:    v'>0 at 1:13 to 1:19
+          |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
+        or have message
+        """1:19 Error parsing program at 1:2
+          |Found:    "}]x=0" at 1:19
+          |Expected: No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
+    the [ParseException] thrownBy parser("[{x'=v,v'=3 & (x+v)'>0}]x=0") should
+      (have message
+        """1:13 No differentials can be used in evolution domain constraints
+          |Found:    (x+v)'>0 at 1:13 to 1:23
+          |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
+        or have message
+        """1:23 Error parsing program at 1:2
+          |Found:    "}]x=0" at 1:23
+          |Expected: No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
   }
 
   it should "parse standalone differential symbols" in {
@@ -373,7 +386,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser.formulaParser(parser.formulaParser("p(||)").prettyString) shouldBe UnitPredicational("p", AnyArg)
   }
 
-  it should "round trip parse dot terms" in {
+  it should "FEATURE_REQUEST: round trip parse dot terms" taggedAs TodoTest in {
     parser.termParser(parser.termParser("•").prettyString) shouldBe DotTerm()
     parser.termParser(parser.termParser(".").prettyString) shouldBe DotTerm()
     parser.termParser(parser.termParser("•()").prettyString) shouldBe DotTerm()
@@ -384,7 +397,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser.termParser(parser.termParser(".(.,.,.)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)))
   }
 
-  it should "round trip parse colored dots" in {
+  it should "FEATURE_REQUEST: round trip parse colored dots" taggedAs TodoTest in {
     parser.termParser(parser.termParser("•_1").prettyString) shouldBe DotTerm(Real, Some(1))
     parser.termParser(parser.termParser("._1").prettyString) shouldBe DotTerm(Real, Some(1))
     parser.termParser(parser.termParser("•_1()").prettyString) shouldBe DotTerm(Real, Some(1))
@@ -395,7 +408,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser.termParser(parser.termParser("._1(.,.,.)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)), Some(1))
   }
 
-  it should "foo" in {
+  it should "parse a term from an ODE solution (1)" in {
     val t3 = Variable("t", Some(3))
     val B = Variable("B", None)
     val v0 = Variable("v", Some(0))
@@ -405,14 +418,14 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
       Neg(Times(t3, Minus(Neg(B), Plus(Times(Divide(Minus(Times(Number(0), Number(2)), Times(Neg(B), Number(0))), Power(Number(2), Number(2))), t3), Times(Divide(B, Number(2)), Number(1)))))))
   }
 
-  it should "bar" in {
+  it should "parse a term from an ODE solution (2)" in {
     val t3 = Variable("t", Some(3))
     val B = Variable("B", None)
     parser("t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))") should be
     Times(t3, Minus(Neg(B), Plus(Times(Divide(Minus(Times(Number(0), Number(2)), Times(Neg(B), Number(0))), Power(Number(2), Number(2))), t3), Times(Divide(Neg(B), Number(2)), Number(1)))))
   }
 
-  it should "baz" in {
+  it should "parse a robot example" in {
     val t3 = Variable("t", Some(3))
     val B = Variable("B", None)
     val v0 = Variable("v", Some(0))
@@ -463,13 +476,14 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser("5<=f(|x|)") shouldBe LessEqual(Number(5),UnitFunctional("f",Except(x::Nil),Real))
     parser.termParser("f(|x|)") shouldBe UnitFunctional("f",Except(x::Nil),Real)
     parser.termParser("f(|x,y|)") shouldBe UnitFunctional("f",Except(x::y::Nil),Real)
-    parser("[a{||};]P") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
-    parser("[a{|x|};]P") shouldBe Box(ProgramConst("a", Except(x::Nil)), UnitPredicational("P", AnyArg))
-    parser("[a{|x,y|};]P") shouldBe Box(ProgramConst("a", Except(x::y::Nil)), UnitPredicational("P", AnyArg))
-    parser("[a{|^@|};]P") shouldBe Box(SystemConst("a"), UnitPredicational("P", AnyArg))
-    parser("[a{|^@x|};]P") shouldBe Box(SystemConst("a", Except(x::Nil)), UnitPredicational("P", AnyArg))
-    parser("[a{|^@x,y|};]P") shouldBe Box(SystemConst("a", Except(x::y::Nil)), UnitPredicational("P", AnyArg))
-    parser("[{a{|^@|};}*]P") shouldBe Box(Loop(SystemConst("a")), UnitPredicational("P", AnyArg))
+    //@TODO elaborate in lax parsing mode
+//    parser("[a{||};]P") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
+//    parser("[a{|x|};]P") shouldBe Box(ProgramConst("a", Except(x::Nil)), UnitPredicational("P", AnyArg))
+//    parser("[a{|x,y|};]P") shouldBe Box(ProgramConst("a", Except(x::y::Nil)), UnitPredicational("P", AnyArg))
+//    parser("[a{|^@|};]P") shouldBe Box(SystemConst("a"), UnitPredicational("P", AnyArg))
+//    parser("[a{|^@x|};]P") shouldBe Box(SystemConst("a", Except(x::Nil)), UnitPredicational("P", AnyArg))
+//    parser("[a{|^@x,y|};]P") shouldBe Box(SystemConst("a", Except(x::y::Nil)), UnitPredicational("P", AnyArg))
+//    parser("[{a{|^@|};}*]P") shouldBe Box(Loop(SystemConst("a")), UnitPredicational("P", AnyArg))
     parser("[{x'=5,c{|x|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(5)),
       DifferentialProgramConst("c",Except(x::Nil))), True),
       Greater(x,Number(2)))
@@ -508,6 +522,5 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser("[{c{|y_|}}]x=99") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), True), Equal(x,Number(99)))
     parser("[{c{|y_|}}]p(|y_|)") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), True), UnitPredicational("p",Except(Variable("y_")::Nil)))
     parser("[{c{|y_|}&H(|y_|)}]p(|y_|)") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), UnitPredicational("H",Except(Variable("y_")::Nil))), UnitPredicational("p",Except(Variable("y_")::Nil)))
-
   }
 }

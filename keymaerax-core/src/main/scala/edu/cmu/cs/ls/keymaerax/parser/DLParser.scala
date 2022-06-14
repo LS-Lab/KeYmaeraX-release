@@ -625,8 +625,11 @@ class DLParser extends Parser {
       case (p,Some(("*",Some(inv)))) => inv.foreach(reportAnnotation(Loop(p),_)); Loop(p)
       case (p,Some(("×", _))) => Dual(Loop(Dual(p)))
     })
-  def odeprogram[_: P]: P[ODESystem] = ( diffProgram ~ ("&" ~/ formula).?).
-    map({case (p,f) => ODESystem(p,f.getOrElse(True))})
+  def odeprogram[_: P]: P[ODESystem] = ( diffProgram ~ ("&" ~/ formula.flatMapX(f => {
+    if (StaticSemantics.isDifferential(f)) Fail.opaque("No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.")
+    else Pass(f)
+  })).?).
+    map({case (p,f) => ODESystem(p, f.getOrElse(True))})
   def odesystem[_: P]: P[ODESystem] = ( "{" ~ odeprogram ~ "}" ~/ annotation.?).
     map({
       case (p,None) => p
