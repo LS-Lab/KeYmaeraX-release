@@ -404,7 +404,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       """1:14 Error parsing formula at 1:1
         |Found:    "{sys} B1 &" at 1:14
         |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
-        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "•" | "(")""".stripMargin)
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
 
     //@note {sys} is an ODESystem with differential program constant sys and doesn't require ;
     the [ParseException] thrownBy Parser("A1;{sys}B1") should (have message
@@ -431,7 +431,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       """1:8 Error parsing formula at 1:2
         |Found:    "{sys} B1) " at 1:8
         |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
-        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "•" | "(")""".stripMargin)
+        |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
 
     the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should (have message
       """1:7 Unexpected token cannot be parsed
@@ -627,19 +627,19 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
                      |Found:    ( at 1:2
                      |Expected: """.stripMargin
         or have message
-        """1:2 Error parsing fullExpression at 1:1
-          |Found:    "(x,y" at 1:2
-          |Expected: ([a-zA-Z0-9] | "_" | "{|^@" | odeSpace | ";" | "'" | ":=" | "<<" | space | "^" | "*" | "/" | "+" | "-" | end-of-input)
-          |Hint: Try ([a-zA-Z0-9] | "_" | "{|^@" | "{|" | ";" | "'" | ":=" | "<<" | "(|" | "^" | "*" | "/" | "+" | "-" | end-of-input)""".stripMargin)
+        """1:1 Error parsing fullExpression at 1:1
+          |Found:    "f(x,y" at 1:1
+          |Expected: (program | term ~ end-of-input | formula | expression ~ end-of-input | start-of-input ~ (program | term ~ end-of-input | formula))
+          |Hint: Try ("?" | "if" | "{" | "(" | [0-9] | "." | "•" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | "⎵")""".stripMargin)
     the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
       (have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
                      |Found:    , at 1:12 to EOF$
                      |Expected: Term""".stripMargin
         or have message // Not great but...
-        """1:2 Error parsing fullExpression at 1:1
-          |Found:    "(x,y, x>=2" at 1:2
-          |Expected: ([a-zA-Z0-9] | "_" | "{|^@" | odeSpace | ";" | "'" | ":=" | "<<" | space | "^" | "*" | "/" | "+" | "-" | end-of-input)
-          |Hint: Try ([a-zA-Z0-9] | "_" | "{|^@" | "{|" | ";" | "'" | ":=" | "<<" | "(|" | "^" | "*" | "/" | "+" | "-" | end-of-input)""".stripMargin)
+        """1:1 Error parsing fullExpression at 1:1
+          |Found:    "f(x,y, x>=" at 1:1
+          |Expected: (program | term ~ end-of-input | formula | expression ~ end-of-input | start-of-input ~ (program | term ~ end-of-input | formula))
+          |Hint: Try ("?" | "if" | "{" | "(" | [0-9] | "." | "•" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | "⎵")""".stripMargin)
   }
 
   "Annotation parsing" should "populate easy loop annotations" in {
@@ -784,8 +784,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       or have message
       """1:46 Error parsing termList at 1:44
         |Found:    ">2; End. P" at 1:46
-        |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "," | ")")
-        |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "," | ")")""".stripMargin)
+        |Expected: ([0-9] | "." | ")" | "^" | "*" | "/" | "+" | "-" | ",")
+        |Hint: Try ([0-9] | "." | ")" | "^" | "*" | "/" | "+" | "-" | ",")""".stripMargin)
   }
 
   it should "populate easy ODE annotations" in {

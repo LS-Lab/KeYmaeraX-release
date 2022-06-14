@@ -16,7 +16,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   private val z = Variable("z")
   private val v = Variable("v")
 
-  private var parser: KeYmaeraXParser = _
+  private var parser: Parser = _
   private var pp: PrettyPrinter = _
 
   override def beforeAll(): Unit = {
@@ -28,7 +28,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   override def beforeEach(): Unit = {
-    parser = KeYmaeraXParser
+    parser = Parser.parser
     pp = KeYmaeraXPrettyPrinter
   }
 
@@ -75,13 +75,25 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "report missing identifiers in block quantifiers" in {
-    the [ParseException] thrownBy parser("\\forall x,y, (x>y)") should have message """1:14 Unexpected token cannot be parsed
-                                                                                      |Found:    ( at 1:14
-                                                                                      |Expected: IDENT""".stripMargin
-    the [ParseException] thrownBy parser("\\forall x,y, x>y") should have message """1:15 Unexpected token cannot be parsed
-                                                                                    |Found:    > at 1:15
-                                                                                    |Expected: ,
-                                                                                    |      or: <BeginningOfFormula>""".stripMargin
+    the [ParseException] thrownBy parser("\\forall x,y, (x>y)") should
+      (have message """1:14 Unexpected token cannot be parsed
+                      |Found:    ( at 1:14
+                      |Expected: IDENT""".stripMargin
+        or have message
+        """1:12 Error parsing formula at 1:1
+          |Found:    ", (x>y)" at 1:12
+          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
+    the [ParseException] thrownBy parser("\\forall x,y, x>y") should
+      (have message """1:15 Unexpected token cannot be parsed
+                      |Found:    > at 1:15
+                      |Expected: ,
+                      |      or: <BeginningOfFormula>""".stripMargin
+        or have message
+        """1:12 Error parsing formula at 1:1
+          |Found:    ", x>y" at 1:12
+          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
   }
 
   it should "parse \\exists x,y,z (x>y & y>z)" in {
@@ -146,8 +158,6 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "differential program parse" in {
     parser.differentialProgramParser("{x'=1}") shouldBe AtomicODE(DifferentialSymbol(x), Number(1))
-    // ODESystems are not differential programs, but their ODE is
-    parser.differentialProgramParser("{x'=1 & x<=5}") shouldBe AtomicODE(DifferentialSymbol(x), Number(1))
   }
 
   it should "parse [{{x'=v}}*]x=0 as a loopy ODESystem with one ODE" in {
@@ -175,66 +185,120 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "refuse ; in ODE-{}" in {
-    the [ParseException] thrownBy parser("[{x'=v;v'=2}]x=0") should have message
-      """1:7 Unexpected ; in system of ODEs
-        |Found:    ; at 1:7
-        |Expected: ,""".stripMargin
+    the [ParseException] thrownBy parser("[{x'=v;v'=2}]x=0") should
+      (have message
+        """1:7 Unexpected ; in system of ODEs
+          |Found:    ; at 1:7
+          |Expected: ,""".stripMargin
+        or have message
+        """1:7 Error parsing program at 1:2
+          |Found:    ";v'=2}]x=0" at 1:7
+          |Expected: ([a-zA-Z0-9] | "_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "," | "&" | "}")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "(|" | "'" | "^" | "*" | "/" | "+" | "-" | "," | "&" | "}")""".stripMargin)
   }
 
   it should "refuse ++ in ODE-{}" in {
-    the [ParseException] thrownBy parser("[{x'=v++v'=2}]x=0") should have message
-      """1:7 Unexpected ++ in system of ODEs
-        |Found:    ++ at 1:7 to 1:8
-        |Expected: ,""".stripMargin
+    the [ParseException] thrownBy parser("[{x'=v++v'=2}]x=0") should
+      (have message
+        """1:7 Unexpected ++ in system of ODEs
+          |Found:    ++ at 1:7 to 1:8
+          |Expected: ,""".stripMargin
+        or have message
+        """1:8 Error parsing term at 1:6
+          |Found:    "+v'=2}]x=0" at 1:8
+          |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "-")
+          |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "-")""".stripMargin)
   }
 
   it should "refuse ODE 1 without {} in modalities" in {
-    the [ParseException] thrownBy parser("[x'=v;]x=0") should have message
-      """1:7 ODE without {}
-        |Found:    ] at 1:7
-        |Expected: }""".stripMargin
+    the [ParseException] thrownBy parser("[x'=v;]x=0") should
+      (have message
+        """1:7 ODE without {}
+          |Found:    ] at 1:7
+          |Expected: }""".stripMargin
+        or have message
+        """1:2 Error parsing program at 1:2
+          |Found:    "x'=v;]x=0" at 1:2
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+          |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "refuse ODE 2 without {} in modalities" in {
-    the [ParseException] thrownBy parser("[x'=v & x>0;]x=0") should have message
-      """1:13 ODE without {}
-        |Found:    ] at 1:13
-        |Expected: }""".stripMargin
+    the [ParseException] thrownBy parser("[x'=v & x>0;]x=0") should
+      (have message
+        """1:13 ODE without {}
+          |Found:    ] at 1:13
+          |Expected: }""".stripMargin
+        or have message
+        """1:2 Error parsing program at 1:2
+          |Found:    "x'=v & x>0" at 1:2
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+          |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "refuse ODE systems 1 without {} in modalities" in {
-    the [ParseException] thrownBy parser("[x'=v,v'=3;]x=0") should have message
-      """1:11 ODE without {}
-        |Found:    ; at 1:11
-        |Expected: }""".stripMargin
+    the [ParseException] thrownBy parser("[x'=v,v'=3;]x=0") should
+      (have message
+        """1:11 ODE without {}
+          |Found:    ; at 1:11
+          |Expected: }""".stripMargin
+        or have message
+        """1:2 Error parsing program at 1:2
+          |Found:    "x'=v,v'=3;" at 1:2
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+          |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "refuse ODE systems 2 without {} in modalities" in {
-    the [ParseException] thrownBy parser("[x'=v,v'=3 & x>0;]x=0") should have message
-      """1:17 ODE without {}
-        |Found:    ; at 1:17
-        |Expected: }""".stripMargin
+    the [ParseException] thrownBy parser("[x'=v,v'=3 & x>0;]x=0") should
+      (have message
+        """1:17 ODE without {}
+          |Found:    ; at 1:17
+          |Expected: }""".stripMargin
+        or have message
+        """1:2 Error parsing program at 1:2
+          |Found:    "x'=v,v'=3 " at 1:2
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+          |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "refuse ODE systems 3 without {} in modalities" in {
-    the [ParseException] thrownBy parser("[x'=v,v'=3 ++ {y'=3}]x=0") should have message
-      """1:12 ODE without {}
-        |Found:    ++ at 1:12 to 1:13
-        |Expected: }""".stripMargin
+    the [ParseException] thrownBy parser("[x'=v,v'=3 ++ {y'=3}]x=0") should
+      (have message
+        """1:12 ODE without {}
+          |Found:    ++ at 1:12 to 1:13
+          |Expected: }""".stripMargin
+        or have message
+        """1:2 Error parsing program at 1:2
+          |Found:    "x'=v,v'=3 " at 1:2
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+          |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "refuse ODE systems 4 without {} in modalities" in {
-    the [ParseException] thrownBy parser("[x'=v,v'=3 & x>5 ++ {y'=3}]x=0") should have message
-      """1:18 ODE without {}
-        |Found:    ++ at 1:18 to 1:19
-        |Expected: }""".stripMargin
+    the [ParseException] thrownBy parser("[x'=v,v'=3 & x>5 ++ {y'=3}]x=0") should
+      (have message
+        """1:18 ODE without {}
+          |Found:    ++ at 1:18 to 1:19
+          |Expected: }""".stripMargin
+        or have message
+        """1:2 Error parsing program at 1:2
+          |Found:    "x'=v,v'=3 " at 1:2
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+          |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "refuse ODE systems 5 without {} in modalities" in {
-    the [ParseException] thrownBy parser("[c,d,x'=f(x)&q(x);]x=0") should have message
-      """1:19 ODE without {}
-        |Found:    ] at 1:19
-        |Expected: }""".stripMargin
+    the [ParseException] thrownBy parser("[c,d,x'=f(x)&q(x);]x=0") should
+      (have message
+        """1:19 ODE without {}
+          |Found:    ] at 1:19
+          |Expected: }""".stripMargin
+        or have message
+        """1:2 Error parsing program at 1:2
+          |Found:    "c,d,x'=f(x" at 1:2
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
+          |Hint: Try ("?" | "if" | "{")""".stripMargin)
   }
 
   it should "refuse primed variables in evolution domain constraint" in {
@@ -381,7 +445,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   it should "parse a long chain of quantifiers" in {
     val parsed = parser("\\forall V \\forall dx_0 \\forall B \\forall dy_0 \\forall dx \\forall v \\forall yo_0 \\forall x_0 \\forall y_0 \\forall v_0 \\forall r \\forall xo_0 \\forall dy \\forall A \\forall t_3 (ep()>0&V>=0&B>0&A>=0&r!=0&v>=0&(v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V*(v_0/B)))&r_0()!=0&v_0>=0&dx^2+dy^2=1&dxo()^2+dyo()^2<=V^2&x0_1()=x_0&dx^2+dy^2=1&v_0>=0&dx_0^2+dy_0^2=1&t_3>=0&t_3<=ep()&0>=0&0<=ep()&v_0=v_0+-B*0&v_0+-B*t_3>=0->-(1)*(v_0+-B*t_3--B/2*t_3)+-t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))<=(v_0+-B*t_3)*dx_0-0&(v_0+-B*t_3)*dx_0-0<=1*(v_0+-B*t_3--B/2*t_3)+t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1)))<->true")
     println("Parsed: " + parsed.prettyString)
-    parsed.prettyString shouldBe "\\forall V \\forall dx_0 \\forall B \\forall dy_0 \\forall dx \\forall v \\forall yo_0 \\forall x_0 \\forall y_0 \\forall v_0 \\forall r \\forall xo_0 \\forall dy \\forall A \\forall t_3 (ep()>0&V>=0&B>0&A>=0&r!=0&v>=0&(v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V*(v_0/B)))&r_0()!=0&v_0>=0&dx^2+dy^2=1&dxo()^2+dyo()^2<=V^2&x0_1()=x_0&dx^2+dy^2=1&v_0>=0&dx_0^2+dy_0^2=1&t_3>=0&t_3<=ep()&0>=0&0<=ep()&v_0=v_0+-B*0&v_0+-B*t_3>=0->-(1*(v_0+-B*t_3--B/2*t_3))+-t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))<=(v_0+-B*t_3)*dx_0-0&(v_0+-B*t_3)*dx_0-0<=1*(v_0+-B*t_3--B/2*t_3)+t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1)))<->true"
+    parsed.prettyString shouldBe "\\forall V \\forall dx_0 \\forall B \\forall dy_0 \\forall dx \\forall v \\forall yo_0 \\forall x_0 \\forall y_0 \\forall v_0 \\forall r \\forall xo_0 \\forall dy \\forall A \\forall t_3 (ep()>0&V>=0&B>0&A>=0&r!=0&v>=0&(v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V*(v_0/B)))&r_0()!=0&v_0>=0&dx^2+dy^2=1&dxo()^2+dyo()^2<=V^2&x0_1()=x_0&dx^2+dy^2=1&v_0>=0&dx_0^2+dy_0^2=1&t_3>=0&t_3<=ep()&0>=0&0<=ep()&v_0=v_0+-B*0&v_0+-B*t_3>=0->-1*(v_0+-B*t_3--B/2*t_3)+-t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))<=(v_0+-B*t_3)*dx_0-0&(v_0+-B*t_3)*dx_0-0<=1*(v_0+-B*t_3--B/2*t_3)+t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1)))<->true"
   }
 
 
@@ -424,15 +488,15 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser("P") shouldBe Variable("P")
     parser("p") shouldBe Variable("p")
     parser("[a;]P(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
-    parser.laxParser("[a;]P") shouldBe parser("[a;]P(||)")
-    the [ParseException] thrownBy parser.strictParser("[a;]P") should
+    KeYmaeraXParser.laxParser("[a;]P") shouldBe parser("[a;]P(||)")
+    the [ParseException] thrownBy KeYmaeraXParser.strictParser("[a;]P") should
       have message """1:6 Expected a Formula but got the Term P
                      |Found:    ] at 1:6 to EOF$
                      |Expected: Formula""".stripMargin
     parser("[a;]p(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("p", AnyArg))
     parser("[a;]p()") shouldBe Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))
-    parser.laxParser("[a;]p") shouldBe parser("[a;]p()")
-    the [ParseException] thrownBy parser.strictParser("[a;]p") should
+    KeYmaeraXParser.laxParser("[a;]p") shouldBe parser("[a;]p()")
+    the [ParseException] thrownBy KeYmaeraXParser.strictParser("[a;]p") should
       have message """1:6 Expected a Formula but got the Term p
                      |Found:    ] at 1:6 to EOF$
                      |Expected: Formula""".stripMargin

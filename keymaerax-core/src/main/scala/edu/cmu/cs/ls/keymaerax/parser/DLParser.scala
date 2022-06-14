@@ -556,10 +556,10 @@ class DLParser extends Parser {
       "true".!.map(_ => True) | "false".!.map(_ => False) |
     /* Note we cannot cut after true/false because it could also
      * be the start of an identifier */
-    ( ("\\forall"|"\\exists"|"∀"|"∃").! ~~/ blank ~ variable ~ baseF ).
+    ( ("\\forall"|"\\exists"|"∀"|"∃").! ~~/ blank ~ variable.repX(min=1,sep=",") ~ baseF ).
       map{
-        case ("\\forall"|"∀",x, f) => Forall(x::Nil, f)
-        case ("\\exists"|"∃",x, f) => Exists(x::Nil, f)
+        case ("\\forall"|"∀",x, f) => x.foldLeft(f)({ case (f, x) => Forall(x::Nil, f) })
+        case ("\\exists"|"∃",x, f) => x.foldLeft(f)({ case (f, x) => Exists(x::Nil, f) })
       } |
     ( (("[".! ~/ program ~ "]".!) | ("<".! ~/ program ~ ">".!)) ~/ baseF ).
       map{case ("[",p,"]", f) => Box(p, f)
