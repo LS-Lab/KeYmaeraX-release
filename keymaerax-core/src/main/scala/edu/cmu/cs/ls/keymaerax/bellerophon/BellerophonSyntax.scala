@@ -724,13 +724,14 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
 
   /** True if the `fml` matches the `shape`, false otherwise. */
   private def matches(fml: Option[Expression], shape: Expression): Boolean = {
-    //@note shape in tactics is always abbreviated (without interpretation), formula is either expanded fn<<...>>(x) or abbreviated fn(x)
-    fml.flatMap(ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+    //@note shape in tactics may or may not be with interpretation, formula is either expanded fn<<...>>(x) or abbreviated fn(x)
+    val uninterp = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
         case FuncOf(fn, args) => Right(FuncOf(fn.copy(interp = None), args))
         case _ => Left(None)
       }
-    }, _)).contains(shape)
+    }, _: Expression).get
+    fml.map(uninterp).contains(uninterp(shape))
   }
 
   final override def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr =
