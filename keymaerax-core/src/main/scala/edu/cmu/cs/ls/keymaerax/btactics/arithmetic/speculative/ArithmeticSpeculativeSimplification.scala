@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnaly
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 import scala.collection.mutable.ListBuffer
 
@@ -63,7 +64,7 @@ object ArithmeticSpeculativeSimplification {
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
   lazy val proveOrRefuteAbs: BelleExpr = anon ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & ToolTactics.assertNoCex & QE & done) | speculativeQENoAbs)
+    if (symbols.contains(InterpretedSymbols.absF)) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & ToolTactics.assertNoCex & QE & done) | speculativeQENoAbs)
     else throw new TacticInapplicableFailure("Sequent does not contain abs")
   })
 
@@ -77,7 +78,7 @@ object ArithmeticSpeculativeSimplification {
       val result = ListBuffer[PosInExpr]()
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-          case FuncOf(Function("abs", _, _, _, Some(_)), _) =>
+          case FuncOf(fn, _) if fn == InterpretedSymbols.absF =>
             if (!absTerms.contains(e)) {
               result += p
               absTerms.add(e)
@@ -90,10 +91,10 @@ object ArithmeticSpeculativeSimplification {
     }
 
     val anteAbs = sequent.ante.zipWithIndex.
-      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, Some(True)))}.
+      filter{ case (f,_) => StaticSemantics.symbols(f).contains(InterpretedSymbols.absF)}.
       map{ case (f, i) => (f, AntePosition.base0(i)) }
     val succAbs = sequent.succ.zipWithIndex.
-      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, Some(True)))}.
+      filter{ case (f,_) => StaticSemantics.symbols(f).contains(InterpretedSymbols.absF)}.
       map{ case (f,i) => (f, SuccPosition.base0(i)) }
 
     val absTactic = (anteAbs++succAbs).
