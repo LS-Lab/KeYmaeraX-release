@@ -425,7 +425,7 @@ class DLParser extends Parser {
 
   def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
       numberLiteral | number./ | dot./ | function(doAmbigCuts).flatMapX(diff) | unitFunctional(doAmbigCuts).flatMapX(diff) |
-        variable | termList(doAmbigCuts).flatMapX(diff)
+        variable | termList(doAmbigCuts).flatMapX(diff) | "__________".!.map(_ => UnitFunctional("exerciseF_", AnyArg, Real))
 
   def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
     // Note interpretations can only appear on functions (not predicates)
@@ -549,6 +549,8 @@ class DLParser extends Parser {
         case (form,None) => form
         case (form,Some("'")) => DifferentialFormula(form)
       })
+    /* Exercise */
+    | "__________".!.map(_ => UnitPredicational("exerciseP_", AnyArg))
   )
 
   def unambiguousBaseF[_: P]: P[Formula] =
@@ -610,6 +612,8 @@ class DLParser extends Parser {
       })
   )
 
+  def programExercise[_: P]: P[AtomicProgram] = "__________".!.map(_ => SystemConst("exerciseS_", AnyArg))
+
   def assign[_: P]: P[AtomicProgram] = (
     (variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term(true).map(Right(_)))  ~ ";").
       map({
@@ -637,7 +641,7 @@ class DLParser extends Parser {
     })
 
   def baseP[_: P]: P[Program] = (
-    systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP
+    systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP | programExercise
   )
 
   /** Parses dual notation: baseP or baseP^@ */
@@ -682,7 +686,8 @@ class DLParser extends Parser {
       case (s, None, Some(sp)) => DifferentialProgramConst(s, sp)
     })
   )
-  def atomicDP[_: P]: P[AtomicDifferentialProgram] = ( ode | diffProgramSymbol )
+  def diffExercise[_: P]: P[DifferentialProgramConst] = "__________".!.map(_ => DifferentialProgramConst("exerciseD_", AnyArg))
+  def atomicDP[_: P]: P[AtomicDifferentialProgram] = ( ode | diffProgramSymbol | diffExercise )
 
   /** {|x1,x2,x3|} parses a space declaration */
   def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").

@@ -33,7 +33,10 @@ case class Signature(domain: Option[Sort], codomain: Sort, arguments: Option[Lis
   */
 case class Declaration(decls: Map[Name, Signature]) {
   /** The declarations as topologically sorted substitution pairs. */
-  lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2.interpretation.isDefined).map({
+  lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2.interpretation match {
+    case Some(ns: NamedSymbol) => !ReservedSymbols.reserved.contains(ns)
+    case i => i.isDefined
+  }).map({
     case (name, sig@Signature(_, _, args, interpretation, _)) =>
       // except named arguments and dots, elaborate all symbols to functions for topSort because topSort uses signature
       val taboo = args.map(_.filter({ case (Name("\\cdot", _), _) => false case _ => true }).
@@ -440,6 +443,7 @@ object ArchiveParser extends ArchiveParser {
       map({ case (n, (symbols, loc)) => n ->
         (symbols.
           filter(s => !elaboratedDefs.decls.contains(Name(s.name, s.index))).
+          filterNot(ReservedSymbols.reserved.contains).
           filterNot(InterpretedSymbols.builtin.contains).
           filterNot(TacticReservedSymbols.symbols.contains), loc) }).
       filter({ case (_, (s, _)) => s.nonEmpty })

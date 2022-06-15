@@ -244,7 +244,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "record unique prop case labels" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End. End."
+    val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < (-2) -> x^2>=4 & x^4>=16) End. End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
@@ -279,7 +279,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "record unique prop case labels (2)" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End. End."
+    val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < (-2) -> x^2>=4 & x^4>=16) End. End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
@@ -315,7 +315,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "not record intermediate nil/skip as todo" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End. End."
+    val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < (-2) -> x^2>=4 & x^4>=16) End. End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
@@ -828,7 +828,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }
 
-  "Shipped tutorial import" should "import all tutorials correctly" in withDatabase { importExamplesIntoDB }
+  "Shipped tutorial import" should "import all tutorials correctly" in withTactics { withDatabase { importExamplesIntoDB } }
 
   it should "execute all imported tutorial tactics correctly" in withMathematica { tool => withDatabase { db =>
     val userName = "maxLevelUser"
@@ -839,7 +839,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelInfos = models.asInstanceOf[JsArray].elements.
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
-    modelInfos should have size 85  // change when ListExamplesRequest is updated
+    modelInfos should have size 95  // change when ListExamplesRequest is updated
 
     val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>

@@ -153,7 +153,9 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + " " + "(" + pp(f.child) + ")"
     case f: Box                 => "[" + pp(f.program) + "]" + "(" + pp(f.child) + ")"
     case f: Diamond             => "<" + pp(f.program) + ">" + "(" + pp(f.child) + ")"
-    case UnitPredicational(name,space) => name + "(" + space + ")"
+    case UnitPredicational(name,space) =>
+      if (name == ReservedSymbols.exerciseP.name) "__________"
+      else name + "(" + space + ")"
     //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeFormula=> op(t).opcode + "(" + pp(t.child) + ")"
     //@note all binary operators are infix, see [[OpSpec]]
@@ -163,7 +165,9 @@ object FullPrettyPrinter extends BasePrettyPrinter {
 
   private def pp(program: Program): String = program match {
     case a: ProgramConst        => statement(a.asString)
-    case a: SystemConst         => statement(a.toString)
+    case a: SystemConst         =>
+      if (a.name == ReservedSymbols.exerciseS.name) statement("__________")
+      else statement(a.toString)
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case Test(f)                => statement(op(program).opcode + "(" + pp(f) + ")")
@@ -183,7 +187,9 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   }
 
   private def ppODE(program: DifferentialProgram): String = program match {
-    case a: DifferentialProgramConst => a.asString
+    case a: DifferentialProgramConst =>
+      if (a.name == ReservedSymbols.exerciseD.name) "__________"
+      else a.asString
     case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
       assert(op(t).assoc==RightAssociative && !t.left.isInstanceOf[DifferentialProduct], "differential products are always right-associative")
@@ -294,7 +300,9 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
       }
       posInExprs.append(PosInExpr(((1<<posInExprs.size)-1).toBinaryString.map(_.asDigit).toList))
       wrap(flattened.zipWithIndex.map({ case (p, i) => pp(q++posInExprs(i), p) }).mkString(ppOp(term)), term)
-    case UnitFunctional(name,space,sort) => name + "(" + space + ")"
+    case UnitFunctional(name,space,sort) =>
+      if (name == ReservedSymbols.exerciseF.name) "__________"
+      else name + "(" + space + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => ppOp(t) + "(" + pp(q++0, Number(n)) + ")"
     // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
