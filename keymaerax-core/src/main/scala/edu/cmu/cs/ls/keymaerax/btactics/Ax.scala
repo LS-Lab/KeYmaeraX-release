@@ -3605,7 +3605,7 @@ object Ax extends Logging {
   @Axiom("leaveWithinClosed", key = "1.0", recursor = "*")
   lazy val leaveWithinClosed: DerivedAxiomInfo =
     derivedAxiom("leave within closed <=",
-      "==>(<{c_{|t_|}&q_(|t_|)}>p_(|t_|)<=0 <-> <{c_{|t_|}&q_(|t_|)&p_(|t_|)>=0}>p_(|t_|)=0)<-p_(|t_|)>=0".asSequent,
+      "==>(<{c_{|t_|}&q_(|t_|)}>p_(|t_|)<=0 <-> <{c_{|t_|}&q_(|t_|)&p_(|t_|)>=0}>p_(|t_|)=0) <- p_(|t_|)>=0".asSequent,
       prop & Idioms.<(
         cut("[{c_{|t_|}&q_(|t_|)}]p_(|t_|)>=0".asFormula) & Idioms.<(
           dC("p_(|t_|)>=0".asFormula)(-2)& Idioms.<(
@@ -4011,7 +4011,7 @@ object Ax extends Logging {
   )
 
   @Axiom("timeStep", key="1", unifier="linear")
-  lazy val timeStep: DerivedAxiomInfo = derivedFormula("timeStep", "[{x_'=1,c{|x_|}&q(||)}]p(||)<-(x_ <= h() & [{x_'=1,c{|x_|}&q(||)&x_<=h()}](p(||) & (x_=h()->[{x_'=1,c{|x_|}&q(||)&x_>=h()}]p(||))))".asFormula,
+  lazy val timeStep: DerivedAxiomInfo = derivedFormula("timeStep", "[{x_'=1,c{|x_|}&q(||)}]p(||) <- (x_ <= h() & [{x_'=1,c{|x_|}&q(||)&x_<=h()}](p(||) & (x_=h()->[{x_'=1,c{|x_|}&q(||)&x_>=h()}]p(||))))".asFormula,
       implyR(1) & andL(-1) &
         cutR("[{x_'=1, c{|x_|} & q(||)}]((x_>=h()->p(||))&(x_<=h()->p(||)))".asFormula)(1) &
         Idioms.<(
@@ -5029,9 +5029,9 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("<=*", key = "1", recursor = "0.0.0;0.0.1;0.1.0;0.1.1")
-  lazy val intervalDownTimes: DerivedAxiomInfo = derivedAxiom("<=* down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()*g_()<- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & (h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_()))".asFormula)),
+  lazy val intervalDownTimes: DerivedAxiomInfo = derivedAxiom("<=* down", Sequent(IndexedSeq(), IndexedSeq("h_()<=f_()*g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & (h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_()))".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable), ("h_()".asTerm, "z".asVariable), ("F_()".asTerm, "X".asVariable), ("G_()".asTerm, "Y".asVariable), ("ff_()".asTerm, "xx".asVariable), ("gg_()".asTerm, "yy".asVariable))(1) &
-      byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x*y<- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & (z<=xx*yy & z<=xx*Y & z<=X*yy & z<=X*Y)))".asFormula, TactixLibrary.RCF))
+      byUS(proveBy("\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x*y <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & (z<=xx*yy & z<=xx*Y & z<=X*yy & z<=X*Y)))".asFormula, TactixLibrary.RCF))
   )
 
   /**
