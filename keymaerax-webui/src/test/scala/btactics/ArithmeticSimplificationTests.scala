@@ -17,11 +17,22 @@ import edu.cmu.cs.ls.keymaerax.core._
 import scala.collection.immutable._
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
   * @author Nathan Fulton
   */
 class ArithmeticSimplificationTests extends TacticTestBase {
+  "Z3 simplifier tool" should "simplify some terms correctly" in withZ3 { tool =>
+    val terms = List(
+      "5*x-3*y+2*z-((0+(0*t+5*1))*x0+(1+5*t)*0-((0*t+3*1)*y0+3*t*0)+((0*t+2*1)*z0+2*t*0))".asTerm -> "5*x + (-(3))*y + 2*z + (-(5))*x0 + 3*y0 + (-(2))*z0".asTerm,
+      "15*x-9*y+6*z-((0*t+15*1)*x0+15*t*0+((0-(0*t+9*1))*y0+(1-9*t)*0)+((0*t+6*1)*z0+6*t*0))".asTerm -> "15*x + (-(9))*y + 6*z + (-(15))*x0 + 9*y0 + (-(6))*z0".asTerm
+    )
+    forEvery(Table(("Input", "Expected"), terms:_*))({ (t1, t2) =>
+      tool.simplify(t1, List.empty) shouldBe t2
+    })
+  }
+
   "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in withMathematica { _ =>
     proveBy("x=1, y=1 ==> x=1".asSequent, smartHide).subgoals.loneElement shouldBe "x=1 ==> x=1".asSequent
   }

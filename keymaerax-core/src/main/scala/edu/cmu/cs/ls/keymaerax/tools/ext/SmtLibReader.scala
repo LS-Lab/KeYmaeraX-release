@@ -111,7 +111,8 @@ object SmtLibReader {
     case Reals.NumeralLit(n) =>
       Number(BigDecimal(n))
     case Reals.DecimalLit(n) =>
-      Number(n)
+      if (n.isValidLong) Number(BigDecimal(n.longValue()))
+      else Number(n)
     case QualifiedIdentifier(Terms.Identifier(Terms.SSymbol(name), Nil), None) =>
       if (name.startsWith("-")) {
         // workaround for parser bug

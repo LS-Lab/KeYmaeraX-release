@@ -72,7 +72,12 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
     // result fits the input query index
     val qidx: Long = synchronized { queryIndex += 1; queryIndex }
     var result: (Long, String) = (-1, "")
-    val pl = ProcessLogger(s => result = (qidx, s))
+    val pl = ProcessLogger(s => result match {
+      case (-1, "") => result = (qidx, s)
+      case (i, rs) =>
+        assert(i == qidx)
+        result = (i, rs + "\n" + s)
+    })
     val (p, f) = synchronized {
       val p = cmd.run(pl) // start asynchronously, log output to logger
       z3Process = Some(p)
