@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext._
@@ -1839,11 +1839,12 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
 class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     // reapply lemmas (may have proved in the mean time)
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
     DbProofTree(db, proofId).openGoals.
       filter(n => n.maker.exists(_.startsWith("useLemma")) && !n.isProved).
       foreach(n => n.parent.map(p => {
         p.pruneBelow()
-        p.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), BelleParser(n.maker.get), n.maker.get, wait = true)
+        p.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), ArchiveParser.tacticParser(n.maker.get, proofSession.defs), n.maker.get, wait = true)
       }))
 
     val tree: ProofTree = DbProofTree(db, proofId)
@@ -1856,7 +1857,6 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
     val agendaItems: List[AgendaItem] = leaves.map(n =>
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     // add unexpanded functions, predicates, programs of the open goals of all leaves to the proof session
-    val proofSession = session(proofId).asInstanceOf[ProofSession]
     session(proofId) = leaves.flatMap(_.parent).foldLeft(proofSession)(RequestHelper.updateProofSessionDefinitions)
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
@@ -1995,7 +1995,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, proofSession.defs,
           RequestHelper.listenerFactory(db, proofSession),
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false, recordInternal=true)
-        val parentTactic = BelleParser(parentStep)
+        val parentTactic = ArchiveParser.tacticParser(parentStep, proofSession.defs)
         innerInterpreter(parentTactic, BelleProvable.plain(conjecture))
         innerInterpreter.kill()
 
@@ -2525,7 +2525,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               // see [[updateProofSessionDefinitions]] for proofSession.invSupplier update when tactic is finished
               TactixInit.invSupplier = proofSession.invSupplier
               // elaborate all variables to function/predicate symbols, but never auto-expand
-              val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator), proofSession.defs, expandAll=false)
+              val expr = ArchiveParser.tacticParser(tacticString, proofSession.defs)
 
               val appliedExpr: BelleExpr = (pos, pos2, expr) match {
                 case (None, None, _: AtPosition[BelleExpr]) =>
@@ -2626,8 +2626,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
           case _: ParsingException => t //@note backwards compatibility with database tactics not in JSON
         }
 
-        //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
-        val tactic = BelleParser.parseBackwardsCompatible(tacticText, proofSession.defs)
+        val tactic = ArchiveParser.tacticParser(tacticText, proofSession.defs)
 
         def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
@@ -2991,11 +2990,12 @@ class GetTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String) ex
   }
 }
 
-class TacticDiffRequest(db: DBAbstraction, oldTactic: String, newTactic: String) extends Request with ReadRequest {
+class TacticDiffRequest(db: DBAbstraction, proofId: String, oldTactic: String, newTactic: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val oldT = BelleParser(oldTactic)
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    val oldT = ArchiveParser.tacticParser(oldTactic, proofSession.defs)
     try {
-      val newT = BelleParser(newTactic)
+      val newT = ArchiveParser.tacticParser(newTactic, proofSession.defs)
       val diff = TacticDiff.diff(oldT, newT)
       new TacticDiffResponse(diff) :: Nil
     } catch {
