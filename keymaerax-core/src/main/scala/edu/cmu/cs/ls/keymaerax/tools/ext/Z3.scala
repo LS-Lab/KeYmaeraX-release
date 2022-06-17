@@ -6,11 +6,12 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3QETool, Z3Solver}
-import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolExecutionException, ToolInternalException, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool, ToolExecutionException, ToolOperationManagement}
 
+import java.io.StringReader
 import scala.collection.immutable.Map
 
 /**
@@ -66,16 +67,21 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   }
 
   /** @inheritdoc */
-  override def simplify(expr: Expression, assumptions: List[Formula]): Expression =
-    //@note works only for terms, will fail on formulas
-    simplify(expr, assumptions, Parser.parser)
+  override def simplify(expr: Expression, assumptions: List[Formula]): Expression = expr match {
+    case f: Formula => simplify(f, assumptions)
+    case t: Term => simplify(t, assumptions)
+    case _ => throw ToolExecutionException("Z3 supports only simplifying terms and formulas, but not " + expr.kind)
+  }
 
   /** @inheritdoc */
-  //@todo SMTLib formula parser
-  override def simplify(expr: Formula, assumptions: List[Formula]): Formula = simplify(expr, assumptions, ???)
+  override def simplify(expr: Formula, assumptions: List[Formula]): Formula = simplify(expr, assumptions,
+    parser = (s: String) => SmtLibReader.readFml(s)
+  )
 
   /** @inheritdoc */
-  override def simplify(expr: Term, assumptions: List[Formula]): Term = simplify(expr, assumptions, Parser.parser.termParser)
+  override def simplify(expr: Term, assumptions: List[Formula]): Term = simplify(expr, assumptions,
+    parser = (s: String) => SmtLibReader.readTerm(s)
+  )
 
   /** Simplifies expression `expr` accounting for `assumptions`, parses the result using `parser`. */
   private def simplify[T<:Expression](expr: T, assumptions: List[Formula], parser: String=>T): T = {
@@ -87,7 +93,7 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
       try {
         parser(z3Output)
       } catch {
-        case _: ParseException => expr
+        case _: ConversionException => expr
       }
     }
   }
