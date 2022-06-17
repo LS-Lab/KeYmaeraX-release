@@ -43,7 +43,7 @@ class SmtLibTests extends TacticTestBase {
         }
       }, f).get
 
-      convertFml(SmtLibReader.readFml(DefaultSMTConverter(t))._1)
+      convertFml(SmtLibReader.readAssert(DefaultSMTConverter(t))._1)
     }
   }
 

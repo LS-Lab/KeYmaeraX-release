@@ -6,6 +6,8 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.tools.ConversionException
+import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
 import smtlib.theories.{Core, Reals}
 import smtlib.trees.Commands.{Logic, _}
 import smtlib.trees.Terms.{Attribute, FunctionApplication, Identifier, QualifiedIdentifier, SKeyword, SSymbol}
@@ -19,11 +21,26 @@ object SmtLibReader {
   val USCORE: String = "uscore"
 
   /** Reads a formula from an input containing a single (assert). */
-  def readFml(s: String): (Formula, Map[String, String]) = {
+  def readAssert(s: String): (Formula, Map[String, String]) = {
     read(new StringReader(s)) match {
       case ((f: Formula) :: Nil, info) => (f, info)
       case _ => throw new IllegalArgumentException("Not a single formula: " + s)
     }
+  }
+
+  /** Reads a formula. */
+  def readFml(s: String): Formula = readExpr(s, convertFormula(_)(Map.empty))
+
+  /** Reads a term. */
+  def readTerm(s: String): Term = readExpr(s, convertTerm(_)(Map.empty))
+
+  /** Reads an expression using `convert` to turn it into the desired kind. */
+  private def readExpr[T <: Expression](s: String, convert: Terms.Term => T): T = {
+      val r = new StringReader(s)
+      val lexer = new smtlib.lexer.Lexer(r)
+      val parser = new smtlib.parser.Parser(lexer)
+      val term = parser.parseTerm
+      convert(term)
   }
 
   /** Reads expressions occurring in `(assert ...)` statements in the input provided by reader `r`. */
@@ -57,7 +74,7 @@ object SmtLibReader {
   }
 
   /** Converts a formula. */
-  private def convertFormula(t: Terms.Term)(implicit defs: Map[String, Expression]): Formula = t match {
+  def convertFormula(t: Terms.Term)(implicit defs: Map[String, Expression]): Formula = t match {
     case Core.True() => True
     case Core.False() => False
     case Reals.LessThan(l, r) => Less(convertTerm(l), convertTerm(r))
@@ -90,7 +107,7 @@ object SmtLibReader {
   }
 
   /** Converts a term. */
-  private def convertTerm(t: Terms.Term)(implicit defs: Map[String, Expression]): Term = t match {
+  def convertTerm(t: Terms.Term)(implicit defs: Map[String, Expression]): Term = t match {
     case Reals.NumeralLit(n) =>
       Number(BigDecimal(n))
     case Reals.DecimalLit(n) =>
@@ -99,9 +116,15 @@ object SmtLibReader {
       if (name.startsWith("-")) {
         // workaround for parser bug
         Neg(Number(BigDecimal(name.stripPrefix("-").trim)))
-      } else {
-        //@todo functions vs. variables
-        Variable(sanitize(name))
+      } else try {
+        DefaultSMTConverter.nameFromIdentifier(name) match {
+          case v: Variable => v //@note also differential symbols
+          case f: Function => FuncOf(f, Nothing)
+        }
+      } catch {
+        case _: ConversionException =>
+          //@todo functions vs. variables in non-KeYmaera X generated SMT-Lib input
+          Variable(sanitize(name))
       }
     case Reals.Neg(c)    => Neg(convertTerm(c))
     case Reals.Add(l, r) => Plus(convertTerm(l), convertTerm(r))
