@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.math.{MathContext, RoundingMode}
-
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -15,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 
+import scala.annotation.tailrec
 import scala.collection.immutable._
 
 /** Interval Arithmetic
@@ -107,6 +107,7 @@ object IntervalArithmeticV2 {
     case Number(n) => (n.bigDecimal.round(downContext(prec)), n.bigDecimal.round(upContext(prec)))
     case Times(a, b) => mult_endpoints(prec)(bounds)(a,a)(b,b)
     case Divide(a, b) => divide_endpoints(prec)(bounds)(a,a)(b,b)
+    case Power(a, Neg(Number(i))) if (-i).isValidInt => power_endpoints(prec)(bounds)(a, a)(-i.toInt)
     case Power(a, Number(i)) if i.isValidInt => power_endpoints(prec)(bounds)(a, a)(i.toInt)
     case _ if bounds._1.isDefinedAt(t) && bounds._2.isDefinedAt(t) => (bounds._1(t), bounds._2(t))
     case _ => throw new RuntimeException("Unable to compute bounds for " + t)
@@ -308,21 +309,64 @@ object IntervalArithmeticV2 {
       case None =>
         val prv: ProvableSig =
           if (n >= 0) {
-            if (n % 2 == 0)
-              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
-                "((((0<=ff_() & h_()<=ff_()^" + n + ") | (F_()<=0 & h_()<=F_()^" + n + ") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true))" +
-                "==> h_()<=f_()^" + n).asSequent, QE & done)
-            else
-              proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^" + n + "))<->true)) ==> h_()<=f_()^" + n + "").asSequent, QE & done)
+            if (n % 2 == 0) {
+              // ((ff_()<=f_() & f_()<=F_()) & ((((0<=ff_() & h_()<=ff_()^n) | (F_()<=0 & h_()<=F_()^n) | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true)) ==> h_()<=f_()^n
+              val ante = And(
+                And(LessEqual(t_ff, t_f), LessEqual(t_f, t_F)),
+                Equiv(
+                  Or(
+                    And(LessEqual(Number(0), t_ff), LessEqual(t_h, Power(t_ff, Number(n)))),
+                    Or(
+                      And(LessEqual(t_F, Number(0)), LessEqual(t_h, Power(t_F, Number(n)))),
+                      And(LessEqual(t_ff, Number(0)), And(LessEqual(Number(0), t_F), LessEqual(t_h, Number(0))))
+                    )
+                  )
+                  ,True
+                )
+              )
+              val succ = LessEqual(t_h, Power(t_f, Number(n)))
+              proveBy(Sequent(IndexedSeq(ante), IndexedSeq(succ)), QE & done)
+            } else {
+              // ((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^n))<->true)) ==> h_()<=f_()^n
+              val ante = And(
+                And(LessEqual(t_ff, t_f), LessEqual(t_f, t_F)),
+                Equiv(LessEqual(t_h, Power(t_ff, Number(n))), True)
+              )
+              val succ = LessEqual(t_h, Power(t_f, Number(n)))
+              proveBy(Sequent(IndexedSeq(ante), IndexedSeq(succ)), QE & done)
+            }
           } else {
-            if (n % 2 == 0)
-              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
-                "((((0<ff_() & h_()*F_()^" + -n + "<=1) | (F_()<0 & h_()*ff_()^" + -n + "<=1)))<->true))" +
-                "==> h_()<=f_()^" + n).asSequent, QE & done)
-            else
-              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
-                "(((ff_()>0 & h_()*F_()^" + -n + "<=1) | (F_()<0 & h_()*F_()^" + -n + ">=1))<->true))" +
-                "==> h_()<=f_()^" + n + "").asSequent, QE & done)
+            if (n % 2 == 0) {
+              // ((ff_()<=f_() & f_()<=F_()) & ((((0<ff_() & h_()*F_()^(-n)<=1) | (F_()<0 & h_()*ff_()^(-n)<=1)))<->true)) ==> h_()<=f_()^n
+              val ante = And(
+                And(LessEqual(t_ff, t_f), LessEqual(t_f, t_F)),
+                Equiv(
+                  Or(
+                    And(Less(Number(0), t_ff), LessEqual(Times(t_h, Power(t_F, Number(-n))), Number(1))),
+                    And(Less(t_F, Number(0)), LessEqual(Times(t_h, Power(t_ff, Number(-n))), Number(1)))
+                  )
+                  ,
+                  True
+                )
+              )
+              val succ = LessEqual(t_h, Power(t_f, Number(n)))
+              proveBy(Sequent(IndexedSeq(ante), IndexedSeq(succ)), QE & done)
+            } else {
+              // ((ff_()<=f_() & f_()<=F_()) & (((ff_()>0 & h_()*F_()^(-n)<=1) | (F_()<0 & h_()*F_()^(-n)>=1))<->true)) ==> h_()<=f_()^n
+              val ante = And(
+                And(LessEqual(t_ff, t_f), LessEqual(t_f, t_F)),
+                Equiv(
+                  Or(
+                    And(Greater(t_ff, Number(0)), LessEqual(Times(t_h, Power(t_F, Number(-n))), Number(1))),
+                    And(Less(t_F, Number(0)), GreaterEqual(Times(t_h, Power(t_F, Number(-n))), Number(1)))
+                  )
+                  ,
+                  True
+                )
+              )
+              val succ = LessEqual(t_h, Power(t_f, Number(n)))
+              proveBy(Sequent(IndexedSeq(ante), IndexedSeq(succ)), QE & done)
+            }
           }
         powerDownCache = powerDownCache.updated(n, prv)
         prv
@@ -333,16 +377,48 @@ object IntervalArithmeticV2 {
       case Some(prv) => prv
       case None =>
         val prv: ProvableSig =
-          if (n >= 0)
-            proveBy(("((ff_()<=f_() & f_()<=F_()) & (((ff_()^" + n + " <= h_() & F_()^" + n + " <=h_()))<->true)) ==> f_()^" + n + " <=h_()").asSequent, QE & done)
-          else if (n % 2 == 0) {
-            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
-              "(((ff_()>0 & 1 <=ff_()^" + -n + "*h_()) | (F_()<0 & 1 <=F_()^" + -n + "*h_()))<->true))" +
-              "==> f_()^" + n + " <=h_()").asSequent, QE & done)
+          if (n >= 0) {
+            // ((ff_()<=f_() & f_()<=F_()) & (((ff_()^n <= h_() & F_()^n<=h_()))<->true)) ==> f_()^n<=h_()
+            val ante = And(
+              And(LessEqual(t_ff, t_f), LessEqual(t_f, t_F)),
+              Equiv(
+                And(LessEqual(Power(t_ff, Number(n)), t_h), LessEqual(Power(t_F, Number(n)), t_h))
+                ,
+                True
+              )
+            )
+            val succ = LessEqual(Power(t_f, Number(n)), t_h)
+            proveBy(Sequent(IndexedSeq(ante), IndexedSeq(succ)), QE & done)
+          } else if (n % 2 == 0) {
+            // ((ff_()<=f_() & f_()<=F_()) & (((ff_()>0 & 1 <=ff_()^(-n)*h_()) | (F_()<0 & 1 <=F_()^(-n)*h_()))<->true)) ==> f_()^n<=h_()
+            val ante = And(
+              And(LessEqual(t_ff, t_f), LessEqual(t_f, t_F)),
+              Equiv(
+                Or(
+                  And(Greater(t_ff, Number(0)), LessEqual(Number(1), Times(Power(t_ff, Number(-n)), t_h))),
+                  And(Less(t_F, Number(0)), LessEqual(Number(1), Times(Power(t_F, Number(-n)), t_h)))
+                )
+                ,
+                True
+              )
+            )
+            val succ = LessEqual(Power(t_f, Number(n)), t_h)
+            proveBy(Sequent(IndexedSeq(ante), IndexedSeq(succ)), QE & done)
           } else {
-            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
-              "(((ff_()>0 & 1 <=ff_()^" + -n + "*h_()) | (F_()<0 & 1 >=ff_()^" + -n + "*h_()))<->true))" +
-              "==> f_()^" + n + " <=h_()").asSequent, QE & done)
+            // ((ff_()<=f_() & f_()<=F_()) & (((ff_()>0 & 1 <=ff_()^(-n*h_()) | (F_()<0 & 1 >=ff_()^(-n)*h_()))<->true)) ==> f_()^n<=h_()
+            val ante = And(
+              And(LessEqual(t_ff, t_f), LessEqual(t_f, t_F)),
+              Equiv(
+                Or(
+                  And(Greater(t_ff, Number(0)), LessEqual(Number(1), Times(Power(t_ff, Number(-n)), t_h))),
+                  And(Less(t_F, Number(0)), GreaterEqual(Number(1), Times(Power(t_ff, Number(-n)), t_h)))
+                )
+                ,
+                True
+              )
+            )
+            val succ = LessEqual(Power(t_f, Number(n)), t_h)
+            proveBy(Sequent(IndexedSeq(ante), IndexedSeq(succ)), QE & done)
           }
         powerUpCache = powerUpCache.updated(n, prv)
         prv
@@ -383,8 +459,10 @@ object IntervalArithmeticV2 {
       "Bounds must be given with a number on one side of one of the comparison operators <,<=,=,>=,>.\n" +
       "Maybe try Propositional->Exhaustive (prop) first?"
     // TODO: if there is more like this, better use an [[ StaticSingleAssignment.unfoldMap]] throughout
-    def intOfTerm(t: Term) : Option[Int] = t match {
+    @tailrec
+    def intOfTerm(t: Term): Option[Int] = t match {
       case Number(n) if n.isValidInt => Some(n.toIntExact)
+      case Neg(Number(n)) if (-n).isValidInt => Some((-n).toIntExact)
       case v: Variable => ssaMap.get(v) match {
         case Some(Number(n)) => intOfTerm(Number(n))
         case _ => None
@@ -1044,7 +1122,7 @@ object IntervalArithmeticV2 {
     val nantes = sequent.ante.length
     val prec = 5
     val qe = ToolProvider.qeTool().get
-    val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(terms.toIndexedSeq)
+    val bnds = proveBounds(prec)(qe)(sequent.ante)(include_assms = true)(BoundMap(), BoundMap(), Map())(terms.toIndexedSeq)
     val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
     (prvs, prvs.indices).zipped.foldLeft(provable) {
       (result, prvi) => prvi match {

@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Forall, Neg, Plus, Sequent, True}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.SlowTest
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
 
@@ -88,9 +88,9 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     println(uppers)
   }
 
-  val xyz_bounds = IndexedSeq("-10 <= f(x)", "f(x) <= 1", "-3 <= x", "x <= -1", "2 <= c()", "c() <= 4").map(_.asFormula)
+  val xyz_bounds = IndexedSeq("(-10) <= f(x)", "f(x) <= 1", "(-3) <= x", "x <= (-1)", "2 <= c()", "c() <= 4").map(_.asFormula)
 
-  "intervalCutTerms" should "work with all supported operations" in withMathematica { qeTool =>
+  "intervalCutTerms" should "work with all supported operations" in withMathematica { _ =>
     val res = proveBy(Sequent(xyz_bounds, IndexedSeq(
       ("-13<=x+f(x) & x+f(x)<=0 &" +
         "-3<=x*f(x) & x*f(x)<=30 &" +
@@ -103,14 +103,14 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
         "-1000<=f(x)^3 & f(x)^3<=1 &" +
         "-27<=x^3 & x^3<=-1 &" +
         "8<=c()^3 & c()^3<=64 &" +
-        "25*10^-2<=c()^-1 & c()^-1<=5*10^-1 &" +
-        "625*10^-4<=c()^-2 & c()^-2<=25*10^-2 &" +
-        "15625*10^-6<=c()^-3 & c()^-3<=125*10^-3 &" +
+        "25*10^(-2)<=c()^(-1) & c()^(-1)<=5*10^(-1) &" +
+        "625*10^(-4)<=c()^(-2) & c()^(-2)<=25*10^(-2) &" +
+        "15625*10^(-6)<=c()^(-3) & c()^(-3)<=125*10^(-3) &" +
         "1<=c()^0 & c()^0<=1 &" +
         "1<=x^0 & x^0<=1 &" +
-        "-1<=x^-1 & x^-1<=-33333*10^-5 &" +
-        "11111*10^-5<=x^-2 & x^-2<=1 &" +
-        "-1<=x^-3 & x^-3<=-37037*10^-6"
+        "-1<=x^(-1) & x^(-1)<=(-33333)*10^(-5) &" +
+        "11111*10^(-5)<=x^(-2) & x^(-2)<=1 &" +
+        "-1<=x^(-3) & x^(-3)<=(-37037)*10^(-6)"
         ).asFormula)),
       intervalCutTerms(Seq(
         "x+f(x)".asTerm,
@@ -125,13 +125,13 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
         "x^3".asTerm,
         "c()^3".asTerm,
         "c()^0".asTerm,
-        "c()^-1".asTerm,
-        "c()^-2".asTerm,
-        "c()^-3".asTerm,
+        "c()^(-1)".asTerm,
+        "c()^(-2)".asTerm,
+        "c()^(-3)".asTerm,
         "x^0".asTerm,
-        "x^-1".asTerm,
-        "x^-2".asTerm,
-        "x^-3".asTerm
+        "x^(-1)".asTerm,
+        "x^(-2)".asTerm,
+        "x^(-3)".asTerm
       )) & SimplifierV3.fullSimpTac() & prop
     )
     res shouldBe 'proved
@@ -161,7 +161,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   }
 
   it should "work with non-constant numerical bounds" in withMathematica { _ =>
-    proveBy("1/3<=x, x<=5*10^(-1)==>66666*10^-5<=2*x&2*x<=10*10^-1".asSequent, intervalCutTerms(Seq("2*x".asTerm)) & prop) shouldBe
+    proveBy("1/3<=x, x<=5*10^(-1)==>66666*10^(-5)<=2*x&2*x<=10*10^(-1)".asSequent, intervalCutTerms(Seq("2*x".asTerm)) & prop) shouldBe
       'proved
   }
 
@@ -209,22 +209,22 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   }
 
   "IA subgoal for low order TM" should "prove #1" in withMathematica { _ =>
-    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-83268644009967/50000000000000+-1*rem1+-1/2*x0()+y0())*1<=0".asSequent
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^(-16) < rem0, rem0 < 332987591698456*10^(-16), -165372880199332*10^(-15) < rem1, rem1 < 164937953442280*10^(-15)\n  ==>  (-83268644009967/50000000000000+-1*rem1+-1/2*x0()+y0())*1<=0".asSequent
     val res = proveBy(seq, intervalArithmetic)
     res shouldBe 'proved
   }
   "IA subgoal for low order TM" should "prove #2" in withMathematica { _ =>
-    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-41623448836057/25000000000000+rem1+1/2*x0()+-1*y0())*1<=0".asSequent
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^(-16) < rem0, rem0 < 332987591698456*10^(-16), -165372880199332*10^(-15) < rem1, rem1 < 164937953442280*10^(-15)\n  ==>  (-41623448836057/25000000000000+rem1+1/2*x0()+-1*y0())*1<=0".asSequent
     val res = proveBy(seq, intervalArithmetic)
     res shouldBe 'proved
   }
   "IA subgoal for low order TM" should "prove #3" in withMathematica { _ =>
-    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-102521876236019/12500000000000+rem0^2+2*x0()+2*y0()+(x0()+y0())^2+2*rem0*(1+x0()+y0()))*1+(-55915715877171/12500000000000+11/5*rem0+11/5*x0()+11/5*y0())*t^1+-1/500000000000000*t^2<=0\n".asSequent
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^(-16) < rem0, rem0 < 332987591698456*10^(-16), -165372880199332*10^(-15) < rem1, rem1 < 164937953442280*10^(-15)\n  ==>  (-102521876236019/12500000000000+rem0^2+2*x0()+2*y0()+(x0()+y0())^2+2*rem0*(1+x0()+y0()))*1+(-55915715877171/12500000000000+11/5*rem0+11/5*x0()+11/5*y0())*t^1+-1/500000000000000*t^2<=0\n".asSequent
     val res = proveBy(seq, intervalArithmetic)
     res shouldBe 'proved
   }
   "IA subgoal for low order TM" should "prove #4" in withMathematica { _ =>
-    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-410108025149723/50000000000000+-1*rem0^2+-2*x0()+-2*y0()+-1*(x0()+y0())^2+-2*rem0*(1+x0()+y0()))*1+(-223685820347549/50000000000000+-11/5*rem0+-11/5*x0()+-11/5*y0())*t^1+-1/1000000000000000*t^2<=0".asSequent
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^(-16) < rem0, rem0 < 332987591698456*10^(-16), -165372880199332*10^(-15) < rem1, rem1 < 164937953442280*10^(-15)\n  ==>  (-410108025149723/50000000000000+-1*rem0^2+-2*x0()+-2*y0()+-1*(x0()+y0())^2+-2*rem0*(1+x0()+y0()))*1+(-223685820347549/50000000000000+-11/5*rem0+-11/5*x0()+-11/5*y0())*t^1+-1/1000000000000000*t^2<=0".asSequent
     val res = proveBy(seq, intervalArithmetic)
     res shouldBe 'proved
   }
@@ -265,14 +265,14 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     val (res, _, _) =
       IntervalArithmeticV2.proveBinop(qeTool)(10)(IndexedSeq())(Plus)("0.1".asTerm, "0.3".asTerm)("0.4".asTerm, "0.8".asTerm)
     res shouldBe 'proved
-    res.conclusion.succ.loneElement shouldBe "\\forall i1_ \\forall i2_ (0.1<=i1_&i1_<=0.3&0.4<=i2_&i2_<=0.8->5*10^-1<=i1_+i2_&i1_+i2_<=11*10^-1)".asFormula
+    res.conclusion.succ.loneElement shouldBe "\\forall i1_ \\forall i2_ (0.1<=i1_&i1_<=0.3&0.4<=i2_&i2_<=0.8->5*10^(-1)<=i1_+i2_&i1_+i2_<=11*10^(-1))".asFormula
   }
 
   "proveUnop" should "prove unary operations" in withMathematica { qeTool =>
     val (res, _, _) =
       IntervalArithmeticV2.proveUnop(qeTool)(10)(IndexedSeq())(Neg)("0.1".asTerm, "0.3".asTerm)
     res shouldBe 'proved
-    res.conclusion.succ.loneElement shouldBe "\\forall i1_ (0.1<=i1_&i1_<=0.3->-3*10^-1<=-i1_&-i1_<=-1*10^-1)".asFormula
+    res.conclusion.succ.loneElement shouldBe "\\forall i1_ (0.1<=i1_&i1_<=0.3->(-3)*10^(-1)<=-i1_&-i1_<=(-1)*10^(-1))".asFormula
   }
 
   "SSAMap" should "extract subterms" in withMathematica { _ =>
