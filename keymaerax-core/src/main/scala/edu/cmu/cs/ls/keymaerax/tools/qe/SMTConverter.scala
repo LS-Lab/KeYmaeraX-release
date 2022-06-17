@@ -94,6 +94,21 @@ abstract class SMTConverter extends (Formula=>String) {
     }
   }
 
+  /** Converts an identifier back to a [[NamedSymbol]]. @see [[nameIdentifier]]. */
+  private[tools] def nameFromIdentifier(s: String): NamedSymbol = {
+    def toName(s: String): (String, Option[Int]) = {
+      if (s.endsWith("_")) (s, None)
+      else s.split("_").toSeq match {
+        case n +: Nil =>  (n, None)
+        case n +: i +: Nil => (n, Some(Integer.valueOf(i)))
+      }
+    }
+    if (s.startsWith(VAR_PREFIX)) { val (n, i) = toName(s.stripPrefix(VAR_PREFIX)); Variable(n, i) }
+    else if (s.startsWith(FUNC_PREFIX)) { val (n, i) = toName(s.stripPrefix(FUNC_PREFIX)); Function(n, i, Unit, Real) }
+    else if (s.startsWith(DIFFSYMBOL_PREFIX)) { val (n, i) = toName(s.stripPrefix(DIFFSYMBOL_PREFIX)); DifferentialSymbol(Variable(n, i)) }
+    else throw ConversionException("Unable to convert " + s + " to a named symbol")
+  }
+
 
   /** Convert sort to SMT parameter declaration syntax. */
   private def generateFuncParamSorts(t: Sort) : String = t match {
