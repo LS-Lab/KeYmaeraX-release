@@ -101,6 +101,7 @@ abstract class SMTConverter extends (Formula=>String) {
       else s.split("_").toSeq match {
         case n +: Nil =>  (n, None)
         case n +: i +: Nil => (n, Some(Integer.valueOf(i)))
+        case n +: "" +: i +: Nil => (n + "_", Some(Integer.valueOf(i))) //@note case x__i
       }
     }
     if (s.startsWith(VAR_PREFIX)) { val (n, i) = toName(s.stripPrefix(VAR_PREFIX)); Variable(n, i) }
