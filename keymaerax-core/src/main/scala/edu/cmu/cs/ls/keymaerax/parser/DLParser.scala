@@ -424,8 +424,14 @@ class DLParser extends Parser {
     }
 
   def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
-      numberLiteral | number./ | dot./ | function(doAmbigCuts).flatMapX(diff) | unitFunctional(doAmbigCuts).flatMapX(diff) |
-        variable | termList(doAmbigCuts).flatMapX(diff) | "__________".!.map(_ => UnitFunctional("exerciseF_", AnyArg, Real))
+    (if (doAmbigCuts) numberLiteral./ else NoCut(numberLiteral)) |
+      (if (doAmbigCuts) number./ else NoCut(number)) |
+      dot./ |
+      function(doAmbigCuts).flatMapX(diff) |
+      unitFunctional(doAmbigCuts).flatMapX(diff) |
+      variable |
+      termList(doAmbigCuts).flatMapX(diff) |
+      "__________".!.map(_ => UnitFunctional("exerciseF_", AnyArg, Real))
 
   def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
     // Note interpretations can only appear on functions (not predicates)
@@ -549,8 +555,6 @@ class DLParser extends Parser {
         case (form,None) => form
         case (form,Some("'")) => DifferentialFormula(form)
       })
-    /* Exercise */
-    | "__________".!.map(_ => UnitPredicational("exerciseP_", AnyArg))
   )
 
   def unambiguousBaseF[_: P]: P[Formula] =
@@ -568,7 +572,9 @@ class DLParser extends Parser {
       case ("<",p,">", f) => Diamond(p, f)} |
     ("!" ~/ baseF ).map(Not) |
     predicational |
-    "⎵".!.map(_ => DotFormula)
+    "⎵".!.map(_ => DotFormula) |
+    /* Exercise */
+    "__________".!.map(_ => UnitPredicational("exerciseP_", AnyArg))
 
   /** Parses a comparison, given the left-hand term */
   def comparison[_: P]: P[Formula] = P(

@@ -42,7 +42,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     val ex = the [ParseException] thrownBy Parser.parser.termParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
-    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"-\")"
+    ex.expect shouldBe "(\"(\" | number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
   }
 
   it should "report expected term on rhs FROM FORMULA" in {
@@ -50,7 +50,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     val ex = the [ParseException] thrownBy Parser.parser.formulaParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
-    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"-\")"
+    ex.expect shouldBe "(\"(\" | number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
   }
 
   "dL archive parser" should "report missing problem" in {
@@ -81,14 +81,14 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     e.hint should include("Real")
   }
 
-  // TODO
-  it should "bad start of entry" in {
+  it should "FEATURE_REQUEST: bad start of entry" taggedAs TodoTest in {
     val input =
       """BadEntry
         |End.
       """.stripMargin
 
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+    //@todo shared definitions not yet part of the error message, should be similar to below
     e.expect shouldBe "(sharedDefinitions | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
     e.found shouldBe "\"BadEntry\""
     e.hint shouldBe "Try (\"SharedDefinitions\" | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
@@ -133,10 +133,10 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")"""
+    e.expect shouldBe """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")"""
     e.found shouldBe "\"}]x>=0\""
     // todo: maybe provide verbose suggestions here somehow??
-    e.hint shouldBe """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "-" | [0-9] | "." | "•" | "(")"""
+    e.hint shouldBe """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")"""
   }
 
   it should "give correct error location for disallowed identifier" in {
@@ -148,9 +148,9 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe """(baseTerm | "-")"""
+    e.expect shouldBe """("(" | number | dot | function | unitFunctional | variable | termList | "__________" | "-")"""
     e.found shouldBe "\"ax__\""
-    e.hint shouldBe """Try ("-" | [0-9] | "." | "•" | "(")"""
+    e.hint shouldBe """Try ("(" | [0-9] | "." | "•" | "__________" | "-")"""
   }
 
   it should "give correct error location for invalid formula extension" in {
@@ -163,7 +163,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
     e.msg shouldBe "Error parsing problem at 2:1"
-    e.expect shouldBe """([a-zA-Z0-9] | "_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | "End.")"""
+    e.expect shouldBe """([a-zA-Z0-9] | "_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | "End.")"""
     e.found shouldBe "\"<5\""
     e.hint should include("End")
   }

@@ -5,9 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
@@ -87,6 +85,10 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     DLParser("x*-y*z") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Variable("z"))))
   }
 
+  it should "parse parenthesized formulas with decimal numbers" in {
+    DLParser("!(0.8<=x)") shouldBe Not(LessEqual(Number(0.8), Variable("x")))
+  }
+
   it should "parse number differentials" in {
     DLParser("(4)'") shouldBe Differential(Number(4))
     DLParser("(0)'") shouldBe Differential(Number(0))
@@ -131,8 +133,8 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     the [ParseException] thrownBy DLParser("x//y") should have message
       """1:3 Error parsing term at 1:1
         |Found:    "/y" at 1:3
-        |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "-")
-        |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "-")""".stripMargin
+        |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "__________" | "-")
+        |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin
   }
 
 }
