@@ -93,12 +93,7 @@ object TactixLibrary extends HilbertCalculus
   def differentialInvGenerator: Generator[GenProduct] = TactixInit.differentialInvGenerator
   /** Default generator that provides loop invariants and differential invariants to use.
     * @see [[InvariantGenerator]] */
-  val invGenerator: Generator[GenProduct] = (sequent, pos) => sequent.sub(pos) match {
-    case Some(Box(_: ODESystem, _)) => differentialInvGenerator(sequent, pos)
-    case Some(Box(_: Loop, _))      => loopInvGenerator(sequent, pos)
-    case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
-    case None    => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
-  }
+  val invGenerator: Generator[GenProduct] = TactixInit.invGenerator
 
   // Hilbert calculus axioms @see [[HilbertCalculus]]
   // Propositional/first-order sequent calculus @see [[SequentCalculus]]

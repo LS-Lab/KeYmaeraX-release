@@ -2,6 +2,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.core.{Box, Loop, ODESystem}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 
 import scala.collection.immutable.Nil
 
@@ -23,4 +25,13 @@ object TactixInit {
     * @see [[TactixLibrary]]
     * @see [[InvariantGenerator]] */
   var differentialInvGenerator: Generator[GenProduct] = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator) //@note asks invSupplier
+
+  /** Default generator that provides loop invariants and differential invariants to use.
+    * @see [[InvariantGenerator]] */
+  val invGenerator: Generator[GenProduct] = (sequent, pos) => sequent.sub(pos) match {
+    case Some(Box(_: ODESystem, _)) => differentialInvGenerator(sequent, pos)
+    case Some(Box(_: Loop, _))      => loopInvGenerator(sequent, pos)
+    case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
+    case None    => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
+  }
 }
