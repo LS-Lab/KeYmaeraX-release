@@ -102,7 +102,7 @@ object KeYmaeraXTool extends Tool {
       case Some("KeYmaeraXParser") | None => KeYmaeraXArchiveParser
       case Some("DLParser") =>
         new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
-          ReflectiveExpressionBuilder(_, _, Some(TactixInit.invSupplier), _)))
+          ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _)))
       case Some(p) => throw new ProverSetupException("Unknown parser " + p + "; please use one of 'KeYmaeraXParser' or 'DLParser'")
     })
 
