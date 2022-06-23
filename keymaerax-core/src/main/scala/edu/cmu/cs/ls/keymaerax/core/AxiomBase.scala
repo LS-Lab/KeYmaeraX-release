@@ -443,7 +443,7 @@ Axiom "IVT"
 End.
 
 Axiom "DCC"
-  [{c&r(||)}](p(||)->q(||))<-(([{c&r(||)&p(||)}]q(||)) & ([{c&r(||)}](!p(||)->[{c&r(||)}]!p(||))))
+  [{c&r(||)}](p(||)->q(||)) <- (([{c&r(||)&p(||)}]q(||)) & ([{c&r(||)}](!p(||)->[{c&r(||)}]!p(||))))
   /* @note formal proof DCCaxiom in https://github.com/LS-Lab/Isabelle-dL/blob/d6ca357/Differential_Axioms2.thy
    * differential conditional cut (e.g., (40) in https://arxiv.org/abs/1903.00153v1) */
 End.
