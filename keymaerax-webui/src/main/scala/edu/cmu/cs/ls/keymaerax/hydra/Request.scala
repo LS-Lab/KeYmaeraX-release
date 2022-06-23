@@ -2446,14 +2446,15 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Right(t: TwoPositionTacticInfo) => (t.codeName, pos, pos2)
         case Right(t: InputTwoPositionTacticInfo) => (t.codeName, pos, pos2)
         case Right(t: BuiltinInfo) => (t.codeName, None, None)
+        case Right(t: CoreAxiomInfo) => (t.codeName, pos, None)
+        case Right(t: DerivedAxiomInfo) => (t.codeName, pos, None)
         case Right(t) => (t.codeName, None, None)
       }
       else (belleTerm, pos, pos2)
 
     if (inputs.isEmpty && adaptedPos.isEmpty) { assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2"); specificTerm }
-    else if (inputs.isEmpty && adaptedPos.isDefined && adaptedPos2.isEmpty) { specificTerm + "(" + adaptedPos.get.prettyString + ")" }
-    else if (inputs.isEmpty && adaptedPos.isDefined && adaptedPos2.isDefined) { specificTerm + "(" + adaptedPos.get.prettyString + "," + adaptedPos2.get.prettyString + ")" }
-    else specificTerm + "(" + paramStrings.mkString(",") + ")"
+    else if (inputs.isEmpty) { specificTerm + "(" + adaptedPos.get.prettyString + adaptedPos2.map("," + _.prettyString).getOrElse("") + ")" }
+    else specificTerm + "(" + paramStrings.mkString(",") + adaptedPos.map("," + _.prettyString).getOrElse("") + adaptedPos2.map("," + _.prettyString).getOrElse("") + ")"
   }
 
   private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
@@ -2527,19 +2528,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               // elaborate all variables to function/predicate symbols, but never auto-expand
               val expr = ArchiveParser.tacticParser(tacticString, proofSession.defs)
 
-              val appliedExpr: BelleExpr = (pos, pos2, expr) match {
-                case (None, None, _: AtPosition[BelleExpr]) =>
-                  throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
-                case (None, None, _) => expr
-                case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
-                case (Some(_), None, expr: BelleExpr) => expr
-                case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
-                case (Some(_), Some(_), expr: BelleExpr) => expr
-                case _ => logger.error("Position error running tactic at pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
-              }
-
               val ruleName =
-                if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString,
+                if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => expr.prettyString,
                   session(proofId).asInstanceOf[ProofSession])
                 else "custom"
 
@@ -2579,18 +2569,18 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                     case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
                       + ". Expected step path ID of the form (node ID,branch index)")
                   }
-                  val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
+                  val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), expr)
                   RunBelleTermResponse(proofId, node.id.toString, taskId, "Executing custom tactic") :: Nil
                 } else {
                   val localProvable = ProvableSig.startProof(sequent, tree.info.defs(db))
                   val localProofId = db.createProof(localProvable)
                   val executor = BellerophonTacticExecutor.defaultExecutor
-                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable.labeled(localProvable, node.label.map(_ :: Nil)), interpreter(localProofId, -1))
+                  val taskId = executor.schedule(userId, expr, BelleProvable.labeled(localProvable, node.label.map(_ :: Nil)), interpreter(localProofId, -1))
                   RunBelleTermResponse(localProofId.toString, "()", taskId, "Executing internal steps of " + executionInfo(belleTerm)) :: Nil
                 }
               } else {
                 //@note execute clicked single-step tactics on sequential interpreter right away
-                val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), appliedExpr, ruleName)
+                val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), expr, ruleName)
                 val info = "Executing " + executionInfo(belleTerm)
                 RunBelleTermResponse(proofId, node.id.toString, taskId, info) :: Nil
               }
