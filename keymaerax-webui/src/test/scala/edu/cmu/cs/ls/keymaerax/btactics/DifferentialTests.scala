@@ -501,6 +501,17 @@ class DifferentialTests extends TacticTestBase {
     proveByS(entry.sequent, implyR(1) & dI(auto='full)(1), entry.defs) shouldBe 'proved
   }
 
+  it should "work with uninterpreted and interpreted functions" in withMathematica { _ =>
+    val defs = "loopinv(x,y,v,xo,yo) ~> (v >= 0 & (abs(x-xo) > stopDist(v) | abs(y-yo) > stopDist(v))) :: stopDist(v) ~> v^2/(2*b()) :: nil".asDeclaration
+    val s =
+      """loopinv(x_0,y_0,v_0,xo,yo),
+        |A()>=0, b()>0, ep()>0, t=0, v_0=v, x_0=x, y_0=y
+        |==>
+        |[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))
+        |""".stripMargin.asSequent
+    proveBy(s, dI(auto='full)(1), defs) shouldBe 'proved
+  }
+
   it should "work as dIRule in existential context" in withMathematica { _ =>
     proveBy("x>0 ==> \\exists y [{x'=-x,y'=1/2*y}]x*y^2=1".asSequent, dI(auto='diffInd)(1, 0::Nil)).subgoals.
       loneElement shouldBe "x>0 ==> \\exists y (true->x*y^2=1&\\forall x \\forall y [y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y^(2-1)*y')=0)".asSequent
