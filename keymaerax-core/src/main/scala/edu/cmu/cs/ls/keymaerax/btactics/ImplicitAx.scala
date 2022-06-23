@@ -799,7 +799,7 @@ object ImplicitAx {
         val eq = f.asInstanceOf[Equal]
         val v = eq.left.asInstanceOf[Variable]
         Assign(v,eq.right) : Program
-      }).reduceRight(Compose(_,_))
+      }).reduceRight(Compose)
 
     val t = inits.last.asInstanceOf[Equal].left.asInstanceOf[Variable]
 
@@ -912,7 +912,7 @@ object ImplicitAx {
   }
 
   lazy val forallFwdBack : Lemma =
-    remember("\\forall x_ (x_ = f() -> [{x_'=1 & x_ <= g()}++{x_'=-1 & g() <= x_}]P(x_)) -> P(g())".asFormula,
+    remember("\\forall x_ (x_ = f() -> [{x_'=1 & x_ <= g()}++{x_'=(-1) & g() <= x_}]P(x_)) -> P(g())".asFormula,
       implyR(1) & boundRename(Variable("x_"),Variable("y"))(-1) &
         cut("\\exists y y = f()".asFormula) <(
           existsL(-2) &
@@ -942,9 +942,9 @@ object ImplicitAx {
                         implyR(1) & exhaustiveEqL2R(-2) & prop
                     )
                   ),
-                  cut("<{y'=-1 & g() <= y}>P(g())".asFormula) <(
+                  cut("<{y'=(-1) & g() <= y}>P(g())".asFormula) <(
                     cohideOnlyL(-4) & diamondd(-1) & notL(-1) & V(2) & prop,
-                    hideR(1) & cutR("<{y'=-1 & g() <= y}>y=g()".asFormula)(1) <(
+                    hideR(1) & cutR("<{y'=(-1) & g() <= y}>y=g()".asFormula)(1) <(
                       hideL(-1) &
                         ODELiveness.closedRef(True)(1)<(
                           ODELiveness.kDomainDiamond("g() >= y".asFormula)(1) <(
@@ -976,7 +976,7 @@ object ImplicitAx {
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
   @Tactic(names="diffUnfold",
     codeName="diffUnfold",
-    premises="Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=-1 & v0<=v]P(v)",
+    premises="Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=(-1) & v0<=v]P(v)",
     conclusion="Γ |- P(v0), Δ",
     displayLevel="browse")
   def diffUnfold(v0:Term, t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
@@ -1003,7 +1003,7 @@ object ImplicitAx {
   }}
 
   lazy val existsFwdBack : Lemma =
-    remember("<{v_'=1}>P(v_) | <{v_'=-1}>P(v_) -> \\exists x_ P(x_)".asFormula,
+    remember("<{v_'=1}>P(v_) | <{v_'=(-1)}>P(v_) -> \\exists x_ P(x_)".asFormula,
       implyR(1) & useAt(Ax.choiced,PosInExpr(1::Nil))(-1) &
         diamondd(-1) & notL(-1) & abstractionb(2) &
         allR(2) & existsR("v_".asTerm)(1) & prop,
@@ -1013,7 +1013,7 @@ object ImplicitAx {
   // Diamond version of diffUnfold for existentials
   @Tactic(names="diffUnfoldD",
     codeName="diffUnfoldD",
-    premises="Γ, v=t0 |- <v'=1>P(v) ∨ <v'=-1> P(v), Δ ",
+    premises="Γ, v=t0 |- <v'=1>P(v) ∨ <v'=(-1)> P(v), Δ ",
     conclusion="Γ |- ∃v P(v), Δ",
     displayLevel="browse")
   def diffUnfoldD(t0: Term) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
