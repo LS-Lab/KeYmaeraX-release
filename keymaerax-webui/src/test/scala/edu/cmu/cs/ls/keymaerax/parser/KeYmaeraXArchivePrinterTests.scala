@@ -71,4 +71,35 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
     ArchiveParser(printed).head.expandedModel shouldBe entry.expandedModel
   }
 
+  it should "not repeat builtin interpreted function definitions" in {
+    val entry = ArchiveParser(
+      """ArchiveEntry "arctan"
+        |Definitions
+        |  implicit Real arctan(Real t) = {{arctan:=0;t:=0;}; {arctan'=1/(1+t^2),t'=1}};
+        |  Real tan(Real x) = sin(x)/cos(x);
+        |  Real x;
+        |End.
+        |
+        |Problem
+        |  arctan(tan(x)) = x
+        |End.
+        |End.""".stripMargin).head
+    val printed = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments=false)(entry)
+    printed should equal (
+      s"""/* Exported from KeYmaera X v${edu.cmu.cs.ls.keymaerax.core.VERSION} */
+         |Theorem "arctan"
+         |Definitions
+         |  Real arctan(Real x_0) = ( arctan<< <{arctan:=._0;t:=._1;}{{arctan'=-1/(1+t^2),t'=-(1)}++{arctan'=1/(1+t^2),t'=1}}>(arctan=0&t=0) >>(x_0) );
+         |  Real tan(Real x_0) = ( sin(x_0)/cos(x_0) );
+         |  Real x();
+         |End.
+         |
+         |Problem
+         |  arctan(tan(x()))=x()
+         |End.
+         |End.
+         |""".stripMargin) (after being whiteSpaceRemoved)
+    ArchiveParser(printed).head.expandedModel shouldBe entry.expandedModel
+  }
+
 }

@@ -104,6 +104,15 @@ object KeYmaeraXArchivePrinter {
   private val EXERCISE_BEGIN: String = "Exercise"
   private val END_BLOCK: String = "End."
 
+  private val printer = new KeYmaeraXPrecedencePrinter {
+    override protected def pp(q: PosInExpr, term: Term): String = term match {
+      case FuncOf(f, c) =>
+        val fnName = if (InterpretedSymbols.builtin.contains(f)) f.name + f.index.map("_" + _).getOrElse("") else f.asString
+        if (f.domain.isInstanceOf[Tuple]) fnName + pp(q++0, c) else fnName + "(" + pp(q++0, c) + ")"
+      case _ => super.pp(q, term)
+    }
+  }
+
   def printName(name: String, idx: Option[Int]): String = name + (idx match {
     case Some(i) => "_" + i
     case None => ""
@@ -137,7 +146,7 @@ object KeYmaeraXArchivePrinter {
         case Bool => ("<->", "("::")"::Nil)
         case Trafo => ("::=", "{"::"}"::Nil)
       }
-      s" $op ${parens(0)} ${i.prettyString} ${parens(1)}"
+      s" $op ${parens(0)} ${printer(i)} ${parens(1)}"
     case None => ""
   }
 
@@ -159,7 +168,7 @@ object KeYmaeraXArchivePrinter {
 
   /** Prints a `Definitions` block, excluding base variables occurring in `symbols`. */
   def printDefsBlock(decl: Declaration, symbols: Set[NamedSymbol]): String = {
-    val defs = decl.decls.filter(_._2.domain.isDefined)
+    val defs = decl.decls.filter(_._2.domain.isDefined).filter(dn => !InterpretedSymbols.byName.exists({ case ((n, i), _) => Name(n, i) == dn._1 }))
 
     val printedDecls = symbols.filter(s => !defs.keySet.contains(Name(s.name, s.index))).map({
       case Function(name, idx, domain, sort, None) =>
