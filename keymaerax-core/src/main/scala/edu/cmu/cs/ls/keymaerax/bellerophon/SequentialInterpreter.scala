@@ -47,8 +47,19 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       val result = v match {
         case p: BelleDelayedSubstProvable => exprResult match {
           case r: BelleDelayedSubstProvable =>
-            assert(p.parent.isEmpty || p.parent == r.parent)
-            new BelleDelayedSubstProvable(r.p, r.label, p.subst ++ r.subst, if (p.parent.isEmpty) r.parent else p.parent)
+            (p.parent, r.parent) match {
+              case (Some(pp), None) =>
+                // if r is a lemma that was proved constified but it also expanded definitions
+                assert(pp._1(p.subst ++ r.subst).subgoals(pp._2) == r.p(p.subst ++ r.subst).conclusion,
+                  "Unsupported delayed substitution: even after substitution, conclusion of sub-derivation\n" +
+                    r.p(p.subst ++ r.subst).conclusion + "\ndoes not fit subgoal\n" + pp._1(p.subst ++ r.subst).subgoals(pp._2))
+                new BelleDelayedSubstProvable(r.p, r.label, p.subst ++ r.subst, p.parent)
+              case (Some(pp), Some(rp)) =>
+                assert(pp == rp, "Unsupported delayed substitution: parent provables disagree")
+                new BelleDelayedSubstProvable(r.p, r.label, p.subst ++ r.subst, p.parent)
+              case (None, _) =>
+                new BelleDelayedSubstProvable(r.p, r.label, p.subst ++ r.subst, r.parent)
+            }
           case r: BelleProvable => new BelleDelayedSubstProvable(r.p, r.label, p.subst, p.parent)
           case _ => exprResult
         }
