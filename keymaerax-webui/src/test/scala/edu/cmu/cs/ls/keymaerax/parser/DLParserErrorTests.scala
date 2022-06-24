@@ -60,7 +60,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe "(metaInfoKey | programVariables | definitions | \"Problem\")"
+    e.expect shouldBe "(metaInfoKey | \"Problem\")"
     e.found shouldBe "\"End.\""
     e.hint shouldBe "Try (\"Description\" | \"Title\" | \"Link\" | \"Author\" | \"See\" | \"Illustration\" | \"Citation\" | \"ProgramVariables\" | \"Definitions\" | \"Problem\")"
   }

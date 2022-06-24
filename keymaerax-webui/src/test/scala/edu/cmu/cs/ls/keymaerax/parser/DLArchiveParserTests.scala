@@ -1869,4 +1869,48 @@ class DLArchiveParserTests extends TacticTestBase {
     // TODO: shouldBes
   }
 
+  it should "correctly pass definitions to tactic parser" in withTactics {
+    val tacticA =
+      """/* tactic parser needs to elaborate to function symbol x() */
+        |implyR('R=="x^2 >= 0");
+        |cut("x>=x")
+        |""".stripMargin
+    val contentA = s"""
+      |Theorem "A"
+      |Definitions
+      |  Real x();
+      |End.
+      |Problem
+      |  x^2 >= 0
+      |End.
+      |Tactic "Proof A"
+      |  $tacticA
+      |End.
+      |End.
+      |""".stripMargin
+    val contentB = """
+      |Theorem "B"
+      |ProgramVariables
+      |  Real x;
+      |End.
+      |Problem
+      |  x>=0 -> [{x'=x}]x>=0
+      |End.
+      |Tactic "Proof B"
+      |  /* but here x is a variable */
+      |  implyR('R=="x>=0 -> [{x'=x}]x>=0");
+      |  dC("x>=old(x)", 'R=="[{x'=x}]x>=0")
+      |End.
+      |End.
+      |""".stripMargin
+    val a :: Nil = ArchiveParser(contentA)
+    val ta = ArchiveParser.tacticParser(tacticA, a.defs) // changes the defs in DLBelleParser, subsequent ArchiveParser calls need to robustly reset it; @todo refactor DLBelleParser to stateless setup
+    a.tactics.map(_._3) should contain theSameElementsInOrderAs List(ta)
+    //@note if not robustly reset, will use contentA definition x() in tactic parser and as a consequence will get
+    // assertion error in the next line because the parser cannot elaborate x in x' to x()
+    val b :: Nil = ArchiveParser(contentB)
+    b.tactics.map(_._3) should contain theSameElementsInOrderAs
+      List("""implyR('R=="x>=0 -> [{x'=x}]x>=0"); dC("x>=old(x)", 'R=="[{x'=x}]x>=0")""".asTactic(b.defs)) // again changes defs here
+  }
+
 }

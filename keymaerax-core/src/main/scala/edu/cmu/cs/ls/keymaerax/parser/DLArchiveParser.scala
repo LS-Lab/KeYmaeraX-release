@@ -10,7 +10,6 @@ import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{DLTacticParser, TacticParser}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted.FromProgramException
 
 import scala.collection.immutable._
@@ -111,37 +110,36 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     val annotations = ListBuffer.empty[(Program, Formula)]
     Parser.parser.setAnnotationListener((p: Program, f: Formula) => annotations.append((p, f)))
     try {
-      P(archiveStart ~~/ blank ~
-        (label ~ ":").? ~ string ~
+      (archiveStart ~~/ blank ~ (label ~ ":").? ~ string ~
         metaInfo ~
-        allDeclarations ~
-        problem ~
-        tacticProof.rep ~
-        metaInfo ~
+      (for {
+        archiveDecls <- allDeclarations
+        rest <- problem ~ /* todo refactor to pass definitions to problem parser to check along the way instead of elaborating after */
+          tacticProof(shared.map(_ ++ archiveDecls).getOrElse(archiveDecls)).rep
+      } yield (archiveDecls, rest))
+        ~ metaInfo ~
         ("End" ~ label.? ~ ".")
-      ).flatMapX(
-        { case (kind, label, name, meta, decl, (prob, probString), tacs, moremeta, endlabel) =>
-          if (endlabel.isDefined && endlabel != label)
-            Fail.opaque("end label: " + endlabel + " is optional but should be the same as the start label: " + label)
-          else {
-            val result = // definitions elaboration to replace arguments by dots and do type analysis
-              ArchiveParser.elaborate(ParsedArchiveEntry(
-                name = name,
-                kind = kind,
-                fileContent = "<undefined>",
-                problemContent = probString.trim,
-                defs = shared.map(_ ++ decl).getOrElse(decl),
-                model = prob,
-                tactics = tacs.map({ case (tn, (t, ts)) => (tn.getOrElse("<undefined>"), ts.trim, t) }).toList,
-                annotations = annotations.toList,
-                //@todo check that there are no contradictory facts in the meta and moremeta
-                info = (if (label.isDefined) Map("id" -> label.get) else Map.empty) ++ meta ++ moremeta
-              ))
-            result.annotations.foreach({ case (p: Program, f: Formula) => al(p, f) })
-            Pass(result)
-          }
+      ).flatMapX({ case (kind, label, name, meta, (decl, (prob, probString, tacs)), moremeta, endlabel) =>
+        if (endlabel.isDefined && endlabel != label)
+          Fail.opaque("end label: " + endlabel + " is optional but should be the same as the start label: " + label)
+        else {
+          val result = // definitions elaboration to replace arguments by dots and do type analysis
+            ArchiveParser.elaborate(ParsedArchiveEntry(
+              name = name,
+              kind = kind,
+              fileContent = "<undefined>",
+              problemContent = probString.trim,
+              defs = shared.map(_ ++ decl).getOrElse(decl),
+              model = prob,
+              tactics = tacs.map({ case (tn, (t, ts)) => (tn.getOrElse("<undefined>"), ts.trim, t) }).toList,
+              annotations = annotations.toList,
+              //@todo check that there are no contradictory facts in the meta and moremeta
+              info = (if (label.isDefined) Map("id" -> label.get) else Map.empty) ++ meta ++ moremeta
+            ))
+          result.annotations.foreach({ case (p: Program, f: Formula) => al(p, f) })
+          Pass(result)
         }
-      )
+      })
     } finally {
       Parser.parser.setAnnotationListener(al)
     }
@@ -174,7 +172,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] =
-    (programVariables | definitions).rep.map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
+    (programVariables | definitions).rep.map(_.reduceOption(_++_).getOrElse(Declaration(Map.empty)))
 
   /** Merges `newDecls` into `curDecls`, but checks that no duplicate symbol names occur. */
   private def uniqueDecls(curDecls: Declaration, newDecls: List[(Name, Signature)])(implicit ctx: P[_]) = {
@@ -381,7 +379,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** `Problem  formula  End.` parsed. */
   def problem[_: P]: P[(Formula,String)] = P("Problem" ~~ blank ~/ DLParserUtils.captureWithValue(formula) ~ "End." )
 
-  def tacticProof[_: P]: P[(Option[String],(BelleExpr,String))] = P( "Tactic" ~~ blank ~/ string.? ~ DLParserUtils.captureWithValue(tactic) ~ "End.")
+  def tacticProof[_: P](defs: Declaration): P[(Option[String],(BelleExpr,String))] = P( "Tactic" ~~ blank ~/ string.? ~ DLParserUtils.captureWithValue(tactic(defs)) ~ "End.")
 
 
   // externals
@@ -409,5 +407,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** odeprogram: Parses an ode system from [[expParser]]. */
   def odeprogram[_: P]: P[ODESystem] = expParser.odeprogram
 
-  def tactic[_: P]: P[BelleExpr] = tacticParser.tactic
+  def tactic[_: P](defs: Declaration): P[BelleExpr] = {
+    tacticParser.setDefs(defs)
+    tacticParser.tactic
+  }
 }
