@@ -98,7 +98,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           val persist = BelleExpr.persistable(it.inputs)
           val flat = persist.flatMap(input => argPrinter(Left(input)))
           val eargs = flat.mkString(COMMA.img + SPACE)
-          val argString = if (eargs.isEmpty) EMPTY_ARGS else  OPEN_PAREN.img + eargs + CLOSE_PAREN.img
+          val argString = if (eargs.isEmpty) EMPTY_ARGS else  OPEN_PAREN.img + (if (eargs=="\"nil\"") EMPTY_ARGS else eargs) + CLOSE_PAREN.img
           it.name + argString
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + OPEN_PAREN.img + t.posOne.prettyString + COMMA.img + SPACE + t.posTwo.prettyString + CLOSE_PAREN.img
         case n@NamedTactic(name, _) =>
