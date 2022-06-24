@@ -65,7 +65,9 @@ class StringConverter(val s: String) {
   def asDifferentialProgram: DifferentialProgram = Parser.parser.differentialProgramParser(s)
 
   /** Converts to a tactic. */
-  def asTactic: BelleExpr = BelleParser(s)
+  def asTactic: BelleExpr = ArchiveParser.tacticParser(s)
+  /** Converts to a tactic using definitions `defs` to elaborate symbols. */
+  def asTactic(defs: Declaration): BelleExpr = ArchiveParser.tacticParser(s, defs)
 
   /** Converts to a sequent. */
   def asSequent: Sequent = Parser.parser.sequentParser(s)
