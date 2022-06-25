@@ -232,7 +232,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "preserve labels" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>-1 End. End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>(-1) End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -241,7 +241,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List(
           "x>0 ==> x>0".asSequent,
-          "x>0 ==> x>-1".asSequent
+          "x>0 ==> x>(-1)".asSequent
         )
         l.value should contain theSameElementsAs List("x>0".asLabel, "x>(-1)".asLabel)
     }
@@ -251,7 +251,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "preserve nested labels" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>-1 End. End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>(-1) End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -263,8 +263,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     ) match {
       case BelleProvable(p, l) =>
         p.subgoals should contain theSameElementsAs List(
-          "x>0 ==> x>-1, x>=0".asSequent,
-          "x>0, x>=0 ==> x>-1".asSequent
+          "x>0 ==> x>(-1), x>=0".asSequent,
+          "x>0, x>=0 ==> x>(-1)".asSequent
         )
         l.value should contain theSameElementsAs List("x>(-1)//Use".asLabel, "x>(-1)//Show".asLabel)
     }
@@ -283,7 +283,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }}
 
   it should "delete labels of closed branches" in withDatabase { db => withMathematica { _ =>
-    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>-1 End. End."
+    val modelContent = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>0 -> x>0&x>(-1) End. End."
     val proofId = db.createProof(modelContent)
 
     val interpreter = createInterpreter(proofId, db.db)
@@ -1897,7 +1897,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |)""".stripMargin)
   }}
 
-  it should "work for prop on a left-branching example with depth 2" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: work for prop on a left-branching example with depth 2" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|!x<y -> x>=0"
     val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; Real y; End.\n\n Problem $problem End. End."""
     val proofId = db.createProof(modelContent, "proof1")
@@ -2688,17 +2688,19 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val entry = ArchiveParser(
       """ArchiveEntry "Implicit interpreted function definition"
         |Definitions
-        |implicit Real tanh(Real t) = {{tanh:=0;}; {tanh'=1-tanh^2}}; Real tau; Real lambda;
+        |  implicit Real tanh(Real t) = {{tanh:=0;}; {tanh'=1-tanh^2}};
+        |  Real tau;
+        |  Real lambda;
         |End.
-        |ProgramVariables Real x,y,old; End.
+        |  ProgramVariables Real x,y,old; End.
         |Problem
         |tau()>0 & t=0 & x^2+y^2=old & old>0
-        |  ->  [{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}]exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*old^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau()))-(x^2+y^2)^(1/2)>=0
+        |  ->  [{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x^2+y^2>0}]exp(-t/tau())*old^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)>=0
         |End.
         |Tactic "Steps"
         |unfold;
         |dbx("(-1)/tau()", 1); /* causes a delayed substitution step, has a "delayed" parent */
-        |expandAllDefs("nil")  /* creates a child delayed substitution provable, does not have a "delayed" parent */
+        |expandAllDefs()  /* creates a child delayed substitution provable, does not have a "delayed" parent */
         |End.
         |End.
         |""".stripMargin).head
@@ -2711,7 +2713,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(entry.tactics.head._3, BelleProvable.plain(ProvableSig.startProof(entry.sequent, entry.defs))) match {
       case BelleProvable(p, _) => p.subgoals.loneElement shouldBe
         """tau()>0, t=0, x^2+y^2=old(), old()>0
-          |  ==>  \forall t \forall x \forall y (true&x^2+y^2>0->exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*(-((1*tau()-t*0)/tau()^2))*old()^(1/2)+2*tau()*(0-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*(-((1*tau()-t*0)/tau()^2)))-1/2*(x^2+y^2)^(1/2-1)*(2*x^(2-1)*(-x/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)-tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y))+2*y^(2-1)*(-y/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y)))>=(-1)/tau()*(exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*old()^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau()))-(x^2+y^2)^(1/2)))
+          |  ==>  \forall t \forall x \forall y (true&x^2+y^2>0->exp(-t/tau())*(-(1*tau()-t*0)/tau()^2))*old()^(1/2)+2*tau()*(0-exp(-t/tau())*(-((1*tau()-t*0)/tau()^2)))-1/2*(x^2+y^2)^(1/2-1)*(2*x^(2-1)*(-x/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)-tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y))+2*y^(2-1)*(-y/tau()+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*x)+tanh<< <{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-(1)}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0) >>(lambda()*y)))>=(-1)/tau()*(exp(-t/tau())*old()^(1/2)+2*tau()*(1-exp(-t/tau()))-(x^2+y^2)^(1/2)))
           |""".stripMargin.asSequent
     }
   }}

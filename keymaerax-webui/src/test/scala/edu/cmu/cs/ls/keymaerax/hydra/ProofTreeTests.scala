@@ -647,7 +647,7 @@ class ProofTreeTests extends TacticTestBase {
     checkTree(db.db, theoremId, theorem.tactics.loneElement._3, "==> x>sq(y) -> x>sq(y) & x>sq(y)".asSequent)
   }}
 
-  it should "work with delayed let substitution" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: work with delayed let substitution" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     val proofId = db.createProof(
       """ArchiveEntry "Simple"
         |Problem y+z>=0 -> [x:=y+z;]x>=0 End.

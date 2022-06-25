@@ -5,7 +5,7 @@
 import com.wolfram.jlink.Expr
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, Parser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 
@@ -13,7 +13,7 @@ import java.math.{BigDecimal, BigInteger}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{BaseKeYmaeraMathematicaBridge, JLinkMathematicaLink, UncheckedBaseK2MConverter, UncheckedBaseM2KConverter}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, MathematicaToKeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
 import edu.cmu.cs.ls.keymaerax.tools.qe.ExprFactory._
 
 import scala.collection.immutable._
@@ -232,8 +232,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "associate minus and negation correctly" in {
-    KeYmaeraToMathematica("5--2".asTerm) shouldBe makeExpr(new MExpr(Expr.SYMBOL, "Subtract"),
-      Array(new MExpr(BigInt(5).bigInteger), new MExpr(BigInt(-2).bigInteger)))
+    KeYmaeraToMathematica("5--2".asTerm) shouldBe (
+      if (Parser.numNeg) MathematicaOpSpec.minus(
+        new MExpr(BigInt(5).bigInteger),
+        new MExpr(BigInt(-2).bigInteger))
+      else MathematicaOpSpec.minus(
+        new MExpr(BigInt(5).bigInteger),
+        MathematicaOpSpec.neg(new MExpr(BigInt(2).bigInteger)))
+      )
   }
 
   it should "left-associate nary arithmetic operators" in {

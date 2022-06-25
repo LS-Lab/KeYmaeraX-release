@@ -21,9 +21,6 @@ import org.scalatest.concurrent._
  * @author Andre Platzer
  */
 class LoopInvTests extends TacticTestBase {
-  private val someList: () => Iterator[Formula] = () =>
-      ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator
-
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).map(_ -> None).toStream
@@ -109,7 +106,7 @@ class LoopInvTests extends TacticTestBase {
 
   it should "prove x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0 by invariant v>=0" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0".asFormula
-    proveBy(fml, implyR(1) &  loop("v>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize)) shouldBe 'proved
+    proveBy(fml, implyR(1) &  loop("v>=0".asFormula)(1) <(QE, QE, chase(1) & unfoldProgramNormalize & OnAll(ODE(1)))) shouldBe 'proved
   }
 
   it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0" in withMathematica { _ =>
@@ -271,23 +268,23 @@ class LoopInvTests extends TacticTestBase {
   it should "prove the invariants of first a branch informative (scripted)" in withMathematica { _ =>
     //todo: These are getting proved directly with solve
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1&t<=1&v>=0}@invariant((10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v*v<=10-x),(v=0&x<=10))}}*]x<=10".asFormula
-    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, master())) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, auto(TactixLibrary.invGenerator, None))) shouldBe 'proved
   }
 
   it should "prove the invariants of first a branch informative (scripted) nosolve" in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((v'=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v'=-1->v*v<=10-x),(v'=0->v=0&x<=10))}}*]x<=10".asFormula
-    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, master())) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, auto(TactixLibrary.invGenerator, None))) shouldBe 'proved
   }
 
   it should "prove the invariants of first a branch informative (scripted) 2" in withMathematica { _ =>
     //todo: These are getting proved directly with solve
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1&t<=1&v>=0}@invariant((a=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(a=-1->v*v<=10-x),(a=0->v=0&x<=10))}}*]x<=10".asFormula
-    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, master())) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, auto(TactixLibrary.invGenerator, None))) shouldBe 'proved
   }
 
   it should "prove the invariants of first a branch informative (scripted) 2 nosolve" in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((v'=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v'=-1->v*v<=10-x),(v'=0->v=0&x<=10))}}*]x<=10".asFormula
-    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, master())) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE, QE, auto(TactixLibrary.invGenerator, None))) shouldBe 'proved
   }
 
   it should "find an invariant when first a branch informative (scripted)" taggedAs SlowTest in withMathematica { _ =>
@@ -429,7 +426,7 @@ class LoopInvTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
@@ -445,7 +442,7 @@ class LoopInvTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
@@ -463,7 +460,7 @@ class LoopInvTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
@@ -479,7 +476,7 @@ class LoopInvTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
@@ -506,8 +503,7 @@ class LoopInvTests extends TacticTestBase {
       odeInvariant(1))) shouldBe 'proved
   }
 
-  it should "FEATURE_REQUEST: find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" taggedAs SlowTest in withMathematica { _ =>
-    // Failing test case
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" taggedAs SlowTest in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
     proveBy(fml, implyR(1) & loopSR((_,_)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
@@ -517,7 +513,7 @@ class LoopInvTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))

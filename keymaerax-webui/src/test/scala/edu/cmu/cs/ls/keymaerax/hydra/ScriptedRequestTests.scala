@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Region, Signature, UnknownLocation}
@@ -360,7 +360,7 @@ class ScriptedRequestTests extends TacticTestBase {
       TactixLibrary.invGenerator, FixedGenerator(Nil), Declaration(Map()))
     val tacticRunner = runTactic(db, t, proofId) _
 
-    tacticRunner("()", master()) should have (
+    tacticRunner("()", auto(TactixLibrary.invGenerator, None)) should have (
       'proofId (proofId.toString),
       'parent (DbProofTree(db.db, proofId.toString).root),
       'progress (true)
@@ -586,7 +586,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "FEATURE_REQUEST: expand prop" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: expand prop" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     //@todo expand forward tactics
     val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End. End."
     val proofId = db.createProof(modelContents)
@@ -605,7 +605,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "FEATURE_REQUEST: expand auto" in withMathematica { _ => withDatabase { db =>
+  it should "FEATURE_REQUEST: expand auto" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     //@todo expand forward tactics
     val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x, y, z; End. Problem x>=0&y>0&z=0 -> [x:=x+y;]x>=z End. End."
     val proofId = db.createProof(modelContents)
@@ -841,24 +841,24 @@ class ScriptedRequestTests extends TacticTestBase {
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
     modelInfos should have size 95  // change when ListExamplesRequest is updated
 
-    val modelInfosTable = Table(("name", "id"), modelInfos:_*)
+    val modelInfosTable = Table(("name", "id"), modelInfos.filter(_._1.startsWith("IJCAR22")):_*)
     forEvery(modelInfosTable) { (name, id) =>
       whenever(tool.isInitialized) {
         val start = System.currentTimeMillis()
         println("Importing and opening " + name + "...")
         val r1 = new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponses(t).loneElement
-        r1 shouldBe a[CreatedIdResponse]
+        r1 shouldBe a[CreatedIdResponse] withClue r1.getJson.prettyPrint
         val proofId = r1.getJson.asJsObject.fields("id").asInstanceOf[JsString].value
         val r2 = new OpenProofRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
-        r2 shouldBe a[OpenProofResponse]
+        r2 shouldBe a[OpenProofResponse] withClue r2.getJson.prettyPrint
         val r3 = new InitializeProofFromTacticRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
-        r3 shouldBe a[RunBelleTermResponse]
+        r3 shouldBe a[RunBelleTermResponse] withClue r3.getJson.prettyPrint
         val nodeId = r3.getJson.asJsObject.fields("nodeId").asInstanceOf[JsString].value
         val taskId = r3.getJson.asJsObject.fields("taskId").asInstanceOf[JsString].value
         var status = "running"
         do {
           val r4 = new TaskStatusRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponses(t).loneElement
-          r4 shouldBe a[TaskStatusResponse]
+          r4 shouldBe a[TaskStatusResponse] withClue r4.getJson.prettyPrint
           status = r4.getJson.asJsObject.fields("status").asInstanceOf[JsString].value
         } while (status != "done")
         new TaskResultRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponses(t).loneElement match {
@@ -866,13 +866,18 @@ class ScriptedRequestTests extends TacticTestBase {
           case e: ErrorResponse => fail(e.msg, e.exn)
         }
         val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
-        r5 shouldBe a[AgendaAwesomeResponse]
+        r5 shouldBe a[AgendaAwesomeResponse] withClue r5.getJson.prettyPrint
         val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
         ArchiveParser.tacticParser(db.db.getModel(id).tactic.get) match {
           case _: PartialTactic =>
             r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue "closed"
           case _ =>
-            r5.getJson.asJsObject.fields("agendaItems").asJsObject.getFields() shouldBe empty
+            val tacticText =
+              if (r5.getJson.asJsObject.fields("agendaItems").asJsObject.fields.nonEmpty) {
+                val tr = new ExtractTacticRequest(db.db, userName, proofId, verbose=true).getResultingResponses(t).loneElement
+                tr.getJson.asJsObject.fields("tacticText")
+              } else "<unknown>"
+            r5.getJson.asJsObject.fields("agendaItems").asJsObject.fields shouldBe empty withClue tacticText
             r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue "closed"
             val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
             r6 shouldBe a [ProofVerificationResponse] withClue r6.getJson.prettyPrint
@@ -881,7 +886,7 @@ class ScriptedRequestTests extends TacticTestBase {
             val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
             // double check extracted tactic
             println("Reproving extracted tactic...")
-            val extractedTactic = ArchiveParser.tacticParser(extractedTacticString)
+            val extractedTactic = ArchiveParser.tacticParser(extractedTacticString, entry.defs)
             proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
             println("Done reproving")
         }
@@ -940,7 +945,7 @@ class ScriptedRequestTests extends TacticTestBase {
           'proofId (proofIdString),
           'nodeId (nodeId)
         )
-        val taskId = response.asInstanceOf[RunBelleTermResponse].taskId
+        val taskId = response.taskId
         while (new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).
           loneElement.asInstanceOf[TaskStatusResponse].status == "running") {
           Thread.sleep(100)

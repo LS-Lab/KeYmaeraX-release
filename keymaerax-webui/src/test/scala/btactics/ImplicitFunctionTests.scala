@@ -50,13 +50,13 @@ class ImplicitFunctionTests extends TacticTestBase {
         |""".stripMargin
     val prog = parse(input)
 
-    prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF, Number(-1)),Number(1))
+    prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))),Number(1))
   }
 
   it should "parse inline function interps correctly" in {
     val input =
       """ArchiveEntry "entry1"
-        | Problem myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-(1)) = 1 End.
+        | Problem myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-1) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)

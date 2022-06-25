@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics]]
@@ -360,7 +361,7 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x=4, [x:=-7;]!(x>=0&x>=5|x < 0&-x>=5), y=3 ==> ".asSequent
   }
 
-  it should "expand abs(x) in equivalences in context" ignore withQE { _ =>
+  it should "FEATURE_REQUEST: expand abs(x) in equivalences in context" taggedAs TodoTest in withQE { _ =>
     //@todo not yet supported
     proveBy("==> \\forall x (abs(x)>=0 <-> (x>=0 | x<=0))".asSequent, abs(1, 0::0::0::Nil)).subgoals.loneElement shouldBe
       "==> \\forall x ( (x>=0 & x>=0 <-> (x>=0 | x<=0) ) | ( x<0 & -x>=0 <-> (x>=0 | x<=0) ) )".asSequent
@@ -369,7 +370,7 @@ class EqualityTests extends TacticTestBase {
   it should "find by top-level locator" in withQE { _ =>
     val s = "a=2 & five=abs(-5) ==>".asSequent
     proveBy(s, BelleParser(""" absExp('L=="a=2 & five=abs(-5)") """)).
-      subgoals.loneElement shouldBe "a=2&five=abs_, -5>=0&abs_=-5 | -5 < 0&abs_=-(-5) ==>".asSequent
+      subgoals.loneElement shouldBe "a=2&five=abs_, -5>=0&abs_=-5 | -5 < 0&abs_=--5 ==>".asSequent
   }
 
   it should "expand nested" in withQE { _ =>

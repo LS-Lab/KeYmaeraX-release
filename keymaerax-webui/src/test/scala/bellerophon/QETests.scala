@@ -229,7 +229,7 @@ class QETests extends TacticTestBase {
     val provider = MultiToolProvider(
       new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
-    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>=0&x>=-1 End. End."""
+    val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>=0&x>=(-1) End. End."""
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true, recordInternal=false))

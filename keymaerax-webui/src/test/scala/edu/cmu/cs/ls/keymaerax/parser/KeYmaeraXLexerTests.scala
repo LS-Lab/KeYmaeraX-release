@@ -58,13 +58,13 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
   }
 
   it should "parse forall" in {
-    val input = "\\forall"
+    val input = "\\forall "
     KeYmaeraXLexer(input).length shouldBe 2 //forall and EOS.
     KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(FORALL, Region(1,1,1,7))
   }
 
   it should "parse forall 2 times" in {
-    val input = """\forall \forall"""
+    val input = """\forall \forall """
     KeYmaeraXLexer(input).length shouldBe 3 //forall and EOS.
     KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(FORALL, Region(1,1,1,7))
     KeYmaeraXLexer(input).tail.head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(FORALL, Region(1,9,1,15))

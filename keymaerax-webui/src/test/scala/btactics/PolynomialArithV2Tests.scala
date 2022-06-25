@@ -415,9 +415,9 @@ class PolynomialArithV2Tests extends TacticTestBase {
     Coefficient(1, 1, None).normalized._1.conclusion.succ(0) shouldBe "1/1=1".asFormula
     Coefficient(2, 1, None).normalized._1.conclusion.succ(0) shouldBe "2/1=2".asFormula
     Coefficient(1, 2, None).normalized._1.conclusion.succ(0) shouldBe "1/2=0.5".asFormula
-    Coefficient(-2, 1, None).normalized._1.conclusion.succ(0) shouldBe "-2/1=-2".asFormula
-    Coefficient(-1, 2, None).normalized._1.conclusion.succ(0) shouldBe "-1/2=-0.5".asFormula
-    Coefficient(-1, 1, None).normalized._1.conclusion.succ(0) shouldBe "-1/1=-1".asFormula
+    Coefficient(-2, 1, None).normalized._1.conclusion.succ(0) shouldBe "(-2)/1=(-2)".asFormula
+    Coefficient(-1, 2, None).normalized._1.conclusion.succ(0) shouldBe "(-1)/2=(-0.5)".asFormula
+    Coefficient(-1, 1, None).normalized._1.conclusion.succ(0) shouldBe "(-1)/1=(-1)".asFormula
   }
 
   it should "normalize monomials" in withMathematica { _ =>
@@ -437,7 +437,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val p = (0 until 5).map(i => Const((i % 3) - 2) * Var(pa4Vars(i % 2), i % 3 + 1)).reduceLeft(_ + _) ^ 2
     p.normalized shouldBe 'proved
     p.normalized.conclusion.succ(0) shouldBe
-      "(-2*x^1+-1*y^2+0*x^3+-2*y^1+-1*x^2)^2=4*y^2+8*x*y+4*x^2+4*y^3+4*x*y^2+4*x^2*y+4*x^3+y^4+2*x^2*y^2+x^4".asFormula
+      "((-2)*x^1+(-1)*y^2+0*x^3+(-2)*y^1+(-1)*x^2)^2=4*y^2+8*x*y+4*x^2+4*y^3+4*x*y^2+4*x^2*y+4*x^3+y^4+2*x^2*y^2+x^4".asFormula
   }
 
   it should "split coefficients" in withMathematica { _ =>

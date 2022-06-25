@@ -61,7 +61,7 @@ class ArithmeticTests extends TacticTestBase {
 
   "fullQE" should "apply equalities, transform to implication, and compute universal closure" in withTactics {
     val tool = new MockTool(
-      "\\forall x_0 \\forall v_0 \\forall t \\forall s (v_0>0&x_0 < s&(-1)*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0->1/2*((-1)*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+((-1)*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)".asFormula)
+      "\\forall x_0 \\forall v_0 \\forall t \\forall s (v_0>0&x_0 < s&-1*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0->1/2*(-1*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+(-1*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     //@note actual assertions are made by MockTool, expect a BelleThrowable since MockTool returns false as QE answer
     val result = proveBy(

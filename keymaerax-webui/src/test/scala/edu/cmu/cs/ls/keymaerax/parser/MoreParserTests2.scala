@@ -83,8 +83,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:12 Error parsing formula at 1:1
           |Found:    ", (x>y)" at 1:12
-          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
+          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
     the [ParseException] thrownBy parser("\\forall x,y, x>y") should
       (have message """1:15 Unexpected token cannot be parsed
                       |Found:    > at 1:15
@@ -93,8 +93,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:12 Error parsing formula at 1:1
           |Found:    ", x>y" at 1:12
-          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | comparison | ident | "(")
-          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
+          |Expected: ([a-zA-Z0-9] | "_" | "'" | "," ~ variable | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")
+          |Hint: Try ([a-zA-Z0-9] | "_" | "'" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")""".stripMargin)
   }
 
   it should "parse \\exists x,y,z (x>y & y>z)" in {
@@ -207,8 +207,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:8 Error parsing term at 1:6
           |Found:    "+v'=2}]x=0" at 1:8
-          |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "-")
-          |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "-")""".stripMargin)
+          |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "__________" | "-")
+          |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin)
   }
 
   it should "refuse ODE 1 without {} in modalities" in {
@@ -220,8 +220,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:2 Error parsing program at 1:2
           |Found:    "x'=v;]x=0" at 1:2
-          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
-          |Hint: Try ("?" | "if" | "{")""".stripMargin)
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________")
+          |Hint: Try ("?" | "if" | "{" | "__________")""".stripMargin)
   }
 
   it should "refuse ODE 2 without {} in modalities" in {
@@ -233,8 +233,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:2 Error parsing program at 1:2
           |Found:    "x'=v & x>0" at 1:2
-          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
-          |Hint: Try ("?" | "if" | "{")""".stripMargin)
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________")
+          |Hint: Try ("?" | "if" | "{" | "__________")""".stripMargin)
   }
 
   it should "refuse ODE systems 1 without {} in modalities" in {
@@ -246,8 +246,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:2 Error parsing program at 1:2
           |Found:    "x'=v,v'=3;" at 1:2
-          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
-          |Hint: Try ("?" | "if" | "{")""".stripMargin)
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________")
+          |Hint: Try ("?" | "if" | "{" | "__________")""".stripMargin)
   }
 
   it should "refuse ODE systems 2 without {} in modalities" in {
@@ -259,8 +259,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:2 Error parsing program at 1:2
           |Found:    "x'=v,v'=3 " at 1:2
-          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
-          |Hint: Try ("?" | "if" | "{")""".stripMargin)
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________")
+          |Hint: Try ("?" | "if" | "{" | "__________")""".stripMargin)
   }
 
   it should "refuse ODE systems 3 without {} in modalities" in {
@@ -272,8 +272,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:2 Error parsing program at 1:2
           |Found:    "x'=v,v'=3 " at 1:2
-          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
-          |Hint: Try ("?" | "if" | "{")""".stripMargin)
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________")
+          |Hint: Try ("?" | "if" | "{" | "__________")""".stripMargin)
   }
 
   it should "refuse ODE systems 4 without {} in modalities" in {
@@ -285,8 +285,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:2 Error parsing program at 1:2
           |Found:    "x'=v,v'=3 " at 1:2
-          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
-          |Hint: Try ("?" | "if" | "{")""".stripMargin)
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________")
+          |Hint: Try ("?" | "if" | "{" | "__________")""".stripMargin)
   }
 
   it should "refuse ODE systems 5 without {} in modalities" in {
@@ -298,8 +298,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:2 Error parsing program at 1:2
           |Found:    "c,d,x'=f(x" at 1:2
-          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{")
-          |Hint: Try ("?" | "if" | "{")""".stripMargin)
+          |Expected: (systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________")
+          |Hint: Try ("?" | "if" | "{" | "__________")""".stripMargin)
   }
 
   it should "refuse primed variables in evolution domain constraint" in {
@@ -312,7 +312,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         """1:19 Error parsing program at 1:2
           |Found:    "}]x=0" at 1:19
           |Expected: No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.
-          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
     the [ParseException] thrownBy parser("[{x'=v,v'=3 & (x+v)'>0}]x=0") should
       (have message
         """1:13 No differentials can be used in evolution domain constraints
@@ -322,7 +322,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         """1:23 Error parsing program at 1:2
           |Found:    "}]x=0" at 1:23
           |Expected: No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.
-          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
   }
 
   it should "parse standalone differential symbols" in {

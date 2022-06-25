@@ -258,7 +258,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     result.subgoals.loneElement should
       (   be("true, time_=0, x_0=x ==> [{x'=5,time_'=1 & true & time_>=0&x=5*time_+x_0}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent)
        //Z3
-       or be("true, time_=0, x_0=x ==> [{x'=5,time_'=1 & true & time_>=0&x=x_0+5*(time_^1/1)}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent))
+       or be("true, time_=0, x_0=x ==> [{x'=5,time_'=1 & true & time_>=0&x=x_0+5*time_}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent))
   }
 
   it should "work with maybe bound" in withMathematica { _ =>
@@ -522,19 +522,19 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
   "1D Saddle Node" should "prove with a bifurcation" in withMathematica { _ =>
     val formula = """r <= 0 -> \exists f (x=f -> [{x'=r+x^2}]x=f)""".asFormula
     val tactic = """implyR(1);
-              |cut({`r=0|r < 0`}) <(hideL(-1), hideR(1) ; QE); orL(-1) <(
-              |  existsR({`0`}, 1) ;
+              |cut("r=0|r < 0") ; <(hideL(-1), hideR(1) ; QE); orL(-1) ; <(
+              |  existsR("0", 1) ;
               |  implyR(1) ;
-              |  dG({`{y'=-x*y}`}, {`y*x=0&y>0`}, 1) ; existsR({`1`}, 1) ;
+              |  dG("y'=-x*y", "y*x=0&y>0", 1) ; existsR("1", 1) ;
               |  boxAnd(1) ; andR(1) ; <(
               |    dI(1),
-              |    dG({`{z'=x/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+              |    dG("z'=x/2*z", "z^2*y=1", 1) ; existsR("1", 1) ; dI(1)
               |  )
               |  ,
-              |  cut({`\exists s r=-s*s`}) ; <(
-              |    existsL(-2) ; existsR({`-s`}, 1) ; implyR(1) ; dG({`{y'=(-(x-s))*y}`}, {`y*(x+s)=0&y>0`}, 1) ; existsR({`1`}, 1) ; boxAnd(1) ; andR(1) ; <(
+              |  cut("\exists s r=-s*s") ; <(
+              |    existsL(-2) ; existsR("-s", 1) ; implyR(1) ; dG("y'=(-(x-s))*y", "y*(x+s)=0&y>0", 1) ; existsR("1", 1) ; boxAnd(1) ; andR(1) ; <(
               |      dI(1),
-              |      dG({`{z'=(x-s)/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+              |      dG("z'=(x-s)/2*z", "z^2*y=1", 1) ; existsR("1", 1) ; dI(1)
               |    ),
               |    hideR(1) ; QE
               |  )
@@ -548,20 +548,20 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     val formula = """r <= 0 -> \exists f (x=f -> [{x'=r+x^2}]x=f)""".asFormula
 
     val tactic = """implyR(1);
-                   |cut({`r=0|r < 0`}) <(
-                   |  hideL(-1); orL(-1) <(
-                   |    existsR({`0`}, 1) ;
+                   |cut("r=0|r < 0") ; <(
+                   |  hideL(-1); orL(-1) ; <(
+                   |    existsR("0", 1) ;
                    |    implyR(1) ;
-                   |    dG({`{y'=-x*y}`}, {`y*x=0&y>0`}, 1) ; existsR({`1`}, 1) ;
+                   |    dG("y'=-x*y", "y*x=0&y>0", 1) ; existsR("1", 1) ;
                    |    boxAnd(1) ; andR(1) ; <(
                    |      dI(1),
-                   |      dG({`{z'=x/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+                   |      dG("z'=x/2*z", "z^2*y=1", 1) ; existsR("1", 1) ; dI(1)
                    |    )
                    |    ,
-                   |    cut({`\exists s r=-s*s`}) ; <(
-                   |      existsL(-2) ; existsR({`-s`}, 1) ; implyR(1) ; dG({`{y'=(-(x-s))*y}`}, {`y*(x+s)=0&y>0`}, 1) ; existsR({`1`}, 1) ; boxAnd(1) ; andR(1) ; <(
+                   |    cut("\exists s r=-s*s") ; <(
+                   |      existsL(-2) ; existsR("-s", 1) ; implyR(1) ; dG("{y'=(-(x-s))*y}", "y*(x+s)=0&y>0", 1) ; existsR("1", 1) ; boxAnd(1) ; andR(1) ; <(
                    |        dI(1),
-                   |        dG({`{z'=(x-s)/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+                   |        dG("z'=(x-s)/2*z", "z^2*y=1", 1) ; existsR("1", 1) ; dI(1)
                    |      ),
                    |      hideR(1) ; QE
                    |    )

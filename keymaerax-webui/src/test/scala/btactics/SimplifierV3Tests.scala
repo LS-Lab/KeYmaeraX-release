@@ -324,7 +324,7 @@ class SimplifierV3Tests extends TacticTestBase {
 
     baseNormalize("false -> true".asFormula)._1 shouldBe "true|true".asFormula
     algNormalize("true -> x=4".asFormula)._1 shouldBe "1*(x-4)=0".asFormula
-    maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "max((-1),x-5)>=0".asFormula
+    maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "max(-1,x-5)>=0".asFormula
   }
 
   "simplify" should "find contradictions" in withMathematica { _ =>

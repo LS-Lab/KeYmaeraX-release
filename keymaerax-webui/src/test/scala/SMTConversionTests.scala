@@ -29,7 +29,7 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     KeYmaeraXTool.shutdown()
   }
 
-  private val converter = DefaultSMTConverter
+  private lazy val converter = DefaultSMTConverter
 
   "Numbers" should "convert numbers" in {
     converter("1 > 2".asFormula) shouldBe "(assert (not (> 1 2)))\n(check-sat)\n"
@@ -178,7 +178,7 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |(declare-fun _v_v_2 () Real)
         |(declare-fun _v_v_3 () Real)
         |(declare-fun _v_v_5 () Real)
-        |(assert (not (=> (and (< _v_c 1) (and (>= _v_c 0) (and (>= _v_H 0) (and (> _v_g 0) (and (<= (^ _v_v 2) (* (* 2 _v_g) (- _v_H _v_h))) (and (>= _v_h 0) (and (= _v_kxtime_1 0) (and (= _v_h_2 _v_h) (and (= _v_v_2 _v_v) (and (= _v_kxtime_4 _v_kxtime_1) (and (= _v_v_3 (+ (* (* (- 1) _v_kxtime_5) _v_g) _v_v_2)) (and (= _v_h_3 (* (/ 1 2) (+ (+ (* (* (- 1) (^ _v_kxtime_5 2)) _v_g) (* 2 _v_h_2)) (* (* 2 _v_kxtime_5) _v_v_2)))) (and (>= _v_h_3 0) (and (>= _v_kxtime_5 _v_kxtime_4) (and (= _v_h_3 0) (= _v_v_5 (- (* _v_c _v_v_3)))))))))))))))))) (<= (^ _v_v_5 2) (* (* 2 _v_g) (- _v_H _v_h_3))))))
+        |(assert (not (=> (and (< _v_c 1) (and (>= _v_c 0) (and (>= _v_H 0) (and (> _v_g 0) (and (<= (^ _v_v 2) (* (* 2 _v_g) (- _v_H _v_h))) (and (>= _v_h 0) (and (= _v_kxtime_1 0) (and (= _v_h_2 _v_h) (and (= _v_v_2 _v_v) (and (= _v_kxtime_4 _v_kxtime_1) (and (= _v_v_3 (+ (- (* (* 1 _v_kxtime_5) _v_g)) _v_v_2)) (and (= _v_h_3 (* (/ 1 2) (+ (+ (- (* (* 1 (^ _v_kxtime_5 2)) _v_g)) (* 2 _v_h_2)) (* (* 2 _v_kxtime_5) _v_v_2)))) (and (>= _v_h_3 0) (and (>= _v_kxtime_5 _v_kxtime_4) (and (= _v_h_3 0) (= _v_v_5 (- (* _v_c _v_v_3)))))))))))))))))) (<= (^ _v_v_5 2) (* (* 2 _v_g) (- _v_H _v_h_3))))))
         |(check-sat)
         |""".stripMargin
   }
@@ -198,7 +198,7 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |(declare-fun _f_v_2 () Real)
         |(declare-fun _v_v_3 () Real)
         |(declare-fun _v_v_5 () Real)
-        |(assert (not (=> (and (< _v_c 1) (and (>= _v_c 0) (and (>= _v_H 0) (and (> _f_g 0) (and (<= (^ _v_v 2) (* (* 2 _f_g) (- _v_H _v_h))) (and (>= _v_h 0) (and (= _v_kxtime_1 0) (and (= _f_h_2 _v_h) (and (= _f_v_2 _v_v) (and (= _f_kxtime_4 _v_kxtime_1) (and (= _v_v_3 (+ (* (* (- 1) _v_kxtime_5) _f_g) _f_v_2)) (and (= _v_h_3 (* (/ 1 2) (+ (+ (* (* (- 1) (^ _v_kxtime_5 2)) _f_g) (* 2 _f_h_2)) (* (* 2 _v_kxtime_5) _f_v_2)))) (and (>= _v_h_3 0) (and (>= _v_kxtime_5 _f_kxtime_4) (and (= _v_h_3 0) (= _v_v_5 (- (* _v_c _v_v_3)))))))))))))))))) (<= (^ _v_v_5 2) (* (* 2 _f_g) (- _v_H _v_h_3))))))
+        |(assert (not (=> (and (< _v_c 1) (and (>= _v_c 0) (and (>= _v_H 0) (and (> _f_g 0) (and (<= (^ _v_v 2) (* (* 2 _f_g) (- _v_H _v_h))) (and (>= _v_h 0) (and (= _v_kxtime_1 0) (and (= _f_h_2 _v_h) (and (= _f_v_2 _v_v) (and (= _f_kxtime_4 _v_kxtime_1) (and (= _v_v_3 (+ (- (* (* 1 _v_kxtime_5) _f_g)) _f_v_2)) (and (= _v_h_3 (* (/ 1 2) (+ (+ (- (* (* 1 (^ _v_kxtime_5 2)) _f_g)) (* 2 _f_h_2)) (* (* 2 _v_kxtime_5) _f_v_2)))) (and (>= _v_h_3 0) (and (>= _v_kxtime_5 _f_kxtime_4) (and (= _v_h_3 0) (= _v_v_5 (- (* _v_c _v_v_3)))))))))))))))))) (<= (^ _v_v_5 2) (* (* 2 _f_g) (- _v_H _v_h_3))))))
         |(check-sat)
         |""".stripMargin
   }

@@ -137,8 +137,8 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
         or have message
         """1:24 Error parsing argList at 1:16
           |Found:    "\" " at 1:24
-          |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | "::")
-          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | "<-" | "←" | "<->" | "↔" | "::")""".stripMargin)
+          |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | "::")
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | "::")""".stripMargin)
   }
 
   it should "bind strong" in withTactics {

@@ -218,7 +218,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "y>=0 & x-z>=0|x+y*z>0 & x>=0 &x+y+z = 0".asFormula
     val fs = fStar(odeSys,fml)
     println(fs)
-    fs._1 shouldBe "(y>=0&(y=0->2*x+y>0))&x-z>=0&(x-z=0->1+(-1+x)*x+-1*y+-1*z>=0&(1+(-1+x)*x+-1*y+-1*z=0->-1+(-1+x)*x*(1+2*x)+-2*y+-1*z>0))|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&x>0&(-31+z=0&36+y=0)&-5+x=0".asFormula
+    fs._1 shouldBe "(y>=0&(y=0->2*x+y>0))&x-z>=0&(x-z=0->1+((-1)+x)*x+(-1)*y+(-1)*z>=0&(1+((-1)+x)*x+(-1)*y+(-1)*z=0->(-1)+((-1)+x)*x*(1+2*x)+(-2)*y+(-1)*z>0))|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&x>0&((-31)+z=0&36+y=0)&(-5)+x=0".asFormula
   }
 
   "sAIc" should "take a local progress step" in withMathematica { _ =>
@@ -682,9 +682,9 @@ class ODEInvarianceTests extends TacticTestBase {
     )
 
     pr.subgoals(0).ante.length shouldBe 7
-    pr.subgoals(0).ante(4) shouldBe "x=2/3*(3*A()+B()+-5*C)*time_^3+x_0+time_*(A()+2*(x_0+y_0+-1*z_0))+time_^2*(A()+-1*B()+-5*C+6*x_0+-2*(y_0+z_0))".asFormula
-    pr.subgoals(0).ante(5) shouldBe "y=2/3*(3*A()+B()+-5*C)*time_^3+y_0+time_*(-1*B()+5*x_0+y_0+-3*z_0)+1/2*time_^2*(5*A()+-1*B()+-15*C+12*x_0+-4*(y_0+z_0))".asFormula
-    pr.subgoals(0).ante(6) shouldBe "z=4/3*(3*A()+B()+-5*C)*time_^3+time_*(5*C+x_0+5*y_0+-3*z_0)+z_0+1/2*time_^2*(A()+-5*B()+-15*C+24*x_0+-8*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(4) shouldBe "x=2/3*(3*A()+B()+(-5)*C)*time_^3+x_0+time_*(A()+2*(x_0+y_0+(-1)*z_0))+time_^2*(A()+(-1)*B()+(-5)*C+6*x_0+(-2)*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(5) shouldBe "y=2/3*(3*A()+B()+(-5)*C)*time_^3+y_0+time_*((-1)*B()+5*x_0+y_0+(-3)*z_0)+1/2*time_^2*(5*A()+(-1)*B()+(-15)*C+12*x_0+(-4)*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(6) shouldBe "z=4/3*(3*A()+B()+(-5)*C)*time_^3+time_*(5*C+x_0+5*y_0+(-3)*z_0)+z_0+1/2*time_^2*(A()+(-5)*B()+(-15)*C+24*x_0+(-8)*(y_0+z_0))".asFormula
   }
 
   it should "not dW when unprovable" in withMathematica { _ =>

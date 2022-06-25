@@ -8,6 +8,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.TacticInfo
@@ -27,6 +29,7 @@ import org.scalatest.LoneElement._
 import org.scalatest.time.SpanSugar._
 import org.scalatest.OptionValues._
 
+import scala.collection.mutable.ListBuffer
 import scala.reflect.io.File
 
 /**
@@ -86,7 +89,7 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "generate and master prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { _ =>
+  it should "generate and auto prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { _ =>
     proveBy("x>=5 ==> [{x'=x^2}]x>=5".asSequent,
       ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & autoClose)
     ) shouldBe 'proved
@@ -119,7 +122,7 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "generate and master prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { _ =>
+  it should "generate and auto prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { _ =>
     proveBy("x>=5 ==> [{{x'=2}}*]x>=5".asSequent,
       ChooseSome(someList, (inv:Formula) => loop(inv)(1) & autoClose)
     ) shouldBe 'proved
@@ -259,17 +262,35 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
-  it should "eventually run out of ideas" taggedAs SlowTest in withQE { _ =>
+  it should "eventually run out of ideas" taggedAs SlowTest in withMathematica { _ =>
     val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
-    failAfter(50 seconds) {
-      val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(invGenerator)(1))
-      result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
+    val invs = ListBuffer.empty[(Sequent, Position)]
+    val boundedInvGen = (s: Sequent, p: Position) => {
+      !invs.contains((s, p)) // loopPostMaster shouldn't ask repeatedly the same question
+      invs += (s -> p)
+      invGenerator(s, p)
     }
+    val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(boundedInvGen)(1))
+    result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
   }
 
-  //@todo why do these tests fail with ill-positioning?
+  it should "FEATURE_REQUEST: eventually run out of ideas with Z3" taggedAs (SlowTest, TodoTest) in withZ3 { _ =>
+    //@todo withZ3 tries invalid substitution steps
+    val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
+    // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
+    // not keep asking over and over again
+    val invs = ListBuffer.empty[(Sequent, Position)]
+    val boundedInvGen = (s: Sequent, p: Position) => {
+      !invs.contains((s, p)) // loopPostMaster shouldn't ask repeatedly the same question
+      invs += (s -> p)
+      invGenerator(s, p)
+    }
+    val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(boundedInvGen)(1))
+    result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
+  }
+
   "SnR Loop Invariant" should "by loopSR find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
@@ -281,7 +302,8 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
-  it should "by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+  it should "FEATURE_REQUEST: by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" taggedAs TodoTest in withMathematica { _ =>
+    //@todo no ODE so loopPostMaster gives up even though postcondition is invariant
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val proof = proveBy(fml,
@@ -300,7 +322,7 @@ class TactixLibraryTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, assignb(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
@@ -316,7 +338,7 @@ class TactixLibraryTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, step(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
@@ -332,7 +354,7 @@ class TactixLibraryTests extends TacticTestBase {
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
-        OnAll(master()) & done
+        OnAll(auto(TactixLibrary.invGenerator, None)) & done
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
@@ -663,7 +685,7 @@ class TactixLibraryTests extends TacticTestBase {
                 |  ]
                 |  (posCtrl <= posLead) /* safety condition */""".stripMargin.asFormula
 
-    proveBy(fml, master()) shouldBe 'proved
+    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
   }, 180)
 
   it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
@@ -682,7 +704,7 @@ class TactixLibraryTests extends TacticTestBase {
         |End.
         |End.""".stripMargin).head.model.asInstanceOf[Formula]
 
-    proveBy(problem, master()) shouldBe 'proved
+    proveBy(problem, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
   }
 
   it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
@@ -701,7 +723,7 @@ class TactixLibraryTests extends TacticTestBase {
              {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
            }*
          ] x <= m""".stripMargin(' ').asFormula
-    proveBy(problem1, master()) shouldBe 'proved
+    proveBy(problem1, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
 
     val problem2 = """
       v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
@@ -712,34 +734,34 @@ class TactixLibraryTests extends TacticTestBase {
              {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
            }*
          ] x <= m""".stripMargin(' ').asFormula
-    proveBy(problem2, master()) shouldBe 'proved
+    proveBy(problem2, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
   }
 
   it should "try the postcondition" in withQE { _ =>
     val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=y; } }*]x<=y".asFormula
-    proveBy(fml, master()) shouldBe 'proved
+    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
   }
 
   it should "try the preocondition" in withQE { _ =>
     val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=x-1/(y-x); } }*]x<=y".asFormula
-    proveBy(fml, master()) shouldBe 'proved
+    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
   }
 
   it should "apply safeabstraction and find the correct recursors" in withQE { _ =>
     // provable with safeabstraction, which is an anon tactic; triggers master autoTacticIndex comparison with loop and
     // returns wrong recursor if autoTacticIndex comparison bug
-    proveBy("x>=0 -> [y:=2;]x>=0".asFormula, master()) shouldBe 'proved
+    proveBy("x>=0 -> [y:=2;]x>=0".asFormula, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
   }
 
   it should "use auto modus ponens" in withQE { _ =>
     val s = "Y>y, X>y, y < x&x<=Y->P(x) ==>  y < x&x<=min(X,Y)->P(x)".asSequent
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
   }
 
   it should "not fail when trying to chase non-toplevel" in withQE { _ =>
     val f = "\\exists X (X>x&\\forall a (x<a&a<=X->P(a)))->\\exists a (a>x&P(a))".asFormula
     //@note master does not yet instantiate quantifiers
-    proveBy(f, master()).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->P(a)) ==> \\exists a (a>x&P(a))".asSequent
+    proveBy(f, auto(TactixLibrary.invGenerator, None)).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->P(a)) ==> \\exists a (a>x&P(a))".asSequent
   }
 
   it should "expand definitions" in withQE { _ =>

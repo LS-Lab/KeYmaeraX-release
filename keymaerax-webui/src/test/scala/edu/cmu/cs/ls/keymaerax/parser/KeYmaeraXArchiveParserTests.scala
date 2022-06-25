@@ -258,7 +258,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.defs should beDecl(
       Declaration(Map(
         Name("exp1",None) ->
-          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=(-2)) >>(.)".asTerm), UnknownLocation),
+          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-1}++{exp1'=exp1,s'=1}}>(exp1=1&s=-2) >>(.)".asTerm), UnknownLocation),
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
   }
