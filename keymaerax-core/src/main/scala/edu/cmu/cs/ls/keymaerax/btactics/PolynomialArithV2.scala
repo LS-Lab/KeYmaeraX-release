@@ -1722,7 +1722,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     case _ =>
       throw new IllegalArgumentException("powerDivideLemma requires natural number exponent")
   }
-  private val powerDivideLemmas = (0 to 100).map(provePowerDivideLemma(_, 0, i => powerDivide0)).toArray
+  private lazy val powerDivideLemmas = (0 to 100).map(provePowerDivideLemma(_, 0, i => powerDivide0)).toArray
   /** lookup or prove lemma of the form "(x_(||) / y_(||))^i = x_(||)^i / y_(||)^i " */
   def powerDivideLemma(i: Int) = if (i <= 100) powerDivideLemmas(i) else provePowerDivideLemma(i, 100, powerDivideLemmas)
 
