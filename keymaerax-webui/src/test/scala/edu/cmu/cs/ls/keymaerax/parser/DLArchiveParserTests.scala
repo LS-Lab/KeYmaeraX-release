@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Equal, FuncOf, Number, Plus, Power, Real, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Number, Plus, Power, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -830,6 +830,31 @@ class DLArchiveParserTests extends TacticTestBase {
         |Found:    "End." at 3:57
         |Expected: Unique name (a not unique)
         |Hint: Try Unique name (a not unique)""".stripMargin
+  }
+
+  it should "not complain about undeclared variables in unused program definitions" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions HP a ::= { y:=y+1; }; End.
+        |ProgramVariables Real x; End.
+        |Problem [x:=1;]x>=0 End.
+        |End.
+        |""".stripMargin
+      parse(input).head.model shouldBe Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "complain about undeclared variables in unused function definitions" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real f() = y+1; End.
+        |ProgramVariables Real x; End.
+        |Problem [x:=1;]x>=0 End.
+        |End.
+        |""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> Definition f uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "not elaborate to program constants when definitions contain duals" in {

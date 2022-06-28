@@ -424,7 +424,19 @@ object ArchiveParser extends ArchiveParser {
 
     val elaboratedDefs = elaborateDefs(entry.defs)
 
-    val uses = elaboratedDefs.decls.map({
+    /** All function and predicate definitions + (transitively) used program definitions. */
+    def defsUsedIn(e: Expression): Map[Name, Signature] = {
+      val syms = freeBaseSymbols(e).map(s => Name(s.name, s.index))
+      elaboratedDefs.decls.flatMap({
+        case e@(name, Signature(_, s, _, int, _)) =>
+          if (s != Trafo) Map(e)
+          else if (syms.contains(name)) int.map(defsUsedIn).getOrElse(Map.empty) + e
+          else Map.empty[Name, Signature]
+        case _ => Map.empty[Name, Signature]
+      })
+    }
+
+    val uses = defsUsedIn(entry.model).map({
       case (name, Signature(_, _, args, int, loc)) => name -> ((args match {
         case Some(args) =>
           int.map(freeBaseSymbols(_).filterNot(n => args.contains((Name(n.name, n.index), n.sort))))
