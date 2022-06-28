@@ -422,12 +422,10 @@ object ArchiveParser extends ArchiveParser {
       throw ParseException("Definition " + name.prettyString + " uses unsupported anonymous (dot) arguments; please use named arguments (e.g., Real x) instead", loc)
     }
 
-    val elaboratedDefs = elaborateDefs(entry.defs)
-
     /** All function and predicate definitions + (transitively) used program definitions. */
     def defsUsedIn(e: Expression): Map[Name, Signature] = {
       val syms = freeBaseSymbols(e).map(s => Name(s.name, s.index))
-      elaboratedDefs.decls.flatMap({
+      entry.defs.decls.flatMap({
         case e@(name, Signature(_, s, _, int, _)) =>
           if (s != Trafo) Map(e)
           else if (syms.contains(name)) int.map(defsUsedIn).getOrElse(Map.empty) + e
@@ -436,7 +434,9 @@ object ArchiveParser extends ArchiveParser {
       })
     }
 
-    val uses = defsUsedIn(entry.model).map({
+    val elaboratedDefs = elaborateDefs(Declaration(defsUsedIn(entry.model)))
+
+    val uses = elaboratedDefs.decls.map({
       case (name, Signature(_, _, args, int, loc)) => name -> ((args match {
         case Some(args) =>
           int.map(freeBaseSymbols(_).filterNot(n => args.contains((Name(n.name, n.index), n.sort))))

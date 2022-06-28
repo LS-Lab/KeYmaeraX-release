@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Number, Plus, Power, Real, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Number, Plus, Power, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -855,6 +855,18 @@ class DLArchiveParserTests extends TacticTestBase {
       """<somewhere> Definition f uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
+  }
+
+  it should "not elaborate in unused program definitions" in {
+    val input =
+      """SharedDefinitions HP a ::= { y:=y+1; }; End.
+        |ArchiveEntry "Test"
+        |Definitions Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [x:=y;]x>=0 End.
+        |End.
+        |""".stripMargin
+    parse(input).head.model shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
   }
 
   it should "not elaborate to program constants when definitions contain duals" in {
