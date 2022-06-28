@@ -128,7 +128,7 @@ class DLParser extends Parser {
 
   private def parseAndCompare[A](newParser: P[_] => P[A], oldParser: String => A, name: String): String => A =
     s => {
-      val newres = fastparse.parse(s, newParser(_)) match {
+      val newres = fastparse.parse(ParserHelper.removeBOM(s), newParser(_)) match {
         case Parsed.Success(value, _) => Right(value)
         case f: Parsed.Failure => Left(parseException(f))
       }

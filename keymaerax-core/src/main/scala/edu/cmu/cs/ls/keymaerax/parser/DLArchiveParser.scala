@@ -64,7 +64,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** @inheritdoc */
   override def tacticParser: TacticParser = tacticParser
 
-  val archiveParser: String => List[ParsedArchiveEntry] = input => fastparse.parse(input, archiveEntries(_)) match {
+  val archiveParser: String => List[ParsedArchiveEntry] = input => fastparse.parse(ParserHelper.removeBOM(input), archiveEntries(_)) match {
     case Parsed.Success(value, index) =>
       if (value.length==1)
         List(value.head.withProblemContent(input.trim))
@@ -73,7 +73,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
   }
 
-  private val problemOrFormulaParser: String => Formula = input => fastparse.parse(input, problemOrFormula(_)) match {
+  private val problemOrFormulaParser: String => Formula = input => fastparse.parse(ParserHelper.removeBOM(input), problemOrFormula(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
   }
