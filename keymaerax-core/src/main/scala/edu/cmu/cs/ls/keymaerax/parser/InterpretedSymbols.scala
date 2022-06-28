@@ -48,6 +48,14 @@ object InterpretedSymbols {
     PI
   ) ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
 
+  /** The nondifferentiable builtin interpreted function symbols. */
+  val nondiffBuiltin: List[Function] = List(
+    absF,
+    minF,
+    maxF,
+    PI
+  ) ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
+
   /** The interpreted symbols by name. */
   val byName: Map[(String, Option[Int]),Function] = builtin.map(f => (f.name, f.index) -> f).toMap
 }

@@ -21,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, TacticReservedSymbols}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, Name, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
@@ -1911,9 +1911,14 @@ private object DifferentialTactics extends Logging {
         if(!dropFuncs)
           Some(Minus(l,r))
         else //dropFuncs is true
-        if (!sig.exists(e => e.isInstanceOf[Function] && e.asInstanceOf[Function].sort != Unit && !e.asInstanceOf[Function].interpreted))
+        // signature has a non-unit uninterpreted e
+        if (sig.exists(e => e.isInstanceOf[Function] && e.asInstanceOf[Function].sort != Unit && !e.asInstanceOf[Function].interpreted))
+          None
+        // signature contains non differentiable e
+        else if (sig.exists(e => InterpretedSymbols.nondiffBuiltin.contains(e)))
+          None
+        else
           Some(Minus(l, r))
-        else None
       case _ => None
     }
   }
