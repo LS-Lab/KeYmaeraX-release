@@ -52,8 +52,7 @@ object InterpretedSymbols {
   val nondiffBuiltin: List[Function] = List(
     absF,
     minF,
-    maxF,
-    PI
+    maxF
   ) ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
 
   /** The interpreted symbols by name. */
