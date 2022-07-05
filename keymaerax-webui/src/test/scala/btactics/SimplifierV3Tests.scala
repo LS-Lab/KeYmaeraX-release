@@ -96,6 +96,13 @@ class SimplifierV3Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only "0>x->y=0&z < x->5 < x|x=5&a=0&0=z+b".asFormula
   }
 
+  it should "simplify negated multiplication" in withMathematica { _ =>
+    SimplifierV3.termSimp("-1*x".asTerm, Set.empty, SimplifierV3.defaultTaxs)._1 shouldBe "-x".asTerm
+    SimplifierV3.termSimp("-(1*x)".asTerm, Set.empty, SimplifierV3.defaultTaxs)._1 shouldBe "-x".asTerm
+    SimplifierV3.termSimp("(-1)*x".asTerm, Set.empty, SimplifierV3.defaultTaxs)._1 shouldBe "-x".asTerm
+    SimplifierV3.termSimp("-(1)*x".asTerm, Set.empty, SimplifierV3.defaultTaxs)._1 shouldBe "-x".asTerm
+  }
+
   it should "FEATURE_REQUEST: saturate term simplifiers" taggedAs TodoTest in withMathematica { _ =>
     SimplifierV3.termSimp("0-(x-y)".asTerm, Set.empty, SimplifierV3.defaultTaxs)._1 shouldBe "y-x".asTerm
   }

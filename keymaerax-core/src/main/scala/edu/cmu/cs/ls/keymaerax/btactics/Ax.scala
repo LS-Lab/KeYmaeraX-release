@@ -3131,6 +3131,19 @@ object Ax extends Logging {
   )
 
   /**
+    * {{{Axiom "-1*".
+    *    (-1*f()) = -f()
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom("-1*", unifier = "surjlinear")
+  lazy val negOneTimes: DerivedAxiomInfo = derivedAxiom("-1*", Sequent(IndexedSeq(), IndexedSeq("((-1)*f_()) = -f_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x ((-1)*x = -x)".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
    * {{{Axiom "0+".
    *    (0+f()) = f()
    * End.

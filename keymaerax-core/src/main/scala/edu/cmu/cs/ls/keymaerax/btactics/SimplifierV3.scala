@@ -926,7 +926,8 @@ object SimplifierV3 {
     Ax.timesIdentity.provable,
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentity.provable),
     Ax.timesIdentityNeg.provable,
-    useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable))
+    useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable),
+    Ax.negOneTimes.provable)
 
   private lazy val negArith: List[ProvableSig] = List(
     Ax.minusNeg.provable,
