@@ -406,9 +406,9 @@ private object DLBySubst {
   /** Returns conditions in `fmls` that are unaffected by `taboo`, expanding formulas according to `defs` to determine
     * the free variables of their constituent subformulas. */
   private def constConditions(fmls: IndexedSeq[Formula], taboo: SetLattice[Variable], defs: Declaration = Declaration(Map.empty)): IndexedSeq[Formula] = {
-    fmls.flatMap({
+    fmls.flatMap(FormulaTools.conjuncts).flatMap({
       case p: PredOf => FormulaTools.conjuncts(defs.exhaustiveSubst[Formula](p))
-      case f => List(f)
+      case f => FormulaTools.conjuncts(f)
     }).filter(StaticSemantics.freeVars(_).intersect(taboo).isEmpty)
   }
 
@@ -480,7 +480,7 @@ private object DLBySubst {
               /* c */ useAt(Ax.I)(pos) & andR(pos) <(
                 andR(pos) <(
                   label(replaceTxWith(initCase)),
-                  (andR(pos) <(expandInit & pre & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
+                  (andR(pos) <(expandInit & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
                     (andR(pos) <(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
                     notR(pos) & SaturateTactic(andL('L)) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(

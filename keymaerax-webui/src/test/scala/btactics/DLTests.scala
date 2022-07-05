@@ -432,12 +432,30 @@ class DLTests extends TacticTestBase {
     )
   }
 
-  it should "keep conjunctive constants around when pre is nil" in withTactics {
+  it should "keep constants around when pre is nil" in withTactics {
     proveBy("x_0=0&y_0=1, x_0=x, y_0=y ==> [{y:=y+x;x:=x+1;}*]y>=0".asSequent, DLBySubst.loop("x>=0&y>=1".asFormula, nil)(1)).subgoals should
       contain theSameElementsInOrderAs List(
       /* init */     "x_0=0&y_0=1, x_0=x, y_0=y ==> x>=0&y>=1".asSequent,
-      /* use case */ "x>=0&y>=1, x_0=0&y_0=1 ==> y>=0".asSequent,
-      /* step */     "x>=0&y>=1, x_0=0&y_0=1 ==> [y:=y+x;x:=x+1;](x>=0&y>=1)".asSequent
+      /* use case */ "x>=0&y>=1, x_0=0, y_0=1 ==> y>=0".asSequent,
+      /* step */     "x>=0&y>=1, x_0=0, y_0=1 ==> [y:=y+x;x:=x+1;](x>=0&y>=1)".asSequent
+    )
+  }
+
+  it should "keep constants around when pre is nil (2)" in withTactics {
+    proveBy("x_0=0, y_0=1, x_0=x, y_0=y ==> [{y:=y+x;x:=x+1;}*]y>=0".asSequent, DLBySubst.loop("x>=0&y>=1".asFormula, nil)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x_0=0, y_0=1, x_0=x, y_0=y ==> x>=0&y>=1".asSequent,
+      /* use case */ "x>=0&y>=1, x_0=0, y_0=1 ==> y>=0".asSequent,
+      /* step */     "x>=0&y>=1, x_0=0, y_0=1 ==> [y:=y+x;x:=x+1;](x>=0&y>=1)".asSequent
+    )
+  }
+
+  it should "keep disjunctive constants around when pre is alpha" in withTactics {
+    proveBy("x=1|x=2, y=x ==> [{y:=y+1/x;}*]y>=0".asSequent, DLBySubst.loop("y>=1".asFormula, SaturateTactic(alphaRule))(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x=1|x=2, y=x ==> y>=1".asSequent,
+      /* use case */ "y>=1, x=1|x=2 ==> y>=0".asSequent,
+      /* step */     "y>=1, x=1|x=2 ==> [y:=y+1/x;]y>=1".asSequent
     )
   }
 
@@ -449,11 +467,11 @@ class DLTests extends TacticTestBase {
       Name("a") -> Signature(Some(Unit), Trafo, None, Some("x:=x+y;".asProgram), UnknownLocation)
     ))
     val result = proveBy("initial(x,y) ==> [{a{|^@|};}*]post(x)".asSequent, loop("loopinv(x)".asFormula)(1), defs)
-    // sequential interpreter does not yet support keeping abbreviations when combining provables in branchtactic
+    // sequential interpreter does not yet support keeping all abbreviations when combining provables in branchtactic
     result.subgoals should contain theSameElementsInOrderAs List(
-      /* init */     "x>2&y>0 ==> x>1".asSequent,
-      /* use case */ "x>1, y>0 ==> x>0".asSequent,
-      /* step */     "x>1, y>0 ==> [x:=x+y;]x>1".asSequent
+      /* init */     "x>2&y>0 ==> loopinv(x)".asSequent,
+      /* use case */ "loopinv(x), y>0 ==> post(x)".asSequent,
+      /* step */     "loopinv(x), y>0 ==> [x:=x+y;]loopinv(x)".asSequent
     )
     // want instead
     result.subgoals should contain theSameElementsInOrderAs List(
@@ -610,7 +628,7 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "v_>0, v_>x, 0>=0 ==> <x:=x-1;>v_-1>x".asSequent
   }
 
-  it should "TODO: accept modal convergence conditions" taggedAs(TodoTest) in withTactics {
+  it should "TODO: accept modal convergence conditions" taggedAs TodoTest in withTactics {
     val result = proveBy("<{{x'=-1}}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "<{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asFormula)(1))
     result.subgoals should have size 3
     result.subgoals(0) shouldBe "==> \\exists v_ <{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asSequent
@@ -773,6 +791,16 @@ class DLTests extends TacticTestBase {
     proveByS("init(x) ==> [{x:=x+1;}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
       subgoals should contain theSameElementsAs List(
       "b()>0&x/b()>=1 ==> inv(x)".asSequent,
+      "inv(x), b()>0 ==> post(x)".asSequent,
+      "inv(x), b()>0 ==> [x:=x+1;]inv(x)".asSequent
+    )
+  }
+
+  it should "keep constant assumptions even when hidden inside conjunction with non-expanded assumptions/loop invariant" in withTactics {
+    val defs = "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: inv(x) ~> x/b()>=0 :: nil".asDeclaration
+    proveByS("init(x)&x>0 ==> [{x:=x+1;}*]post(x)".asSequent, DLBySubst.loop("inv(x)".asFormula, nil)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "(b()>0&x/b()>=1)&x>0 ==> inv(x)".asSequent,
       "inv(x), b()>0 ==> post(x)".asSequent,
       "inv(x), b()>0 ==> [x:=x+1;]inv(x)".asSequent
     )
