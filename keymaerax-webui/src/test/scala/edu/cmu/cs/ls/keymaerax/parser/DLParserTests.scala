@@ -58,11 +58,14 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
 
   it should "parse exponentials" in {
     DLParser("-2^4") shouldBe Neg(Power(Number(2), Number(4)))
+    DLParser("(-2)^4") shouldBe Power(Number(-2), Number(4))
+    DLParser("(- 2)^4") shouldBe Power(Neg(Number(2)), Number(4))
   }
 
   it should "parse numbers" in {
     DLParser("-1") shouldBe (if (Parser.numNeg) Number(-1) else Neg(Number(1)))
     DLParser("(-1)") shouldBe Number(-1)
+    DLParser("(- 1)") shouldBe Neg(Number(1))
     DLParser("(-1)*10") shouldBe Times(Number(-1), Number(10))
     DLParser("-1*10") shouldBe (if (Parser.numNeg) Times(Number(-1), Number(10)) else Neg(Times(Number(1), Number(10))))
     DLParser("-1*x") shouldBe (if (Parser.numNeg) Times(Number(-1), Variable("x")) else Neg(Times(Number(1), Variable("x"))))

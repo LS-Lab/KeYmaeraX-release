@@ -303,16 +303,22 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case UnitFunctional(name,space,sort) =>
       if (name == ReservedSymbols.exerciseF.name) "__________"
       else name + "(" + space + ")"
-    // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
-    case t@Neg(Number(n))       => ppOp(t) + "(" + pp(q++0, Number(n)) + ")"
+    // special case when negative numbers are enabled: force to disambiguate between -5 as in the number (-5) as opposed to -(5).
+    case t@Neg(n: Number) if !negativeBrackets => ppOp(t) + "(" + pp(q++0, n) + ")"
     // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
-    case t: Neg if !negativeBrackets => val c = pp(q++0, t.child)
+    case t: Neg if !negativeBrackets =>
+      val c = pp(q++0, t.child)
       ppOp(t) + (if (c.charAt(0).isDigit) " " else "") + wrapChild(t, c)
     //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeTerm  => ppOp(t) + wrapChild(t, pp(q++0, t.child))
     //@note all binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeTerm =>
-      wrapLeft(t, pp(q++0, t.left)) + ppOp(t) + wrapRight(t, pp(q++1, t.right))
+      // special case forcing space between unary negation and numbers when negative brackets are enabled to disambiguate (- 1)^2 from (-1)^2
+      def printSub(i: Int, t: Term): String = t match {
+        case Neg(n: Number) if negativeBrackets => ppOp(t) + " " + pp(q++i, n)
+        case _ => pp(q++i, t)
+      }
+      wrapLeft(t, printSub(0, t.left)) + ppOp(t) + wrapRight(t, printSub(1, t.right))
   })
 
   protected def pp(q: PosInExpr, formula: Formula): String = emit(q, formula match {
@@ -573,7 +579,9 @@ object KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXOmitInterpretat
 class KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXPrecedencePrinter {
   protected override def pp(q: PosInExpr, term: Term): String = term match {
     case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
-    case FuncOf(Function(n, i, _, _, Some(_)), arg) => emit(q, n + i.map("_" + _).getOrElse("") + "(" + pp(q++0, arg) + ")")
+    case FuncOf(Function(n, i, d, _, Some(_)), arg) =>
+      if (d.isInstanceOf[Tuple]) emit(q, n + i.map("_" + _).getOrElse("") + pp(q++0, arg))
+      else emit(q, n + i.map("_" + _).getOrElse("") + "(" + pp(q++0, arg) + ")")
     case FuncOf(f, Nothing) => emit(q, f.asString + "()")
     case _ => super.pp(q, term)
   }
