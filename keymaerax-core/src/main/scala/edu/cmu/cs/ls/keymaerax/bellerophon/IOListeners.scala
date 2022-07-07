@@ -173,7 +173,7 @@ object IOListeners {
                 }
               case _ => "Unexpected output provable from input error"
             }
-          case _ => "failed"
+          case Right(ex) => "failed: " + ex.getMessage
         }
 
         expr match {
