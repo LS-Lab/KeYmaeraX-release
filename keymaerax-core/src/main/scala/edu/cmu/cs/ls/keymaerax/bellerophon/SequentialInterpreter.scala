@@ -577,6 +577,10 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           (PredOf(fn, arg), Some(SubstitutionPair(PredOf(fn, dotsArg), fDots)))
         }
 
+        val missing = es.filter(e => p.subgoals.map(s => (s.ante ++ s.succ).indexOf(e)).exists(_ < 0))
+        if (missing.nonEmpty) throw new IllFormedTacticApplicationException("Tactic t using es: Expressions\n" +
+          missing.map(_.prettyString).mkString(",") + "\nare not present in provable\n" + p.prettyString)
+
         val filteredGoals = p.subgoals.map(s => {
           val antes = s.ante.zipWithIndex.map({ case (f, i) =>
             if (keepPos(s, AntePos(i))) (f, None)
