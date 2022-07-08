@@ -218,7 +218,7 @@ trait ProofTreeNode {
     else substituted
   }
 
-  private lazy val usMatcher = """US\("([^"]*)"\)""".r("subst")
+  private lazy val usMatcher = """(?<!by)US\("([^"]*)"\)""".r("subst")
   private lazy val expandMatcher = """expand\s*"([^"]*)"""".r("name")
 
   /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
@@ -234,7 +234,7 @@ trait ProofTreeNode {
     } else if (m.contains("US(")) {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       // collect substitutions of expandAll (serializes to sequence of US), and
-      // anywhere in custom tactics, e.g., "expand Q; unfold; expand P; master"
+      // anywhere in custom tactics, e.g., "expand Q; unfold; expand P; auto"
       usMatcher.findAllMatchIn(m).map(_.group("subst").trim).map(_.asSubstitutionPair).toList.distinct
     } else Nil
   }).getOrElse(Nil)
