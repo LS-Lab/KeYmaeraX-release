@@ -786,6 +786,26 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "FEATURE_REQUEST: support division/square root" taggedAs TodoTest in withMathematica { _ =>
+    val s =
+      """g>0 & p>a & a>0 & T>0 & m< -(g/p)^(1/2) &
+        |  x>=0 & v<0 & v> -(g/p)^(1/2) & r=a
+        |==>
+        |[ {
+        |    {
+        |      ?(v - g*T > -(g/p)^(1/2) & r = a);
+        |      ++
+        |      r := p;
+        |    }
+        |    t := 0;
+        |    {x'=v, v'=-g+r*v^2, t'=1 & t<=T & x>=0 & v<0}
+        |  }*
+        |](x=0 -> v>=m)
+        |""".stripMargin.asSequent
+    //@todo sAI causes singularities in dG because it hides the assumptions g>0, p>a, a>0
+    proveBy(s, autoClose) shouldBe 'proved
+  }
+
   "ode rewrite" should "prove an ODE rewrite" in withMathematica { _ =>
 
     val pr = proveBy("[{x'=-(z+5)+10,y'=y*y+y-y&z=2}]x+y>=1000 -> [{x'=3,y'=y^2&z=2}]x+y>=1000 ".asFormula,

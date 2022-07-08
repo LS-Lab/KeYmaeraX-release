@@ -109,6 +109,9 @@ object ODEInvariance {
     prop & OnAll(QE)
   )
 
+  private lazy val sqZero = proveBy("f_()=0 <-> f_()*f_()<=0".asFormula, QE)
+  private lazy val sqNonZero = proveBy("f_()!=0 <-> f_()*f_()>0".asFormula, QE)
+
   /** Given a polynomial p, and an ODE system, generates the formula
     * p*>0
     * along with additional information for
@@ -962,9 +965,9 @@ object ODEInvariance {
     //this can also be manually proved rather than using QE
     val pr =
       if(negate)
-        proveBy(Equiv(cutp, Greater(sump,zero)), QE)
+        proveBy(Equiv(cutp, Greater(sump,zero)), byUS(sqNonZero) | QE)
       else
-        proveBy(Equiv(cutp,LessEqual(sump,zero)), SaturateTactic(useAt(fastSOS,PosInExpr(1::Nil))(1) & andR(1) <( prove_sos_positive, skip )) & QE )
+        proveBy(Equiv(cutp,LessEqual(sump,zero)), SaturateTactic(useAt(fastSOS,PosInExpr(1::Nil))(1) & andR(1) <( prove_sos_positive, skip )) & (byUS(sqZero) | QE) )
 
     //Construct the term ||G||^2 + 1
     val cofactorPre = Plus(Gco.map(ts => ts.map(t=>Times(t,t):Term).reduceLeft(Plus)).reduceLeft(Plus),one)
@@ -2245,7 +2248,7 @@ object ODEInvariance {
                 implyR('Rlast) & andL('Llast) & hideL('Llast) &
                 cut(Or(nprstarpf,rennqrstarpf)) <(
                   //Cleanup the sequent
-                  (hideL(-1) * seq.ante.length) & // hide original antecedents
+                  (hideL(-1) * seq.ante.length) & // hide original antecedents //@todo may cause singularities in dG!
                   hideL(-1) & // hide s_!=t_
                   cohideOnlyR('Rlast) & //hide all succedents
                   hideL(-2) & // hide domain

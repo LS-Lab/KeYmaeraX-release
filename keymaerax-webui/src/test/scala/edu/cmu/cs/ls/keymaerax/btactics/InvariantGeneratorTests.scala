@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.{FileOutputStream, PrintWriter}
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
@@ -57,6 +56,22 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   it should "not fail on non-FOL postcondition" in withMathematica { _ =>
     InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0)).toList should
       contain theSameElementsAs(("[x:=x+1;]x>=2".asFormula, None) :: ("x>=1".asFormula, None) ::Nil)
+  }
+
+  it should "find an invariant for the runaround robot" in withMathematica { _ =>
+    val s = """x!=ox | y!=oy ==>
+                #  [{
+                #    {?(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2; om:=-1;
+                #    ++ ?(x+w-ox)^2+(y-v-oy)^2!=v^2+w^2; om:=1;
+                #    ++ ?(ox-x)*w!=(oy-y)*v; om:=0;}
+                #    {x'=v,y'=w,v'=om*w,w'=-om*v}
+                #   }*
+                #  ] !(x=ox & y=oy)""".stripMargin('#').asSequent
+    //@note precondition and postcondition are invariant
+    InvariantGenerator.loopInvariantGenerator(s, SuccPos(0)).toList should contain theSameElementsAs List(
+      "x!=ox|y!=oy".asFormula -> None, "!(x=ox&y=oy)".asFormula -> None
+    )
+    proveBy(s, autoClose) shouldBe 'proved
   }
 
   "Differential invariant generator" should "use Pegasus lazily" in withTactics {
