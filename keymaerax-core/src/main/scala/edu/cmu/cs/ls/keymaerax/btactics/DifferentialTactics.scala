@@ -1771,7 +1771,7 @@ private object DifferentialTactics extends Logging {
     //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     val invTactic =
-      if (tryHard) {
+      if (tryHard) expandAllDefs(Nil) & {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos) |
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
@@ -1780,7 +1780,7 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAI(pos) |
         ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
-      } else {
+      } else expandAllDefs(Nil) & {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
         // ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
