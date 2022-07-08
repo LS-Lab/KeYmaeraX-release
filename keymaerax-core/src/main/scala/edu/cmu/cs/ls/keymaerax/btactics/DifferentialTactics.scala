@@ -515,7 +515,7 @@ private object DifferentialTactics extends Logging {
     * @see [[dG()]]
     * @todo generalize to diamond ODEs since it's an equivalence
     */
-  private def DG(ghost: DifferentialProgram): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  private def DG(ghost: DifferentialProgram): DependentPositionTactic = anon ((pos: Position, sequent: Sequent, defs: Declaration) => {
     val (y:Variable, a:Term, b:Term) = try {
       DifferentialHelper.parseGhost(ghost)
     } catch {
@@ -551,13 +551,15 @@ private object DifferentialTactics extends Logging {
           )
         }
 
-        if (singular.nonEmpty)
-          throw new IllFormedTacticApplicationException("Possible singularities during DG(" + ghost + ") will be rejected: " +
+        if (singular.nonEmpty) {
+          val substs = singular.flatMap(t => defs.substs.find(_.what == t)).toList
+          val gs = USubst(substs)(ghost)
+          if (gs != ghost) DG(gs)(pos)
+          else throw new IllFormedTacticApplicationException("Possible singularities during DG(" + ghost + ") will be rejected: " +
             singular.mkString(",") + " in\n" + sequent.prettyString +
             "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
           )
-
-        (a, b) match {
+        } else (a, b) match {
           case (Number(n), _) if n == 0 =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::

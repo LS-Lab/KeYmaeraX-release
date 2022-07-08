@@ -1343,6 +1343,27 @@ class DifferentialTests extends TacticTestBase {
       "==> [b:=1;][{x'=v}]b=1".asSequent :: Nil)
   }
 
+  it should "expand definitions to avoid singularities" in withMathematica { _ =>
+    val defs = "g() ~> 9 :: p() ~> 1 :: nil".asDeclaration
+    val s =
+      """9>0,
+        |1>0,
+        |T()>0,
+        |m() < -(9/1)^(1/2),
+        |t=0,
+        |v>-(9/1)^(1/2),
+        |x>=0,
+        |v < 0
+        |==>
+        |[{x'=v,v'=-9+1*v^2,t'=1 & t<=T() & x>=0 & v < 0}]v>-(9/1)^(1/2)
+        |""".stripMargin.asSequent
+      proveBy(s, dG("y'=(-1/2*p()*(v-(g()/p())^(1/2)))*y".asDifferentialProgram,
+        Some("y^2*(v+(g()/p())^(1/2))=1".asFormula))(1), defs).
+        subgoals.loneElement shouldBe
+        """9>0, 1>0, T()>0, m() < -(9/1)^(1/2), t=0, v>-(9/1)^(1/2), x>=0, v < 0
+          |==>  \exists y [{x'=v,v'=-9+1*v^2,t'=1,y'=(-1/2*1*(v-(9/1)^(1/2)))*y+0 & (t<=T() & x>=0 & v < 0) & 1!=0}]y^2*(v+(9/1)^(1/2))=1""".stripMargin.asSequent
+  }
+
   "DA" should "add y'=1 to [x'=2]x>0" in withQE { _ =>
     val s = "==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1)
