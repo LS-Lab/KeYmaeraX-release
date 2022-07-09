@@ -5,7 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, Find, Fixed, LastAnte, LastSucc, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SeqTactic, Using}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, DefTactic, Find, Fixed, LastAnte, LastSucc, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SaturateTactic, SeqTactic, Using}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.andL
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
@@ -146,6 +147,10 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   it should "parse PosInExpr arguments" in {
     parse("""CMonCongruence(".1")""") shouldBe TactixLibrary.CMon(PosInExpr(1::Nil))
+  }
+
+  it should "parse tactic definitions" in {
+    parse("tactic andLStar as ( andL('L)* )") shouldBe DefTactic("andLStar", SaturateTactic(andL('L)))
   }
 
 }

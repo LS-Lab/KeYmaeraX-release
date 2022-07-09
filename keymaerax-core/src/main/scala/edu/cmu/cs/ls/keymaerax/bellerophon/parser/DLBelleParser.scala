@@ -45,12 +45,19 @@ class DLBelleParser(override val printer: BelleExpr => String,
   /** @inheritdoc */
   override def apply(input: String, defs: Declaration): BelleExpr = {
     setDefs(defs)
+    setDefTactics(Map.empty)
     belleParser(input)
   }
 
   /** Sets the definitions to be used when parsing tactic expressions. Expected to be set
     * before [[apply]] or [[tactic]] are used. */
   override def setDefs(defs: Declaration): Unit = this.defs = defs
+
+  /** @inheritdoc */
+  override def setDefTactics(defs: Map[String, DefTactic]): Unit = {
+    tactics.clear
+    defs.foreach(tactics += _)
+  }
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   //@todo store the parser for speed
@@ -62,7 +69,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   import JavaWhitespace._
 
   def fullTactic[_: P]: P[BelleExpr] = {
-    tactics.clear
+    setDefTactics(Map.empty)
     Start ~ tactic ~ End
   }
 
@@ -258,7 +265,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       (blank ~ "using" ~~ blank ~/ "\"" ~ argList(expression) ~ "\"").?
     ).map({
       case (tac, None) => tac
-      case (tac, Some(es)) => Using(es, tac)
+      case (tac, Some(es)) => Using(es.map(defs.elaborateToFunctions(_)).map(defs.elaborateToSystemConsts), tac)
     })
 
   def partialTac[_: P]: P[BelleExpr] = (eitherTac ~~ (blank ~ "partial").map(_ => "partial").?).map({

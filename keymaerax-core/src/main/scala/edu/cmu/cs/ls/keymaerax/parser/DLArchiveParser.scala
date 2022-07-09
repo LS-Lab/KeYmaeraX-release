@@ -409,6 +409,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   def tactic[_: P](defs: Declaration): P[BelleExpr] = {
     tacticParser.setDefs(defs)
+    tacticParser.setDefTactics(Map.empty)
     tacticParser.tactic
   }
 }

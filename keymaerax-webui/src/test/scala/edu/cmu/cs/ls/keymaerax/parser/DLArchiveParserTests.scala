@@ -6,10 +6,10 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
+import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Number, Plus, Power, Real, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -1948,6 +1948,32 @@ class DLArchiveParserTests extends TacticTestBase {
     val b :: Nil = ArchiveParser(contentB)
     b.tactics.map(_._3) should contain theSameElementsInOrderAs
       List("""implyR('R=="x>=0 -> [{x'=x}]x>=0"); dC("x>=old(x)", 'R=="[{x'=x}]x>=0")""".asTactic(b.defs)) // again changes defs here
+  }
+
+  it should "elaborate in tactic using ..." in withTactics {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Bool p(Real x); End.
+        |Problem p(5) End.
+        |Tactic "Proof" QE using "p(5) :: nil" End.
+        |End.
+        |""".stripMargin
+      ArchiveParser(input).head.tactics.head._3 shouldBe Using(List(PredOf(edu.cmu.cs.ls.keymaerax.core.Function("p", None, Real, Bool), Number(5))), QE)
+  }
+
+  it should "reset tactic definitions at the start of each tactic" in withTactics {
+    val input =
+      """ArchiveEntry "Test"
+        |ProgramVariables Real x,y; End.
+        |Problem x^2>=0 & y^2>=0 End.
+        |Tactic "Proof A" tactic myQE as (QE); myQE End.
+        |Tactic "Proof B" tactic myQE as (prop; doall(QE)); myQE End.
+        |End.
+        |""".stripMargin
+    ArchiveParser(input).head.tactics.map(_._3) should contain theSameElementsAs List(
+      DefTactic("myQE", QE) & ApplyDefTactic(DefTactic("myQE", QE)),
+      DefTactic("myQE", prop & OnAll(QE)) & ApplyDefTactic(DefTactic("myQE", prop & OnAll(QE)))
+    )
   }
 
 }

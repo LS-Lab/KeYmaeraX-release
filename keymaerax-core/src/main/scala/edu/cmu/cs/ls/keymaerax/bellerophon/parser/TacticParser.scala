@@ -12,7 +12,7 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic}
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParseException, Parser}
 import fastparse.P
 
@@ -68,5 +68,8 @@ trait DLTacticParser extends TacticParser {
   def tactic[_: P]: P[BelleExpr]
 
   /** Sets the definitions to be used during parsing. */
-  def setDefs(defs: Declaration)
+  def setDefs(defs: Declaration): Unit
+
+  /** Sets the defined tactics to be used during parsing. */
+  def setDefTactics(defs: Map[String, DefTactic]): Unit
 }

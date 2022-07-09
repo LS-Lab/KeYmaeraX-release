@@ -35,6 +35,9 @@ class DLMockBelleParser(override val printer: BelleExpr => String,
     * before [[apply]] or [[tactic]] are used. */
   override def setDefs(defs: Declaration): Unit = this.defs = defs
 
+  /** @inheritdoc */
+  override def setDefTactics(defs: Map[String, DefTactic]): Unit = {}
+
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   //@todo store the parser for speed
   val belleParser: String => BelleExpr = (s => fastparse.parse(s, tactic(_)) match {
