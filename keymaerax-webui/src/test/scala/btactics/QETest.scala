@@ -1,10 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable.Map
+import scala.collection.immutable.IndexedSeq
 
 /**
   * Tests of direct calls to quantifier elimination tools
@@ -46,6 +48,21 @@ class QETest extends TacticTestBase {
       *       "expressions deeper than 256" test case in JLinkMathematicaLinkTests */
     withTemporaryConfig(Map(Configuration.Keys.JLINK_USE_EXPR_INTERFACE -> "true")) {
       qeTool.qe(eq(n)).fact.conclusion.succ(0).asInstanceOf[Equiv].right shouldBe True
+    }
+  }
+
+  it should "FEATURE_REQUEST: prove a simple example with nested quantifier" taggedAs TodoTest in withMathematica { qeTool =>
+    val f = "\\forall x \\forall t_ \\forall ep \\forall S \\forall B \\forall A (A>0&B>0&ep>0&t_>=0&\\forall s_ (0<=s_&s_<=t_->0*s_+0>=0&s_+0<=ep)&x+0^2/(2*B)<=S->0*(t_^2/2)+0*t_+x+(0*t_+0)^2/(2*B)<=S)".asFormula
+    withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce")) {
+      val r = qeTool.qe(f)
+      r.fact shouldBe 'proved
+      r.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(f, True)))
+    }
+    withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Resolve")) {
+      val r = qeTool.qe(f)
+      r.fact shouldBe 'proved
+      //@note Mathematica not able to prove with Resolve!
+      r.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(f, True)))
     }
   }
 

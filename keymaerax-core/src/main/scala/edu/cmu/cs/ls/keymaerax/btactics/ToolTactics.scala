@@ -58,7 +58,8 @@ private object ToolTactics {
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
-  lazy val assertNoCex: BuiltInTactic = anon { (provable: ProvableSig) =>
+  lazy val assertNoCex: BuiltInTactic = assertNoCex(p => p)
+  def assertNoCex(onTimeout: ProvableSig => ProvableSig): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "assertNoCex")
     val sequent = provable.subgoals.head
     val removeUscorePred: Formula => Boolean = {
@@ -70,7 +71,7 @@ private object ToolTactics {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
       case Success(None) => provable
       case Failure(_: ProverSetupException) => provable //@note no counterexample tool, so no counterexample
-      case Failure(_: MathematicaComputationAbortedException) => provable
+      case Failure(_: MathematicaComputationAbortedException) => onTimeout(provable)
       case Failure(ex) => throw ex //@note fail with all other exceptions
     }
   }
@@ -82,11 +83,11 @@ private object ToolTactics {
       doIfFw(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosureFw(order)(1))
 
     // Expands abs/min/max
-    val expand = EqualityTactics.expandAll
-//    if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
-//    else EqualityTactics.expandAll andThen
-//      assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted.isDefined case _ => false }),
-//        "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
+    val expand =
+      if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
+      else EqualityTactics.expandAll andThen
+        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted.isDefined case _ => false }),
+          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
     if (!provable.isProved && provable.subgoals.forall(_.isFOL)) {
       val alpha = provable(saturate(or(alphaRule, allR('R))), 0)
@@ -251,7 +252,7 @@ private object ToolTactics {
   /** Returns all sub-terms of `fml` that are interpreted except known functions. */
   def interpretedFuncsOfExcept(e: Expression): List[Term] = e.matchingTerms({
     case FuncOf(fn@Function(_, _, _, _, Some(_)), _) =>
-      Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false) &&
+      !Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false) ||
         !MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn)
     case _ => false
   }).reverse
@@ -283,11 +284,18 @@ private object ToolTactics {
     val interpreted = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOf).distinct.reverse
     val interpretedExcept = (seq.ante ++ seq.succ).flatMap(interpretedFuncsOfExcept).distinct.reverse
 
-    // Try full abbreviation and search for cex
-    pr(or(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).
-      foldLeft(_)({ case (p, t) => p(t, 0) })(assertNoCex, 0)
-      ,
-      interpretedExcept.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).foldLeft(_)({ case (p, t) => p(t, 0) })), 0)
+    //@todo abbreviating/expanding attempts with fallback are not ideal, rather instruct users to do those steps manually
+    if (interpreted == interpretedExcept) {
+      pr(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).
+        foldLeft(_)({ case (p, t) => p(t, 0) }))
+    } else {
+      // Try full abbreviation and search for cex
+      pr(or(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).
+        foldLeft(_)({ case (p, t) => p(t, 0) })(assertNoCex(_ => throw new ProofSearchFailure("Potential CEX")), 0)
+        ,
+        interpretedExcept.map(fn => EqualityTactics.abbrv(fn, None) andThen hideL('Llast)).foldLeft(_)({ case (p, t) => p(t, 0) })
+      ), 0)
+    }
   }
 
   /** Abbreviates interpreted functions to variables with 1 layer of simplification. */
@@ -459,6 +467,7 @@ private object ToolTactics {
         case ex: SMTQeException => throw new TacticInapplicableFailure(ex.getMessage, ex)
         case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
         case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
+        case ex: MathematicaComputationAbortedException => throw new ProofSearchFailure(ex.getMessage, ex)
       }
 
       def leadingQuantOrder(fml: Formula): Seq[Variable] = fml match {

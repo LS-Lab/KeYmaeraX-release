@@ -89,6 +89,17 @@ class QETests extends TacticTestBase {
     proveBy("x=2, x=2, true, x=2 ==> x>=2, x>=2, x+1>=3".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
+  it should "abbreviate/not abbreviate interpreted symbols known to Mathematica according to the configuration" in withMathematica { _ =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      //@todo check that generated QE call includes abs
+      proveBy("abs(x)>=0".asFormula, QE) shouldBe 'proved
+    }
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
+      //@todo check that generated QE call does not include abs
+      proveBy("abs(x)>=0".asFormula, QE) shouldBe 'proved
+    }
+  }
+
   it should "not have soundness bug with decimal representations " in withMathematica { tool =>
 
     val pr = proveBy("false".asFormula,
