@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, DerivationInfo, ExpressionArg, FormulaArg, GeneratorArg, ListArg, NumberArg, OptionArg, PosInExprArg, StringArg, SubstitutionArg, TermArg, VariableArg}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
-import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
@@ -203,7 +203,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def atomicTactic[_: P]: P[BelleExpr] = P(tacticSymbol ~ !"("./).map(t => try {
     tacticProvider(t, Nil, defs)
   } catch {
-    case _: ReflectiveExpressionBuilderExn =>
+    case _: ParseException =>
       ApplyDefTactic(tactics(t))
       //@todo Pass/Fail does not compile here
   })

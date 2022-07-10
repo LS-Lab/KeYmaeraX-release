@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParseException, UnknownLocation}
 
 import scala.annotation.tailrec
 import scala.reflect.runtime.universe.typeTag
@@ -20,7 +20,7 @@ import DerivationInfoAugmentors._
 object ReflectiveExpressionBuilder extends Logging {
   def build(info: DerivationInfo, args: List[Either[Seq[Any], PositionLocator]],
             generator: Option[Generator.Generator[GenProduct]], defs: Declaration): BelleExpr = {
-    val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown.")))
+    val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw ParseException("Filtered down to only right-inhabited elements... this exn should never be thrown.", UnknownLocation)))
     val withGenerator =
       if (info.needsGenerator) {
         generator match {
@@ -33,7 +33,7 @@ object ReflectiveExpressionBuilder extends Logging {
         info.belleExpr
       }
     val expressionArgs = args.filter(_.isLeft).
-      map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown.")))
+      map(_.left.getOrElse(throw ParseException("Filtered down to only left-inhabited elements... this exn should never be thrown.", UnknownLocation)))
 
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
@@ -54,8 +54,8 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr: TypedFunc[Seq[Expression], _], fml: Expression) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(Seq(fml))
       case (expr: TypedFunc[Seq[SubstitutionPair], _], ex: Seq[SubstitutionPair]) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(ex)
       case (expr: TypedFunc[Seq[SubstitutionPair], _], (ex: SubstitutionPair) :: Nil) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(Seq(ex))
-      case (expr: TypedFunc[_, _], _) => throw new ReflectiveExpressionBuilderExn(s"Expected argument of type ${expr.argType}, but got " + expr.getClass.getSimpleName)
-      case _ => throw new ReflectiveExpressionBuilderExn("Expected a TypedFunc (cannot match due to type erasure)")
+      case (expr: TypedFunc[_, _], _) => throw ParseException(s"Expected argument of type ${expr.argType}, but got " + expr.getClass.getSimpleName, UnknownLocation)
+      case _ => throw ParseException("Expected a TypedFunc (cannot match due to type erasure)", UnknownLocation)
     }
 
     @tailrec
@@ -88,9 +88,9 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr: ((Position, Position) => BelleExpr), Fixed(arg1: Position, _, _)::Fixed(arg2: Position, _, _)::Nil, 2) => expr(arg1, arg2)
       case (expr, pArgs, num) =>
         if (pArgs.length > num) {
-          throw new ReflectiveExpressionBuilderExn("Expected either " + num + s" or 0 position arguments for ${expr.getClass} ($expr), got " + pArgs.length)
+          throw ParseException("Expected either " + num + s" or 0 position arguments for ${expr.getClass} ($expr), got " + pArgs.length, UnknownLocation)
         } else {
-          throw new ReflectiveExpressionBuilderExn("Tactic " + info.codeName + " called with\n  " + expressionArgs.mkString(";") + "\n  arguments\ndoes not match type " + expr.getClass.getSimpleName)
+          throw ParseException("Tactic " + info.codeName + " called with\n  " + expressionArgs.mkString(";") + "\n  arguments\ndoes not match type " + expr.getClass.getSimpleName, UnknownLocation)
         }
     }
   }
@@ -106,17 +106,14 @@ object ReflectiveExpressionBuilder extends Logging {
   def apply(name: String, arguments: List[Either[Seq[Any], PositionLocator]] = Nil,
             generator: Option[Generator.Generator[GenProduct]], defs: Declaration) : BelleExpr = {
     if (!DerivationInfo.hasCodeName(name)) {
-      throw new ReflectiveExpressionBuilderExn(s"Identifier '$name' is not recognized as a tactic identifier.")
+      throw ParseException(s"Identifier '$name' is not recognized as a tactic identifier.", UnknownLocation)
     } else {
       try {
         build(DerivationInfo.ofCodeName(name), arguments, generator, defs)
       } catch {
         case e: java.util.NoSuchElementException =>
-          throw new ReflectiveExpressionBuilderExn(s"Error when building tactic $name", e)
+          throw ParseException(s"Error when building tactic $name", e)
       }
     }
   }
 }
-
-/** Exceptions raised by the reflective expression builder on unexpected tactics/arguments. */
-class ReflectiveExpressionBuilderExn(msg: String, cause: Throwable = null) extends Exception(msg, cause)

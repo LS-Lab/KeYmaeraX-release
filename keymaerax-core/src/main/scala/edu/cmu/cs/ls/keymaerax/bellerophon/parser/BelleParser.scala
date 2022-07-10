@@ -566,7 +566,7 @@ object BelleParser extends TacticParser with Logging {
           }
         } else t
       } catch {
-        case e: ReflectiveExpressionBuilderExn =>
+        case e: ParseException =>
           throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
       }
     }
