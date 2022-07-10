@@ -823,17 +823,17 @@ object SwitchedSystems {
   }
 
   // MLF tactics
-  private val conjSplit = proveBy("((p(||) | q(||))&r(||)) <-> (p(||) & r(||) | q(||)&r(||))".asFormula,
+  private lazy val conjSplit = remember("((p(||) | q(||))&r(||)) <-> (p(||) & r(||) | q(||)&r(||))".asFormula,
     equivR(1) <(
       prop,
       prop
-    ))
+    ), namespace)
 
-  private val conjAssoc = proveBy("( (a(||) & b(||)) & c(||) ) <-> (  a(||) & b(||) & c(||) )".asFormula,
+  private lazy val conjAssoc = remember("( (a(||) & b(||)) & c(||) ) <-> (  a(||) & b(||) & c(||) )".asFormula,
     equivR(1) <(
       prop,
       prop
-    ))
+    ), namespace)
 
   // MLF tactic for state-dependent and guarded state-dependents
   @Tactic(
