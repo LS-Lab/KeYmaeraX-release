@@ -135,7 +135,7 @@ class DLParser extends Parser {
       val oldres = try {
         Right(oldParser(s))
       } catch {
-        case e => Left(e)
+        case e: Throwable => Left(e)
       }
       if (oldres != newres && (oldres.isRight || newres.isRight)) {
         println(s"Parser disagreement ($name): `$s`")
