@@ -505,8 +505,7 @@ object ArchiveParser extends ArchiveParser {
       case (e: Program, a: Formula) =>
         if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         else typeAnalysis(entry.name, declarationsOf(entry.model) ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
-        //@todo Parser
-        KeYmaeraXParser.annotationListener(e, a)
+        Parser.parser.annotationListener(e, a)
       case (_: Program, a) => throw ParseException("Unsupported annotation " + a.prettyString + " of kind " + a.kind +
         " encountered, please provide a formula", UnknownLocation)
       case (e, a) => throw ParseException("Annotation " + a.prettyString + " on " + e.prettyString + " of kind " +
