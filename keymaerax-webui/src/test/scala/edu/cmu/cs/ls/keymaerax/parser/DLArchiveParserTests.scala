@@ -274,7 +274,7 @@ class DLArchiveParserTests extends TacticTestBase {
     DLParser.programParser("{ x:=x+1; }") shouldBe DLParser.programParser("x:=x+1;")
     val archiveParser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
     DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
-    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)))
+    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(Declaration(Map.empty))(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)))
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -461,9 +461,10 @@ class DLArchiveParserTests extends TacticTestBase {
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
       or have message
-      """3:24 Duplicate symbol 'x': already defined at 2:14 to 2:26
-        |Found:    x at 3:24
-        |Expected: <unique name>""".stripMargin)
+      """3:27 Error parsing programVariables at 3:2
+        |Found:    "End." at 3:27
+        |Expected: Unique name (x not unique)
+        |Hint: Try ("Real" | "Bool" | "HP" | "HG" | Unique name (x not unique))""".stripMargin)
   }
 
   it should "parse simple definitions after variables" in {
@@ -830,6 +831,85 @@ class DLArchiveParserTests extends TacticTestBase {
         |Found:    "End." at 3:57
         |Expected: Unique name (a not unique)
         |Hint: Try Unique name (a not unique)""".stripMargin
+  }
+
+  it should "detect duplicate definitions (1)" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real x; End.
+        | Problem x^2>=0 End.
+        |End.
+      """.stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:27 Error parsing programVariables at 3:2
+        |Found:    "End." at 3:27
+        |Expected: Unique name (x not unique)
+        |Hint: Try ("Real" | "Bool" | "HP" | "HG" | Unique name (x not unique))""".stripMargin
+  }
+
+  it should "detect duplicate definitions (2)" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real y; End.
+        | Definitions Real z; End.
+        | ProgramVariables Real x; End.
+        | Problem x^2>=0 End.
+        |End.
+      """.stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """5:27 Error parsing programVariables at 5:2
+        |Found:    "End." at 5:27
+        |Expected: Unique name (x not unique)
+        |Hint: Try ("Real" | "Bool" | "HP" | "HG" | Unique name (x not unique))""".stripMargin
+  }
+
+  it should "detect duplicate definitions (3)" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real y; End.
+        | Definitions Real y; End.
+        | Problem x^2>=0 End.
+        |End.
+      """.stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """4:22 Error parsing definitions at 4:2
+        |Found:    "End." at 4:22
+        |Expected: Unique name (y not unique)
+        |Hint: Try Unique name (y not unique)""".stripMargin
+  }
+
+  it should "detect duplicate definitions (4)" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real y; End.
+        | Definitions Real x; End.
+        | Problem x^2>=0 End.
+        |End.
+      """.stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """4:22 Error parsing definitions at 4:2
+        |Found:    "End." at 4:22
+        |Expected: Unique name (x not unique)
+        |Hint: Try Unique name (x not unique)""".stripMargin
+  }
+
+  it should "detect duplicate definitions (5)" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; End.
+        | ProgramVariables Real x; End.
+        | Problem x^2>=0 End.
+        |End.
+      """.stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:27 Error parsing programVariables at 3:2
+        |Found:    "End." at 3:27
+        |Expected: Unique name (x not unique)
+        |Hint: Try ("Real" | "Bool" | "HP" | "HG" | Unique name (x not unique))""".stripMargin
   }
 
   it should "not complain about undeclared variables in unused program definitions" in {

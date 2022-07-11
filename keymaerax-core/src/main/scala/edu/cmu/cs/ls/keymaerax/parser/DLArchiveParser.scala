@@ -171,8 +171,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   )
 
   /** Functions and ProgramVariables block in any order */
-  def allDeclarations[_: P]: P[Declaration] =
-    (programVariables | definitions).rep.map(_.reduceOption(_++_).getOrElse(Declaration(Map.empty)))
+  def allDeclarations[_: P]: P[Declaration] = {
+    DLParserUtils.repFold(Declaration(Map.empty))(curDecls => programVariables(curDecls) | definitions(curDecls))
+  }
 
   /** Merges `newDecls` into `curDecls`, but checks that no duplicate symbol names occur. */
   private def uniqueDecls(curDecls: Declaration, newDecls: List[(Name, Signature)])(implicit ctx: P[_]) = {
@@ -190,16 +191,14 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** `SharedDefinitions declOrDef End.` parsed. */
   def sharedDefinitions[_: P]: P[Declaration] = P(
     "SharedDefinitions" ~~/ blank ~
-      DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
-        declOrDef(curDecls).flatMap(newDecls => uniqueDecls(curDecls, newDecls))
+      DLParserUtils.repFold(Declaration(Map.empty))(curDecls => declOrDef(curDecls).flatMap(uniqueDecls(curDecls, _))
       ) ~ "End."
   )
 
   /** `Definitions declOrDef End.` parsed. */
-  def definitions[_: P]: P[Declaration] = P(
+  def definitions[_: P](curDecls: Declaration): P[Declaration] = P(
     "Definitions" ~~/ blank ~
-      DLParserUtils.repFold(Declaration(Map.empty))(curDecls =>
-        declOrDef(curDecls).flatMap(newDecls => uniqueDecls(curDecls, newDecls))
+      DLParserUtils.repFold(curDecls)(curDecls => declOrDef(curDecls).flatMap(uniqueDecls(curDecls, _))
       ) ~ "End."
   )
 
@@ -267,14 +266,13 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   ).map({case (s,idx,p) => (Name(s,idx), Signature(Some(Unit), Trafo, None, Some(p), UnknownLocation))})
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
-  def programVariables[_: P]: P[Declaration] = P ("ProgramVariables" ~~ blank ~/
+  def programVariables[_: P](curDecls: Declaration): P[Declaration] = P ("ProgramVariables" ~~ blank ~/
     //@todo retain location information
     //@todo how to ensure there is some whitespace between sort and baseVariable?
-    (sort ~/ ident ~ (","./ ~ ident).rep ~ ";").map({case (ty,x,xs) => (xs.+:(x)).toList.map(v=>v->ty)})
-      .rep.flatMap(xs => {
+    (sort ~/ ident ~ (","./ ~ ident).rep ~ ";").map({ case (ty, x, xs) => (x +: xs).toList.map(_ -> ty) }).rep.flatMap(xs => {
       val ns = xs.flatten.map(x=>Name(x._1._1, x._1._2)->Signature(None,x._2,None,None,UnknownLocation))
       val n = ns.map(_._1)
-      if (n.size == n.distinct.size) Pass(Declaration(ns.toMap))
+      if (n.size == n.distinct.size) uniqueDecls(curDecls, ns.toList)
       else Fail.opaque("Unique name (" + n.diff(n.distinct).map(_.prettyString).mkString(",") + " not unique)")
     })
     ~ "End." )
