@@ -9,6 +9,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.ProverSetupException
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -120,6 +121,27 @@ object Parser extends (String => Expression) {
       } else List(Parser(prefix + s))
     }
     splitComma(s)
+  }
+
+  /** Semantic analysis of expressions after parsing, returning errors if any or None. */
+  def semanticAnalysis(e: Expression): Option[String] = {
+    val symbols = try { StaticSemantics.symbols(e) }
+    catch {
+      case ex: AssertionError => return Some("semantics: symbols computation error\n" + ex)
+      case ex: CoreException => return Some("semantics: symbols computation error\n" + ex)
+    }
+    val names = symbols.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
+    assert(Configuration(Configuration.Keys.DEBUG) == "false" || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
+    //@NOTE Stringify avoids infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
+    if (names.size == symbols.size) None
+    else {
+      val namesList = symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
+      val duplicateNames = namesList.diff(namesList.distinct)
+      val duplicates = symbols.filter(s => duplicateNames.contains((s.name, s.index, s.isInstanceOf[DifferentialSymbol])))
+      Some("semantics: Expect unique names_index that identify a unique type." +
+        "\nambiguous: " + duplicates.toList.map(s => s.fullString).mkString(" and ") +
+        "\nsymbols:   " + symbols.mkString(", ") /*+ if (DEBUG) "\nin expression: " + printer.stringify(e)*/)
+    }
   }
 }
 

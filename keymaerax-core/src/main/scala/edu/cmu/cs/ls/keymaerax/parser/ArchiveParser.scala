@@ -491,7 +491,7 @@ object ArchiveParser extends ArchiveParser {
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
-    KeYmaeraXParser.semanticAnalysis(fullyExpandedModel) match {
+    Parser.semanticAnalysis(fullyExpandedModel) match {
       case None =>
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, fullyExpandedModel)
     }

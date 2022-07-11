@@ -202,7 +202,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case _ :+ Error(msg, loc, st) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
-    semanticAnalysis(parse) match {
+    Parser.semanticAnalysis(parse) match {
       case None => parse
       case Some(error) => if (lax) { logger.trace("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
       else throw ParseException("Semantic analysis error " + error, parse).inInput("<unknown>", Some(input))
@@ -214,27 +214,6 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def parseLoop(st: ParseState, lax: Boolean): ParseState = st.stack match {
     case _ :+ (_: FinalItem) => st
     case _ => parseLoop(parseStep(st, lax), lax)
-  }
-
-  /** Semantic analysis of expressions after parsing, returning errors if any or None. */
-  def semanticAnalysis(e: Expression): Option[String] = {
-    val symbols = try { StaticSemantics.symbols(e) }
-    catch {
-      case ex: AssertionError => return Some("semantics: symbols computation error\n" + ex)
-      case ex: CoreException => return Some("semantics: symbols computation error\n" + ex)
-    }
-    val names = symbols.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
-    assert(Configuration(Configuration.Keys.DEBUG) == "false" || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
-    //@NOTE Stringify avoids infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
-    if (names.size == symbols.size) None
-    else {
-      val namesList = symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
-      val duplicateNames = namesList.diff(namesList.distinct)
-      val duplicates = symbols.filter(s => duplicateNames.contains((s.name, s.index, s.isInstanceOf[DifferentialSymbol])))
-      Some("semantics: Expect unique names_index that identify a unique type." +
-        "\nambiguous: " + duplicates.toList.map(s => s.fullString).mkString(" and ") +
-        "\nsymbols:   " + symbols.mkString(", ") /*+ if (DEBUG) "\nin expression: " + printer.stringify(e)*/)
-    }
   }
 
   // elaboration based on expected types
