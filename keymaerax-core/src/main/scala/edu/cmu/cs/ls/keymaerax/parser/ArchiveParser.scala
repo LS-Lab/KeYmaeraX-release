@@ -79,8 +79,8 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Joins two declarations. */
   def ++(other: Declaration): Declaration = {
-    val keyClashes = decls.keySet.intersect(other.decls.keySet)
-    require(keyClashes.isEmpty, "Expected non-overlapping definitions, but got duplicate " + keyClashes.map(_.prettyString).mkString(","))
+    val keyClashes = decls.keySet.intersect(other.decls.keySet).flatMap(n => if (decls(n) != other.decls(n)) Some(n) else None)
+    require(keyClashes.isEmpty, "Expected unique definitions, but got contradictory definitions for names " + keyClashes.map(_.prettyString).mkString(","))
     Declaration(decls ++ other.decls)
   }
 
