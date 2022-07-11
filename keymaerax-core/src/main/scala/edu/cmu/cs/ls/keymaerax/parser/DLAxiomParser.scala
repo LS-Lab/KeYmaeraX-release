@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import fastparse._
 import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
@@ -18,6 +18,7 @@ import scala.collection.immutable._
   */
 object DLAxiomParser extends (String => List[(String,Formula)]) {
   import DLParser.string
+  private val checkAgainst: Option[String => List[(String,Formula)]] = Some(KeYmaeraXAxiomParser)
 
   /**
     * Parse an axiom string into a list of named axioms.
@@ -26,10 +27,29 @@ object DLAxiomParser extends (String => List[(String,Formula)]) {
     */
   def apply(input: String) : List[(String,Formula)] = axiomParser(input)
 
-
-  private val axiomParser: String => List[(String,Formula)] = input => fastparse.parse(input, axiomList(_)) match {
-    case Parsed.Success(value, index) => value
-    case f: Parsed.Failure => throw parseException(f).inContext("<AxiomBase>"/*input*/)
+  private val axiomParser: String => List[(String,Formula)] = input => {
+    val newres = fastparse.parse(input, axiomList(_)) match {
+      case Parsed.Success(value, _) => Right(value)
+      case f: Parsed.Failure => Left(parseException(f).inContext("<AxiomBase>"))
+    }
+    checkAgainst match {
+      case Some(p) =>
+        val oldres = try {
+          Right(p(input))
+        } catch {
+          case e: Throwable => Left(e)
+        }
+        if (oldres != newres && (oldres.isRight || newres.isRight)) {
+          println(s"Axiom parser disagreement: `$input`")
+          println(s"KYXParser:\n${oldres match {case Left(x) => x.toString case Right(x) => x.toString}}")
+          println(s"DLParser:\n${newres match {case Left(x) => x.toString case Right(x) => x.toString}}")
+        }
+      case None => // nothing to do
+    }
+    newres match {
+      case Left(e) => throw e
+      case Right(res) => res
+    }
   }
 
 
