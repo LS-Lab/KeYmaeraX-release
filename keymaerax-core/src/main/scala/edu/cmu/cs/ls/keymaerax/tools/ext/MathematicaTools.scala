@@ -22,8 +22,8 @@ import scala.collection.immutable
 import scala.math.BigDecimal
 
 object UncheckedBaseConverter {
-  val CONST_FN_SUFFIX = "cnstfn_"
-  val CONST_PRED_SUFFIX = "cnstpred_"
+  val CONST_FN_SUFFIX = "cnstfn"
+  val CONST_PRED_SUFFIX = "cnstpred"
 }
 
 class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
@@ -82,15 +82,15 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
 
   override protected def convertFormula(f: Formula): MExpr = f match {
     case PredOf(Function(name, index, Unit, Bool, None), Nothing) =>
-      //@todo name may have underscores
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
+      if (name.endsWith("_")) MathematicaNameConversion.toMathematica(Variable(name.stripSuffix("_") + UncheckedBaseConverter.CONST_PRED_SUFFIX + "_", index))
+      else MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
     case _ => super.convertFormula(f)
   }
 
   override protected[tools] def convertTerm(t: Term): MExpr = t match {
     case FuncOf(Function(name, index, Unit, Real, None), Nothing) =>
-      //@todo name may have underscores
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
+      if (name.endsWith("_")) MathematicaNameConversion.toMathematica(Variable(name.stripSuffix("_") + UncheckedBaseConverter.CONST_FN_SUFFIX + "_", index))
+      else MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
 }
@@ -138,10 +138,16 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
 
     override protected def convertAtomicTerm(e: MExpr): KExpr = {
       MathematicaNameConversion.toKeYmaera(e) match {
+        case BaseVariable(name, None, _) if name == UncheckedBaseConverter.CONST_FN_SUFFIX => super.convertAtomicTerm(e)
+        case BaseVariable(name, None, _) if name == UncheckedBaseConverter.CONST_PRED_SUFFIX => super.convertAtomicTerm(e)
         case BaseVariable(name, index, _) if name.endsWith(UncheckedBaseConverter.CONST_FN_SUFFIX) =>
-          FuncOf(Function(name.substring(0, name.length - UncheckedBaseConverter.CONST_FN_SUFFIX.length), index, Unit, Real), Nothing)
+          FuncOf(Function(name.stripSuffix(UncheckedBaseConverter.CONST_FN_SUFFIX), index, Unit, Real), Nothing)
+        case BaseVariable(name, index, _) if name.endsWith(UncheckedBaseConverter.CONST_FN_SUFFIX + "_") =>
+          FuncOf(Function(name.stripSuffix("_").stripSuffix(UncheckedBaseConverter.CONST_FN_SUFFIX) + "_", index, Unit, Real), Nothing)
         case BaseVariable(name, index, _) if name.endsWith(UncheckedBaseConverter.CONST_PRED_SUFFIX) =>
-          PredOf(Function(name.substring(0, name.length - UncheckedBaseConverter.CONST_PRED_SUFFIX.length), index, Unit, Bool), Nothing)
+          PredOf(Function(name.stripSuffix(UncheckedBaseConverter.CONST_PRED_SUFFIX), index, Unit, Bool), Nothing)
+        case BaseVariable(name, index, _) if name.endsWith(UncheckedBaseConverter.CONST_PRED_SUFFIX + "_") =>
+          PredOf(Function(name.stripSuffix("_").stripSuffix(UncheckedBaseConverter.CONST_PRED_SUFFIX) + "_", index, Unit, Bool), Nothing)
         case _ => super.convertAtomicTerm(e)
       }
     }
