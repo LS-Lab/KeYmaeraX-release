@@ -78,7 +78,11 @@ case class Declaration(decls: Map[Name, Signature]) {
   }
 
   /** Joins two declarations. */
-  def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls)
+  def ++(other: Declaration): Declaration = {
+    val keyClashes = decls.keySet.intersect(other.decls.keySet)
+    require(keyClashes.isEmpty, "Expected non-overlapping definitions, but got duplicate " + keyClashes.map(_.prettyString).mkString(","))
+    Declaration(decls ++ other.decls)
+  }
 
   /** Definitions projected to names. */
   def project(names: Set[Name]): Declaration = Declaration(decls.filter({ case (n, _) => names.contains(n) }))
