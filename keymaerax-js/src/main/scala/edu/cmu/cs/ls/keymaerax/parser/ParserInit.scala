@@ -10,7 +10,6 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 object ParserInit {
   /** Initializes the parser from configuration. */
   def fromConfig(): Parser = Configuration.getString(Configuration.Keys.PARSER) match {
-    case Some("KeYmaeraXParser") | None => KeYmaeraXParser.parser
     case Some("DLParser") | None => DLParser
     case Some(parserId) => throw new IllegalArgumentException("Unknown parser " + parserId + "; please use KeYmaeraXParser")
   }
