@@ -77,6 +77,10 @@ watchSources ++= {{ baseDirectory map {
   path => ((path / "src/main/resources/js") ** "*.js").get 
 }}.value }
 
+watchSources ++= {{ baseDirectory map {
+  path => ((path / "src/main/resources/js") ** "*.map").get
+}}.value }
+
 watchSources ++= {{baseDirectory map {
   path => ((path / "src/main/resources") ** "*.html").get 
 }}.value }
