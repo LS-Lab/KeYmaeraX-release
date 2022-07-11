@@ -7,5 +7,5 @@ import scala.collection.mutable
 object JsMapConfiguration extends MapConfiguration(mutable.Map(
   "LAX" -> "true",
   "DEBUG" -> "false",
-  "PARSER" -> "KeYmaeraXParser")
+  "PARSER" -> "DLParser")
 ) { }
