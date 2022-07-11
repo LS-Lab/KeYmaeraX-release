@@ -14,4 +14,11 @@ object ParserInit {
     case Some("DLParser") => DLParser
     case Some(parserId) => throw new IllegalArgumentException("Unknown parser " + parserId + "; please use one of DLParser or KeYmaeraXParser")
   }
+  /** A parser that the DLParser uses to double-check its results. */
+  def checkAgainstFromConfig(): Option[Parser] = Configuration.getString(Configuration.Keys.CHECK_AGAINST_PARSER) match {
+    case None => None
+    case Some("KeYmaeraXParser") => Some(KeYmaeraXParser.parser)
+    case Some("DLParser") => Some(DLParser)
+    case Some(parserId) => throw new IllegalArgumentException("Unknown parser " + parserId + "; please use one of DLParser or KeYmaeraXParser")
+  }
 }
