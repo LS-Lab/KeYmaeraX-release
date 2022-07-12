@@ -3220,7 +3220,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("DW Q initial", conclusion = "(Q→[x'=f(x)&Q]P) ↔ [x'=f(x)&Q]P")
-  lazy val DWQinitial: DerivedAxiomInfo = derivedAxiom("DW differential weakening and",
+  lazy val DWQinitial: DerivedAxiomInfo = derivedAxiom("DW Q initial",
     Sequent(IndexedSeq(), IndexedSeq("(q_(||) -> [{c_&q_(||)}]p_(||)) <-> [{c_&q_(||)}]p_(||)".asFormula)),
     equivR(1) <(
       implyL(-1) <(useAt(DI)(1) & implyR(1) & closeId(-1, 1), closeId(-1, 1)),
