@@ -135,7 +135,7 @@ object DerivationInfo {
 
   /** Retrieve meta-information on a builtin tactic expression by the given `name`. */
   def ofBuiltinName(name: String): Option[DerivationInfo] = {
-    val expandPattern = "(expand\\s*\"[^\"]*\")|(expandAllDefs)".r
+    val expandPattern = """(expand\("[^"]*"\))|(expandAllDefs)""".r
     name match {
       case expandPattern(_*) => Some(new BuiltinInfo(name, name, SimpleDisplayInfo(name, name)))
       case _ => None

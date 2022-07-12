@@ -138,9 +138,9 @@ object UIIndex {
             }
             else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
-            s"""expand "$name"""" :: rules
+            s"""expand("$name")""" :: rules
           case SystemConst(name, _) if substs.exists({ case SubstitutionPair(SystemConst(wn, _), _) => wn == name case _ => false }) =>
-            s"""expand "$name"""" :: rules
+            s"""expand("$name")""" :: rules
           case _ => rules
         }
 
@@ -168,7 +168,7 @@ object UIIndex {
               else ("solve" :: "compatCut" :: Nil) //todo
             } else ("solve" :: "compatCut" :: Nil) //todo
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
-            s"""expand "$name"""" :: rules
+            s"""expand("$name")""" :: rules
           case _ => rules
         }
 
@@ -215,13 +215,13 @@ object UIIndex {
           // Check for expansions
           val sig = StaticSemantics.signature(expr)
           sig.toList.flatMap( s => s match {
-            case (fn : Function) if substs.exists({
+            case fn: Function if substs.exists({
               case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn
               case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn
               case _ => false }) =>
-              Some(s"""expand "${fn.prettyString}"""")
+              Some(s"""expand("${fn.prettyString}")""")
             //case (PredOf(fn, _)) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false }) =>
-            //  Some(s"""expand "${fn.prettyString}"""")
+            //  Some(s"""expand("${fn.prettyString}")""")
             case _ => None
           }
           ) ++
