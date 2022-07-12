@@ -771,10 +771,7 @@ private object DifferentialTactics extends Logging {
   lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
-      cut(q) <(
-        /* use */ skip,
-        /* show */ DI(pos) & implyR(pos) & closeIdWith('Llast)
-        )
+      useAt(Ax.DWQinitial, PosInExpr(1::Nil))(pos) & implyR(pos)
     case Some(e) => throw new TacticInapplicableFailure("diffUnpackEvolDomain only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
