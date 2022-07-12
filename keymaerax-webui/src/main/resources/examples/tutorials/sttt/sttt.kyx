@@ -324,9 +324,9 @@ implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
-    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; ODE(1) ; QE ; done,
+    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; ODE(1) ; dW(1) ; QE ; done,
     choiceb(1) ; andR(1) ; <(
-      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; ODE(1) ; QE ; done,
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; ODE(1) ; dW(1) ; QE ; done,
       assignb(1) ; composeb(1) ; assignb(1) ; ODE(1) ; done
     )
   )
@@ -383,6 +383,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 6"
+useSolver("Mathematica");
 implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
