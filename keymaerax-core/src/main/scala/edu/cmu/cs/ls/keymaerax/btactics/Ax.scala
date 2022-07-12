@@ -3214,6 +3214,21 @@ object Ax extends Logging {
   )
 
   /**
+    * {{{Axiom "DW Q initial".
+    *    (q(||) -> [{c&q(||)}]p(||)) <-> [{c&q(||)}]p(||)
+    * End.
+    * }}}
+    */
+  @Axiom("DW Q initial", conclusion = "(Q→[x'=f(x)&Q]P) ↔ [x'=f(x)&Q]P")
+  lazy val DWQinitial: DerivedAxiomInfo = derivedAxiom("DW differential weakening and",
+    Sequent(IndexedSeq(), IndexedSeq("(q_(||) -> [{c_&q_(||)}]p_(||)) <-> [{c_&q_(||)}]p_(||)".asFormula)),
+    equivR(1) <(
+      implyL(-1) <(useAt(DI)(1) & implyR(1) & closeId(-1, 1), closeId(-1, 1)),
+      implyR(1) & closeId(-1, 1)
+    )
+  )
+
+  /**
     * {{{Axiom "DR differential refine".
     *    ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}]r(||)
     * End.
@@ -3571,6 +3586,24 @@ object Ax extends Logging {
       useAt(proveBy("!(p_() & q_()) <-> (p_() -> !q_())".asFormula, TactixLibrary.prop))(1, 1::0::1::Nil) &
       useAt(DW, PosInExpr(1::Nil))(1, 1::0::Nil) &
       byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "DWd Q initial".
+    *    q_(||)&<{c&q_(||)}>p_(||) <-> <{c&q_(||)}>p_(||)
+    * End.
+    * }}}
+    */
+  @Axiom("DWd Q initial")
+  lazy val DWdQinitial: DerivedAxiomInfo = derivedAxiom("DWd Q initial",
+    Sequent(IndexedSeq(), IndexedSeq("q_(||)&<{c&q_(||)}>p_(||) <-> <{c&q_(||)}>p_(||)".asFormula)),
+    equivR(1) <(
+      andL(-1) & closeId(-2, 1),
+      andR(1) <(
+        useAt(diamond, PosInExpr(1::Nil))(-1) & notL(-1) & useAt(DWQinitial, PosInExpr(1::Nil))(2) & implyR(2) & closeId(-1, 1),
+        closeId(-1, 1)
+      )
+    )
   )
 
   /**
