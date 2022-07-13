@@ -76,8 +76,9 @@ trait HTMLPrinter {
 
 class UIAbbreviatingKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter {
   protected override def pp(q: PosInExpr, term: Term): String = term match {
-    case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
-    case FuncOf(Function(n, i, _, _, Some(_)), arg) => emit(q, n + i.map("_" + _).getOrElse("") + "(" + pp(q++0, arg) + ")")
+    case FuncOf(Function(n, i, _, _, Some(_)), Nothing)   => emit(q, n + i.map("_" + _).getOrElse("") + "()")
+    case FuncOf(Function(n, i, _, _, Some(_)), arg: Pair) => emit(q, n + i.map("_" + _).getOrElse("") + pp(q++0, arg))
+    case FuncOf(Function(n, i, _, _, Some(_)), arg)       => emit(q, n + i.map("_" + _).getOrElse("") + "(" + pp(q++0, arg) + ")")
     case FuncOf(f, Nothing) => emit(q, f.asString + "()")
     case _ => super.pp(q, term)
   }
@@ -86,8 +87,8 @@ class UIAbbreviatingKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinte
 class UIAbbreviatingKeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrettierPrinter(margin) {
   override def docOf(term: Term): Doc = term match {
     case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => Doc.text(n + i.map("_" + _).getOrElse("") + "()")
-    case FuncOf(Function(n, i, _, _, Some(_)), c: Pair)     => (Doc.text(n + i.map("_" + _).getOrElse("")) + Doc.lineBreak + docOf(c)).grouped
-    case FuncOf(Function(n, i, _, _, Some(_)), c)           => (Doc.text(n + i.map("_" + _).getOrElse("")) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
+    case FuncOf(Function(n, i, _, _, Some(_)), c: Pair) => (Doc.text(n + i.map("_" + _).getOrElse("")) + Doc.lineBreak + docOf(c)).grouped
+    case FuncOf(Function(n, i, _, _, Some(_)), c)       => (Doc.text(n + i.map("_" + _).getOrElse("")) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
     case _ => super.docOf(term)
   }
 }

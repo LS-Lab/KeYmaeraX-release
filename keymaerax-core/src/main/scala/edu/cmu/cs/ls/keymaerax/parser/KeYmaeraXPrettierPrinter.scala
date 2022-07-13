@@ -52,6 +52,9 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     if (skipParensRight(t)) doc else encloseText("{", doc,"}")
 
   protected def docOf(term: Term): Doc = term match {
+    case Differential(t@Number(n)) if negativeBrackets =>
+      if (n < 0) encloseText("((", Doc.text(n.bigDecimal.toPlainString), "))" + ppOp(term))
+      else encloseText("(", docOf(t), ")" + ppOp(term))
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
     case FuncOf(f, c: Pair)     => (Doc.text(f.asString) + Doc.lineBreak + docOf(c)).grouped
@@ -63,7 +66,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
         case t => t :: Nil
       }
       wrapDoc((Doc.lineBreak + flattenPairs(p).map(docOf).reduce[Doc]({ case (a, b) => a + Doc.text(ppOp(term)) + Doc.lineBreak + b + Doc.lineBreak })).nested(2).grouped, term)
-    case Neg(Number(_))         => Doc.text(pp(HereP, term))
+    case t@Neg(n: Number) if !negativeBrackets => Doc.text(ppOp(t) + "(" + pp(HereP, n) + ")")
     case t: Neg if !negativeBrackets =>
       val c = pp(HereP, t.child)
       Doc.text(ppOp(t) + (if (c.charAt(0).isDigit) " " else "")) + wrapChildDoc(t, docOf(t.child)).grouped
