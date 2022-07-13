@@ -536,6 +536,7 @@ object TactixLibrary extends HilbertCalculus
   lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => must({
     // use and check invSupplier (user-defined annotations from input file)
     val invs = invSupplier(seq, pos).toList
+    //@todo problematic if ODE is used in a scripted proof but also annotations are present!
     invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
       skip,
       //@todo pass invariant supplier to tactics via interpreter (as part of BelleProvable)
@@ -597,6 +598,11 @@ object TactixLibrary extends HilbertCalculus
         case _ => skip
       })
     else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos)
+  })
+
+  @Tactic(longDisplayName = "ODE Invariant")
+  def ODEinv(tryHard: Option[Formula], useDw: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon ({
+    pos: Position => DifferentialTactics.odeInvariant(tryHard.getOrElse(True) == True, useDw.getOrElse(True) == True)(pos)
   })
 
   /** Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].

@@ -1,13 +1,12 @@
 <div>
 <p>
-<kbd>ODE</kbd> tactic tries to automatically prove differential equation systems <code>[{x'=f(x) & Q}]P</code> and is especially good at searching and proving invariants.
-If you don not need invariant search but only want to prove the postcondition invariant, use <kbd>ODEinv</kbd> instead.
+<kbd>ODEinv</kbd> tactic tries to automatically prove differential equation systems <code>[{x'=f(x) & Q}]P</code> and is especially good at proving invariants, but does not perform any invariant search.
 Complicated cases may benefit from other more dedicated proof rules to obtain faster proofs.
 </p>
 <p>
 See also
 <ul>
-    <li><kbd>ODEinv</kbd> ODE invariant proving without search</li>
+    <li><kbd>ODE</kbd> for differential invariant search and proving</li>
     <li><kbd>dI</kbd> Differential invariant to prove the formula <code>R</code> is an invariant of the
         differential equation system.</li>
     <li><kbd>dC</kbd> differential cuts: to first prove another property of the differential equation and then assume it during the dynamics.</li>

@@ -133,7 +133,7 @@ object UIIndex {
           }
           case ODESystem(_, _) =>
             if (pos.forall(_.isSucc)) {
-              if (pos.forall(_.isTopLevel)) ("ODE" :: "solve" :: "dC" :: "dIRule" ::  "dW" :: "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
+              if (pos.forall(_.isTopLevel)) ("ODE" :: "ODEinv" :: "solve" :: "dC" :: "dIRule" ::  "dW" :: "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
               else ("solve" :: "dC" :: "dIRule" :: "dW" :: "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
             }
             else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
