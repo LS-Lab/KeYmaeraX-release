@@ -92,7 +92,7 @@ object RestApi extends Logging {
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
       else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(
-        new ErrorResponse("KeYmaera X may not have finished starting; please try to refresh the page (may need to refresh several times). If the error persists, try to reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register a local login name.") :: Nil))
+        new ErrorResponse("KeYmaera X may have restarted or may not have finished starting yet; please try to refresh the page (may need to refresh several times). If the error persists, try to reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register a local login name.") :: Nil))
       else complete(Forbidden, Nil, s"Permission to this resource (${r.getClass.getCanonicalName}) is denied for session $t")
   }
 
