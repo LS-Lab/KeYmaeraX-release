@@ -125,11 +125,11 @@ class DLParser extends Parser {
     * @ensures apply(printer(\result)) == \result
     * @throws ParseException if `input` is not a well-formed expression of differential dynamic logic or differential game logic.
     */
-  override def apply(input: String): Expression = exprParser(input)
+  override def apply(input: String): Expression = exprParser(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)))
 
   private def parseAndCompare[A](newParser: P[_] => P[A], checkAgainst: Option[String => A], name: String): String => A =
     s => {
-      val newres = fastparse.parse(ParserHelper.removeBOM(s), newParser(_)) match {
+      val newres = fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(s)), newParser(_)) match {
         case Parsed.Success(value, _) => Right(value)
         case f: Parsed.Failure => Left(parseException(f))
       }
