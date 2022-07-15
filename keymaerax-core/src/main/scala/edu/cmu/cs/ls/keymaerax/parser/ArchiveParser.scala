@@ -79,7 +79,13 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Joins two declarations. */
   def ++(other: Declaration): Declaration = {
-    val keyClashes = decls.keySet.intersect(other.decls.keySet).flatMap(n => if (decls(n) != other.decls(n)) Some(n) else None)
+    val keyClashes = decls.keySet.intersect(other.decls.keySet).flatMap(n => {
+      if (decls(n) == other.decls(n)) None
+      else (decls(n), other.decls(n)) match {
+        case (Signature(td, ts, ta, ti, _), Signature(od, os, oa, oi, _)) if td != od || ts != os || ta.size != oa.size || ti != oi => Some(n)
+        case _ => None
+      }
+    })
     require(keyClashes.isEmpty, "Expected unique definitions, but got contradictory definitions for names " + keyClashes.map(_.prettyString).mkString(","))
     Declaration(decls ++ other.decls)
   }
