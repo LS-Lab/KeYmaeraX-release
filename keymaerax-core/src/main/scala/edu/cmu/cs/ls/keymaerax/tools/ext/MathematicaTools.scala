@@ -136,6 +136,14 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
   private val baseConverter = new UncheckedBaseM2KConverter {
     override def apply(e: MExpr): KExpr = convert(e)
 
+    override def convert(e: MExpr): KExpr = {
+      if (ExtMathematicaOpSpec.complex.applies(e)) {
+        val r :: i :: Nil = e.args().toList
+        //@note not actually a complex number, encode only for the sake of reporting a counterexample
+        FuncOf(Function("Complex", None, Real, Tuple(Real, Real), None), Pair(convert(r).asInstanceOf[Term], convert(i).asInstanceOf[Term]))
+      } else super.convert(e)
+    }
+
     override protected def convertAtomicTerm(e: MExpr): KExpr = {
       MathematicaNameConversion.toKeYmaera(e) match {
         case BaseVariable(name, None, _) if name == UncheckedBaseConverter.CONST_FN_SUFFIX => super.convertAtomicTerm(e)
@@ -154,7 +162,11 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
   }
 
   override def k2m: K2MConverter[Either[KExpr, NamedSymbol]] = null
-  override private[tools] def convert(e: MExpr): Either[KExpr,NamedSymbol] = Left(baseConverter.convert(e))
+  override private[tools] def convert(e: MExpr): Either[KExpr,NamedSymbol] = try {
+    Left(baseConverter.convert(e))
+  } catch {
+    case _: ConversionException => Left(Equal(Variable("unknown"), Variable("unknown")))
+  }
   override def apply(e: MExpr): Either[KExpr,NamedSymbol] = convert(e)
 }
 
@@ -547,11 +559,12 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
 
     if (StaticSemantics.symbols(fml).exists({ case fn@Function(_, _, _, _, Some(_)) => !MathematicaOpSpec.interpretedSymbols.exists(_._2 == fn) case _ => false})) None
     else if (cexVars.nonEmpty) {
-      val input = ExtMathematicaOpSpec.findInstance(
+      //@note numeric counterexamples
+      val input = ExtMathematicaOpSpec.n(ExtMathematicaOpSpec.findInstance(
         k2m.convert(Left(fml match { case Imply(a, b) => And(a, Not(b)) case _ => Not(fml) })),
         MathematicaOpSpec.list(cexVars.toList.sorted.map(s => k2m.convert(Right(s))):_*),
         MathematicaOpSpec.reals.op
-      )
+      ))
       run(input) match {
         case (_, Left(cex: Formula)) => cex match {
           case False =>

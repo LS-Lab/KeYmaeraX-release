@@ -89,6 +89,10 @@ object ExtMathematicaOpSpec {
 
   def n: NaryMathOpSpec = NaryMathOpSpec(symbol("N"))
 
+  def i: Expr = symbol("I")
+
+  def complex: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Complex"))
+
   def nmaximize: BinaryMathOpSpec = BinaryMathOpSpec(symbol("NMaximize"))
 
   //</editor-fold>
