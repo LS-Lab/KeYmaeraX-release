@@ -2452,12 +2452,12 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       }
       else (belleTerm, pos, pos2, Nil)
 
-    if (args.isEmpty && inputs.isEmpty && adaptedPos.isEmpty) {
-      assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2")
-      specificTerm
-    } else if ((args match { case (_: ListArg) :: Nil => true case _ => false }) && inputs.isEmpty && adaptedPos.isEmpty) {
+    if ((args match { case (_: ListArg) :: Nil => true case _ => false }) && inputs.isEmpty && adaptedPos.isEmpty) {
       assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2")
       specificTerm + "()"
+    } else if (inputs.isEmpty && adaptedPos.isEmpty) {
+      assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2")
+      specificTerm
     } else if (inputs.isEmpty) {
       specificTerm + "(" + adaptedPos.get.prettyString + adaptedPos2.map("," + _.prettyString).getOrElse("") + ")"
     } else {
