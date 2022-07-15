@@ -58,8 +58,10 @@ private object ToolTactics {
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
-  lazy val assertNoCex: BuiltInTactic = assertNoCex(p => p)
-  def assertNoCex(onTimeout: ProvableSig => ProvableSig): BuiltInTactic = anon { (provable: ProvableSig) =>
+  lazy val assertNoCex: BuiltInTactic = assertNoCex(
+    /* no counterexample tool => no counterexample */ p => p,
+    /* timeout => no counterexample */ p => p)
+  def assertNoCex(onProverSetupError: ProvableSig => ProvableSig, onTimeout: ProvableSig => ProvableSig): BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "assertNoCex")
     val sequent = provable.subgoals.head
     val removeUscorePred: Formula => Boolean = {
@@ -70,7 +72,7 @@ private object ToolTactics {
                                         succ = sequent.succ.filter(removeUscorePred)).toFormula)) match {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
       case Success(None) => provable
-      case Failure(_: ProverSetupException) => provable //@note no counterexample tool, so no counterexample
+      case Failure(_: ProverSetupException) => onProverSetupError(provable) //@note no counterexample tool
       case Failure(_: MathematicaComputationAbortedException) => onTimeout(provable)
       case Failure(ex) => throw ex //@note fail with all other exceptions
     }
@@ -291,7 +293,10 @@ private object ToolTactics {
     } else {
       // Try full abbreviation and search for cex
       pr(or(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).
-        foldLeft(_)({ case (p, t) => p(t, 0) })(assertNoCex(_ => throw new ProofSearchFailure("Potential CEX")), 0)
+        foldLeft(_)({ case (p, t) => p(t, 0) })(assertNoCex(
+          /* skip ahead to un-abbreviated interpreted functions immediately if unknown CEX (due to missing tool, or timeout) */
+          _ => throw new ProofSearchFailure("Unknown CEX"),
+          _ => throw new ProofSearchFailure("Unknown CEX")), 0)
         ,
         interpretedExcept.map(fn => EqualityTactics.abbrv(fn, None) andThen hideL('Llast)).foldLeft(_)({ case (p, t) => p(t, 0) })
       ), 0)
