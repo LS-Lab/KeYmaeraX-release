@@ -55,7 +55,7 @@ abstract class SMTConverter extends (Formula=>String) {
   }
 
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
-  private[tools] def generateSMT(expr: Expression): (String, String) = {
+  def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
     val names = allSymbols.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")

@@ -39,7 +39,7 @@ object Usage {
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kym [-vars var1,var2,..,varn] [-out file.c]
       |     [-quantitative] |
-      |  -convert stripHints file.kyx -out fileout.kyx
+      |  -convert [stripHints|kyx2mat|kyx2smt|mat2kyx|mat2smt|smt2kyx|smt2mat] file.kyx [-out fileout.kyx]
       |  -setup
       |
       |Actions:

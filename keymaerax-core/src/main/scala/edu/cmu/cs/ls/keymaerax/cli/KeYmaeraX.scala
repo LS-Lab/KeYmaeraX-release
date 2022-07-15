@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{FileReader, PrintWriter}
 import java.util.concurrent.TimeUnit
-import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException, TacticAssertionError}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArch
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.ext.SmtLibReader
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica, MathematicaToKeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Nil
@@ -44,11 +44,9 @@ object KeYmaeraX {
     val STRIPHINTS: String = "stripHints"
     val KYX2MAT: String = "kyx2mat"
     val KYX2SMT: String = "kyx2smt"
-    val MAT2KYX: String = "mat2kyx"
-    val MAT2SMT: String = "mat2smt"
     val SMT2KYX: String = "smt2kyx"
     val SMT2MAT: String = "smt2mat"
-    val conversions: Set[String] = Set(STRIPHINTS, KYX2MAT, KYX2SMT, MAT2KYX, MAT2SMT, SMT2KYX, SMT2MAT)
+    val conversions: Set[String] = Set(STRIPHINTS, KYX2MAT, KYX2SMT, SMT2KYX, SMT2MAT)
   }
 
   /** Backend tools. */
@@ -327,8 +325,6 @@ object KeYmaeraX {
       case Conversions.STRIPHINTS => stripHints(options, usage)
       case Conversions.KYX2SMT    => kyx2smt(options, usage)
       case Conversions.KYX2MAT    => kyx2mat(options, usage)
-      case Conversions.MAT2KYX    => mat2kyx(options, usage)
-      case Conversions.MAT2SMT    => mat2smt(options, usage)
       case Conversions.SMT2KYX    => smt2kyx(options, usage)
       case Conversions.SMT2MAT    => smt2mat(options, usage)
       case _ => Usage.optionErrorReporter("-convert", usage); exit(1)
@@ -365,7 +361,9 @@ object KeYmaeraX {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
       archiveContent.map(_.model match {
-        case fml: Formula => DefaultSMTConverter(fml)
+        case fml: Formula =>
+          val (decls, expr) = DefaultSMTConverter.generateSMT(fml)
+          decls + expr
         case e => throw new IllegalArgumentException("Expected a formula, but got " + e)
       }).mkString("\n")
     }
@@ -384,16 +382,6 @@ object KeYmaeraX {
     convert(options, converter, usage)
   }
 
-  /** Converts Mathematica to KeYmaera X. */
-  private def mat2kyx(options: OptionMap, usage: String): Unit = {
-    val converter = (fileName: String) => {
-      val source = scala.io.Source.fromFile(fileName)
-      val lines = try { source.mkString } finally { source.close() }
-      MathematicaToKeYmaera(new com.wolfram.jlink.Expr(lines)).prettyString
-    }
-    convert(options, converter, usage)
-  }
-
   /** Converts SMT-Lib format to KeYmaera X. */
   private def smt2kyx(options: OptionMap, usage: String): Unit = {
     val converter = (fileName: String) => {
@@ -407,19 +395,6 @@ object KeYmaeraX {
     val converter = (fileName: String) => {
       val (kyx, _) = SmtLibReader.read(new FileReader(fileName))
       kyx.map(KeYmaeraToMathematica).mkString("\n")
-    }
-    convert(options, converter, usage)
-  }
-
-  /** Converts Mathematica to KeYmaera X. */
-  private def mat2smt(options: OptionMap, usage: String): Unit = {
-    val converter = (fileName: String) => {
-      val source = scala.io.Source.fromFile(fileName)
-      val lines = try { source.mkString } finally { source.close() }
-      MathematicaToKeYmaera(new com.wolfram.jlink.Expr(lines)) match {
-        case fml: Formula => DefaultSMTConverter(fml)
-        case e => throw new IllegalArgumentException("Expected a formula, but got " + e.prettyString)
-      }
     }
     convert(options, converter, usage)
   }
