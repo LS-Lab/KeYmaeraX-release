@@ -722,6 +722,7 @@ private object DLBySubst {
     if (x match { case Some(g) => g != e case None => true }) {
       seq.sub(pos) match {
         case Some(f: Formula) =>
+          if (StaticSemantics.freeVars(f).isInfinite) throw new TacticInapplicableFailure("discrete ghost is inapplicable, because of infinite free variables; please expand program symbols first")
           // check specified name, or construct a new name for the ghost variable if None
           def ghostV(f: Formula): Variable = x match {
             case Some(gv) => require(gv == e || (!StaticSemantics.symbols(f).contains(gv))); gv
