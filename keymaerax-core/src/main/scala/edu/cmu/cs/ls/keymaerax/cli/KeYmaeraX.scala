@@ -4,16 +4,18 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.PrintWriter
+import java.io.{FileReader, PrintWriter}
 import java.util.concurrent.TimeUnit
 import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException, TacticAssertionError}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
-import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, StaticSemantics}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, Name, ParsedArchiveEntry, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.SmtLibReader
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica, MathematicaToKeYmaera}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Nil
@@ -36,6 +38,17 @@ object KeYmaeraX {
     val SETUP: String = "setup"
     val CONVERT: String = "convert"
     val modes: Set[String] = Set(CODEGEN, CONVERT, GRADE, MODELPLEX, PROVE, REPL, SETUP)
+  }
+
+  object Conversions {
+    val STRIPHINTS: String = "stripHints"
+    val KYX2MAT: String = "kyx2mat"
+    val KYX2SMT: String = "kyx2smt"
+    val MAT2KYX: String = "mat2kyx"
+    val MAT2SMT: String = "mat2smt"
+    val SMT2KYX: String = "smt2kyx"
+    val SMT2MAT: String = "smt2mat"
+    val conversions: Set[String] = Set(STRIPHINTS, KYX2MAT, KYX2SMT, MAT2KYX, MAT2SMT, SMT2KYX, SMT2MAT)
   }
 
   /** Backend tools. */
@@ -76,7 +89,7 @@ object KeYmaeraX {
         println("...done")
       case Some(Modes.CONVERT) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-        stripHints(options, usage)
+        convert(options, usage)
       case command => println("WARNING: Unknown command " + command)
     }
   }
@@ -309,40 +322,121 @@ object KeYmaeraX {
 
   /** Converts input files. */
   def convert(options: OptionMap, usage: String): Unit = {
-    require(options.contains('in) && options.contains('out) && options.contains('conversion), usage)
+    require(options.contains('in) && options.contains('conversion), usage)
     options('conversion) match {
-      case "stripHints" => stripHints(options, usage)
+      case Conversions.STRIPHINTS => stripHints(options, usage)
+      case Conversions.KYX2SMT    => kyx2smt(options, usage)
+      case Conversions.KYX2MAT    => kyx2mat(options, usage)
+      case Conversions.MAT2KYX    => mat2kyx(options, usage)
+      case Conversions.MAT2SMT    => mat2smt(options, usage)
+      case Conversions.SMT2KYX    => smt2kyx(options, usage)
+      case Conversions.SMT2MAT    => smt2mat(options, usage)
       case _ => Usage.optionErrorReporter("-convert", usage); exit(1)
     }
   }
 
   /** Strips proof hints from the model. */
   private def stripHints(options: OptionMap, usage: String): Unit = {
-    require(options.contains('in) && options.contains('out), usage)
+    val converter = (kyxFile: String) => {
+      val archiveContent = ArchiveParser.parseFromFile(kyxFile)
 
-    val kyxFile = options('in).toString
-    val archiveContent = ArchiveParser.parseFromFile(kyxFile)
+      //@note remove all tactics, e.model does not contain annotations anyway
+      //@note fully expand model and remove all definitions too, those might be used as proof hints
+      def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = {
+        val expandedModel = e.defs.exhaustiveSubst(e.model)
+        val expandedModelNames = StaticSemantics.symbols(expandedModel)
+        e.copy(model = expandedModel,
+          defs = Declaration(e.defs.decls.flatMap({
+            case (name@Name(n, i), sig) =>
+              if (expandedModelNames.exists(ns => ns.name == n && ns.index == i)) Some(name, sig.copy(interpretation = None))
+              else None
+          })), tactics = Nil, annotations = Nil)
+      }
 
-    //@note remove all tactics, e.model does not contain annotations anyway
-    //@note fully expand model and remove all definitions too, those might be used as proof hints
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = {
-      val expandedModel = e.defs.exhaustiveSubst(e.model)
-      val expandedModelNames = StaticSemantics.symbols(expandedModel)
-      e.copy(model = expandedModel,
-        defs = Declaration(e.defs.decls.flatMap({
-          case (name@Name(n, i), sig) =>
-            if (expandedModelNames.exists(ns => ns.name == n && ns.index == i)) Some(name, sig.copy(interpretation = None))
-            else None
-        })), tactics = Nil, annotations = Nil)
+      val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
+      archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
     }
 
-    val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
-    val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
+    convert(options, converter, usage)
+  }
 
-    val outFile = options('out).toString
-    val pw = new PrintWriter(outFile)
-    pw.write(printedStrippedContent)
-    pw.close()
+  /** Converts KeYmaera X to SMT-Lib format. */
+  private def kyx2smt(options: OptionMap, usage: String): Unit = {
+    val converter = (fileName: String) => {
+      val archiveContent = ArchiveParser.parseFromFile(fileName)
+      archiveContent.map(_.model match {
+        case fml: Formula => DefaultSMTConverter(fml)
+        case e => throw new IllegalArgumentException("Expected a formula, but got " + e)
+      }).mkString("\n")
+    }
+    convert(options, converter, usage)
+  }
+
+  /** Converts KeYmaera X to Mathematica. */
+  private def kyx2mat(options: OptionMap, usage: String): Unit = {
+    val converter = (fileName: String) => {
+      val archiveContent = ArchiveParser.parseFromFile(fileName)
+      archiveContent.map(_.model match {
+        case fml: Formula => KeYmaeraToMathematica(fml)
+        case e => throw new IllegalArgumentException("Expected a formula, but got " + e)
+      }).mkString("\n")
+    }
+    convert(options, converter, usage)
+  }
+
+  /** Converts Mathematica to KeYmaera X. */
+  private def mat2kyx(options: OptionMap, usage: String): Unit = {
+    val converter = (fileName: String) => {
+      val source = scala.io.Source.fromFile(fileName)
+      val lines = try { source.mkString } finally { source.close() }
+      MathematicaToKeYmaera(new com.wolfram.jlink.Expr(lines)).prettyString
+    }
+    convert(options, converter, usage)
+  }
+
+  /** Converts SMT-Lib format to KeYmaera X. */
+  private def smt2kyx(options: OptionMap, usage: String): Unit = {
+    val converter = (fileName: String) => {
+      SmtLibReader.read(new FileReader(fileName))._1.map(_.prettyString).mkString("\n")
+    }
+    convert(options, converter, usage)
+  }
+
+  /** Converts SMT-Lib format to Mathematica. */
+  private def smt2mat(options: OptionMap, usage: String): Unit = {
+    val converter = (fileName: String) => {
+      val (kyx, _) = SmtLibReader.read(new FileReader(fileName))
+      kyx.map(KeYmaeraToMathematica).mkString("\n")
+    }
+    convert(options, converter, usage)
+  }
+
+  /** Converts Mathematica to KeYmaera X. */
+  private def mat2smt(options: OptionMap, usage: String): Unit = {
+    val converter = (fileName: String) => {
+      val source = scala.io.Source.fromFile(fileName)
+      val lines = try { source.mkString } finally { source.close() }
+      MathematicaToKeYmaera(new com.wolfram.jlink.Expr(lines)) match {
+        case fml: Formula => DefaultSMTConverter(fml)
+        case e => throw new IllegalArgumentException("Expected a formula, but got " + e.prettyString)
+      }
+    }
+    convert(options, converter, usage)
+  }
+
+  /** Converts the content of a file using the `converter` fileName => content. */
+  private def convert(options: OptionMap, converter: String => String, usage: String): Unit = {
+    require(options.contains('in), usage)
+    val kyxFile = options('in).toString
+    val converted = converter(kyxFile)
+    options.get('out).map(_.toString) match {
+      case Some(outFile) =>
+        val pw = new PrintWriter(outFile)
+        pw.write(converted)
+        pw.close()
+      case None =>
+        println(converted)
+    }
   }
 
 }
