@@ -148,6 +148,10 @@ object SmtLibReader {
 
   /** Converts a variable. */
   private def convertVar(t: Terms.SortedVar): Variable = t match {
-    case Terms.SortedVar(Terms.SSymbol(name), sort) if Reals.RealSort.unapply(sort) => Variable(sanitize(name))
+    case Terms.SortedVar(Terms.SSymbol(name), sort) if Reals.RealSort.unapply(sort) =>
+      DefaultSMTConverter.nameFromIdentifier(name) match {
+        case v: BaseVariable => v
+        case f => throw new IllegalArgumentException("Expected a variable, but got " + f.prettyString)
+      }
   }
 }
