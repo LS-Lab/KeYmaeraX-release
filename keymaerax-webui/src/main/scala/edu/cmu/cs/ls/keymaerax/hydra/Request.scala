@@ -2404,7 +2404,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
                           pos: Option[PositionLocator], pos2: Option[PositionLocator] = None,
-                          inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true, stepwise: Boolean = false)
+                          inputs: List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true, stepwise: Boolean = false)
   extends UserProofRequest(db, userId, proofId) with WriteRequest {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(sequent: Sequent): String = {
@@ -2433,28 +2433,36 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
-    val (specificTerm: String, adaptedPos: Option[PositionLocator], adaptedPos2: Option[PositionLocator]) =
+    val (specificTerm: String, adaptedPos: Option[PositionLocator], adaptedPos2: Option[PositionLocator], args) =
       if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, session(proofId).asInstanceOf[ProofSession]) match {
-        case Left(s) => (s, pos, pos2)
+        case Left(s) => (s, pos, pos2, Nil)
         //@note improve tactic maintainability by position search with formula shape on universally applicable tactics
         case Right(t: PositionTacticInfo) if t.codeName == "hideL" || t.codeName == "hideR" => pos match {
-          case Some(Fixed(pp, None, _)) if pp.isTopLevel => (t.codeName, Some(Fixed(pp, Some(sequent(pp.top)))), None)
-          case _ => (t.codeName, pos, None)
+          case Some(Fixed(pp, None, _)) if pp.isTopLevel => (t.codeName, Some(Fixed(pp, Some(sequent(pp.top)))), None, Nil)
+          case _ => (t.codeName, pos, None, Nil)
         }
-        case Right(t: PositionTacticInfo) => (t.codeName, pos, None)
-        case Right(t: InputPositionTacticInfo) => (t.codeName, pos, None)
-        case Right(t: TwoPositionTacticInfo) => (t.codeName, pos, pos2)
-        case Right(t: InputTwoPositionTacticInfo) => (t.codeName, pos, pos2)
-        case Right(t: BuiltinInfo) => (t.codeName, None, None)
-        case Right(t: CoreAxiomInfo) => (t.codeName, pos, None)
-        case Right(t: DerivedAxiomInfo) => (t.codeName, pos, None)
-        case Right(t) => (t.codeName, None, None)
+        case Right(t: PositionTacticInfo) => (t.codeName, pos, None, Nil)
+        case Right(t: InputPositionTacticInfo) => (t.codeName, pos, None, t.persistentInputs)
+        case Right(t: TwoPositionTacticInfo) => (t.codeName, pos, pos2, Nil)
+        case Right(t: InputTwoPositionTacticInfo) => (t.codeName, pos, pos2, t.persistentInputs)
+        case Right(t: BuiltinInfo) => (t.codeName, None, None, Nil)
+        case Right(t: CoreAxiomInfo) => (t.codeName, pos, None, Nil)
+        case Right(t: DerivedAxiomInfo) => (t.codeName, pos, None, Nil)
+        case Right(t) => (t.codeName, None, None, t.persistentInputs)
       }
-      else (belleTerm, pos, pos2)
+      else (belleTerm, pos, pos2, Nil)
 
-    if (inputs.isEmpty && adaptedPos.isEmpty) { assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2"); specificTerm }
-    else if (inputs.isEmpty) { specificTerm + "(" + adaptedPos.get.prettyString + adaptedPos2.map("," + _.prettyString).getOrElse("") + ")" }
-    else specificTerm + "(" + paramStrings.mkString(",") + adaptedPos.map("," + _.prettyString).getOrElse("") + adaptedPos2.map("," + _.prettyString).getOrElse("") + ")"
+    if (args.isEmpty && inputs.isEmpty && adaptedPos.isEmpty) {
+      assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2")
+      specificTerm
+    } else if ((args match { case (_: ListArg) :: Nil => true case _ => false }) && inputs.isEmpty && adaptedPos.isEmpty) {
+      assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2")
+      specificTerm + "()"
+    } else if (inputs.isEmpty) {
+      specificTerm + "(" + adaptedPos.get.prettyString + adaptedPos2.map("," + _.prettyString).getOrElse("") + ")"
+    } else {
+      specificTerm + "(" + paramStrings.mkString(",") + adaptedPos.map("," + _.prettyString).getOrElse("") + adaptedPos2.map("," + _.prettyString).getOrElse("") + ")"
+    }
   }
 
   private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
