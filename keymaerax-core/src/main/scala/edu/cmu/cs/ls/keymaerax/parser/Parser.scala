@@ -148,16 +148,21 @@ object Parser extends (String => Expression) {
 object ParserHelper {
   private val UTF8_BOM = "\uFEFF"
 
-  private val SUPPORTED_UNICODE = List("→","←","↔","∧","∨","•","∀","∃","⎵","≠","≥","≤","∪","∩")
+  private val SUPPORTED_UNICODE = List("→","←","↔","∧","∨","•","∀","∃","⎵","≠","≥","≤","∪","∩","×")
+
+  private val DOUBLE_QUOTES_STRING = """"(([^\\"]|\\"|\\(?!"))*+)"""".r //@note possessive quantifier *+ to disable backtracking between quotes
+
+  private val ASCII_CHARS = "([^\\x00-\\x7F])".r
 
   /** Returns 's' without leading Byte Order Mark. */
   def removeBOM(s: String): String = s.stripPrefix(UTF8_BOM)
 
   /** Checks that only supported Unicode characters are contained in `s`, reports the first such character as a parse exception. */
   def checkUnicode(s: String): String = {
-    s.lines.zipWithIndex.foreach({
+    //@note allow any unicode in double-quoted strings
+    DOUBLE_QUOTES_STRING.replaceAllIn(s, "").lines.zipWithIndex.foreach({
       case (l, i) =>
-        "[^\\x00-\\x7F]".r.findAllMatchIn(l).map(m => m.matched -> m.start).toList.headOption match {
+        ASCII_CHARS.findAllMatchIn(l).map(m => m.matched -> m.start).toList.headOption match {
           case Some((u, j)) if !SUPPORTED_UNICODE.contains(u) =>
             throw ParseException("Unsupported Unicode character '" + u + "', please try ASCII", Region(i, j), u.toString, "ASCII character")
           case _ => // nothing to do

@@ -200,6 +200,7 @@ class DLArchiveParserTests extends TacticTestBase {
     val input =
       """
         |ArchiveEntry "Entry 1"
+        | Description "Unicode is allowed in strings: ü, é, ∇, ©, ↩︎"
         | Definitions Bool p(Real x, Real y) <-> x >= -2 & x <= -1 & y >= −3 /* the last minus is not ASCII */; End.
         | ProgramVariables Real x; End.
         | Problem p(x,5) -> [x:=x+1;]p(x-1,5) End.
