@@ -3461,7 +3461,7 @@ oop.inherits(Worker, Mirror);
           column: error.column,
           endRow: error.endLine-1,
           endColumn: error.endColumn,
-          text: "Expected '" + error.expect + "',\nbut found '" + error.found + "'" +
+          text: "Columns " + error.column + "-" + error.endColumn + ": expected '" + error.expect + "',\nbut found '" + error.found + "'" +
               (error.hint !== undefined && error.hint !== "" ? ("\n" + error.hint) : ""),
           type: "error" // |"warning"|"info"
         });
