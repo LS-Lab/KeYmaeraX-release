@@ -19,7 +19,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
         link: function(scope, elem, attr) {
             scope.sequentSuggestions = [];
 
-            if (!scope.readOnly) {
+            if (!scope.readOnly && scope.userId && scope.userId !== "" && scope.proofId && scope.proofId !== "" &&
+                scope.nodeId && scope.nodeId !== "") {
               derivationInfos.sequentSuggestionDerivationInfos(scope.userId, scope.proofId, scope.nodeId)
                 .then(function(response) {
                   scope.sequentSuggestions = response.data;
