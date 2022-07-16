@@ -11,7 +11,18 @@
     <li class="divider"></li>
     <li><small>&nbsp;Special functions</small></li>
     <li ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a href ng-click="doTactic(undefined, 'expandAll')">Expand all<code class="pull-right">expandAll</code></a>
+        <a href ng-click="doTactic(undefined, 'expandAll')">Expand all
+            <span class="pull-right">
+                <code>expandAll</code>
+                <i class="fa fa-question-circle"
+                   ng-click="$event.preventDefault();$event.stopPropagation()"
+                   uib-popover-html="'<kbd>expandAll</kbd> expands all occurrences of abs/min/max.'"
+                   popover-append-to-body="true"
+                   popover-class="k4-rulemenu-helppopover-long"
+                   popover-placement="auto bottom"
+                   popover-trigger="'outsideClick'"></i>
+            </span>
+        </a>
     </li>
     <k4-tactic-menu-entry
             proof-id="{{proofId}}" user-id="{{userId}}"
@@ -39,10 +50,32 @@
         </small>
     </li>
     <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all<code class="pull-right">expandAllDefs</code></a>
+        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all
+            <span class="pull-right">
+                <code>expandAllDefs</code>
+                <i class="fa fa-question-circle"
+                   ng-click="$event.preventDefault();$event.stopPropagation()"
+                   uib-popover-html="'<kbd>expandAllDefs</kbd> expands all definitions of function symbols, predicate symbols, and program symbols according to the <b>Definitions</b> block of the model file.'"
+                   popover-append-to-body="true"
+                   popover-class="k4-rulemenu-helppopover-long"
+                   popover-placement="auto bottom"
+                   popover-trigger="'outsideClick'"></i>
+            </span>
+        </a>
     </li>
     <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a href ng-click="onMultiNodeTactic({id:'expandAllDefs'}, undefined)">...everywhere<code class="pull-right">doall(expandAllDefs)</code></a>
+        <a href ng-click="onMultiNodeTactic({id:'expandAllDefs'}, undefined)">...everywhere
+            <span class="pull-right">
+                <code>doall(expandAllDefs)</code>
+                <i class="fa fa-question-circle"
+                   ng-click="$event.preventDefault();$event.stopPropagation()"
+                   uib-popover-html="'<kbd>doall(expandAllDefs)</kbd> expands all definitions on all branches.'"
+                   popover-append-to-body="true"
+                   popover-class="k4-rulemenu-helppopover-long"
+                   popover-placement="auto bottom"
+                   popover-trigger="'outsideClick'"></i>
+            </span>
+        </a>
     </li>
     <li ng-repeat="d in definitions | filter: {definition: {editable:false,assumptionsCart:false}}" ng-class="{'disabled': agenda.items().length <= 0 }">
         <a ng-class="{'disabled': agenda.items().length <= 0 }"
