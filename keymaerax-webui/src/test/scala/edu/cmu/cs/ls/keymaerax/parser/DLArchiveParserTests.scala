@@ -207,8 +207,8 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     the [ParseException] thrownBy parse(input).loneElement should have message
-      """2:65 Unsupported Unicode character '−', please try ASCII
-        |Found:    − at 2:65
+      """3:65 Unsupported Unicode character '−', please try ASCII
+        |Found:    − at 3:65
         |Expected: ASCII character""".stripMargin
   }
 
