@@ -771,7 +771,11 @@ private object DifferentialTactics extends Logging {
   lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
-      useAt(Ax.DWQinitial, PosInExpr(1::Nil))(pos) & implyR(pos)
+      //@note cut to keep positioning stable (implyR modifies positions)
+      cut(q) <(
+        skip,
+        useAt(Ax.DWQinitial, PosInExpr(1::Nil))(pos) & implyR(pos) & close
+      )
     case Some(e) => throw new TacticInapplicableFailure("diffUnpackEvolDomain only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -1769,18 +1773,18 @@ private object DifferentialTactics extends Logging {
 
     val invTactic =
       if (tryHard) expandAllDefs(Nil) & {
-        ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos) |
-        ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
+        DebuggingTactics.print("A") & ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        DebuggingTactics.print("B") & ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos) |
+        DebuggingTactics.print("C") & ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
-        ODEInvariance.sAIclosed(pos) |
-        ODEInvariance.sAI(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
-        ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
+        DebuggingTactics.print("D") & ODEInvariance.sAIclosed(pos) |
+        DebuggingTactics.print("E") & ODEInvariance.sAI(pos) |
+        DebuggingTactics.print("F") & ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
+          DebuggingTactics.print("G") & ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       } else expandAllDefs(Nil) & {
-        ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        DebuggingTactics.print("H") & ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
         // ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
-        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
+          DebuggingTactics.print("i") & ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
     val diffWeaken =

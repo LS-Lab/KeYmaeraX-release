@@ -1701,6 +1701,11 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>=0 ==> [{x'=3&x>=0}]x>=0".asSequent
   }
 
+  it should "keep positions stable" in withTactics {
+    val result = proveBy("==> a=1, [{x'=3&x>=0}]x>=0, b=2".asSequent, DifferentialTactics.diffUnpackEvolutionDomainInitially(2))
+    result.subgoals.loneElement shouldBe "x>=0 ==> a=1, [{x'=3&x>=0}]x>=0, b=2".asSequent
+  }
+
   "Differential Invariants" should "FEATURE_REQUEST: prove random differential invariant equations" taggedAs TodoTest in withMathematica { tool =>
     //@note test is supposed/very likely to fail until feature is implemented (^0)
     for (i <- 1 to randomTrials) {
