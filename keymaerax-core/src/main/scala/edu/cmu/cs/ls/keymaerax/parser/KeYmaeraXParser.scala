@@ -202,10 +202,19 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case _ :+ Error(msg, loc, st) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
-    Parser.semanticAnalysis(parse) match {
-      case None => parse
-      case Some(error) => if (lax) { logger.trace("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
-      else throw ParseException("Semantic analysis error " + error, parse).inInput("<unknown>", Some(input))
+    Parser.semanticAnalysis(parse).toList match {
+      case Nil => parse
+      case ambiguous =>
+        val msg =
+          "semantics: Expect unique names_index that identify a unique type." +
+            "\nambiguous: " + ambiguous.map(_.fullString).mkString(" and ")
+        if (lax) {
+          logger.trace("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + msg)
+          parse
+        } else {
+          throw ParseException("Semantic analysis error\n" + msg, UnknownLocation,
+            ambiguous.map(_.fullString).mkString(" and "), "unambiguous type").inInput("<unknown>", Some(input))
+        }
     }
   }
 

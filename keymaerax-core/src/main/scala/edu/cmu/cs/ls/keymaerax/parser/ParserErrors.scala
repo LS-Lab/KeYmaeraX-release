@@ -121,8 +121,8 @@ object ParseException {
   def typeError(msg: String, illtyped: Expression, expectedType: String, loc: Location, hint: String = ""): ParseException =
     typeException(msg, loc, illtyped + " " + illtyped.getClass.getSimpleName + " of sort " + illtyped.sort, expectedType, hint=hint)
 
-  def typeDeclGuessError(msg: String, declaredType: String, expected: Expression, loc: Location, hint: String = ""): ParseException =
-    typeException(msg, loc, declaredType, expected.getClass.getSimpleName + " of sort " + expected.sort, hint=hint)
+  def typeDeclGuessError(msg: String, declaredType: String, expected: String, loc: Location, hint: String = ""): ParseException =
+    typeException(msg, loc, declaredType, expected, hint=hint)
 
   def typeDeclError(msg: String, declaredType: String, expectedType: String, loc: Location, hint: String = ""): ParseException =
     typeException(msg, loc, declaredType, expectedType, hint=hint)

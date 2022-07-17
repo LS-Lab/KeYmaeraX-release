@@ -501,9 +501,14 @@ object ArchiveParser extends ArchiveParser {
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
-    Parser.semanticAnalysis(fullyExpandedModel) match {
-      case None =>
-      case Some(error) => throw ParseException("Semantic analysis error\n" + error, fullyExpandedModel)
+    Parser.semanticAnalysis(fullyExpandedModel).toList match {
+      case Nil =>
+      case ambiguous =>
+        val msg =
+          "semantics: Expect unique names_index that identify a unique type." +
+            "\nambiguous: " + ambiguous.map(_.fullString).mkString(" and ")
+        throw ParseException("Semantic analysis error\n" + msg, UnknownLocation,
+          ambiguous.map(_.fullString).mkString(" and "), "unambiguous type")
     }
     //@note bare formula input without any definitions uses default meaning of symbols
     if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
@@ -690,11 +695,14 @@ object ArchiveParser extends ArchiveParser {
           val (declaredSort, declLoc) = d.decls.get(Name(x.name, x.index)) match {
             case Some(Signature(None, sort, _, _, loc)) => (sort, loc)
             case Some(Signature(Some(domain), sort, _, _, loc)) =>
-              throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
-            case None => throw ParseException.typeDeclGuessError(name + ": undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
-              "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
+              throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.",
+                x.prettyString + ": " + domain + "->" + sort + " Function", "Real " + x.prettyString, loc)
+            case None => throw ParseException.typeDeclGuessError(name + ": undefined symbol " + x.prettyString,
+              "undefined symbol " + x.prettyString, "Real " + x.prettyString, UnknownLocation,
+              "Add \"Real " + x.prettyString + ";\" to the ProgramVariables block")
           }
-          if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declaredSort + "", x, declLoc)
+          if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.",
+            declaredSort + x.prettyString, x.sort + " " + x.prettyString, declLoc)
           x.sort == declaredSort
         }
       case _: UnitPredicational => true //@note needs not be declared

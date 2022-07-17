@@ -483,6 +483,35 @@ class DLArchiveParserTests extends TacticTestBase {
         |Hint: Try ("Real" | "Bool" | "HP" | "HG" | Unique name (x not unique))""".stripMargin)
   }
 
+  it should "give useful error messages on semantic analysis" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real one = 1; End.
+        |ProgramVariables /* Real x; */ End.
+        |Problem x>0 -> [x:=x+1;]x>1 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> type analysis: Test: undefined symbol x
+        |Found:    undefined symbol x at <somewhere>
+        |Expected: Real x
+        |Hint: Add "Real x;" to the ProgramVariables block""".stripMargin
+  }
+
+  it should "give useful error messages on semantic analysis (2)" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real f; End.
+        |ProgramVariables Real x,y; End.
+        |Problem x -> [x:=1+f;]x>f End. /* uses x as predicate and variable */
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> Semantic analysis error
+        |semantics: Expect unique names_index that identify a unique type.
+        |ambiguous: x:Unit->Bool and x:Real
+        |Found:    x:Unit->Bool and x:Real at <somewhere>
+        |Expected: unambiguous type""".stripMargin
+  }
+
   it should "parse simple definitions after variables" in {
     val input =
       """
