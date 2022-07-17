@@ -1046,7 +1046,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
 class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val templates = List(
-      TemplatePOJO("Plain", "A plain dL formula",
+      TemplatePOJO("Plain", "Plain dL formula",
         """ArchiveEntry "New Entry"
           |
           |Problem
@@ -1061,13 +1061,13 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
         """ArchiveEntry "New Entry"
           |
           |Definitions
-          |  /* A constant with arbitrary value, constrained in predicate p */
+          |  /* A constant with arbitrary value (onstrained in predicate p below) */
           |  /* Real any; */
           |
           |  /* The constant 2 */
           |  /* Real two = 2; */
           |
-          |  /* An uninterpreted function */
+          |  /* An uninterpreted function of two arguments */
           |  /* Real f(Real x, Real y); */
           |
           |  /* Function x^2 */
