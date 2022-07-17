@@ -212,6 +212,24 @@ class DLArchiveParserTests extends TacticTestBase {
         |Expected: ASCII character""".stripMargin
   }
 
+  it should "give a readable error message on unsupported unicode characters in multiline strings" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Description "Unicode is allowed in strings: ü,
+        |              é, ∇,
+        |              ©, ↩︎"
+        | Definitions Bool p(Real x, Real y) <-> x >= -2 & x <= -1 & y >= −3 /* the last minus is not ASCII */; End.
+        | ProgramVariables Real x; End.
+        | Problem p(x,5) -> [x:=x+1;]p(x-1,5) End.
+        |End.
+      """.stripMargin
+    the [ParseException] thrownBy parse(input).loneElement should have message
+      """3:65 Unsupported Unicode character '−', please try ASCII
+        |Found:    − at 3:65
+        |Expected: ASCII character""".stripMargin
+  }
+
   it should "parse simple nullary predicate definition with multiple variables" in {
     val input =
       """

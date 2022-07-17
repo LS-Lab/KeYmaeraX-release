@@ -252,7 +252,7 @@ private case class DOUBLE_QUOTES_STRING(var s: String) extends Terminal("<string
 }
 private object DOUBLE_QUOTES_STRING_PAT {
   // everything between "...", allows line breaks, \, and escaped \" as content
-  def regexp: Regex = """"(([^\\"]|\\"|\\(?!"))*+)"""".r //@note possessive quantifier *+ to disable backtracking between quotes
+  def regexp: Regex = """"(([^\\"]|\\.)*)"""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private object PERIOD extends Terminal(".") {

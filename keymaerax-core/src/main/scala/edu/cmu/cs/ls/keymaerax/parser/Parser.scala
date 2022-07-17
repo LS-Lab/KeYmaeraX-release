@@ -149,7 +149,7 @@ object ParserHelper {
 
   private val SUPPORTED_UNICODE = List("→","←","↔","∧","∨","•","∀","∃","⎵","≠","≥","≤","∪","∩","×")
 
-  private val DOUBLE_QUOTES_STRING = """"(([^\\"]|\\"|\\(?!"))*+)"""".r //@note possessive quantifier *+ to disable backtracking between quotes
+  private val DOUBLE_QUOTES_STRING = """"(([^\\"]|\\.)*)"""".r
 
   private val ASCII_CHARS = "([^\\x00-\\x7F])".r
 
@@ -163,7 +163,7 @@ object ParserHelper {
       case (l, i) =>
         ASCII_CHARS.findAllMatchIn(l).map(m => m.matched -> m.start).toList.headOption match {
           case Some((u, j)) if !SUPPORTED_UNICODE.contains(u) =>
-            throw ParseException("Unsupported Unicode character '" + u + "', please try ASCII", Region(i, j), u.toString, "ASCII character")
+            throw ParseException("Unsupported Unicode character '" + u + "', please try ASCII", Region(i, j), u, "ASCII character")
           case _ => // nothing to do
         }
     })
