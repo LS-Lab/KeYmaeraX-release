@@ -139,6 +139,10 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               sequentProofData.formulas.toggleUseAllFmls(scope.sequent);
             }
 
+            scope.invertAllFmls = function() {
+                sequentProofData.formulas.invertAllFmls(scope.sequent);
+            }
+
             scope.isFOL = function(formula) {
               //@todo implement
               return true;

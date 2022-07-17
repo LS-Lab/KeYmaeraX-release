@@ -275,6 +275,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           $.map(sequent.succ, function(e, i) { e.use = use; return e; });
         }
       },
+      invertAllFmls: function(sequent) {
+        if (sequent) {
+          $.map(sequent.ante, function(e, i) { e.use = !e.use; return e; });
+          $.map(sequent.succ, function(e, i) { e.use = !e.use; return e; });
+        }
+      },
       mode: 'prove',
       stickyEdit: false
     },
