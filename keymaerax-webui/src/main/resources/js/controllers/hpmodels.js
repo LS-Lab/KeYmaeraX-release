@@ -217,6 +217,24 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.aceLoaded = function(editor) {
        editor.focus();
+       editor.getSession().on("changeAnnotation", function() {
+         var annotations = editor.getSession().getAnnotations();
+         var errors = annotations.filter(function (a) { return a.type === "error"; });
+         Object.values(editor.getSession().getMarkers(true)).filter(function(m) {
+           return m.clazz === "k4-model-editor-error";
+         }).forEach(function(m) {
+           editor.getSession().removeMarker(m.id);
+         });
+         if (errors.length > 0) {
+           var error = errors[0];
+           editor.getSession().addMarker(
+               new ace.Range(error.row, error.column-1, error.endRow, error.endColumn),
+               "k4-model-editor-error",
+               "text",
+               true
+           );
+         }
+       });
      }
 
      $scope.aceChanged = function(e) {

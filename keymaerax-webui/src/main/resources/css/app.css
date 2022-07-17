@@ -727,9 +727,23 @@ del {
   max-width: calc(30vw);
 }
 
+.k4-model-editor-error {
+  position: absolute;
+  border-bottom: 1px solid darkred;
+}
+.k4-model-editor-error:after {
+  color: darkred;
+  content: "\f0e7"; /* fontawesome bolt */
+  font-family: FontAwesome;
+  font-size: smaller;
+  position: absolute;
+  top: -10px;
+  right: -5px;
+}
+
 .k4-tacticeditor-error {
   color: black;
-  border-bottom: 1px dashed red;
+  border-bottom: 1px dashed darkred;
 }
 
 .k4-tacticeditor-new {
@@ -1574,7 +1588,7 @@ del {
 }
 
 .error {
-  boder-color: var(--lsblue);
+  border-color: var(--lsblue);
 }
 
 /*
