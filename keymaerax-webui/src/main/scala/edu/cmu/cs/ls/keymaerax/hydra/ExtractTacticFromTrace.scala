@@ -18,19 +18,20 @@ trait TraceToTacticConverter {
   def getTacticString(node: ProofTreeNode, indent: String): (String, Map[Location, ProofTreeNode])
 }
 
-class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConverter {
+abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTacticConverter {
   private val INDENT_INCREMENT = BelleParser.TAB
 
   /** Tactic definitions from the tactic script (if any). */
   private val tacticDefs = scala.collection.mutable.Map.empty[String, BelleExpr]
 
-  private def makeLocNodeMap(maker: String, node: ProofTreeNode): Map[Location, ProofTreeNode] = {
-    if (maker.nonEmpty) {
-      val makerLines = (maker: StringOps).lines.toList
-      val makerRegion = Region(0, 0, makerLines.length - 1, makerLines.last.length)
-      Map[Location, ProofTreeNode](makerRegion -> node)
-    } else Map.empty
-  }
+  /** Creates string locations for the `maker` tactic. */
+  protected def makeLocNodeMap(maker: String, node: ProofTreeNode): Map[Location, ProofTreeNode]
+
+  /** Makes labels for the subgoals of `node`. */
+  protected def makeLabels(node: ProofTreeNode, tacticDefs: Map[String, BelleExpr]): List[BelleLabel]
+
+  /** Converts fixed positions into searchy locators. */
+  protected def convertLocator(tactic: BelleExpr, node: ProofTreeNode): BelleExpr
 
   def getTacticString(node: ProofTreeNode, indent: String): (String, Map[Location, ProofTreeNode]) = {
     assert(!node.children.contains(node), "A node should not be its own child.")
@@ -42,44 +43,30 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
     }
     val subgoalTactics = node.children.map(getTacticString(_, indent + (if (node.children.size <= 1) "" else INDENT_INCREMENT)))
 
-    //@note expensive: labels are temporary, need to rerun tactic to create labels
-    val labels = if (node.children.size > 1) {
-      node.goal.map(s => BelleProvable.plain(ProvableSig.startProof(s, defs))) match {
-        case Some(p) =>
-          node.children.headOption.flatMap(_.maker.map(m => tacticDefs.getOrElse(m, BelleParser.parseWithInvGen(m, None, defs)))) match {
-            case Some(t) =>
-              LazySequentialInterpreter()(t, p) match {
-                case BelleProvable(_, Some(labels)) => labels
-                case _ => Nil
-              }
-            case None =>
-              Nil
-          }
-      }
-    } else Nil
+    val labels = makeLabels(node, tacticDefs.toMap)
 
     if (subgoalTactics.isEmpty) (indent + nodeMaker, shift(nodeMakerLoc, 0, indent.length))
     else if (subgoalTactics.size == 1) sequentialTactic((nodeMaker, nodeMakerLoc), subgoalTactics.head, indent)
     else if (subgoalTactics.size == labels.size) sequentialTactic((nodeMaker, nodeMakerLoc), {
-        val (lines, locs) = subgoalTactics.zip(minimize(labels)).foldLeft[(String, Map[Location, ProofTreeNode])](("", Map.empty))({
-          case ((rtext, rloc), ((ttext, tloc), label)) =>
-            val indented = indent + INDENT_INCREMENT + "\"" + label.prettyString + "\"" + COLON.img + NEWLINE +
-              (ttext: StringOps).linesWithSeparators.map(INDENT_INCREMENT + _).mkString
-            val newLoc = shift(tloc, (rtext : StringOps).lines.length + 1, INDENT_INCREMENT.length)
-            (rtext + indented + COMMA.img + NEWLINE, rloc ++ newLoc)
-        })
-        // first line has 1 indent less because sequentialTactic will add it
-        (lines.stripSuffix(NEWLINE).stripSuffix(COMMA.img) + NEWLINE + indent + CLOSE_PAREN.img, locs)
-      },
-      indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + OPEN_PAREN.img)
-    else sequentialTactic((nodeMaker, nodeMakerLoc), {
-        val (lines, locs) = subgoalTactics.foldLeft[(String, Map[Location, ProofTreeNode])](EMPTY_TACTIC, Map.empty)({
-          case ((rtext, rloc), (ttext, tloc)) =>
-            (rtext + ttext + COMMA.img + NEWLINE, rloc ++ shift(tloc, rtext.length, 0))
-        })
+      val (lines, locs) = subgoalTactics.zip(minimize(labels)).foldLeft[(String, Map[Location, ProofTreeNode])](("", Map.empty))({
+        case ((rtext, rloc), ((ttext, tloc), label)) =>
+          val indented = indent + INDENT_INCREMENT + "\"" + label.prettyString + "\"" + COLON.img + NEWLINE +
+            (ttext: StringOps).linesWithSeparators.map(INDENT_INCREMENT + _).mkString
+          val newLoc = shift(tloc, (rtext : StringOps).lines.length + 1, INDENT_INCREMENT.length)
+          (rtext + indented + COMMA.img + NEWLINE, rloc ++ newLoc)
+      })
       // first line has 1 indent less because sequentialTactic will add it
       (lines.stripSuffix(NEWLINE).stripSuffix(COMMA.img) + NEWLINE + indent + CLOSE_PAREN.img, locs)
-      },
+    },
+      indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + OPEN_PAREN.img)
+    else sequentialTactic((nodeMaker, nodeMakerLoc), {
+      val (lines, locs) = subgoalTactics.foldLeft[(String, Map[Location, ProofTreeNode])](EMPTY_TACTIC, Map.empty)({
+        case ((rtext, rloc), (ttext, tloc)) =>
+          (rtext + ttext + COMMA.img + NEWLINE, rloc ++ shift(tloc, rtext.length, 0))
+      })
+      // first line has 1 indent less because sequentialTactic will add it
+      (lines.stripSuffix(NEWLINE).stripSuffix(COMMA.img) + NEWLINE + indent + CLOSE_PAREN.img, locs)
+    },
       indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + OPEN_PAREN.img)
   }
 
@@ -110,8 +97,73 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
       case (EMPTY_TACTIC | EMPTY_BRANCHES, _) => (indent + ts2t, shift(ts2._2, 0, 0))
       case _ =>
         (indent + ts1t + sep + NEWLINE + indent + ts2t,
-        shift(ts1._2, 0, indent.length) ++ shift(ts2._2, (ts1t: StringOps).lines.length, 0))
+          shift(ts1._2, 0, indent.length) ++ shift(ts2._2, (ts1t: StringOps).lines.length, 0))
     }
+  }
+
+  //@note all children share the same maker
+  private def tacticStringAt(node: ProofTreeNode): (String, Option[BelleExpr]) = node.children.headOption match {
+    case None =>
+      if (node.isProved) (EMPTY_TACTIC, None)
+      else (TODO_TACTIC, None)
+    case Some(c) => c.maker match {
+      case None => (SKIP_TACTIC, None)
+      case Some(NIL_TACTIC | SKIP_TACTIC) => (EMPTY_TACTIC, None) //@note do not print internal skip steps
+      case Some(TODO_TACTIC) => (EMPTY_TACTIC, None) //@note was recorded as TODO_TACTIC, but non-empty children indicate progress since then
+      case Some(m) =>
+        if (BelleExpr.isInternal(m)) ("???", None) //@note internal tactics are not serializable (and should not be in the trace)
+        else Try(BelleParser.parseWithTacticDefs(m, tacticDefs.toMap)).toOption match {
+          case Some(t: AppliedPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
+          case Some(t: AppliedDependentPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
+          case Some(t: AppliedDependentPositionTacticWithAppliedInput) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
+          case Some(using@Using(es, t)) => (BellePrettyPrinter(Using(es, convertLocator(t, node))), Some(using))
+          case Some(t) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
+          case _ => (m, None)
+        }
+    }
+  }
+}
+
+/** A verbatim trace to tactic converter whose tactics are as recorded in the database. */
+class VerbatimTraceToTacticConverter(defs: Declaration) extends TraceToTacticConverterBase(defs) {
+  override protected def makeLocNodeMap(maker: String, node: ProofTreeNode): Map[Location, ProofTreeNode] = Map.empty
+
+  /** Keeps all locators unmodified. */
+  override protected def convertLocator(tactic: BelleExpr, node: ProofTreeNode): BelleExpr = tactic
+
+  /** Creates no labels. */
+  override protected def makeLabels(node: ProofTreeNode, tacticDefs: Map[String, BelleExpr]): List[BelleLabel] = Nil
+}
+
+/** A verbatim trace to tactic converter whose tactics are as recorded in the database, but adds branch labels. */
+class LabelledTraceToTacticConverter(defs: Declaration) extends VerbatimTraceToTacticConverter(defs) {
+  /** Makes labels for the subgoals of `node`. */
+  override protected def makeLabels(node: ProofTreeNode, tacticDefs: Map[String, BelleExpr]): List[BelleLabel] = {
+    if (node.children.size > 1) {
+      node.goal.map(s => BelleProvable.plain(ProvableSig.startProof(s, defs))) match {
+        case Some(p) =>
+          node.children.headOption.flatMap(_.maker.map(m => tacticDefs.getOrElse(m, BelleParser.parseWithInvGen(m, None, defs)))) match {
+            case Some(t) =>
+              LazySequentialInterpreter()(t, p) match {
+                case BelleProvable(_, Some(labels)) => labels
+                case _ => Nil
+              }
+            case None =>
+              Nil
+          }
+      }
+    } else Nil
+  }
+}
+
+class VerboseTraceToTacticConverter(defs: Declaration) extends LabelledTraceToTacticConverter(defs) {
+  /** @inheritdoc */
+  override protected def makeLocNodeMap(maker: String, node: ProofTreeNode): Map[Location, ProofTreeNode] = {
+    if (maker.nonEmpty) {
+      val makerLines = (maker: StringOps).lines.toList
+      val makerRegion = Region(0, 0, makerLines.length - 1, makerLines.last.length)
+      Map[Location, ProofTreeNode](makerRegion -> node)
+    } else Map.empty
   }
 
   /** Returns a copy of `pos` with index 0. */
@@ -138,71 +190,13 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
     case _ => loc
   }
 
-  //@note all children share the same maker
-  private def tacticStringAt(node: ProofTreeNode): (String, Option[BelleExpr]) = node.children.headOption match {
-    case None =>
-      if (node.isProved) (EMPTY_TACTIC, None)
-      else (TODO_TACTIC, None)
-    case Some(c) => c.maker match {
-      case None => (SKIP_TACTIC, None)
-      case Some(NIL_TACTIC | SKIP_TACTIC) => (EMPTY_TACTIC, None) //@note do not print internal skip steps
-      case Some(TODO_TACTIC) => (EMPTY_TACTIC, None) //@note was recorded as TODO_TACTIC, but non-empty children indicate progress since then
-      case Some(m) =>
-        if (BelleExpr.isInternal(m)) ("???", None) //@note internal tactics are not serializable (and should not be in the trace)
-        else Try(BelleParser.parseWithTacticDefs(m, tacticDefs.toMap)).toOption match {
-          case Some(t: AppliedPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
-          case Some(t: AppliedDependentPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
-          case Some(t: AppliedDependentPositionTacticWithAppliedInput) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
-          case Some(using@Using(es, t)) => (BellePrettyPrinter(Using(es, convertLocator(t, node))), Some(using))
-          case Some(t) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
-          case _ => (m, None)
-        }
-    }
-  }
-
   /** Converts fixed positions into searchy locators. */
-  private def convertLocator(tactic: BelleExpr, node: ProofTreeNode): BelleExpr = tactic match {
+  override protected def convertLocator(tactic: BelleExpr, node: ProofTreeNode): BelleExpr = tactic match {
     case t@AppliedPositionTactic(_, l) => t.copy(locator = convertLocator(l, node))
     case t: AppliedDependentPositionTactic => new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node))
     case t: AppliedDependentPositionTacticWithAppliedInput =>
       new AppliedDependentPositionTacticWithAppliedInput(t.pt, convertLocator(t.locator, node))
     case t => t
-  }
-}
-
-/** A verbatim trace to tactic converter whose tactics are as recorded in the database. */
-class VerbatimTraceToTacticConverter extends TraceToTacticConverter {
-
-  def getTacticString(node: ProofTreeNode, indent: String): (String, Map[Location, ProofTreeNode]) = {
-    assert(!node.children.contains(node), "A node should not be its own child.")
-    val thisTactic = tacticStringAt(node)
-    val subgoals = node.children.map(getTacticString(_, indent + (if (node.children.size <= 1) "" else "  ")))
-
-    //@todo does pretty-printing
-    if (subgoals.isEmpty) (thisTactic, Map.empty)
-    else if (subgoals.size == 1) (sequentialTactic(thisTactic, subgoals.head._1), Map.empty)
-    else (sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + OPEN_PAREN.img + NEWLINE +
-      indent + subgoals.map(_._1).mkString(COMMA.img + NEWLINE + indent) + NEWLINE + indent + CLOSE_PAREN.img), Map.empty)
-  }
-  
-  private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {
-    case (NIL_TACTIC, _) | (SKIP_TACTIC, _) | (TODO_TACTIC, _) => ts2
-    case (_, NIL_TACTIC) | (_, SKIP_TACTIC) | (TODO_TACTIC, _)=> ts1
-    case (EMPTY_TACTIC | EMPTY_BRANCHES, EMPTY_TACTIC | EMPTY_BRANCHES) => EMPTY_TACTIC
-    case (_, EMPTY_TACTIC | EMPTY_BRANCHES) => ts1
-    case (EMPTY_TACTIC | EMPTY_BRANCHES, _) => ts2
-    case _ => ts1 + " " + SEQ_COMBINATOR.img + " " + ts2
-  }
-
-  //@note all children share the same maker
-  private def tacticStringAt(node: ProofTreeNode): String = node.children.headOption match {
-    case None => TODO_TACTIC
-    case Some(c) => c.maker match {
-      case None => SKIP_TACTIC
-      case Some(m) =>
-        if (BelleExpr.isInternal(m)) "???" //@note internal tactics are not serializable (and should not be in the trace)
-        else m
-    }
   }
 }
 

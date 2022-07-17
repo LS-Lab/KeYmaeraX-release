@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBTools, DbProofTree, VerbatimTraceToTacticConverter, TempDBTools, VerboseTraceToTacticConverter}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBTools, DbProofTree, LabelledTraceToTacticConverter, TempDBTools, VerbatimTraceToTacticConverter, VerboseTraceToTacticConverter}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
@@ -405,7 +405,8 @@ object KeYmaeraX {
             val tree = DbProofTree(tempDB.db, proofId.toString)
             val converter = how match {
               case "verboseTactics" => new VerboseTraceToTacticConverter(tree.info.defs(tempDB.db))
-              case "verbatimTactics" => new VerbatimTraceToTacticConverter()
+              case "labelledTactics" => new LabelledTraceToTacticConverter(tree.info.defs(tempDB.db))
+              case "verbatimTactics" => new VerbatimTraceToTacticConverter(tree.info.defs(tempDB.db))
               case "succinctTactics" => ??? //@todo a succinct tactic converter that prints with index positions
             }
             val (converted, _) = tree.tacticString(converter)
