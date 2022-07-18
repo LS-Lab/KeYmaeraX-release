@@ -224,10 +224,23 @@ class DLArchiveParserTests extends TacticTestBase {
         | Problem p(x,5) -> [x:=x+1;]p(x-1,5) End.
         |End.
       """.stripMargin
-    the [ParseException] thrownBy parse(input).loneElement should have message
+    the [ParseException] thrownBy parse(input) should have message
       """3:65 Unsupported Unicode character '−', please try ASCII
         |Found:    − at 3:65
         |Expected: ASCII character""".stripMargin
+  }
+
+  it should "detect a missing tactic name" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Problem 1+1=2 End.
+        |Tactic notatactic End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:8 Error parsing baseTac at 3:8
+        |Found:    "notatactic" at 3:8
+        |Expected: (string | "?" | <(tactic,tactic,...) | (tactic) | "doall" | "partial" | "let" | "tactic" | "USMatch" | atomicTactic | tactic(...))
+        |Hint: Try ("\"" | "?" | "<" | "(" | "doall" | "partial" | "let" | "tactic" | "USMatch")""".stripMargin
   }
 
   it should "parse simple nullary predicate definition with multiple variables" in {
