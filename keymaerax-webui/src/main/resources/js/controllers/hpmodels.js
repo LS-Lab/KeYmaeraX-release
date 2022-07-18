@@ -192,7 +192,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
            controller: 'ModalMessageCtrl',
            size: 'md',
            resolve: {
-             title: function() { return "Want to save your changes?"; },
+             title: function() { return "Save changes?"; },
              message: function() { return "The editor has unsaved changes, do you want to save?"; },
              mode: function() { return "yesnocancel"; },
              oktext: function() { return "Save"; },
