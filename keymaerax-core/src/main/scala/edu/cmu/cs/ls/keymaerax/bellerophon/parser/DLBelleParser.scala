@@ -145,11 +145,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def argumentInterior[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
     argInfo match {
-      case FormulaArg(name, allowsFresh) => formula.map(f => List(defs.elaborateToSystemConsts(defs.elaborateToFunctions(f))))
-      case TermArg(name, allowsFresh) => term(true).map(t => List(defs.elaborateToFunctions(t)))
+      case FormulaArg(name, allowsFresh) => formula.map(f => List(defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(f)))))
+      case TermArg(name, allowsFresh) => term(true).map(t => List(defs.implicitSubst(defs.elaborateToFunctions(t))))
       case ExpressionArg(name, allowsFresh) =>
         // I feel like we should never actually hit this because of the cases before it, but ???
-        expression.map(e => List(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))))
+        expression.map(e => List(defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))))
       case VariableArg(name, allowsFresh) => DLParser.variable.map(List(_))
       case GeneratorArg(name) => Fail.opaque("unimplemented: generator argument")
       case StringArg(name, allowsFresh) => DLParser.stringInterior.map(List(_))

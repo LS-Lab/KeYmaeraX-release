@@ -5,16 +5,17 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, DefTactic, Find, Fixed, LastAnte, LastSucc, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SaturateTactic, SeqTactic, Using}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedPositionTactic, DefTactic, Find, Fixed, InputTactic, LastAnte, LastSucc, LazySequentialInterpreter, PartialTactic, ReflectiveExpressionBuilder, SaturateTactic, SeqTactic, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.andL
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, ParseException, Parser, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.TodoTest
 
@@ -32,6 +33,9 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     ))
     parser = new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invSupplier), _))
   }
+
+  override def beforeEach(): Unit = { parser.setDefs(Declaration(Map.empty)) }
+
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
   private var parser: DLBelleParser = _
@@ -81,6 +85,15 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
            |""".stripMargin
     )
     //TODO: shouldBes
+  }
+
+  it should "elaborate to interpreted functions" in {
+    val tanh = Function("tanh", None, Real, Real, Some("<{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-1}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0)".asFormula))
+    val defs = Declaration(Map(
+      Name("tanh", None) ->
+      Signature(Some(Real), Real, Some(List(Name("x", None) -> Real)), Some(FuncOf(tanh, DotTerm())), UnknownLocation)))
+    val tactic = parser("""cut("tanh(x)<=1")""", defs).asInstanceOf[InputTactic]
+    tactic.inputs.loneElement shouldBe LessEqual(FuncOf(tanh, Variable("x")), Number(1))
   }
 
   it should "parse PosInExpr attached to locator" taggedAs TodoTest in {
