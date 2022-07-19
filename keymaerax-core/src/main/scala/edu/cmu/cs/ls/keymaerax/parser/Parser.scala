@@ -149,7 +149,7 @@ object ParserHelper {
 
   private val SUPPORTED_UNICODE = List("→","←","↔","∧","∨","•","∀","∃","⎵","≠","≥","≤","∪","∩","×")
 
-  private val DOUBLE_QUOTES_STRING = """"(([^\\"]|\\.)*)"""".r
+  private val DOUBLE_QUOTES_STRING = """"(([^\\"]*|\\.)*)"""".r
 
   private val ASCII_CHARS = "([^\\x00-\\x7F])".r
 
