@@ -11,7 +11,7 @@ Problem
 End.
 
 Tactic "IJCAR22/Arctan Identity Proof"
-expand("arctan");
+useSolver("Mathematica");
 expand("tan");
 diffUnfold("x()", "0", 'R=="arctan(sin(x())/cos(x()))=x()"); <(
   "Init":
@@ -161,8 +161,6 @@ cut("exp(exp(x()))=exp1(exp1(x()))"); <(
   "Use":
     allL2R('L=="exp(exp(x()))=exp1(exp1(x()))");
     hideL('L=="exp(exp(x()))=exp1(exp1(x()))");
-    expand("exp2");
-    expand("exp1");
     diffUnfold("x()", "0", 'R=="exp2(x())=exp1(exp1(x()))"); <(
       "Init":
         QE,
@@ -173,19 +171,16 @@ cut("exp(exp(x()))=exp1(exp1(x()))"); <(
     ),
   "Show":
     hideR('R=="exp2(x())=exp(exp(x()))");
-    expand("exp1");
     cut("\forall y exp(y)=exp1(y)"); <(
       "Use":
         allLkeep("x()", 'L=="\forall y exp(y)=exp1(y)");
         allL2R('L=="exp(x())=exp1(x())");
         hideL('L=="exp(x())=exp1(x())");
         allL("exp1(x())", 'L=="\forall y exp(y)=exp1(y)");
-        expand("exp1");
         propClose,
       "Show":
         hideR('R=="exp(exp(x()))=exp1(exp1(x()))");
         allR('R=="\forall y exp(y)=exp1(y)");
-        expand("exp1");
         diffUnfold("y", "0", 'R=="exp(y)=exp1(y)"); <(
           "Init":
             QE,
@@ -214,7 +209,6 @@ Problem
 End.
 
 Tactic "IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1) Proof"
-expand("tanh");
 diffUnfold("f()", "0", 'R=="tanh(f())^2 < 1"); <(
   "Init":
     QE,
@@ -252,6 +246,7 @@ Problem
 End.
 
 Tactic "IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)"
+useSolver("Mathematica");
 unfold;
 cut("init=0|init>0"); <(
   "Use":
@@ -271,7 +266,6 @@ cut("init=0|init>0"); <(
                         ODE('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&x=0&y=0}]t>=0")
                     ),
                   "Show":
-                    expandAllDefs();
                     dRI('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x=0&y=0)")
                 ),
               "Show":
@@ -293,7 +287,6 @@ cut("init=0|init>0"); <(
                     QE,
                   "Show":
                     cohideR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1");
-                    expand("tanh");
                     andR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
                       "tanh(lambda()*x)^2 < 1":
                         useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "auto"),
@@ -307,7 +300,6 @@ cut("init=0|init>0"); <(
           "Show":
             MR("!(x=0&y=0)", 'R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}]x^2+y^2>0"); <(
               "Use Q->P":
-                expandAllDefs();
                 dgVdbxAuto('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](!(x=0&y=0))");
                 dW('R=="[{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)&true&(((y!=0|x!=0)|tanh(lambda()*x)!=0)|tanh(lambda()*y)!=0)}](!(x=0&y=0))");
                 QE,
