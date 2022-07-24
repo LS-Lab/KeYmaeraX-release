@@ -55,6 +55,7 @@ import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 import spray.json.JsonParser.ParsingException
 
+import java.nio.charset.StandardCharsets
 import scala.annotation.tailrec
 import scala.util.Try
 
@@ -970,6 +971,27 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
       case _ => new ErrorResponse(s"Testing connection failed: unknown tool '$toolId'. Please check the tool configuration.") :: Nil
     }
 
+  }
+}
+
+class HotkeysRequest() extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    val f = new File(Configuration.KEYMAERAX_HOME_PATH + File.separator + "hotkeys.js")
+    if (!f.exists) {
+      val s = Source.fromURL("https://raw.githubusercontent.com/samysweb/KeymaeraX-Hotkeys/main/keymaerax-hotkeys.js")
+      try {
+        f.createNewFile()
+        Files.write(f.toPath, s.mkString.getBytes(StandardCharsets.UTF_8))
+      } finally {
+        s.close
+      }
+    }
+    val hotkeys = Source.fromFile(f)
+    try {
+      List(JSResponse(hotkeys.mkString))
+    } finally {
+      hotkeys.close
+    }
   }
 }
 

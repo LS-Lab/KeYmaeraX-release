@@ -1153,6 +1153,14 @@ object RestApi extends Logging {
     }
   }
 
+  val hotkeys: Route = path("hotkeys") {
+    pathEnd {
+      get {
+        completeRequest(new HotkeysRequest(), EmptyToken())
+      }
+    }
+  }
+
   // endregion
 
   //region Examples
@@ -1297,6 +1305,7 @@ object RestApi extends Logging {
     restartTool        ::
     cancelTool         ::
     testToolConnection ::
+    hotkeys            ::
     Nil
 
   /** Requests that need a session token parameter.

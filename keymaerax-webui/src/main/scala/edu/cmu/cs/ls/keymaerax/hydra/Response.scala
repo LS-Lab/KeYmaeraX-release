@@ -73,6 +73,12 @@ case class HtmlResponse(html: Elem) extends Response {
   override def print: ToResponseMarshallable = html
 }
 
+/** Responds with dynamically generated Javascript code. */
+case class JSResponse(code: String) extends Response {
+  override def getJson: JsValue = throw new UnsupportedOperationException("JS response is no JSON data")
+  override def print: ToResponseMarshallable = code
+}
+
 case class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends Response {
   override val schema: Option[String] = Some("BooleanResponse.js")
 
