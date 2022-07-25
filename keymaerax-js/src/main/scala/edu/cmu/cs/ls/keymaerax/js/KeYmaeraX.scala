@@ -45,6 +45,29 @@ object KeYmaeraX {
     }
   }
 
+  @JSExportTopLevel("parseTactic")
+  def parseTactic(input: String): Array[Dictionary[Any]] = {
+    try {
+      ArchiveParser.tacticParser(input)
+      List.empty.toJSArray
+    } catch {
+      case ex: ParseException =>
+        // unknown locations have beginning/end=-1 (won't show), anchor them at the very top of the editor
+        val line = Math.max(1, ex.loc.begin.line)
+        val column = Math.max(1, ex.loc.begin.column)
+        List(Dictionary(
+          "line" -> line,
+          "column" -> column,
+          "endLine" -> Math.max(line, ex.loc.end.line),
+          "endColumn" -> Math.max(column, ex.loc.end.column),
+          "message" -> ex.msg,
+          "found" -> ex.found,
+          "expect" -> ex.expect,
+          "hint" -> ex.hint
+        )).toJSArray
+    }
+  }
+
   //endregion
 
   //region Parsing for Diderot
