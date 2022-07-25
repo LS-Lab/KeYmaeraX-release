@@ -549,55 +549,52 @@ object TactixLibrary extends HilbertCalculus
       ODEfinish(invs.nonEmpty)(pos)
   }, Some("ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.")))
 
-  private def ODEfinish(preferDw: Boolean) = anon ((pos: Position, seq: Sequent) => {
-    if (pos.isTopLevel && preferDw) {
-      lazy val defaultFinish = DifferentialTactics.diffInd()(pos) |
-        dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify &
-          (autoMonotonicityTransform & smartHide & QE & done | QE & done) |
-        DifferentialTactics.mathematicaSplittingODE(pos)
+  private def ODEfinish(preferDw: Boolean) = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)
+    case Some(Box(ODESystem(_, q), p)) if pos.isTopLevel && q != True && !p.isFOL => dWPlus(pos)
+    case _ if pos.isTopLevel =>
+      if (preferDw) {
+        lazy val defaultFinish = DifferentialTactics.diffInd()(pos) |
+          dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify &
+            (autoMonotonicityTransform & smartHide & QE & done | QE & done) |
+          DifferentialTactics.mathematicaSplittingODE(pos)
 
-      ToolProvider.qeTool() match {
-        case Some(t: Mathematica) => try {
-          val di = proveBy(seq, DifferentialTactics.diffInd(auto = 'diffInd)(pos) < (
-            ToolTactics.prepareQE(Nil, nil),
-            SaturateTactic(Dassignb(pos)) & ToolTactics.prepareQE(Nil, nil)
-          ))
-          val dwBase = proveBy(seq, dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify)
-          val dwPlain = proveBy(dwBase, ToolTactics.prepareQE(Nil, nil))
-          val dwSmartBase = proveBy(dwBase, autoMonotonicityTransform)
-          val dwSmart = proveBy(dwSmartBase, smartHide & ToolTactics.prepareQE(Nil, nil))
-          val dwPropBase = proveBy(dwSmartBase, SaturateTactic(orL('L) | andR('R)) & OnAll(smartHide & ToolTactics.prepareQE(Nil, nil)))
+        ToolProvider.qeTool() match {
+          case Some(t: Mathematica) => try {
+            val di = proveBy(seq, DifferentialTactics.diffInd(auto = 'diffInd)(pos) < (
+              ToolTactics.prepareQE(Nil, nil),
+              SaturateTactic(Dassignb(pos)) & ToolTactics.prepareQE(Nil, nil)
+            ))
+            val dwBase = proveBy(seq, dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify)
+            val dwPlain = proveBy(dwBase, ToolTactics.prepareQE(Nil, nil))
+            val dwSmartBase = proveBy(dwBase, autoMonotonicityTransform)
+            val dwSmart = proveBy(dwSmartBase, smartHide & ToolTactics.prepareQE(Nil, nil))
+            val dwPropBase = proveBy(dwSmartBase, SaturateTactic(orL('L) | andR('R)) & OnAll(smartHide & ToolTactics.prepareQE(Nil, nil)))
 
-          val diAttempt = AllOf(di.subgoals.map(s => Atom(s.succ.head)))
-          val dwSmartAttempt = Atom(dwSmart.subgoals.head.succ.head)
-          val dwPlainAttempt = Atom(dwPlain.subgoals.head.succ.head)
-          val dwPropAttempts =
-            if (dwPropBase.subgoals.size <= 8) List(AllOf(dwPropBase.subgoals.map(g => Atom(g.succ.head))))
-            else List.empty
+            val diAttempt = AllOf(di.subgoals.map(s => Atom(s.succ.head)))
+            val dwSmartAttempt = Atom(dwSmart.subgoals.head.succ.head)
+            val dwPlainAttempt = Atom(dwPlain.subgoals.head.succ.head)
+            val dwPropAttempts =
+              if (dwPropBase.subgoals.size <= 8) List(AllOf(dwPropBase.subgoals.map(g => Atom(g.succ.head))))
+              else List.empty
 
-          t.qe(OneOf(List(diAttempt, dwSmartAttempt, dwPlainAttempt) ++ dwPropAttempts), continueOnFalse=true) match {
-            case (_, False) => fail
-            case (g, True) =>
-              if (g == diAttempt) DifferentialTactics.Dconstify(by(di) & OnAll(RCF))(pos)
-              else if (g == dwSmartAttempt) by(dwSmart) & RCF
-              else if (g == dwPlainAttempt) by(dwPlain) & RCF
-              else if (g == dwPropAttempts.head) by(dwPropBase) & OnAll(RCF)
-              else fail
+            t.qe(OneOf(List(diAttempt, dwSmartAttempt, dwPlainAttempt) ++ dwPropAttempts), continueOnFalse=true) match {
+              case (_, False) => fail
+              case (g, True) =>
+                if (g == diAttempt) DifferentialTactics.Dconstify(by(di) & OnAll(RCF))(pos)
+                else if (g == dwSmartAttempt) by(dwSmart) & RCF
+                else if (g == dwPlainAttempt) by(dwPlain) & RCF
+                else if (g == dwPropAttempts.head) by(dwPropBase) & OnAll(RCF)
+                else fail
+            }
+          } catch {
+            case e: TacticInapplicableFailure => throw e
+            case _: Throwable => defaultFinish
           }
-        } catch {
-          case e: TacticInapplicableFailure => throw e
-          case _: Throwable => defaultFinish
+          case _ => defaultFinish
         }
-        case _ => defaultFinish
-      }
-    }
-    else if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos) |
-      (seq.sub(pos) match {
-        // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)
-        case Some(Box(ODESystem(_, q), p)) if q != True && !p.isFOL => dWPlus(pos)
-        case _ => skip
-      })
-    else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos)
+      } else DifferentialTactics.mathematicaSplittingODE(pos)
+    case _ => DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos)
   })
 
   @Tactic(longDisplayName = "ODE Invariant")
