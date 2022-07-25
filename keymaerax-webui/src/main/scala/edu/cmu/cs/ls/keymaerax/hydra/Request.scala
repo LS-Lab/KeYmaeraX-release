@@ -1722,10 +1722,13 @@ class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) 
       })
       //@note check non-existent or outdated lemmas
       val unprovedLemmas = lemmaProofs.filter(e => LemmaDBFactory.lemmaDB.get("user" + File.separator + e._1.name) match {
-        case Some(l) => l.fact.conclusion == Sequent(IndexedSeq(), IndexedSeq(ArchiveParser.parser(e._1.keyFile).head.model.asInstanceOf[Formula]))
+        case Some(l) =>
+          val lemmaConc = e._1.defs.exhaustiveSubst(l.fact.conclusion)
+          val modelConc = e._1.defs.exhaustiveSubst(Sequent(IndexedSeq(), IndexedSeq(ArchiveParser.parser(e._1.keyFile).head.model.asInstanceOf[Formula])))
+          lemmaConc != modelConc // outdated or unexpected if different conclusion
         case None => true
       })
-      (unprovedLemmas.foldRight(collectedLemmas)({ case ((m, p), cl) => recCollectRequiredLemmaNames(p.proofId, cl) ++ cl }) ++
+      (unprovedLemmas.foldRight(collectedLemmas)({ case ((_, p), cl) => recCollectRequiredLemmaNames(p.proofId, cl) ++ cl }) ++
         unprovedLemmas.map({ case (m, p) => (m.name, p.proofId) })).distinct
     }
 
