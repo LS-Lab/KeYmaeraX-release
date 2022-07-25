@@ -1773,18 +1773,18 @@ private object DifferentialTactics extends Logging {
 
     val invTactic =
       if (tryHard) expandAllDefs(Nil) & {
-        DebuggingTactics.print("A") & ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        DebuggingTactics.print("B") & ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos) |
-        DebuggingTactics.print("C") & ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
+        ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos) |
+        ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
-        DebuggingTactics.print("D") & ODEInvariance.sAIclosed(pos) |
-        DebuggingTactics.print("E") & ODEInvariance.sAI(pos) |
-        DebuggingTactics.print("F") & ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
-          DebuggingTactics.print("G") & ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
+        ODEInvariance.sAIclosed(pos) |
+        ODEInvariance.sAI(pos) |
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
+          ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       } else expandAllDefs(Nil) & {
-        DebuggingTactics.print("H") & ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
         // ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
-          DebuggingTactics.print("i") & ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
+          ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
     val diffWeaken =
