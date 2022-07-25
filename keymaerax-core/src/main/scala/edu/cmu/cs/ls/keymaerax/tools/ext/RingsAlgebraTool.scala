@@ -5,7 +5,7 @@ import cc.redberry.rings.scaladsl._
 import cc.redberry.rings.scaladsl.syntax._
 import edu.cmu.cs.ls.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith, SequentCalculus}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.Tool
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -32,7 +32,7 @@ class RingsLibrary(terms: Traversable[Term]) {
     val (funcs,emp) = rest.partition( p => p.isInstanceOf[Function] && p.asInstanceOf[Function].domain == Unit )
 
     if(emp.nonEmpty)
-      throw new IllegalArgumentException("RingsLibrary does not handle non-constant function symbols: " +emp)
+      throw ToolExecutionException("RingsLibrary does not handle non-constant function symbols: " +emp)
     vars ++ funcs
   }
 
@@ -68,7 +68,7 @@ class RingsLibrary(terms: Traversable[Term]) {
       case Divide(l,r) =>
         val arr = ring.divideAndRemainder(toRing(l),toRing(r))
         if(!arr(1).isZero)
-          throw new IllegalArgumentException("Unable to divide "+l+" by "+r+" to obtain a polynomial")
+          throw ToolExecutionException("Unable to divide "+l+" by "+r+" to obtain a polynomial")
         arr(0)
       // Only ints
       case n:Number => {
@@ -86,12 +86,12 @@ class RingsLibrary(terms: Traversable[Term]) {
           case Some((n:Number,pr)) if n.value.isValidInt && n.value >= 0 => {
             ring.pow(toRing(l) , n.value.toIntExact)
           }
-          case res => throw new IllegalArgumentException("Unable to reduce exponent "+r+" to a natural number")
+          case _ => throw ToolExecutionException("Unable to reduce exponent "+r+" to a natural number")
         }
       }
       case f:FuncOf if f.child == Nothing =>
         ring(mapper(f.func))
-      case _ => throw new IllegalArgumentException("Unable to convert "+term+" to polynomial")
+      case _ => throw ToolExecutionException("Unable to convert "+term+" to polynomial")
     }
   }
 
@@ -190,7 +190,7 @@ class RingsLibrary(terms: Traversable[Term]) {
     case Divide(u, Number(n)) if n.isValidInt => lieDerivative(ode)(u) / n.toIntExact
     case Power(u, Number(n)) if n.isValidInt =>
       n.toIntExact * (toRing(u) ^ (n.toIntExact - 1)) * lieDerivative(ode)(u)
-    case _ => throw new IllegalArgumentException("Operation not (yet) supported by RingsLibrary: " + t)
+    case _ => throw ToolExecutionException("Operation not (yet) supported by RingsLibrary: " + t)
   }
 
   /** return None if b does not divide a, otherwise Some (quotient, remainder) */
@@ -228,12 +228,12 @@ class RingsLibrary(terms: Traversable[Term]) {
   }
 
   /** a distributive representation w.r.t. Variables in `xs` */
-  def distributive(t: Ring, xs: Seq[Term]) = {
+  def distributive(t: Ring, xs: Seq[Term]): Map[List[Int], Term] = {
     val monomials = t.collection().asScala.toList
     val exponentIndices = xs.map{
       case n: NamedSymbol => ring.index(mapper(n))
       case FuncOf(f, Nothing) => ring.index(mapper(f))
-      case _ => throw new IllegalArgumentException("distributive only for variables and constants.")
+      case _ => throw ToolExecutionException("distributive only for variables and constants.")
     }
     def makeMonomialRep(m: Monomial[Rational[BigInteger]]) : List[Int] = exponentIndices.map(m.exponents(_)).toList
     monomials.foldLeft(Map[List[Int],Term]()){case(coeffs, m) =>
@@ -262,7 +262,7 @@ class RingsLibrary(terms: Traversable[Term]) {
     case Divide(u, Number(n)) if n.isValidInt => substitutes(subst)(u) / n.toIntExact
     case Power(u, Number(n)) if n.isValidInt => substitutes(subst)(u) ^ (n.toIntExact)
     case n : Number => toRing(n)
-    case _ => throw new IllegalArgumentException("Operation " + t.kind + " not (yet) supported by substitutes in RingsLibrary: " + t)
+    case _ => throw ToolExecutionException("Operation " + t.kind + " not (yet) supported by substitutes in RingsLibrary: " + t)
   }
 
   /** split polynomial according to order w.r.t variables in list */
