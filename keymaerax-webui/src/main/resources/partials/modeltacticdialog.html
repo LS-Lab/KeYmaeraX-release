@@ -25,5 +25,6 @@
     </span>
 
     <h3>Proof Construction</h3>
-    <div class="k4-vertical-fill-flex" hljs hljs-language="bellerophon" hljs-source="tactic.tacticBody"></div>
+    <div ui-ace="{theme:'github',mode:'bellerophon',showGutter:true,useWrapMode:true,onLoad:aceLoaded}"
+         ng-model="tactic.tacticBody" id="tacticeditor"></div>
 </div>

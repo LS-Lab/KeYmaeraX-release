@@ -815,6 +815,10 @@ angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', func
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };
+
+  $scope.aceLoaded = function(editor) {
+    editor.setReadOnly(true);
+  }
 });
 
 angular.module('keymaerax.controllers').controller('DeleteAllModelsDialogCtrl', function ($scope, $uibModalInstance) {
