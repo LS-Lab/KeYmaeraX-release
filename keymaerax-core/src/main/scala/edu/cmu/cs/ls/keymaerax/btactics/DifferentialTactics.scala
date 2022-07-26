@@ -1074,9 +1074,9 @@ private object DifferentialTactics extends Logging {
       })(pos))
   })
 
-  private def ODE(useOdeInvariant: Boolean, introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+  private def ODE(useOdeInvariant: Boolean, introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = anon ((pos: Position, seq: Sequent, defs: Declaration) => {
     val invariantCandidates = try {
-      InvariantGenerator.differentialInvariantGenerator(seq,pos)
+      InvariantGenerator.differentialInvariantGenerator(seq,pos,defs)
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
@@ -1210,7 +1210,7 @@ private object DifferentialTactics extends Logging {
     def odeWithInvgen(sys: ODESystem, generator: Generator[GenProduct],
                       onGeneratorError: Throwable => Stream[GenProduct]): DependentPositionTactic = fastODE(
       try {
-        generator(seq, pos).iterator
+        generator(seq, pos, defs).iterator
       } catch {
         case ex: Exception =>
           logger.warn("Failed to produce a proof for this ODE. Underlying cause: generator error listing options " + ex)
@@ -1854,8 +1854,8 @@ private object DifferentialTactics extends Logging {
     DifferentialTactics.DconstV(pos) & odeInvariantAutoBody(pos)
   })
 
-  private def odeInvariantAutoBody: DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    val invs = InvariantGenerator.pegasusInvariants(seq,pos).toList
+  private def odeInvariantAutoBody: DependentPositionTactic = anon ((pos:Position,seq:Sequent,defs:Declaration) => {
+    val invs = InvariantGenerator.pegasusInvariants(seq,pos,defs).toList
     //Empty list = failed to generate an invariant
     //True ~ no DCs needed
     //Else, DC chain

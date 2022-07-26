@@ -8,12 +8,12 @@ import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{ExtremeTest, IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 
 import scala.collection.immutable.IndexedSeq
-import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery,whenever}
+import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery, whenever}
 import org.scalatest.prop.Tables._
 import org.scalatest.LoneElement._
 
@@ -27,13 +27,13 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   "Continuous invariant lookup" should "provide a simple invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1)]x>0".asSequent
-    TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
+    TactixLibrary.invGenerator(problem, SuccPos(0), Declaration(Map.empty)) should contain theSameElementsInOrderAs(
       ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
   it should "provide a conditional invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1, (x'=2 -> x>2), (x'=3 -> x>5))]x>0".asSequent
-    TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
+    TactixLibrary.invGenerator(problem, SuccPos(0), Declaration(Map.empty)) should contain theSameElementsInOrderAs(
       ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
@@ -41,7 +41,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
     proveBy(problem, ODE(1)) shouldBe 'proved
 
-    val (simpleInvariants, pegasusInvariants) = TactixLibrary.differentialInvGenerator(problem, SuccPos(0)).splitAt(4)
+    val (simpleInvariants, pegasusInvariants) = TactixLibrary.differentialInvGenerator(problem, SuccPos(0), Declaration(Map.empty)).splitAt(4)
     simpleInvariants should contain theSameElementsAs(
       ("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
         ("y>=-1".asFormula, None) :: Nil)
@@ -67,17 +67,17 @@ class ContinuousInvariantTests extends TacticTestBase {
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "-1")
     ) {
-      forEvery(Table(("Name", "Model"),
-        entries.map(e => e.name -> e.model): _*).
-        filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
-        (name, model) =>
+      forEvery(Table(("Name", "Model", "Definitions"),
+        entries.map(e => (e.name, e.model, e.defs)): _*).
+        filter({ case (_, Imply(_, Box(_: ODESystem, _)), _) => true case _ => false })) {
+        (name, model, defs) =>
           whenever(tool.isInitialized) {
             println("\n" + name)
             val Imply(assumptions, goal@Box(ode: ODESystem, _)) = model
 
             //@note the annotations in nonlinear.kyx are produced by Pegasus
             val invariants = InvariantGenerator.pegasusInvariants(
-              Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0))
+              Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
 
             println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
 
@@ -147,13 +147,13 @@ class ContinuousInvariantTests extends TacticTestBase {
       Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "60")) {
       val entries = ArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-      forEvery(Table(("Name", "Model"), entries.map(e => (e.name, e.model)):_*)) {
-        (name, model) =>
+      forEvery(Table(("Name", "Model", "Definitions"), entries.map(e => (e.name, e.model, e.defs)):_*)) {
+        (name, model, defs) =>
           whenever(tool.isInitialized) {
             println("\n" + name)
             val Imply(assumptions, goal@Box(ODESystem(_, _), _)) = model
             val invariants = InvariantGenerator.pegasusInvariants(
-              Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0))
+              Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
             println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
             TactixInit.invSupplier = FixedGenerator(Nil)
             TactixInit.loopInvGenerator = FixedGenerator(Nil)
