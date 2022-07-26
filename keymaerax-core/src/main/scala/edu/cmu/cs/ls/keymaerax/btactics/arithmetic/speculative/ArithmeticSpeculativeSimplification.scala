@@ -64,7 +64,7 @@ object ArithmeticSpeculativeSimplification {
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
   lazy val proveOrRefuteAbs: BelleExpr = anon ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.contains(InterpretedSymbols.absF)) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & ToolTactics.assertNoCex & QE & done) | speculativeQENoAbs)
+    if (symbols.contains(InterpretedSymbols.absF)) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & expandAllDefs(Nil) & ToolTactics.assertNoCex & QE & done) | speculativeQENoAbs)
     else throw new TacticInapplicableFailure("Sequent does not contain abs")
   })
 
