@@ -201,9 +201,15 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def tacticSymbol[_: P]: P[String] = P(ident).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
   def atomicTactic[_: P]: P[BelleExpr] = P((tacticSymbol ~ !"("./).flatMapX(t => try {
-    Pass(tacticProvider(t, Nil, defs))
+    val di = DerivationInfo.ofCodeName(t)
+    (di.persistentInputs, di.numPositionArgs) match {
+      case (ListArg(_) :: Nil, 0) => Pass(tacticProvider(t, List(Left(Nil)), defs))
+      case (GeneratorArg(_) :: rest, 0) if rest.forall(_.isInstanceOf[OptionArg]) => Pass(tacticProvider(t, Nil, defs))
+      case (args, 0) if args.forall(_.isInstanceOf[OptionArg]) => Pass(tacticProvider(t, Nil, defs))
+      case (_, _) => Pass(tacticProvider(t, Nil, defs))
+    }
   } catch {
-    case _: ParseException =>
+    case _: ParseException | _: IllegalArgumentException =>
       if (tactics.contains(t)) Pass(ApplyDefTactic(tactics(t)))
       else Fail.opaque("Unknown tactic " + t)
   }))

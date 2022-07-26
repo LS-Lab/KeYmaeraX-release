@@ -101,6 +101,21 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     parse("derive('Llast.1.0.1)") should have ('locator (LastAnte(0, PosInExpr(1::0::1::Nil))))
   }
 
+  it should "allow omitting parentheses for sole empty list argument" in {
+    parse("expandAllDefs()") shouldBe TactixLibrary.expandAllDefs(Nil)
+    parse("expandAllDefs") shouldBe TactixLibrary.expandAllDefs(Nil)
+  }
+
+  it should "allow omitting parentheses when all optional arguments are omitted" in {
+    parse("QE()") shouldBe TactixLibrary.QEX(None, None)
+    parse("QE") shouldBe TactixLibrary.QEX(None, None)
+  }
+
+  it should "allow omitting generator and optional args" in {
+    //@note we set up the reflective expression builder to return the supplier
+    parse("auto") shouldBe TactixLibrary.auto(TactixInit.invSupplier, None)
+  }
+
   it should "parse hash locators" in {
     val t = parse("""trueAnd('R=="[x:=1;]#true&x=1#")""").asInstanceOf[AppliedPositionTactic]
     t.locator shouldBe Find.FindR(0, Some("[x:=1;](true&x=1)".asFormula), PosInExpr(1::Nil), exact=true, defs=Declaration(Map.empty))
