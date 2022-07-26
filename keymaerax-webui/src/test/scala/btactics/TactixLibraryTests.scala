@@ -720,6 +720,15 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "prove ATC-2 fully automatically" in withMathematica { _ =>
+    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) //@note ignore annotations
+    val entry = ArchiveParser.getEntry("Benchmarks/Advanced/ATC: 2 Aircraft Tangential Roundabout Maneuver", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString).get
+    withTacticProgress(autoClose, List("_ALL"))(
+      proveBy(entry.model.asInstanceOf[Formula], _, defs=entry.defs)
+    ) shouldBe 'proved
+  }
+
   it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>
     val problem1 = """
       v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
