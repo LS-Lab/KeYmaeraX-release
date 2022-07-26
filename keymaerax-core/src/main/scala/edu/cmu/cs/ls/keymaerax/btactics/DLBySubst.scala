@@ -502,22 +502,25 @@ private object DLBySubst {
   }
 
   /** Analyzes a loop for counterexamples. */
-  def cexLoop(inv: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+  def cexLoop(inv: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent, defs: Declaration) => {
     val cexProgram = unfoldProgramNormalize & OnAll(
       Idioms.doIfElse(_.subgoals.forall(_.isFOL))(
         //@todo nested loops, loops in postcondition, ODEs in postcondition
-        ToolTactics.assertNoCex,
+        expandAllDefs(Nil) & ToolTactics.assertNoCex,
         ToolProvider.invGenTool().map(t => {
-          anon((pos: Position, seq: Sequent) => seq.sub(pos) match {
-            case Some(Box(ode: ODESystem, post)) =>
-              val preImpPostCEX = Try(TactixLibrary.findCounterExample(Imply(seq.ante.reduceRightOption(And).getOrElse(True), post))).getOrElse(None)
-              if (preImpPostCEX.isDefined) throw BelleCEX("ODE Counterexample", preImpPostCEX.get, seq)
-              else Try(t.refuteODE(ode, seq.ante, post)) match {
-                case Success(None) => skip
-                case Success(Some(cex)) => throw BelleCEX("ODE Counterexample", cex, seq)
-                case Failure(_) => skip
-              }
-            case _ => skip
+          anon((pos: Position, seq: Sequent, defs: Declaration) => {
+            val sexp = defs.exhaustiveSubst(seq)
+            sexp.sub(pos) match {
+              case Some(Box(ode: ODESystem, post)) =>
+                val preImpPostCEX = Try(TactixLibrary.findCounterExample(Imply(sexp.ante.reduceRightOption(And).getOrElse(True), post))).getOrElse(None)
+                if (preImpPostCEX.isDefined) throw BelleCEX("ODE Counterexample", preImpPostCEX.get, sexp)
+                else Try(t.refuteODE(ode, sexp.ante, post)) match {
+                  case Success(None) => skip
+                  case Success(Some(cex)) => throw BelleCEX("ODE Counterexample", cex, sexp)
+                  case Failure(_) => skip
+                }
+              case _ => skip
+            }
           })(pos)
         }).getOrElse(skip)
       )
@@ -526,12 +529,12 @@ private object DLBySubst {
     seq.sub(pos) match {
       case Some(Box(Loop(_), post)) =>
         // proveBy throws BelleCEX when counterexamples found
-        proveBy(seq,
+        proveBy(ProvableSig.startProof(seq, defs),
           //@note uses loop to preserve constants/initial conditions consistently
           loop(inv)(pos) <(
             //@todo support for non-FOL invariant
-            ToolTactics.assertNoCex,
-            Idioms.doIfElse(_.subgoals.forall(_.isFOL))(ToolTactics.assertNoCex, cexProgram),
+            expandAllDefs(Nil) & ToolTactics.assertNoCex,
+            Idioms.doIfElse(_.subgoals.forall(_.isFOL))(expandAllDefs(Nil) & ToolTactics.assertNoCex, cexProgram),
             (if (!post.isFOL) chase(pos ++ PosInExpr(1::Nil)) else skip) & cexProgram
           )
         )
