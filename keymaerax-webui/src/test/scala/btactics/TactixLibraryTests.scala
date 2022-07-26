@@ -8,15 +8,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.TacticInfo
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -231,9 +229,9 @@ class TactixLibraryTests extends TacticTestBase {
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).map(_ -> None).toStream
-    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe 'proved
     //@note postcondition is invariant, loopPostMaster won't ask invariant generator
-    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for curvebot" in withMathematica { _ =>
@@ -246,7 +244,7 @@ class TactixLibraryTests extends TacticTestBase {
                 #   }*
                 #  ] !(x=ox & y=oy)""".stripMargin('#').asFormula
     //@note postcondition is invariant
-    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for curvebot with fns" in withMathematica { _ =>
@@ -259,7 +257,7 @@ class TactixLibraryTests extends TacticTestBase {
                 #   }*
                 #  ] !(x=ox() & y=oy())""".stripMargin('#').asFormula
     //@note postcondition is invariant
-    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "eventually run out of ideas" taggedAs SlowTest in withMathematica { _ =>
@@ -267,10 +265,10 @@ class TactixLibraryTests extends TacticTestBase {
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
-    val boundedInvGen = (s: Sequent, p: Position) => {
+    val boundedInvGen = (s: Sequent, p: Position, defs: Declaration) => {
       !invs.contains((s, p)) // loopPostMaster shouldn't ask repeatedly the same question
       invs += (s -> p)
-      invGenerator(s, p)
+      invGenerator(s, p, defs)
     }
     val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(boundedInvGen)(1))
     result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
@@ -282,10 +280,10 @@ class TactixLibraryTests extends TacticTestBase {
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
-    val boundedInvGen = (s: Sequent, p: Position) => {
+    val boundedInvGen = (s: Sequent, p: Position, defs: Declaration) => {
       !invs.contains((s, p)) // loopPostMaster shouldn't ask repeatedly the same question
       invs += (s -> p)
-      invGenerator(s, p)
+      invGenerator(s, p, defs)
     }
     val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(boundedInvGen)(1))
     result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
@@ -295,11 +293,11 @@ class TactixLibraryTests extends TacticTestBase {
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val proof = proveBy(fml,
-      implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)
+      implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
   it should "FEATURE_REQUEST: by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" taggedAs TodoTest in withMathematica { _ =>
@@ -307,11 +305,11 @@ class TactixLibraryTests extends TacticTestBase {
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val proof = proveBy(fml,
-      implyR(1) & loopPostMaster((_, _) => invs.map(_ -> None).toStream)(1)
+      implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).toStream)(1)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
   it should "find by assignb an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -327,7 +325,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
   it should "find by step an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -343,7 +341,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
   it should "find by chase an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -359,7 +357,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
   "Normalize" should "prove simple formula" in {
@@ -711,6 +709,15 @@ class TactixLibraryTests extends TacticTestBase {
     val problem = ArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kyx")).mkString).get.model.asInstanceOf[Formula]
     proveBy(problem, autoClose) shouldBe 'proved
+  }
+
+  it should "prove ETCS fully automatically" in withMathematica { _ =>
+    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) //@note ignore annotations
+    val entry = ArchiveParser.getEntry("Benchmarks/Advanced/ETCS: Essentials", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString).get
+    withTacticProgress(autoClose, List("_ALL"))(
+      proveBy(entry.model.asInstanceOf[Formula], _, defs=entry.defs)
+    ) shouldBe 'proved
   }
 
   it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>

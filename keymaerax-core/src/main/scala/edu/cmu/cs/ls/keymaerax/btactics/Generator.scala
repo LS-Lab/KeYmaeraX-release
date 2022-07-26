@@ -22,12 +22,12 @@ object Generator {
     * @tparam A the type of results that are being generated.
     * @author Stefan Mitsch
     */
-  type Generator[A] = (Sequent, Position) => Stream[A]
+  type Generator[A] = (Sequent, Position, Declaration) => Stream[A]
 }
 
 /** Generator always providing a fixed list as output. */
 case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position): Stream[A] = list.toStream
+  def apply(s: Sequent, p: Position, defs: Declaration): Stream[A] = list.toStream
 }
 
 object ConfigurableGenerator {
@@ -54,7 +54,7 @@ object ConfigurableGenerator {
   * @author Stefan Mitsch
   * */
 class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expression,Seq[A]]()) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position): Stream[A] = s.sub(p) match {
+  def apply(s: Sequent, p: Position, defs: Declaration): Stream[A] = s.sub(p) match {
     case Some(Box(prg, _)) => findPrgProducts(prg)
     case Some(Diamond(prg, _)) => findPrgProducts(prg)
     case Some(f) => products.getOrElse(f, Nil).distinct.toStream

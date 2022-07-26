@@ -28,9 +28,9 @@ object TactixInit {
 
   /** Default generator that provides loop invariants and differential invariants to use.
     * @see [[InvariantGenerator]] */
-  val invGenerator: Generator[GenProduct] = (sequent, pos) => sequent.sub(pos) match {
-    case Some(Box(_: ODESystem, _)) => differentialInvGenerator(sequent, pos)
-    case Some(Box(_: Loop, _))      => loopInvGenerator(sequent, pos)
+  val invGenerator: Generator[GenProduct] = (sequent, pos, defs) => sequent.sub(pos) match {
+    case Some(Box(_: ODESystem, _)) => differentialInvGenerator(sequent, pos, defs)
+    case Some(Box(_: Loop, _))      => loopInvGenerator(sequent, pos, defs)
     case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
     case None    => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
   }

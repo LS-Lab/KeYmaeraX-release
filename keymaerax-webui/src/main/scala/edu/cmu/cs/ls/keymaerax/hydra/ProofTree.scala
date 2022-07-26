@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, SubstitutionClashException, SubstitutionPair, USubst, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, UnificationTools}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Location}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Location}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig, TermProvable}
@@ -405,7 +405,8 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
       //@HACK for loop and dG
       subFormula match {
         case Box(Loop(_), _) =>
-          val invariant = generator(goal, pos).iterator
+          //@todo provide model definitions
+          val invariant = generator(goal, pos, Declaration(Map.empty)).iterator
           if (invariant.hasNext) Map(FormulaArg("J") -> invariant.next._1)
           else Map.empty
         case Box(_: ODESystem, p) => Map(FormulaArg("P", List("y")) -> p) //@hack for dG

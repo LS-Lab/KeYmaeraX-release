@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleNoProgress, BelleThrowable, ProverSetupException}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleNoProgress, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
@@ -36,7 +36,7 @@ object InvariantGenerator extends Logging {
   /** A relevance filtering tool for dependency-optimized invariant and differential invariant generation
     * based on the candidates from `generator`.
     * @author Andre Platzer */
-  def relevanceFilter(generator: Generator[GenProduct], analyzeMissing: Boolean): Generator[GenProduct] = (sequent,pos) => {
+  def relevanceFilter(generator: Generator[GenProduct], analyzeMissing: Boolean): Generator[GenProduct] = (sequent,pos,defs) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val (system, constraint, post, allowPost) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf,false)
@@ -58,7 +58,7 @@ object InvariantGenerator extends Logging {
     }
     lazy val missing = if (analyzeMissing) frees.flatMap(relevantInvVars).diff(knowledge) else frees.flatMap(relevantInvVars)
     //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
-    generator(sequent,pos).
+    generator(sequent,pos,defs).
       distinct.
       // new invariants only that aren't in the evolution domain constraint yet
       //@note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
@@ -78,7 +78,7 @@ object InvariantGenerator extends Logging {
   /** A relevance filtering tool for dependency-optimized invariant and differential invariant generation
     * based on the candidates from `generator`.
     * @author Andre Platzer */
-  def sortedRelevanceFilter(generator: Generator[GenProduct]): Generator[GenProduct] = (sequent,pos) => {
+  def sortedRelevanceFilter(generator: Generator[GenProduct]): Generator[GenProduct] = (sequent,pos,defs) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val system = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _)) => ode
@@ -118,7 +118,7 @@ object InvariantGenerator extends Logging {
       else aOrder < bOrder
     }
 
-    relevanceFilter(generator, analyzeMissing = true)(sequent, pos).
+    relevanceFilter(generator, analyzeMissing = true)(sequent, pos, defs).
       // sort by dependency order
       //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
       sortWith((a: GenProduct, b: GenProduct) =>
@@ -131,27 +131,27 @@ object InvariantGenerator extends Logging {
 
   /** A differential invariant generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
-    (TactixLibrary.invSupplier(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)).distinct
+  lazy val differentialInvariantGenerator: Generator[GenProduct] = (sequent,pos,defs) =>
+    (TactixLibrary.invSupplier(sequent,pos,defs) #::: differentialInvariantCandidates(sequent,pos,defs)).distinct
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
 
   /** A more expensive extended differential invariant generator.
     * @author Andre Platzer */
-  lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
-    sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos).distinct
+  lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos,defs) =>
+    sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos,defs).distinct
 
   /** A loop invariant generator.
     * @author Andre Platzer */
-  lazy val loopInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
-    (TactixLibrary.invSupplier(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)).distinct
+  lazy val loopInvariantGenerator: Generator[GenProduct] = (sequent,pos,defs) =>
+    (TactixLibrary.invSupplier(sequent,pos,defs) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos,defs)).distinct
 
   /** A simplistic differential invariant candidate generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantCandidates: Generator[GenProduct] = (sequent,pos) =>
+  lazy val differentialInvariantCandidates: Generator[GenProduct] = (sequent,pos,defs) =>
     //@note be careful to not evaluate entire stream by sorting/filtering etc.
     //@note do not relevance filter Pegasus candidates: they contain trivial results, that however make ODE try harder
     // since flagged as truly invariant and not just a guess like the simple candidates
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos,defs) #::: pegasusCandidates(sequent,pos,defs)).distinct
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -160,9 +160,9 @@ object InvariantGenerator extends Logging {
 
   /** A simplistic invariant and differential invariant candidate generator.
     * @author Andre Platzer */
-  lazy val simpleInvariantCandidates: Generator[GenProduct] = (sequent,pos) => {
+  lazy val simpleInvariantCandidates: Generator[GenProduct] = (sequent,pos,defs) => {
     def combinedAssumptions(loop: Loop, post: Formula): List[Formula] = {
-      val anteConjuncts = sequent.ante.toList.flatMap(FormulaTools.conjuncts)
+      val anteConjuncts = defs.exhaustiveSubst(sequent).ante.toList.flatMap(FormulaTools.conjuncts)
       val postConjuncts = FormulaTools.conjuncts(post)
       val loopBV = StaticSemantics.boundVars(loop)
       val combined = anteConjuncts.
@@ -177,8 +177,8 @@ object InvariantGenerator extends Logging {
         }
       } else postConjuncts ++ combined
     }
-    sequent.sub(pos) match {
-      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).distinct.map(_ -> None).toStream.distinct
+    defs.exhaustiveSubst(sequent).sub(pos) match {
+      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: defs.exhaustiveSubst(sequent).ante.toList).distinct.map(_ -> None).toStream.distinct
       case Some(Box(l: Loop, post))      =>
         val combined = combinedAssumptions(l, post).distinct
         (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(_ -> None).toStream.distinct
@@ -189,7 +189,7 @@ object InvariantGenerator extends Logging {
   /** Pegasus invariant generator (requires Mathematica). */
   lazy val pegasusInvariants: Generator[GenProduct] = pegasus(includeCandidates=false)
   lazy val pegasusCandidates: Generator[GenProduct] = pegasus(includeCandidates=true)
-  def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos) => sequent.sub(pos) match {
+  def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos,_) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
       ToolProvider.invGenTool() match {
         case Some(tool) =>
@@ -221,7 +221,7 @@ object InvariantGenerator extends Logging {
   /** Inverse Characteristic Method differential invariant generator.
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
     */
-  val inverseCharacteristicDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) => {
+  val inverseCharacteristicDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos,defs) => {
     import FormulaTools._
     if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("inverse characteristic method needs a computer algebra tool")
     if (ToolProvider.pdeTool().isEmpty) throw new ProverSetupException("inverse characteristic method needs a PDE Solver")
@@ -261,7 +261,7 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   def cached(generator: Generator[GenProduct]): Generator[GenProduct] = {
     val cache: scala.collection.mutable.Map[Box, Stream[GenProduct]] = new scala.collection.mutable.LinkedHashMap()
-    (sequent,pos) => {
+    (sequent,pos,defs) => {
       val box = sequent.sub(pos) match {
         case Some(Box(ODESystem(ode, And(True, q)), pf)) => Box(ODESystem(ode, q), pf)
         case Some(box@Box(_: ODESystem, _)) => box
@@ -272,7 +272,7 @@ object InvariantGenerator extends Logging {
       cache.get(box) match {
         case Some(cached) => cached
         case None =>
-          val remember = generator(sequent,pos)
+          val remember = generator(sequent,pos,defs)
           cache.put(box,remember)
           remember
       }

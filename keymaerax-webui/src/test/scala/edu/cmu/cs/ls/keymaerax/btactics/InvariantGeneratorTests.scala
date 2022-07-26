@@ -23,6 +23,7 @@ import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{Seconds, Span}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map, Nil}
@@ -36,25 +37,38 @@ import scala.collection.mutable.ListBuffer
 class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
 
   "Loop invariants" should "be generated from pre and postconditions" in withTactics {
-    InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0)).toList should
+    InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0), Declaration(Map.empty)).toList should
       contain theSameElementsInOrderAs(("x>=1".asFormula, None) :: ("[x:=x+1;]x>=2".asFormula, None) :: ("[x:=x+1;]x>=2 & x>=1".asFormula, None) :: Nil)
+  }
+
+  it should "be generated from unexpanded pre and postconditions" in withTactics {
+    //@note no counter-example tool, so definitions don't need to be expanded
+    InvariantGenerator.loopInvariantGenerator("init(x) ==> [{x:=x+1;}*][x:=x+1;]post(x)".asSequent, SuccPos(0), Declaration(Map.empty)).toList should
+      contain theSameElementsInOrderAs(("init(x)".asFormula, None) :: ("[x:=x+1;]post(x)".asFormula, None) :: ("[x:=x+1;]post(x) & init(x)".asFormula, None) :: Nil)
+  }
+
+  it should "be generated from unexpanded pre and postconditions (with CEX tool for filtering)" in withMathematica { _ =>
+    //@note counter-example tool needs to know what init and post are
+    val defs = "init(.) ~> .>=1 & z=2 :: post(.) ~> .>=2".asDeclaration
+    InvariantGenerator.loopInvariantGenerator("init(x) ==> [{x:=x+1;}*][x:=x+1;]post(x)".asSequent, SuccPos(0), defs).toList should
+      contain theSameElementsInOrderAs(("x>=1".asFormula, None) :: ("[x:=x+1;]x>=2".asFormula, None) :: Nil)
   }
 
   it should "not include equivalent postcondition conjuncts if it has a counterexample tool" in withMathematica { _ =>
     //@todo some conjuncts are redundant
-    InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2 & y>=3)".asSequent, SuccPos(0)).toList should
+    InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2 & y>=3)".asSequent, SuccPos(0), Declaration(Map.empty)).toList should
       contain theSameElementsInOrderAs(("x>=1".asFormula, None) :: ("x>=2".asFormula, None) :: ("x>=3".asFormula, None) ::
       ("x>=1 & x>=2 & y>=3 & x>=3".asFormula, None) :: ("x>=1 & x>=2 & y>=3".asFormula, None) :: Nil)
   }
 
   it should "not fail on missing counterexample tool" in withTactics {
-    InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2)".asSequent, SuccPos(0)).toList should
+    InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2)".asSequent, SuccPos(0), Declaration(Map.empty)).toList should
       contain theSameElementsInOrderAs(("x>=1".asFormula, None) :: ("x>=2".asFormula, None) :: ("x>=3".asFormula, None) ::
         ("x>=1&x>=2&x>=3".asFormula, None) :: ("x>=1&x>=2".asFormula, None) :: Nil)
   }
 
   it should "not fail on non-FOL postcondition" in withMathematica { _ =>
-    InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0)).toList should
+    InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0), Declaration(Map.empty)).toList should
       contain theSameElementsAs(("[x:=x+1;]x>=2".asFormula, None) :: ("x>=1".asFormula, None) ::Nil)
   }
 
@@ -68,7 +82,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
                 #   }*
                 #  ] !(x=ox & y=oy)""".stripMargin('#').asSequent
     //@note precondition and postcondition are invariant
-    InvariantGenerator.loopInvariantGenerator(s, SuccPos(0)).toList should contain theSameElementsAs List(
+    InvariantGenerator.loopInvariantGenerator(s, SuccPos(0), Declaration(Map.empty)).toList should contain theSameElementsAs List(
       "x!=ox|y!=oy".asFormula -> None, "!(x=ox&y=oy)".asFormula -> None
     )
     proveBy(s, autoClose) shouldBe 'proved
@@ -87,7 +101,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     val requestedInvGenerators: ListBuffer[Option[String]] = ListBuffer.empty
     ToolProvider.setProvider(mockProvider(requestedInvGenerators))
 
-    val gen = InvariantGenerator.differentialInvariantGenerator("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
+    val gen = InvariantGenerator.differentialInvariantGenerator("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0), Declaration(Map.empty))
     requestedInvGenerators shouldBe 'empty
     gen should not be 'empty
     gen.head shouldBe ("x>0".asFormula, None)
@@ -114,12 +128,12 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "not fail if Mathematica is unavailable" in withTactics {
-    val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
+    val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0), Declaration(Map.empty))
     gen shouldBe 'empty
   }
 
   it should "use Pegasus if available" in withMathematica { _ =>
-    val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
+    val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0), Declaration(Map.empty))
     gen should not be 'empty
     gen.head shouldBe ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PostInv"))))
   }
@@ -137,15 +151,36 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
 
   it should "not generate duplicate invariants" in withTactics {
     val s = "x>=0&x<=H(), g()>0, 1>=c(), c()>=0, x>=0&x=H()&v=0&g()>0&1>=c()&c()>=0 ==> [{x'=v,v'=-g()&x>=0}]((x=0->x>=0&x<=H())&(x!=0->x>=0&x<=H()))".asSequent
-    invGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("v=0".asFormula, None)
+    invGenerator(s, SuccPos(0), Declaration(Map.empty)).toList.loneElement shouldBe ("v=0".asFormula, None)
   }
 
   it should "provide precondition as invariant candidate" in withTactics {
     val s = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
-    invGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("x^2+y^2=2".asFormula, None)
+    invGenerator(s, SuccPos(0), Declaration(Map.empty)).toList.loneElement shouldBe ("x^2+y^2=2".asFormula, None)
   }
 
-  //@todo why does this test fail?
+  "Pegasus" should "FEATURE_REQUEST: generate invariants in correct order" taggedAs TodoTest in withMathematica { _ =>
+    val s = "x=1, y=1/8 ==> [{x'=x-y^2, y'=y*(x-y^2)}]!(x<0)".asSequent
+    //@note produces 8*y>=1, x*y>y^3, but 8*y>=1 only provable if we know x>y^2
+    InvariantGenerator.pegasusInvariants(s, SuccPos(0), Declaration(Map.empty)).toList should contain theSameElementsInOrderAs
+      List(
+        "x*y>y^3".asFormula -> PegasusProofHint(isInvariant=true, None),
+        "8*y>=1".asFormula -> PegasusProofHint(isInvariant=true, None),
+        "x*y>y^3 & 8*y>=1".asFormula -> PegasusProofHint(isInvariant=true, None)
+      )
+  }
+
+  it should "generate Darboux polynomials" in withMathematicaMatlab { _ =>
+    val s =
+      """x > -1, x < -3/4, y <= 3/2 & y >= 1
+        |==>
+        |[
+        |  {x'=-42*x^7+50*x^2*y+156*x^3*y+258*x^4*y-46*x^5*y+68*x^6*y+20*x*y^6-8*y^7,
+        |   y'=y*(1110*x^6-3182*x^4*y-220*x^5*y+478*x^3*y^3+487*x^2*y^4-102*x*y^5-12*y^6)}
+        |] !(x > 1 + y)""".stripMargin.asSequent
+    InvariantGenerator.pegasusInvariants(s, SuccPos(0), Declaration(Map.empty)).toList should contain theSameElementsInOrderAs List()
+  }
+
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
     proveBy("x=0 -> [{x:=-x;}*]x>=0".asFormula, autoClose) shouldBe 'proved
   }
@@ -163,7 +198,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
         ("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true))),
         ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PreNoImpPost")))))
       else List(("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true))))
-    val invs = TactixLibrary.invGenerator("==> [{x'=3}]x>=0".asSequent, SuccPosition(1))
+    val invs = TactixLibrary.invGenerator("==> [{x'=3}]x>=0".asSequent, SuccPosition(1), Declaration(Map.empty))
     invs should contain theSameElementsInOrderAs expectedInvs
     //@note ODE will return with counterexample before even trying fastODE, so call fastODE directly
     proveBy(s, (DifferentialTactics invokePrivate fastODE(() => invs.toIterator, skip))(1)).subgoals.
@@ -179,17 +214,17 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
         ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PreNoImpPost")))))
       else List((inv.asFormula, Some(AnnotationProofHint(tryHard = true))))
 
-    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)) should contain theSameElementsInOrderAs expectedInvs("y>=old(y)")
-    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)) should contain theSameElementsInOrderAs expectedInvs("y<=old(y)")
+    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1), Declaration(Map.empty)) should contain theSameElementsInOrderAs expectedInvs("y>=old(y)")
+    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1), Declaration(Map.empty)) should contain theSameElementsInOrderAs expectedInvs("y<=old(y)")
   }
 
   "Pegasus" should "return trivial invariant postcondition result if sanity timeout > 0" in withMathematica { _ =>
     val seq = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0")) {
-      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("x^2+y^2<=2".asFormula -> Some(PegasusProofHint(isInvariant = true, None)) :: Nil)
+      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1), Declaration(Map.empty)).toList should contain theSameElementsInOrderAs ("x^2+y^2<=2".asFormula -> Some(PegasusProofHint(isInvariant = true, None)) :: Nil)
     }
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "5")) {
-      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("true".asFormula -> Some(PegasusProofHint(isInvariant = true, Some("PostInv")))) :: Nil
+      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1), Declaration(Map.empty)).toList should contain theSameElementsInOrderAs ("true".asFormula -> Some(PegasusProofHint(isInvariant = true, Some("PostInv")))) :: Nil
     }
   }
 
@@ -684,15 +719,15 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
   }
 
-  private def pegasusGen(name: String, model: Formula, keepCandidates: Boolean) = {
+  private def pegasusGen(name: String, model: Formula, keepCandidates: Boolean, defs: Declaration) = {
     model match {
       case Imply(ante, succ@Box(_: ODESystem, _)) =>
         val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))
         println(s"Generating invariants $name")
         val invGenStart = System.currentTimeMillis()
         val candidates =
-          if (keepCandidates) InvariantGenerator.pegasusCandidates(seq, SuccPos(0)).toList
-          else InvariantGenerator.pegasusInvariants(seq, SuccPos(0)).toList
+          if (keepCandidates) InvariantGenerator.pegasusCandidates(seq, SuccPos(0), defs).toList
+          else InvariantGenerator.pegasusInvariants(seq, SuccPos(0), defs).toList
         val invGenEnd = System.currentTimeMillis()
         println(s"Done generating in ${invGenEnd-invGenStart}ms (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
         Some((candidates, invGenStart, invGenEnd))
@@ -731,7 +766,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       val expandedModel = defs.exhaustiveSubst(model)
 
       try {
-        pegasusGen(name, expandedModel, keepUnverifiedCandidates) match {
+        pegasusGen(name, expandedModel, keepUnverifiedCandidates, defs) match {
           case Some((candidates, invGenStart, invGenEnd)) =>
             if (candidates.nonEmpty) {
               println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))

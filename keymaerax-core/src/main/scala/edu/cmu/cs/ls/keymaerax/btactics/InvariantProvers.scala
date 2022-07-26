@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.parser.Parser
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
@@ -36,9 +36,9 @@ object InvariantProvers {
     * @see [[loopauto]]
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
-  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent,defs:Declaration) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
-      val cand: Iterator[Formula] = gen(seq, pos).iterator.map(_._1)
+      val cand: Iterator[Formula] = gen(seq, pos, defs).iterator.map(_._1)
       val bounds: List[Variable] =
         if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
           StaticSemantics.boundVars(loopfml).toSet.toList
@@ -78,7 +78,7 @@ object InvariantProvers {
 
 
   /** [[TactixLibrary.loopPostMaster()]]. */
-  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent,defs:Declaration) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       // extra information occasionally thrown in to help direct invariant generation
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
@@ -117,7 +117,7 @@ object InvariantProvers {
               val odePost = seq.sub(pos++PosInExpr(1::Nil))
               // no need to try same invariant again if odeInvariant(pos) already failed
               //@todo optimize: if the invariant generator were correct, could restrict to its first element
-              ChooseSome(() => gen(seq, pos).iterator.map(_._1).filterNot(localInv => odePost.contains(localInv)),
+              ChooseSome(() => gen(seq, pos, defs).iterator.map(_._1).filterNot(localInv => odePost.contains(localInv)),
                 (localInv:Formula) => {
                   logger.debug("loopPostMaster local " + localInv)
                   DebuggingTactics.debug("local")&
@@ -151,7 +151,7 @@ object InvariantProvers {
             logger.debug("loopPostMaster progressing")
             val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
 
-            val generator = gen(assumeMoreSeq, pos).map(_._1)
+            val generator = gen(assumeMoreSeq, pos, defs).map(_._1)
             // keep iterating remembered iterator (otherwise generator restarts from the beginning)
             if (!generators.contains(assumeMoreSeq)) generators.put(assumeMoreSeq, generator.iterator)
             val candidates = generators(assumeMoreSeq)

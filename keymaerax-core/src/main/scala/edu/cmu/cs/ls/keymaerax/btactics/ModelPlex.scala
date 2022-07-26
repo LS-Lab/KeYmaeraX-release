@@ -285,7 +285,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     })
   }
 
-  private def proofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term]) = new IOListener() {
+  private def proofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration) = new IOListener() {
     var invariant: Option[GenProduct] = None
     // initial condition and differential invariants per ODE
     val diffInvariants: mutable.ListMap[DifferentialProgram, (Formula, Formula)] = mutable.ListMap()
@@ -315,7 +315,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case t: AppliedDependentPositionTactic if t.pt.name == "loopAuto" && invariant.isEmpty =>
         input match {
           case BelleProvable(p, _) =>
-            invariant = TactixLibrary.invGenerator(p.subgoals(0), t.locator.toPosition(p).get).toList.headOption
+            invariant = TactixLibrary.invGenerator(p.subgoals(0), t.locator.toPosition(p).get, defs).toList.headOption
         }
       case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" && !inDW => input match {
         case BelleProvable(p, _) =>
@@ -412,7 +412,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val x0 = plantVars.map(v => v -> BaseVariable(v.name, TacticHelper.freshIndexInFormula(v.name, fml))).toMap
       val x0Ghosts = x0.toList.sortBy[NamedSymbol](_._1).map({ case (v, g) => Assign(g, v) }).reduceRight(Compose)
 
-      val pl = proofListener(name, plantVars.toSet, /*q, */x0)
+      val pl = proofListener(name, plantVars.toSet, /*q, */x0, defs)
       LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(model.asInstanceOf[Formula], defs))) match {
         case BelleProvable(proof, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
         case _ => assert(assertion = false, "Cannot derive a nonlinear model from unfinished proof")
@@ -506,7 +506,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val x0 = Map[Variable,Term]()
     val olds = senseVars.map(v => FuncOf(Function("old", None, Real, Real), postVar(v)) -> v).toMap
 
-    val pl = proofListener(name, senseVars.toSet, x0)
+    val pl = proofListener(name, senseVars.toSet, x0, defs)
     LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(formula, defs)))
 
     assert(pl.invariant.isDefined, "Proof of model " + name + " does not provide a loop invariant. Please use tactic loop({`inv`},...) in the proof.")
