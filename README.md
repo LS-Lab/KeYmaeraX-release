@@ -192,7 +192,7 @@ In Wolfgang Ahrendt et al., editors, Deductive Software Verification: Future Per
 Copyright and Licenses
 ======================
 
-Copyright (C) 2014-2021 Carnegie Mellon University. See COPYRIGHT.txt for details.
+Copyright (C) 2014-2022 Carnegie Mellon University. See COPYRIGHT.txt for details.
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Marcus Voelp, Ran Ji.
 
 See LICENSE.txt for the conditions of using this software.
