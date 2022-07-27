@@ -43,6 +43,7 @@ object InterpretedSymbols {
     minF,
     maxF,
     expF,
+    E,
     sinF,
     cosF,
     PI
