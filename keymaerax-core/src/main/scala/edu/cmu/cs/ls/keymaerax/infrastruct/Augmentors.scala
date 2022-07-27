@@ -437,17 +437,17 @@ object Augmentors {
         case _ => false
       })
 
-      val elaboratableVars = StaticSemantics.symbols(e).filter({
-        case BaseVariable(name, i, _) => signature.exists({
+      val elaboratableVars = StaticSemantics.symbols(e).map({
+        case s@BaseVariable(name, i, _) => s -> signature.find({
           case Function(fn, fi, Unit, _, _) => fn == name && fi == i
           case _ => false
         })
-        case _ => false
-      }).map(_.asInstanceOf[BaseVariable])
+        case s => s -> None
+      }).filter(_._2.isDefined).map({ case (v: BaseVariable, Some(f)) => v->f })
 
-      val fnElaborated = elaboratableVars.foldLeft(e)((e, v) => {
-        //@note avoid elaborating to inconsistent kinds
-        val replaced = e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing))
+      val fnElaborated = elaboratableVars.foldLeft(e)({ case (e, (v, f: Function)) =>
+        //@note avoid elaborating to inconsistent with v, so don't just replace v with f but name/index/sort of v. later checks discover inconsistency with builtin definitions
+        val replaced = e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort, f.interp), Nothing))
         if (byNameIdx(StaticSemantics.symbols(replaced).filter(bySignature)).isEmpty) replaced
         else e
       })

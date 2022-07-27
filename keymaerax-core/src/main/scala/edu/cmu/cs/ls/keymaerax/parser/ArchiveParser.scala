@@ -129,7 +129,8 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Elaborates variable uses of declared functions, except those listed in taboo. */
   //@todo need to look into concrete programs that implement program constants when elaborating
-  def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T = expr.elaborateToFunctions(asNamedSymbols.toSet -- taboo).asInstanceOf[T]
+  def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T =
+    expr.elaborateToFunctions(asNamedSymbols.toSet ++ InterpretedSymbols.builtin.toSet -- taboo).asInstanceOf[T]
 
   /** Elaborates program constants to system constants if their definition is dual-free. */
   def elaborateToSystemConsts[T <: Expression](expr: T): T = {

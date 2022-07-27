@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -1011,6 +1011,30 @@ class DLArchiveParserTests extends TacticTestBase {
       """<somewhere> Definition f uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
+  }
+
+  it should "elaborate to builtin interpreted symbols" in {
+    val input =
+      """ArchiveEntry "Test"
+        |ProgramVariables Real x; End.
+        |Problem x>=0 -> e^x>=1 End.
+        |End.
+        |""".stripMargin
+    parse(input).head.model shouldBe Imply(
+      GreaterEqual(Variable("x"), Number(0)),
+      GreaterEqual(Power(FuncOf(InterpretedSymbols.E, Nothing), Variable("x")), Number(1)))
+  }
+
+  it should "elaborate to builtin interpreted symbols in definitions" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions Real f(Real x) = e^x; End.
+        |ProgramVariables Real x; End.
+        |Problem x>=0 -> f(x)>=1 End.
+        |End.
+        |""".stripMargin
+    val entry = parse(input).head
+    entry.defs.decls(Name("f")).interpretation shouldBe Some(Power(FuncOf(InterpretedSymbols.E, Nothing), DotTerm()))
   }
 
   it should "not elaborate in unused program definitions" in {
