@@ -181,4 +181,26 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     parse("tactic andLStar as ( andL('L)* )") shouldBe DefTactic("andLStar", SaturateTactic(andL('L)))
   }
 
+  it should "report missing arguments" in {
+    the [ParseException] thrownBy parse("implyR") should have message
+      """1:7 Error parsing atomicTactic at 1:1
+        |Found:    "" at 1:7
+        |Expected: ([a-zA-Z0-9] | "_" | "(" | Expected 0 arguments () and 1 positions)
+        |Hint: Try ([a-zA-Z0-9] | "_" | "(" | Expected 0 arguments () and 1 positions)""".stripMargin
+  }
+
+  it should "report wrong arguments" in {
+    the [ParseException] thrownBy parse("""implyR("x=2")""") should have message
+      """1:8 Error parsing locator at 1:8
+        |Found:    "\"x=2\")" at 1:8
+        |Expected: (locator | positionLocator | searchLocator)
+        |Hint: Try ("-" | [0-9] | "'Llast" | "'Rlast" | "'L" | "'R")""".stripMargin
+
+    the [ParseException] thrownBy parse("""QE("Mathematica","false")""") should have message
+      """1:19 Error parsing number at 1:19
+        |Found:    "false\")" at 1:19
+        |Expected: [0-9]
+        |Hint: Try [0-9]""".stripMargin
+  }
+
 }

@@ -200,13 +200,15 @@ class DLBelleParser(override val printer: BelleExpr => String,
   )
 
   def tacticSymbol[_: P]: P[String] = P(ident).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
-  def atomicTactic[_: P]: P[BelleExpr] = P((tacticSymbol ~ !"("./).flatMapX(t => try {
+  def atomicTactic[_: P]: P[BelleExpr] = P((tacticSymbol ~/ !"("./).flatMapX(t => try {
     val di = DerivationInfo.ofCodeName(t)
     (di.persistentInputs, di.numPositionArgs) match {
       case (ListArg(_) :: Nil, 0) => Pass(tacticProvider(t, List(Left(Nil)), defs))
       case (GeneratorArg(_) :: rest, 0) if rest.forall(_.isInstanceOf[OptionArg]) => Pass(tacticProvider(t, Nil, defs))
-      case (args, 0) if args.forall(_.isInstanceOf[OptionArg]) => Pass(tacticProvider(t, Nil, defs))
-      case (_, _) => Pass(tacticProvider(t, Nil, defs))
+      case (args, 0) if args.forall(_.isInstanceOf[OptionArg]) => Pass(tacticProvider(t, Nil, defs)) //@note includes args==Nil
+      case (args, posArgs) => Fail.opaque("Expected " + args.length + " arguments " +
+        args.map(a => a.name + ":" + a.sort).mkString("(", ",", ")") +
+        (if (posArgs > 0) " and " + posArgs + " positions" else ""))
     }
   } catch {
     case _: ParseException | _: IllegalArgumentException =>
@@ -255,7 +257,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def parenTac[_: P]: P[BelleExpr] = P("(" ~/ tactic ~ ")")("(tactic)",implicitly)
 
-  def baseTac[_: P]: P[BelleExpr] = P(branchTac | parenTac | builtinTactic | atomicTactic | at)
+  def baseTac[_: P]: P[BelleExpr] = P(branchTac | parenTac | builtinTactic | at | atomicTactic)
 
   def repTac[_: P]: P[BelleExpr] =
     (baseTac ~ (("*".! ~ (integer.map(Left(_)) | (!CharIn("0-9")).map(Right(_)))) | "+".!.map(s => (s, Right(())))).?).
