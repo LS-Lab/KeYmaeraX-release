@@ -237,10 +237,10 @@ class DLArchiveParserTests extends TacticTestBase {
         |Tactic notatactic End.
         |End.""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """3:8 Error parsing baseTac at 3:8
-        |Found:    "notatactic" at 3:8
-        |Expected: (string | "?" | <(tactic,tactic,...) | (tactic) | "doall" | "partial" | "let" | "tactic" | "USMatch" | atomicTactic | tactic(...))
-        |Hint: Try ("\"" | "?" | "<" | "(" | "doall" | "partial" | "let" | "tactic" | "USMatch")""".stripMargin
+      """3:18 Error parsing atomicTactic at 3:8
+        |Found:    " End." at 3:18
+        |Expected: ([a-zA-Z0-9] | "_" | "(" | Expected known tactic, but notatactic not a known tactic)
+        |Hint: Try ([a-zA-Z0-9] | "_" | "(" | Expected known tactic, but notatactic not a known tactic)""".stripMargin
   }
 
   it should "parse simple nullary predicate definition with multiple variables" in {

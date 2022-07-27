@@ -213,7 +213,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   } catch {
     case _: ParseException | _: IllegalArgumentException =>
       if (tactics.contains(t)) Pass(ApplyDefTactic(tactics(t)))
-      else Fail.opaque("Unknown tactic " + t)
+      else Fail.opaque("Expected known tactic, but " + t + " not a known tactic")
   }))
 
   def at[_: P]: P[BelleExpr] = P(
