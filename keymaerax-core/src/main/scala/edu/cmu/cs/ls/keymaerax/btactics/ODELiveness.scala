@@ -984,10 +984,10 @@ object ODELiveness {
     * The first one is partially auto-closed if odeReduce is able to prove global existence
     * e.g. (similarly for dV >),
     *
-    * Note: autonormalizes to >= and > (but provided e() must be for the normalized shape!)
+    * Note: autonormalizes to >= and > (but provided e_() must be for the normalized shape!)
     *
     * G, t=0 |- <t'=1, ODE & Q> t > const
-    * G, t=0 |- e() > 0
+    * G, t=0 |- e_() > 0
     * G, t=0 |- [t'=1, ODE & Q & p-q < 0] p'-q' >= e () (this uses compatible cuts )
     * ---- (dV >=)
     * G |- <ODE & Q> p >= q
@@ -1033,7 +1033,7 @@ object ODELiveness {
     val oldp = TacticHelper.freshNamedSymbol("oldp".asVariable, seq)
 
     val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
-    val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,bnd)).usubst
+    val unify = UnificationMatch("p(||) + e_()".asTerm, Plus(oldp,bnd)).usubst
 
     val ax = property match {
       case Greater(_, _) => DVgt.fact
@@ -1058,7 +1058,7 @@ object ODELiveness {
       andR(pos) <(
         andR(pos) <(
         ToolTactics.hideNonFOL & QE &
-          DebuggingTactics.done("Unable to prove "+ bnd + " strictly positive."), //G |- e() > 0
+          DebuggingTactics.done("Unable to prove "+ bnd + " strictly positive."), //G |- e_() > 0
         odeReduce(strict = false, Nil)(pos) &
         Idioms.?(cohideR(pos) & byUScaught(ex))), // existence
         (odeUnify(pos) & dI('full)(pos) & done |
@@ -1197,7 +1197,7 @@ object ODELiveness {
 
     // Pre-unify to avoid Dconstify
     val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
-    val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,bnd)).usubst
+    val unify = UnificationMatch("p(||) + e_()".asTerm, Plus(oldp,bnd)).usubst
 
     val axren = exRWgt.fact(URename(timevar,"t".asVariable,semantic=true))(unifODE)(unify)
 
@@ -1269,7 +1269,7 @@ object ODELiveness {
 
     // Pre-unify to avoid Dconstify
     val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
-    val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,eps)).usubst
+    val unify = UnificationMatch("p(||) + e_()".asTerm, Plus(oldp,eps)).usubst
 
     val axren = exRWgt.fact(URename(timevar,"t".asVariable,semantic=true))(unifODE)(unify)
 
@@ -1343,40 +1343,40 @@ object ODELiveness {
   }}
 
   /** some of these should morally be in DerivedAxioms but have weird dependencies */
-  private lazy val exRWgt = remember("e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t > 0".asFormula,
+  private lazy val exRWgt = remember("e_() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e_() -> <{t'=1, c &q_(||)}> p(||) + e_() * t > 0".asFormula,
     implyR(1) & andL(-1) &
-      cutR("<{t'=1,c&q_(||)}>(t>-p(||)/e() & e() > 0)".asFormula)(1) <(
+      cutR("<{t'=1,c&q_(||)}>(t>-p(||)/e_() & e_() > 0)".asFormula)(1) <(
         implyRi()(AntePosition(2),SuccPosition(1)) & useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
-          cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e()&e()>0)) & e() > 0}](!t>-p(||)/e())".asFormula)(1)<(
+          cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e_()&e_()>0)) & e_() > 0}](!t>-p(||)/e_())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
               useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & id
           ) ,
-        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e()&e()>0 ==> p()+e()*t>0".asSequent,QE))
+        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e_()&e_()>0 ==> p()+e_()*t>0".asSequent,QE))
       ),
     namespace
   )
 
-  private lazy val exRWge = remember("e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t >= 0".asFormula,
+  private lazy val exRWge = remember("e_() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e_() -> <{t'=1, c &q_(||)}> p(||) + e_() * t >= 0".asFormula,
     implyR(1) & andL(-1) &
-      cutR("<{t'=1,c&q_(||)}>(t>=-p(||)/e() & e() > 0)".asFormula)(1) <(
+      cutR("<{t'=1,c&q_(||)}>(t>=-p(||)/e_() & e_() > 0)".asFormula)(1) <(
         implyRi()(AntePosition(2),SuccPosition(1)) & useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
-          cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e()&e()>0)) & e() > 0}](!t>=-p(||)/e())".asFormula)(1)<(
+          cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e_()&e_()>0)) & e_() > 0}](!t>=-p(||)/e_())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
               useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & id
           ) ,
-        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e()&e()>0 ==> p()+e()*t>=0".asSequent,QE))
+        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e_()&e_()>0 ==> p()+e_()*t>=0".asSequent,QE))
       ),
     namespace
   )
 
   private lazy val DVgeq = remember(
-    "(e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) < 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) >= 0".asFormula,
+    "(e_() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e_()) & [{t'=1, c & q_(||) & f_(||) < 0}] f_(||) >= p(||) + e_() * t -> <{t'=1, c & q_(||)}> f_(||) >= 0".asFormula,
     implyR(1) & andL(-1) & useAt(exRWge.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
-    cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t >= 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0 ==> f_()>=0".asSequent,QE)),
+    cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e_() * t}](!p(||) + e_()* t >= 0)".asFormula)(1)<(
+      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e_()*t, p()+e_()*t>=0 ==> f_()>=0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
@@ -1384,11 +1384,11 @@ object ODELiveness {
   )
 
   private lazy val DVgt = remember(
-    "(e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) <= 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) > 0".asFormula,
+    "(e_() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e_()) & [{t'=1, c & q_(||) & f_(||) <= 0}] f_(||) >= p(||) + e_() * t -> <{t'=1, c & q_(||)}> f_(||) > 0".asFormula,
     implyR(1) & andL(-1) & useAt(exRWgt.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
-    cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t > 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0 ==> f_()>0".asSequent,QE)),
+    cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e_() * t}](!p(||) + e_()* t > 0)".asFormula)(1)<(
+      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e_()*t, p()+e_()*t>0 ==> f_()>0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
@@ -1463,7 +1463,7 @@ object ODELiveness {
 //      discreteGhost(p, Some(oldp))(pos) &
 //      useAt(axren,PosInExpr(1::Nil))(pos) &
 //      andR(pos) < (
-//        ToolTactics.hideNonFOL & QE //G |- e() > 0
+//        ToolTactics.hideNonFOL & QE //G |- e_() > 0
 //        ,
 //        andR(pos) <(
 //          odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(ex)), // existence

@@ -236,13 +236,13 @@ object ImplicitAx {
     val assignby = proveBy("[y_:=f();]p(y_) <-> p(f())".asFormula,
       byUS(Ax.assignbAxiom))
 
-    val assignby2 = proveBy("[y_:=g(|y_|);][y_':=1;](f(g(|y_|)))'=e(y_)*(g(|y_|))' <-> [y_':=1;](f(g(|y_|)))'=e(g(|y_|))*(g(|y_|))'".asFormula,
+    val assignby2 = proveBy("[y_:=g(|y_|);][y_':=1;](f(g(|y_|)))'=e_(y_)*(g(|y_|))' <-> [y_':=1;](f(g(|y_|)))'=e_(g(|y_|))*(g(|y_|))'".asFormula,
       byUS(assignby))
 
     val assignby3 = proveBy("\\forall y_ p_(||) -> [y_:=f_();]p_(||)".asFormula,
       byUS(Ax.assignball))
 
-    val pd = "\\forall y_ [y_':=1;](f(y_))' = e(y_) -> (f(g(|y_|)))'=e(g(|y_|)) * g(|y_|)'".asFormula
+    val pd = "\\forall y_ [y_':=1;](f(y_))' = e_(y_) -> (f(g(|y_|)))'=e_(g(|y_|)) * g(|y_|)'".asFormula
 
     remember(pd,
       implyR(1) &
@@ -759,7 +759,7 @@ object ImplicitAx {
     )
     val splits = (ls._1::ls._2).reverse
 
-    val pr = proveBy("(f(g(|t_|)))'=e(g(|t_|)) * g(|t_|)'".asFormula,
+    val pr = proveBy("(f(g(|t_|)))'=e_(g(|t_|)) * g(|t_|)'".asFormula,
       useAt(DcomposeFull.fact(URename("y_".asVariable,"t_".asVariable,semantic=true)),PosInExpr(1::Nil))(1) & allR(1))
 
     val axs = splits.map( sp => {
