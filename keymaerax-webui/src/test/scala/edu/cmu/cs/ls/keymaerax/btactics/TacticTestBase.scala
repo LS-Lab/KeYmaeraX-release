@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{JLinkMathematicaLink, Mathematica, QETacticTool, Z3}
@@ -46,13 +47,10 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   }
 
   override def timeLimit: Span = {
-    val simpleNames = this.getClass.getAnnotations.map(_.annotationType().getSimpleName)
-    if (simpleNames.contains("ExtremeTest")) {
-      Span(3, Hours)
-    } else if (simpleNames.contains("SlowTest")) {
-      Span(1, Hour)
-    } else {
-      Span(20, Minutes)
+    this.getClass.getAnnotations.find(_.annotationType().getSimpleName match { case "ExtremeTest" | "SlowTest" => true case _ => false }) match {
+      case Some(t: ExtremeTest) => Span(t.timeout, Hours)
+      case Some(_: SlowTest) => Span(1, Hour)
+      case None => Span(20, Minutes)
     }
   }
 
