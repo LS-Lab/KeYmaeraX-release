@@ -5,14 +5,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.PrintWriter
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Program, Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
+import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
@@ -31,7 +30,6 @@ import scala.reflect.io.File
   * Benchmarks.
   * Created by smitsch on 4/26/18.
   */
-@ExtremeTest
 class BenchmarkTests extends Suites(
   // benchmark problems from tactics and with database recording
 //  new TutorialRegressionTester("Basic Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx"),
@@ -40,9 +38,6 @@ class BenchmarkTests extends Suites(
   // export
 //  new BenchmarkExporter("Export", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx")
   // benchmark problems
-//  new BenchmarkExporter("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx"),
-//  new BenchmarkExporter("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx"),
-//  new BenchmarkExporter("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx"),
   new BenchmarkTester("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx", 300, genCheck=false),
   new BenchmarkTester("Games", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/games.kyx", 300, genCheck=false),
 //  new BenchmarkTester("Counterexamples", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/counterexample.kyx", 300, genCheck=false),
@@ -51,9 +46,9 @@ class BenchmarkTests extends Suites(
 )
 
 object BenchmarkTests {
-  private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
+//  private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
   // for testing changes in a locally cloned repository
-//  private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
+  private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
 }
 
 /** Collects a benchmark result. */
@@ -134,7 +129,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
 
 }
 
-@ExtremeTest
+@ExtremeTest(timeout=6)
 class BenchmarkTester(val benchmarkName: String, val url: String,
                       val timeout: Int, val genCheck: Boolean) extends TacticTestBase with AppendedClues {
 
@@ -157,10 +152,11 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 
   private def setTimeouts(tool: ToolOperationManagement)(testcode: => Any): Unit = {
     withTemporaryConfig(Map(
+        Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce",
         Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true",
         Configuration.Keys.ODE_TIMEOUT_FINALQE -> "120",
         Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "180",
-        Configuration.Keys.Pegasus.INVCHECK_TIMEOUT ->"20", // 60
+        Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "20", // 60
         Configuration.Keys.LOG_QE_DURATION -> "true")) {
       tool.setOperationTimeout(120)
       testcode
@@ -173,7 +169,14 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   it should "prove interactive benchmarks" in withMathematica { tool => setTimeouts(tool) {
-    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
+    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2),
+      () => {
+        //@note connect to mathematica over TCPIP for better control over shutting down kernel
+        withTemporaryConfig(Map(Configuration.Keys.MATH_LINK_TCPIP -> "true")) {
+          withMathematicaMatlab(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+        }
+      }
+    ))
     val writer = new PrintWriter(benchmarkName + "_interactive.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
@@ -184,8 +187,24 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
   }
 
+  it should "generate invariants" in withMathematica ({ tool => setTimeouts(tool) {
+    def expectedProved(entry: TutorialEntry) = entry.tactic.map(_._1.trim()).contains("Automated proof")
+    val results = entries.map(e => runInvGen(e.name, e.model, expectedProved(e)))
+    val writer = new PrintWriter(benchmarkName + "_invgen.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration total[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
+    writer.close()
+    if (genCheck) {
+      forEvery(tableResults(results)) { (_, name, status, _, cause) =>
+        if (expectedProved(entries.find(_.name == name).get)) status shouldBe "proved" withClue cause
+        else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
+      }
+    }
+  }
+  })
+
   it should "prove interactive benchmarks with Z3" in withZ3 { _ =>
-    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
+    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2), () => withZ3(_ => {})))
     val writer = new PrintWriter(benchmarkName + "_interactive_z3.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
@@ -195,8 +214,15 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     }
   }
 
-  it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool => setTimeouts(tool) {
-    val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.lastOption.map(_._2)))
+  private def runWithHints(filter: TutorialEntry => Boolean, check: (String, String) => Unit): Unit = {
+    val results = entries.filter(filter).map(e => runWithHints(e.name, e.model,
+      () => {
+        //@note connect to mathematica over TCPIP for better control over shutting down kernel
+        withTemporaryConfig(Map(Configuration.Keys.MATH_LINK_TCPIP -> "true")) {
+          withMathematicaMatlab(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+        }
+      }
+    ))
     val writer = new PrintWriter(benchmarkName + "_withhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
@@ -204,11 +230,19 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     forEvery(tableResults(results)) { (_, name, status, _, cause) =>
       cause match {
         case Some(c) => throw c
-        case None =>
-          if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved"
-          else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
+        case None => check(name, status)
       }
     }
+  }
+
+  it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool => setTimeouts(tool) {
+    runWithHints(_.tactic.exists(_._2.trim match { case "auto" | "autoClose" | "master" => true case _ => false }),
+      (_: String, status: String) => status shouldBe "proved")
+  }}
+
+  it should "try unmarked benchmarks with proof hints and Mathematica" ignore withMathematica { tool => setTimeouts(tool) {
+    runWithHints(!_.tactic.exists(_._2.trim match { case "auto" | "autoClose" | "master" => true case _ => false }),
+      (name: String, status: String) => if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark"))
   }
   }
 
@@ -217,32 +251,35 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 //    forEvery (entries) { (_, name, modelContent, _) => runWithHints(name, modelContent) }
 //  }
 
-  it should "prove benchmarks without proof hints and in Mathematica" in withMathematica { tool => setTimeouts(tool) {
-    val results = entries.filter(_.name!="Chinese Train Control System Level 3 (CTCS-3)").map(e => runAuto(e.name, e.model))
+  private def runWithoutHints(filter: TutorialEntry => Boolean, check: (String, String) => Unit): Unit = {
+    val results = entries.filter(filter).map(e => runAuto(e.name, e.model,
+      () => {
+        //@note connect to mathematica over TCPIP for better control over shutting down kernel
+        withTemporaryConfig(Map(Configuration.Keys.MATH_LINK_TCPIP -> "true")) {
+          withMathematicaMatlab(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+        }
+      }
+    ))
     val writer = new PrintWriter(benchmarkName + "_auto.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     forEvery(tableResults(results)) { (_, name, status, _, cause) =>
       if (cause.isDefined) throw cause.get
-      else if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved"
-      else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
+      else check(name, status)
     }
-  }
   }
 
-  it should "generate invariants" ignore withMathematica { tool => setTimeouts(tool) {
-    val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen.csv")
-    writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
-    writer.close()
-    if (genCheck) {
-      forEvery(tableResults(results)) { (_, name, status, _, cause) =>
-        if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved" withClue cause
-        else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
-      }
-    }
+  it should "prove benchmarks without proof hints and in Mathematica" in withMathematica ({ tool => setTimeouts(tool) {
+    runWithoutHints(_.tactic.exists(_._1.trim() == "Automated proof"), (_: String, status: String) => status shouldBe "proved")
+  }
+  })
+
+  it should "try all benchmarks without proof hints and in Mathematica" ignore withMathematica { tool => setTimeouts(tool) {
+    runWithoutHints(!_.tactic.exists(_._2 match {
+      case "auto" | "autoClose" | "master" => true
+      case _ => false
+    }), (name: String, status: String) => if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark"))
   }
   }
 
@@ -251,36 +288,39 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 //    forEvery (entries) { (_, name, modelContent, _) => runAuto(name, modelContent) }
 //  }
 
-  private def runInteractive(name: String, modelContent: String, tactic: Option[String]) =
-    runEntry(name, modelContent, parseWithHints, tactic.map(_.trim) match { case Some("master") => None case t => t })
-  private def runWithHints(name: String, modelContent: String, tactic: Option[String]) =
-    runEntry(name, modelContent, parseWithHints, Some("master"))
-  private def runAuto(name: String, modelContent: String) =
-    runEntry(name, modelContent, parseStripHints, Some("master"))
+  private def runInteractive(name: String, modelContent: String, tactic: Option[String], initToolProvider: () => Unit) =
+    runEntry(name, modelContent, parseStripHints, tactic.map(_.trim) match { case Some("master") => None case Some("auto") => None case Some("autoClose") => None case t => t }, initToolProvider)
+  private def runWithHints(name: String, modelContent: String, initToolProvider: () => Unit) =
+    runEntry(name, modelContent, parseWithHints, Some("autoClose"), initToolProvider)
+  private def runAuto(name: String, modelContent: String, initToolProvider: () => Unit) =
+    runEntry(name, modelContent, parseStripHints, Some("autoClose"), initToolProvider)
 
-  private def runInvGen(name: String, modelContent: String) = {
+  private def runInvGen(name: String, modelContent: String, expectedProved: Boolean) = {
     if (genCheck) {
       beforeEach()
       withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
-      val (model, _) = parseStripHints(modelContent)
+      val (model, defs) = parseStripHints(modelContent)
 
       try {
-        val Imply(ante, succ) = model
+        val Imply(ante, succ) = defs.exhaustiveSubst(model)
         succ match {
           case Box(_: ODESystem, _) =>
             val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))
             println(s"Generating invariants $name")
             val invGenStart = System.currentTimeMillis()
-            val candidates = InvariantGenerator.pegasusCandidates(seq, SuccPos(0)).toList
+            val candidates = InvariantGenerator.pegasusCandidates(seq, SuccPos(0), defs).toList
             val invGenEnd = System.currentTimeMillis()
-            println(s"Done generating (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
+            println(s"Done generating (${invGenEnd-invGenStart}ms: ${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
             if (candidates.nonEmpty) {
               println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))
-              TactixInit.invSupplier = FixedGenerator(candidates)
+              //@note invSupplier is expected to a diff-cut chain and fails if they are not provable in exactly the presented order;
+              // a generator can provide candidates, unprovable candidates are skipped
+              TactixInit.invSupplier = FixedGenerator(Nil)
+              TactixInit.differentialInvGenerator = FixedGenerator(candidates)
               val checkStart = System.currentTimeMillis()
-              val proof = proveBy(seq, TactixLibrary.master())
+              val proof = proveBy(seq, TactixLibrary.autoClose)
               val checkEnd = System.currentTimeMillis()
-              println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
+              println(s"Done checking $name (" + (checkEnd-checkStart) + "ms: " + (if (proof.isProved) "proved)" else "unfinished)"))
 
               val result =
                 if (proof.isProved) "proved"
@@ -296,37 +336,35 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
             BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, -1, -1, None)
         }
       } catch {
-        case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
-          -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
-        case ex => BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
+        case ex: TestFailedDueToTimeoutException =>
+          println(s"Done $name (failed: timeout)")
+          BenchmarkResult(name, "timeout", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
+        case ex =>
+          if (expectedProved) println(s"Done $name (failed)") else println(s"Done $name (feature request: not generated and/or not proved)")
+          BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
       }
     } else {
       BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, -1, -1, None)
     }
   }
 
-  private def runEntry(name: String, modelContent: String, modelParser: String => (Formula, Declaration), tactic: Option[String]): BenchmarkResult = {
+  private def runEntry(name: String, modelContent: String, modelParser: String => (Formula, Declaration),
+                       tactic: Option[String], initToolProvider: () => Unit): BenchmarkResult = {
     beforeEach()
-    //@note connect to mathematica over TCPIP for better control over shutting down kernel
-    withTemporaryConfig(Map(Configuration.Keys.MATH_LINK_TCPIP -> "true")) {
-      withMathematicaMatlab(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
-    }
+    initToolProvider()
     val (model, defs) = modelParser(modelContent)
     val result = tactic match {
       case Some(t) =>
         println(s"Proving $name")
 
-        val hasDefinitions = defs.decls.exists(_._2.interpretation.isDefined)
-        val tacticExpands = BelleParser.tacticExpandsDefsExplicitly(t)
-        if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
-        val theTactic = BelleParser.parseWithInvGen(t, None, defs, hasDefinitions && !tacticExpands)
+        val theTactic = ArchiveParser.tacticParser(t, defs)
 
         qeDurationListener.reset()
         val start = System.currentTimeMillis()
         try {
           val proof = failAfter(Span(timeout, Seconds))({
-            proveBy(model, theTactic)
-//            withTacticProgress(theTactic, "_ALL" :: Nil) { proveBy(model, _) }
+//            proveBy(model, theTactic, defs=defs)
+            withTacticProgress(theTactic, Nil) { proveBy(model, _, defs=defs) }
           })((testThread: Thread) => {
             theInterpreter.kill()
             testThread.interrupt()
@@ -362,8 +400,8 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
     val entry = ArchiveParser.parser(modelContent).head
     TactixInit.invSupplier = generator
-    TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
-    TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
+    TactixInit.differentialInvGenerator = FixedGenerator(Nil)
+    TactixInit.loopInvGenerator = FixedGenerator(Nil)
     Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
