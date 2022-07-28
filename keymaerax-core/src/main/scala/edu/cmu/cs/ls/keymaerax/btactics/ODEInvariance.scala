@@ -269,9 +269,8 @@ object ODEInvariance {
 
   //Proves t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
   // Note that the 2nd antecedent is only important when Q reduces the rank
-  private def lpclosed(inst:Inst) : BelleExpr = {
-    val tac =
-    inst match {
+  private def lpclosed(inst: Inst): BelleExpr = {
+    val tac = inst match {
       case DisjFml(l, r) =>
         DebuggingTactics.debug("DISJ", doPrint = debugTactic) &
           orL(-3) < (
@@ -286,27 +285,29 @@ object ODEInvariance {
       case GeqFml(r, gs, cofs) =>
         DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
         (
-          if(gs.isEmpty) {
+          if (gs.isEmpty) {
             cohideOnlyL(-3) & lpgeq(r - 1)
-          }
-          else {
+          } else {
             orL(-3) < (
               cohideOnlyL(-3) & lpgeq(r - 1),
-              implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
+              useAt(Ax.DWdQinitial, PosInExpr(1::Nil))(-2) & // retain evolution domain constraint
+              andL(-2) &
+              implyRi()(-4,1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                 // Get rid of nasty constraints
                 refineToEqualities(1) &
                   dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
             )
           }
         )
-      case EqFml(r, gs, cofs) =>
+      case EqFml(_, gs, cofs) =>
         DebuggingTactics.debug("= case", doPrint = debugTactic) &
         (
-          if(gs.isEmpty) {
+          if (gs.isEmpty) {
             closeF
-          }
-          else {
-            implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+          } else {
+            useAt(Ax.DWdQinitial, PosInExpr(1::Nil))(-2) & // retain evolution domain constraint
+            andL(-2) &
+            implyRi()(-4,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
               // Get rid of nasty constraints
               refineToEqualities(1) &
               dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
@@ -340,28 +341,30 @@ object ODEInvariance {
             useAt(refOrL, PosInExpr(1 :: Nil))(1) & // drop t_ = 0 disjunct in domain of progress fml
             DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
             (
-              if(gs.isEmpty) {
+              if (gs.isEmpty) {
                 cohideOnlyL(-3) & lpgeq(r - 1)
-              }
-              else {
+              } else {
                 orL(-3) < (
                   cohideOnlyL(-3) & lpgeq(r - 1),
-                  implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
+                  useAt(Ax.DWdQinitial, PosInExpr(1::Nil))(-2) & // retain evolution domain constraint
+                  andL(-2) &
+                  implyRi()(-4,1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                     // Get rid of nasty constraints
                     refineToEqualities(1) &
                     dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
                 )
               }
             )
-        case EqFml(r, gs, cofs) =>
+        case EqFml(_, gs, cofs) =>
           DebuggingTactics.debug("= case", doPrint = debugTactic) &
             useAt(refOrL, PosInExpr(1 :: Nil))(1) & // drop t_ = 0 disjunct in domain of progress fml
             (
-              if(gs.isEmpty) {
+              if (gs.isEmpty) {
                 closeF
-              }
-              else {
-                implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+              } else {
+                useAt(Ax.DWdQinitial, PosInExpr(1::Nil))(-2) & // retain evolution domain constraint
+                andL(-2) &
+                implyRi()(-4,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
                   // Get rid of nasty constraints
                   refineToEqualities(1) &
                   dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
@@ -965,9 +968,11 @@ object ODEInvariance {
     //this can also be manually proved rather than using QE
     val pr =
       if(negate)
-        proveBy(Equiv(cutp, Greater(sump,zero)), byUS(sqNonZero) | QE)
+        proveBy(Equiv(cutp, Greater(sump,zero)),
+          TryCatch(byUS(sqNonZero), classOf[UnificationException], (_: UnificationException) => QE))
       else
-        proveBy(Equiv(cutp,LessEqual(sump,zero)), SaturateTactic(useAt(fastSOS,PosInExpr(1::Nil))(1) & andR(1) <( prove_sos_positive, skip )) & (byUS(sqZero) | QE) )
+        proveBy(Equiv(cutp,LessEqual(sump,zero)), SaturateTactic(useAt(fastSOS,PosInExpr(1::Nil))(1) &
+          andR(1) <( prove_sos_positive, skip )) & TryCatch(byUS(sqZero), classOf[UnificationException], (_: UnificationException) => QE) )
 
     //Construct the term ||G||^2 + 1
     val cofactorPre = Plus(Gco.map(ts => ts.map(t=>Times(t,t):Term).reduceLeft(Plus)).reduceLeft(Plus),one)
