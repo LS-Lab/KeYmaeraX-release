@@ -132,6 +132,11 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     DLParser("y>x() <- x()<y") shouldBe Imply(Less(x, y), Greater(y, x))
   }
 
+  it should "parse when function name and arguments are separated by whitespace " in {
+    DLParser("min (x,y)") shouldBe FuncOf(InterpretedSymbols.minF, Pair(Variable("x"), Variable("y")))
+    DLParser("min\n(x,y)") shouldBe FuncOf(InterpretedSymbols.minF, Pair(Variable("x"), Variable("y")))
+  }
+
   it should "not parse x//y" in {
     the [ParseException] thrownBy DLParser("x//y") should have message
       """1:3 Error parsing term at 1:1

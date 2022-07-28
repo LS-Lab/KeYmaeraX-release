@@ -442,7 +442,7 @@ class DLParser extends Parser {
   def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
     // Note interpretations can only appear on functions (not predicates)
     // so that cut is safe
-    ident ~~ ("<<" ~/ formula ~ ">>").? ~~
+    ident ~~ ("<<" ~/ formula ~ ">>").? ~
       // Note that ident(termList) can still be ambiguous even if termList
       // is unambiguously a term (it will always be unambiguously a term)
       // so in the doAmbigCuts == false case we want to ignore those cuts
