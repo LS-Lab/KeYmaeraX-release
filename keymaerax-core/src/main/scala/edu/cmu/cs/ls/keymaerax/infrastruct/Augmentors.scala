@@ -297,10 +297,14 @@ object Augmentors {
 
         /** Partitions `repls` into those with key in `x` (variable/differential symbol), and those whose key is not in `x`. */
         def partitionBF(x: Seq[Variable], repls: Map[Expression, Expression]): (Map[Expression, Expression], Map[Expression, Expression]) = {
-          repls.partition({ case (k: Variable, _) => x.exists({
-            case ds@DifferentialSymbol(xx) => ds == k || xx == k
-            case v => v == k
-          }) })
+          repls.partition({
+            case (k: Variable, _) => x.exists({
+              case ds@DifferentialSymbol(xx) => ds == k || xx == k
+              case v => v == k
+            })
+            case (FuncOf(_, args), _) => !StaticSemantics.freeVars(args).intersect(x.toSet).isEmpty
+            case _ => false
+          })
         }
 
         /** Renames variable or differential symbol `what` according to the renaming in `ren`. */
