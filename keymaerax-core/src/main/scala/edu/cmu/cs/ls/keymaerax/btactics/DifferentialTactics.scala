@@ -1433,7 +1433,12 @@ private object DifferentialTactics extends Logging {
 
     val barrier = cf.left
 
-    val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
+    val lie = try {
+      DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new TacticInapplicableFailure("Unable to compute Lie derivative of " + barrier.prettyString, ex)
+    }
 
     //The special max term
     val barrierAlg = FuncOf(maxF, Pair(Times(barrier, barrier), lie))
@@ -1528,7 +1533,12 @@ private object DifferentialTactics extends Logging {
                                  property: ComparisonFormula, strict:Boolean=true): (ProvableSig,Term,Term) = {
 
     val p = property.left
-    val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
+    val lie = try {
+      DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new TacticInapplicableFailure("Unable to compute Lie derivative of " + p.prettyString, ex)
+    }
 
     val interp = (ToolTactics.interpretedFuncsOf(lie)++ToolTactics.interpretedFuncsOf(p)++ToolTactics.interpretedFuncsOf(dom)).distinct
     val renvar = "x_"
