@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.mutable
 
@@ -20,7 +21,10 @@ import scala.collection.mutable
   */
 class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
   /** The lemma cache, updated lazily on access of a lemma. */
-  private var cachedLemmas: mutable.Map[LemmaID, Lemma] = mutable.Map()
+  private val cachedLemmas: mutable.Map[LemmaID, Lemma] = mutable.Map()
+
+  /** Clears the cache. */
+  final def clearCache(): Unit = cachedLemmas.clear()
 
   /** @inheritdoc */
   final override def contains(lemmaID: LemmaID): Boolean = cachedLemmas.keySet.contains(lemmaID) || db.contains(lemmaID)
@@ -48,8 +52,10 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
 
   /** @inheritdoc */
   final override def add(lemma: Lemma): LemmaID = {
-    val id = db.add(lemma)
-    cachedLemmas += ((id,lemma))
+    //@note strip definitions to keep cache and database consistent, since Lemma.toString always prints without definitions
+    val stored = lemma.copy(fact = lemma.fact.reapply(Declaration(Map.empty)))
+    val id = db.add(stored)
+    cachedLemmas += ((id,stored))
     id
   }
 
