@@ -5,10 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
@@ -62,7 +60,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
     forEvery (tutorialEntries.filter(_._7.nonEmpty)) { (tutorialName, name, model, _, _, _, tactics, _) =>
       val defs = ArchiveParser.parseProblem(model, parseTactics=false).defs
       forEvery (table(tactics)) { ( tname, ttext) =>
-        withClue(tutorialName + "/" + name + "/" + tname) { BelleParser.parseWithInvGen(ttext, None, defs) }
+        withClue(tutorialName + "/" + name + "/" + tname) { ArchiveParser.tacticParser(ttext, defs) }
       }
     }
   }
@@ -102,13 +100,9 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
 
   private def runEntry(name: String, model: String, kind: String, tactic: (String, String, Boolean), db: TempDBTools) = {
     withClue(tutorialName + ": " + name + "/" + tactic._1) {
-      val (decls, invGen) = parseProblem(model)
+      val (decls, _) = parseProblem(model)
       println(s"Proving $name with ${tactic._1}")
-      // backwards compatibility: start with expandAll if model has expansible definitions and tactic does not expand any
-      val hasDefinitions = decls.decls.exists(_._2.interpretation.isDefined)
-      val tacticExpands = BelleParser.tacticExpandsDefsExplicitly(tactic._2)
-      if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
-      val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls, hasDefinitions && !tacticExpands)
+      val t = ArchiveParser.tacticParser(tactic._2, decls)
 
       val start = System.currentTimeMillis()
       val proof = db.proveBy(model, t, l => LazySequentialInterpreter(l :+ new PrintProgressListener(t), throwWithDebugInfo = false), name)
@@ -159,21 +153,20 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
   private def filterEntriesByTool(toolFilter: Iterator[Regex.Match] => Boolean, replaceQE: Boolean) = {
     // find all specific QE({`tool`}) and QE("tool") entries, but ignores the generic QE that works with any tool
     val qeOldFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
-    val qeFinder = """QE\("([^"]+)"\)""".r("toolName")
+    val qeFinder = """(?:QE|useSolver)\("([^"]+)"\)""".r("toolName")
 
     val skipEntries = tutorialEntries.filter(e => e._7.nonEmpty && !e._7.exists(t => t._3 &&
       toolFilter(qeFinder.findAllMatchIn(t._2)) && toolFilter(qeOldFinder.findAllMatchIn(t._2)))
     )
     skipEntries.foreach(e => println(s"QE tool mismatch: skipping ${e._2}"))
 
-    val foo = tutorialEntries.flatMap(e => e._7.filter(t => t._3 &&
+    tutorialEntries.flatMap(e => e._7.filter(t => t._3 &&
       toolFilter(qeFinder.findAllMatchIn(t._2)) && toolFilter(qeOldFinder.findAllMatchIn(t._2))).map(t =>
         (e._1, e._2, e._3, e._4, e._5, e._6,
           if (replaceQE) (t._1, qeOldFinder.replaceAllIn(qeFinder.replaceAllIn(t._2, "QE"), "QE"), t._3)::Nil
           else t::Nil, e._8)
       )
     )
-    foo
   }
 }
 

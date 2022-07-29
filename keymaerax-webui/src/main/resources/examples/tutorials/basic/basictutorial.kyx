@@ -217,13 +217,13 @@ ArchiveEntry "Beginner Safety Tutorial/10: Simple Rotational Dynamics"
 
 ProgramVariables
   Real d;  /* direction in x-axis */
-  Real e;  /* direction in y-axis */
+  Real f;  /* direction in y-axis */
   Real r;  /* radius r of circle around origin */
 End.
 
 Problem
-  d^2+e^2-r^2=0 ->
-    [{d'=e,e'=-d}@invariant(d^2+e^2-r^2=0)] d^2+e^2-r^2=0
+  d^2+f^2-r^2=0 ->
+    [{d'=f,f'=-d}@invariant(d^2+f^2-r^2=0)] d^2+f^2-r^2=0
 End.
 
 Tactic "Proof 10: Simple Rotational Dynamics"

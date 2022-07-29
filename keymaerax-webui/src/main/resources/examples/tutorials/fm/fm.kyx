@@ -280,6 +280,7 @@ Problem
 End.
 
 Tactic "Proof Formal Methods Tutorial Example 5"
+useSolver("Mathematica");
 implyR('R=="v>=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))&dx^2+dy^2=1&A()>=0&B()>0&ep()>0&r!=0->[{{{a:=-B();++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=A();r:=*;?r!=0;w:=*;?v=w/r;xo:=*;yo:=*;?abs(x-xo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v);}t:=0;}{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}}*](x-xo)^2+(y-yo)^2>0");
 andL('L=="v>=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))&dx^2+dy^2=1&A()>=0&B()>0&ep()>0&r!=0");
 andL('L=="(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))&dx^2+dy^2=1&A()>=0&B()>0&ep()>0&r!=0");

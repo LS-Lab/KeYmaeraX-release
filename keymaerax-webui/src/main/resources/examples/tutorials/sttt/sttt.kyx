@@ -437,7 +437,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 7"
-/* requires QE("Mathematica") */
+useSolver("Mathematica");
 implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*b()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,

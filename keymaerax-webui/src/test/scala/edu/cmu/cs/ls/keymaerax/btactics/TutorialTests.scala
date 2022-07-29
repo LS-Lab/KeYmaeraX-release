@@ -15,6 +15,7 @@ import TutorialTests._
 @SlowTest
 class TutorialTests extends Suites(
   // Tutorials
+  new TutorialRegressionTester("Implicit Definitions", "classpath:/examples/implicitdefinitions.kyx"),
   new TutorialRegressionTester("Basic", "classpath:/examples/tutorials/basic/basictutorial.kyx"),
   new TutorialRegressionTester("FM", "classpath:/examples/tutorials/fm/fm.kyx"),
   new TutorialRegressionTester("STTT", "classpath:/examples/tutorials/sttt/sttt.kyx"),
@@ -23,36 +24,16 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("POPL", "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx"),
   new TutorialRegressionTester("LFCPS", s"$GITHUB_PROJECTS_RAW_PATH/lfcps/lfcps.kyx"),
   new TutorialRegressionTester("LFCPS Tutorial", s"$GITHUB_PROJECTS_RAW_PATH/lfcps-tutorial/lfcps-tutorial.kyx"),
-  // Course
-  new TutorialRegressionTester("FCPS17-05", s"$COURSE17_PATH/05-dynax.kya"),
-  new TutorialRegressionTester("FCPS17-07", s"$COURSE17_PATH/07-loops.kya"),
-  new TutorialRegressionTester("FCPS17-08", s"$COURSE17_PATH/08-events.kya"),
-  new TutorialRegressionTester("FCPS17-09", s"$COURSE17_PATH/09-time.kya"),
-  new TutorialRegressionTester("FCPS17-10", s"$COURSE17_PATH/10-diffinv.kya"),
-  new TutorialRegressionTester("FCPS17-11", s"$COURSE17_PATH/11-diffcut.kya"),
-  new TutorialRegressionTester("FCPS17-12", s"$COURSE17_PATH/12-diffghost.kya"),
-  new TutorialRegressionTester("FCPS17-18", s"$COURSE17_PATH/18-gameproofs.kya"),
-  new TutorialRegressionTester("FCPS-R02", s"$COURSE17_PATH/recitation02.kya"),
-  new TutorialRegressionTester("FCPS-R03", s"$COURSE17_PATH/recitation03.kya"),
-  new TutorialRegressionTester("FCPS-R04", s"$COURSE17_PATH/recitation04.kya"),
-  new TutorialRegressionTester("FCPS-R05", s"$COURSE17_PATH/recitation05.kya"),
-  new TutorialRegressionTester("FCPS-R06", s"$COURSE17_PATH/recitation06.kya"),
-  new TutorialRegressionTester("FCPS-R07", s"$COURSE17_PATH/recitation07.kya"),
-  new TutorialRegressionTester("FCPS-R08", s"$COURSE17_PATH/recitation08.kya"),
-  new TutorialRegressionTester("FCPS-R09", s"$COURSE17_PATH/recitation09.kya"),
-  new TutorialRegressionTester("FCPS-R11", s"$COURSE17_PATH/recitation11.kya"),
-  new TutorialRegressionTester("FCPS-R12", s"$COURSE17_PATH/recitation12.kya"),
   // keymaerax-projects
   new TutorialRegressionTester("Bifurcations", s"$GITHUB_PROJECTS_RAW_PATH/bifurcations/saddle-nodes/1D/combined.kya"),
   new TutorialRegressionTester("DLDS 1", s"$GITHUB_PROJECTS_RAW_PATH/dlds/dlds.kya"),
-  new TutorialRegressionTester("DLDS 2", s"$GITHUB_PROJECTS_RAW_PATH/dlds/dlds-one.kya"),
   new TutorialRegressionTester("DLDS 3", s"$GITHUB_PROJECTS_RAW_PATH/dlds/parachute.kya"),
   new TutorialRegressionTester("DLDS 4", s"$GITHUB_PROJECTS_RAW_PATH/dlds/parachute-transformed.kya"),
   new TutorialRegressionTester("Games 1", s"$GITHUB_PROJECTS_RAW_PATH/games/dual-filibuster.kya"),
   new TutorialRegressionTester("Games 2", s"$GITHUB_PROJECTS_RAW_PATH/games/games.kya"),
   new TutorialRegressionTester("Games 3", s"$GITHUB_PROJECTS_RAW_PATH/games/goalie.kya"),
   new TutorialRegressionTester("Games 4", s"$GITHUB_PROJECTS_RAW_PATH/games/pusharound-cart.kya"),
-  new TutorialRegressionTester("Games 5", s"$GITHUB_PROJECTS_RAW_PATH/games/WALL-E-EVE.kya"),
+  new TutorialRegressionTester("Games 5", s"$GITHUB_PROJECTS_RAW_PATH/games/WALL-E-EVE.kyx"),
   new TutorialRegressionTester("Ghosts 1", s"$GITHUB_PROJECTS_RAW_PATH/ghosts_simple/example_1.kya"),
   new TutorialRegressionTester("Ghosts 2", s"$GITHUB_PROJECTS_RAW_PATH/ghosts_simple/example_2.kya"),
   new TutorialRegressionTester("Ghosts 3", s"$GITHUB_PROJECTS_RAW_PATH/ghosts_simple/example_3.kya"),
@@ -72,10 +53,11 @@ class TutorialTests extends Suites(
 
 @ExtremeTest
 class CaseStudyTests extends Suites(
+  new CaseStudyRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx"),
   new CaseStudyRegressionTester("Roundabout", s"$GITHUB_PROJECTS_RAW_PATH/roundabout/TRM-essentials.kya"),
   new CaseStudyRegressionTester("ACAS X", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx.kyx"),
+  new CaseStudyRegressionTester("RAL", s"$GITHUB_PROJECTS_RAW_PATH/ral/relative-full.kyx"),
   new CaseStudyRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx"),
-  new CaseStudyRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx"),
   // ACAS-X games
   new CaseStudyRegressionTester("ACAS X Games Bounded-Time Non-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Bounded-Time Safety for a Non-Maneuvering Intruder.kyx"),
   new CaseStudyRegressionTester("ACAS X Games Bounded-Time Vertically-Maneuvering", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx-games/Bounded-Time Safety for a Vertically-Maneuvering Intruder.kyx"),
@@ -87,9 +69,7 @@ class CaseStudyTests extends Suites(
 )
 
 object TutorialTests {
-  val COURSE17_PATH: String = "http://symbolaris.com/course/fcps17"
-//  val GITHUB_PROJECTS_RAW_PATH: String = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
+  val GITHUB_PROJECTS_RAW_PATH: String = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
   // for testing changes in a locally cloned repository
-//  val COURSE17_PATH: String = "classpath:/course"
-  val GITHUB_PROJECTS_RAW_PATH: String = "classpath:/keymaerax-projects"
+//  val GITHUB_PROJECTS_RAW_PATH: String = "classpath:/keymaerax-projects"
 }
