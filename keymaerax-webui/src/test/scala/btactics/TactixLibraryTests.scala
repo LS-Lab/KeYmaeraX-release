@@ -729,6 +729,16 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "FEATURE_REQUEST: prove an event-triggered system fully automatically" taggedAs TodoTest in withMathematica { _ =>
+    //@todo better loop invariant generator needed (revisit loopPostMaster)
+    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) //@note ignore annotations
+    val entry = ArchiveParser.getEntry("Benchmarks/Basic/STTT Tutorial: Example 3a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).get
+    withTacticProgress(autoClose, List("_ALL"))(
+      proveBy(entry.model.asInstanceOf[Formula], _, defs=entry.defs)
+    ) shouldBe 'proved
+  }
+
   it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>
     val problem1 = """
       v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
