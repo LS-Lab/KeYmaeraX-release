@@ -343,9 +343,9 @@ object AxiomaticODESolver {
   }
 
   def sortSubst(dom:Formula, post:Formula, context:DifferentialProgram, ode1:DifferentialProgram, ode2:DifferentialProgram):USubst = USubst(List(
-    SubstitutionPair(DifferentialProgramConst("c"), context),
-    SubstitutionPair(DifferentialProgramConst("d"), ode1),
-    SubstitutionPair(DifferentialProgramConst("e"), ode2),
+    SubstitutionPair(DifferentialProgramConst("c_"), context),
+    SubstitutionPair(DifferentialProgramConst("d_"), ode1),
+    SubstitutionPair(DifferentialProgramConst("e_"), ode2),
     SubstitutionPair(UnitPredicational("q", AnyArg), dom),
     SubstitutionPair(UnitPredicational("p", AnyArg), post)))
 
