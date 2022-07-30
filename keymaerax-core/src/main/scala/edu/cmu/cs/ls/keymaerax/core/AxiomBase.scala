@@ -383,7 +383,7 @@ End.
 
 /* @todo: , commute should be derivable from this + ghost */
 Axiom ", sort"
-  [{c,d,e&q(||)}]p(||) <-> [{c,e,d&q(||)}]p(||)
+  [{c_,d_,e_&q(||)}]p(||) <-> [{c_,e_,d_&q(||)}]p(||)
 End.
 
 Axiom ", commute"

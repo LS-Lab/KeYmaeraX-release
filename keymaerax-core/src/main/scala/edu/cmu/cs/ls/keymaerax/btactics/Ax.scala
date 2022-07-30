@@ -3749,42 +3749,42 @@ object Ax extends Logging {
     key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXgt: DerivedAxiomInfo =
     derivedAxiom("DBX>",
-    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(e_(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e_(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e_(|y_|))'>=g(|y_|)*e_(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
-      dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
+      dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e_(|y_|)*y_^2>0".asFormula)*/)(1) &
       useAt(Ax.DGpp, (us:Option[Subst])=>us.get ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
       //The following replicates functionality of existsR(Number(1))(1)
       // 1) Stutter
-      cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
-        cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1) <(
+      cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e_(|y_|)>0".asFormula)(1,0::Nil) <(
+        cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e_(|y_|)>0".asFormula)(1) <(
           //2) assignb
           useAt(assignbeqy)(1) &
           ProofRuleTactics.skolemizeR(1) & implyR(1),
           //3) finish up
           cohide(1) & CMon(PosInExpr(Nil)) &
-          byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+          byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e_(|y_|)>0".asFormula)) :: Nil))
           )
           ,
           cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfassignby) & done
         ) &
       useAt(ally, PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
       useAt(commaCommute)(-1) & //@note since DG inverse differential ghost has flipped order
-      cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
+      cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e_(|y_|)*y_^2>0".asFormula)(1) <(
         useAt(DI)(1) & implyR(1) & andR(1) <(
-          hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>0".asFormula,"y()=1".asFormula), IndexedSeq("e()*y()^2>0".asFormula)), QE & done)),
+          hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e_()>0".asFormula,"y()=1".asFormula), IndexedSeq("e_()*y()^2>0".asFormula)), QE & done)),
           derive(1, PosInExpr(1::Nil)) &
           useAt(commaCommute)(1) & useAt(DEsysy)(1) &
           useAt(Dassignby, PosInExpr(0::Nil))(1, PosInExpr(1::Nil)) &
           cohide2(-1,1) & HilbertCalculus.monb &
           // DebuggingTactics.print("DI finished") &
-          byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e()".asFormula), IndexedSeq("ep()*y()^2 + e()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
+          byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e_()".asFormula), IndexedSeq("ep()*y()^2 + e_()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
           ),
           implyR(1) &
             // DebuggingTactics.print("new post") &
-            cohide2(-4, 1) & HilbertCalculus.monb & byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>0".asFormula), IndexedSeq("e()>0".asFormula)), QE & done))
+            cohide2(-4, 1) & HilbertCalculus.monb & byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e_()*y()^2>0".asFormula), IndexedSeq("e_()>0".asFormula)), QE & done))
         )
     )
 
@@ -3800,47 +3800,47 @@ object Ax extends Logging {
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
-  @Axiom("DBX> open", conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e>0→(e)'≥ge)",
+  @Axiom("DBX> open", conclusion = "(e_>0 → __[x'=f(x)&Q]e_>0__) ← [x'=f(x)&Q](e_>0→(e_)'≥ge)",
     key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
   lazy val DBXgtOpen: DerivedAxiomInfo =
     derivedAxiom("DBX> open",
-      Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("(e_(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e_(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e_(|y_|) > 0 -> (e_(|y_|)'>=g(|y_|)*e_(|y_|)))".asFormula)),
       implyR(1) & implyR(1) &
-        dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
+        dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e_(|y_|)*y_^2>0".asFormula)*/)(1) &
         useAt(Ax.DGpp, (us:Option[Subst])=>us.get++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
         //The following replicates functionality of existsR(Number(1))(1)
         // 1) Stutter
-        cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
-          cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1) <(
+        cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e_(|y_|)>0".asFormula)(1,0::Nil) <(
+          cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e_(|y_|)>0".asFormula)(1) <(
             //2) assignb
             useAt(assignbeqy)(1) &
               ProofRuleTactics.skolemizeR(1) & implyR(1),
             //3) finish up
             cohide(1) & CMon(PosInExpr(Nil)) &
-              byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+              byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e_(|y_|)>0".asFormula)) :: Nil))
           )
           ,
           cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfassignby) & done
         ) &
         useAt(ally, PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
         useAt(commaCommute)(-1) & //@note since DG inverse differential ghost has flipped order
-        cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
+        cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e_(|y_|)*y_^2>0".asFormula)(1) <(
           useAt(DIogreater)(1) <(
-            HilbertCalculus.testb(1) & implyR(1) & hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>0".asFormula,"y()=1".asFormula), IndexedSeq("e()*y()^2>0".asFormula)), QE & done)),
+            HilbertCalculus.testb(1) & implyR(1) & hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e_()>0".asFormula,"y()=1".asFormula), IndexedSeq("e_()*y()^2>0".asFormula)), QE & done)),
             implyR(1) & hideL(-4) &
               derive(1, PosInExpr(1::1::Nil)) &
               useAt(commaCommute)(1) & useAt(DEsysy)(1) &
               useAt(Dassignby, PosInExpr(0::Nil))(1, PosInExpr(1::Nil)) &
               cohide2(-1,1) & HilbertCalculus.monb &
               // DebuggingTactics.print("DI finished") &
-              byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e() > 0 -> ep()>=g()*e()".asFormula), IndexedSeq("e()*y()^2 >0 -> ep()*y()^2 + e()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
+              byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e_() > 0 -> ep()>=g()*e_()".asFormula), IndexedSeq("e_()*y()^2 >0 -> ep()*y()^2 + e_()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
           ),
           implyR(1) &
             // DebuggingTactics.print("new post") &
-            cohide2(-4, 1) & HilbertCalculus.monb & byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>0".asFormula), IndexedSeq("e()>0".asFormula)), QE & done))
+            cohide2(-4, 1) & HilbertCalculus.monb & byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e_()*y()^2>0".asFormula), IndexedSeq("e_()>0".asFormula)), QE & done))
         )
     )
 
@@ -3863,7 +3863,7 @@ object Ax extends Logging {
     key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXge: DerivedAxiomInfo =
     derivedAxiom("DBX>=",
-      Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)>=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)>=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'>=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("(e_(|y_,z_|)>=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e_(|y_,z_|)>=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e_(|y_,z_|))'>=g(|y_,z_|)*e_(|y_,z_|)".asFormula)),
       implyR(1) & implyR(1) &
         dG(AtomicODE(DifferentialSymbol(dbx_internal),
           Times(Neg(Divide("g(|y_,z_|)".asTerm, Number(BigDecimal(2)))), dbx_internal)), None)(1) &
@@ -3875,16 +3875,16 @@ object Ax extends Logging {
         useAt(selfassignby)(1) &
         useAt(ally, PosInExpr(0 :: Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
         useAt(commaCommute)(-1) &
-        cutR("[{c{|y_,z_|},y_'=(-(g(|y_,z_|)/2))*y_+0&q(|y_,z_|)}](e(|y_,z_|)*y_^2>=0 & y_ > 0)".asFormula)(1) < (
+        cutR("[{c{|y_,z_|},y_'=(-(g(|y_,z_|)/2))*y_+0&q(|y_,z_|)}](e_(|y_,z_|)*y_^2>=0 & y_ > 0)".asFormula)(1) < (
           TactixLibrary.boxAnd(1) & andR(1) < (
             useAt(DI)(1) & implyR(1) & andR(1) < (
               hideL(-4) & hideL(-1) &
-                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>=0".asFormula, "y()>0".asFormula), IndexedSeq("e()*y()^2>=0".asFormula)), QE & done)),
+                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e_()>=0".asFormula, "y()>0".asFormula), IndexedSeq("e_()*y()^2>=0".asFormula)), QE & done)),
               derive(1, PosInExpr(1 :: Nil)) &
                 useAt(commaCommute)(1) & useAt(DEsysy)(1) &
                 useAt(Dassignby, PosInExpr(0 :: Nil))(1, PosInExpr(1 :: Nil)) &
                 cohide2(-1, 1) & HilbertCalculus.monb &
-                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e()".asFormula), IndexedSeq("ep()*y()^2 + e()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
+                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e_()".asFormula), IndexedSeq("ep()*y()^2 + e_()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
             ),
             cohideOnlyL('Llast) &
               implyRi &
@@ -3896,7 +3896,7 @@ object Ax extends Logging {
           ),
           cohideR(1) & implyR(1) &
             HilbertCalculus.monb &
-            byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>=0 & y() > 0".asFormula), IndexedSeq("e()>=0".asFormula)), QE & done))
+            byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e_()*y()^2>=0 & y() > 0".asFormula), IndexedSeq("e_()>=0".asFormula)), QE & done))
         )
     )
 
@@ -3919,7 +3919,7 @@ object Ax extends Logging {
     key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXeq: DerivedAxiomInfo =
     derivedAxiom("DBX=",
-      Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+      Sequent(IndexedSeq(), IndexedSeq("(e_(|y_,z_|)=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e_(|y_,z_|)=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e_(|y_,z_|))'=g(|y_,z_|)*e_(|y_,z_|)".asFormula)),
       implyR(1) & implyR(1) &
         useAt(dbxEqArith)('Llast) & andL('Llast) &
         useAt(dbxEqArith)(1,PosInExpr(1::Nil)) &
@@ -3951,14 +3951,14 @@ object Ax extends Logging {
     key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
   lazy val DBXltOpen: DerivedAxiomInfo =
   derivedAxiom("DBX< open",
-    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)<0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)<0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) < 0 -> (e(|y_|)'<=g(|y_|)*e(|y_|)))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(e_(|y_|)<0 -> [{c{|y_|}&q(|y_|)}]e_(|y_|)<0) <- [{c{|y_|}&q(|y_|)}](e_(|y_|) < 0 -> (e_(|y_|)'<=g(|y_|)*e_(|y_|)))".asFormula)),
     implyR(1) &
       useAt(dbxLtArith)(1,0::Nil) &
       useAt(dbxLtArith)(1,1::1::Nil) &
       useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) &
       monb &
       derive(1,1::0::Nil) &
-      byUS(TactixLibrary.proveBy("e() < 0->f()<=g()*h() ==> -e()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
+      byUS(TactixLibrary.proveBy("e_() < 0->f()<=g()*h() ==> -e_()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
   )
 
   private lazy val dbxLeArith = proveBy("f_() <= 0 <-> -f_()>=0".asFormula,QE)
@@ -3978,7 +3978,7 @@ object Ax extends Logging {
     key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXle: DerivedAxiomInfo =
   derivedAxiom("DBX<=",
-    Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)<=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)<=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'<=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(e_(|y_,z_|)<=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e_(|y_,z_|)<=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e_(|y_,z_|))'<=g(|y_,z_|)*e_(|y_,z_|)".asFormula)),
     implyR(1) &
       useAt(dbxLeArith)(1,0::Nil) &
       useAt(dbxLeArith)(1,1::1::Nil) &
@@ -4005,18 +4005,18 @@ object Ax extends Logging {
     key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
   lazy val DBXneOpen: DerivedAxiomInfo =
   derivedAxiom("DBX!= open",
-    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)!=0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)!=0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) != 0 -> (e(|y_|)'=g(|y_|)*e(|y_|)))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(e_(|y_|)!=0 -> [{c{|y_|}&q(|y_|)}]e_(|y_|)!=0) <- [{c{|y_|}&q(|y_|)}](e_(|y_|) != 0 -> (e_(|y_|)'=g(|y_|)*e_(|y_|)))".asFormula)),
     implyR(1) &
       useAt(dbxNeArith)(1,0::Nil) &
       useAt(dbxNeArith)(1,1::1::Nil) &
       implyR(1) & orL('Llast) <(
       useAt(Ax.boxOrLeft)(1) & exchangeL(-1,-2) & implyRi &
         useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) & monb &
-        byUS(TactixLibrary.proveBy("e() != 0->f()=g() ==> e()>0 -> f()>=g()".asSequent, QE & done)),
+        byUS(TactixLibrary.proveBy("e_() != 0->f()=g() ==> e_()>0 -> f()>=g()".asSequent, QE & done)),
       useAt(Ax.boxOrRight)(1) & exchangeL(-1,-2) & implyRi &
         useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) & monb &
         derive(1,1::0::Nil) &
-        byUS(TactixLibrary.proveBy("e() != 0->f()=g()*h() ==> -e()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
+        byUS(TactixLibrary.proveBy("e_() != 0->f()=g()*h() ==> -e_()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
     )
   )
 
@@ -4594,9 +4594,9 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("*i", unifier = "full")
-  lazy val timesInverse: DerivedAxiomInfo = derivedAxiom("* inverse", Sequent(IndexedSeq(), IndexedSeq("f_() != 0 -> f_()*(f_()^-1) = 1".asFormula)),
+  lazy val timesInverse: DerivedAxiomInfo = derivedAxiom("* inverse", Sequent(IndexedSeq(), IndexedSeq("f_() != 0 -> f_()*(f_()^(-1)) = 1".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
-    byUS(proveBy("\\forall x (x != 0 -> x*(x^-1) = 1)".asFormula, TactixLibrary.RCF))
+    byUS(proveBy("\\forall x (x != 0 -> x*(x^(-1)) = 1)".asFormula, TactixLibrary.RCF))
   )
 
   /**
@@ -5758,7 +5758,7 @@ object Ax extends Logging {
     QE & done
   )
   @Axiom("divideNeg")
-  lazy val divideNeg: DerivedAxiomInfo = derivedFormula("divideNeg","(-p_()/-q_() = r_()) -> p_()/q_() = r_()".asFormula,
+  lazy val divideNeg: DerivedAxiomInfo = derivedFormula("divideNeg","((-p_())/(-q_()) = r_()) -> p_()/q_() = r_()".asFormula,
     QE & done
   )
 
