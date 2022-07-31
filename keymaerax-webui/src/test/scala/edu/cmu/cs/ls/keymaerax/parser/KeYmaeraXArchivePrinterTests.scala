@@ -43,10 +43,10 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
   it should "print and reparse interpreted function definitions" in {
     val entry = ArchiveParser(
       """ArchiveEntry "exp"
-        |Definitions implicit Real e(Real t) = {{e:=1;t:=2;}; {e'=-e,t'=1}};
+        |Definitions implicit Real e1(Real t) = {{e1:=1;t:=2;}; {e1'=-e1,t'=1}};
         |End.
         |ProgramVariables Real x; End.
-        |Problem e(x) > 0
+        |Problem e1(x) > 0
         |End.
         |End.""".stripMargin).head
     val printed = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments=false)(entry)
@@ -55,7 +55,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
         |
         |Theorem "exp"
         |Definitions
-        |  Real e(Real x_0) = ( e<< <{e:=._0;t:=._1;}{{e'=--e,t'=-1}++{e'=-e,t'=1}}>(e=1&t=2) >>(x_0) );
+        |  Real e1(Real x_0) = ( e1<< <{e1:=._0;t:=._1;}{{e1'=--e1,t'=-1}++{e1'=-e1,t'=1}}>(e1=1&t=2) >>(x_0) );
         |End.
         |
         |ProgramVariables
@@ -63,7 +63,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
         |End.
         |
         |Problem
-        |  e(x)>0
+        |  e1(x)>0
         |End.
         |
         |
