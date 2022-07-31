@@ -45,7 +45,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     Try(TacticInfo.apply(e.prettyString)).toOption match {
       // anything that needs a generator (e.g. master) will never be a BelleExpr so might as well take the codeName
       // directly for those.
-      case Some(info) if info.belleExpr == e || info.needsGenerator => info.codeName
+      case Some(info) if info.numPositionArgs==0 && (info.belleExpr == e || info.needsGenerator) => info.codeName
       case _ => e match {
         case DefTactic(name, t) => op(e).terminal.img + SPACE + name + SPACE + AS.img + SPACE + OPEN_PAREN.img + newline(indent+1) + pp(t, indent+1) + newline(indent) + CLOSE_PAREN.img
         case ApplyDefTactic(DefTactic(name, _)) => name

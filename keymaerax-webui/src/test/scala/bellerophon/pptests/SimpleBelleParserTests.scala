@@ -71,7 +71,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
   
   it should "accept id as well as closeId" in {
-    tacticParser("closeId") shouldBe (round trip TactixLibrary.closeId)
+    tacticParser("closeId(-1, 1)") shouldBe (round trip TactixLibrary.closeId(-1, 1))
     tacticParser("id") shouldBe (round trip TactixLibrary.id)
   }
 
@@ -436,7 +436,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         or have message
         """1:29 Error parsing baseTac at 1:29
           |Found:    "\"Step\": an" at 1:29
-          |Expected: ("?" | <(tactic,tactic,...) | (tactic) | "doall" | "partial" | "let" | "tactic" | "USMatch" | atomicTactic | tactic(...))
+          |Expected: ("?" | <(tactic,tactic,...) | (tactic) | "doall" | "partial" | "let" | "tactic" | "USMatch" | tactic(...) | atomicTactic)
           |Hint: Try ("?" | "<" | "(" | "doall" | "partial" | "let" | "tactic" | "USMatch" | [a-zA-Z])""".stripMargin)
   }
 
