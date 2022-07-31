@@ -1,12 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Region, Signature, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLParser, Declaration, Name, Parser, ParserInit, Region, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -828,9 +829,24 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }
 
-  "Shipped tutorial import" should "import all tutorials correctly" in withTactics { withDatabase { importExamplesIntoDB } }
+  //@note old parser cannot parse implicit definitions
+  "Shipped tutorial import" should "import all tutorials correctly" in
+    withTemporaryConfig(Map(Configuration.Keys.CHECK_AGAINST_PARSER -> "")) {
+      // re-initialize the parser (DLParser singleton may have check-against set by previous test cases)
+      val c = DLParser.getClass.getDeclaredConstructor()
+      c.setAccessible(true)
+      c.newInstance()
+      Parser.setParser(DLParser)
+      withTactics { withDatabase { importExamplesIntoDB } }
+    }
 
-  it should "execute all imported tutorial tactics correctly" in withMathematica { tool => withDatabase { db =>
+  it should "execute all imported tutorial tactics correctly" in withTemporaryConfig(Map(Configuration.Keys.CHECK_AGAINST_PARSER -> "")) { withMathematica { tool => withDatabase { db =>
+    // re-initialize the parser (DLParser singleton may have check-against set by previous test cases)
+    val c = DLParser.getClass.getDeclaredConstructor()
+    c.setAccessible(true)
+    c.newInstance()
+    Parser.setParser(DLParser)
+
     val userName = "maxLevelUser"
     // import all tutorials, creates user too
     importExamplesIntoDB(db)
@@ -893,7 +909,7 @@ class ScriptedRequestTests extends TacticTestBase {
         println("Done (" + (System.currentTimeMillis()-start)/1000 + "s)")
       }
     }
-  }}
+  }}}
 
   private def runTactic(db: TempDBTools, token: SessionToken, proofId: Int)(nodeId: String, tactic: BelleExpr): Response = {
     def createInputs(name: String, inputs: Seq[Any]): Seq[BelleTermInput] = {
