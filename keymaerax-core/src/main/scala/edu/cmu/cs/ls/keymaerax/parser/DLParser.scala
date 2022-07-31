@@ -142,8 +142,8 @@ class DLParser extends Parser {
           }
           if (oldres != newres && (oldres.isRight || newres.isRight)) {
             println(s"Parser disagreement ($name): `$s`")
-            println(s"KYXParser:\n${oldres match {case Left(x) => x.toString case Right(x: Expression) => x.prettyString case Right(x) => x.toString}}")
-            println(s"DLParser:\n${newres match {case Left(x) => x.toString case Right(x: Expression) => x.prettyString case Right(x) => x.toString}}")
+            println(s"KYXParser:\n${oldres match {case Left(x) => x.toString case Right(x: Expression) => KeYmaeraXNoContractPrettyPrinter(x) case Right(x) => x.toString}}")
+            println(s"DLParser:\n${newres match {case Left(x) => x.toString case Right(x: Expression) => KeYmaeraXNoContractPrettyPrinter(x) case Right(x) => x.toString}}")
           }
         case None => // nothing to do
       }
