@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 import scala.collection.immutable.List
+import scala.collection.mutable.ListBuffer
 
 /** Name is alphanumeric name and index. */
 case class Name(name: String, index: Option[Int] = None) {
@@ -33,7 +34,7 @@ case class Signature(domain: Option[Sort], codomain: Sort, arguments: Option[Lis
   */
 case class Declaration(decls: Map[Name, Signature]) {
   /** The declarations as topologically sorted substitution pairs. */
-  lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2.interpretation match {
+  lazy val substs: List[SubstitutionPair] = Declaration.topSort(decls.filter(_._2.interpretation match {
     case Some(ns: NamedSymbol) => !ReservedSymbols.reserved.contains(ns)
     case i => i.isDefined
   }).map({
@@ -65,16 +66,8 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Declared names and signatures as [[NamedSymbol]]. */
   lazy val asNamedSymbols: List[NamedSymbol] = {
-    topSort(decls).reverseMap(decl => Declaration.asNamedSymbol(decl._1,
+    Declaration.topSort(decls).reverseMap(decl => Declaration.asNamedSymbol(decl._1,
       decl._2.copy(interpretation = decl._2.interpretation.map(elaborateToSystemConsts))))
-  }
-
-  /** Topologically sorts the names in `decls`. */
-  private def topSort(decls: Map[Name, Signature]): List[(Name, Signature)] = {
-    val adjacencyMap = decls.map({ case (name, Signature(_, _, _, repl, _)) =>
-      name -> repl.map(StaticSemantics.signature).map(_.map(ns => Name(ns.name, ns.index))).getOrElse(Set.empty) })
-    val sortedNames = DependencyAnalysis.dfs[Name](adjacencyMap)
-    decls.toList.sortBy(s => sortedNames.indexOf(s._1))
   }
 
   /** Joins two declarations. */
@@ -286,6 +279,14 @@ object Declaration {
       case SubstitutionPair(s: ProgramConst, r) =>
         Name(s.name, s.index) -> Signature(None, s.sort, None, Some(r), UnknownLocation)
     }).toMap)
+  }
+
+  /** Topologically sorts the names in `decls`. */
+  def topSort(decls: Map[Name, Signature]): List[(Name, Signature)] = {
+    val adjacencyMap = decls.map({ case (name, Signature(_, _, _, repl, _)) =>
+      name -> repl.map(StaticSemantics.signature).map(_.map(ns => Name(ns.name, ns.index))).getOrElse(Set.empty) })
+    val sortedNames = DependencyAnalysis.dfs[Name](adjacencyMap).reverse
+    decls.toList.sortBy(s => sortedNames.indexOf(s._1))
   }
 }
 
@@ -656,13 +657,20 @@ object ArchiveParser extends ArchiveParser {
       ds.foldLeft(e)({ case (e, n) => e.replaceFree(n, Differential(n.x)) })
     }
 
-    defs.copy(decls = defs.decls.map({ case (name, sig@Signature(_, sort, argNames, interpretation, loc)) =>
-      (name, sig.copy(interpretation = interpretation.map(i => {
-        val elaborated = defs.elaborateToSystemConsts(defs.elaborateToFunctions(elaborateToDifferentials(i), taboos(argNames.getOrElse(Nil))))
+    val elab = ListBuffer.empty[(Name, Signature)]
+    val remainder = scala.collection.mutable.Map(defs.decls.toSeq:_*)
+    defs.copy(decls = Declaration.topSort(defs.decls).map({ case (name, sig@Signature(_, sort, argNames, interpretation, loc)) =>
+      val r = (name, sig.copy(interpretation = interpretation.map(i => {
+        //@note use already elaborated symbols instead of original symbols
+        val d = Declaration(elab.toMap ++ remainder)
+        val elaborated = d.elaborateToSystemConsts(d.elaborateToFunctions(elaborateToDifferentials(i), taboos(argNames.getOrElse(Nil))))
         if (elaborated.sort != sort) throw ParseException("Definition " + name.prettyString + " does not fit declared sort " + sort + "; right-hand side is of sort " + elaborated.sort, loc)
         elaborated
       })))
-    }))
+      elab += r
+      remainder.remove(name)
+      r
+    }).toMap)
   }
 
   /**
