@@ -72,7 +72,7 @@ trait BasePrettyPrinter extends PrettyPrinter {
       (1 to seq.succ.length).map(i => +i + ":  " + stringify(seq.succ(i - 1)) + "\t" + seq.succ(i - 1).getClass.getSimpleName).mkString("\n")
 
   /** Reparse the string print as the same kind as expr has */
-  private def reparse(expr: Expression, print: String): Expression = expr.kind match {
+  protected[keymaerax] def reparse(expr: Expression, print: String): Expression = expr.kind match {
     case TermKind => parser.termParser(print)
     case FormulaKind => parser.formulaParser(print)
     case ProgramKind => parser.programParser(print)
@@ -577,6 +577,20 @@ object KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXOmitInterpretat
 
 /** A pretty printer that omits the interpretations of interpreted functions. */
 class KeYmaeraXOmitInterpretationPrettyPrinter extends KeYmaeraXPrecedencePrinter {
+  override def apply(expr: Expression): String = stringify(expr) ensures(
+    //@note functions and interpreted functions are printed without parentheses/interpretations and do not reparse
+    r => expr.kind == FunctionKind
+      || StaticSemantics.symbols(expr).exists({ case Function(_, _, _, _, i) => i.isDefined case _ => false })
+      || reparse(expr, r) == expr,
+    "Expect parse of print to be identity." +
+      //@todo reconcile first and last line of contract message
+      "\nExpression: " + FullPrettyPrinter.stringify(expr) + "\t@ " + expr.getClass.getSimpleName +
+      "\nPrinted:    " + stringify(expr) +
+      "\nReparsed:   " + stringify(reparse(expr, stringify(expr))) + "\t@ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpression: " + FullPrettyPrinter.stringify(reparse(expr, stringify(expr))) + "\t@ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpected:   " + FullPrettyPrinter.stringify(expr) + "\t@ " + expr.getClass.getSimpleName
+  )
+
   protected override def pp(q: PosInExpr, term: Term): String = term match {
     case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
     case FuncOf(Function(n, i, d, _, Some(_)), arg) =>
