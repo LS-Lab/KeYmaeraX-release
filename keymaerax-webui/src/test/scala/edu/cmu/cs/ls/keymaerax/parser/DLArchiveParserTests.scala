@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -988,7 +988,7 @@ class DLArchiveParserTests extends TacticTestBase {
         |Hint: Try ("Real" | "Bool" | "HP" | "HG" | Unique name (x not unique))""".stripMargin
   }
 
-  it should "not complain about undeclared variables in unused program definitions" in {
+  it should "complain about undeclared variables in unused program definitions" in {
     val input =
       """ArchiveEntry "Test"
         |Definitions HP a ::= { y:=y+1; }; End.
@@ -996,7 +996,37 @@ class DLArchiveParserTests extends TacticTestBase {
         |Problem [x:=1;]x>=0 End.
         |End.
         |""".stripMargin
-      parse(input).head.model shouldBe Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0)))
+      the [ParseException] thrownBy parse(input) should have message
+        """<somewhere> Definition a uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
+          |Found:    <unknown> at <somewhere>
+          |Expected: <unknown>""".stripMargin
+  }
+
+  it should "FEATURE_REQUEST: combine program variables and bound variables in formula when filtering" taggedAs TodoTest in {
+    val input =
+      """SharedDefinitions
+        |  Real one = 1;
+        |  HP contincy ::= { {y'=one} };
+        |End.
+        |
+        |Theorem "Universally quantifies y"
+        |  Problem \forall y [contincy;]y>=old(y) End.
+        |End.""".stripMargin
+    val result = parse(input).loneElement
+    result.fileContent shouldBe
+      """SharedDefinitions
+        |  Real one = 1;
+        |  HP contincy ::= { {y'=one} };
+        |End.
+        |Theorem "Universally quantifies y"
+        |  Problem \forall y [contincy;]y>=old(y) End.
+        |End.""".stripMargin
+    result.defs should beDecl(
+      Declaration(Map(
+        Name("one", None) -> Signature(Some(Unit), Real, Some(List.empty), Some("1".asTerm), UnknownLocation),
+        Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Some("{y'=one()}".asProgram), UnknownLocation)
+      )))
+    result.model shouldBe "\\forall y [contincy{|^@|};]y>=old(y)".asFormula
   }
 
   it should "complain about undeclared variables in unused function definitions" in {
@@ -1037,7 +1067,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.defs.decls(Name("f")).interpretation shouldBe Some(Power(FuncOf(InterpretedSymbols.E, Nothing), DotTerm()))
   }
 
-  it should "not elaborate in unused program definitions" in {
+  it should "not elaborate in unused shared program definitions" in {
     val input =
       """SharedDefinitions HP a ::= { y:=y+1; }; End.
         |ArchiveEntry "Test"
@@ -1047,6 +1077,34 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
         |""".stripMargin
     parse(input).head.model shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
+  }
+
+  it should "elaborate in used shared program definitions" in {
+    val input =
+      """SharedDefinitions HP a ::= { x:=y; }; End.
+        |ArchiveEntry "Test"
+        |Definitions Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [a;]x>=0 End.
+        |End.
+        |""".stripMargin
+    parse(input).head.expandedModel shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
+  }
+
+  it should "report when elaborating in used shared program definitions is impossible" in {
+    //@todo better error message
+    val input =
+      """SharedDefinitions HP a ::= { x:=y; }; HP b ::= { y:=y+1; }; End.
+        |ArchiveEntry "Test"
+        |Definitions Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [a;b;]x>=0 End.
+        |End.
+        |""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> Unable to elaborate to function symbols: assertion failed: Elaboration tried replacing y in literal bound occurrence inside y:=y+1;
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "not elaborate to program constants when definitions contain duals" in {
@@ -1497,7 +1555,7 @@ class DLArchiveParserTests extends TacticTestBase {
         |     {{tanh:=0;}; {tanh'=1-tanh^2}};
         | End.
         | ProgramVariables Real y; End.
-        | Problem (sin1(y))^2 + (cos1(y))^2 = 1 End.
+        | Problem (sin1(y))^2 + (cos1(y))^2 = 1 & tanh(y)^2>=0 End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -1510,14 +1568,19 @@ class DLArchiveParserTests extends TacticTestBase {
         Name("tanh", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), Some(FuncOf(tanh, DotTerm())), UnknownLocation),
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe (
+    entry.model shouldBe And(
       Equal(
         Plus(
           Power(FuncOf(sin1, "y".asVariable), Number(2)),
           Power(FuncOf(cos1, "y".asVariable), Number(2))
         ),
         Number(1)
-      ))
+      ),
+      GreaterEqual(
+        Power(FuncOf(tanh, "y".asVariable), Number(2)),
+        Number(0)
+      )
+    )
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()

@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.TacticParser
 
 import java.io.InputStream
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ProverSetupException}
-import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Quantified, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -122,8 +122,11 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Elaborates variable uses of declared functions, except those listed in taboo. */
   //@todo need to look into concrete programs that implement program constants when elaborating
-  def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T =
+  def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T = try {
     expr.elaborateToFunctions(asNamedSymbols.toSet ++ InterpretedSymbols.builtin.toSet -- taboo).asInstanceOf[T]
+  } catch {
+    case ex: AssertionError => throw ParseException("Unable to elaborate to function symbols: " + ex.getMessage, ex)
+  }
 
   /** Elaborates program constants to system constants if their definition is dual-free. */
   def elaborateToSystemConsts[T <: Expression](expr: T): T = {
@@ -410,17 +413,39 @@ object ArchiveParser extends ArchiveParser {
       Declaration(Map(Name("old", None) -> Signature(Some(Real), Real, Some(List((Name("\\cdot", None), Real))), None, UnknownLocation)))
   }
 
-  /** Returns the free base symbols of expression `e`. */
-  private def freeBaseSymbols(e: Expression): Set[NamedSymbol] =
+  /** Returns all symbols of `e` minus the explicitly quantified symbols (want to treat \forall x differently from [x:=...;]). */
+  private def baseSymbols(e: Expression): Set[NamedSymbol] =
     (StaticSemantics.symbols(e) -- (e match {
-      case _: Term => Set.empty
+      case _: Term => Set.empty // include all term symbols
       case f: Formula =>
-        val s = StaticSemantics(f)
-        (s.bv--s.fv).toSet
-      case p: Program => StaticSemantics(p).mbv.toSet
+        // exclude universally/existentially quantified symbols
+        val quantifiedSymbols = scala.collection.mutable.Set.empty[Variable]
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+            case q: Quantified =>
+              quantifiedSymbols ++= q.vars
+              Left(None)
+            case _ => Left(None)
+          }
+        }, f)
+        val fv = StaticSemantics.freeVars(f)
+        if (fv.isInfinite) Set.empty
+        else quantifiedSymbols -- fv.toSet
+      case _: Program => Set.empty // include all program symbols //@todo test with quantified formulas ?\exists y p(y)
       case _ => throw ParseException("Unknown expression " + e.prettyString + " of kind " + e.kind + " encountered when computing free base symbols", UnknownLocation)
-    })).filterNot(_.isInstanceOf[DifferentialSymbol])
+    })).map({ case DifferentialSymbol(v) => v case s => s })
 
+  /** All symbols (transitively) used from `e`, except explicitly quantified symbols. */
+  def defsUsedIn(defs: Declaration, e: List[Expression], taboo: Set[Name]): Map[Name, Signature] = {
+    val syms = e.flatMap(baseSymbols).map(s => Name(s.name, s.index)).toSet -- taboo
+    defs.decls.flatMap({
+      case e@(name, Signature(_, _, args, int, _)) =>
+        //@note implicit definitions have not only args but also bind their own name
+        if (syms.contains(name)) int.map(i => defsUsedIn(defs, List(i), taboo ++ args.map(_.map(_._1)).getOrElse(List.empty) + name)).getOrElse(Map.empty) + e
+        else Map.empty[Name, Signature]
+      case _ => Map.empty[Name, Signature]
+    })
+  }
 
   /** Elaborates variable uses of nullary function symbols in `entry` and its definitions/annotations, performs
     * DotTerm abstraction in entry definitions, and semantic/type analysis of the results. */
@@ -434,25 +459,12 @@ object ArchiveParser extends ArchiveParser {
       throw ParseException("Definition " + name.prettyString + " uses unsupported anonymous (dot) arguments; please use named arguments (e.g., Real x) instead", loc)
     }
 
-    /** All function and predicate definitions + (transitively) used program definitions. */
-    def defsUsedIn(e: Expression): Map[Name, Signature] = {
-      val syms = freeBaseSymbols(e).map(s => Name(s.name, s.index))
-      entry.defs.decls.flatMap({
-        case e@(name, Signature(_, s, _, int, _)) =>
-          if (s != Trafo) Map(e)
-          else if (syms.contains(name)) int.map(defsUsedIn).getOrElse(Map.empty) + e
-          else Map.empty[Name, Signature]
-        case _ => Map.empty[Name, Signature]
-      })
-    }
-
-    val elaboratedDefs = elaborateDefs(Declaration(defsUsedIn(entry.model)))
+    val elaboratedDefs = elaborateDefs(entry.defs)
 
     val uses = elaboratedDefs.decls.map({
       case (name, Signature(_, _, args, int, loc)) => name -> ((args match {
-        case Some(args) =>
-          int.map(freeBaseSymbols(_).filterNot(n => args.contains((Name(n.name, n.index), n.sort))))
-        case None => int.map(freeBaseSymbols)
+        case Some(args) => int.map(baseSymbols(_).filterNot(n => args.contains((Name(n.name, n.index), n.sort))))
+        case None => int.map(baseSymbols)
       }).getOrElse(Set.empty).groupBy(n => Name(n.name, n.index)), loc)
     })
     val inconsistentUses = uses.filter(_._2._1.exists(_._2.size > 1))
@@ -627,7 +639,7 @@ object ArchiveParser extends ArchiveParser {
     }, parsedContent)
 
     val symbols = StaticSemantics.symbols(parsedContent)
-    val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
+    val fnDecls = symbols.filterNot(InterpretedSymbols.builtin.contains).filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
       Name(fn.name, fn.index) -> Signature(Some(fn.domain), fn.sort, collectedArgs.get(fn), None, UnknownLocation)
     ).toMap
     val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v =>
@@ -644,7 +656,7 @@ object ArchiveParser extends ArchiveParser {
 
     val inconsistentDecls = defs.decls.
       map({ case (n, Signature(_, _, _, i, loc)) =>
-        (n, loc) -> i.map(freeBaseSymbols(_).groupBy(n => Name(n.name, n.index))).getOrElse(Map.empty) }).
+        (n, loc) -> i.map(baseSymbols(_).groupBy(n => Name(n.name, n.index))).getOrElse(Map.empty) }).
       filter({ case (_, symbols) => symbols.exists(_._2.size > 1) })
     if (inconsistentDecls.nonEmpty) {
       val loc = if (inconsistentDecls.size == 1) inconsistentDecls.head._1._2 else UnknownLocation

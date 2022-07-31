@@ -311,7 +311,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |  Problem f()>0 -> p() End.
         |End.""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> assertion failed: Cannot elaborate:
+      """<somewhere> Unable to elaborate to function symbols: assertion failed: Cannot elaborate:
         |  Symbol f used with inconsistent kinds f:Unit->Real,f:Unit->Bool
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
@@ -644,10 +644,11 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
   }
 
   it should "accept reserved identifiers" in {
+    //@todo reconsider this feature
     parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real Real; End.
-        | Problem true End.
+        | Problem Real>0 -> Real>=0 End.
         |End.""".stripMargin
     ).loneElement.defs should beDecl(
       Declaration(Map(
@@ -658,7 +659,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real R; End.
-        | Problem true End.
+        | Problem R>0 -> R>=0 End.
         |End.""".stripMargin
     ).loneElement.defs  should beDecl(
       Declaration(Map(
@@ -669,7 +670,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real Bool; End.
-        | Problem true End.
+        | Problem Bool>0 -> Bool>=0 End.
         |End.""".stripMargin
     ).loneElement.defs  should beDecl(
       Declaration(Map(
@@ -680,7 +681,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real HP; End.
-        | Problem true End.
+        | Problem HP>0 -> HP>=0 End.
         |End.""".stripMargin
     ).loneElement.defs  should beDecl(
       Declaration(Map(
@@ -814,7 +815,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
-    entry.defs.decls shouldBe Map(Name("abs", None) -> Signature(Some(Real), Real, None, None, UnknownLocation))
+    entry.defs.decls shouldBe Map.empty
     entry.model shouldBe "abs(-5)>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -940,7 +941,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.
         |End.""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> assertion failed: Cannot elaborate:
+      """<somewhere> Unable to elaborate to function symbols: assertion failed: Cannot elaborate:
         |  Symbol x used with inconsistent kinds x:Unit->Real,x:Real
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
@@ -2382,7 +2383,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     }
   }
 
-  it should "combine program variables and bound variables in formula when filtering" in {
+  it should "FEATURE_REQUEST: combine program variables and bound variables in formula when filtering" taggedAs TodoTest in {
     val input = """
       |SharedDefinitions
       |  Real one = 1;
@@ -3091,10 +3092,10 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |Problem
         |  [{?true;}*@invariant(fg > 0)]true
         |End.""".stripMargin
-    ) should have message """<somewhere> type analysis: <undefined>: undefined symbol fg with index None
-                            |Found:    undefined symbol at <somewhere>
-                            |Expected: BaseVariable of sort Real
-                            |Hint: Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.""".stripMargin
+    ) should have message """<somewhere> type analysis: <undefined>: undefined symbol fg
+                            |Found:    undefined symbol fg at <somewhere>
+                            |Expected: Real fg
+                            |Hint: Add "Real fg;" to the ProgramVariables block""".stripMargin
   }
 
   it should "report program constant and differential program constant mismatches" in {
