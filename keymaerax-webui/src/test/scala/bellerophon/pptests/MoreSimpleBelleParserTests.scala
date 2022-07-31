@@ -48,14 +48,14 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse partials and built-ins" in withTactics {
-    inside(parser("partial(implyR)")) {
-      case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR
+    inside(parser("partial(implyR(1))")) {
+      case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1)
     }
   }
 
   it should "parse post-fix partials and built-ins" in withTactics {
-    inside(parser("implyR partial")) {
-      case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR
+    inside(parser("implyR(1) partial")) {
+      case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1)
     }
   }
 

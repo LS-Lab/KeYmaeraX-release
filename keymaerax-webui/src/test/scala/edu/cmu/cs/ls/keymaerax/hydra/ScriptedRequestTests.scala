@@ -4,10 +4,10 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLParser, Declaration, Name, Parser, ParserInit, Region, Signature, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLParser, Declaration, Name, Parser, Region, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -16,7 +16,7 @@ import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import spray.json.{JsArray, JsBoolean, JsString}
 import org.scalatest.prop.TableDrivenPropertyChecks._
-import testHelper.KeYmaeraXTestTags.TodoTest
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 /**
   * Tests the server-side web API with scripted requests.
@@ -840,7 +840,7 @@ class ScriptedRequestTests extends TacticTestBase {
       withTactics { withDatabase { importExamplesIntoDB } }
     }
 
-  it should "execute all imported tutorial tactics correctly" in withTemporaryConfig(Map(Configuration.Keys.CHECK_AGAINST_PARSER -> "")) { withMathematica { tool => withDatabase { db =>
+  it should "execute all imported tutorial tactics correctly" taggedAs SlowTest in withTemporaryConfig(Map(Configuration.Keys.CHECK_AGAINST_PARSER -> "")) { withMathematica { tool => withDatabase { db =>
     // re-initialize the parser (DLParser singleton may have check-against set by previous test cases)
     val c = DLParser.getClass.getDeclaredConstructor()
     c.setAccessible(true)
@@ -857,7 +857,7 @@ class ScriptedRequestTests extends TacticTestBase {
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
     modelInfos should have size 95  // change when ListExamplesRequest is updated
 
-    val modelInfosTable = Table(("name", "id"), modelInfos.filter(_._1.startsWith("IJCAR22")):_*)
+    val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>
       whenever(tool.isInitialized) {
         val start = System.currentTimeMillis()

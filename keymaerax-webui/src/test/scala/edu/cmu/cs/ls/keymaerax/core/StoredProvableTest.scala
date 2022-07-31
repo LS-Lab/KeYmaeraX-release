@@ -5,25 +5,23 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, TodoTest, UsualTest}
+import testHelper.KeYmaeraXTestTags.{SlowTest, SummaryTest, TodoTest, UsualTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester, TagAnnotation}
+import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import org.scalatest.concurrent.{Signaler, TimeLimits}
 import org.scalatest.time._
-
-import scala.collection.immutable._
 
 /**
  * Random Provable constructions that are stored, read again, tampered with, read again.
  * @author Andre Platzer
  */
 class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester with TimeLimits {
+  Configuration.setConfiguration(FileConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 1000
   val randomComplexity = 20
@@ -40,13 +38,13 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     readagain shouldBe pr
   }
 
-  "Stored Provable" should "be written and reread correctly (summary)" taggedAs(SummaryTest) in {test(10,4, 20)}
-  it should "be written and reread correctly (usual)" taggedAs(UsualTest) in {test(100,8, 20)}
-  it should "be written and reread correctly (slow)" taggedAs(SlowTest) in {test(randomTrials,randomComplexity, 60)}
+  "Stored Provable" should "be written and reread correctly (summary)" taggedAs SummaryTest in {test(10,4, 20)}
+  it should "be written and reread correctly (usual)" taggedAs UsualTest in {test(100,8, 20)}
+  it should "be written and reread correctly (slow)" taggedAs SlowTest in {test(randomTrials,randomComplexity, 60)}
 
-  private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity, timeout: Int = 20) =
+  private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity, timeout: Int = 20): Unit =
     cancelAfter(Span(timeout, Minutes)) {
-      for (i <- 1 to randomTrials) {
+      for (_ <- 1 to randomTrials) {
         if (Thread.currentThread().isInterrupted) cancel()
         val e = rand.nextProvable(randomComplexity).underlyingProvable
         e shouldBe 'proved
@@ -56,16 +54,16 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
       }
     }
 
-  "Tampered Stored Provable" should "be rejected upon rereading (summary)" taggedAs(SummaryTest) in {testTamper(10,Math.min(4,randomComplexity), 20)}
-  it should "be rejected upon rereading (usual)" taggedAs(UsualTest) in {testTamper(100,Math.min(8,randomComplexity), 20)}
-  it should "be rejected upon rereading (slow)" taggedAs(SlowTest) in {testTamper(randomTrials,randomComplexity, 60)}
+  "Tampered Stored Provable" should "be rejected upon rereading (summary)" taggedAs SummaryTest in {testTamper(10,Math.min(4,randomComplexity), 20)}
+  it should "be rejected upon rereading (usual)" taggedAs UsualTest in {testTamper(100,Math.min(8,randomComplexity), 20)}
+  it should "be rejected upon rereading (slow)" taggedAs SlowTest in {testTamper(randomTrials,randomComplexity, 60)}
 
   private def testTamper(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity, timeout: Int = 20): Unit = {
     implicit val signaler: Signaler = (t: Thread) => {
       t.interrupt()
     }
     cancelAfter(Span(timeout, Minutes)) {
-      for (i <- 1 to randomTrials) {
+      for (_ <- 1 to randomTrials) {
         if (Thread.currentThread().isInterrupted) cancel()
         val e = rand.nextProvable(randomComplexity).underlyingProvable
         e shouldBe 'proved
@@ -78,12 +76,11 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
   }
 
   private def tamperString(stored: String, randomTrials: Int= randomTrials, tamperComplexity: Int = tamperComplexity): Unit =
-    for (i <- 1 to randomTrials) {
+    for (_ <- 1 to randomTrials) {
       if (Thread.currentThread().isInterrupted) cancel()
       val readagain = Provable.fromStorageString(stored)
       val separator = stored.lastIndexOf("::")
       val storedChecksum = stored.substring(separator+2)
-      val remainder = stored.substring(0, separator)
       tamperFact(storedChecksum, readagain, randomTrials/10, tamperComplexity)
     }
 
@@ -95,7 +92,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
       "::" + chksum
     fact shouldBe Provable.fromStorageString(pseudotampered)
 
-    for (i <- 1 to randomTrials) {
+    for (_ <- 1 to randomTrials) {
       if (Thread.currentThread().isInterrupted) cancel()
       val which = rand.rand.nextInt(1 + fact.subgoals.length)
       val (tampered, pos) = if (which == 0) {
@@ -117,7 +114,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
           fact shouldBe reread
         }
       } catch {
-        case expected: ProvableStorageException => /* continue */
+        case _: ProvableStorageException => /* continue */
         case possible: IllegalStateException if possible.getMessage.contains("Higher-order differential symbols are not supported")=> /* continue */
       }
     }
@@ -126,7 +123,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
   /** Tamper with a formula by randomly replacing one of its subexpressions */
   private def tamperFormula(f: Formula, tamperComplexity: Int = tamperComplexity): Formula = {
     // rejection sampling
-    for (i <- 1 to 100) try {
+    for (_ <- 1 to 100) try {
       val pos = rand.nextSubPosition(f, FormulaKind)
       FormulaAugmentor(f).sub(pos) match {
         case Some(_: Term)    => return FormulaAugmentor(f).replaceAt(pos, rand.nextTerm(tamperComplexity))

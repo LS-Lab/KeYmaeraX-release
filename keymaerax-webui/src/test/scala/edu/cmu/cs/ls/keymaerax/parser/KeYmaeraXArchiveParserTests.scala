@@ -851,7 +851,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
-    entry.defs.decls shouldBe Map(Name("abs", None) -> Signature(Some(Real), Real, None, None, UnknownLocation))
+    entry.defs.decls shouldBe 'empty
     entry.model shouldBe "abs(-5)>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -2582,10 +2582,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Problem
         |  [{?true;}*@invariant(fg > 0)]true
         |End.""".stripMargin
-    ) should have message """<somewhere> type analysis: <undefined>: undefined symbol fg with index None
-                            |Found:    undefined symbol at <somewhere>
-                            |Expected: BaseVariable of sort Real
-                            |Hint: Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.""".stripMargin
+    ) should have message """<somewhere> type analysis: <undefined>: undefined symbol fg
+                            |Found:    undefined symbol fg at <somewhere>
+                            |Expected: Real fg
+                            |Hint: Add "Real fg;" to the ProgramVariables block""".stripMargin
   }
 
   it should "report program constant and differential program constant mismatches" in {

@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.mutable.ListBuffer
 
@@ -90,6 +91,10 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
 
   it should "parse parenthesized formulas with decimal numbers" in {
     DLParser("!(0.8<=x)") shouldBe Not(LessEqual(Number(0.8), Variable("x")))
+  }
+
+  it should "FEATURE_REQUEST: not weak-negate parenthesized negations" taggedAs TodoTest in {
+    DLParser("x*(-y)*z") shouldBe Times(Variable("x"), Times(Neg(Variable("y")), Variable("z")))
   }
 
   it should "parse number differentials" in {
