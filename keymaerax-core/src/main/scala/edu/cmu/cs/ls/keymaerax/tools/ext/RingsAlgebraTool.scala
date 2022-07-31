@@ -255,12 +255,13 @@ class RingsLibrary(terms: Traversable[Term]) {
       case Some(u) => u
       case None => toRing(v)
     }
+    case FuncOf(_, Nothing) => toRing(t)
     case Neg(u) => -substitutes(subst)(u)
     case Plus(u, v) => substitutes(subst)(u) + substitutes(subst)(v)
     case Minus(u, v) => substitutes(subst)(u) - substitutes(subst)(v)
     case Times(u, v) => substitutes(subst)(u) * substitutes(subst)(v)
     case Divide(u, Number(n)) if n.isValidInt => substitutes(subst)(u) / n.toIntExact
-    case Power(u, Number(n)) if n.isValidInt => substitutes(subst)(u) ^ (n.toIntExact)
+    case Power(u, Number(n)) if n.isValidInt => substitutes(subst)(u) ^ n.toIntExact
     case n : Number => toRing(n)
     case _ => throw ToolExecutionException("Operation " + t.kind + " not (yet) supported by substitutes in RingsLibrary: " + t)
   }
