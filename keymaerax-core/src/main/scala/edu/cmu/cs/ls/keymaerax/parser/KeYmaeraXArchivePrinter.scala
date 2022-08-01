@@ -53,7 +53,7 @@ class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, wit
       case SubstitutionPair(FuncOf(Function(n, i, _, _, _), _), _) => Name(n, i) // isubsts
     })
 
-    val interpretationSanitized = abbrvNames.foldLeft(entry.model.prettyString)({ case (m, n) => m.replaceAll("(" + n.prettyString + ")" + "<<.*>>", "$1") })
+    val interpretationSanitized = abbrvNames.foldLeft(entry.model.prettyString)({ case (m, n) => m.replaceAll("(" + n.prettyString + ")" + "<<.*?>>", "$1") })
     val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrinter(entry.model).print(interpretationSanitized), printedTactics)
 
     val finalPrint = if (withComments) {
