@@ -85,8 +85,9 @@ private object ToolTactics {
       case PredOf(Function(name, _, _, _, _), _) => name.last != '_'
       case _ => true
     }
-    Try(findCounterExample(sequent.copy(ante = sequent.ante.filter(removeUscorePred),
-                                        succ = sequent.succ.filter(removeUscorePred)).toFormula)) match {
+    Try(findCounterExample(provable.defs.exhaustiveSubst(
+      sequent.copy(ante = sequent.ante.filter(removeUscorePred),
+                   succ = sequent.succ.filter(removeUscorePred)).toFormula))) match {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
       case Success(None) => provable
       case Failure(_: ProverSetupException) => onProverSetupError(provable) //@note no counterexample tool
