@@ -210,6 +210,16 @@ class ProofTreeTests extends TacticTestBase {
     tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> (implyR('R, "x>0->x>0".asFormula) & todo), BelleLabels.cutShow -> todo)
   }
 
+  it should "use provables with definitions" in withDatabase { db => withMathematica { _ =>
+    val modelContent = """ArchiveEntry "Test" Definitions Real y=1; End. ProgramVariables Real x; End. Problem x^2/y>=0 End. End."""
+    val proofId = db.createProof(modelContent)
+
+    var tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.runTactic("guest", ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), expandAllDefs(Nil), "expandAllDefs", wait = true)
+    tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.goal shouldBe Some("==> x^2/1>=0".asSequent)
+  }}
+
   "Tactic suggestion" should "return single-pos tactics" in withTactics { withDatabase { db =>
     val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
