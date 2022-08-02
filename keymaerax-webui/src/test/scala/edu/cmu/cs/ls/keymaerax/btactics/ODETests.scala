@@ -133,9 +133,9 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     TactixLibrary.proveBy(f, QE) shouldBe 'proved
   }
 
-  "Pretest" should "PDEify x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)" in withQE { _ =>
+  "Pretest" should "PDEify x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)" in withQE { _ =>
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "-1")) {
-      TactixLibrary.proveBy("x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+      TactixLibrary.proveBy("x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
     }
   }
 
