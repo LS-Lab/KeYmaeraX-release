@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettierPrinter, KeYmaeraXWeightedPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXPrettierPrinter, KeYmaeraXWeightedPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -85,6 +85,20 @@ class UIAbbreviatingKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinte
 }
 
 class UIAbbreviatingKeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrettierPrinter(margin) {
+  override def apply(expr: Expression): String = stringify(expr) ensures(
+    //@note functions and interpreted functions are printed without parentheses/interpretations and do not reparse
+    r => expr.kind == FunctionKind
+      || StaticSemantics.symbols(expr).exists({ case Function(_, _, _, _, i) => i.isDefined case _ => false })
+      || reparse(expr, r) == expr,
+    "Expect parse of print to be identity." +
+      //@todo reconcile first and last line of contract message
+      "\nExpression: " + FullPrettyPrinter.stringify(expr) + "\t@ " + expr.getClass.getSimpleName +
+      "\nPrinted:    " + stringify(expr) +
+      "\nReparsed:   " + stringify(reparse(expr, stringify(expr))) + "\t@ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpression: " + FullPrettyPrinter.stringify(reparse(expr, stringify(expr))) + "\t@ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpected:   " + FullPrettyPrinter.stringify(expr) + "\t@ " + expr.getClass.getSimpleName
+  )
+
   override def docOf(term: Term): Doc = term match {
     case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => Doc.text(n + i.map("_" + _).getOrElse("") + "()")
     case FuncOf(Function(n, i, _, _, Some(_)), c: Pair) => (Doc.text(n + i.map("_" + _).getOrElse("")) + Doc.lineBreak + docOf(c)).grouped
