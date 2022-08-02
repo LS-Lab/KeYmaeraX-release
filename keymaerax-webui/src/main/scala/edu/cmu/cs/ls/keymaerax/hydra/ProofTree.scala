@@ -347,9 +347,10 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
                          executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                          wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
-    val listener = new TraceRecordingListener(db, proof.info.proofId, stepId, localProvable,
+    val pr = localProvable.reapply(proof.info.defs(db))
+    val listener = new TraceRecordingListener(db, proof.info.proofId, stepId, pr,
       goalIdx, recursive = false, shortName, constructGlobalProvable = false)
-    val taskId = executor.schedule(userId, tactic, BelleProvable.labeled(localProvable.sub(goalIdx), label.map(_ :: Nil)),
+    val taskId = executor.schedule(userId, tactic, BelleProvable.labeled(pr.sub(goalIdx), label.map(_ :: Nil)),
       interpreter(listener::Nil))
     if (wait) {
       executor.wait(taskId)
@@ -368,7 +369,8 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
                           executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                           wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
-    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter)
+    val pr = localProvable.reapply(proof.info.defs(db))
+    val taskId = executor.schedule(userId, tactic, BelleProvable(pr.sub(goalIdx), label.map(_ :: Nil)), interpreter)
     if (wait) {
       executor.wait(taskId)
       // report tactic execution problems upon completion
