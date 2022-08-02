@@ -1082,17 +1082,18 @@ object TactixLibrary extends HilbertCalculus
   /** Expands all definitions in `pr` exhaustively according to definitions `defs`. Expands all definitions carried
    * by the provable if `defs` is empty. */
   def expandAllDefsFw(defs: List[SubstitutionPair]): BuiltInTactic = anon { (pr: ProvableSig) =>
-    val substs =
+    val substPairs =
       if (defs.nonEmpty) {
         val diff = defs.map({ case sp@SubstitutionPair(what, _) => sp -> pr.defs.substs.find(_.what == what) }).filterNot({
           case (argDef, prDef) => prDef.forall(_.repl == argDef.repl)
         })
-        if (diff.isEmpty) defs.map(s => USubst(List(s)))
+        if (diff.isEmpty) defs
         else throw new IllFormedTacticApplicationException("Substitutions disagree: " + diff.map(d => d._1 + " vs. " + d._2.getOrElse("<undefined>")).mkString(",\n"))
-      } else pr.defs.substs.map(s => USubst(List(s)))
-    if (substs.nonEmpty) {
+      } else pr.defs.substs
+    if (substPairs.nonEmpty) {
+      // expand in reverse topological order to expand nested definitions outside-in
+      val substs = Declaration.topSort(substPairs).reverse.map(s => USubst(List(s)))
       TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
-      // sort substs topologically
       substs.map(US).reduce[ProvableSig=>ProvableSig](_ andThen _)(pr)
     } else pr
   }

@@ -58,7 +58,7 @@ case class Declaration(decls: Map[Name, Signature]) {
     val s = StaticSemantics.symbols(e).filterNot(_.isInstanceOf[DotTerm])
     val expand = substs.filter(sp => StaticSemantics.symbols(sp.what).intersect(s).nonEmpty)
     val also = expand.flatMap(sp => transitiveSubstsFrom(sp.repl) )
-    expand ++ also
+    Declaration.topSort(also ++ expand)
   }
 
   /** Substitution applying all definitions non-recursively (i.e., one level of substitution). */
@@ -290,6 +290,18 @@ object Declaration {
       name -> repl.map(StaticSemantics.signature).map(_.map(ns => Name(ns.name, ns.index))).getOrElse(Set.empty) })
     val sortedNames = DependencyAnalysis.dfs[Name](adjacencyMap).reverse
     decls.toList.sortBy(s => sortedNames.indexOf(s._1))
+  }
+
+  def topSort(substs: List[SubstitutionPair]): List[SubstitutionPair] = {
+    def namesOf(e: Expression): Set[Name] = StaticSemantics.signature(e).filterNot(_.isInstanceOf[DotTerm]).map(ns => Name(ns.name, ns.index))
+    def uniqueNameOf(e: Expression): Name = {
+      val names = namesOf(e)
+      assert(names.size == 1)
+      names.head
+    }
+    val adjacencyMap = substs.map({ case SubstitutionPair(what, repl) => uniqueNameOf(what) -> namesOf(repl) }).toMap
+    val sortedNames = DependencyAnalysis.dfs[Name](adjacencyMap).reverse
+    substs.sortBy({ case SubstitutionPair(what, _) => sortedNames.indexOf(uniqueNameOf(what)) })
   }
 }
 

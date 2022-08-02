@@ -889,6 +889,17 @@ class TactixLibraryTests extends TacticTestBase {
       "x^2>0 -> x^2>0 ==> 2*x>0->2*x>0".asSequent
   }
 
+  "expandAllDefs" should "topologically sort definitions" in withTactics {
+    val defs = "p(.) ~> f(.)>=0 :: f(.) ~> g(.)+h(.) :: g(.) ~> .+1 :: h(.) ~> i(.) :: i(.) ~> .^2 :: nil".asDeclaration
+    proveBy("==> p(x)".asSequent, expandAllDefs(Nil), defs).subgoals.loneElement shouldBe "==> (x+1)+x^2>=0".asSequent
+    defs.decls.toList.permutations.foreach(s =>
+      proveBy("==> p(x)".asSequent, expandAllDefs(Nil), Declaration(s.toMap)).subgoals.loneElement shouldBe "==> (x+1)+x^2>=0".asSequent
+    )
+    defs.substs.permutations.foreach(s => {
+      proveBy("==> p(x)".asSequent, expandAllDefs(s), defs).subgoals.loneElement shouldBe "==> (x+1)+x^2>=0".asSequent
+    })
+  }
+
   "useLemmaAt" should "apply at provided key" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
