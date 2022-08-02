@@ -90,7 +90,7 @@ object Parser extends (String => Expression) {
 
   /** `true` has unary negation `-` bind weakly like binary subtraction.
     * `false` has unary negation `-` bind strong just shy of power `^`. */
-  val weakNeg: Boolean = true
+  val weakNeg: Boolean = OpSpec.weakNeg
 
   /** `true` when negative numbers are picked out specially, e.g. `-2*x` is `(-2)*x`.
     * `false` when negative numbers are handled like unary `-`. */

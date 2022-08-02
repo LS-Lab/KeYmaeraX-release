@@ -94,7 +94,24 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
   }
 
   it should "FEATURE_REQUEST: not weak-negate parenthesized negations" taggedAs TodoTest in {
-    DLParser("x*(-y)*z") shouldBe Times(Variable("x"), Times(Neg(Variable("y")), Variable("z")))
+    if (Parser.weakNeg) {
+      DLParser("-x*y") shouldBe Neg(Times(Variable("x"), Variable("y")))
+      DLParser("(-x)*y") shouldBe Times(Neg(Variable("x")), Variable("y"))
+      // nested once
+      DLParser("x*-y*z") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Variable("z"))))
+      DLParser("x*(-y)*z") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Variable("z"))
+      // nested
+      DLParser("x*-y*-z*2") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Neg(Times(Variable("z"), Number(2))))))
+      DLParser("x*(-y)*(-z)*2") shouldBe Times(Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Variable("z"))), Number(2))
+      DLParser("x*(-y)*-z*2") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Times(Variable("z"), Number(2))))
+      DLParser("x*-y*(-z)*2") shouldBe Times(Variable("x"), Neg(Times(Times(Variable("y"), Neg(Variable("z"))), Number(2))))
+    } else {
+//      DLParser("-x*y") shouldBe DLParser("(-x)*y")
+//      DLParser("-x*y*z") shouldBe DLParser("(-x)*y")
+      DLParser("(-(x*y))*z") shouldBe Times(Neg(Times(Variable("x"), Variable("y"))), Variable("z"))
+      DLParser("x*(-y)*z") shouldBe DLParser("x*-y*z")
+      DLParser("x*(-y)*z") shouldBe Times(Variable("x"), Times(Neg(Variable("y")), Variable("z")))
+    }
   }
 
   it should "parse number differentials" in {

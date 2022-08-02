@@ -368,6 +368,18 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
+  private def getEither(e: Either[Term, Term]): Term = e match {
+    case Left(t) => t
+    case Right(t) => t
+  }
+
+  private def assocSign(t: Either[Term, Term]): Term = t match {
+    case Left(t) => t
+    case Right(Neg(Times(l, r))) if !Parser.weakNeg => Times(Neg(l), r)
+    case Right(Neg(Divide(l, r))) if !Parser.weakNeg => Divide(Neg(l), r)
+    case Right(t) => t
+  }
+
   /** Parse a term.
    *
    * Some terms are ambiguous with formulas, in particular
@@ -383,50 +395,43 @@ class DLParser extends Parser {
    * cuts that are unambiguous indicators the input is a term.
    */
   def term[_: P](doAmbigCuts: Boolean): P[Term] = P(
-    signed(summand(doAmbigCuts)) ~
-    // Note: the summand is signed, rather than the first multiplicand
-    // in `summand`, because -5*6 is parsed as -(5*6)
+    (if (Parser.weakNeg) signed(summand(doAmbigCuts)) else summand(doAmbigCuts).map(t => Left(t))) ~
+    // Note: on weakNeg, the summand is signed, rather than the first multiplicand
+    // in `summand`, because -5*6 is parsed as -(5*6),
+    // otherwise (on !weakNeg), the multiplicand is signed because then -x*y is parsed as (-x)*y
     (("+" | "-" ~ !">").!./ ~ signed(summand(doAmbigCuts))).rep
   ).map { case (left, sums) =>
-    sums.foldLeft(left) {
-      case (m1, ("+", m2)) => Plus(m1, m2)
-      case (m1, ("-", m2)) => Minus(m1, m2)
+    sums.foldLeft(assocSign(left)) {
+      case (m1, ("+", m2)) => Plus(m1, assocSign(m2))
+      case (m1, ("-", m2)) => Minus(m1, assocSign(m2))
+    }
+  }
+
+  private def mulDiv(left: Term, rest: Seq[(String, Either[Term, Term])]): Term = (left, rest) match {
+    case (l, Nil) => l
+    case (l, (op, Right(n@Neg(c))) +: r) if Parser.weakNeg => op match {
+      case "*" => Times(l, Neg(mulDiv(c, r)))
+      case "/" => r match {
+        case Nil => Divide(left, n)
+        case ("*", _) +: _ => mulDiv(Divide(left, n), r)
+        case ("/", _) +: _ => Divide(l, Neg(mulDiv(c, r)))
+      }
+    }
+    case (l, (op, t) +: r) => op match {
+      case "*" => mulDiv(Times(l, getEither(t)), r)
+      case "/" => mulDiv(Divide(l, getEither(t)), r)
     }
   }
 
   def summand[_: P](doAmbigCuts: Boolean): P[Term] =
     // Lookahead is to avoid /* */ comments
-    (multiplicand(doAmbigCuts) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).map {
-      case (left, (op1, t1@Neg(c)) +: r1) if Parser.weakNeg =>
-        op1 match {
-          case "*" =>
-            Times(left, Neg(r1.foldLeft(c) {
-              case (m1, ("*", m2)) => Times(m1, m2)
-              case (m1, ("/", m2)) => Divide(m1, m2)
-            }))
-          case "/" => r1 match {
-            case Nil => Divide(left, t1)
-            case ("/", _) +: _ =>
-              Divide(left, Neg(r1.foldLeft[Term](c) {
-                case (m1, ("*", m2)) => Times(m1, m2)
-                case (m1, ("/", m2)) => Divide(m1, m2)
-              }))
-            case ("*", _) +: _ =>
-              r1.foldLeft[Term](Divide(left, t1)) {
-                case (m1, ("*", m2)) => Times(m1, m2)
-                case (m1, ("/", m2)) => Divide(m1, m2)
-              }
-          }
-        }
-      case (left, mults) => mults.foldLeft(left) {
-        case (m1, ("*", m2)) => Times(m1, m2)
-        case (m1, ("/", m2)) => Divide(m1, m2)
-      }
+    ((if (Parser.weakNeg) multiplicand(doAmbigCuts).map(t => Left(t)) else signed(multiplicand(doAmbigCuts))) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).map {
+      case (left, rest) => mulDiv(getEither(left), rest.to[Seq])
     }
 
   def multiplicand[_: P](doAmbigCuts: Boolean): P[Term] =
     (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(multiplicand(doAmbigCuts))).rep).map{ case (left, pows) =>
-      (left +: pows).reduceRight(Power)
+      (left +: pows.map(getEither)).reduceRight(Power)
     }
 
   def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
@@ -463,9 +468,9 @@ class DLParser extends Parser {
 
   /** `p | -p`: possibly signed occurrences of what is parsed by parser `p`
    * Note we try `p` before `-p` because some parsers (like `number`)
-   * also consume -s. */
-  def signed[_: P](p: => P[Term]): P[Term] =
-    p | (("-" ~~ !">") ~ signed(p)).map(Neg)
+   * also consume -s. Distinguishes between Left(Neg(x)) = (-x) and Right(Neg(x)) = -x. */
+  def signed[_: P](p: => P[Term]): P[Either[Term,Term]] =
+    p.map(t => Left(t)) | (("-" ~~ !">") ~ signed(p)).map({ case Left(t) => Right(Neg(t)) case Right(t) => Right(Neg(t)) })
 
   /** Parses term' */
   def diff[_: P](left: Term): P[Term] =

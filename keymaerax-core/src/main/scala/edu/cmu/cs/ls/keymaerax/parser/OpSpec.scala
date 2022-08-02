@@ -151,6 +151,10 @@ object OpSpec {
   /** Whether to accept negative numbers as negative numbers as opposed to unary negation applied to a number. */
   val negativeNumber = false //@note parses -1 to (-1), but also -2^4 to (-2)^4 when true!
 
+  /** `true` has unary negation `-` bind weakly like binary subtraction.
+   * `false` has unary negation `-` bind strong just shy of power `^`. */
+  val weakNeg: Boolean = true
+
   /** no notation */
   private val none = PSEUDO
 

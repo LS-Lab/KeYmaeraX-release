@@ -306,9 +306,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     // special case when negative numbers are enabled: force to disambiguate between -5 as in the number (-5) as opposed to -(5).
     case t@Neg(n: Number) if !negativeBrackets => ppOp(t) + "(" + pp(q++0, n) + ")"
     // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
-    case t: Neg if !negativeBrackets =>
-      val c = pp(q++0, t.child)
-      ppOp(t) + (if (c.charAt(0).isDigit) " " else "") + wrapChild(t, c)
+    case t@Neg(n: Number) if !negativeBrackets => ppOp(t) + " " + wrapChild(t, pp(q++0, n))
+    case t@Neg(x) if !OpSpec.weakNeg => ppOp(t) + "(" + pp(q++0, x) + ")"
     //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeTerm  => ppOp(t) + wrapChild(t, pp(q++0, t.child))
     //@note all binary operators are infix, see [[OpSpec]]
