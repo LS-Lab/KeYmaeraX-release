@@ -5758,7 +5758,7 @@ object Ax extends Logging {
     QE & done
   )
   @Axiom("divideNeg")
-  lazy val divideNeg: DerivedAxiomInfo = derivedFormula("divideNeg","((-p_())/(-q_()) = r_()) -> p_()/q_() = r_()".asFormula,
+  lazy val divideNeg: DerivedAxiomInfo = derivedFormula("divideNeg","-(p_()/(-q_())) = r_() -> p_()/q_() = r_()".asFormula,
     QE & done
   )
 
