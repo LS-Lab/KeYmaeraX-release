@@ -217,7 +217,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
   /** the names of schematic axioms in AxiomInfo, in reality only a subset. */
 
   //@todo not all arity 1 predicationals will be supported during unification
-  "Random Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in instantiateRandomSchematic()
+  "Random Instance Unification" should "FEATURE_REQUEST: instantiate keys of schematic axioms to random schematic instantiations" taggedAs TodoTest in instantiateRandomSchematic()
 
    private def instantiateRandomSchematic() {
     for ((name, ax) <- AxiomInfo.allInfo) {
@@ -262,7 +262,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
     }
   }
 
- "Random Renamed Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in instantiateRandomRenamed()
+ "Random Renamed Instance Unification" should "FEATURE_REQUEST: instantiate keys of schematic axioms to random schematic instantiations" taggedAs TodoTest in instantiateRandomRenamed()
 
   private def instantiateRandomRenamed() {
     for ((name, ax) <- AxiomInfo.allInfo) {
@@ -309,7 +309,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
   }
 
 
-  "Random Renamed Instance Unification optimistic" should "instantiate keys of all axioms to random schematic instantiations" in instantiateRandomKey()
+  "Random Renamed Instance Unification optimistic" should "FEATURE_REQUEST: instantiate keys of all axioms to random schematic instantiations" taggedAs TodoTest in instantiateRandomKey()
 
   private def instantiateRandomKey() {
     for ((name, ax) <- AxiomInfo.allInfo) {

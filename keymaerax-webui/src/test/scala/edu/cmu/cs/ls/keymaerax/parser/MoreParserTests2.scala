@@ -207,7 +207,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         or have message
         """1:8 Error parsing term at 1:6
           |Found:    "+v'=2}]x=0" at 1:8
-          |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "__________" | "-")
+          |Expected: (number | dot | function | unitFunctional | variable | termList | "__________" | "-")
           |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin)
   }
 

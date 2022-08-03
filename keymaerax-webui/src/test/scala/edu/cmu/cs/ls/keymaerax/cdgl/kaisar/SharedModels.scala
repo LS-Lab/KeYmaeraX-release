@@ -265,7 +265,7 @@ object SharedModels {
 
   val inverseGhostODE: String =
     """z := 0;
-      |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution}
+      |{/-- x' = y, y' = (-1) --/ ,  z'=1 & !zPos:(z >= 0) by solution}
       |""".stripMargin
 
   val inverseGhostODECircle: String =
@@ -276,7 +276,7 @@ object SharedModels {
   /** Program which the inverse ghost ODE refines */
   val inverseGhostODEProgram: String =
     """z := 0;
-      |{x' = y, y' = -1,  z'=1}
+      |{x' = y, y' = (-1),  z'=1}
       |""".stripMargin
 
   // Correctly rejected

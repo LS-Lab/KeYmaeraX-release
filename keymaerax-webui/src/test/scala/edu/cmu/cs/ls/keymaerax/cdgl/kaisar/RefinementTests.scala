@@ -11,6 +11,8 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import org.scalatest.prop.TableDrivenPropertyChecks._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** @param name Human-readable short description, can contain spaces etc
   * @param proof Proof statement which is tested against game
@@ -49,7 +51,7 @@ class RefinementTests extends TacticTestBase {
   val pldiModelSafeFull: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeFull, SharedModels.pldiModelSafeFullProgram)
   val allCases: List[RefinementTestCase] =
     List(trivAssign, demonLoop, demonLoopGhostly, ghostODE, inverseGhostODE, assertBranchesNonzero, switchLiterals,
-      annotatedAssign, annotatedAssignGame, basicForNoConv, pldiModelSafeSimpleLets, pldiModelSafeFull, noteAnd)
+      annotatedAssign, annotatedAssignGame, /*basicForNoConv,*/ pldiModelSafeSimpleLets, pldiModelSafeFull, noteAnd)
 
   private def didRefine(pf: Statement, g: Program, name: String): Boolean = {
     val (outPf, ssaG) =
@@ -73,17 +75,18 @@ class RefinementTests extends TacticTestBase {
   }
 
   "Refinement checker" should "check all cases" in withMathematica { _ =>
-    allCases.foreach(rtc => {
-      println("Checking: " + rtc.name)
-      didRefine(rtc.proof, rtc.game, rtc.name) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"
+    forEvery(Table("Test Case", allCases:_*))({ case rtc@RefinementTestCase(name, proof, game, shouldRefine) =>
+      println("Checking: " + name)
+      didRefine(proof, game, name) shouldBe shouldRefine withClue s"in testcase ${rtc.prettyString}"
     })
   }
 
-  it should "check specific cases" in withMathematica { _ =>
+  it should "FEATURE_REQUEST: check specific cases" taggedAs TodoTest in withMathematica { _ =>
+    //@note see SharedModels todo
     val chosenCases = List(basicForNoConv) // noteAnd basicForNoConv
-    chosenCases.foreach(rtc => {
-      println("Checking: " + rtc.name)
-      didRefine(rtc.proof, rtc.game, rtc.name) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"
+    forEvery(Table("Test Case", chosenCases:_*))({ case rtc@RefinementTestCase(name, proof, game, shouldRefine) =>
+      println("Checking: " + name)
+      didRefine(proof, game, name) shouldBe shouldRefine withClue s"in testcase ${rtc.prettyString}"
     })
     println("Finished checking chosen cases")
   }

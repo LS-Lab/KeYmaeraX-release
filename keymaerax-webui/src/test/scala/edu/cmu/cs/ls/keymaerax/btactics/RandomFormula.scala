@@ -356,7 +356,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
 
   def nextF(vars : IndexedSeq[Variable], n : Int) : Formula = nextF(vars, n, modals=true, dotTs=false, dotFs=false)
-  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean) : Formula = nextF(vars, n, modals=modals, dotTs=dotTs, dotFs=dotFs, diffs= !(dotTs||dotFs), funcs=dotTs&&dotFs, duals=isGame)
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean) : Formula = nextF(vars, n, modals=modals, dotTs=dotTs, dotFs=dotFs, diffs= !(dotTs||dotFs), funcs=dotTs&&dotFs)
+  def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean, funcs: Boolean) : Formula = nextF(vars, n, modals=modals, dotTs=dotTs, dotFs=dotFs, diffs, funcs, duals=isGame)
   def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean, funcs: Boolean, duals: Boolean) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dotFs && rand.nextInt(100)>=70) {assert(dotFs);DotFormula} else True

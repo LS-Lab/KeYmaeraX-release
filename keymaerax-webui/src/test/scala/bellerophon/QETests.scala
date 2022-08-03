@@ -7,16 +7,15 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import edu.cmu.cs.ls.keymaerax.tools.qe.KeYmaeraToMathematica
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import testHelper.KeYmaeraXTestTags.TodoTest
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 /**
  * Tests [[ToolTactics.fullQE]] and [[ToolTactics.partialQE]].
@@ -154,13 +153,21 @@ class QETests extends TacticTestBase {
     }
   }
 
-  it should "prove the Robix static safety acceleration subgoal" in withMathematica { tool =>
+  it should "prove the Robix static safety acceleration subgoal" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { tool =>
     val s = "A>=0, B>0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo)>v_0^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v_0), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)".asSequent
     withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
       proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform & ArithmeticSimplification.smartHide &
         ToolTactics.fullQE(tool)) shouldBe 'proved
     }
-  }
+  }}
+
+  it should "prove the Robix static safety acceleration subgoal when expanding abs" taggedAs SlowTest in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) { withMathematica { tool =>
+    val s = "A>=0, B>0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo)>v_0^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v_0), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)".asSequent
+    withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
+      proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform & ArithmeticSimplification.smartHide &
+        ToolTactics.fullQE(tool)) shouldBe 'proved
+    }
+  }}
 
   it should "FEATURE_REQUEST: prove the Robix passive safety acceleration subgoal" taggedAs TodoTest ignore withMathematica { tool =>
     val s = "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())), abs(x_0-xo_0)>v_0^2/(2*B)+V()*(v_0/B), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
@@ -193,7 +200,16 @@ class QETests extends TacticTestBase {
       ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
   }
 
-  it should "try to abbreviate interpreted functions and only proceed expanded on counterexample" in withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce")) { withMathematica { tool =>
+  it should "abbreviate interpreted functions when not converting" in withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce", Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) { withMathematica { tool =>
+    //@note not solvable by Reduce without abbreviating
+    val s =
+      """(x^2+y^2)^(1/2)<=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())), tau()>0, eps>0, init>=0
+        |  ==>  y*y+x*x<=(exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())))^2
+        |""".stripMargin.asSequent
+    proveBy(s, ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
+  }}
+
+  it should "try to abbreviate interpreted functions even when converting to Mathematica is enabled and only proceed expanded on counterexample" in withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce", Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { tool =>
     //@note not solvable by Reduce without abbreviating
     val s =
       """(x^2+y^2)^(1/2)<=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())), tau()>0, eps>0, init>=0

@@ -42,7 +42,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     val ex = the [ParseException] thrownBy Parser.parser.termParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
-    ex.expect shouldBe "(\"(\" | number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
+    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
   }
 
   it should "report expected term on rhs FROM FORMULA" in {
@@ -50,7 +50,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     val ex = the [ParseException] thrownBy Parser.parser.formulaParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
-    ex.expect shouldBe "(\"(\" | number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
+    ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
   }
 
   "dL archive parser" should "report missing problem" in {
@@ -148,7 +148,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |End.
       """.stripMargin
     val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe """("(" | number | dot | function | unitFunctional | variable | termList | "__________" | "-")"""
+    e.expect shouldBe """(number | dot | function | unitFunctional | variable | termList | "__________" | "-")"""
     e.found shouldBe "\"ax__\""
     e.hint shouldBe """Try ("(" | [0-9] | "." | "•" | "__________" | "-")"""
   }

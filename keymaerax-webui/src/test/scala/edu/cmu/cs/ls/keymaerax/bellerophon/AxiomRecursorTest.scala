@@ -126,7 +126,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
   /** the names of schematic axioms in AxiomInfo, in reality only a subset. */
 
   //@todo not all arity 1 predicationals will be supported during unification
-  "Random Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in withQE {_ => instantiateRandomSchematic()}
+  "Random Instance Unification" should "FEATURE_REQUEST: instantiate keys of schematic axioms to random schematic instantiations" taggedAs TodoTest in withQE {_ => instantiateRandomSchematic()}
 
    private def instantiateRandomSchematic() {
     for ((name, ax) <- AxiomInfo.allInfo) {
@@ -149,7 +149,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
     }
   }
 
- "Random Renamed Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in withQE {_ => instantiateRandomRenamed()}
+ "Random Renamed Instance Unification" should "FEATURE_REQUEST: instantiate keys of schematic axioms to random schematic instantiations" taggedAs TodoTest in withQE {_ => instantiateRandomRenamed()}
 
   private def instantiateRandomRenamed() {
     for ((name, ax) <- AxiomInfo.allInfo) {
@@ -173,7 +173,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
   }
 
 
-  "Random Renamed Instance Unification optimistic" should "instantiate keys of all axioms to random schematic instantiations" in withQE {_ => instantiateRandomKey()}
+  "Random Renamed Instance Unification optimistic" should "FEATURE_REQUEST: instantiate keys of all axioms to random schematic instantiations" taggedAs TodoTest in withQE {_ => instantiateRandomKey()}
 
   private def instantiateRandomKey() {
     for ((name, ax) <- AxiomInfo.allInfo) {

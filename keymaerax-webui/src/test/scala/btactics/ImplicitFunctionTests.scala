@@ -114,7 +114,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     prog2.model shouldBe prog.model
   }
 
-  "differential defs" should "prove exp differential axiom" in withMathematica { _ =>
+  "differential defs" should "prove exp differential axiom" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     import InterpretedSymbols.expF
 
     val diffAx = ImplicitAx.deriveDiffAxiom(List(expF)).head
@@ -123,12 +123,12 @@ class ImplicitFunctionTests extends TacticTestBase {
                       Times(FuncOf(expF,"x".asVariable),Differential("x".asVariable)))
 
     proveBy(prob, byUS(diffAx)) shouldBe 'proved
-  }
+  }}
 
-  it should "prove exp always positive in dL" in withMathematica { _ =>
+  it should "prove exp always positive in dL" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     val problem = Greater(FuncOf(InterpretedSymbols.expF,"x".asVariable), Number(0))
     proveBy(problem, QE) shouldBe 'proved
-  }
+  }}
 
   it should "prove sin differential axiom" in withMathematica { _ =>
     import InterpretedSymbols.{sinF,cosF}
@@ -137,7 +137,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     proveBy(prob, byUS(ImplicitAx.deriveDiffAxiom(List(sinF, cosF)).head)) shouldBe 'proved
   }
 
-  "kyx2mathematica" should "convert special implicit functions to Mathematica" in withMathematica { _ =>
+  "kyx2mathematica" should "convert special implicit functions to Mathematica" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     import InterpretedSymbols.expF
 
     println(Parser.parser.getClass.getSimpleName)
@@ -147,11 +147,11 @@ class ImplicitFunctionTests extends TacticTestBase {
       Number(1)), QE)
 
     pr shouldBe 'proved
-  }
+  }}
 
-  "QE" should "not abbreviate interpreted functions known to Mathematica" in withMathematica { _ =>
+  "QE" should "not abbreviate interpreted functions known to Mathematica" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     proveBy("exp(x)>0".asFormula, QE) shouldBe 'proved
-  }
+  }}
 
   //TODO: substitute uninterpreted for interpreted functions in these tests
   "examples" should "FEATURE_REQUEST: work under assignments and nesting" taggedAs TodoTest in withMathematica { _ =>

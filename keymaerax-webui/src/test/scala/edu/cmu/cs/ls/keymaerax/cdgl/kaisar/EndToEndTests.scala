@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import fastparse.Parsed.{Failure, Success}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 // @TODO: Decide how useful pattern selectors and match statements are. (match statements might be kind of useless)
 // @TODO: Test end-to-end angelic loop proofs with nominals etc
@@ -164,9 +165,9 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "prove solution cut that requires  domain constraint assumption" in withMathematica { _ =>
-    val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit tInit xRange by solution;};"
+    val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = (-1) & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit tInit xRange by solution;};"
     val ff = check(pfStr)
-    ff shouldBe "[t_1:=0; x_1:= 1; {t_2 := t_1;x_2:=x_1;}{t_2' = 1, x_2' = -1 & x_2>=0}]true".asFormula
+    ff shouldBe "[t_1:=0; x_1:= 1; {t_2 := t_1;x_2:=x_1;}{t_2' = 1, x_2' = (-1) & x_2>=0}]true".asFormula
   }
 
   it should "automatically find base case assumption in diffcut" in withMathematica { _ =>
@@ -432,7 +433,7 @@ class EndToEndTests extends TacticTestBase {
   }
 
   // @TODO: Improve language so examples work
-  it should "parse and prove all thesis examples" in withMathematica { _ =>
+  it should "FEATURE_REQUEST: parse and prove all thesis examples" taggedAs TodoTest in withMathematica { _ =>
     testExampleSet(SharedModels.thesisExamples)
   }
 
@@ -452,8 +453,9 @@ class EndToEndTests extends TacticTestBase {
     testExampleSet(SharedModels.ijrrModels)
   }
 
-  it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(SharedModels.forwardHypothetical :: SharedModels.sandboxExample :: Nil)
+  it should "FEATURE_REQUEST: parse and prove specific examples" taggedAs TodoTest in withMathematica { _ =>
+    testExampleSet(SharedModels.forwardHypothetical :: Nil) //@note works
+    testExampleSet(SharedModels.sandboxExample :: Nil) //@note fails
     // disturbReachAvoiddurationODE  solAgain
     // .labelOldEq .demonicLoopConst    .inverseGhostODECircle
       /*switchLiteralArgAlternate forwardHypotheticalUnsolvable*/

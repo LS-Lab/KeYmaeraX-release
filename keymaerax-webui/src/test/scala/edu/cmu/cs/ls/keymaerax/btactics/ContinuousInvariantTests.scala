@@ -50,7 +50,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     pegasusInvariants should have size 3
     val invariants = pegasusInvariants.take(pegasusInvariants.size-1)
     val candidate = pegasusInvariants.last
-    candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant=false, None))
+    candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant=true, None))
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica { tool =>
@@ -100,7 +100,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "-1")) {
       val entries = ArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-      val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
+      val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixInit.invSupplier match {
         case gen: ConfigurableGenerator[GenProduct] => gen
       }
 
@@ -180,7 +180,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       "x=1".asFormula)
     val aFunc = "A()".asTerm.asInstanceOf[FuncOf]
 
-    cex shouldBe Some(Map("x".asVariable -> "1.0".asTerm,aFunc.func -> "1.0".asTerm,"v".asVariable -> "-1.0".asTerm))
+    cex shouldBe Some(Map("x".asVariable -> "1.0".asTerm,aFunc.func -> "1.0".asTerm,"v".asVariable -> "(-1.0)".asTerm))
   }
 
   it should "not refute true invariants" in withMathematica { tool =>
@@ -242,50 +242,8 @@ class ContinuousInvariantTests extends TacticTestBase {
       "x=1".asFormula :: Nil,
       "x=1".asFormula)
 
-    invnec shouldBe List("x=1->(1+-1*x < 0|1+-1*x=0)&-1+x < 0".asFormula,"x!=1->!(1+-1*x < 0&(-1+x < 0|-1+x=0))".asFormula)
-    seqnec shouldBe List("true".asFormula,"x=1->(1+-1*x < 0|1+-1*x=0)&-1+x < 0".asFormula, "x!=1->!(1+-1*x < 0&(-1+x < 0|-1+x=0))".asFormula)
+    invnec shouldBe List("x=1->(1+(-1)*x < 0|1+(-1)*x=0)&(-1)+x < 0".asFormula,"x!=1->!(1+(-1)*x < 0&((-1)+x < 0|(-1)+x=0))".asFormula)
+    seqnec shouldBe List("true".asFormula,"x=1->(1+(-1)*x < 0|1+(-1)*x=0)&(-1)+x < 0".asFormula, "x!=1->!(1+(-1)*x < 0&((-1)+x < 0|(-1)+x=0))".asFormula)
   }
-
-//  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
-//    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
-//    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "60", saveToFile = false)
-//
-//    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
-//      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-//    var generated = 0
-//    var success = 0
-//    var total = 0
-//    forEvery(Table(("Name", "Model", "Tactic"), entries.
-//      map(e => (e.name, e.model, e.tactics)): _*)) {
-//      (name, model, _) =>
-//        println("\n" + name + " " + model)
-//        try {
-//          failAfter(3 minutes) {
-//            total+=1
-//            try {
-//              val pr = proveBy(model.asInstanceOf[Formula], implyR(1) & odeInvariantAuto(1) & done)
-//              success+=1
-//              generated += 1
-//            }
-//            catch {
-//              case ex: BelleThrowable =>
-//                if(ex.getMessage.contains("Pegasus failed to generate an invariant"))
-//                  println("Pegasus did not generate an invariant")
-//                else {
-//                  println(ex.getMessage)
-//                  generated += 1
-//                }
-//            }
-//          }
-//          println(name + " done.")
-//          println("Total: "+total+" Generated: "+generated+" Proved: ",success)
-//        }
-//        catch {
-//          case ex: IllegalArgumentException =>
-//            println(name + " not of expected form")
-//        }
-//    }
-//    println("Total: "+total+" Generated: "+generated+" Proved: ",success)
-//  }
 
 }

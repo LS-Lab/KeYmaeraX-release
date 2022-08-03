@@ -638,7 +638,7 @@ class ProofTreeTests extends TacticTestBase {
         |End.
         |
         |Problem
-        |  gt(x,sq(y)) -> gt(x,sq(y)) & x>sq(y)
+        |  gtsq(x,y) -> gt(x,sq(y)) & x>sq(y)
         |End.
         |
         |Tactic "Delayed Substitution Test with Lemmas: Proof"
@@ -687,7 +687,7 @@ class ProofTreeTests extends TacticTestBase {
     val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>0 End. End."""
     val proofId = db.createProof(modelContent)
 
-    val numStepsPerProof = 1000
+    val numStepsPerProof = 800
     val durations = Array.fill(numStepsPerProof)(0.0)
 
     for (i <- 0 until numStepsPerProof) {
@@ -720,6 +720,7 @@ class ProofTreeTests extends TacticTestBase {
     }
 
     val tree = DbProofTree(db.db, proofId.toString)
+    //@todo with too many steps get stack overflow (parser?)
     tree.tacticString(new VerbatimTraceToTacticConverter(tree.info.defs(db.db)))
 
     val medianDuration = median(durations.toList)

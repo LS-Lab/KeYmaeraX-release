@@ -1,15 +1,15 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable.Nil
 
@@ -123,15 +123,15 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "derive global existence for large and badly structured system" in withQE { _ =>
-    val ode = "ee'=ff, g'=aa^2*g+gg,gg'=g+b^2*g,f'=a,dd'=ee,a'=b,aa'=bb,cc'=dd,e'=f,bb'=cc,d'=e,c'=d,b'=c,ff'=aa".asDifferentialProgram
+    val ode = "ee'=ff, g'=aa^2*g+gg,gg'=g+b^2*g,f'=a,dd'=ee,a'=b,aa'=bb,cc'=dd,e_'=f,bb'=cc,d'=e_,c'=d,b'=c,ff'=aa".asDifferentialProgram
     //When sorted correctly, this is just two cyclic ODEs with an extra dependency:
-    //f'=a,e'=f,d'=e,c'=d,b'=c,a'=b, ff'=aa,ee'=ff,dd'=ee,cc'=dd,bb'=cc,aa'=bb, g'=aa^2*g
+    //f'=a,e_'=f,d'=e_,c'=d,b'=c,a'=b, ff'=aa,ee'=ff,dd'=ee,cc'=dd,bb'=cc,aa'=bb, g'=aa^2*g
 
     val res = deriveGlobalExistence(ode)
 
     res.isDefined shouldBe true
     res.get.isProved shouldBe true
-    res.get.conclusion.succ(0) shouldBe "<{gextimevar_'=1,ee'=ff,g'=aa^2*g+gg,gg'=g+b^2*g,f'=a,dd'=ee,a'=b,aa'=bb,cc'=dd,e'=f,bb'=cc,d'=e,c'=d,b'=c,ff'=aa&true}>gextimevar_>p()".asFormula
+    res.get.conclusion.succ(0) shouldBe "<{gextimevar_'=1,ee'=ff,g'=aa^2*g+gg,gg'=g+b^2*g,f'=a,dd'=ee,a'=b,aa'=bb,cc'=dd,e_'=f,bb'=cc,d'=e_,c'=d,b'=c,ff'=aa&true}>gextimevar_>p()".asFormula
   }
 
   "compatibility" should "automatically match by compatibility" in withQE { _ =>
@@ -177,35 +177,35 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
-    val seq = "d >0 , 1+1=2 ==> 1+1=3, <{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5, 2+2=1".asSequent
+    val seq = "d >0 , 1+1=2 ==> 1+1=3, <{a'=b+c+e_*5, x'=x+1, v'=2, e_' = a+e_, b'=c+f(),c'=d+e_() & c <= 5}> x+v<= 5, 2+2=1".asSequent
 
     val pr = proveBy(seq, odeReduce(strict = true, Nil)(2))
 
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "d>0, 1+1=2  ==> 1+1=3, <{x'=x+1,c'=d+e(),v'=2&c<=5}>x+v<=5, 2+2=1".asSequent
+    pr.subgoals(0) shouldBe "d>0, 1+1=2  ==> 1+1=3, <{x'=x+1,c'=d+e_(),v'=2&c<=5}>x+v<=5, 2+2=1".asSequent
   }
 
   it should "throw a helpful error when it gets stuck" in withQE { _ =>
-    val seq = "==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
+    val seq = "==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e_'=5 & e_ <= 5}> e_<= 5".asSequent
 
     the [Exception] thrownBy proveBy(seq, odeReduce(strict = true, Nil)(1)) should have message
       "odeReduce failed to autoremove: {d'=d^2+f}. Try to add a hint of either this form: d*d<=f_(|d|) or this form: 2*(d*(d^2+f))<=a_(|y_,z_,d|)*(d*d)+b_(|y_,z_,d|)"
   }
 
   it should "continue using assms (format 1)" in withQE { _ =>
-    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] d^2 <= e*f ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
+    val seq = "[{d'=d^2+f,f'=f,e_'=5&e_<=5}] d^2 <= e_*f ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e_'=5 & e_ <= 5}> e_<= 5".asSequent
 
-    val pr = proveBy(seq, odeReduce(strict = true, "d*d <= f*e".asFormula::Nil)(1))
+    val pr = proveBy(seq, odeReduce(strict = true, "d*d <= f*e_".asFormula::Nil)(1))
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]d^2<= e*f ==>  <{e'=5&e<=5}>e<=5".asSequent
+    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e_'=5&e_<=5}]d^2<= e_*f ==>  <{e_'=5&e_<=5}>e_<=5".asSequent
   }
 
   it should "continue using assms (format 2)" in withQE { _ =>
-    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] 2*(d*(d^2+f)) <= 1*(d^2) ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
+    val seq = "[{d'=d^2+f,f'=f,e_'=5&e_<=5}] 2*(d*(d^2+f)) <= 1*(d^2) ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e_'=5 & e_ <= 5}> e_<= 5".asSequent
 
     val pr = proveBy(seq, odeReduce(strict = true, "2*(d*(d^2+f)) <= 1*(d*d)+5".asFormula :: Nil)(1))
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=1*(d^2)  ==>  <{e'=5&e<=5}>e<=5".asSequent
+    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e_'=5&e_<=5}]2*(d*(d^2+f))<=1*(d^2)  ==>  <{e_'=5&e_<=5}>e_<=5".asSequent
   }
 
   "kdomd" should "refine ODE postcondition (with auto DC of assumptions)" in withQE { _ =>
@@ -259,16 +259,16 @@ class ODELivenessTests extends TacticTestBase {
 
   it should "work on simple examples (1) symbolically" in withQE { _ =>
     val pr = proveBy("a>0 ==> <{x'=a,y'=z}>x>=b()".asSequent,
-      cutR("\\exists e (e > 0 & \\forall x \\forall y (a >= e))".asFormula)(1) <(
+      cutR("\\exists e_ (e_ > 0 & \\forall x \\forall y (a >= e_))".asFormula)(1) <(
         QE,
-        implyR(1) & existsL('Llast) & dV("e".asTerm)(1)
+        implyR(1) & existsL('Llast) & dV("e_".asTerm)(1)
       )
     )
 
     val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent,
-      cutR("\\exists e (e > 0 & \\forall y \\forall x (a+c >= e))".asFormula)(2) <(
+      cutR("\\exists e_ (e_ > 0 & \\forall y \\forall x (a+c >= e_))".asFormula)(2) <(
         QE,
-        implyR(2) & existsL('Llast) & dV("e".asTerm)(2)
+        implyR(2) & existsL('Llast) & dV("e_".asTerm)(2)
       )
     )
 
@@ -358,7 +358,7 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "support semialgebraic dV auto 2" in withMathematica { _ =>
+  it should "support semialgebraic dV auto 2" taggedAs SlowTest in withMathematica { _ =>
     val pr = proveBy("<{u'=-u^3}>(-1<=u & u <=1 )".asFormula,
       semialgdVAuto()(1)
     )
@@ -447,10 +447,10 @@ class ODELivenessTests extends TacticTestBase {
   it should "try manual univariate boundedness proof" in withQE { _ =>
     val fml = "a*r^2+b*r+c = 0 & (v-r=0 | v-r < 0 & a*v0^2+b*v0+c > 0 | a*v0^2+b*v0+c < 0 & v-r > 0 ) & v=v0 -> [{v' = a*v^2+b*v+c}] v^2 <= v0^2+r^2".asFormula
     val pr = proveBy(fml,
-      implyR(1) & cut("\\exists d \\exists e \\forall v a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula) <(
+      implyR(1) & cut("\\exists d \\exists e_ \\forall v a*v^2+b*v+c=(v-r)*(d*v+e_)".asFormula) <(
         existsL('Llast) & existsL('Llast) &
-          dC("a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula)(1) <(
-            ODEInvariance.diffDivConquer("v-r".asTerm, Some("d*v+e".asTerm))(1)
+          dC("a*v^2+b*v+c=(v-r)*(d*v+e_)".asFormula)(1) <(
+            ODEInvariance.diffDivConquer("v-r".asTerm, Some("d*v+e_".asTerm))(1)
               <(
               dW(1) & QE,
               // Should just do DDC manually to avoid this cut

@@ -126,8 +126,16 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     for (_ <- 1 to 100) try {
       val pos = rand.nextSubPosition(f, FormulaKind)
       FormulaAugmentor(f).sub(pos) match {
-        case Some(_: Term)    => return FormulaAugmentor(f).replaceAt(pos, rand.nextTerm(tamperComplexity))
-        case Some(_: Formula) => return FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
+        case Some(t: Term)    =>
+          //@note avoid higher-order differentials by allowing differentials only when replacing differential terms
+          val repl = rand.nextT(rand.nextNames("z", tamperComplexity / 3 + 1), tamperComplexity,
+            dots=false, diffs=StaticSemantics.isDifferential(t), funcs=true)
+          return FormulaAugmentor(f).replaceAt(pos, repl)
+        case Some(fml: Formula) =>
+          //@note avoid higher-order differentials by allowing differentials only when replacing differential formulas
+          val repl = rand.nextF(rand.nextNames("z", tamperComplexity / 3 + 1), tamperComplexity,
+            modals=true, dotTs=false, dotFs=false, diffs=StaticSemantics.isDifferential(fml), funcs=true)
+          return FormulaAugmentor(f).replaceAt(pos, repl)
         case Some(_: Program) => return FormulaAugmentor(f).replaceAt(pos, rand.nextProgram(tamperComplexity))
         case None => throw new AssertionError("nextSubPosition should only find defined positions: " + f + " at " + pos + " is " + FormulaAugmentor(f).sub(pos))
       }

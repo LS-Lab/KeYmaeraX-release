@@ -197,7 +197,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |Hint: Try ("-" | [0-9] | "'Llast" | "'Rlast" | "'L" | "'R")""".stripMargin
 
     the [ParseException] thrownBy parse("""QE("Mathematica","false")""") should have message
-      """1:19 Error parsing number at 1:19
+      """1:19 Error parsing numberLiteral at 1:19
         |Found:    "false\")" at 1:19
         |Expected: [0-9]
         |Hint: Try [0-9]""".stripMargin
