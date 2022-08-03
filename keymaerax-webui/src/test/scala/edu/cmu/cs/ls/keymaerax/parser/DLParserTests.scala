@@ -87,13 +87,14 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
 
   it should "parse negations correctly" in {
     DLParser("x*-y*z") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Variable("z"))))
+    DLParser("2*(3*(-0.1*x))") shouldBe Times(Number(2), Times(Number(3), Neg(Times(Number(0.1), Variable("x")))))
   }
 
   it should "parse parenthesized formulas with decimal numbers" in {
     DLParser("!(0.8<=x)") shouldBe Not(LessEqual(Number(0.8), Variable("x")))
   }
 
-  it should "FEATURE_REQUEST: not weak-negate parenthesized negations" taggedAs TodoTest in {
+  it should "not weak-negate parenthesized negations" in {
     if (Parser.weakNeg) {
       DLParser("-x*y") shouldBe Neg(Times(Variable("x"), Variable("y")))
       DLParser("(-x)*y") shouldBe Times(Neg(Variable("x")), Variable("y"))
@@ -106,8 +107,8 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
       DLParser("x*(-y)*-z*2") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Times(Variable("z"), Number(2))))
       DLParser("x*-y*(-z)*2") shouldBe Times(Variable("x"), Neg(Times(Times(Variable("y"), Neg(Variable("z"))), Number(2))))
     } else {
-//      DLParser("-x*y") shouldBe DLParser("(-x)*y")
-//      DLParser("-x*y*z") shouldBe DLParser("(-x)*y")
+      DLParser("-x*y") shouldBe DLParser("(-x)*y")
+      DLParser("-x*y*z") shouldBe DLParser("(-x)*y")
       DLParser("(-(x*y))*z") shouldBe Times(Neg(Times(Variable("x"), Variable("y"))), Variable("z"))
       DLParser("x*(-y)*z") shouldBe DLParser("x*-y*z")
       DLParser("x*(-y)*z") shouldBe Times(Variable("x"), Times(Neg(Variable("y")), Variable("z")))
@@ -163,7 +164,7 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     the [ParseException] thrownBy DLParser("x//y") should have message
       """1:3 Error parsing term at 1:1
         |Found:    "/y" at 1:3
-        |Expected: ("(" | number | dot | function | unitFunctional | variable | termList | "__________" | "-")
+        |Expected: (number | dot | function | unitFunctional | variable | termList | "__________" | "-")
         |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin
   }
 

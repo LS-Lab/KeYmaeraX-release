@@ -387,7 +387,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def blank[_:P]: P[Unit] = expParser.blank
 
   /** parse a number literal from [[expParser]] */
-  def number[_: P]: P[Number] = expParser.number
+  def number[_: P]: P[Number] = expParser.numberLiteral
   /** parse an identifier from [[expParser]] */
   def ident[_: P]: P[(String,Option[Int])] = expParser.ident
   def string[_: P]: P[String] = expParser.string

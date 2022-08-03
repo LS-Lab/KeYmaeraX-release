@@ -291,14 +291,20 @@ class DLParser extends Parser {
   def blank[_:P]: P[Unit] = P( CharsWhileIn(" \t\r\n", 1) )
 
   /** parse a number literal enclosed in (), which is allowed to be a negative number */
-  def numberLiteral[_: P]: P[Number] = "(" ~ P(
-    ("-".? ~~ CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
-  ).map(s => Number(BigDecimal(s))) ~ ")" ~~ !"'"
+  def negNumberLiteral[_: P]: P[Number] = P("(" ~ P(
+    ("-".? ~~ CharIn("0-9").repX(1) ~~ ("." ~~ CharIn("0-9").repX(1)).?).!
+  ).map(s => Number(BigDecimal(s))) ~ ")" ~~ !"'")
 
   /** parses a number literal */
-  def number[_: P]: P[Number] = P(
+  def numberLiteral[_: P]: P[Number] = P(
     (CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
   ).map(s => Number(BigDecimal(s)))
+
+  /** parses a number */
+  def number[_: P](doAmbigCuts: Boolean): P[Number] = P(
+    (if (doAmbigCuts) negNumberLiteral./ else NoCut(negNumberLiteral)) |
+      (if (doAmbigCuts) numberLiteral./ else NoCut(numberLiteral))
+  )
 
   /** matches keywords. An identifier cannot be a keyword. */
   def keywords: Set[String] = Set(
@@ -435,8 +441,7 @@ class DLParser extends Parser {
     }
 
   def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
-    (if (doAmbigCuts) numberLiteral./ else NoCut(numberLiteral)) |
-      (if (doAmbigCuts) number./ else NoCut(number)) |
+    number(doAmbigCuts) |
       dot./ |
       function(doAmbigCuts).flatMapX(diff) |
       unitFunctional(doAmbigCuts).flatMapX(diff) |

@@ -158,7 +158,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
       case ListArg(arg) =>
         argList(argumentInterior(arg)).map(_.flatten)
-      case NumberArg(_, _) => DLParser.number.map(List(_))
+      case NumberArg(_, _) => DLParser.numberLiteral.map(List(_))
     }
   )
 
@@ -377,7 +377,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def blank[_:P]: P[Unit] = expParser.blank
 
   /** parse a number literal from [[expParser]] */
-  def number[_: P]: P[Number] = expParser.number
+  def number[_: P]: P[Number] = expParser.numberLiteral
   /** parse an identifier from [[expParser]] */
   def ident[_: P]: P[(String,Option[Int])] = expParser.ident
   def string[_: P]: P[String] = expParser.string
