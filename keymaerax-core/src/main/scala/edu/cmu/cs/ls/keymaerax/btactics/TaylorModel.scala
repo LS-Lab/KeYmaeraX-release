@@ -323,6 +323,7 @@ object TaylorModelTactics extends Logging {
 
     // State Variables of Expansion and Actual Evolution
     protected val vars = DifferentialHelper.getPrimedVariables(ode)
+    protected val params = StaticSemantics.symbols(ode).flatMap({ case fn@Function(_, _, Unit, Real, _) => Some(fn) case _ => None }).map(FuncOf(_, Nothing))
     protected val state = vars.filterNot(_ == time)
     protected val dim = state.length
     private val timestep = names.timestep
@@ -337,7 +338,7 @@ object TaylorModelTactics extends Logging {
 
 
     // Establish connection to the rings-library
-    private val ringsLib = new RingsLibrary(time0::localTime::vars++names.all_vars(dim, order))
+    private val ringsLib = new RingsLibrary(time0::localTime::vars++params++names.all_vars(dim, order))
     private val ringsODE = ringsLib.ODE(localTime, state, names.right_vars(dim),
       DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
@@ -473,7 +474,7 @@ object TaylorModelTactics extends Logging {
           :: post).reduceRight(And)))
     )
 
-    val postEq = proveBy(Equiv(boxTMEnclosure.child, postUnfolded),
+    lazy val postEq = proveBy(Equiv(boxTMEnclosure.child, postUnfolded),
       equivR(1) &
         Idioms.<(
           existsLstable(-1) & andLstable(-1) & andLstable(-1) &
@@ -509,7 +510,7 @@ object TaylorModelTactics extends Logging {
       }
     }
 
-    private val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
+    private lazy val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
       And(LessEqual(Number(0), Minus(time, time0)), LessEqual(Minus(time, time0), timestep))), QE & done)
 
     val numericAssumption =
@@ -521,7 +522,7 @@ object TaylorModelTactics extends Logging {
       // condition for valid TM conclusion
       numbericCondition)
 
-    val lemma: ProvableSig = proveBy(
+    lazy val lemma: ProvableSig = proveBy(
       Imply(
         numericAssumption,
         boxTMEnclosure),
@@ -584,7 +585,7 @@ object TaylorModelTactics extends Logging {
         )
     )
 
-    val timestepLemma = {
+    lazy val timestepLemma = {
       proveBy(
         Imply(
           And(And(And(

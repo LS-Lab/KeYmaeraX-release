@@ -257,6 +257,19 @@ class TaylorModelTests extends TacticTestBase {
     tm shouldBe 'proved
   }}
 
+  it should "prove a lemma about parametrized van der Pol" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+    val tm = TaylorModel("{x' = y, y' = m()*(1 - x^2)*y - x,t'=1}".asDifferentialProgram, 1)
+    tm.lemma shouldBe 'proved
+    tm.timestepLemma shouldBe 'proved
+  }}
+
+  it should "prove a lemma about coupled van der Pol" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
+    val cvdp = "{x1' = y1, y1' = (1-x1^2)*y1 + b()*(x2-x1) - x1, x2' = y2, y2' = (1-x2^2)*y2 - b()*(x2-x1) - x2, t'=1}".asDifferentialProgram
+    val tm = TaylorModel(cvdp, 1)
+    tm.lemma shouldBe 'proved
+    tm.timestepLemma shouldBe 'proved
+  }}
+
   it should "prove a lemma about Lotka-Volterra" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = 1.5*x - x*y, y'= -3*y + x*y, t' = 1}".asDifferentialProgram
     val tm = TaylorModel(ode, 2).lemma
