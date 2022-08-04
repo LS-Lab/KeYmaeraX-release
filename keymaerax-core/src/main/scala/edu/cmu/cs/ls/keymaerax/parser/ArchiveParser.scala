@@ -278,9 +278,9 @@ object Declaration {
       case SubstitutionPair(af: ApplicationOf, r) =>
         Name(af.func.name, af.func.index) -> Signature(Some(af.func.domain), af.func.sort, argsFromExpr(af.child), Some(r), UnknownLocation)
       case SubstitutionPair(s: SystemConst, r) =>
-        Name(s.name, s.index) -> Signature(None, s.sort, None, Some(r), UnknownLocation)
+        Name(s.name, s.index) -> Signature(Some(Unit), s.sort, None, Some(r), UnknownLocation)
       case SubstitutionPair(s: ProgramConst, r) =>
-        Name(s.name, s.index) -> Signature(None, s.sort, None, Some(r), UnknownLocation)
+        Name(s.name, s.index) -> Signature(Some(Unit), s.sort, None, Some(r), UnknownLocation)
     }).toMap)
   }
 
