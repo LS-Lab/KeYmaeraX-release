@@ -167,7 +167,7 @@ KeYmaera X uses the [Pegasus](http://pegasus.keymaeraX.org/) tool for invariant 
 
 14. Andrew Sogokon, Stefan Mitsch, Yong Kiam Tan, Katherine Cordwell and André Platzer. 
 [Pegasus: Sound continuous invariant generation](https://doi.org/10.1007/s10703-020-00355-z).
-Formal Methods in System Design. To appear. 
+Formal Methods in System Design, 58(1), pp. 5-41, 2022. 
 Special issue for selected papers from [FM'19](https://doi.org/10.1007/978-3-030-30942-8_10).
 
 KeYmaera X implements the [ModelPlex](http://modelplex.net) method to ensure that verification results about models apply to cyber-physical system implementations. ModelPlex generates provably correct monitor conditions that, if checked to hold at runtime, are provably guaranteed to imply that the offline safety verification results about the CPS model apply to the present run of the actual CPS implementation.
@@ -177,15 +177,25 @@ KeYmaera X implements the [ModelPlex](http://modelplex.net) method to ensure tha
 Formal Methods in System Design 49(1), pp. 33-74. 2016. 
 Special issue for selected papers from [RV'14](https://doi.org/10.1007/978-3-319-11164-3_17).
 
+16. Yong Kiam Tan, Stefan Mitsch and André Platzer.
+[Verifying switched system stability with logic](https://doi.org/10.1145/3501710.3519541)
+In Ezio Bartocci and Sylvie Putot, editors, Hybrid Systems: Computation and Control (part of CPS Week 2022), HSCC'22. Article No. 2, pp. 1-11. ACM, 2022.
+
 The design principles for the user interface of KeYmaera X are described in:
 
-16. Stefan Mitsch and André Platzer. 
+17. Stefan Mitsch and André Platzer. 
 [The KeYmaera X proof IDE: Concepts on usability in hybrid systems theorem proving](https://doi.org/10.4204/EPTCS.240.5). 
 In Catherine Dubois, Paolo Masci and Dominique Méry, editors, 3rd Workshop on Formal Integrated Development Environment F-IDE 2016, volume 240 of EPTCS, pp. 67-81, 2017.
 
+Model and proof management techniques are described in:
+
+18. Stefan Mitsch.
+[Implicit and Explicit Proof Management in KeYmaera X](https://doi.org/10.4204/EPTCS.338.8)
+In José Proença and Andrei Paskevich, editors, 6th Workshop on Formal Integrated Development Environment F-IDE 2021, volume 338 of EPTCS 338, pp. 53-67, 2021.
+
 A comparison of KeYmaera X with its predecessor provers is described in:
 
-17. Stefan Mitsch and André Platzer. 
+19. Stefan Mitsch and André Platzer. 
 [A Retrospective on Developing Hybrid System Provers in the KeYmaera Family: A Tale of Three Provers](https://doi.org/10.1007/978-3-030-64354-6_2). 
 In Wolfgang Ahrendt et al., editors, Deductive Software Verification: Future Perspectives, volume 12345 of LNCS, pp. 21-64. Springer, 2020
 
