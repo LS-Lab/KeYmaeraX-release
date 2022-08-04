@@ -50,7 +50,7 @@ object UIIndex {
       case Differential(t) =>
         val tactics =
           t match {
-            case _: Variable => "DvariableTactic" :: alwaysApplicable
+            case _: Variable => "Dvar" :: alwaysApplicable
             case _: Number => "c()' derive constant fn" :: alwaysApplicable
             // optimizations
             case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: alwaysApplicable
