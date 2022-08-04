@@ -2,11 +2,11 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{EMPTY_BRANCHES, EMPTY_TACTIC, NEWLINE, NIL_TACTIC, SKIP_TACTIC, TODO_TACTIC}
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParser, BellePrettyPrinter, CLOSE_PAREN, COLON, COMMA, OPEN_PAREN, SEQ_COMBINATOR}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParser, BellePrettyPrinter, CLOSE_PAREN, COLON, COMMA, DLBelleParser, OPEN_PAREN, SEQ_COMBINATOR}
 import edu.cmu.cs.ls.keymaerax.hydra.TacticExtractionErrors.TacticExtractionError
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, Region}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Location, Region}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -112,7 +112,7 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
       case Some(TODO_TACTIC) => (EMPTY_TACTIC, None) //@note was recorded as TODO_TACTIC, but non-empty children indicate progress since then
       case Some(m) =>
         if (BelleExpr.isInternal(m)) ("???", None) //@note internal tactics are not serializable (and should not be in the trace)
-        else Try(BelleParser.parseWithTacticDefs(m, tacticDefs.toMap)).toOption match {
+        else parseTactic(m, tacticDefs.toMap) match {
           case Some(t: AppliedPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
           case Some(t: AppliedDependentPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
           case Some(t: AppliedDependentPositionTacticWithAppliedInput) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
@@ -122,6 +122,16 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
         }
     }
   }
+
+  /** Parses tactic `s` using abbreviated `tactics`. */
+  private def parseTactic(s: String, tactics: Map[String, BelleExpr]): Option[BelleExpr] = Try(
+    ArchiveParser.tacticParser match {
+      case p: DLBelleParser =>
+        p.setDefTactics(tactics.map({ case (k, v) => k -> DefTactic(k, v) }))
+        p(s)
+      case p@BelleParser => p.parseWithTacticDefs(s, tactics)
+    }
+  ).toOption
 }
 
 /** A verbatim trace to tactic converter whose tactics are as recorded in the database. */
