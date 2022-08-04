@@ -105,7 +105,7 @@ private object ToolTactics {
     // Expands abs/min/max
     val expand =
       if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
-      else EqualityTactics.expandAll andThen
+      else EqualityTactics.expandAll andThen abbreviateInterpretedFuncs andThen
         assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted.isDefined case _ => false }),
           "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
