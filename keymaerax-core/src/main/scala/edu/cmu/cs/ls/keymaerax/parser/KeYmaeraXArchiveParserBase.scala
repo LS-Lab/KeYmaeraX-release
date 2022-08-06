@@ -164,16 +164,13 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
     val KEYS: List[String] = "Link" :: "Citation" :: "Title" :: "Description" :: "Author" :: "See" :: "Illustration" :: Nil
   }
 
-  /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
-  def apply(input: String): List[ParsedArchiveEntry] = parse(input)
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression.
     * Skips parsing tactics if `parseTactics` is false. Requires KeYmaeraXPrettyPrinter setup if `parseTactics` is true. */
-  def parse(input: String, parseTactics: Boolean = true): List[ParsedArchiveEntry] = {
+  protected override def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
     val stripped = ParserHelper.removeBOM(input).replaceAllLiterally("\t","  ")
     val tokenStream = KeYmaeraXLexer.inMode(stripped, ProblemFileMode)
     try {
-      parse(tokenStream, stripped, parseTactics).map(e =>
-        if (e.defs.decls.isEmpty) elaborate(e.copy(defs = declarationsOf(e.model))) else e)
+      parse(tokenStream, stripped, parseTactics)
     } catch {
       //@note backwards compatibility with formula-only problem contents of old databases
       case ex: ParseException if ex.expect == "ArchiveEntry|Theorem|Lemma|Exercise" =>

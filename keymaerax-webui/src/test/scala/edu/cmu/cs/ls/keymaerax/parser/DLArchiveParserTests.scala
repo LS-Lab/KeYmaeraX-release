@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, Box, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, StaticSemantics, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -148,7 +148,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse simple predicate declaration" taggedAs TodoTest in {
+  it should "parse simple predicate declaration" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -268,7 +268,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse simple unary predicate definition" taggedAs TodoTest in {
+  it should "parse simple unary predicate definition" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -756,7 +756,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a problem that uses the built-in interpreted functions" taggedAs TodoTest in {
+  it should "parse a problem that uses the built-in interpreted functions" in {
     val input =
       """ArchiveEntry "Entry 1"
         | Problem abs(-5)>0 End.
@@ -821,7 +821,10 @@ class DLArchiveParserTests extends TacticTestBase {
     val entry = parse(input).loneElement
     entry.name shouldBe "Test"
     entry.kind shouldBe "theorem"
-    entry.defs.decls shouldBe 'empty
+    entry.defs should beDecl(Declaration(Map(
+      Name("x") -> Signature(None, Real, None, None, UnknownLocation),
+      Name("y") -> Signature(None, Real, None, None, UnknownLocation)
+    )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty

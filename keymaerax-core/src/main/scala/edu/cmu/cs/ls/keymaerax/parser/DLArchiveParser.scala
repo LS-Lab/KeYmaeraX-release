@@ -43,17 +43,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** Which formula/term/program parser this archive parser uses. */
   private val expParser = DLParser
 
-  /**
-    * Parse an archive file string into a list of archive entries.
-    * @param input The contents of the archive file.
-    * @return A list of archive entries occurring in the string.
-    * @see [[parse()]]
-    */
-  def apply(input: String) : List[ParsedArchiveEntry] = parse(input)
-  /** Parse an archive file string into a list of archive entries, same as [[apply()]] */
-  def parse(input: String) : List[ParsedArchiveEntry] = archiveParser(input)
-
-  override def parse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = parse(input)
+  /** @inheritdoc */
+  override protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = archiveParser(input)
 
   /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
   override def parseAsFormula(input: String): Formula = problemOrFormulaParser(input)
@@ -137,7 +128,6 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
               //@todo check that there are no contradictory facts in the meta and moremeta
               info = (if (label.isDefined) Map("id" -> label.get) else Map.empty) ++ meta ++ moremeta
             ))
-          result.annotations.foreach({ case (p: Program, f: Formula) => al(p, f) })
           Pass(result)
         }
       })

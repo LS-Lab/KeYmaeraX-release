@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.TacticParser
 
 import java.io.InputStream
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ProverSetupException}
-import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Quantified, Real, Sequent, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -327,7 +327,17 @@ case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, p
 }
 
 trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
-  def parse(input: String, parseTactics: Boolean = true): List[ParsedArchiveEntry]
+  final override def apply(input: String): List[ParsedArchiveEntry] = parse(input)
+  final def parse(input: String): List[ParsedArchiveEntry] = parse(input, parseTactics=true)
+  final def parse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
+    val result = doParse(input, parseTactics).map(e =>
+      if (e.defs.decls.isEmpty) ArchiveParser.elaborate(e.copy(defs = ArchiveParser.declarationsOf(e.model)))
+      else ArchiveParser.elaborate(e)
+    )
+    result.foreach(_.annotations.foreach({ case (p: Program, f: Formula) => Parser.parser.annotationListener(p, f) }))
+    result
+  }
+  protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry]
   /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
   def parseFromFile(file: String): List[ParsedArchiveEntry] = {
     file.split('#').toList match {
@@ -394,11 +404,10 @@ object ArchiveParser extends ArchiveParser {
   /** Set a new parser. */
   def setParser(parser: ArchiveParser): Unit = { p = parser }
 
-  /** Parses `input`. */
-  override def apply(input: String): List[ParsedArchiveEntry] = parser(input)
+  /** @inheritdoc */
+  override protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = parser.doParse(input, parseTactics)
 
-  override def parse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = parser.parse(input, parseTactics)
-
+  /** @inheritdoc */
   override def parseFromFile(file: String): List[ParsedArchiveEntry] = parser.parseFromFile(file)
 
   /** @inheritdoc */
@@ -490,6 +499,7 @@ object ArchiveParser extends ArchiveParser {
     val undeclaredUses = locallyConsistentUses.
       map({ case (n, (symbols, loc)) => n ->
         (symbols.
+          filterNot(_.isInstanceOf[DotTerm]).
           filter(s => !elaboratedDefs.decls.contains(Name(s.name, s.index))).
           filterNot(ReservedSymbols.reserved.contains).
           filterNot(InterpretedSymbols.builtin.contains).
@@ -518,7 +528,7 @@ object ArchiveParser extends ArchiveParser {
 
     // elaborate model and check
     val elaboratedModel = try {
-      elaboratedDefs.implicitSubst(elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model).asInstanceOf[Formula]))
+      elaboratedDefs.implicitSubst(elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model)))
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
@@ -546,7 +556,6 @@ object ArchiveParser extends ArchiveParser {
       case (e: Program, a: Formula) =>
         if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         else typeAnalysis(entry.name, declarationsOf(entry.model) ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
-        Parser.parser.annotationListener(e, a)
       case (_: Program, a) => throw ParseException("Unsupported annotation " + a.prettyString + " of kind " + a.kind +
         " encountered, please provide a formula", UnknownLocation)
       case (e, a) => throw ParseException("Annotation " + a.prettyString + " on " + e.prettyString + " of kind " +
@@ -563,7 +572,7 @@ object ArchiveParser extends ArchiveParser {
   /** Checks that uses in `problem` match the declarations.
     * @throws [[ParseException]] on use-def mismatch.
     */
-  private def checkUseDefMatch(problem: Formula, defs: Declaration): Unit = {
+  private def checkUseDefMatch(problem: Expression, defs: Declaration): Unit = {
     // check that definitions and use match
     val symbols = StaticSemantics.symbols(problem) ++ defs.substs.flatMap(s => StaticSemantics.symbols(s.repl))
     val defSymbols = defs.substs.map(_.what)
