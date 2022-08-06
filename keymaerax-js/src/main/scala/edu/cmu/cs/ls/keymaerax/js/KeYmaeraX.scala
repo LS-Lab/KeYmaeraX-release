@@ -6,8 +6,9 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PositionLocator}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLBelleParser
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParseException, Parser,
-  SubstitutionParser, DLArchiveParser, MockBellePrettyPrinter, MockExpressionBuilder, SequentParser, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, InterpretedSymbols,
+  ParseException, Parser, SubstitutionParser, DLArchiveParser, MockBellePrettyPrinter, MockExpressionBuilder,
+  SequentParser, ParsedArchiveEntry}
 
 import scala.util.Try
 import scala.scalajs.js.{Array, Dictionary}
@@ -25,14 +26,48 @@ object KeYmaeraX {
   @JSExportTopLevel("parseArchive")
   def parseArchive(input: String): Array[Dictionary[Any]] = {
     try {
-      ArchiveParser(input)
-      List.empty.toJSArray
+      val entries = ArchiveParser(input)
+      // inspect archives and print warning if no program variables block/definitions but archive entry defs nonempty
+      val noDefEntries = entries.filter(e => e.defs.decls.nonEmpty && !e.fileContent.contains("Definitions") && !e.fileContent.contains("ProgramVariables"))
+      val noDefEntryWarnings = noDefEntries.map(e => {
+        val fc = e.fileContent.lines
+        val eline = if (fc.hasNext) input.lines.indexOf(fc.next) + 1 else 1
+        Dictionary(
+          "kind" -> "warning",
+          "line" -> eline,
+          "column" -> 1,
+          "endLine" -> eline,
+          "endColumn" -> 1,
+          "message" -> "Entry does not specify functions and variables in Definitions/ProgramVariables blocks."
+        )
+      }).toJSArray
+
+      // print hint if entry uses builtin interpreted symbols
+      val builtin = entries.map(e => e -> StaticSemantics.symbols(e.expandedModel).filter(
+        n => InterpretedSymbols.byName.contains((n.name, n.index))
+      )).filter(_._2.nonEmpty)
+      val builtinSymbolsHints = builtin.map({
+        case (e, builtin) =>
+          val fc = e.fileContent.lines
+          val eline = if (fc.hasNext) input.lines.indexOf(fc.next) + 1 else 1
+          Dictionary(
+            "kind" -> "info",
+            "line" -> eline,
+            "column" -> 1,
+            "endLine" -> eline,
+            "endColumn" -> 1,
+            "message" -> ("Entry uses builtin interpreted symbols " + builtin.map(_.prettyString).mkString(","))
+          )
+      }).toJSArray
+
+      noDefEntryWarnings ++ builtinSymbolsHints
     } catch {
       case ex: ParseException =>
         // unknown locations have beginning/end=-1 (won't show), anchor them at the very top of the editor
         val line = Math.max(1, ex.loc.begin.line)
         val column = Math.max(1, ex.loc.begin.column)
         List(Dictionary(
+          "kind" -> "error",
           "line" -> line,
           "column" -> column,
           "endLine" -> Math.max(line, ex.loc.end.line),
