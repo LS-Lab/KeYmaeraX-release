@@ -117,16 +117,15 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
         TacticStatistics.size(t))
       println("Proof steps: " + proof.steps)
 
-      if (kind == "lemma") {
-        val lemmaName = "user" + File.separator + name
-        if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
-        val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-          "tool" -> "KeYmaera X",
-          "model" -> model,
-          "tactic" -> t.prettyString
-        )) :: Nil)
-        LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
-      }
+      // store lemma
+      val lemmaName = "user" + File.separator + name
+      if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+      val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+        "tool" -> "KeYmaera X",
+        "model" -> model,
+        "tactic" -> t.prettyString
+      )) :: Nil)
+      LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
 
       t match {
         case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
