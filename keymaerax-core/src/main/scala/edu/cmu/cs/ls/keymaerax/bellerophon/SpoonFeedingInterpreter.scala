@@ -197,8 +197,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             if (children.size != labels.size) throw new IllFormedTacticApplicationException("Number of cases does not match number of subgoals, got\ncases\n  " + children.map(_._1.prettyString).mkString("\n  ") + "\nfor\n  " + labels.map(_.prettyString).mkString("\n  "))
             def getBranchTactic(l: BelleLabel): BelleExpr = children.filter(c => l.endsWith(c._1)).toList match {
               case c :: Nil => c._2
-              case Nil => throw new IllFormedTacticApplicationException("No case for branch " + l.prettyString)
-              case c => throw new IllFormedTacticApplicationException("Multiple labels apply to branch " + l.prettyString + "; please disambiguate cases " + c.map(_._1.prettyString).mkString("::"))
+              case Nil => throw new IllFormedTacticApplicationException("Tactic has branch labels\n\t" + children.map(_._1.prettyString).mkString("\n\t") + "\nbut no case for branch\n\t" + l.prettyString)
+              case c => throw new IllFormedTacticApplicationException("Multiple labels apply to branch\n\t" + l.prettyString + "\n\tPlease disambiguate cases\n\t" + c.map(_._1.prettyString).mkString("\n\t"))
             }
             runTactic(BranchTactic(labels.map(getBranchTactic)), goal, level, ctx, strict, convertPending, executePending)
           case _ => throw new IllFormedTacticApplicationException("Case tactic applied on a proof state without labels")
@@ -521,9 +521,17 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     runningInner = inner(Nil)
                     val result = (runningInner(tactic, goal), ctx)
                     runningInner = null
-                    if (result._1 != goal) throw new IllFormedTacticApplicationException("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
                     //@todo record a NoOpTactic that operates on all subgoals (print, assert etc)
-                    else result
+
+                    //@todo change for STTT Example 2 delayed tactic, but then still fails in ProofTree subgoal application (wrong order)
+                    result._1 match {
+                      case dp: BelleDelayedSubstProvable =>
+                        if (BelleProvable(dp.p, dp.label) != goal) throw new IllFormedTacticApplicationException("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                        else result
+                      case r =>
+                        if (r != goal) throw new IllFormedTacticApplicationException("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                        else result
+                    }
                   } else {
                     assert(recordInternal || !BelleExpr.isInternal(tactic.prettyString), "Unable to record internal tactic")
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))

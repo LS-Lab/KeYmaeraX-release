@@ -258,8 +258,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         if (children.size != labels.size) throw new IllFormedTacticApplicationException("Number of cases does not match number of subgoals, got\ncases\n  " + children.map(_._1.prettyString).mkString("\n  ") + "\nfor\n  " + labels.map(_.prettyString).mkString("\n  "))
         def getBranchTactic(l: BelleLabel): BelleExpr = children.filter(c => l.endsWith(c._1)).toList match {
           case c :: Nil => c._2
-          case Nil => throw new IllFormedTacticApplicationException("No case for branch " + l.prettyString)
-          case c => throw new IllFormedTacticApplicationException("Multiple labels apply to branch " + l.prettyString + "; please disambiguate cases " + c.map(_._1.prettyString).mkString("::"))
+          case Nil => throw new IllFormedTacticApplicationException("Tactic has branch labels\n\t" + children.map(_._1.prettyString).mkString("\n\t") + "\nbut no case for branch\n\t" + l.prettyString)
+          case c => throw new IllFormedTacticApplicationException("Multiple labels apply to branch\n\t" + l.prettyString + "\nPlease disambiguate cases\n\t" + c.map(_._1.prettyString).mkString("\n\t"))
         }
         apply(BranchTactic(labels.map(getBranchTactic)), v)
       case _ => throw new IllFormedTacticApplicationException("Case tactic applied on a proof state without labels")
