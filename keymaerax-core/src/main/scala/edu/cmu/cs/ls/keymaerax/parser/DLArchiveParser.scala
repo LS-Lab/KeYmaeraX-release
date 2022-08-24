@@ -114,7 +114,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         if (endlabel.isDefined && endlabel != label)
           Fail.opaque("end label: " + endlabel + " is optional but should be the same as the start label: " + label)
         else {
-          val usedShared = shared.map(d => Declaration(ArchiveParser.defsUsedIn(d, prob +: annotations.map(_._2).toList, Set.empty)))
+          val usedShared = shared.map(d => Declaration(ArchiveParser.defsUsedIn(d,
+            // shared definitions used in problem or any of the entry's definitions or any annotation
+            prob +: (decl.substs.map(_.repl) ++ annotations.map(_._2).toList), Set.empty)))
           val result = // definitions elaboration to replace arguments by dots and do type analysis
             ArchiveParser.elaborate(ParsedArchiveEntry(
               name = name,

@@ -1094,6 +1094,18 @@ class DLArchiveParserTests extends TacticTestBase {
     parse(input).head.expandedModel shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
   }
 
+  it should "elaborate in transitively used shared program definitions" in {
+    val input =
+      """SharedDefinitions HP a ::= { x:=y; }; End.
+        |ArchiveEntry "Test"
+        |Definitions HP b ::= { a; }; Real y; End.
+        |ProgramVariables Real x; End.
+        |Problem y=1 -> [b;]x>=0 End.
+        |End.
+        |""".stripMargin
+    parse(input).head.expandedModel shouldBe "y()=1 -> [x:=y();]x>=0".asFormula
+  }
+
   it should "report when elaborating in used shared program definitions is impossible" in {
     //@todo better error message
     val input =
