@@ -624,11 +624,16 @@ object ArchiveParser extends ArchiveParser {
 
   /** Extracts declarations per static semantics of the expression `parsedContent`. */
   def declarationsOf(parsedContent: Expression, filter: Option[Set[NamedSymbol]] = None): Declaration = {
-    def makeArgsList(args: Term): List[(Name, Sort)] = args match {
-      case Pair(l, r) => makeArgsList(l) ++ makeArgsList(r)
-      case FuncOf(n, _) => List(Name(n.name, n.index) -> n.sort)
-      case n: NamedSymbol => List(Name(n.name, n.index) -> n.sort)
-      case _ => List() //@note unable to guess argument name from general terms x+y
+    def makeArgsList(args: Term): Option[List[(Name, Sort)]] = args match {
+      case Pair(l, r) => (makeArgsList(l), makeArgsList(r)) match {
+        case (Some(la), Some(ra)) => Some(la ++ ra)
+        case (la@Some(_), None) => la
+        case (None, ra@Some(_)) => ra
+        case _ => None
+      }
+      case FuncOf(n, _) => Some(List(Name(n.name, n.index) -> n.sort))
+      case n: NamedSymbol => Some(List(Name(n.name, n.index) -> n.sort))
+      case _ => None //@note unable to guess argument name from general terms x+y
     }
 
     val collectedArgs = scala.collection.mutable.Map.empty[NamedSymbol, List[(Name, Sort)]]
@@ -636,8 +641,11 @@ object ArchiveParser extends ArchiveParser {
       InterpretedSymbols.byName.get((fn.name, fn.index)) match {
         case None =>
           if (filter.isEmpty || filter.get.contains(fn)) {
-            if (!collectedArgs.contains(fn)) collectedArgs(fn) = makeArgsList(args)
-            else assert(collectedArgs(fn) == makeArgsList(args), "Expected consistent arguments to " + fn.prettyString +
+            if (!collectedArgs.contains(fn)) collectedArgs(fn) = makeArgsList(args).getOrElse(List.empty)
+            else assert(makeArgsList(args) match {
+              case None => true //@note was unable to guess argument list from a term, use collected so far
+              case Some(guessed) => guessed == collectedArgs(fn)
+            }, "Expected consistent arguments to " + fn.prettyString +
               " everywhere, but found " + collectedArgs(fn).mkString(",") + " vs. " + makeArgsList(args).mkString(","))
           }
         case Some(_) => // nothing to do, builtin interpreted symbols do not need to be declared
