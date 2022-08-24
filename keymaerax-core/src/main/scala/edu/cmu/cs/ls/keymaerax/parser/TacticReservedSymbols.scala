@@ -20,4 +20,7 @@ object TacticReservedSymbols {
 
   /** The reserved symbols by name. */
   val byName: Map[(String, Option[Int]),Function] = symbols.map(f => (f.name, f.index) -> f).toMap
+
+  /** The reserved symbols definitions. */
+  val asDecl: Declaration = Declaration(byName.map({ case ((n, i), fn) => Name(n, i) -> Signature(Some(fn.domain), fn.sort, None, None, UnknownLocation) }))
 }

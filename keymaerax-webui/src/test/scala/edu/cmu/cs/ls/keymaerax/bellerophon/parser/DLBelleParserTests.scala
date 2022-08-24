@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLib
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, ParseException, Parser, Signature, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, ParseException, Parser, Signature, TacticReservedSymbols, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
@@ -118,7 +118,8 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   it should "parse hash locators" in {
     val t = parse("""trueAnd('R=="[x:=1;]#true&x=1#")""").asInstanceOf[AppliedPositionTactic]
-    t.locator shouldBe Find.FindR(0, Some("[x:=1;](true&x=1)".asFormula), PosInExpr(1::Nil), exact=true, defs=Declaration(Map.empty))
+    t.locator shouldBe Find.FindR(0, Some("[x:=1;](true&x=1)".asFormula), PosInExpr(1::Nil), exact=true,
+      defs=TacticReservedSymbols.asDecl)
   }
 
   it should "parse suffix partial" in {
@@ -178,7 +179,11 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "parse tactic definitions" in {
-    parse("tactic andLStar as ( andL('L)* )") shouldBe DefTactic("andLStar", SaturateTactic(andL('L)))
+    parse("tactic andLStar as ( andL('L)* )") shouldBe DefTactic("andLStar", SaturateTactic(andL(Find.FindLFirst)))
+  }
+
+  it should "elaborate tactic reserved symbols" in {
+    parse("""dC("x^2+y^2=const", 1)""") shouldBe TactixLibrary.dC(List(Equal("x^2+y^2".asTerm, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
   }
 
   it should "report missing arguments" in {
