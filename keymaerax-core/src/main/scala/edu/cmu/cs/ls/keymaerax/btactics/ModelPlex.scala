@@ -187,9 +187,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
         filter(_._2.isDefined).
         map({ case (v, Some(e)) =>
           (StaticSemantics.freeVars(e).toSet - v).toList match {
-            case Nil => ???
+            case Nil => v -> e.replaceFree(v, postVar(v))
             case sensorVar :: Nil => v -> e.replaceFree(v, postVar(v)).replaceFree(sensorVar, postVar(sensorVar))
-            case s => throw new IllegalArgumentException("Sensor specifications with multiple variables not supported, please use function symbols for uncertainty and other parameters")
+            case s => throw new IllegalArgumentException("Sensor specifications with multiple variables (" + s.map(_.prettyString).mkString(",") +
+              ") not supported, please use function symbols for uncertainty and other parameters")
           }
         })
 
