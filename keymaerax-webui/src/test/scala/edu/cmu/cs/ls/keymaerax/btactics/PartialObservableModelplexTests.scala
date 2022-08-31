@@ -11,13 +11,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.codegen.{CodeGenerator, PythonGenerator, PythonMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, SimplificationTool}
+import edu.cmu.cs.ls.keymaerax.utils.EulerIntegrationCompiler
 import org.scalatest.LoneElement._
 import testHelper.KeYmaeraXTestTags.TodoTest
 
@@ -130,51 +131,51 @@ class PartialObservableModelplexTests extends TacticTestBase {
     qf
   }
 
-  "Conjecture generator" should "make a state variable unobservable" in {
+  "Conjecture generator" should "make a state variable unobservable" in withTactics {
     val fml = "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
     ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Variable("x") -> None)).
       conjecture shouldBe "\\exists x <{x:=x+1;}*>\\exists xpost xpost=x".asFormula
   }
 
-  it should "replace a state variable with a sensor" in {
+  it should "replace a state variable with a sensor" in withTactics {
     val fml = "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
     ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Variable("x") -> Some("xS-xU()<=x & x<=xS+xU()".asFormula))).
       conjecture shouldBe "\\exists x ((xS-xU()<=x&x<=xS+xU())&<{x:=x+1;}*>\\exists xpost ((xSpost-xU()<=xpost & xpost<=xSpost+xU()) & xpost=x))".asFormula
   }
 
-  it should "existentially quantify an unknown parameter" in {
+  it should "existentially quantify an unknown parameter" in withTactics {
     val fml = "x>=0 -> [{x:=f()+1;}*]x>=0".asFormula
     ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Function("f", None, Unit, Real) -> None)).
       conjecture shouldBe "\\exists f <{x:=f+1;}*>xpost=x".asFormula
   }
 
-  it should "existentially quantify an unknown function" in {
+  it should "existentially quantify an unknown function" in withTactics {
     val fml = "x>=0 -> [{x:=f(y)+1;z:=2*f(y);}*]x>=0".asFormula
     ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x"), Variable("z")), ListMap(Function("f", None, Real, Real) -> None)).
       conjecture shouldBe "\\exists f <{x:=f+1;z:=2*f;}*>(xpost=x&zpost=z)".asFormula
   }
 
-  it should "complain when function arguments are bound" in {
+  it should "complain when function arguments are bound" in withTactics {
     val fml = "x>=0 -> [{x:=f(x)+1;}*]x>=0".asFormula
     the [IllegalArgumentException] thrownBy ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("x")), ListMap(Function("f", None, Real, Real) -> None)) should
       have message "requirement failed: Unable to make functions f(x) unobservable, because their arguments are bound in program; replace manually with non-deterministic assignments (e.g., replace x:=2; y:=f(x) with x:=2; fx:=*; y:=fx)"
   }
 
-  it should "replace a function with a sensor" in {
+  it should "replace a function with a sensor" in withTactics {
     val fml = "x>=0 & f(x)>=0 -> [{y:=f(x)+1;}*]y>=0".asFormula
     ModelPlex.createMonitorSpecificationConjecture(fml, List(Variable("y")), ListMap(Function("f", None, Real, Real) -> Some("fS-fU() <= f(x) & f(x) <= fS+fU()".asFormula))).
       conjecture shouldBe "\\exists f ((fS-fU()<=f&f<=fS+fU())&<{y:=f+1;}*>ypost=y)".asFormula
   }
 
   "Partial Observability" should "derive a model monitor from approximated turning behavior" in withMathematica { tool =>
-    val Some(curvedBot) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Curved Ground Robot Motion is Safe",
+    val Some(curvedBot) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Curved Ground Robot Motion is Safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
 
     checkArchiveEntries(List(curvedBot))
 
     val tactic = curvedBot.tactics.head._3
     val approx = ModelPlex.createNonlinearModelApprox(curvedBot.name, tactic, curvedBot.defs)(curvedBot.model)
-    val Some(approxEntry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Approximated Curved Ground Robot Motion is Safe",
+    val Some(approxEntry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Approximated Curved Ground Robot Motion is Safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     approx._1 shouldBe approxEntry.defs.exhaustiveSubst(approxEntry.model)
 
@@ -184,7 +185,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "derive an approximated model monitor with unobservable parameter" in withMathematica { tool =>
-    val Some(curvedBot) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Curved Ground Robot Motion with Curve Disturbance is Safe",
+    val Some(curvedBot) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Curved Ground Robot Motion with Curve Disturbance is Safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
 
     checkArchiveEntries(List(curvedBot))
@@ -196,7 +197,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "FEATURE_REQUEST: derive a model monitor from approximated turning behavior with actuator disturbance" ignore withMathematica { tool =>
     //@todo model is not proved yet
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Curved Ground Robot Motion with Piecewise Constant Actuator Disturbance is Safe",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Curved Ground Robot Motion with Piecewise Constant Actuator Disturbance is Safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap[Variable, Option[Formula]](Variable("ad") -> None)
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe "\\forall d (-1-D()<=d&d<=-1+D()->(xr+w/d-xo)^2+(yr-v/d-yo)^2!=v^2+w^2)&(-1-D()<=adpost&adpost<=-1+D())&(xr+w/adpost-xo)^2+(yr-v/adpost-yo)^2!=v^2+w^2&(xrpost+wpost/adpost-xo)^2+(yrpost-vpost/adpost-yo)^2!=vpost^2+wpost^2&apost=-1&wpost_0=w&vpost_0=v&xrpost_0=xr&yrpost_0=yr|\\forall d (1-D()<=d&d<=1+D()->(xr+w/d-xo)^2+(yr-v/d-yo)^2!=v^2+w^2)&(1-D()<=adpost&adpost<=1+D())&(xr+w/adpost-xo)^2+(yr-v/adpost-yo)^2!=v^2+w^2&(xrpost+wpost/adpost-xo)^2+(yrpost-vpost/adpost-yo)^2!=vpost^2+wpost^2&apost=1&wpost_0=w&vpost_0=v&xrpost_0=xr&yrpost_0=yr".asFormula
@@ -204,7 +205,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive a proof-guided water tank model monitor" in withMathematica { tool =>
     // experiment: water tank original
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank is safe",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank is safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
 
     val unobservable = ListMap[Variable, Option[Formula]]("c_0".asVariable -> None, "l_0".asVariable -> None)
@@ -224,7 +225,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive a model monitor from water tank with flow disturbance" in withMathematica { tool =>
     //@note experiment: water tank + actuator
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
 
     val unobservable = ListMap[Variable, Option[Formula]]("fd".asVariable -> None, "c_0".asVariable -> None, "l_0".asVariable -> None)
@@ -232,7 +233,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "derive a model monitor from water tank with flow disturbance for unknown disturbance parameter" in withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val model = entry.model.exhaustiveSubst(USubst(entry.defs.substs.filter(_.what.isInstanceOf[SystemConst]))).asInstanceOf[Formula]
 
@@ -251,15 +252,16 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "derive a model monitor from water tank with flow disturbance for unknown disturbance parameter (2)" in withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     // monitor for disturbance: exists 0<=D<=0.2
     val unobservable = ListMap("fd".asVariable -> None, "D()".asFunction -> Some("0 <= D() & D() <= 0.2".asFormula))
     deriveMonitor(entry, None, unobservable, tool)
   }
 
-  it should "derive a model monitor from water tank with flow disturbance for unknown disturbance parameter and load measurement uncertainty" in withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
+  it should "derive a model monitor from water tank with flow disturbance for unknown disturbance parameter and load measurement uncertainty" ignore withMathematica { tool =>
+    //@todo extremely long
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap[NamedSymbol, Option[Formula]](
       Variable("l") -> Some("0 <= lU() & lS-lU() <= l & l <= lS+lU()".asFormula),
@@ -270,7 +272,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "derive a model monitor from water tank with load measurement uncertainty" in withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with load measurement uncertainty is safe",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with load measurement uncertainty is safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap[Variable,Option[Formula]](
       "l".asVariable -> Some("lu-U()<=l&l<=lu+U()".asFormula),
@@ -281,7 +283,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive a model monitor from water tank with load measurement uncertainty (control exists)" in withMathematica { tool =>
     //@note experiment: water tank + sensor
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with load measurement uncertainty is safe (control choice exists)",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Water tank with load measurement uncertainty is safe (control choice exists)",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap[Variable,Option[Formula]](
       "l".asVariable -> Some("lu-U()<=l&l<=lu+U()".asFormula),
@@ -291,7 +293,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "prove planar flight motion" in withMathematica { _ =>
-    val entries = KeYmaeraXArchiveParser(io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
+    val entries = ArchiveParser(io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
 
     checkArchiveEntries(entries.find(_.name == "ModelPlex/Partial Observability/Planar Flight Motion Safety with Ownship Angular Velocity Disturbance").toList)
     checkArchiveEntries(entries.find(_.name == "ModelPlex/Partial Observability/Planar Flight Motion Safety with Intruder Linear Speed Uncertainty").toList)
@@ -309,7 +311,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "derive model monitor from approximated planar flight motion 2 simple" in withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap("x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe "I2(v1,v2,1,0,dx,dy,x,y)>2*v1*v2+2*v2&dx^2+dy^2=1&dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y)&w1post=1&w2post=0".asFormula
@@ -317,14 +319,14 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive model monitor from approximated planar flight motion" in withMathematica { tool =>
     // experiment: horizontal flight original
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap("x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool) shouldBe "I1(v1,v2,dx,dy,x,y)>v1+v2&(0=1->dx^2+dy^2=1)&(0=1->dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y)&w1post=0&w2post=0|I2(v1,v2,1,0,dx,dy,x,y)>2*v1*v2+2*v2&dx^2+dy^2=1&dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y)&(1=0->dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y))&w1post=1&w2post=0".asFormula
   }
 
   it should "derive model monitor from approximated planar flight motion simple 2 with ownship actuator disturbance" in withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple with Ownship Actuator Disturbance",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple with Ownship Actuator Disturbance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap("w1".asVariable -> None,
       "x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
@@ -333,7 +335,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive model monitor from approximated planar flight motion with ownship actuator disturbance" in withMathematica { tool =>
     // experiment: horizontal flight + actuator
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple with Ownship Actuator Disturbance",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple with Ownship Actuator Disturbance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap(
       "w1".asVariable -> None,
@@ -342,7 +344,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "derive model monitor from approximated planar flight motion simple 2 with intruder linear velocity uncertainty" in withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple with Intruder Linear Velocity Uncertainty",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple with Intruder Linear Velocity Uncertainty",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap(
       "v2".asVariable -> Some("v2-v2U()<=v2m&v2m<=v2+v2U()".asFormula),
@@ -352,18 +354,18 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive model monitor from approximated planar flight motion with intruder linear velocity uncertainty" in withMathematica { tool =>
     // experiment: horizontal flight + sensor
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple with Intruder Linear Velocity Uncertainty",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple with Intruder Linear Velocity Uncertainty",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap(
       "v2".asVariable -> Some("v2-v2U()<=v2m&v2m<=v2+v2U()".asFormula),
       "x_0".asVariable -> None, "y_0".asVariable -> None, "dx_0".asVariable -> None, "dy_0".asVariable -> None)
     //@todo partial QE may not terminate
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool,
-      checkWitnessResult = _.subgoals.loneElement shouldBe "==>  \\exists v2 ((v2-v2U()<=v2m&v2m<=v2+v2U())&(\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I1(v1,v2p,dx,dy,x,y)>v1+v2p)&(0=1->dx^2+dy^2=1)&((0=1->dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y))&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&\\exists v2 ((v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&w1post=0&w2post=0)|\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I2(v1,v2p,1,0,dx,dy,x,y)>2*v1*v2p+2*v2p)&dx^2+dy^2=1&((dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&(1=0->dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y)))&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&\\exists v2 ((v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&w1post=1&w2post=0)))".asSequent)
+      checkWitnessResult = _.subgoals.loneElement shouldBe "==>  \\exists v2 ((v2-v2U()<=v2m&v2m<=v2+v2U())&(\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I1(v1,v2p,dx,dy,x,y)>v1+v2p)&(0=1->dx^2+dy^2=1)&((0=1->dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y))&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&\\exists v2post ((v2post-v2U()<=v2mpost&v2mpost<=v2post+v2U())&w1post=0&w2post=0)|\\forall v2p (v2m-v2U()<=v2p&v2p<=v2m+v2U()->I2(v1,v2p,1,0,dx,dy,x,y)>2*v1*v2p+2*v2p)&dx^2+dy^2=1&((dxpost^2+dypost^2=1&I2(1,1,1,0,dxpost,dypost,xpost,ypost)=I2(1,1,1,0,dx,dy,x,y))&(1=0->dxpost=dx&dypost=dy&I1(1,1,dxpost,dypost,xpost,ypost)=I1(1,1,dx,dy,x,y)))&(v2-v2U()<=v2mpost&v2mpost<=v2+v2U())&\\exists v2post ((v2post-v2U()<=v2mpost&v2mpost<=v2post+v2U())&w1post=1&w2post=0)))".asSequent)
   }
 
   it should "FEATURE_REQUEST: derive model monitor from approximated planar flight motion with ownship velocity disturbance and intruder velocity uncertainty" taggedAs TodoTest ignore withMathematica { tool =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety with Ownship Angular Velocity Disturbance and Intruder Velocity Uncertainty",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Planar Flight Motion Safety with Ownship Angular Velocity Disturbance and Intruder Velocity Uncertainty",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap(
       "w1".asVariable -> None,
@@ -376,22 +378,22 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "prove LLC" in withMathematica { _ =>
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Local lane control safety",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Local lane control safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     checkArchiveEntries(entry::Nil)
   }
 
   it should "derive a model monitor from approximated ETCS Essentials" in withMathematica { tool =>
     // experiment: train control original
-    val entry = KeYmaeraXArchiveParser.getEntry("ICFEM09/ETCS Essentials",
+    val entry = ArchiveParser.getEntry("ICFEM09/ETCS Essentials",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/etcs/etcs.kyx")).mkString).get
     val monitor = deriveMonitor(entry, Some(entry.tactics.find(_._1 == "ETCS Essentials Proof with Differential Invariants").get._3), ListMap.empty, tool)
-    monitor shouldBe "m()-z<=SB(v)&v>=0&0<=ep()&vpost>=0&tpost<=ep()&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2&zpost_0=z&vpost_0=v&apost=-b()&tpost_0=0|m()-z>=SB(v)&v>=0&0<=ep()&vpost>=0&tpost<=ep()&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2&zpost_0=z&vpost_0=v&apost=A()&tpost_0=0".asFormula
+    monitor shouldBe "m-z<=SB(v)&v>=0&0<=ep()&vpost>=0&tpost<=ep()&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2&zpost_0=z&vpost_0=v&apost=-b()&tpost_0=0|m-z>=SB(v)&v>=0&0<=ep()&vpost>=0&tpost<=ep()&tpost>=0&vpost=v-b()*tpost&zpost=z+v*tpost-b()/2*tpost^2&vpost=v+A()*tpost&zpost=z+v*tpost+A()/2*tpost^2&zpost_0=z&vpost_0=v&apost=A()&tpost_0=0".asFormula
   }
 
   it should "derive a model monitor from ETCS essentials with train position measurement" in withMathematica { tool =>
     // experiment: train control + sensor
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/ETCS Essentials with train position uncertainty",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/ETCS Essentials with train position uncertainty",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap(
       "z".asVariable -> Some("z-zU()<=zm&zm<=z+zU()".asFormula),
@@ -401,7 +403,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive a model monitor from ETCS essentials with train acceleration disturbance" in withMathematica { tool =>
     // experiment: train control + actuator
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/ETCS Essentials with train acceleration disturbance",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/ETCS Essentials with train acceleration disturbance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap(
       "a".asVariable -> None,
@@ -412,7 +414,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive a model monitor from approximated VSL" in withMathematica { tool =>
     // experiment: road traffic control original
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Variable Speed Limit is Safe",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Variable Speed Limit is Safe",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap("v1_0".asVariable -> None, "t_0".asVariable -> None, "x1_0".asVariable -> None)
     val monitor = deriveMonitor(entry, Some(entry.tactics.head._3), unobservable, tool)
@@ -421,7 +423,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive a model monitor from approximated VSL with car actuator disturbance" in withMathematica { tool =>
     // experiment: road traffic control + actuator
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Variable Speed Limit is Safe with Car Actuator Disturbance",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Variable Speed Limit is Safe with Car Actuator Disturbance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap(
       "a1".asVariable -> None,
@@ -432,7 +434,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "derive a model monitor from approximated VSL with car position uncertainty" in withMathematica { tool =>
     // experiment: road traffic control + sensor
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Variable Speed Limit is Safe with Car Position Uncertainty",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Variable Speed Limit is Safe with Car Position Uncertainty",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservable = ListMap(
       "x1".asVariable -> Some("x1m-xU()<=x1&x1<=x1m+xU()".asFormula),
@@ -442,22 +444,23 @@ class PartialObservableModelplexTests extends TacticTestBase {
   }
 
   it should "derive a model monitor from approximated robix static safety" in withMathematica { tool =>
-    val entry = KeYmaeraXArchiveParser.getEntry("IJRR17/Theorem 1: Static safety",
+    val entry = ArchiveParser.getEntry("IJRR17/Theorem 1: Static safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString).head
     deriveMonitor(entry, entry.tactics.find(_._1 == "Proof Theorem 1: Static safety").map(_._3), ListMap.empty, tool)
   }
 
   it should "derive a model monitor from approximated robix passive safety" in withMathematica { tool =>
     // experiment: robot original
-    val entry = KeYmaeraXArchiveParser.getEntry("IJRR17/Theorem 2: Passive safety",
+    val entry = ArchiveParser.getEntry("IJRR17/Theorem 2: Passive safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString).head
     val unobservableVars = ListMap(List("dx_0","t_0","yo_0","w_0","x_0","y_0","yo_0","vo_0","xo_0","dy_0","v_0").map(_.asVariable -> None):_*)
     deriveMonitor(entry, Some(entry.tactics.head._3), unobservableVars, tool)
   }
 
-  it should "derive a model monitor from approximated robix passive safety despite location uncertainty" in withMathematica { tool =>
+  it should "derive a model monitor from approximated robix passive safety despite location uncertainty" ignore withMathematica { tool =>
+    //@todo test is too slow
     // experiment: robot + sensor
-    val Some(entry) = KeYmaeraXArchiveParser.getEntry("ModelPlex/Partial Observability/Theorem 6: Passive safety despite location uncertainty",
+    val Some(entry) = ArchiveParser.getEntry("ModelPlex/Partial Observability/Theorem 6: Passive safety despite location uncertainty",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx")).mkString)
     val unobservableVars = ListMap(
       ("mx".asVariable -> Some("true".asFormula)) +:
