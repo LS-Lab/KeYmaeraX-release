@@ -107,6 +107,10 @@ class SimplifierV3Tests extends TacticTestBase {
     SimplifierV3.termSimp("0-(x-y)".asTerm, Set.empty, SimplifierV3.defaultTaxs)._1 shouldBe "y-x".asTerm
   }
 
+  it should "simplify plus negation" in withMathematica { _ =>
+    SimplifierV3.termSimp("x+(-y)".asTerm, Set.empty, SimplifierV3.defaultTaxs)._1 shouldBe "x-y".asTerm
+  }
+
   it should "simplify terms under quantifiers" in withMathematica { _ =>
     val fml = "(\\forall t \\forall s \\forall y (t>=0 & 0 <= s & s<=t & y>0-> x=v_0*(0+1*t-0) -> x >= 0/y))".asFormula
     val ctxt = IndexedSeq("x_0=0".asFormula, "v_0=5".asFormula)

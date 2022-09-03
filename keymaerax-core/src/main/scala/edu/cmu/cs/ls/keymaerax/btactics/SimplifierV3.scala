@@ -936,7 +936,9 @@ object SimplifierV3 {
 
   private lazy val plusArith: List[ProvableSig] = List(
     Ax.plusZero.provable,
-    Ax.zeroPlus.provable)
+    Ax.zeroPlus.provable,
+    Ax.plusNeg.provable
+  )
 
   private lazy val minusArith: List[ProvableSig] = List(
     Ax.minusZero.provable,
