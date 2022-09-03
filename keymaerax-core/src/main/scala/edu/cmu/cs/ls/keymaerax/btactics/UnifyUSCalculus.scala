@@ -2015,13 +2015,29 @@ trait UnifyUSCalculus {
 
         // in which context of the fact does the key occur
         K.ctx match {
-          case Equal(DotTerm(_, _), o) => equivStep(o)
+          case Equal(DotTerm(_, _), o) => fact.conclusion.succ.head match {
+            case Equal(l, r) =>
+              if (l == r) proof //@note shortcut for stutter/recursor axioms
+              else equivStep(o)
+          }
 
-          case Equal(o, DotTerm(_, _)) => equivStep(o)
+          case Equal(o, DotTerm(_, _)) => fact.conclusion.succ.head match {
+            case Equal(l, r) =>
+              if (l == r) proof //@note shortcut for stutter/recursor axioms
+              else equivStep(o)
+          }
 
-          case Equiv(DotFormula, o)    => equivStep(o)
+          case Equiv(DotFormula, o)    => fact.conclusion.succ.head match {
+            case Equiv(l, r) =>
+              if (l == r) proof //@note shortcut for stutter/recursor axioms
+              else equivStep(o)
+          }
 
-          case Equiv(o, DotFormula)    => equivStep(o)
+          case Equiv(o, DotFormula)    => fact.conclusion.succ.head match {
+            case Equiv(l, r) =>
+              if (l == r) proof //@note shortcut for stutter/recursor axioms
+              else equivStep(o)
+          }
 
 
           case Imply(o, DotFormula) =>
