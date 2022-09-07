@@ -3,8 +3,8 @@ angular.module('formula', ['ngSanitize']);
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
   .directive('k4Formula', ['$compile', '$http', '$sce', '$q', '$uibModal', 'derivationInfos', 'sequentProofData',
-             'spinnerService',
-      function($compile, $http, $sce, $q, $uibModal, derivationInfos, sequentProofData, spinnerService) {
+             'spinnerService','formulaTools',
+      function($compile, $http, $sce, $q, $uibModal, derivationInfos, sequentProofData, spinnerService, formulaTools) {
     return {
         restrict: 'AE',
         scope: {
@@ -228,30 +228,16 @@ angular.module('formula')
               return $sce.trustAsHtml(html);
             }
 
-            scope.replaceSpecialNotation = function(html) {
-              return html.replace(/(\w+)(?:(\(\))|(\(\|\|\))|({\|\^@\|}))/g,
-                function(match, name, fnParens, fnctlParens, sysParens, offset, string) {
-                  if (name.startsWith('A__')) return name.replace(/A__(\d+)/g,
-                    function(match, i, offset, string) { return '<span class="k4-assumptions-cart fa fa-shopping-cart small text-muted"><sub>' + i + '</sub></span>'; })
-                  else if (fnParens) return '<span class="k4-nullary-fn">' + name + '</span>';
-                  else if (fnctlParens) return '<span class="k4-functional">' + name + '</span>';
-                  else if (sysParens) return '<span class="k4-system-const">' + name + '</span>';
-                  else return html;
-                });
+            scope.formulaStringHtml = function() {
+              return $sce.trustAsHtml(formulaTools.formatSubscriptIndex(formulaTools.formatSpecialNotation(scope.formula.string)));
             }
 
-            scope.replacePlainSpecialNotation = function(text) {
-              return text.replace(/(\w+)(?:(\(\))|({\|\^@\|}))/g, function(match, name, fnParens, sysParens, offset, string) {
-                return name;
-              });
+            scope.exprTextHtml = function(expr) {
+              return $sce.trustAsHtml(formulaTools.formatSubscriptIndex(formulaTools.formatSpecialNotation(expr.text)));
             }
 
-            scope.subscriptIndex = function(html) {
-              return html;
-              //@note disabled for now for proper copy-paste behavior
-//              return html.replace(/_(\d+)/g, function(match, idx, parens, offset, string) {
-//                return '<sub>' + idx + '</sub>';
-//              });
+            scope.exprText = function(expr) {
+              return formulaTools.formatPlainSpecialNotation(expr.plain);
             }
         }
     };

@@ -16,13 +16,13 @@
 
     <!-- Antecedent -->
     <div class="col-sm-3 k4-sequent-antecedent">
-        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}"
+        <div class="row k4-flexrow" ng-class="{'k4-abbreviate': abbreviate}" ng-if="!collapsed" ng-repeat="f in sequent.ante" id="{{f.id}}"
              uib-popover-template="'templates/axiomPopoverTemplate.html'"
              popover-class="k4-axiomtactic-popover"
              popover-trigger="'rightClick'"
              popover-append-to-body="true"
              popover-placement="auto bottom-left">
-            <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">
+            <div class="col-sm-12 k4-formula" ng-if="!readOnly">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideL')"
                            uib-tooltip="Hide permanently" tooltip-placement="left" tooltip-popup-delay="500">
@@ -56,11 +56,21 @@
                             on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-sm-12 k4-formula nohover" ng-if="(collapsed && $first) || (readOnly && !collapsed)">
+            <div class="col-sm-12 k4-formula nohover" ng-if="readOnly">
                 <div class="k4-formula-content" ng-class="{'k4-formula-collapsed': collapsed}">
                     <k4-formula class="k4-formula-container" user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                                 formula="f.formula" highlight="false" collapsed="collapsed"></k4-formula>
                 </div>
+            </div>
+        </div>
+        <div class="row k4-flexrow" ng-class="{'k4-abbreviate': abbreviate}" ng-if="collapsed"
+             uib-popover-template="'templates/axiomPopoverTemplate.html'"
+             popover-class="k4-axiomtactic-popover"
+             popover-trigger="'rightClick'"
+             popover-append-to-body="true"
+             popover-placement="auto bottom-left">
+            <div class="k4-formula-content" ng-class="{'k4-formula-collapsed': collapsed}">
+                <span ng-bind-html="fmlListHtml(sequent.ante)"></span>
             </div>
         </div>
         <!-- Collapse button -->
@@ -127,13 +137,13 @@
 
     <!-- Succedent -->
     <div class="col-sm-8">
-        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.succ" id="{{f.id}}"
+        <div class="row k4-flexrow" ng-class="{'k4-abbreviate': abbreviate}" ng-if="!collapsed" ng-repeat="f in sequent.succ" id="{{f.id}}"
              uib-popover-template="'templates/axiomPopoverTemplate.html'"
              popover-class="k4-axiomtactic-popover"
              popover-trigger="'rightClick'"
              popover-append-to-body="true"
              popover-placement="auto bottom-right">
-            <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">
+            <div class="col-sm-12 k4-formula" ng-if="!readOnly">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideR')"
                            uib-tooltip="Hide permanently" tooltip-placement="left" tooltip-popup-delay="500">
@@ -160,13 +170,23 @@
                                 on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-sm-12 k4-formula nohover" ng-if="(collapsed && $first) || (readOnly && !collapsed)">
+            <div class="col-sm-12 k4-formula nohover" ng-if="readOnly">
                 <div class="k4-formula-content" ng-class="{'k4-formula-collapsed': collapsed}">
                     <k4-formula class="k4-formula-container"
                                 user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}" goal-id="{{goalId}}"
                                 formula="f.formula" highlight="false" collapsed="collapsed"></k4-formula>
                 </div>
 
+            </div>
+        </div>
+        <div class="row k4-flexrow" ng-class="{'k4-abbreviate': abbreviate}" ng-if="collapsed"
+             uib-popover-template="'templates/axiomPopoverTemplate.html'"
+             popover-class="k4-axiomtactic-popover"
+             popover-trigger="'rightClick'"
+             popover-append-to-body="true"
+             popover-placement="auto bottom-right">
+            <div class="k4-formula-content" ng-class="{'k4-formula-collapsed': collapsed}">
+                <span ng-bind-html="fmlListHtml(sequent.succ)"></span>
             </div>
         </div>
         <div class="row k4-flexrow" ng-if="sequent.ante.length > 0 && sequent.succ.length === 0">
