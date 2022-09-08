@@ -26,6 +26,8 @@ object QuizExtractor {
     val MATH_DELIM = "$"
     val LISTING_DELIM = "\\begin{lstlisting}"
     val INLINE_SOL_DELIM = "____"
+    val INLINE_SOL_DELIM_UNI_BEGIN = "\u00ab"
+    val INLINE_SOL_DELIM_UNI_END = "\u00bb"
     val ARG_PLACEHOLDER = "\\%"
 
     private val QUESTION_INFO1 = "qi1"
@@ -57,7 +59,7 @@ object QuizExtractor {
     private def solfinBodyExtractor(capture: String) = """(?s)\\begin\{lstlisting}\s*(""" + capture + """.*?)\s*\\end\{lstlisting}"""
     private val SOLFIN_BODY_EXTRACTOR = solfinBodyExtractor(s"?<$SOLFIN>")
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\{?\s*""" + SOLFIN_BODY_EXTRACTOR + """\s*}?)"""
-    private val SOLFIN_ANSWER_EXTRACTOR: Regex  = ("(?s)" + INLINE_SOL_DELIM + "\\s*" + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + "\\s*" + INLINE_SOL_DELIM).r(ANSWER)
+    private val SOLFIN_ANSWER_EXTRACTOR: Regex  = ("(?s)" + "(?:" + INLINE_SOL_DELIM + "|" + INLINE_SOL_DELIM_UNI_BEGIN + ")" + "\\s*" + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + "\\s*" + "(?:" + INLINE_SOL_DELIM + "|" + INLINE_SOL_DELIM_UNI_END + ")").r(ANSWER)
     // \sol
     private def kyxlineExtractor(capture: String) = """\""" + KYXLINE + """\s*"(""" + capture + """[^"]+)""""
     //@note nested {} up to level 2
