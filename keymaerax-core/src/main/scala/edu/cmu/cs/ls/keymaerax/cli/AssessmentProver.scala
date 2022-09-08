@@ -1273,7 +1273,7 @@ object AssessmentProver {
             case _ => None
           }
           })
-          val percentage = (100.0 * grades.count(_._2 > 0.0)) / grades.size
+          val percentage = if (grades.exists(_._1.points > 0.0)) (100.0 * grades.count(_._2 > 0.0)) / grades.count(_._1.points > 0.0) else 1
           msgStream.println(f"${p.number} ) Sum $percentage%2.1f%%")
           feedback match {
             case Some(s) =>
