@@ -317,12 +317,21 @@ object AssessmentProver {
       mode.getOrElse(Modes.SYN_EQ) match {
         case Modes.SYN_EQ => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) => run(() => syntacticEquality(h.expr, e.expr))
+          case (h: ListExpressionArtifact, e: ExpressionArtifact) => check(h, ListExpressionArtifact(List(e.expr)))
+          case (h: ExpressionArtifact, e: ListExpressionArtifact) => check(ListExpressionArtifact(List(h.expr)), e)
+          case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
+            run(() => {
+              val checkResults = h.sortBy(_.prettyString).zip(e.sortBy(_.prettyString)).map({
+                case (he, ee) => syntacticEquality(he, ee)
+              })
+              checkResults.find(!_.isProved).getOrElse(checkResults.head)
+            })
           case (TexExpressionArtifact(h), TexExpressionArtifact(e)) => run(() => syntacticEquality(h, e))
           case (SequentArtifact(h), SequentArtifact(e)) => run(() => syntacticEquality(h, e))
           case (TextArtifact(h), TextArtifact(e)) =>
             if (h == e) run(() => prove(Sequent(IndexedSeq(), IndexedSeq(True)), closeT))
             else Right("")
-          case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.longHintString)
+          case _ => Right("Answer must be a KeYmaera X expression, sequent, list of expressions, or simple list/interval notation, but got " + have.longHintString)
         }
         case Modes.VALUE_EQ => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
