@@ -1025,7 +1025,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         )
       )
     // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
-    val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).partition(_.name.startsWith("pre"))
+    val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).filter(_.isInstanceOf[Variable]).partition(_.name.startsWith("pre"))
     val pre2post = stepPostVars.filter(_.name != "t_").map(v => Variable("pre" + v.name, v.index, v.sort) -> v).toMap[NamedSymbol, NamedSymbol]
 
     val stepModuleInit = stepPreVars.toList.sorted.map(s =>
@@ -1068,7 +1068,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         )
       )
     // initial;step;simulate
-    val simulate = ExtMathematicaOpSpec.compoundExpression(init, step, exec)
+    val simulate = ExtMathematicaOpSpec.quiet(ExtMathematicaOpSpec.compoundExpression(init, step, exec))
 
     run(simulate)._2
   }

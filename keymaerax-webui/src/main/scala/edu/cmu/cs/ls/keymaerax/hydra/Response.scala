@@ -1219,9 +1219,10 @@ class PegasusCandidatesResponse(candidates: Seq[Either[Seq[(Formula, String)],Se
 }
 
 class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends Response {
+  private val pp = new UIAbbreviatingKeYmaeraXPrettyPrinter()
   def getJson: JsValue = JsObject(
-    "initial" -> JsString(initial.prettyString),
-    "stateRelation" -> JsString(stateRelation.prettyString)
+    "initial" -> JsString(pp(initial)),
+    "stateRelation" -> JsString(pp(stateRelation))
   )
 }
 

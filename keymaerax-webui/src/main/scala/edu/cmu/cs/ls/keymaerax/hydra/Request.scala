@@ -454,10 +454,8 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
       case Some(node) =>
         //@note not a tactic because we don't want to change the proof tree just by simulating
         val sequent = node.goal.get
-        val fml = sequent.toFormula match {
-          case Imply(True, succ) => succ //@todo really? below we error response if not an implication
-          case f => f
-        }
+        val defs = node.proof.info.defs(db)
+        val fml = defs.exhaustiveSubst(sequent.toFormula)
         if (ToolProvider.odeTool().isDefined) fml match {
           case Imply(initial, b@Box(prg, _)) =>
             // all symbols because we need frame constraints for constants
