@@ -952,6 +952,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             resolve: {
               result: function() { return response.data.result; },
               origFormula: function() { return response.data.origFormula; },
+              assumptions: function() { return response.data.additionalAssumptions; },
               cexFormula: function() { return response.data.cexFormula; },
               cexValues: function() { return response.data.cexValues; },
               speculatedValues: function() { return response.data.speculatedValues; }

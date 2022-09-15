@@ -48,9 +48,14 @@
     </div>
 </div>
 <div ng-if="result === 'cex.none'" class="modal-body">
-    <p>
-    No counterexample found. Try proving it to see if it is valid.
-    Some arithmetic simplifications may help reduce the complexity.
+    <p ng-if="assumptions.additional">
+        No counterexample found with the additional assumptions below:
+        <p><code><span ng-bind-html="assumptions.additional"></span></code></p>
+        Try to make these additional assumptions available by transforming the proof around or by adapting the model.
+    </p>
+    <p ng-if="!assumptions.additional">
+        No counterexample found. Try proving it to see if it is valid.
+        Some arithmetic simplifications may help reduce the complexity.
     </p>
     <p>
         If the formula cannot be proved (<code>&#8866; false</code>)

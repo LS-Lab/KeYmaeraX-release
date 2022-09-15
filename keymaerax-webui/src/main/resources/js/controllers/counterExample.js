@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 angular.module('keymaerax.controllers').controller('CounterExampleCtrl',
-    function($scope, $uibModalInstance, result, origFormula, cexFormula, cexValues, speculatedValues) {
+    function($scope, $uibModalInstance, result, origFormula, assumptions, cexFormula, cexValues, speculatedValues) {
 
   $scope.result = result;
   $scope.origFormula = origFormula;
@@ -11,7 +11,7 @@ angular.module('keymaerax.controllers').controller('CounterExampleCtrl',
   $scope.cexValues = cexValues;
   $scope.speculatedValues = speculatedValues;
   $scope.assumptions = {
-    additional: undefined
+    additional: assumptions
   }
 
   $scope.cancel = function() {

@@ -296,7 +296,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
         def nonfoError(sequent: Sequent) = {
           val nonFOAnte = sequent.ante.filterNot(_.isFOL)
           val nonFOSucc = sequent.succ.filterNot(_.isFOL)
-          new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
+          new CounterExampleResponse("cex.nonfo", additionalAssumptions, (nonFOSucc ++ nonFOAnte).head) :: Nil
         }
 
         def filterSequent(s: Sequent): Sequent = s.copy(
@@ -313,7 +313,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
               //@note counterexample on false (e.g., after QE on invalid formula)
               node.parent match {
                 case Some(parent) => getCex(parent, cexTool)
-                case None => new CounterExampleResponse("cex.none") :: Nil
+                case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
               }
             } else {
               val skolemized = TactixLibrary.proveBy(sequent,
@@ -326,11 +326,11 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
               try {
                 findCounterExample(withAssumptions, cexTool) match {
                   //@todo return actual sequent, use collapsiblesequentview to display counterexample
-                  case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-                  case None => new CounterExampleResponse("cex.none") :: Nil
+                  case Some(cex) => new CounterExampleResponse("cex.found", additionalAssumptions, fml, cex) :: Nil
+                  case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
                 }
               } catch {
-                case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+                case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
                 case ex: ToolException => new ErrorResponse("Error executing counterexample tool", ex) :: Nil
               }
             }
@@ -345,7 +345,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                         val search = new BoundedDFS(10)
                         search(snode) match {
                           case None => nonfoError(sequent)
-                          case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+                          case Some(cex) => new CounterExampleResponse("cex.found", additionalAssumptions, fml, cex.map) :: Nil
                         }
                       } catch {
                         // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
@@ -356,9 +356,9 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                       // no automated counterexamples for games yet
                       nonfoError(sequent)
                     }
-                  case None => new CounterExampleResponse("cex.wrongshape") :: Nil
+                  case None => new CounterExampleResponse("cex.wrongshape", additionalAssumptions) :: Nil
                 }
-              case None => new CounterExampleResponse("cex.notool") :: Nil
+              case None => new CounterExampleResponse("cex.notool", additionalAssumptions) :: Nil
             }
           }
         }
@@ -367,25 +367,25 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
           node.goal match {
             case Some(unfiltered) if filterSequent(unfiltered).isFOL => ToolProvider.cexTool() match {
                 case Some(cexTool) => getCex(node, cexTool)
-                case None => new CounterExampleResponse("cex.notool") :: Nil
+                case None => new CounterExampleResponse("cex.notool", additionalAssumptions) :: Nil
               }
             case Some(unfiltered) =>
               val sequent = filterSequent(unfiltered)
               sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
                 case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
                   case Some(tool) => tool.refuteODE(ode, sequent.ante, post) match {
-                    case None => new CounterExampleResponse("cex.none") :: Nil
-                    case Some(cex) => new CounterExampleResponse("cex.found", sequent.toFormula, cex) :: Nil
+                    case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
+                    case Some(cex) => new CounterExampleResponse("cex.found", additionalAssumptions, sequent.toFormula, cex) :: Nil
                   }
-                  case None => new CounterExampleResponse("cex.notool") :: Nil
+                  case None => new CounterExampleResponse("cex.notool", additionalAssumptions) :: Nil
                 }
                 case None => nonfoError(sequent)
               }
-            case None => new CounterExampleResponse("cex.none") :: Nil
+            case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
           }
         } catch {
-          case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
-        } else new CounterExampleResponse("cex.emptysequent") :: Nil
+          case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
+        } else new CounterExampleResponse("cex.emptysequent", additionalAssumptions) :: Nil
     }
   }
 }

@@ -46,6 +46,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                         size: dialogSize,
                         resolve: {
                           result: function() { return response.data.result; },
+                          assumptions: function() { return response.data.additionalAssumptions; },
                           origFormula: function() { return response.data.origFormula; },
                           cexFormula: function() { return response.data.cexFormula; },
                           cexValues: function() { return response.data.cexValues; },

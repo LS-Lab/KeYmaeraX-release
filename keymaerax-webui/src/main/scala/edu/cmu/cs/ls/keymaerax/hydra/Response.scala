@@ -1111,13 +1111,14 @@ class PruneBelowResponse(item: AgendaItem) extends Response {
   )
 }
 
-class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Expression] = Map()) extends Response {
+class CounterExampleResponse(kind: String, assumptions: Option[Formula], fml: Formula = True, cex: Map[NamedSymbol, Expression] = Map()) extends Response {
   def getJson: JsObject = {
     val bv = StaticSemantics.boundVars(fml).toSet[NamedSymbol]
     val (boundCex, freeCex) = cex.partition(e => bv.contains(e._1))
     JsObject(
       "result" -> JsString(kind),
       "origFormula" -> JsString(fml.prettyString.replaceAllLiterally("()", "")),
+      "additionalAssumptions" -> assumptions.map(f => JsString(f.prettyString.replaceAllLiterally("()", ""))).getOrElse(JsNull),
       "cexFormula" -> JsString(createCexFormula(fml, cex).replaceAllLiterally("()", "")),
       "cexValues" -> JsArray(
         freeCex.map(e => JsObject(
