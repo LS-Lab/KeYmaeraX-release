@@ -138,9 +138,9 @@ object UIIndex {
             }
             else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
-            s"""expand("$name")""" :: rules
+            rules :+ s"""expand("$name")"""
           case SystemConst(name, _) if substs.exists({ case SubstitutionPair(SystemConst(wn, _), _) => wn == name case _ => false }) =>
-            s"""expand("$name")""" :: rules
+            rules :+ s"""expand("$name")"""
           case _ => rules
         }
 
@@ -168,7 +168,7 @@ object UIIndex {
               else ("solve" :: "compatCut" :: Nil) //todo
             } else ("solve" :: "compatCut" :: Nil) //todo
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
-            s"""expand("$name")""" :: rules
+            rules :+ s"""expand("$name")"""
           case _ => rules
         }
 
@@ -214,17 +214,6 @@ object UIIndex {
         else {
           // Check for expansions
           val sig = StaticSemantics.signature(expr)
-          sig.toList.flatMap( s => s match {
-            case fn: Function if substs.exists({
-              case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn
-              case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn
-              case _ => false }) =>
-              Some(s"""expand("${fn.prettyString}")""")
-            //case (PredOf(fn, _)) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false }) =>
-            //  Some(s"""expand("${fn.prettyString}")""")
-            case _ => None
-          }
-          ) ++
           ((expr, isAnte) match {
             case (True, false) => "closeTrue" :: alwaysApplicable
             case (False, true) => "closeFalse" :: alwaysApplicable
@@ -245,11 +234,20 @@ object UIIndex {
             case (_: Equal, true) => "allL2R" :: "allR2L" :: "= commute" :: "alphaRenAllBy" :: alwaysApplicable
             // Suggest diffUnfolding for atomic comparisons if there is an interpreted function
             case (f:ComparisonFormula,false) =>
-              if(StaticSemantics.signature(f).exists( e => e match {
+              if(StaticSemantics.signature(f).exists({
                 case ee: Function => ee.interpreted
               })) "diffUnfold" :: alwaysApplicable
               else alwaysApplicable
             case _ => alwaysApplicable
+          }) ++ sig.toList.flatMap({
+            case fn: Function if substs.exists({
+            case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn
+            case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn
+            case _ => false }) =>
+            Some(s"""expand("${fn.prettyString}")""")
+            //case (PredOf(fn, _)) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false }) =>
+            //  Some(s"""expand("${fn.prettyString}")""")
+            case _ => None
           })
         }
     }
