@@ -25,7 +25,7 @@
                     <span id="stateRelationHelpBlock" class="help-block">
                         A formula that describes the relation between the state prior and posterior to running the
                         program (e.g., the state relation x=xpre+1 describes the deterministic program x:=x+1).
-                        You are running KeYmaera X without ModelPlex, please provide manually.
+                        <span ng-if="!stateRelation">You are running KeYmaera X without ModelPlex, please provide manually.</span>
                     </span>
                 </div>
             </div>

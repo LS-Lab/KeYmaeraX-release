@@ -53,6 +53,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
+import edu.cmu.cs.ls.keymaerax.utils.EulerIntegrationCompiler
 import spray.json.JsonParser.ParsingException
 
 import java.nio.charset.StandardCharsets
@@ -493,30 +494,36 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
   private def solveODEs(prg: Program): Program = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
     override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-      case ODESystem(ode, evoldomain) =>
-        Right(Compose(Test(evoldomain), solve(ode, evoldomain)))
+      case sys@ODESystem(_, evoldomain) => Right(Compose(Test(evoldomain), solve(sys)))
       case _ => Left(None)
     }
   }, prg).get
 
-  private def solve(ode: DifferentialProgram, evoldomain: Formula): Program = {
+  private def solve(sys: ODESystem): Program = {
     val iv: Map[Variable, Variable] =
-      DifferentialHelper.getPrimedVariables(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
+      DifferentialHelper.getPrimedVariables(sys.ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
     val time: Variable = Variable("t_", None, Real)
-    val solution = ToolProvider.odeTool().get.odeSolve(ode, time, iv).get
-    val flatSolution = FormulaTools.conjuncts(solution).
-      sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
-    Compose(
-      //@store initial values
-      iv.map({ case (v, i) => Assign(i, v) }).reduceRightOption(Compose).getOrElse(Test(True)),
+    try {
+      val solution = ToolProvider.odeTool().get.odeSolve(sys.ode, time, iv).get
+      val flatSolution = FormulaTools.conjuncts(solution).
+        sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
       Compose(
-        flatSolution.map({ case Equal(v: Variable, r) => Assign(v, r) }).reduceRightOption(Compose).getOrElse(Test(True)),
-        Test(evoldomain))
-    )
-  }
-
-  private def replaceFree(f: Formula, vars: Map[Variable, Variable]) = {
-    vars.keySet.foldLeft[Formula](f)((b, v) => b.replaceFree(v, vars(v)))
+        //@store initial values
+        iv.map({ case (v, i) => Assign(i, v) }).reduceRightOption(Compose).getOrElse(Test(True)),
+        Compose(
+          flatSolution.map({ case Equal(v: Variable, r) => Assign(v, r) }).reduceRightOption(Compose).getOrElse(Test(True)),
+          Test(sys.constraint))
+      )
+    } catch {
+      case _: ToolException =>
+        val prg = new EulerIntegrationCompiler()(sys)
+        // introduce variables for differential symbols (prepare for ModelPlex), replace step with t_
+        val dotted = StaticSemantics.symbols(prg).filter(_.isInstanceOf[DifferentialSymbol]).foldLeft(prg)({
+          case (prg, v) => prg.replaceAll(v, TacticHelper.freshNamedSymbol(Variable(v.name + "dot", v.index), sys))
+        })
+        val stepVar = StaticSemantics.freeVars(dotted).toSet.filter(_.name == "step").maxBy(_.index)
+        dotted.replaceAll(stepVar, time)
+    }
   }
 }
 
@@ -537,7 +544,13 @@ class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, node
         val varsStateRelation = replaceFuncs(stateRelation).get
         val varsInitial = replaceFuncs(initial).get
         val timedStateRelation = varsStateRelation.replaceFree(Variable("t_"), stepDuration)
-        val simulation = s.simulate(varsInitial, timedStateRelation, steps, n)
+
+        // preserve initial values of unmodified variables
+        val vars = StaticSemantics.freeVars(timedStateRelation).toSet
+        val modifiedVars = vars.flatMap(v => if (v.name.startsWith("pre")) List(v, Variable(v.name.stripPrefix("pre"), v.index)) else List.empty)
+        val unmodified = (vars -- modifiedVars).map(v => Equal(v, Variable("pre" + v.name, v.index))).reduceOption(And).getOrElse(True)
+
+        val simulation = s.simulate(varsInitial, And(unmodified, timedStateRelation), steps, n)
         new SimulationResponse(simulation, stepDuration) :: Nil
       case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
     }
