@@ -923,9 +923,12 @@ object RestApi extends Logging {
             val initial = obj.fields("initial").asInstanceOf[JsString].value.asFormula
             val stateRelation = obj.fields("stateRelation").asInstanceOf[JsString].value.asFormula
             val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue()
-            val stepDuration = obj.fields("stepDuration").asInstanceOf[JsString].value.asTerm
-            val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, stepDuration)
-            completeRequest(request, t)
+            obj.fields("stepDuration").asInstanceOf[JsString].value.asTerm match {
+              case dt: edu.cmu.cs.ls.keymaerax.core.Number =>
+                val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, dt)
+                completeRequest(request, t)
+              case t => complete(completeResponse(new ErrorResponse("Expected a number as step duration, but got " + t.prettyString) :: Nil))
+            }
           }}}
       }}
     }

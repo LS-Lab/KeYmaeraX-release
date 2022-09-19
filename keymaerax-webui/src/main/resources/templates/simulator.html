@@ -46,7 +46,7 @@
             </div>
             <div class="form-group">
                 <div class="col-md-offset-2 col-md-10">
-                    <button type="submit" class="btn btn-default">Simulate</button>
+                    <button type="submit" class="btn btn-default" ng-disabled="busy">Simulate <i ng-if="busy" class="fa fa-spinner fa-spin"></i></button>
                 </div>
             </div>
 

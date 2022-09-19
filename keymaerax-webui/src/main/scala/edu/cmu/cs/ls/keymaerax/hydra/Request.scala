@@ -528,7 +528,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 }
 
 class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula,
-                        stateRelation: Formula, steps: Int, n: Int, stepDuration: Term)
+                        stateRelation: Formula, steps: Int, n: Int, stepDuration: Number)
   extends UserProofRequest(db, userId, proofId) with RegisteredOnlyRequest {
   override protected def doResultingResponses(): List[Response] = {
     def replaceFuncs(fml: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
@@ -551,7 +551,15 @@ class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, node
         val unmodified = (vars -- modifiedVars).map(v => Equal(v, Variable("pre" + v.name, v.index))).reduceOption(And).getOrElse(True)
 
         val simulation = s.simulate(varsInitial, And(unmodified, timedStateRelation), steps, n)
-        new SimulationResponse(simulation, stepDuration) :: Nil
+
+        val samples = 100
+        // downselect to 100 samples, otherwise JS library plot is illegible
+        val visualize = simulation.map(s => {
+          val ratio = s.size / samples
+          if (ratio > 1) s.grouped(ratio).map(_.head).toList else s
+        })
+
+        new SimulationResponse(visualize, steps/samples, stepDuration) :: Nil
       case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
     }
   }

@@ -1226,12 +1226,12 @@ class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends 
   )
 }
 
-class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]], stepDuration: Term) extends Response {
+class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]], steps: Int, stepDuration: Number) extends Response {
   def getJson: JsObject = {
     val seriesList = simulation.map(convertToDataSeries)
     JsObject(
       "varNames" -> JsArray(seriesList.head.map(_._1).map(name => JsString(name.prettyString)).toVector),
-      "ticks" -> JsArray(seriesList.head.head._2.indices.map(i => JsString(i.toString)).toVector),
+      "ticks" -> JsArray(seriesList.head.head._2.indices.map(i => JsString((i*steps*stepDuration.value).toString)).toVector),
       "lineStates" -> JsArray(seriesList.map(series =>
         JsArray(series.map({
           case (_, vs) => JsArray(vs.map(v => JsNumber(v.value)).toVector)
