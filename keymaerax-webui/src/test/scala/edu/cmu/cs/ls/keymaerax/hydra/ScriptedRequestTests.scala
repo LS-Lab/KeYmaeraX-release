@@ -1,3 +1,7 @@
+/**
+ * Copyright (c) Carnegie Mellon University.
+ * See LICENSE.txt for the conditions of this license.
+ */
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -12,6 +16,10 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.hydra.requests.models.{GetModelListRequest, ListExamplesRequest, UploadArchiveRequest}
+import edu.cmu.cs.ls.keymaerax.hydra.requests.proofs.{BelleTermInput, CheckIsProvedRequest, CheckTacticInputRequest, CreateModelTacticProofRequest, ExtractTacticRequest, GetAgendaAwesomeRequest, GetApplicableAxiomsRequest, InitializeProofFromTacticRequest, OpenProofRequest, ProofTaskExpandRequest, RunBelleTermRequest, TaskResultRequest, TaskStatusRequest}
+import edu.cmu.cs.ls.keymaerax.hydra.responses.models.ModelUploadResponse
+import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.{AgendaAwesomeResponse, ExpandTacticResponse, GetTacticResponse, OpenProofResponse, ProofVerificationResponse, RunBelleTermResponse, TaskResultResponse, TaskStatusResponse}
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import spray.json.{JsArray, JsBoolean, JsString}
@@ -615,7 +623,7 @@ class ScriptedRequestTests extends TacticTestBase {
       FixedGenerator(Nil), Declaration(Map()))
     val tacticRunner = runTactic(db, t, proofId) _
 
-    tacticRunner("()", master())
+    tacticRunner("()", autoClose)
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "auto"
@@ -640,7 +648,7 @@ class ScriptedRequestTests extends TacticTestBase {
       FixedGenerator(Nil), Declaration(Map()))
     val tacticRunner = runTactic(db, t, proofId) _
 
-    tacticRunner("()", master())
+    tacticRunner("()", autoClose)
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "auto"
