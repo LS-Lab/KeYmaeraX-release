@@ -38,6 +38,11 @@ class SimplifierV3Tests extends TacticTestBase {
     proveBy("!p(), r()&p() | r()&q(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
   }
 
+  it should "do beautification simplification" in withMathematica { _ =>
+    val fml = "x>0 & z>=y -> x^(-1)*((-1)*y+z) >= 0".asFormula
+    proveBy(fml, SimplifierV3.simplify(1)).subgoals.loneElement shouldBe "==> x>0 & z>=y -> (z-y)/x >= 0".asSequent
+  }
+
   it should "do dependent arithmetic simplification" in withMathematica { _ =>
     val fml = "ar > 0 -> (x - 0 + 0 * y + 0 + 0/ar >= 0 - k)".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))
@@ -234,7 +239,7 @@ class SimplifierV3Tests extends TacticTestBase {
     val ctxt = IndexedSeq()
     val tactic = simpTac()
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
-    result.subgoals.loneElement shouldBe "==> 4-4/3=-3/2+1/6+20".asSequent
+    result.subgoals.loneElement shouldBe "==> 4-4/3=1/6-3/2+20".asSequent
   }
 
   it should "cooperate with chase" in withMathematica { _ =>

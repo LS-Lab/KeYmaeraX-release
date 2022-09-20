@@ -4576,6 +4576,19 @@ object Ax extends Logging {
   )
 
   /**
+   * {{{Axiom "1/x * y".
+   *    1/f() * g() = g()/f()
+   * End.
+   * }}}
+   */
+  @Axiom("1/x*")
+  lazy val timesDivInverse: DerivedAxiomInfo = derivedAxiom("* div-inverse", Sequent(IndexedSeq(), IndexedSeq("1/f_() * g_() = g_()/f_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
+      allInstantiateInverse(("g_()".asTerm, "y".asVariable))(1) &
+      byUS(proveBy("\\forall y \\forall x (1/x*y = y/x)".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
     * {{{Axiom "+ inverse".
     *    f() + (-f()) = 0
     * End.
@@ -5248,9 +5261,9 @@ object Ax extends Logging {
     */
   @Axiom("timesIdentityNeg", key = "0", recursor = "")
   lazy val timesIdentityNeg: DerivedAxiomInfo =
-    derivedAxiom("* identity neg", Sequent(IndexedSeq(), IndexedSeq("f_()*-1 = -f_()".asFormula)),
+    derivedAxiom("* identity neg", Sequent(IndexedSeq(), IndexedSeq("f_()*(-1) = -f_()".asFormula)),
       allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
-        byUS(proveBy("\\forall x (x*-1 = -x)".asFormula, TactixLibrary.RCF))
+        byUS(proveBy("\\forall x (x*(-1) = -x)".asFormula, TactixLibrary.RCF))
     )
 
   /**
@@ -5278,6 +5291,18 @@ object Ax extends Logging {
   lazy val plusNeg: DerivedAxiomInfo = derivedAxiom("plus neg", Sequent(IndexedSeq(), IndexedSeq("f_()+(-g_()) = f_()-g_()".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
       byUS(proveBy("\\forall y \\forall x x+(-y)=x-y".asFormula, TactixLibrary.RCF)))
+
+  /**
+   * {{{Axiom "plus neg".
+   *    f()+(-g()) = f()-g()
+   * End.
+   * }}}
+   *
+   * @Derived
+   */
+  @Axiom("plusNeg", unifier = "linear", key = "0", recursor = "")
+  lazy val negPlus: DerivedAxiomInfo = derivedAxiom("neg plus", Sequent(IndexedSeq(), IndexedSeq("(-g_()) + f_() = f_()-g_()".asFormula)),
+    useAt(plusCommute.provable)(1, PosInExpr(0::Nil)) & byUS(plusNeg.provable))
 
 
   /**
@@ -5329,6 +5354,8 @@ object Ax extends Logging {
   lazy val powZero: DerivedAxiomInfo = derivedAxiom("F^0", Sequent(IndexedSeq(), IndexedSeq("f_()^0 = 1".asFormula)), QE)
   @Axiom("powOne", key = "0", recursor = "")
   lazy val powOne: DerivedAxiomInfo = derivedAxiom("F^1", Sequent(IndexedSeq(), IndexedSeq("f_()^1 = f_()".asFormula)), QE)
+  @Axiom("powNegOne", key = "0", recursor = "")
+  lazy val powNegOne: DerivedAxiomInfo = derivedAxiom("F^(-1)", Sequent(IndexedSeq(), IndexedSeq("f_()^(-1) = 1/f_()".asFormula)), RCF)
 
   /** `t<->tt` equivalence */
   private def equivSequent(t: String, tt: String): Sequent =

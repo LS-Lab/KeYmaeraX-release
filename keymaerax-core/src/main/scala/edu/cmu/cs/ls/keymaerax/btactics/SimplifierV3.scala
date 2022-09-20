@@ -927,7 +927,8 @@ object SimplifierV3 {
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentity.provable),
     Ax.timesIdentityNeg.provable,
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable),
-    Ax.negOneTimes.provable)
+    Ax.negOneTimes.provable,
+    Ax.timesDivInverse.provable)
 
   private lazy val negArith: List[ProvableSig] = List(
     Ax.minusNeg.provable,
@@ -937,7 +938,8 @@ object SimplifierV3 {
   private lazy val plusArith: List[ProvableSig] = List(
     Ax.plusZero.provable,
     Ax.zeroPlus.provable,
-    Ax.plusNeg.provable
+    Ax.plusNeg.provable,
+    Ax.negPlus.provable
   )
 
   private lazy val minusArith: List[ProvableSig] = List(
@@ -952,7 +954,8 @@ object SimplifierV3 {
 
   lazy val powArith: List[ProvableSig] = List(
     Ax.powZero.provable,
-    Ax.powOne.provable)
+    Ax.powOne.provable,
+    Ax.powNegOne.provable)
 
   //These may also be useful:
   //qeTermProof("F_()*(F_()^-1)","1",Some("F_()>0")), qeTermProof("(F_()^-1)*F_()","1",Some("F_()>0")))
