@@ -38,29 +38,44 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
   private def numberLiteral(n: BigDecimal): String = PythonPrettyPrinter.numberLiteral(n)
 
+  private def flattenDisjuncts(p: CProgram): Set[CProgram] = p match {
+    case CDisjunctiveSafetyMargin(l, r) => flattenDisjuncts(l) ++ flattenDisjuncts(r)
+    case _ => Set(p)
+  }
+
+  private def flattenConjuncts(p: CProgram): Set[CProgram] = p match {
+    case CConjunctiveSafetyMargin(l, r) => flattenConjuncts(l) ++ flattenConjuncts(r)
+    case _ => Set(p)
+  }
+
   def printDefinitions(e: CExpression): String = e match {
-    case COrProgram(l, r) =>
-      s"""${printDefinitions(l)}
-         |${printDefinitions(r)}
-         |
-         |def OrLeft${uniqueName(l)}($PRE, $CURR, $PARAMS):
-         |${print(l).linesWithSeparators.map("  " + _).mkString}
-         |
-         |def OrRight${uniqueName(r)}($PRE, $CURR, $PARAMS):
-         |${print(r).linesWithSeparators.map("  " + _).mkString}
-         |
-         |""".stripMargin
-    case CAndProgram(l, r) =>
-      s"""${printDefinitions(l)}
-         |${printDefinitions(r)}
-         |
-         |def AndLeft${uniqueName(l)}($PRE, $CURR, $PARAMS):
-         |${print(l).linesWithSeparators.map("  " + _).mkString}
-         |
-         |def AndRight${uniqueName(r)}($PRE, $CURR, $PARAMS):
-         |${print(r).linesWithSeparators.map("  " + _).mkString}
-         |
-         |""".stripMargin
+    case d: CDisjunctiveSafetyMargin =>
+      val disjuncts = flattenDisjuncts(d)
+      val nestedDefs = disjuncts.map(printDefinitions).mkString("\n")
+      val disjunctDefs = disjuncts.
+        filter({ case _: CConjunctiveSafetyMargin => true case _: CIfThenElse => true case _ => false }).
+        map(d => {
+          s"""def Or${uniqueName(d)}($PRE, $CURR, $PARAMS):
+             |${print(d).linesWithSeparators.map("  " + _).mkString}""".stripMargin
+        }).mkString("\n")
+      nestedDefs + "\n" + disjunctDefs
+    case c: CConjunctiveSafetyMargin =>
+      val conjuncts = flattenConjuncts(c)
+      val nestedDefs = conjuncts.map(printDefinitions).mkString("\n")
+      val conjunctDefs = conjuncts.
+        filter({ case _: CDisjunctiveSafetyMargin => true case _: CIfThenElse => true case _ => false }).
+        map(d => {
+          s"""def And${uniqueName(d)}($PRE, $CURR, $PARAMS):
+             |${print(d).linesWithSeparators.map("  " + _).mkString}""".stripMargin
+        }).mkString("\n")
+      nestedDefs + "\n" + conjunctDefs
+    case CIfThenElse(_, ifP, elseP: CIfThenElse) =>
+      val elsePDef =
+        s"""def IfThenElse${uniqueName(elseP)}($PRE, $CURR, $PARAMS):
+           |${print(elseP).linesWithSeparators.map("  " + _).mkString}""".stripMargin
+      s"""${printDefinitions(ifP)}
+         |${printDefinitions(elseP)}
+         |$elsePDef""".stripMargin
     case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
     case _ => ""
   }
@@ -108,36 +123,39 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
     case CTrue => "True"
     case CFalse => "False"
-
-    case CIfThenElse(f, ifP, elseP) => "if " + print(f) + ":\n" + print(ifP).linesWithSeparators.map(INDENT + _).mkString + "\nelse:\n" + print(elseP).linesWithSeparators.map(INDENT + _).mkString
-    case CReturn(e: CExpression) => "result = Verdict(1, " + print(e) + ")\nreturn result"
-    case CError(id: Int, retVal: CExpression, _: String) => s"result = Verdict($id, ${print(retVal)})\nreturn result"
-    case COrProgram(l, r) /* if kind=="boolean" */ =>
-      if (printDebugOut)
-        s"""leftDist = OrLeft${uniqueName(l)}($PRE, $CURR, $PARAMS)
-           |rightDist = OrRight${uniqueName(r)}($PRE, $CURR, $PARAMS)
-           |verdictId = leftDist.id if leftDist.val >= rightDist.val else rightDist.id
-           |result = Verdict(verdictId, max(leftDist.val, rightDist.val));
-           |return result""".stripMargin
-      else
-        s"""leftDist = OrLeft${uniqueName(l)}($PRE, $CURR, $PARAMS)
-           |rightDist = OrRight${uniqueName(r)}($PRE, $CURR, $PARAMS)
-           |verdictId = leftDist.id if leftDist.val >= rightDist.val else rightDist.id
-           |result = Verdict(verdictId, max(leftDist.val, rightDist.val))
-           |return result""".stripMargin
-    case CAndProgram(l, r) /* if kind=="boolean" */ =>
-      if (printDebugOut)
-        s"""leftDist = AndLeft${uniqueName(l)}($PRE, $CURR, $PARAMS);
-           |rightDist = AndRight${uniqueName(r)}($PRE, $CURR, $PARAMS);
-           |verdictId = leftDist.id if leftDist.val <= rightDist.val else rightDist.id
-           |result = Verdict(verdictId, min(leftDist.val, rightDist.val))
-           |return result""".stripMargin
-      else
-        s"""leftDist = AndLeft${uniqueName(l)}($PRE, $CURR, $PARAMS)
-           |rightDist = AndRight${uniqueName(r)}($PRE, $CURR, $PARAMS)
-           |verdictId = leftDist.id if leftDist.val <= rightDist.val else rightDist.id
-           |result = Verdict(verdictId, min(leftDist.val, rightDist.val))
-           |return result""".stripMargin
+    case CIfThenElse(f, ifP, elseP: CIfThenElse) =>
+      s"""if ${print(f)}:
+         |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
+         |else:
+         |  IfThenElse${uniqueName(elseP)}($PRE, $CURR, $PARAMS)""".stripMargin
+    case CIfThenElse(f, ifP, elseP) =>
+      s"""if ${print(f)}:
+         |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
+         |else:
+         |${print(elseP).linesWithSeparators.map(INDENT + _).mkString}""".stripMargin
+    case CMeasureZeroMargin(e: CExpression) => s"Verdict(0, ${print(e)})"
+    case CSafetyMargin(e: CExpression) => s"Verdict(1, ${print(e)})"
+    case CErrorMargin(id: Int, v: CExpression, _: String) => s"Verdict($id, ${print(v)})"
+    case d: CDisjunctiveSafetyMargin =>
+      val disjuncts = flattenDisjuncts(d)
+      val (complexDisjuncts, atomicDisjuncts) = disjuncts.
+        partition({ case _: CConjunctiveSafetyMargin => true case _: CIfThenElse => true case _ => false })
+      s"""verdicts = [
+         | ${atomicDisjuncts.map(print).mkString(",\n ")}${if (atomicDisjuncts.nonEmpty && complexDisjuncts.nonEmpty) "," else ""}
+         | ${complexDisjuncts.map(d => s"Or${uniqueName(d)}($PRE, $CURR, $PARAMS)").mkString(",\n ")}
+         |]
+         |nonMeasureZeroVerdicts = filter(lambda v: v.id != 0, verdicts)
+         |return max(nonMeasureZeroVerdicts, key=lambda v: v.val, default=Verdict(0, True))""".stripMargin
+    case c: CConjunctiveSafetyMargin =>
+      val conjuncts = flattenConjuncts(c)
+      val (complexConjuncts, atomicConjuncts) = conjuncts.
+        partition({ case _: CDisjunctiveSafetyMargin => true case _: CIfThenElse => true case _ => false })
+      s"""verdicts = [
+         | ${atomicConjuncts.map(print).mkString(",\n ")}${if (atomicConjuncts.nonEmpty && complexConjuncts.nonEmpty) "," else ""}
+         | ${complexConjuncts.map(d => s"And${uniqueName(d)}($PRE, $CURR, $PARAMS)").mkString(",\n ")}
+         |]
+         |nonMeasureZeroVerdicts = filter(lambda v: v.id != 0, verdicts)
+         |return min(nonMeasureZeroVerdicts, key=lambda v: v.val, default=Verdict(0, True))""".stripMargin
   }
 
 }

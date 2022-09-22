@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.btactics.{ModelPlex, SimplifierV3}
-import edu.cmu.cs.ls.keymaerax.core.{And, BaseVariable, ComparisonFormula, Diamond, Divide, Equal, Expression, Formula, FuncOf, Greater, GreaterEqual, Less, LessEqual, NamedSymbol, Neg, Not, NotEqual, Nothing, Number, Or, Pair, Plus, Term, Test, True}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 
@@ -49,34 +49,55 @@ abstract class MonitorGenerator(conjunctionsAs: Symbol,
     override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                        modelName: String): (String, String) = expr match {
       case f: Formula if f.isFOL => super.apply(f, stateVars, inputVars, modelName)
-      case f: Formula if !f.isFOL => prettyPrinter(compileProgramFormula(f, Number(0)))
+      case f: Formula if !f.isFOL => prettyPrinter(compileProgramFormula(f))
       case t: Term => super.apply(t, stateVars, inputVars, modelName)
+    }
+
+    @tailrec
+    private def toSafetyMargin(p: Formula): CTerm = Try(ModelPlex.toMetric(p)).toOption match {
+      case Some(c: ComparisonFormula) =>
+        assert(c.right == Number(0))
+        // safety margin>=0 -> p is true, so decrease strict inequalities by machine epsilon (false alerts are safe)
+        val margin: Term = c match {
+          case _: GreaterEqual => c.left
+          case _: Greater => c.left //Minus(c.left, FuncOf(Function(CEpsilon.name, None, Unit, Real), Nothing))
+          case _: LessEqual => Neg(c.left)
+          case _: Less => Neg(c.left) // Minus(Neg(c.left), FuncOf(Function(CEpsilon.name, None, Unit, Real), Nothing))
+          case _: Equal => Neg(FuncOf(InterpretedSymbols.absF, c.left))
+          case _: NotEqual => FuncOf(InterpretedSymbols.absF, c.left)
+        }
+        compileTerm(SimplifierV3.termSimp(margin, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultTaxs)._1)
+      case _ =>
+        val psubst = defs.exhaustiveSubst(p)
+        if (psubst != p) toSafetyMargin(psubst)
+        else CNothing
     }
 
     //@todo preprocess `f` to collect distance measure `dist` by proof instead of here:
     // transform <?s=t><?x<=y><?a<=b>true into <?s=t><?x<=y><?a<=b>min(x-y,a-b)>=0
-    private def compileProgramFormula(f: Formula, dist: Term): CProgram = f match {
-      case Or(Diamond(Test(p), ifP), Diamond(Test(Not(q)), elseP)) if p==q =>
-        val ifDist = if (onlyEqualities(p)) dist else ModelPlex.toMetric(p) match {
-          //@todo toMetric returns negated to what we assume here
-          case c: ComparisonFormula => Plus(dist, Neg(c.left))
-        }
-        val elseDist = if (onlyEqualities(p)) dist else ModelPlex.toMetric(Not(q)) match {
-          //@todo toMetric returns negated to what we assume here
-          case c: ComparisonFormula => Plus(dist, Neg(c.left))
-        }
-        CIfThenElse(compileFormula(p), compileProgramFormula(ifP, ifDist), compileProgramFormula(elseP, elseDist))
-      case Or(l, r) => COrProgram(compileProgramFormula(l, Number(0)), compileProgramFormula(r, Number(0)))
-      case And(l, r) => CAndProgram(compileProgramFormula(l, Number(0)), compileProgramFormula(r, Number(0)))
-      case True => CReturn(compileTerm(dist))
+    /** Compiles formula `f` into a program computing it's metric distance; `dist` is metric of outer _satisfied_ formulas. */
+    private def compileProgramFormula(f: Formula): CMargin = f match {
+      case True => CMeasureZeroMargin(CTrue)
       case Diamond(Test(p), q) =>
-        val (pMetric: Term, pSatDist) = conjunctionsAs match {
-          case 'min => printAndMin(p, dist)
-          case 'resist => printAndParallelResistors(p, dist)
+        val successDist = toSafetyMargin(p)
+        val successPrg = if (onlyEqualities(p)) CMeasureZeroMargin(successDist) else CSafetyMargin(successDist)
+        val errorDist = CNeg(successDist)
+        CIfThenElse(compileFormula(p),
+          successPrg and compileProgramFormula(q),
+          CErrorMargin(errorId(p), errorDist, p.prettyString)
+        )
+      case Or(Diamond(Test(p: ComparisonFormula), ifP), Diamond(Test(Not(q: ComparisonFormula)), elseP)) if p==q =>
+        val ifDist = p match {
+          case _: Equal => CMeasureZeroMargin(toSafetyMargin(p))
+          case _ => CSafetyMargin(toSafetyMargin(p))
         }
-        //@note offset error distance from -1 since weak inequalities may otherwise result in safe distance 0
-        val errorDist = CPlus(CNumber(-1), compileTerm(pMetric))
-        CIfThenElse(compileFormula(p), compileProgramFormula(q, pSatDist), CError(errorId(p), errorDist, p.prettyString))
+        val elseDist = q match {
+          case _: NotEqual => CMeasureZeroMargin(toSafetyMargin(Not(p)))
+          case _ => CSafetyMargin(toSafetyMargin(Not(p)))
+        }
+        CIfThenElse(compileFormula(p), ifDist and compileProgramFormula(ifP), elseDist and compileProgramFormula(elseP))
+      case Or(l, r) => compileProgramFormula(l) or compileProgramFormula(r)
+      case And(l, r) => compileProgramFormula(l) and compileProgramFormula(r)
     }
   }
 

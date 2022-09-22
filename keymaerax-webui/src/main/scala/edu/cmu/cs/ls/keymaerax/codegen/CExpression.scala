@@ -27,6 +27,10 @@ case class CFormulaComment(comment: String) extends CFormula with CComment {}
 case class CProgramComment(comment: String) extends CProgram with CComment {}
 
 case object CNothing extends CTerm {}
+// a machine epsilon term
+case object CEpsilon extends CTerm {
+  val name = "eps"
+}
 case class CNumber(n: BigDecimal) extends CTerm {}
 case class CVariable(name: String) extends CTerm {}
 case class CUnaryFunction(name: String, arg: CTerm) extends CTerm {}
@@ -58,11 +62,70 @@ case class COr(l: CFormula, r: CFormula) extends CFormula {}
 object CTrue extends CFormula {}
 object CFalse extends CFormula {}
 
-case class CIfThenElse(f: CFormula, ifP: CProgram, elseP: CProgram) extends CProgram
-case class COrProgram(l: CProgram, r: CProgram) extends CProgram
-case class CAndProgram(l: CProgram, r: CProgram) extends CProgram
-case class CError(id: Int, retVal: CExpression, msg: String) extends CProgram
-case class CReturn(e: CExpression) extends CProgram
+sealed trait CMargin extends CProgram {
+  def and(other: CMargin): CMargin
+  def or(other: CMargin): CMargin
+}
+case class CErrorMargin(id: Int, v: CTerm, msg: String) extends CMargin {
+  override def and(other: CMargin): CMargin = other match {
+    case CErrorMargin(oid, ov, omsg) =>
+      CErrorMargin(id, CPlus(v, ov), "Failed: " + id + " and " + oid + "\n" + msg + "\nand\n" + omsg)
+    case _ =>
+      throw new IllegalArgumentException("Error margins can only be combined with other error margins")
+  }
+  override def or(other: CMargin): CMargin = other match {
+    case _: CErrorMargin => this and other // false or false <-> false & false (retain both error messages)
+    case _ => other
+  }
+}
+case class CSafetyMargin(v: CExpression) extends CMargin {
+  override def and(other: CMargin): CMargin = other match {
+    case _: CSafetyMargin => CConjunctiveSafetyMargin(other, this)
+    case _ => other and this
+  }
+  override def or(other: CMargin): CMargin = other match {
+    case _: CSafetyMargin => CDisjunctiveSafetyMargin(other, this)
+    case _ => other or this
+  }
+}
+case class CConjunctiveSafetyMargin(l: CProgram, r: CProgram) extends CMargin {
+  override def and(other: CMargin): CMargin = other match {
+    case _: CMeasureZeroMargin => other and this
+    case _: CIfThenElse => other and this
+    case _ => CConjunctiveSafetyMargin(this, other)
+  }
+
+  override def or(other: CMargin): CMargin = other match {
+    case _: CMeasureZeroMargin => other or this
+    case _ => CDisjunctiveSafetyMargin(this, other)
+  }
+}
+case class CDisjunctiveSafetyMargin(l: CProgram, r: CProgram) extends CMargin {
+  override def and(other: CMargin): CMargin = other match {
+    case _: CMeasureZeroMargin => other and this
+    case _ => CConjunctiveSafetyMargin(this, other)
+  }
+
+  override def or(other: CMargin): CMargin = other match {
+    case _: CMeasureZeroMargin => other.or(this)
+    case _ => CDisjunctiveSafetyMargin(this, other)
+  }
+}
+case class CMeasureZeroMargin(v: CExpression) extends CMargin {
+  override def and(other: CMargin): CMargin = other //@note measure zero safety margin would "pin" combined conjunction to 0
+  override def or(other: CMargin): CMargin = other //@note measure zero safety margin always dominated by other margins
+}
+case class CIfThenElse(f: CFormula, ifP: CMargin, elseP: CMargin) extends CMargin {
+  override def and(other: CMargin): CMargin = other match {
+    case CIfThenElse(q, c, d) => CIfThenElse(f, CIfThenElse(q, ifP and c, d), elseP)
+    case _ => copy(ifP = other and ifP)
+  }
+  override def or(other: CMargin): CMargin = other match {
+    case CIfThenElse(q, c, d) => CIfThenElse(f, ifP, CIfThenElse(q, c, elseP or d))
+    case _ => CDisjunctiveSafetyMargin(this, other)
+  }
+}
+
 object CNoop extends CProgram
 
 
@@ -95,7 +158,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
   }
 
   def printDefinitions(e: CExpression): String = e match {
-    case COrProgram(l, r) =>
+    case CDisjunctiveSafetyMargin(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
@@ -106,7 +169,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
          |verdict OrRight${uniqueName(r)}(state $PRE, state $CURR, const parameters* const $PARAMS) {
          |  ${print(r)}
          |}""".stripMargin
-    case CAndProgram(l, r) =>
+    case CConjunctiveSafetyMargin(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
@@ -173,38 +236,35 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CFalse => "-1.0L"
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
-    case CReturn(e: CExpression) => "verdict result = { .id=1, .val=" + print(e) + " }; return result;"
-    case CError(id: Int, retVal: CExpression, msg: String) =>
+    case CSafetyMargin(e: CExpression) =>
+      "verdict result = { .id=1, .val=" + print(e) + " }; return result;"
+    case CErrorMargin(id: Int, retVal: CExpression, msg: String) =>
       if (printDebugOut) s"""printf("Failed %d=%s\\n", $id, "$msg"); verdict result = { .id=$id, .val=${print(retVal)} }; return result;"""
       else s"verdict result = { .id=$id, .val=${print(retVal)} }; return result;"
-    case COrProgram(l, r) /* if kind=="boolean" */ =>
-      if (printDebugOut)
-        s"""verdict leftDist = OrLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
-         |verdict rightDist = OrRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
-         |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
+    case CDisjunctiveSafetyMargin(l, r) =>
+      val lid = uniqueName(l)
+      val rid = uniqueName(r)
+      val print =
+        if (printDebugOut) s"""printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft$lid", leftDist, "OrRight$rid", rightDist);"""
+        else ""
+      s"""verdict leftDist = OrLeft$lid($PRE,$CURR,$PARAMS);
+         |verdict rightDist = OrRight$rid($PRE,$CURR,$PARAMS);
+         |$print
          |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
          |verdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
-      else
-        s"""verdict leftDist = OrLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
-         |verdict rightDist = OrRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
-         |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
-         |verdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };
-         |return result;""".stripMargin
-    case CAndProgram(l, r) /* if kind=="boolean" */ =>
-      if (printDebugOut)
-        s"""verdict leftDist = AndLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
-         |verdict rightDist = AndRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
-         |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
-         |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
-         |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
-         |return result;""".stripMargin
-      else
-        s"""verdict leftDist = AndLeft${uniqueName(l)}($PRE,$CURR,$PARAMS);
-         |verdict rightDist = AndRight${uniqueName(r)}($PRE,$CURR,$PARAMS);
-         |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
-         |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
-         |return result;""".stripMargin
+    case CConjunctiveSafetyMargin(l, r) =>
+      val lid = uniqueName(l)
+      val rid = uniqueName(r)
+      val print =
+        if (printDebugOut) s"""printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft$lid", leftDist, "AndRight$rid", rightDist);"""
+        else ""
+      s"""verdict leftDist = AndLeft$lid($PRE,$CURR,$PARAMS);
+       |verdict rightDist = AndRight$rid($PRE,$CURR,$PARAMS);
+       |$print
+       |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
+       |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
+       |return result;""".stripMargin
   }
 
 }
@@ -650,7 +710,7 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
   }
 
   def printDefinitions(e: CExpression): String = e match {
-    case COrProgram(l, r) =>
+    case CDisjunctiveSafetyMargin(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
@@ -661,7 +721,7 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
          |long double OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
          |  ${print(r)}
          |}""".stripMargin
-    case CAndProgram(l, r) =>
+    case CConjunctiveSafetyMargin(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
@@ -728,10 +788,10 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case t: CNumber => createMpfrVar(t)
 
     case CTrue | CFalse =>
-    case COrProgram(l, r) => createMpfrVars(l); createMpfrVars(r)
+    case CDisjunctiveSafetyMargin(l, r) => createMpfrVars(l); createMpfrVars(r)
     case CIfThenElse(cond, ifP, elseP) => createMpfrVars(cond); createMpfrVars(ifP); createMpfrVars(elseP)
-    case CReturn(r) => createMpfrVars(r)
-    case CError(_, r, _) => createMpfrVars(r)
+    case CSafetyMargin(r) => createMpfrVars(r)
+    case CErrorMargin(_, r, _) => createMpfrVars(r)
 
     case t@CNeg(c) => createMpfrVar(t); createMpfrVars(c)
     case t@CPlus(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
@@ -785,10 +845,10 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case CTrue => ""
     case CFalse => ""
 
-    case COrProgram(l, r) => printMpfrArithmetic(l) + printMpfrArithmetic(r)
+    case CDisjunctiveSafetyMargin(l, r) => printMpfrArithmetic(l) + printMpfrArithmetic(r)
     case CIfThenElse(cond, ifP, elseP) => printMpfrArithmetic(cond) + printMpfrArithmetic(ifP) + printMpfrArithmetic(elseP)
-    case CReturn(r) => printMpfrArithmetic(r)
-    case CError(_, r, _) => printMpfrArithmetic(r)
+    case CSafetyMargin(r) => printMpfrArithmetic(r)
+    case CErrorMargin(_, r, _) => printMpfrArithmetic(r)
   }
 
   //@todo print only necessary parentheses
@@ -816,16 +876,16 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case CFalse => "-1.0L"
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
-    case CReturn(e: CTerm) => s"return mpfr_get_ld(${mpfrVars(e)}, $roundingMode);"
-    case CError(_, retVal: CFormula, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
-    case CError(_, retVal: CTerm, msg: String) =>
+    case CSafetyMargin(e: CTerm) => s"return mpfr_get_ld(${mpfrVars(e)}, $roundingMode);"
+    case CErrorMargin(_, retVal: CFormula, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
+    case CErrorMargin(_, retVal: CTerm, msg: String) =>
       s"""printf("Failed %s\\n", "$msg"); return mpfr_get_ld(${mpfrVars(retVal)}, $roundingMode);"""
-    case COrProgram(l, r) /* if kind=="boolean" */ =>
+    case CDisjunctiveSafetyMargin(l, r) =>
       s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
          |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
          |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
          |return fmaxl(leftDist, rightDist);""".stripMargin
-    case CAndProgram(l, r) /* if kind=="boolean" */ =>
+    case CConjunctiveSafetyMargin(l, r) =>
       s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
          |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
          |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);

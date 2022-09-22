@@ -38,6 +38,7 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
       case t: Variable if t.name.endsWith("post") =>
         CVariable(termContainer(t) + nameIdentifier(BaseVariable(t.name.stripSuffix("post"), t.index, t.sort)))
       case t: Variable if !t.name.endsWith("post") => CVariable(termContainer(t) + nameIdentifier(t))
+      case FuncOf(Function(fname, None, Unit, Real, None), Nothing) if fname == CEpsilon.name => CEpsilon
       //@note _idx are aliases for the same post variable, todo: preprocess with tactic
       case t@FuncOf(fn@Function(fname, fidx, fdom, fsort, fintr), Nothing) =>
         if (fname.endsWith("post")) {
