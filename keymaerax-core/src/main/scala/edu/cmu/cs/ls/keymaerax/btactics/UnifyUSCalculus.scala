@@ -1962,11 +1962,16 @@ trait UnifyUSCalculus {
           * @param o Replacement expression
           */
         def equivStep(o: Expression): ProvableSig = {
-          //@todo chase does not work with applying axioms inverse
           require(fact.isProved, "currently want proved facts as input only\n" + fact)
           require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
-          // |- fact: k=o or k<->o, respectively
-          val sideUS: ProvableSig = subst.toForward(fact)
+          // |- fact: k=o or k<->o, respectively; commute fact if key=1
+          val sideUS: ProvableSig = fact.conclusion.succ.head match {
+            case Equiv(l, r) =>
+              if (key == PosInExpr(0::Nil)) subst.toForward(fact)
+              else subst.toForward(fact(Sequent(IndexedSeq(), IndexedSeq(Equiv(r, l))), CommuteEquivRight(SuccPos(0))))
+            case _ => subst.toForward(fact) //@note not an equivalence axiom, cannot commute
+          }
+
           // |- subst(fact): subst(k)=subst(o) or subst(k)<->subst(o) by US
           val sideCE: ProvableSig = CE(C)(sideUS)
           //@todo could shortcut proof by using "CO one-sided congruence" instead of CE
