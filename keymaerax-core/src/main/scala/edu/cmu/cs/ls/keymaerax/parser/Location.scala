@@ -64,6 +64,21 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
 object Region {
   /** A point Region consisting only of one line:column */
   def apply(line: Int, column: Int): Region = Region(line, column, line, column)
+
+  /** Returns the region in `s` that spans from `startIdx` to `endIdx`. */
+  def in(s: String, startIdx: Int, endIdx: Int): Region = {
+    def lineColumn(i: Int) = {
+      if (i == 0) {
+        (1, 1)
+      } else {
+        val lines = s.substring(0, i).lines.toList
+        (lines.length, lines.lastOption.map(_.length).getOrElse(0))
+      }
+    }
+    val (sl, sc) = lineColumn(startIdx)
+    val (el, ec) = lineColumn(endIdx)
+    Region(sl, sc, el, ec)
+  }
 }
 /**
   * Like a region, but extends until the end of the input.

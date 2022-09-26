@@ -28,12 +28,13 @@ class DLArchiveParserTests extends TacticTestBase {
   private def parse(input: String): List[ParsedArchiveEntry] =
     ArchiveParser.parse(input)
 
-  private def beDecl(right: Declaration) =
+  private def beDecl(right: Declaration, checkLocation: Boolean=false) =
     new Matcher[Declaration] {
       def apply(left: Declaration): MatchResult =
         MatchResult(
           //compare without locations
-          left.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)) == right.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)),
+          if (checkLocation) left.decls == right.decls
+          else left.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)) == right.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)),
           left + " was not " + right,
           left + " was " + right
         )
@@ -320,11 +321,10 @@ class DLArchiveParserTests extends TacticTestBase {
     DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
     DLParser.programParser("{ x:=x+1; }") shouldBe DLParser.programParser("x:=x+1;")
     val archiveParser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
-    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
-    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(Declaration(Map.empty))(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)))
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), Region(1, 1, 1, 21)))
+    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(Declaration(Map.empty))(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), Region(1, 12, 1, 34))))
     val input =
-      """
-        |ArchiveEntry "Entry 1"
+      """ArchiveEntry "Entry 1"
         | Definitions HP a ::= { x:=x+1; }; End.
         | ProgramVariables Real x; End.
         | Problem x!=0 -> [a;]x>1 End.
@@ -335,9 +335,9 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
-      )))
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), Region(2, 13, 2, 35)),
+        Name("x", None) -> Signature(None, Real, None, None, Region(3, 23, 3, 24))
+      )), checkLocation = true)
     entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
     entry.tactics shouldBe empty
@@ -467,8 +467,7 @@ class DLArchiveParserTests extends TacticTestBase {
 
   it should "parse lots of definitions before variables" in {
     val input =
-      """
-        |ArchiveEntry "Entry 1"
+      """ArchiveEntry "Entry 1"
         | Definitions Real f() = (1); Bool p(Real x) <-> (x>1); Bool q(Real x, Real y, Real z) <-> (x+y>z); HP a ::= { ?p(x); }; End.
         | ProgramVariables Real x; Real y; End.
         | Problem p(x) & y>=0 -> q(x,y,f()) & [a;]p(x) End.
@@ -479,13 +478,13 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
-        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Some(".>1".asFormula), UnknownLocation),
-        Name("q", None) -> Signature(Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil), Some("._0+._1>._2".asFormula), UnknownLocation),
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("?p(x);".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
-      )))
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Some("1".asTerm), Region(2, 18, 2, 22)),
+        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Some(".>1".asFormula), Region(2, 34, 2, 44)),
+        Name("q", None) -> Signature(Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil), Some("._0+._1>._2".asFormula), Region(2, 60, 2, 86)),
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("?p(x);".asProgram), Region(2, 99, 2, 120)),
+        Name("x", None) -> Signature(None, Real, None, None, Region(3, 23, 3, 24)),
+        Name("y", None) -> Signature(None, Real, None, None, Region(3, 31, 3, 32))
+      )), checkLocation = true)
     entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a{|^@|};]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
@@ -1000,8 +999,8 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
         |""".stripMargin
       the [ParseException] thrownBy parse(input) should have message
-        """<somewhere> Definition a uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
-          |Found:    <unknown> at <somewhere>
+        """2:12 Definition a uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
+          |Found:    <unknown> at 2:12 to 2:34
           |Expected: <unknown>""".stripMargin
   }
 
@@ -1041,8 +1040,8 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
         |""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> Definition f uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
-        |Found:    <unknown> at <somewhere>
+      """2:17 Definition f uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
+        |Found:    <unknown> at 2:17 to 2:21
         |Expected: <unknown>""".stripMargin
   }
 

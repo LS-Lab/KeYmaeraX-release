@@ -233,15 +233,15 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** `name(sort1 arg1, sorg2 arg2)` declaration part.
    * Input sort is the (codomain) sort */
-  def declPart[_: P](ty: Sort) : P[(Name,Signature)] = (
-    ident ~~ ("(" ~/ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")"./).?
+  def declPart(ty: Sort)(implicit ctx: P[_]) : P[(Name,Signature)] = (
+    Index ~ ident ~~ ("(" ~/ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")"./).? ~ Index
   ).map({
-    case (n, idx, argList) =>
+    case (s, (n, idx), argList, e) =>
       val args = argList.map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
           , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
           (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
         })).getOrElse(Unit, List())
-      (Name(n, idx), Signature(Some(args._1), ty, Some(args._2), None, UnknownLocation))
+      (Name(n, idx), Signature(Some(args._1), ty, Some(args._2), None, Region.in(ctx.input.slice(0, ctx.input.length), s, e)))
   })
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
@@ -254,16 +254,17 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** `HP name ::= {program};` | `HG name ::= {program};` program definition. */
     //@todo better return type with ProgramConst/SystemConst instead of Name
-  def progDef[_: P]: P[(Name,Signature)] = P(
-    ("HP" | "HG") ~~ blank ~/ ident ~ "::=" ~ "{" ~/ (NoCut(program) | odeprogram) ~ "}" ~ ";"
-  ).map({case (s,idx,p) => (Name(s,idx), Signature(Some(Unit), Trafo, None, Some(p), UnknownLocation))})
+  def progDef(implicit ctx: P[_]): P[(Name,Signature)] = P(
+    Index ~ ("HP" | "HG") ~~ blank ~/ ident ~ "::=" ~ "{" ~/ (NoCut(program) | odeprogram) ~ "}" ~ ";" ~ Index
+  ).map({ case (start,(s,idx),p, end) =>
+    (Name(s, idx), Signature(Some(Unit), Trafo, None, Some(p), Region.in(ctx.input.slice(0, ctx.input.length), start, end)))
+  })
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
-  def programVariables[_: P](curDecls: Declaration): P[Declaration] = P ("ProgramVariables" ~~ blank ~/
-    //@todo retain location information
+  def programVariables(curDecls: Declaration)(implicit ctx: P[_]): P[Declaration] = P ("ProgramVariables" ~~ blank ~/
     //@todo how to ensure there is some whitespace between sort and baseVariable?
-    (sort ~/ ident ~ (","./ ~ ident).rep ~ ";").map({ case (ty, x, xs) => (x +: xs).toList.map(_ -> ty) }).rep.flatMap(xs => {
-      val ns = xs.flatten.map(x=>Name(x._1._1, x._1._2)->Signature(None,x._2,None,None,UnknownLocation))
+    (sort ~/ Index ~ ident ~ Index ~ (","./ ~ Index ~ ident ~ Index).rep ~ ";").map({ case (ty, xis, x, xie, xs) => ((xis, x, xie) +: xs).toList.map(_ -> ty) }).rep.flatMap(xs => {
+      val ns = xs.flatten.map({ case ((s, (x, i), e), sort) => Name(x, i) -> Signature(None,sort,None,None,Region.in(ctx.input.slice(0, ctx.input.length), s, e))})
       val n = ns.map(_._1)
       if (n.size == n.distinct.size) uniqueDecls(curDecls, ns.toList)
       else Fail.opaque("Unique name (" + n.diff(n.distinct).map(_.prettyString).mkString(",") + " not unique)")
