@@ -24,7 +24,7 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
         Try(repl.asExpr).toEither match {
           case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage)) :: Nil
           case Right(r) =>
-            val erepl = elaborate(r, proofSession.defs.asNamedSymbols)
+            val erepl = proofSession.defs.elaborateToSystemConsts(proofSession.defs.elaborateToFunctions(r))
             if (erepl.sort == ewhat.sort) {
               val fnwhat: Function = ewhat match {
                 case FuncOf(fn: Function, _) => fn
