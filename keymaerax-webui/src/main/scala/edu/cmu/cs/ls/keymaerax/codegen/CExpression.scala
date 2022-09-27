@@ -120,10 +120,7 @@ case class CIfThenElse(f: CFormula, ifP: CMargin, elseP: CMargin) extends CMargi
     case CIfThenElse(q, c, d) => CIfThenElse(f, CIfThenElse(q, ifP and c, d), elseP)
     case _ => copy(ifP = other and ifP)
   }
-  override def or(other: CMargin): CMargin = other match {
-    case CIfThenElse(q, c, d) => CIfThenElse(f, ifP, CIfThenElse(q, c, elseP or d))
-    case _ => CDisjunctiveSafetyMargin(this, other)
-  }
+  override def or(other: CMargin): CMargin = CDisjunctiveSafetyMargin(this, other)
 }
 
 object CNoop extends CProgram
