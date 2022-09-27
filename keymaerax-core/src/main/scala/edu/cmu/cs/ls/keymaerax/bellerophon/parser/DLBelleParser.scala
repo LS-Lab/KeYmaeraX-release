@@ -131,7 +131,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
     (NoCut(formula ~ "~>" ~ formula) |
       term(false) ~ "~>" ~ term(false) |
       (DLParser.systemSymbol | DLParser.programSymbol) ~ "~>" ~ program).
-      map(pair => SubstitutionPair(pair._1, pair._2))
+      map(pair => pair._1.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(pair._2))))
   )
 
   def argList[_: P,A](p: => P[A]): P[List[A]] = P(

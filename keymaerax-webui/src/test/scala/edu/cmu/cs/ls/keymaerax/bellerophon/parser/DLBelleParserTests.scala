@@ -39,7 +39,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
   private var parser: DLBelleParser = _
-  private def parse(input: String) = parser.belleParser(input)
+  private def parse(input: String, defs: Declaration = Declaration(Map.empty)) = parser(input, defs)
 
   "DLBelleParser" should "parse postfix \"using\"" in {
     parse(raw"""QE using "x^2+y^2=init"""".stripMargin) shouldBe Using(List("x^2+y^2=init".asFormula), TactixLibrary.QE)
@@ -131,10 +131,26 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "parse substitutions" in {
     parse("""US("J(.) ~> .>=0")""") shouldBe TactixLibrary.USX(
       List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
+    parse("""US("J(x) ~> x>=0")""") shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
     parse("""US("(J(.) ~> .>=0)")""") shouldBe TactixLibrary.USX(
       List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
     parse("""US("f(.) ~> 2+.")""") shouldBe TactixLibrary.USX(
       List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), Plus(Number(2), DotTerm()))))
+    parse("""US("f(y) ~> 2+y")""") shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), Plus(Number(2), DotTerm()))))
+    parse("""US("pow(x,y) ~> x^y")""") shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(
+        FuncOf(Function("pow", None, Tuple(Real, Real), Real), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+        Power(DotTerm(Real, Some(0)), DotTerm(Real, Some(1))))))
+    parse("""US("J(x,v) ~> x+v^2/(2*b())>=0")""") shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(
+        PredOf(Function("J", None, Tuple(Real, Real), Bool), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+        "._0 + ._1^2/(2*b())>=0".asFormula)))
+    parse("""US("J(x,v) ~> x+v^2/(2*b)>=0")""", Declaration(Map(Name("b") -> Signature(Some(Unit), Real, None, None, UnknownLocation)))) shouldBe TactixLibrary.USX(
+      List(SubstitutionPair(
+        PredOf(Function("J", None, Tuple(Real, Real), Bool), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+        "._0 + ._1^2/(2*b())>=0".asFormula)))
     parse("""US("(J(.) ~> .>=0)::(f(.) ~> 2+.)::nil")""") shouldBe TactixLibrary.USX(
       List(
         SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0))),
