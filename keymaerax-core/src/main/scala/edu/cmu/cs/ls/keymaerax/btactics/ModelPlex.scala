@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Atom, OneOf, QETacticTool, SimplificationTool}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, ProvableInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
 
@@ -1144,6 +1144,17 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Partial QE on a formula that first expands/abbreviates all uninterpreted symbols and
     * then substitutes back in on the result. */
+  def mxPartialQE(defs: Declaration, tool: QETacticTool): ProvableSig=>ProvableSig = (p: ProvableSig) => {
+    assert(p.subgoals.size == 1)
+    val goal = p.subgoals.head
+    assert(goal.ante.isEmpty && goal.succ.size == 1)
+    val qfResult = mxPartialQE(goal.succ.head, defs, tool)
+    val Equiv(_, qf) = qfResult.conclusion.succ.head
+    p(CutRight(qf, SuccPos(0)), 0)(
+      EquivifyRight(SuccPos(0)), 1)(
+      CommuteEquivRight(SuccPos(0)), 1)(
+      qfResult, 1)
+  }
   def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = mxPartialQE(List(fml), defs, tool)
   def mxPartialQE(fmlAlts: List[Formula], defs: Declaration, tool: QETacticTool, verified: Boolean = true): ProvableSig = {
     val abbreviated = fmlAlts.map(mxAbbreviateFunctions(_, defs)).toMap
