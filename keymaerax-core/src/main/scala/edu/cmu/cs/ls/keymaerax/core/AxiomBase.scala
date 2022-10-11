@@ -378,7 +378,7 @@ Axiom "DG differential ghost constant all"
 End.
 
 Axiom "DS& differential equation solution"
-  [{x_'=c()&q(x_)}]p(|x_'|) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(|x_'|)))
+  [{x_'=c()&q(x_)}]p(|x_',t_|) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(|x_',t_|)))
 End.
 
 /* @todo: , commute should be derivable from this + ghost */

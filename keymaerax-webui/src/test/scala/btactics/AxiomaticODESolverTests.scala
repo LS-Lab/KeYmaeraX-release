@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.PrivateMethodTester
-import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.{AdvocatusTest, DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
 
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
@@ -475,11 +475,9 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     proveBy(f,t).subgoals.loneElement shouldBe "==> [{x'=1&true}]22>0".asSequent
   }
 
-  //@todo unsound bananas in post condition
-  "DS& differential equation solution" should "be careful in postcondition" in withMathematica { _ =>
-    val fml = "[{x'=1}] t_>=0".asFormula
-    val result = proveBy(fml, useAt(Ax.DS)(1) & normalize)
-    result shouldBe 'proved
+  "DS& differential equation solution" should "be careful in postcondition" taggedAs AdvocatusTest in withMathematica { _ =>
+    //@note t_ introduced with assumption t_>=0 by axiom DS& differential equation solution
+    a [InapplicableUnificationKeyFailure] should be thrownBy proveBy("[{x'=1}]t_>=0".asFormula, useAt(Ax.DS)(1))
   }
 
   //@todo this proof is broken by the second DS quantifying over the same t_
