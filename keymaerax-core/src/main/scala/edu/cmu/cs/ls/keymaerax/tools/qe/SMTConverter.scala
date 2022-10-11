@@ -36,7 +36,7 @@ abstract class SMTConverter extends (Formula=>String) {
   private val SMT_MAX = "maximum"
 
   //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
-  private val SMT_INTERPRETED_FUNCTIONS = Map[NamedSymbol, String](
+  private lazy val SMT_INTERPRETED_FUNCTIONS = Map[NamedSymbol, String](
     InterpretedSymbols.absF -> ("(define-fun " + nameIdentifier(InterpretedSymbols.absF) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"),
     InterpretedSymbols.minF -> ("(define-fun " + nameIdentifier(InterpretedSymbols.minF) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"),
     InterpretedSymbols.maxF -> ("(define-fun " + nameIdentifier(InterpretedSymbols.maxF) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))")
