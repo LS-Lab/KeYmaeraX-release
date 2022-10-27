@@ -128,6 +128,11 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
          |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
          |else:
          |  IfThenElse${uniqueName(elseP)}($PRE, $CURR, $PARAMS)""".stripMargin
+    case CIfThenElse(f, ifP, elseP: CErrorMargin) =>
+      s"""if ${print(f)}:
+         |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
+         |else:
+         |  return ${print(elseP).linesWithSeparators.map(INDENT + _).mkString.stripPrefix(INDENT)}""".stripMargin
     case CIfThenElse(f, ifP, elseP) =>
       s"""if ${print(f)}:
          |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
