@@ -170,11 +170,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(Some(interpretation)), _) =>
       domain.value shouldBe Unit
       sort shouldBe Real
       argNames shouldBe Some(Nil)
-      interpretation.value shouldBe Number(5)
+      interpretation shouldBe Number(5)
     }
     entry.model shouldBe Parser("f()>3")
   }
@@ -196,11 +196,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Real
       sort shouldBe Real
       argNames shouldBe Some((Name("x", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(Number(5), Times(DotTerm(Real), DotTerm(Real)))
+      interpretation.value shouldBe Plus(Number(5), Times(Variable("x"), Variable("x")))
     }
     entry.model shouldBe Parser("f(4)>3")
   }
@@ -222,11 +222,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real, Real))
       sort shouldBe Real
       argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+      interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
     entry.model shouldBe Parser.parser("f(2,3,4)>3")
   }
@@ -265,11 +265,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real, Real))
       sort shouldBe Real
       argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+      interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
     entry.model shouldBe Parser.parser("f(2,3,4)>3")
   }
@@ -291,19 +291,19 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 2
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real, Real))
       sort shouldBe Real
       argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+      interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
     entry.defs.decls should contain key Name("g", None)
-    entry.defs.decls(Name("g", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("g", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real,Real))
       sort shouldBe Real
       argNames shouldBe Some((Name("a", None), Real) :: (Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
       interpretation.value shouldBe FuncOf(Function("f", None, Tuple(Real, Tuple(Real, Real)), Real),
-        Pair(DotTerm(Real, Some(1)), Pair(DotTerm(Real, Some(2)), DotTerm(Real, Some(0)))))
+        Pair(Variable("x"), Pair(Variable("y"), Variable("a"))))
     }
     entry.model shouldBe Parser("f(1,2,3)>0 -> g(3,1,2)>0")
   }
@@ -324,11 +324,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Tuple(Real, Real)
       sort shouldBe Real
       argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(DotTerm(Real, Some(1)), Number(3))
+      interpretation.value shouldBe Plus(Variable("y"), Number(3))
     }
     entry.model shouldBe Parser("f(1,2)>0")
   }
@@ -349,11 +349,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Real
       sort shouldBe Real
       argNames shouldBe Some((Name("x", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(DotTerm(Real), Number(2))
+      interpretation.value shouldBe Plus(Variable("x"), Number(2))
     }
     entry.model shouldBe Parser("f(2)>3")
   }
@@ -379,7 +379,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty
@@ -411,7 +411,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty
@@ -444,13 +444,13 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty
       interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
-    entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty
@@ -485,13 +485,13 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty
       interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
-    entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
+    entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty

@@ -36,13 +36,13 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
               proofSession.defs.decls.get(name) match {
                 case None =>
                   session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
-                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
+                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, None, Right(Some(erepl)), UnknownLocation))))
                   BooleanResponse(flag = true) :: Nil
-                case Some(Signature(_, _, args, None, _)) =>
+                case Some(Signature(_, _, args, Right(None), _)) =>
                   session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
-                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, args, Some(erepl), UnknownLocation))))
+                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, args, Right(Some(erepl)), UnknownLocation))))
                   BooleanResponse(flag = true) :: Nil
-                case Some(Signature(_, _, _, Some(i), _)) =>
+                case Some(Signature(_, _, _, Right(Some(i)), _)) =>
                   new ErrorResponse("Cannot change " + fnwhat.prettyString + ", it is already defined as " + i.prettyString) :: Nil
               }
 

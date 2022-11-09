@@ -16,8 +16,8 @@ object CodeGenerator {
   def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
     StaticSemantics.symbols(expr)
       .filter({
-        case InterpretedSymbols.absF | InterpretedSymbols.minF | InterpretedSymbols.maxF => false
         case Function(name, _, Unit, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
+        case fn: Function => !InterpretedSymbols.preshipped.contains(fn)
         case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
         case _ => false //@note any other function or differential symbol
       })

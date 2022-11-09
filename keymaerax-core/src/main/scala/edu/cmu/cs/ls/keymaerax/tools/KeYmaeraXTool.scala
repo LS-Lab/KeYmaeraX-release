@@ -47,6 +47,14 @@ object KeYmaeraXTool extends Tool {
     else
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 
+    ArchiveParser.setParser(Configuration.getString(Configuration.Keys.PARSER) match {
+      case Some("KeYmaeraXParser") | None => KeYmaeraXArchiveParser
+      case Some("DLParser") =>
+        new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
+          ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _)))
+      case Some(p) => throw new ProverSetupException("Unknown parser " + p + "; please use one of 'KeYmaeraXParser' or 'DLParser'")
+    })
+
     val LOG_EARLIEST_QE = Configuration.getBoolean(Configuration.Keys.LOG_ALL_FO).getOrElse(false)
     val LOG_QE = Configuration.getBoolean(Configuration.Keys.LOG_QE).getOrElse(false)
     val LOG_QE_DURATION = Configuration.getBoolean(Configuration.Keys.LOG_QE_DURATION).getOrElse(false)
@@ -97,14 +105,6 @@ object KeYmaeraXTool extends Tool {
     Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true))))))
     TactixInit.invSupplier = generator
-
-    ArchiveParser.setParser(Configuration.getString(Configuration.Keys.PARSER) match {
-      case Some("KeYmaeraXParser") | None => KeYmaeraXArchiveParser
-      case Some("DLParser") =>
-        new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
-          ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _)))
-      case Some(p) => throw new ProverSetupException("Unknown parser " + p + "; please use one of 'KeYmaeraXParser' or 'DLParser'")
-    })
 
     initialized = true
   }

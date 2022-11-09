@@ -75,8 +75,7 @@ object ExpressionParser {
   def funcOf[_: P]: P[FuncOf] =
     // note: user-specified let definitions can have 0 args
     (ident ~ "(" ~ term.rep(min = 0, sep = ",") ~ ")").map({case (f, args) =>
-      val fn = InterpretedSymbols.builtin.find(fn => fn.name == f.name && fn.index == f.index).getOrElse(
-        Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Real))
+      val fn = Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Real)
       FuncOf(fn, nargs(args))
     })
 

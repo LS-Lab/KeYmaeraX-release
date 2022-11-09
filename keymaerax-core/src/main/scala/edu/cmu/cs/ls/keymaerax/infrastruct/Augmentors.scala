@@ -401,19 +401,23 @@ object Augmentors {
       val signature = e match {
         case FuncOf(_, t) => t
         case PredOf(_, t) => t
+        //@note programs and system constants do not have arguments
+        case _: ProgramConst => Nothing
+        case _: SystemConst => Nothing
       }
 
       val (dots: Map[Term, DotTerm], arg: Term, _) = signature match {
         case Nothing => (Map.empty, Nothing, 0)
         case Pair(_, _) => findDots(signature, 0, Map.empty)
         case _ =>
-          val dot = DotTerm(signature.sort)
+          val dot = DotTerm(signature.sort, Some(0))
           (Map(signature -> dot), dot, 1)
       }
 
       val what = e match {
         case FuncOf(fn, _) => FuncOf(fn, arg)
         case PredOf(fn, _) => PredOf(fn, arg)
+        case t => t
       }
 
       val repl = dots.foldLeft(other)({ case (t, (w, r)) => t.replaceFree(w, r) })
@@ -532,6 +536,27 @@ object Augmentors {
       }, e)
       result.toList
     }
+
+    /** Returns all symbols of this `e` minus the explicitly quantified symbols (when we want \forall x differently from [x:=...;]). */
+    def baseSymbols: Set[NamedSymbol] =
+      (StaticSemantics.symbols(e) -- (e match {
+        case _: Term => Set.empty // include all term symbols
+        case f: Formula =>
+          // exclude universally/existentially quantified symbols
+          val quantifiedSymbols = scala.collection.mutable.Set.empty[Variable]
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+              case q: Quantified =>
+                quantifiedSymbols ++= q.vars
+                Left(None)
+              case _ => Left(None)
+            }
+          }, f)
+          val fv = StaticSemantics.freeVars(f)
+          if (fv.isInfinite) Set.empty
+          else quantifiedSymbols -- fv.toSet
+        case _: Program => Set.empty // include all program symbols //@todo test with quantified formulas ?\exists y p(y)
+      })).map({ case DifferentialSymbol(v) => v case s => s })
   }
 
   /**

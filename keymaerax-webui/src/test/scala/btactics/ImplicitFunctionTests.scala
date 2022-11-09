@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLArchiveParser, InterpretedSymbols, KeYmaeraXArchivePrinter, KeYmaeraXPrettyPrinter, Parser, PrettierPrintFormatProvider}
+import edu.cmu.cs.ls.keymaerax.parser.{BuiltinSymbols, DLArchiveParser, InterpretedSymbols, KeYmaeraXArchivePrinter, KeYmaeraXPrettyPrinter, Parser, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
@@ -45,6 +45,7 @@ class ImplicitFunctionTests extends TacticTestBase {
   "DLArchiveParser" should "parse built-in interpreted functions correctly" in {
     val input =
       """ArchiveEntry "entry1"
+        | Definitions import kyx.math.abs; End.
         | Problem abs(-1) = 1 End.
         |End.
         |""".stripMargin
@@ -56,7 +57,8 @@ class ImplicitFunctionTests extends TacticTestBase {
   it should "parse inline function interps correctly" in {
     val input =
       """ArchiveEntry "entry1"
-        | Problem myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-1) = 1 End.
+        | Definitions Real myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(Real x); End.
+        | Problem myAbs(-1) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)
@@ -79,10 +81,11 @@ class ImplicitFunctionTests extends TacticTestBase {
     prog.expandedModel shouldBe Equal(FuncOf(renBuiltin(InterpretedSymbols.expF, "myExp"), Number(0)), Number(1))
   }
 
-  "KYXPrettyPrinter" should "print interpretations" in {
+  "Archive printer" should "print interpretations" in {
     val input =
       """ArchiveEntry "entry1"
-        | Problem myAbs<<(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)>>(-1) = 1 End.
+        | Definitions Real myAbs<<(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)>>(Real x); End.
+        | Problem myAbs(-1) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)
@@ -95,7 +98,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     prog2.model shouldBe prog.model
   }
 
-  it should "print without defined interpretation" in {
+  it should "print from implicitly defined interpretation" in {
     val input =
       """ArchiveEntry "entry1"
         | Definitions

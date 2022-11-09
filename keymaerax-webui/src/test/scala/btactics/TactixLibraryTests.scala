@@ -846,7 +846,7 @@ class TactixLibraryTests extends TacticTestBase {
     // report conflicting substitution/definition
     val otherDefs = "f(x) ~> x+1".asDeclaration
     the [IllFormedTacticApplicationException] thrownBy proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), otherDefs) should
-      have message "Substitutions disagree: (f(.)~>.^2) vs. (f(.)~>.+1)"
+      have message "Substitutions disagree: (f(._0)~>._0^2) vs. (f(._0)~>._0+1)"
   }
 
   it should "use definitions" in withTactics {
@@ -857,8 +857,6 @@ class TactixLibraryTests extends TacticTestBase {
         |ProgramVariables Real x; End.
         |Problem f(x)>0->f(x)>0 End.
         |End.""".stripMargin).head
-    val subst = USubst(entry.defs.substs)
-    val s@SubstitutionPair(FuncOf(f, _), _) = subst.subsDefsInput.head
     val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, expand("f") & prop, defs = entry.defs)
     lemma shouldBe 'proved
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
@@ -869,9 +867,9 @@ class TactixLibraryTests extends TacticTestBase {
     val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), entry.defs)
     result shouldBe 'proved
     result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
-    val otherDefs = "f(.) ~> .+1 :: nil".asDeclaration
+    val otherDefs = "f(x) ~> x+1 :: nil".asDeclaration
     the [IllFormedTacticApplicationException] thrownBy proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), otherDefs) should
-      have message "Substitutions disagree: (f(.)~>.^2) vs. (f(.)~>.+1)"
+      have message "Substitutions disagree: (f(._0)~>._0^2) vs. (f(._0)~>._0+1)"
   }
 
   it should "cut in lemma conclusion as assumption when lemma doesn't close" in withTactics {

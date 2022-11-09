@@ -554,7 +554,7 @@ object BelleParser extends TacticParser with Logging {
       try {
         val t = ReflectiveExpressionBuilder(name, newArgs, g, defs)
         // backwards-compatibility with tactics that used definitions when they were auto-expanded immediately
-        if (TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY && expandAll && defs.decls.exists(_._2.interpretation.nonEmpty)) {
+        if (TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY && expandAll && defs.decls.exists(d => d._2.interpretation.isRight && d._2.interpretation.right.get.isDefined)) {
           t.prettyString match {
             case "QE" | "smartQE" | "master" => TactixLibrary.expandAllDefs(defs.substs) & t
             case text =>
@@ -578,6 +578,9 @@ object BelleParser extends TacticParser with Logging {
 
   type TacticArg = Either[Any, PositionLocator]
 
+  private def elaborate[T <: Expression](e: T, defs: Declaration): T =
+    defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
+
   /**
     * An ad-hoc parser for argument lists.
     *
@@ -597,7 +600,7 @@ object BelleParser extends TacticParser with Logging {
 
       def expand[T <: Expression](e: T): T =
         if (expandAll) defs.implicitSubst(defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))))
-        else defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
+        else elaborate(e, defs)
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.
@@ -739,10 +742,10 @@ object BelleParser extends TacticParser with Logging {
     //      could extend notation to 'L@1 or 'L@label
     case "'Llast" => LastAnte(0, sub)
     case "'Rlast" => LastSucc(0, sub)
-    case "'L" => Find.FindL(0, shape, sub, exact, defs)
-    case "'R" => Find.FindR(0, shape, sub, exact, defs)
-    case "'_" => new Find(0, shape, AntePosition.base0(0, sub), exact, defs)
-    case i => Fixed(parseInt(i, location), sub.pos, shape, exact)
+    case "'L" => Find.FindL(0, shape.map(elaborate(_, defs)), sub, exact, defs)
+    case "'R" => Find.FindR(0, shape.map(elaborate(_, defs)), sub, exact, defs)
+    case "'_" => new Find(0, shape.map(elaborate(_, defs)), AntePosition.base0(0, sub), exact, defs)
+    case i => Fixed(parseInt(i, location), sub.pos, shape.map(elaborate(_, defs)), exact)
   }
 
   /** Parses s to a non-zero integer or else throws a ParseException pointing to location.

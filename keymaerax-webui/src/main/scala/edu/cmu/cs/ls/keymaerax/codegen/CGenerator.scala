@@ -76,7 +76,7 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
         case _ => None
       }).map(name =>
       defs.decls.find({ case (n, s) => Declaration.asNamedSymbol(n, s) == name }) match {
-        case Some((name, Signature(_, codomain, Some(args), interpretation, _))) =>
+        case Some((name, Signature(_, codomain, Some(args), Right(interpretation), _))) =>
           def ctype(s: Sort): String = s match {
             case Real => "long double"
             case Bool => "bool"

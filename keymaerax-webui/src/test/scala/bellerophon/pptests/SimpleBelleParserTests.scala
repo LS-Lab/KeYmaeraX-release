@@ -704,22 +704,22 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   "Expand" should "parse a simple definition expand" in {
     tacticParser("implyR(1) ; expand(\"f()\")",
-      Declaration(Map((Name("f", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation))))) shouldBe
+      Declaration(Map((Name("f", None), Signature(Some(Unit), Real, None, Right(Some("3*2".asExpr)), UnknownLocation))))) shouldBe
         TactixLibrary.implyR(1) & expand("f()")
   }
 
   it should "elaborate variables to functions" in {
     tacticParser("implyR(1) ; expand(\"f\")",
       Declaration(scala.collection.immutable.Map(
-        (Name("f", None), Signature(Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
-        (Name("g", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation))
+        (Name("f", None), Signature(Some(Unit), Real, None, Right(Some("g*2".asExpr)), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Real, None, Right(Some("3*2".asExpr)), UnknownLocation))
       ))) shouldBe TactixLibrary.implyR(1) & expand("f")
   }
 
   it should "elaborate variables to functions in tactic arguments" in {
     val defs = Declaration(scala.collection.immutable.Map(
-      (Name("f", None), Signature(Some(Unit), Real, None, None, UnknownLocation)),
-      (Name("g", None), Signature(Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
+      (Name("f", None), Signature(Some(Unit), Real, None, Right(None), UnknownLocation)),
+      (Name("g", None), Signature(Some(Unit), Real, None, Right(Some("1*f".asExpr)), UnknownLocation))
     ))
     tacticParser("hideL('L==\"f=g\")", defs) shouldBe
       TactixLibrary.hideL(Find.FindLDef("f()=g()".asFormula, PosInExpr.HereP, defs))
@@ -728,8 +728,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "elaborate variables to functions per declarations" in {
     val tactic = tacticParser("implyR(1) ; expand(\"f\")",
       Declaration(scala.collection.immutable.Map(
-        (Name("f", None), Signature(Some(Unit), Real, None, Some("g".asExpr), UnknownLocation)),
-        (Name("g", None), Signature(Some(Unit), Real, None, Some("0".asExpr), UnknownLocation))
+        (Name("f", None), Signature(Some(Unit), Real, None, Right(Some("g".asExpr)), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Real, None, Right(Some("0".asExpr)), UnknownLocation))
       )
       ))
     tactic shouldBe TactixLibrary.implyR(1) & expand("f")
@@ -738,8 +738,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "elaborate functions to predicates per declarations" in {
     val tactic = tacticParser("implyR(1) ; expand(\"f\")",
       Declaration(scala.collection.immutable.Map(
-        (Name("f", None), Signature(Some(Unit), Bool, None, Some("g".asExpr), UnknownLocation)),
-        (Name("g", None), Signature(Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation))
+        (Name("f", None), Signature(Some(Unit), Bool, None, Right(Some("g".asExpr)), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Bool, None, Right(Some("3*2>=0".asExpr)), UnknownLocation))
       )
       ))
     tactic shouldBe TactixLibrary.implyR(1) & expand("f")
@@ -747,8 +747,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "elaborate programconsts to systemconsts" in {
     val defs = Declaration(scala.collection.immutable.Map(
-      (Name("p", None), Signature(Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation)),
-      (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asExpr), UnknownLocation))
+      (Name("p", None), Signature(Some(Unit), Bool, None, Right(Some("3*2>=0".asExpr)), UnknownLocation)),
+      (Name("a", None), Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asExpr)), UnknownLocation))
     ))
     tacticParser("implyR(1) ; cut(\"[a;]p\")", defs) shouldBe TactixLibrary.implyR(1) & cut("[a{|^@|};]p()".asFormula)
   }
@@ -761,22 +761,21 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = tacticParser("expandAllDefs(\"nil\")",
       Declaration(scala.collection.immutable.Map(
         //@note UnknownLocation identifies proof definitions, known locations identify model definitions
-        (Name("f", None), Signature(Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
-        (Name("g", None), Signature(Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Unit), Real, None, Right(Some("g*2".asExpr)), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Real, None, Right(Some("4".asExpr)), Region(0, 0, 0, 0)))
       )))
     tactic shouldBe expandAllDefs(Nil)
   }
 
-  it should "FEATURE-REQUEST: expand and elaborate proof definitions in US" taggedAs TodoTest in {
-    val tactic = tacticParser("US(\"f(.)~>g(.)::nil\"); expandAllDefs(\"nil\")",
+  it should "expand and elaborate proof definitions in US" in {
+    val tactic = tacticParser("US(\"f(x)~>g(x)::nil\"); expandAllDefs(\"nil\")",
       Declaration(scala.collection.immutable.Map(
         //@note UnknownLocation identifies proof definitions, known locations identify model definitions
-        (Name("f", None), Signature(Some(Real), Bool, None, Some("g(.)".asExpr), UnknownLocation)),
-        (Name("g", None), Signature(Some(Real), Bool, None, Some(".>0".asExpr), Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Real), Bool, Some(List((Name("x"), Real))), Right(Some("g(x)".asExpr)), UnknownLocation)),
+        (Name("g", None), Signature(Some(Real), Bool, Some(List((Name("x"), Real))), Right(Some("x>0".asExpr)), Region(0, 0, 0, 0)))
       )))
-    //@note returns FuncOf
     tactic shouldBe TactixLibrary.USX(
-      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), PredOf(Function("g", None, Real, Bool), DotTerm())) :: Nil) &
+      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm(Real, Some(0))), PredOf(Function("g", None, Real, Bool), DotTerm(Real, Some(0)))) :: Nil) &
       expandAllDefs(Nil)
   }
 
@@ -784,8 +783,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = tacticParser("""dC("f(x)", 1)""",
       Declaration(scala.collection.immutable.Map(
         //@note Known locations identify model definitions
-        (Name("f", None), Signature(Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
-        (Name("g", None), Signature(Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Right(Some("x>g".asExpr)), Region(0, 0, 0, 0))),
+        (Name("g", None), Signature(Some(Unit), Real, None, Right(None), Region(0, 0, 0, 0)))
       )))
     tactic shouldBe TactixLibrary.dC("f(x)".asFormula)(1)
   }
@@ -794,8 +793,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = tacticParser("""dC("x>g", 1)""",
       Declaration(scala.collection.immutable.Map(
         //@note Known locations identify model definitions
-        (Name("f", None), Signature(Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
-        (Name("g", None), Signature(Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Right(Some("x>g".asExpr)), Region(0, 0, 0, 0))),
+        (Name("g", None), Signature(Some(Unit), Real, None, Right(None), Region(0, 0, 0, 0)))
       )))
     tactic shouldBe TactixLibrary.dC("x>g()".asFormula)(1)
   }
@@ -822,13 +821,13 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse substitution arguments" in {
-    tacticParser("US(\"init(.) ~> .=0\")") shouldBe (round trip TactixLibrary.USX(
-      SubstitutionPair("init(.)".asFormula, ".=0".asFormula) :: Nil))
+    tacticParser("US(\"init(x) ~> x=0\")") shouldBe (round trip TactixLibrary.USX(
+      SubstitutionPair("init(._0)".asFormula, "._0=0".asFormula) :: Nil))
   }
 
   it should "parse list substitution arguments" in {
-    tacticParser("US(\"init(.) ~> .=0 :: a;~>{x'=v,t'=1&true} :: nil\")") shouldBe (round trip TactixLibrary.USX(
-      SubstitutionPair("init(.)".asFormula, ".=0".asFormula) :: SubstitutionPair("a;".asProgram, "{x'=v,t'=1}".asProgram) :: Nil))
+    tacticParser("US(\"init(x) ~> x=0 :: a;~>{x'=v,t'=1&true} :: nil\")") shouldBe (round trip TactixLibrary.USX(
+      SubstitutionPair("init(._0)".asFormula, "._0=0".asFormula) :: SubstitutionPair("a;".asProgram, "{x'=v,t'=1}".asProgram) :: Nil))
   }
 
   it should "parse mixed arguments" in {
@@ -847,7 +846,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
 
     inside(tacticParser("MR(\"safeDist()>0\",1)",
-        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
+        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Right(Some("y".asTerm)), null))))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
@@ -857,7 +856,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "expand definitions in the middle of parsing only when asked to" in {
     val SeqTactic(_ +: (adpt: AppliedDependentPositionTactic) +: Nil) =
       tacticParser("useLemma(\"Lemma\",\"prop\"); MR(\"safeDist()>0\",1)",
-        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))
+        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Right(Some("y".asTerm)), null))))
     adpt.pt should have ('inputs ("safeDist()>0".asFormula::Nil))
   }
 
@@ -873,7 +872,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
 
     inside(tacticParser("hideL(-2==\"s=safeDist()\")",
-      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
+      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Right(Some("y".asTerm)), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
     }
   }

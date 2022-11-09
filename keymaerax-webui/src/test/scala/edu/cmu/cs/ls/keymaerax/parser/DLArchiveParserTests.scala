@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, DotTerm, Equal, FuncOf, Function, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -52,8 +52,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.problemContent shouldBe input
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -72,8 +72,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -92,8 +92,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -115,8 +115,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation),
+        Name("x", None) -> Signature.variable(),
       )))
     entry.model shouldBe "x>=0 -> f()>0".asFormula
     entry.expandedModel shouldBe "x>=0 -> f()>0".asFormula
@@ -139,8 +139,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(Some("1".asTerm)), UnknownLocation),
+        Name("x", None) -> Signature.variable(),
       )))
     entry.model shouldBe "x>=0 -> f()>0".asFormula
     entry.expandedModel shouldBe "x>=0 -> 1>0".asFormula
@@ -163,8 +163,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), None, UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Right(None), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "p(x) & x>0 -> [x:=x+1;]p(x)".asFormula
     entry.expandedModel shouldBe "p(x) & x>0 -> [x:=x+1;]p(x)".asFormula
@@ -187,8 +187,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("p", None) -> Signature(Some(Unit), Bool, Some(Nil), Some("2>1".asFormula), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("p", None) -> Signature(Some(Unit), Bool, Some(Nil), Right(Some("2>1".asFormula)), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "p() & x>0 -> [x:=x+1;]p()".asFormula
     entry.expandedModel shouldBe "2>1 & x>0 -> [x:=x+1;]2>1".asFormula
@@ -258,9 +258,9 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("p", None) -> Signature(Some(Unit), Bool, Some(Nil), Some("2>1".asFormula), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("p", None) -> Signature(Some(Unit), Bool, Some(Nil), Right(Some("2>1".asFormula)), UnknownLocation),
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "p() & x>0 -> [x:=x+y;]p()".asFormula
     entry.expandedModel shouldBe "2>1 & x>0 -> [x:=x+y;]2>1".asFormula
@@ -283,8 +283,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Some(".>1".asFormula), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Right(Some("x>1".asFormula)), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "p(x) & x>0 -> [x:=x+1;]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & x>0 -> [x:=x+1;]x>1".asFormula
@@ -307,8 +307,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, None, UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(None), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [a;]x>1".asFormula
@@ -321,8 +321,8 @@ class DLArchiveParserTests extends TacticTestBase {
     DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
     DLParser.programParser("{ x:=x+1; }") shouldBe DLParser.programParser("x:=x+1;")
     val archiveParser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
-    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), Region(1, 1, 1, 21)))
-    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(Declaration(Map.empty))(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), Region(1, 12, 1, 34))))
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 1, 1, 21)))
+    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(Declaration(Map.empty))(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 12, 1, 34))))
     val input =
       """ArchiveEntry "Entry 1"
         | Definitions HP a ::= { x:=x+1; }; End.
@@ -335,8 +335,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), Region(2, 13, 2, 35)),
-        Name("x", None) -> Signature(None, Real, None, None, Region(3, 23, 3, 24))
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(2, 13, 2, 35)),
+        Name("x", None) -> Signature(None, Real, None, Right(None), Region(3, 23, 3, 24))
       )), checkLocation = true)
     entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
@@ -359,8 +359,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
@@ -383,8 +383,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("?x>1;".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("?x>1;".asProgram)), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [?x>1;]x>1".asFormula
@@ -407,8 +407,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("{x'=5}".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("{x'=5}".asProgram)), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [{x'=5}]x>1".asFormula
@@ -431,8 +431,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;?x>1;".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;?x>1;".asProgram)), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;?x>1;]x>1".asFormula
@@ -455,8 +455,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("?x>1;x:=x+1;".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("?x>1;x:=x+1;".asProgram)), UnknownLocation),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [?x>1;x:=x+1;]x>1".asFormula
@@ -478,12 +478,12 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Some("1".asTerm), Region(2, 18, 2, 22)),
-        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Some(".>1".asFormula), Region(2, 34, 2, 44)),
-        Name("q", None) -> Signature(Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil), Some("._0+._1>._2".asFormula), Region(2, 60, 2, 86)),
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("?p(x);".asProgram), Region(2, 99, 2, 120)),
-        Name("x", None) -> Signature(None, Real, None, None, Region(3, 23, 3, 24)),
-        Name("y", None) -> Signature(None, Real, None, None, Region(3, 31, 3, 32))
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(Some("1".asTerm)), Region(2, 18, 2, 22)),
+        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Right(Some("x>1".asFormula)), Region(2, 34, 2, 44)),
+        Name("q", None) -> Signature(Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil), Right(Some("x+y>z".asFormula)), Region(2, 60, 2, 86)),
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("?p(x);".asProgram)), Region(2, 99, 2, 120)),
+        Name("x", None) -> Signature(None, Real, None, Right(None), Region(3, 23, 3, 24)),
+        Name("y", None) -> Signature(None, Real, None, Right(None), Region(3, 31, 3, 32))
       )), checkLocation = true)
     entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a{|^@|};]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
@@ -556,8 +556,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(Some("1".asTerm)), UnknownLocation),
+        Name("x", None) -> Signature.variable(),
       )))
     entry.model shouldBe "f()>0 & x>=0 -> [x:=x+1;]f()>0".asFormula
     entry.expandedModel shouldBe "1>0 & x>=0 -> [x:=x+1;]1>0".asFormula
@@ -577,7 +577,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.defs should beDecl(
       Declaration(Map(
         Name("exp", None) -> Signature(Some(Real), Real, Some(List(Name("t") -> Real)),
-          Some(FuncOf(Function("exp", None, Real, Real, Some("<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-1}++{exp'=exp,t'=1}}>(exp=1&t=0)".asFormula)), "._1".asTerm)), UnknownLocation)
+          Right(Some(FuncOf(Function("exp", None, Real, Real, Some("<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-1}++{exp'=exp,t'=1}}>(exp=1&t=0)".asFormula)), "._1".asTerm))), UnknownLocation)
       )))
   }
 
@@ -654,12 +654,12 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
-        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Some(".>1".asFormula), UnknownLocation),
-        Name("q", None) -> Signature(Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil), Some("._0+._1>._2".asFormula), UnknownLocation),
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("?p(x);".asProgram), UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(Some("1".asTerm)), UnknownLocation),
+        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Right(Some("x>1".asFormula)), UnknownLocation),
+        Name("q", None) -> Signature(Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil), Right(Some("x+y>z".asFormula)), UnknownLocation),
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("?p(x);".asProgram)), UnknownLocation),
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a{|^@|};]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
@@ -682,9 +682,9 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("{ x'=x, t'=1 & x<=2 }".asProgram), UnknownLocation),
-        Name("t", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("{ x'=x, t'=1 & x<=2 }".asProgram)), UnknownLocation),
+        Name("t", None) -> Signature.variable(),
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "[a{|^@|};]x<=2".asFormula
     entry.expandedModel shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
@@ -704,8 +704,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Some("5".asTerm), UnknownLocation),
-        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Some(".>0".asFormula), UnknownLocation)
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(Some("5".asTerm)), UnknownLocation),
+        Name("p", None) -> Signature(Some(Real), Bool, Some((Name("x", None), Real) :: Nil), Right(Some("x>0".asFormula)), UnknownLocation)
       )))
     entry.model shouldBe "p(f())".asFormula
     entry.expandedModel shouldBe "5>0".asFormula
@@ -726,8 +726,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.problemContent shouldBe input
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -781,7 +781,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation)
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation)
       )))
     entry.model shouldBe "f()>0".asFormula
     entry.tactics shouldBe empty
@@ -800,8 +800,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        Name("g", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation)
+        Name("f", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation),
+        Name("g", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation)
       )))
     entry.model shouldBe "f()>g()".asFormula
     entry.tactics shouldBe empty
@@ -820,8 +820,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("p", None) -> Signature(Some(Unit), Bool, Some(Nil), None, UnknownLocation),
-        Name("q", None) -> Signature(Some(Unit), Bool, Some(Nil), None, UnknownLocation)
+        Name("p", None) -> Signature(Some(Unit), Bool, Some(Nil), Right(None), UnknownLocation),
+        Name("q", None) -> Signature(Some(Unit), Bool, Some(Nil), Right(None), UnknownLocation)
       )))
     entry.model shouldBe "p() & q()".asFormula
     entry.tactics shouldBe empty
@@ -832,6 +832,7 @@ class DLArchiveParserTests extends TacticTestBase {
   it should "parse a problem that uses the built-in interpreted functions" in {
     val input =
       """ArchiveEntry "Entry 1"
+        | Definitions import kyx.math.abs; End.
         | Problem abs(-5)>0 End.
         |End.""".stripMargin
     val entry = parse(input).loneElement
@@ -854,7 +855,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable()
       )))
     entry.model shouldBe "[{x:=x;}*]x=x".asFormula
     entry.tactics shouldBe empty
@@ -886,7 +887,7 @@ class DLArchiveParserTests extends TacticTestBase {
       """1:1 Error parsing archiveStart at 1:1
         |Found:    "ProgramVar" at 1:1
         |Expected: ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
-        |Hint: Try ("SharedDefinitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
+        |Hint: Try ("package" | "Definitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
   }
 
   it should "parse a problem without declarations" in {
@@ -895,8 +896,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.name shouldBe "Test"
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(Declaration(Map(
-      Name("x") -> Signature(None, Real, None, None, UnknownLocation),
-      Name("y") -> Signature(None, Real, None, None, UnknownLocation)
+      Name("x") -> Signature.variable(),
+      Name("y") -> Signature.variable()
     )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -919,7 +920,7 @@ class DLArchiveParserTests extends TacticTestBase {
       """1:1 Error parsing archiveStart at 1:1
         |Found:    "ProgramVar" at 1:1
         |Expected: ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
-        |Hint: Try ("SharedDefinitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
+        |Hint: Try ("package" | "Definitions" | "ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")""".stripMargin
   }
 
   it should "detect duplicate variable definitions" in {
@@ -947,10 +948,10 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """3:42 Error parsing definitions at 3:2
-        |Found:    "End." at 3:42
+      """3:37 Error parsing definitions at 3:2
+        |Found:    "= 2; End." at 3:37
         |Expected: Unique name (f not unique)
-        |Hint: Try Unique name (f not unique)""".stripMargin
+        |Hint: Try ("," | Unique name (f not unique))""".stripMargin
   }
 
   it should "detect duplicate predicate names" in {
@@ -963,10 +964,10 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """3:50 Error parsing definitions at 3:2
-        |Found:    "End." at 3:50
+      """3:41 Error parsing definitions at 3:2
+        |Found:    "<-> 2>1; E" at 3:41
         |Expected: Unique name (p not unique)
-        |Hint: Try Unique name (p not unique)""".stripMargin
+        |Hint: Try ("," | Unique name (p not unique))""".stripMargin
   }
 
   it should "detect duplicate program names" in {
@@ -1027,10 +1028,10 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """4:22 Error parsing definitions at 4:2
-        |Found:    "End." at 4:22
+      """4:20 Error parsing definitions at 4:2
+        |Found:    "; End." at 4:20
         |Expected: Unique name (y not unique)
-        |Hint: Try Unique name (y not unique)""".stripMargin
+        |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "," | Unique name (y not unique))""".stripMargin
   }
 
   it should "detect duplicate definitions (4)" in {
@@ -1043,10 +1044,10 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """4:22 Error parsing definitions at 4:2
-        |Found:    "End." at 4:22
+      """4:20 Error parsing definitions at 4:2
+        |Found:    "; End." at 4:20
         |Expected: Unique name (x not unique)
-        |Hint: Try Unique name (x not unique)""".stripMargin
+        |Hint: Try ([a-zA-Z0-9] | "_" | "<<" | "(" | "," | Unique name (x not unique))""".stripMargin
   }
 
   it should "detect duplicate definitions (5)" in {
@@ -1099,8 +1100,8 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     result.defs should beDecl(
       Declaration(Map(
-        Name("one", None) -> Signature(Some(Unit), Real, Some(List.empty), Some("1".asTerm), UnknownLocation),
-        Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Some("{y'=one()}".asProgram), UnknownLocation)
+        Name("one", None) -> Signature(Some(Unit), Real, Some(List.empty), Right(Some("1".asTerm)), UnknownLocation),
+        Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Right(Some("{y'=one()}".asProgram)), UnknownLocation)
       )))
     result.model shouldBe "\\forall y [contincy{|^@|};]y>=old(y)".asFormula
   }
@@ -1122,6 +1123,7 @@ class DLArchiveParserTests extends TacticTestBase {
   it should "elaborate to builtin interpreted symbols" in {
     val input =
       """ArchiveEntry "Test"
+        |Definitions import kyx.math.e; End.
         |ProgramVariables Real x; End.
         |Problem x>=0 -> e^x>=1 End.
         |End.
@@ -1134,18 +1136,18 @@ class DLArchiveParserTests extends TacticTestBase {
   it should "elaborate to builtin interpreted symbols in definitions" in {
     val input =
       """ArchiveEntry "Test"
-        |Definitions Real f(Real x) = e^x; End.
+        |Definitions import kyx.math.e; Real f(Real x) = e^x; End.
         |ProgramVariables Real x; End.
         |Problem x>=0 -> f(x)>=1 End.
         |End.
         |""".stripMargin
     val entry = parse(input).head
-    entry.defs.decls(Name("f")).interpretation shouldBe Some(Power(FuncOf(InterpretedSymbols.E, Nothing), DotTerm()))
+    entry.defs.decls(Name("f")).interpretation shouldBe Right(Some(Power(FuncOf(InterpretedSymbols.E, Nothing) ,Variable("x"))))
   }
 
   it should "not elaborate in unused shared program definitions" in {
     val input =
-      """SharedDefinitions HP a ::= { y:=y+1; }; End.
+      """Definitions HP a ::= { y:=y+1; }; End.
         |ArchiveEntry "Test"
         |Definitions Real y; End.
         |ProgramVariables Real x; End.
@@ -1157,7 +1159,7 @@ class DLArchiveParserTests extends TacticTestBase {
 
   it should "elaborate in used shared program definitions" in {
     val input =
-      """SharedDefinitions HP a ::= { x:=y; }; End.
+      """Definitions HP a ::= { x:=y; }; End.
         |ArchiveEntry "Test"
         |Definitions Real y; End.
         |ProgramVariables Real x; End.
@@ -1169,7 +1171,7 @@ class DLArchiveParserTests extends TacticTestBase {
 
   it should "elaborate in transitively used shared program definitions" in {
     val input =
-      """SharedDefinitions HP a ::= { x:=y; }; End.
+      """Definitions HP a ::= { x:=y; }; End.
         |ArchiveEntry "Test"
         |Definitions HP b ::= { a; }; Real y; End.
         |ProgramVariables Real x; End.
@@ -1182,7 +1184,7 @@ class DLArchiveParserTests extends TacticTestBase {
   it should "report when elaborating in used shared program definitions is impossible" in {
     //@todo better error message
     val input =
-      """SharedDefinitions HP a ::= { x:=y; }; HP b ::= { y:=y+1; }; End.
+      """Definitions HP a ::= { x:=y; }; HP b ::= { y:=y+1; }; End.
         |ArchiveEntry "Test"
         |Definitions Real y; End.
         |ProgramVariables Real x; End.
@@ -1209,9 +1211,9 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        Name("ctrl", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;^@".asProgram), UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation),
+        Name("ctrl", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;^@".asProgram)), UnknownLocation)
       )))
     entry.model shouldBe "x>y() -> [ctrl;]x>=y()".asFormula
     entry.tactics shouldBe empty
@@ -1240,8 +1242,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry1.kind shouldBe "theorem"
     entry1.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1256,8 +1258,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation),
+        Name("y", None) -> Signature.variable()
       )))
     entry2.model shouldBe "x()>=y -> x()>=y".asFormula
     entry2.tactics shouldBe ("Prop Proof", "prop", prop) :: Nil
@@ -1302,8 +1304,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry1.kind shouldBe "theorem"
     entry1.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1318,8 +1320,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry2.kind shouldBe "lemma"
     entry2.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation),
+        Name("y", None) -> Signature.variable()
       )))
     entry2.model shouldBe "x()>=y -> x()>=y".asFormula
     entry2.tactics shouldBe ("Prop Proof", "prop", prop) :: Nil
@@ -1336,7 +1338,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry3.kind shouldBe "theorem"
     entry3.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable()
       )))
     entry3.model shouldBe "x>3 -> x>=3".asFormula
     entry3.tactics shouldBe empty
@@ -1351,7 +1353,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry4.kind shouldBe "theorem"
     entry4.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable()
       )))
     entry4.model shouldBe "x>4 -> x>=4".asFormula
     entry4.tactics shouldBe empty
@@ -1394,8 +1396,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry1.kind shouldBe "theorem"
     entry1.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1410,8 +1412,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry2.kind shouldBe "lemma"
     entry2.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature(Some(Unit), Real, Some(Nil), Right(None), UnknownLocation),
+        Name("y", None) -> Signature.variable()
       )))
     entry2.model shouldBe "x()>=y -> x()>=y".asFormula
     entry2.tactics shouldBe ("Prop Proof of Lemma 2", "prop", prop) :: Nil
@@ -1428,7 +1430,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry3.kind shouldBe "theorem"
     entry3.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable()
       )))
     entry3.model shouldBe "x>3 -> x>=3".asFormula
     entry3.tactics shouldBe empty
@@ -1443,7 +1445,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry4.kind shouldBe "theorem"
     entry4.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable()
       )))
     entry4.model shouldBe "x>4 -> x>=4".asFormula
     entry4.tactics shouldBe empty
@@ -1467,8 +1469,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "lemma"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -1489,8 +1491,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -1518,8 +1520,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry1.kind shouldBe "lemma"
     entry1.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1535,8 +1537,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry2.model shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma(\"Entry 1\")", TactixLibrary.useLemmaX("Entry 1", None))::Nil
@@ -1563,8 +1565,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "lemma"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> y<x".asFormula
     entry.tactics shouldBe empty
@@ -1597,8 +1599,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "lemma"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("x", None) -> Signature.variable(),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe "x>y -> y<x".asFormula
     entry.tactics shouldBe empty
@@ -1651,10 +1653,10 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("cos1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Some(FuncOf(cos1, DotTerm())), UnknownLocation),
-        Name("sin1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Some(FuncOf(sin1, DotTerm())), UnknownLocation),
-        Name("tanh", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), Some(FuncOf(tanh, DotTerm())), UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+        Name("cos1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Right(Some(FuncOf(cos1, DotTerm(Real, Some(1))))), UnknownLocation),
+        Name("sin1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Right(Some(FuncOf(sin1, DotTerm(Real, Some(1))))), UnknownLocation),
+        Name("tanh", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), Right(Some(FuncOf(tanh, DotTerm(Real, Some(1))))), UnknownLocation),
+        Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe And(
       Equal(
@@ -1679,6 +1681,7 @@ class DLArchiveParserTests extends TacticTestBase {
       """
         |ArchiveEntry "Entry"
         | Definitions
+        |   import kyx.math.exp;
         |   implicit Real exp(Real t) =
         |     {{exp:=1;}; {exp'=exp}};
         | End.
@@ -1687,10 +1690,10 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """5:29 Error parsing implicitDef at 4:4
-        |Found:    ";" at 5:29
-        |Expected: Not redefining builtin symbols (exp redefined)
-        |Hint: Try Not redefining builtin symbols (exp redefined)""".stripMargin
+      """7:2 Error parsing definitions at 3:2
+        |Found:    "End." at 7:2
+        |Expected: Unique name (exp not unique)
+        |Hint: Try Unique name (exp not unique)""".stripMargin
   }
 
   it should "allow explicit initial times" in {
@@ -1718,8 +1721,8 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.defs should beDecl(
       Declaration(Map(
         Name("exp1",None) ->
-          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=-(2)) >>(.)".asTerm), UnknownLocation),
-        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Right(Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=-(2)) >>(._1)".asTerm)), UnknownLocation),
+        Name("y", None) -> Signature.variable()
       )))
   }
 
@@ -1729,6 +1732,7 @@ class DLArchiveParserTests extends TacticTestBase {
       """
         |ArchiveEntry "Entry"
         | Definitions
+        |   import kyx.math.exp;
         |   implicit Real exp1(Real s) =
         |     {{s:=0;exp1:=exp(1);}; {s'=1,exp1'=exp1}};
         |   Real foo = 5;
@@ -1745,10 +1749,11 @@ class DLArchiveParserTests extends TacticTestBase {
     println(entry.defs)
     entry.defs should beDecl(
       Declaration(Map(
-        Name("exp1",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(.)".asTerm), UnknownLocation),
-        Name("foo",None) -> Signature(Some(Unit),Real,Some(List()),Some(Number(5)), UnknownLocation),
-        Name("exp2",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Some("exp2<< <{exp2:=._0;s:=._1;}{{exp2'=-(exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2),s'=-(1)}++{exp2'=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2,s'=1}}>(exp2=0&s=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(5)) >>(.)".asTerm), UnknownLocation),
-        Name("y",None) -> Signature(None,Real,None,None, UnknownLocation)))
+        Name("exp", None) -> Signature(Some(Real),Real,Some(List((Name("t",None),Real))),Right(Some(FuncOf(InterpretedSymbols.expF, "._1".asTerm))), UnknownLocation),
+        Name("exp1",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Right(Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(._1)".asTerm)), UnknownLocation),
+        Name("foo",None) -> Signature(Some(Unit),Real,Some(List()),Right(Some(Number(5))), UnknownLocation),
+        Name("exp2",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Right(Some("exp2<< <{exp2:=._0;s:=._1;}{{exp2'=-(exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2),s'=-(1)}++{exp2'=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2,s'=1}}>(exp2=0&s=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(5)) >>(._1)".asTerm)), UnknownLocation),
+        Name("y",None) -> Signature(None,Real,None,Right(None), UnknownLocation)))
     )
   }
 
@@ -1994,6 +1999,7 @@ class DLArchiveParserTests extends TacticTestBase {
       raw"""Theorem "double iterated exponential"
          |
          |Definitions
+         |  import kyx.math.exp;
          |  implicit Real exp1(Real t) = {{exp1:=1;}; {exp1'=exp1}};
          |  Real E = exp1(1);
          |  implicit Real exp2(Real t) = {{exp2:=E;t:=0;}; {exp2'=exp1(t)*exp2,t'=1}};

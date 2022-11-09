@@ -5,11 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixInit
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.mutable.ListBuffer
 
@@ -21,6 +23,8 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
+    ArchiveParser.setParser(new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
+      ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
   }
 
@@ -156,8 +160,9 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
   }
 
   it should "parse when function name and arguments are separated by whitespace " in {
-    DLParser("min (x,y)") shouldBe FuncOf(InterpretedSymbols.minF, Pair(Variable("x"), Variable("y")))
-    DLParser("min\n(x,y)") shouldBe FuncOf(InterpretedSymbols.minF, Pair(Variable("x"), Variable("y")))
+    //@note DLParser does not know interpreted symbols unless explicit interpretation is listed
+    DLParser("min (x,y)") shouldBe FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(Variable("x"), Variable("y")))
+    DLParser("min\n(x,y)") shouldBe FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(Variable("x"), Variable("y")))
   }
 
   it should "not parse x//y" in {

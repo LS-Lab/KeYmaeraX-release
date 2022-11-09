@@ -13,7 +13,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic}
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{BuiltinSymbols, Declaration, ParseException, Parser}
 import fastparse.P
 
 /**
@@ -39,7 +39,7 @@ trait TacticParser extends (String => BelleExpr) {
     * @ensures apply(printer(\result)) == \result
     * @throws ParseException if `input` is not a well-formed Bellerophon tactic.
     */
-  final def apply(input: String): BelleExpr = apply(input, Declaration(Map.empty))
+  final def apply(input: String): BelleExpr = apply(input, BuiltinSymbols.all)
 
   /** Parse the input string in the concrete syntax of Bellerophon tactics.
     * @param input the string to parse as a Bellerophon tactic.

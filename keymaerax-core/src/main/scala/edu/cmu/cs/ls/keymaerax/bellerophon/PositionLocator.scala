@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Sequent, Term}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXOmitInterpretationPrettyPrinter, TacticReservedSymbols}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, BuiltinSymbols, Declaration, InterpretedSymbols, KeYmaeraXOmitInterpretationPrettyPrinter, TacticReservedSymbols}
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -162,25 +162,25 @@ object Find {
     new Find(goal, shape, AntePosition.base0(0, sub), exact, defs)
   def FindLDef(shape: Expression, sub: PosInExpr, defs: Declaration): Find =
     new Find(0, Some(shape), AntePosition.base0(0, sub), exact=true, defs)
-  def FindLPlain(shape: Expression, sub: PosInExpr): Find = FindLDef(shape, sub, TacticReservedSymbols.asDecl)
+  def FindLPlain(shape: Expression, sub: PosInExpr): Find = FindLDef(shape, sub, BuiltinSymbols.all)
   def FindLPlain(shape: Expression): Find = FindLPlain(shape, HereP)
-  val FindLFirst: Find = new Find(0, None, AntePosition.base0(0), exact=true, TacticReservedSymbols.asDecl)
+  val FindLFirst: Find = new Find(0, None, AntePosition.base0(0), exact=true, BuiltinSymbols.all)
   def FindLMatch(shape: Expression): Find =
-    new Find(0, Some(shape), AntePosition.base0(0), exact=false, TacticReservedSymbols.asDecl)
+    new Find(0, Some(shape), AntePosition.base0(0), exact=false, BuiltinSymbols.all)
   def FindLAfter(shape: Option[Expression], start: AntePosition): Find =
-    new Find(0, shape, start, exact=true, Declaration(Map.empty))
+    new Find(0, shape, start, exact=true, BuiltinSymbols.all)
   /** 'R Find somewhere on the right meaning in the succedent */
   def FindR(goal: Int, shape: Option[Expression], sub: PosInExpr, exact: Boolean, defs: Declaration): Find =
     new Find(goal, shape, SuccPosition.base0(0, sub), exact, defs)
   def FindRDef(shape: Expression, sub: PosInExpr, defs: Declaration): Find =
     new Find(0, Some(shape), SuccPosition.base0(0, sub), exact=true, defs)
-  def FindRPlain(shape: Expression, sub: PosInExpr): Find = FindRDef(shape, sub, TacticReservedSymbols.asDecl)
+  def FindRPlain(shape: Expression, sub: PosInExpr): Find = FindRDef(shape, sub, BuiltinSymbols.all)
   def FindRPlain(shape: Expression): Find = FindRPlain(shape, HereP)
-  val FindRFirst: Find = new Find(0, None, SuccPosition.base0(0), exact=true, TacticReservedSymbols.asDecl)
+  val FindRFirst: Find = new Find(0, None, SuccPosition.base0(0), exact=true, BuiltinSymbols.all)
   def FindRMatch(shape: Expression): Find =
-    new Find(0, Some(shape), SuccPosition.base0(0), exact=false, TacticReservedSymbols.asDecl)
+    new Find(0, Some(shape), SuccPosition.base0(0), exact=false, BuiltinSymbols.all)
   def FindRAfter(shape: Option[Expression], start: SuccPosition): Find =
-    new Find(0, shape, start, exact=true, TacticReservedSymbols.asDecl)
+    new Find(0, shape, start, exact=true, BuiltinSymbols.all)
 }
 
 /** 'Llast Locates the last position in the antecedent. */

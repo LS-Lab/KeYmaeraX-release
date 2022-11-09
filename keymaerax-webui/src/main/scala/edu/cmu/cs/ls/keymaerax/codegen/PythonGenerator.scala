@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.codegen
 import edu.cmu.cs.ls.keymaerax.codegen.PythonPrettyPrinter.{nameIdentifier, printSort}
 import edu.cmu.cs.ls.keymaerax.codegen.PythonGenerator.{IMPORT_STATEMENTS, printHeader, printInputDeclaration, printParameterDeclaration, printStateDeclaration, printVerdictDeclaration}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, Signature}
 
 /**
@@ -92,17 +91,18 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
       else throw new CodeGenerationException("Non-posterior, non-parameter function symbol " + fn.prettyString + " is not supported")
   }, defs)
 
-  /** Prints function definitions. */
-  private def printFuncDefs(defs: Declaration, parameters: Set[NamedSymbol]): String = {
+  /** Prints the function definitions of `defs` that are used transitively in `expr`. */
+  private def printFuncDefs(defs: Declaration, parameters: Set[NamedSymbol], expr: Expression): String = {
     //@note substs are topologically sorted, print in that order
-    defs.substs.reverse.
+    val projected = defs.project(List(expr))
+    projected.substs.reverse.
       flatMap({
         case SubstitutionPair(FuncOf(what, _), _) => Some(what)
         case SubstitutionPair(PredOf(what, _), _) => Some(what)
         case _ => None
       }).map(name =>
-      defs.decls.find({ case (n, s) => Declaration.asNamedSymbol(n, s) == name }) match {
-        case Some((name, Signature(_, codomain, Some(args), interpretation, _))) =>
+      projected.decls.find({ case (Name(n, i), _) => name.name == n && name.index == i }) match {
+        case Some((name, Signature(_, codomain, Some(args), Right(interpretation), _))) =>
           def ptype(s: Sort): String = s match {
             case Real => "np.float64"
             case Bool => "bool"
@@ -119,15 +119,24 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
             (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
               SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
           val body = interpretation match {
-            case Some(i) => primitiveExprGenerator(parameters)(argsSubst(i))._2
-            case _ => PythonPrettyPrinter.numberLiteral(0.0) + " # todo"
+            case Some(FuncOf(Function(_, _, _, _, Some(interp)), arg)) =>
+              s"""# todo: implement preserving the function characteristics
+                 |#       ._0 = ${name.prettyString}(${arg.prettyString}) <-> ${interp.prettyString}
+                 |#       where ._0 is the function result and ._1 is the function argument
+                 |raise NotImplementedError""".stripMargin
+            case Some(i) =>
+              "return " + primitiveExprGenerator(parameters)(argsSubst(i))._2
+            case _ =>
+              """# todo: uninterpreted function symbol
+                |raise NotImplementedError""".stripMargin
           }
           def arguments(x: String): String = FUNC_PARAMS_NAME + ": Params" + (if (x.nonEmpty) ", " + x else "")
           s"""def ${name.prettyString}(${arguments(pargs)}) -> ${ptype(codomain)}:
-             |  return $body
+             |  ${body.linesWithSeparators.map("  " + _).mkString.stripPrefix("  ")}
              |""".stripMargin
         case None =>
-          println("Foo")
+          s"""# todo: undeclared symbol ${name.prettyString}
+             |raise NotImplementedError""".stripMargin
     }).mkString("\n")
   }
 
@@ -162,7 +171,7 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      printFuncDefs(defs, parameters) +
+      printFuncDefs(defs, parameters, expr) +
       initCheck + "\n" +
       bodyDefs
       ,

@@ -33,7 +33,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   /** Definitions, should be provided by the outer parser through [[setDefs]]. Use [[defs]] instead to get combined outer parser and tactic reserved symbols. */
   private var _defs: Declaration = Declaration(Map.empty)
 
-  /** Definitions, provided by outer parser plus tactic reserved symbols (unless declared in the outer definitions). */
+  /** Definitions, provided by outer parser plus tactic reserved symbols. */
   private def defs: Declaration = _defs.addNew(TacticReservedSymbols.asDecl)
 
   /** Which formula/term/program parser this archive parser uses. */

@@ -145,7 +145,7 @@ private object DifferentialTactics extends Logging {
         case Box(_, post) =>
           StaticSemantics.symbols(post).toList.filter({
             case Function(n, i, _, _, interp) =>
-              interp.nonEmpty || defs.decls.get(Name(n, i)).exists(_.interpretation.isDefined)
+              interp.nonEmpty || defs.decls.get(Name(n, i)).exists(d => d.interpretation.isLeft || d.interpretation.isRight && d.interpretation.right.get.isDefined)
             case _ => false
           }).map({
             case fn@Function(_, _, _, _, interpreted) =>

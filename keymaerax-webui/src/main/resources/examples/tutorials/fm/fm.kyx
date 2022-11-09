@@ -207,6 +207,7 @@ ArchiveEntry "FM16/Tutorial Example 5"
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=130".
 
 Definitions
+  import kyx.math.abs;
   Real ep;   /* time limit for control decisions */
   Real B;    /* minimum braking capability of the robot */
   Real A;    /* maximum acceleration -B <= a <= A */

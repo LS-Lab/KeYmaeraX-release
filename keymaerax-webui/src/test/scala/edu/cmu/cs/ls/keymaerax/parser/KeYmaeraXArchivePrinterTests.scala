@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
   * Tests the archive printer.
@@ -55,7 +56,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
         |
         |Theorem "exp"
         |Definitions
-        |  Real e1(Real x_0) = ( e1<< <{e1:=._0;t:=._1;}{{e1'=--e1,t'=-1}++{e1'=-e1,t'=1}}>(e1=1&t=2) >>(x_0) );
+        |  Real e1(Real t) = ( e1<< <{e1:=._0;t:=._1;}{{e1'=--e1,t'=-1}++{e1'=-e1,t'=1}}>(e1=1&t=2) >>(t) );
         |End.
         |
         |ProgramVariables
@@ -71,10 +72,11 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
     ArchiveParser(printed).head.expandedModel shouldBe entry.expandedModel
   }
 
-  it should "not repeat builtin interpreted function definitions" in {
+  it should "FEATURE_REQUEST: not repeat imported interpreted function definitions" taggedAs TodoTest in {
     val entry = ArchiveParser(
       """ArchiveEntry "arctan"
         |Definitions
+        |  import kyx.math.{cos,sin};
         |  implicit Real arctan(Real t) = {{arctan:=0;t:=0;}; {arctan'=1/(1+t^2),t'=1}};
         |  Real tan(Real x) = sin(x)/cos(x);
         |  Real x;
@@ -89,8 +91,10 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
       s"""/* Exported from KeYmaera X v${edu.cmu.cs.ls.keymaerax.core.VERSION} */
          |Theorem "arctan"
          |Definitions
-         |  Real arctan(Real x_0) = ( arctan<< <{arctan:=._0;t:=._1;}{{arctan'=-1/(1+t^2),t'=-1}++{arctan'=1/(1+t^2),t'=1}}>(arctan=0&t=0) >>(x_0) );
-         |  Real tan(Real x_0) = ( sin(x_0)/cos(x_0) );
+         |  import kyx.math.cos;
+         |  import kyx.math.sin;
+         |  Real arctan(Real t) = ( arctan<< <{arctan:=._0;t:=._1;}{{arctan'=-1/(1+t^2),t'=-1}++{arctan'=1/(1+t^2),t'=1}}>(arctan=0&t=0) >>(t) );
+         |  Real tan(Real x) = ( sin(x)/cos(x) );
          |  Real x();
          |End.
          |

@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, TacticParser}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, BuiltinSymbols, Declaration, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
@@ -94,13 +94,13 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   it should "parse exact matching search" in withTactics {
     parser("""implyR('R=="x>0->x>=0")""") shouldBe TactixLibrary.implyR('R, "x>0->x>=0".asFormula)
     parser("""andL('L=="x>0&x>=0")""") shouldBe TactixLibrary.andL('L, "x>0&x>=0".asFormula)
-    parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0::Nil), exact=true, Declaration(Map.empty)))
+    parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0::Nil), exact=true, BuiltinSymbols.all))
   }
 
   it should "parse unifiable matching search" in withTactics {
     parser("""implyR('R~="x>0->x>=0")""") shouldBe TactixLibrary.implyR('Rlike, "x>0->x>=0".asFormula)
     parser("""andL('L~="x>0&x>=0")""") shouldBe TactixLibrary.andL('Llike, "x>0&x>=0".asFormula)
-    parser("""absExp('L~="#abs(x)#=3")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0::Nil), exact=false, Declaration(Map.empty)))
+    parser("""absExp('L~="#abs(x)#=3")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0::Nil), exact=false, BuiltinSymbols.all))
   }
 
   it should "parse fancy dG" in withTactics {

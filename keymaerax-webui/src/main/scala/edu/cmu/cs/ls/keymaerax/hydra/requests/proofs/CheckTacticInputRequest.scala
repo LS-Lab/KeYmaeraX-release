@@ -67,8 +67,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
     sortMismatch match {
       case None =>
-        val allowedSymbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols ++
-          InterpretedSymbols.builtin ++ TacticReservedSymbols.symbols
+        val allowedSymbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols ++ TacticReservedSymbols.symbols
         val paramFV: Set[NamedSymbol] = {
           //@note function/predicate/system/game symbols are proof parameters if they are not declared in the input
           elaborated.flatMap({

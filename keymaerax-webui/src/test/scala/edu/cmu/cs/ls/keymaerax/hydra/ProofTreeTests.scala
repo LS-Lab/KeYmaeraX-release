@@ -458,9 +458,9 @@ class ProofTreeTests extends TacticTestBase {
         |
         |Tactic "Delayed Substitution Test: Proof"
         |implyR(1) ; loop("inv(x)", 1) ; <(
-        |  US("init(•)~>sq(•)=0") ; US("inv(•)~>•>=0") ; US("sq(•)~>•*•") ; QE,
-        |  US("inv(•)~>•>=0") ; US("safe(•)~>•>=0") ; id,
-        |  US("inv(•)~>•>=0") ; US("inc{|^@|};~>x:=x+1;") ; unfold ; QE
+        |  US("init(x)~>sq(x)=0") ; US("inv(x)~>x>=0") ; US("sq(x)~>x*x") ; QE,
+        |  US("inv(x)~>x>=0") ; US("safe(x)~>x>=0") ; id,
+        |  US("inv(x)~>x>=0") ; US("inc{|^@|};~>x:=x+1;") ; unfold ; QE
         |  )
         |End.
         |
@@ -511,7 +511,7 @@ class ProofTreeTests extends TacticTestBase {
 
   it should "work with lemmas that expand all definitions" in withDatabase { db => withMathematica { _ =>
     val modelContent =
-      """SharedDefinitions
+      """Definitions
         |  Real sq(Real x) = x*x;
         |  Bool gt(Real x, Real y) <-> x>y;
         |End.
@@ -568,7 +568,7 @@ class ProofTreeTests extends TacticTestBase {
 
   it should "work with lemmas that partially expand" in withDatabase { db => withMathematica { _ =>
     val modelContent =
-      """SharedDefinitions
+      """Definitions
         |  Real sq(Real x) = x*x;
         |  Bool gt(Real x, Real y) <-> x>y;
         |End.
@@ -625,7 +625,7 @@ class ProofTreeTests extends TacticTestBase {
 
   it should "work when expanding to different extent" in withDatabase { db => withMathematica { _ =>
     val modelContent =
-      """SharedDefinitions
+      """Definitions
         |  Real sq(Real x) = x*x;
         |  Bool gt(Real x, Real y) <-> x>y;
         |  Bool gtsq(Real x, Real y) <-> gt(x,sq(y));

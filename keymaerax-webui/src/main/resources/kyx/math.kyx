@@ -1,0 +1,47 @@
+package kyx.math
+
+Definitions
+  /** Square root, defined as the unique number whose square is the non-negative input x. */
+  Real sqrt<< x>=0 & ._0^2 = x >>(Real x);
+
+  /** Division x/y for y!=0, defined as the unique number z s.t. x=y*z. */
+  Real div<< y!=0 & x=y*._0 >>(Real x, Real y);
+
+  /** Absolute value abs(x). */
+  Real abs<< (x < 0 & ._0 = -(x)) | (x >= 0 & ._0 = x) >>(Real x);
+
+  /** Maximum of two terms max(x,y). */
+  Real max<< (x < y & ._0 = y) | (x >= y & ._0 = x) >>(Real x, Real y);
+
+  /** Minimum of two terms max(x,y). */
+  Real min<< (x < y & ._0 = x) | (x >= y & ._0 = y) >>(Real x, Real y);
+
+  /** Exponential function exp(x). */
+  implicit Real exp(Real t) = {{exp:=1;}; {exp'=exp}};
+
+  /** Euler number e. */
+  Real e<< ._0 = exp(1) >>;
+
+  /** Trigonometric functions */
+
+  /** Sine and cosine sin(t), cos(t) */
+  implicit Real sin(Real t), cos(Real t) = {{sin:=0; cos:=1; t:=0;}; {sin'=cos, cos'=-sin, t'=1}};
+
+  /** The number pi as the unique y s.t. y > 0 & sin(y) = 0 & forall 0 < x < y, sin(x) > 0. */
+  Real pi<< ._0 > 0 & sin(._0)=0 & \forall x_ (0 < x_ & x_ < ._0 -> sin(x_) > 0) >>;
+
+  /** Tangent tan(x). */
+  Real tan<< ._0=sin(x)/cos(x) >>(Real x);
+
+  /** Hyperbolic tangent tanh(x). */
+  implicit Real tanh(Real t) = {{tanh:=0;}; {tanh'=1-tanh^2}};
+
+  /** Inverse trigonometric functions */
+
+  /** Inverse sin arcsin(x). */
+  implicit Real arcsin(Real t) = {{arcsin:=0; t:=0;}; {arcsin'=1/sqrt(1-t^2), t'=1}};
+
+  /** Inverse tangent arctan(x). */
+  implicit Real arctan(Real t) = {{arctan:=0; t:=0;}; {arctan'=1/(1+t^2), t'=1}};
+
+End.

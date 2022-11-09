@@ -7,13 +7,18 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse._
 import JavaWhitespace._
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{DLTacticParser, TacticParser}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted.FromProgramException
 
+import java.io.FileInputStream
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
+import scala.tools.nsc.io.File
 
 /**
   * Parse a differential dynamic logic archive file string to a list of archive entries.
@@ -56,11 +61,14 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   override def tacticParser: TacticParser = tacticParser
 
   val archiveParser: String => List[ParsedArchiveEntry] = input => fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), archiveEntries(_)) match {
-    case Parsed.Success(value, index) =>
-      if (value.length==1)
-        List(value.head.withProblemContent(input.trim))
-      else
-        value
+    case Parsed.Success(value, _) =>
+      if (value.length==1) List(value.head.withProblemContent(input.trim))
+      else value
+    case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
+  }
+
+  val definitionsPackageParser: String => Declaration = input => fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), definitionsPackage(_)) match {
+    case Parsed.Success(value, _) => value
     case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
   }
 
@@ -84,16 +92,27 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** Convenience: Parse a single problem or a single formula */
   def problemOrFormula[_: P]: P[Formula] = P( Start ~ (problem.map(_._1) | formula) ~ End )
 
-
+  /** Parses a package name. */
+  def packageDecl[_: P]: P[String] = P(
+    ("package" ~ packageIdent ~~ ("." ~~ packageIdent).repX).?.!
+  )
 
   /** Parse a list of archive entries */
   def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] =
     for {
-      shared <- Start ~ DLParserUtils.captureWithValue(sharedDefinitions).?
-      entries <- DLParserUtils.captureWithValue(archiveEntry(shared.map(_._1))).rep(1) ~ End
+      //@todo add package name to identifier names
+      pkg <- Start ~ packageDecl
+      pkgDefs <- DLParserUtils.captureWithValue(packageDefinitions(pkg)).?
+      //@todo add only imported package definitions
+      entries <- DLParserUtils.captureWithValue(archiveEntry(pkgDefs.map(_._1))).rep(1) ~ End
     } yield entries.map({ case (entry, content) =>
-      entry.withFileContent(shared.map(_._2).getOrElse("") + content)
+      entry.withFileContent(pkgDefs.map(_._2).getOrElse("") + content)
     }).toList
+
+  def definitionsPackage[_: P]: P[Declaration] = for {
+    pkg <- Start ~ packageDecl
+    defs <- DLParserUtils.captureWithValue(packageDefinitions(pkg)) ~ End
+  } yield defs._1
 
   /** Parse a single archive entry without source. */
   def archiveEntryNoSource[_: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = {
@@ -115,9 +134,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         if (endlabel.isDefined && endlabel != label)
           Fail.opaque("end label: " + endlabel + " is optional but should be the same as the start label: " + label)
         else {
-          val usedShared = shared.map(d => Declaration(ArchiveParser.defsUsedIn(d,
+          val usedShared = shared.map(_.project(
             // shared definitions used in problem or any of the entry's definitions or any annotation
-            prob +: (decl.substs.map(_.repl) ++ annotations.map(_._2).toList), Set.empty)))
+            prob +: (decl.substs.map(_.repl) ++ annotations.map(_._2).toList), Set.empty))
           val result = // definitions elaboration to replace arguments by dots and do type analysis
             ArchiveParser.elaborate(ParsedArchiveEntry(
               name = name,
@@ -183,8 +202,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   }
 
   /** `SharedDefinitions declOrDef End.` parsed. */
-  def sharedDefinitions[_: P]: P[Declaration] = P(
-    "SharedDefinitions" ~~/ blank ~
+  def packageDefinitions[_: P](pkg: String): P[Declaration] = P(
+    //@todo add package name to identifier names
+    "Definitions" ~~/ blank ~
       DLParserUtils.repFold(Declaration(Map.empty))(curDecls => declOrDef(curDecls).flatMap(uniqueDecls(curDecls, _))
       ) ~ "End."
   )
@@ -196,23 +216,37 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       ) ~ "End."
   )
 
-  /** `implicit Real name1(Real arg1, Real arg2), name2(Real arg1, Real arg2) '= {initConds; ode};` ODE function definition or
+  /** `implicit Real name1(Real arg1, Real arg2), name2(Real arg1, Real arg2) = {initConds; ode};` ODE function definition or
     * `sort name(sort1 arg1, sorg2 arg2);` declaration or
     * `sort name(sort1 arg1, sorg2 arg2) = term;` function definition or
     * `Bool name(sort1 arg1, sorg2 arg2) <-> formula;` predicate definition or
-    * `HP name ::= program;` program definition. */
+    * `HP name ::= program;` program definition or
+    * `import path.to.lib.definition;` or
+    * `import path.to.lib.{def-1, ..., def-n};` or
+    * `import path.to.lib.*;`
+    * */
   def declOrDef[_: P](curDecls: Declaration): P[List[(Name, Signature)]] = (
       implicitDef(curDecls) ~ ";"
     | progDef.map(p => p::Nil)
-    | declPartList.flatMap(decls =>
-        Pass(decls) ~ ";"./
-        | (decls match {
-          case (id,sig)::Nil =>
-            ("="./ ~ term(true) ~ ";").map(e => (id, sig.copy(interpretation = Some(e)))::Nil) |
-            ("<->" ~ formula ~ ";").map(f => (id, sig.copy(interpretation = Some(f)))::Nil)
-          case _ => Fail
-        })
-    )
+    | declPartList.flatMap(decls => {
+        val redefined = decls.map(_._1).toSet.intersect(curDecls.decls.keySet)
+        if (redefined.isEmpty) {
+          Pass(decls.map({
+            case (n, s@Signature(_, _, _, Left(i), _)) =>
+              (n, s.copy(interpretation = Left(curDecls.implicitSubst(i))))
+            case d => d
+          })) ~ ";"./ |
+            (decls match {
+            case (id, sig@Signature(_, _, args, Right(None), _)) :: Nil =>
+              ("="./ ~ term(true) ~ ";").map(e => (id, sig.copy(interpretation = Right(Some(curDecls.implicitSubst(e))))) :: Nil) |
+              ("<->" ~ formula ~ ";").map(f => (id, sig.copy(interpretation = Right(Some(curDecls.implicitSubst(f))))) :: Nil)
+            case _ => Fail
+          })
+        } else {
+          Fail.opaque("Unique name (" + redefined.map(_.prettyString).mkString(",") + " not unique)")
+        }
+      })
+    | importDef
   )
 
   private def namedTupleDo(ty1: Sort, n1: Option[Name], ty2: Sort, n2: Option[List[(Name, Sort)]]): (Sort, Option[List[(Name, Sort)]]) =
@@ -226,23 +260,24 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     namedTupleDo(args._1._1, args._1._2, args._2._1, args._2._2)
 //  private def namedTuple(ty1: Sort, n1: Option[(String, Option[Int])], args: (Sort, Option[List[((String, Option[Int]), Sort)]])): (Sort, Option[List[(Name, Sort)]]) =
 //    namedTupleDo(ty1, n1, args._1, args._2)
-  private def namedArgs(ty1: Sort, n1: Option[Name], acc: Option[List[(Name, Sort)]]): Option[List[(Name, Sort)]] =
-  n1 match {
+  private def namedArgs(ty1: Sort, n1: Option[Name], acc: Option[List[(Name, Sort)]]): Option[List[(Name, Sort)]] = n1 match {
     case Some(name) => Some((name,ty1) :: acc.getOrElse(Nil))
     case None => if (acc.isEmpty) None else throw ParseException("Either all or no arguments of function/predicate declarations should have names")
   }
 
-  /** `name(sort1 arg1, sorg2 arg2)` declaration part.
+  /** `name(sort1 arg1, sorg2 arg2)` declaration part with optional interpretation.
    * Input sort is the (codomain) sort */
   def declPart(ty: Sort)(implicit ctx: P[_]) : P[(Name,Signature)] = (
-    Index ~ ident ~~ ("(" ~/ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")"./).? ~ Index
+    Index ~ ident ~~ ("<<" ~/ formula ~ ">>").? ~~ ("(" ~/ (sort ~~ (blank ~ ident).?).rep(sep = ","./) ~ ")"./).? ~ Index
   ).map({
-    case (s, (n, idx), argList, e) =>
+    case (s, (n, idx), interp, argList, e) =>
       val args = argList.map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
           , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
           (Name.tupled(name.getOrElse(("default_", Some(i)))), sort) :: acc
         })).getOrElse(Unit, List())
-      (Name(n, idx), Signature(Some(args._1), ty, Some(args._2), None, Region.in(ctx.input.slice(0, ctx.input.length), s, e)))
+      /*Declaration.elaborateWithDots*/(Name(n, idx), Signature(Some(args._1), ty, Some(args._2),
+        interp.map(Left(_)).getOrElse(Right(None)),
+        Region.in(ctx.input.slice(0, ctx.input.length), s, e)))
   })
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
@@ -258,14 +293,49 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def progDef(implicit ctx: P[_]): P[(Name,Signature)] = P(
     Index ~ ("HP" | "HG") ~~ blank ~/ ident ~ "::=" ~ "{" ~/ (NoCut(program) | odeprogram) ~ "}" ~ ";" ~ Index
   ).map({ case (start,(s,idx),p, end) =>
-    (Name(s, idx), Signature(Some(Unit), Trafo, None, Some(p), Region.in(ctx.input.slice(0, ctx.input.length), start, end)))
+    (Name(s, idx), Signature(Some(Unit), Trafo, None, Right(Some(p)), Region.in(ctx.input.slice(0, ctx.input.length), start, end)))
+  })
+
+  /** Package identifier. */
+  def packageIdent[_: P]: P[String] = P((CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9_").repX).!)
+
+  def identList[_: P]: P[Seq[Name]] = P("{" ~ ident ~ ("," ~ ident).rep ~ "}").map({
+    case (s, i, is) => Name(s, i) +: is.map(i => Name(i._1, i._2)).toIndexedSeq
+  })
+
+  def importNames[_: P]: P[Seq[Name]] = P(
+      ident.map(i => Seq(Name(i._1, i._2)))
+    | "*".!.map(s => Seq(Name(s)))
+    | identList
+  ).flatMap(c => Pass(c))
+
+  def importDef[_: P]: P[List[(Name, Signature)]] = P(
+    "import" ~ (packageIdent ~~ ".").repX(1) ~~ importNames ~ ";"
+  ).map({ case (pkgs, idents) =>
+    val builtin = getClass.getResourceAsStream("/" + pkgs.mkString("/") + ".kyx")
+    val in =
+      if (builtin != null) builtin
+      else new FileInputStream(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lib" + File.separator + pkgs.mkString(File.separator) + ".kyx")
+    val packageContent = Source.fromInputStream(in).mkString
+    val defs = definitionsPackageParser(packageContent)
+    idents match {
+      case Name("*", None) +: Nil => defs.decls.toList
+      case _ =>
+        val imported = defs.decls.filter({ case (name, _) => idents.contains(name) }).toList
+        val transitivelyUsed = defs.project(imported.flatMap(_._2.interpretation match {
+          case Left(f) => Some(f)
+          case Right(Some(e)) => Some(e)
+          case _ => None
+        }), imported.map(_._1).toSet)
+        imported ++ transitivelyUsed.decls.toList
+    }
   })
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
   def programVariables(curDecls: Declaration)(implicit ctx: P[_]): P[Declaration] = P ("ProgramVariables" ~~ blank ~/
     //@todo how to ensure there is some whitespace between sort and baseVariable?
     (sort ~/ Index ~ ident ~ Index ~ (","./ ~ Index ~ ident ~ Index).rep ~ ";").map({ case (ty, xis, x, xie, xs) => ((xis, x, xie) +: xs).toList.map(_ -> ty) }).rep.flatMap(xs => {
-      val ns = xs.flatten.map({ case ((s, (x, i), e), sort) => Name(x, i) -> Signature(None,sort,None,None,Region.in(ctx.input.slice(0, ctx.input.length), s, e))})
+      val ns = xs.flatten.map({ case ((s, (x, i), e), sort) => Name(x, i) -> Signature(None,sort,None,Right(None),Region.in(ctx.input.slice(0, ctx.input.length), s, e))})
       val n = ns.map(_._1)
       if (n.size == n.distinct.size) uniqueDecls(curDecls, ns.toList)
       else Fail.opaque("Unique name (" + n.diff(n.distinct).map(_.prettyString).mkString(",") + " not unique)")
@@ -274,10 +344,10 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** implicit ...
    *
-   *  implicit Real sin(Real t), cos(Real t) '=
-   *    {sin:=0; cos:=1; t:=0; {t'=1, sin'=cos, cos'=-sin}};
+   *  implicit Real sin(Real t), cos(Real t) =
+   *    {{sin:=0; cos:=1; t:=0;} {t'=1, sin'=cos, cos'=-sin}};
    *
-   *  implicit Real xsq(Real t) '=
+   *  implicit Real xsq(Real t) =
    *    {{xsq:=0; t:=0;}; {xsq'=2t,t'=1}};
    *
    *  implicit Real abs(Real x) = y <->
@@ -303,7 +373,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
           return Fail.opaque("Implicit ODE declarations can only declare real-valued " +
             "functions of a single real variable.")
 
-        val (t,Real) = sigs.head._2.arguments.get.head
+        val (t, Real) = sigs.head._2.arguments.get.head
         if (sigs.exists(_._2.arguments.get.head._1 != t))
           return Fail.opaque("Implicit ODE declarations should all use the same " +
             "time argument.")
@@ -326,14 +396,10 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         if (interpFuncs.exists(f => !nameSet.contains(Name(f.name, f.index))))
           return Fail.opaque("ODE variable missing from implicit declaration")
 
-        val redef = InterpretedSymbols.builtin.intersect(interpFuncs)
-        if (redef.nonEmpty)
-          return Fail.opaque("Not redefining builtin symbols (" + redef.map(f => Name(f.name, f.index).prettyString).mkString(",") + " redefined)")
-
         Pass(interpFuncs.map{f =>
           Name(f.name, f.index) -> Signature(
-            domain = Some(Real), codomain = Real, arguments = Some(List((t,Real))),
-            interpretation = Some(FuncOf(f, Variable(t.name, t.index, Real))),
+            domain = Some(Real), codomain = Real, arguments = Some(List((t, Real))),
+            interpretation = Right(Some(FuncOf(f, DotTerm(Real, Some(1))/* Variable(t.name, t.index, Real)*/))),
             loc = UnknownLocation)
         }.toList)
       }

@@ -8,10 +8,11 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, PrettyPrinter, Real, Sequent, StaticSemantics}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, DotTerm, Formula, Function, PrettyPrinter, Real, Sequent, Sort, StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchivePrinter.printDomain
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParseException}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SortAugmentor
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchivePrinter
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -28,6 +29,12 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
     db
   }
 
+  /** Prints the domain of `sort` with named arguments (unique indexed from `name`). */
+  private def printDomain(sort: Sort, name: String): String = {
+    val names: List[Name] = sort.toFlatDots(0)._1.map({ case DotTerm(_, i) => Name(name, i) })
+    KeYmaeraXArchivePrinter.printDomain(sort, names)
+  }
+
   /** Turns a formula into a model problem with mandatory declarations. */
   def makeModel(content: String): String = {
     def augmentDeclarations(content: String, parsedContent: Formula): String =
@@ -35,7 +42,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       else {
         val symbols = StaticSemantics.symbols(parsedContent)
         val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-          if (fn.sort == Real) s"Real ${fn.asString}(${printDomain(fn, "x")});"
+          if (fn.sort == Real) s"Real ${fn.asString}(${printDomain(fn.domain, "x")});"
           else if (fn.sort == Bool) s"Bool ${fn.asString}(${printDomain(fn.domain, "x")});"
           else throw new Exception("Unknown sort: " + fn.sort)
         ).mkString("\n  ")

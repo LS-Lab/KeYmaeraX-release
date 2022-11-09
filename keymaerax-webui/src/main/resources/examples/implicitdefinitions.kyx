@@ -1,6 +1,7 @@
 Theorem "IJCAR22/Arctan Identity"
 
 Definitions
+  import kyx.math.{sin,cos};
   implicit Real arctan(Real t) = {{arctan:=0;t:=0;}; {arctan'=1/(1+t^2),t'=1}};
   Real tan(Real x) = sin(x)/cos(x);
   Real x;
@@ -28,6 +29,7 @@ End.
 Theorem "IJCAR22/Denman Thesis Case Study 6.1: Bouncing Ball on a Sine Curve"
 
 Definitions
+  import kyx.math.{sin,cos,pi};
   Real g; /* Gravity */
   Real k; /* Constant of proportionality for energy lost in inelastic collision */
 End.
@@ -95,6 +97,7 @@ End.
 Theorem "IJCAR22/Discretely Driven Swing"
 
 Definitions
+  import kyx.math.{cos,sin,pi};
   Real g; /* Gravity */
   Real L; /* Length of rod */
   Real k; /* Coefficient of friction against angular velocity */
@@ -148,6 +151,7 @@ End.
 Theorem "IJCAR22/Double Iterated Exponential"
 
 Definitions
+  import kyx.math.exp;
   implicit Real exp1(Real t) = {{exp1:=1;}; {exp1'=exp1}};
   Real E = exp1(1);
   implicit Real exp2(Real t) = {{exp2:=E;t:=0;}; {exp2'=exp1(t)*exp2,t'=1}};
@@ -228,6 +232,8 @@ End.
 Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)"
 
 Definitions
+  import kyx.math.exp;
+
   implicit Real tanh(Real t) =
      {{tanh:=0;}; {tanh'=1-tanh^2}};
 
@@ -293,9 +299,11 @@ cut("init=0|init>0"); <(
                     cohideR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1");
                     andR('R=="tanh(lambda()*x)^2 < 1&tanh(lambda()*y)^2 < 1"); <(
                       "tanh(lambda()*x)^2 < 1":
-                        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "auto"),
+                        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "auto");
+                        done,
                       "tanh(lambda()*y)^2 < 1":
-                        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "auto")
+                        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (tanh^2 < 1)", "auto");
+                        done
                     )
                 ),
               "Show [a]Q":
@@ -395,7 +403,8 @@ cut("\exists t t=0&\exists init (x^2+y^2=init&init>=0)"); <(
         ),
       "Show":
         hideR('R=="<{t'=1,x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps");
-        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)", "prop")
+        useLemma("IJCAR22/Khalil Exercise 2.28 and 3.14 (bound)", "prop");
+        done
     ),
   "Show":
     hideR('R=="<{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}>[{x'=-x/tau()+tanh(lambda()*x)-tanh(lambda()*y),y'=-y/tau()+tanh(lambda()*x)+tanh(lambda()*y)}](x^2+y^2)^(1/2)<=2*tau()+eps");
@@ -411,6 +420,8 @@ Citation "Khalil Ghorbal and André Platzer. Characterizing algebraic invariants
 Link "https://lfcps.org/pub/diffradicalinv.pdf".
 
 Definitions
+  import kyx.math.{cos,sin};
+
   Real X;   /* aerodynamics and thrust moment w.r.t. x axis */
   Real M;   /* aerodynamics and thrust moment w.r.t. y axis */
   Real Z;   /* aerodynamics and thrust moment w.r.t. z axis */
@@ -489,6 +500,8 @@ Citation "Stefan Mitsch, Khalil Ghorbal, David Vogelbacher, and André Platzer. 
 Link "http://doi.org/10.1177/0278364917733549".
 
 Definitions
+  import kyx.math.{abs,cos,sin};
+
   Real ep;      /* time limit for control decisions */
   Real b;       /* minimum braking capability of the robot */
   Real A;       /* maximum acceleration -b <= a <= A */
@@ -663,6 +676,8 @@ Citation "Stefan Mitsch, Khalil Ghorbal, David Vogelbacher, and André Platzer. 
 Link "http://doi.org/10.1177/0278364917733549".
 
 Definitions
+  import kyx.math.{abs,cos,pi,sin,sqrt};
+
   Real ep;      /* time limit for control decisions */
   Real b;       /* minimum braking capability of the robot */
   Real A;       /* maximum acceleration -b <= a <= A */
@@ -676,8 +691,6 @@ Definitions
   Real accelMargin(Real v)  = accelComp(v) + (A/b + 1)*ep*V;
   Real admissibleSeparation(Real v) = stopMargin(v) + accelMargin(v);
   Real admissibleTurnLength(Real v) = stopDist(v) + accelComp(v);
-
-  Real sqrt(Real x) = x^(1/2);
 
   /* distance between points (a,b) and (x,y) */
   Real d(Real a, Real b, Real x, Real y) = sqrt((a-x)^2 + (b-y)^2);

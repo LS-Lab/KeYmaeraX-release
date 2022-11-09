@@ -439,22 +439,21 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
 
   /** DotTerms of different "colors" for components of a Tuple, uncolored DotTerm for non-Tuples
     * @example
-    *   coloredDotsTerm(Real) = •
+    *   coloredDotsTerm(Real) = •_0
     *   coloredDotsTerm(Real*Real) = (•_0, •_1)
     *   coloredDotsTerm(Real*Real*Real) = (•_0, •_1, •_2)
     * */
   def coloredDotsTerm(s: Sort, color: Int = 0) : Term = {
     def coloredDotsTermWithIndex(s: Sort, color: Int) : (Int, Term) = s match {
-      case Tuple(l, r) => {
+      case Tuple(l, r) =>
         val (colorLeft,  dotsLeft)  = coloredDotsTermWithIndex(l, color)
         val (colorRight, dotsRight) = coloredDotsTermWithIndex(r, colorLeft)
         (colorRight, Pair(dotsLeft, dotsRight))
-      }
       case _ => (color + 1, DotTerm(s, Some(color)))
     }
     s match {
       case Tuple(_, _) => coloredDotsTermWithIndex(s, color)._2
-      case _ => DotTerm(s)
+      case _ => DotTerm(s, Some(color))
     }
   }
 

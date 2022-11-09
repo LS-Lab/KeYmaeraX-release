@@ -344,7 +344,7 @@ object KeYmaeraX {
         e.copy(model = expandedModel,
           defs = Declaration(e.defs.decls.flatMap({
             case (name@Name(n, i), sig) =>
-              if (expandedModelNames.exists(ns => ns.name == n && ns.index == i)) Some(name, sig.copy(interpretation = None))
+              if (expandedModelNames.exists(ns => ns.name == n && ns.index == i)) Some(name, sig.copy(interpretation = Right(None)))
               else None
           })), tactics = Nil, annotations = Nil)
       }

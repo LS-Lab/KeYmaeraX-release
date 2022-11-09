@@ -212,10 +212,10 @@ object RequestHelper {
 
     val newDefs: Map[Name, Signature] = undefinedSymbols.map({
       case fn@Function(name, index, domain, sort, _) => Name(name, index) -> Signature(Some(domain), sort,
-        collectedArgs.decls.get(Name(fn.name, fn.index)).flatMap(_.arguments), None, UnknownLocation)
-      case ProgramConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, None, UnknownLocation)
-      case SystemConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, None, UnknownLocation)
-      case u => Name(u.name, u.index) -> Signature(None, u.sort, None, None, UnknownLocation) // cuts may introduce variables
+        collectedArgs.decls.get(Name(fn.name, fn.index)).flatMap(_.arguments), Right(None), UnknownLocation)
+      case ProgramConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, Right(None), UnknownLocation)
+      case SystemConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, Right(None), UnknownLocation)
+      case u => Name(u.name, u.index) -> Signature(None, u.sort, None, Right(None), UnknownLocation) // cuts may introduce variables
     }).toMap
     //@note TactixInit.invSupplier, once non-empty, is proofSession.invSupplier + invariants discovered when executing tactics
     val mergedInvSupplier = TactixInit.invSupplier match {

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLib
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, ParseException, Parser, Signature, TacticReservedSymbols, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{BuiltinSymbols, Declaration, Name, ParseException, Parser, Signature, TacticReservedSymbols, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
@@ -39,7 +39,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
   private var parser: DLBelleParser = _
-  private def parse(input: String, defs: Declaration = Declaration(Map.empty)) = parser(input, defs)
+  private def parse(input: String, defs: Declaration = BuiltinSymbols.all) = parser(input, defs)
 
   "DLBelleParser" should "parse postfix \"using\"" in {
     parse(raw"""QE using "x^2+y^2=init"""".stripMargin) shouldBe Using(List("x^2+y^2=init".asFormula), TactixLibrary.QE)
@@ -91,7 +91,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     val tanh = Function("tanh", None, Real, Real, Some("<{tanh:=._0;t:=._1;}{{tanh'=-(1-tanh^2),t'=-1}++{tanh'=1-tanh^2,t'=1}}>(tanh=0&t=0)".asFormula))
     val defs = Declaration(Map(
       Name("tanh", None) ->
-      Signature(Some(Real), Real, Some(List(Name("x", None) -> Real)), Some(FuncOf(tanh, DotTerm())), UnknownLocation)))
+      Signature(Some(Real), Real, Some(List(Name("x", None) -> Real)), Right(Some(FuncOf(tanh, Variable("x")))), UnknownLocation)))
     val tactic = parser("""cut("tanh(x)<=1")""", defs).asInstanceOf[InputTactic]
     tactic.inputs.loneElement shouldBe LessEqual(FuncOf(tanh, Variable("x")), Number(1))
   }
@@ -119,7 +119,7 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "parse hash locators" in {
     val t = parse("""trueAnd('R=="[x:=1;]#true&x=1#")""").asInstanceOf[AppliedPositionTactic]
     t.locator shouldBe Find.FindR(0, Some("[x:=1;](true&x=1)".asFormula), PosInExpr(1::Nil), exact=true,
-      defs=TacticReservedSymbols.asDecl)
+      defs=BuiltinSymbols.all)
   }
 
   it should "parse suffix partial" in {
@@ -129,16 +129,18 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "parse substitutions" in {
+    val dot = DotTerm(Real, Some(0))
+    //@todo re-enable dots without index when explicitly phrased (.)?
     parse("""US("J(.) ~> .>=0")""") shouldBe TactixLibrary.USX(
-      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
+      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
     parse("""US("J(x) ~> x>=0")""") shouldBe TactixLibrary.USX(
-      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
+      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
     parse("""US("(J(.) ~> .>=0)")""") shouldBe TactixLibrary.USX(
-      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0)))))
+      List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
     parse("""US("f(.) ~> 2+.")""") shouldBe TactixLibrary.USX(
-      List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), Plus(Number(2), DotTerm()))))
+      List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))))
     parse("""US("f(y) ~> 2+y")""") shouldBe TactixLibrary.USX(
-      List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), Plus(Number(2), DotTerm()))))
+      List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))))
     parse("""US("pow(x,y) ~> x^y")""") shouldBe TactixLibrary.USX(
       List(SubstitutionPair(
         FuncOf(Function("pow", None, Tuple(Real, Real), Real), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
@@ -147,14 +149,14 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       List(SubstitutionPair(
         PredOf(Function("J", None, Tuple(Real, Real), Bool), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
         "._0 + ._1^2/(2*b())>=0".asFormula)))
-    parse("""US("J(x,v) ~> x+v^2/(2*b)>=0")""", Declaration(Map(Name("b") -> Signature(Some(Unit), Real, None, None, UnknownLocation)))) shouldBe TactixLibrary.USX(
+    parse("""US("J(x,v) ~> x+v^2/(2*b)>=0")""", Declaration(Map(Name("b") -> Signature(Some(Unit), Real, None, Right(None), UnknownLocation)))) shouldBe TactixLibrary.USX(
       List(SubstitutionPair(
         PredOf(Function("J", None, Tuple(Real, Real), Bool), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
         "._0 + ._1^2/(2*b())>=0".asFormula)))
     parse("""US("(J(.) ~> .>=0)::(f(.) ~> 2+.)::nil")""") shouldBe TactixLibrary.USX(
       List(
-        SubstitutionPair(PredOf(Function("J", None, Real, Bool), DotTerm()), GreaterEqual(DotTerm(), Number(0))),
-        SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), Plus(Number(2), DotTerm()))
+        SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0))),
+        SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))
       ))
   }
 
@@ -203,12 +205,12 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "not elaborate when tactic reserved symbols are declared as variables" in {
-    parse("""dC("abbrv=const", 1)""", Declaration(Map(Name("abbrv", None) -> Signature(None, Real, None, None, UnknownLocation)))) shouldBe
+    parse("""dC("abbrv=const", 1)""", Declaration(Map(Name("abbrv", None) -> Signature(None, Real, None, Right(None), UnknownLocation)))) shouldBe
       TactixLibrary.dC(List(Equal("abbrv".asVariable, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
     parse("""dC("x^2+y^2=const", 1)""", Declaration(Map(
-      Name("const", None) -> Signature(None, Real, None, None, UnknownLocation),
-      Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
-      Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+      Name("const", None) -> Signature(None, Real, None, Right(None), UnknownLocation),
+      Name("x", None) -> Signature(None, Real, None, Right(None), UnknownLocation),
+      Name("y", None) -> Signature(None, Real, None, Right(None), UnknownLocation)
     ))) shouldBe
       TactixLibrary.dC(List(Equal("x^2+y^2".asTerm, Variable("const"))))(1)
   }

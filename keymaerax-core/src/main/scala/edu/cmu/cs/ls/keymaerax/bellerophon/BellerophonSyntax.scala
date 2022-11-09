@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{BuiltinSymbols, Declaration, Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -361,11 +361,11 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     */
   //@todo turn into properly type-checkable locator arguments without going crazy long.
   final def apply(locator: Symbol, inExpr: PosInExpr): T = locator match {
-    case 'L => apply(FindL(0, None, HereP, exact=true, Declaration(Map.empty)))
-    case 'R => apply(FindR(0, None, HereP, exact=true, Declaration(Map.empty)))
+    case 'L => apply(FindL(0, None, HereP, exact=true, BuiltinSymbols.all))
+    case 'R => apply(FindR(0, None, HereP, exact=true, BuiltinSymbols.all))
     case '_ => this match {
-      case _: LeftTactic => apply(FindL(0, None, HereP, exact=true, Declaration(Map.empty)))
-      case _: RightTactic => apply(FindR(0, None, HereP, exact=true, Declaration(Map.empty)))
+      case _: LeftTactic => apply(FindL(0, None, HereP, exact=true, BuiltinSymbols.all))
+      case _: RightTactic => apply(FindR(0, None, HereP, exact=true, BuiltinSymbols.all))
       case _ => throw new IllFormedTacticApplicationException("Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     case 'Llast => apply(LastAnte(0, inExpr))
@@ -401,7 +401,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     case 'Llast => logger.info("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
     case 'Rlast => logger.info("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
   }
-  final def apply(locator: Symbol, expected: Expression): T = apply(locator, expected, Declaration(Map.empty))
+  final def apply(locator: Symbol, expected: Expression): T = apply(locator, expected, BuiltinSymbols.all)
 
 }
 

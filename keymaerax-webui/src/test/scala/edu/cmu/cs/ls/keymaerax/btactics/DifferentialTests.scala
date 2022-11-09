@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
@@ -509,7 +509,7 @@ class DifferentialTests extends TacticTestBase {
         |==>
         |[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))
         |""".stripMargin.asSequent
-    proveBy(s, dI(auto='full)(1), defs) shouldBe 'proved
+    proveBy(s, dI(auto='full)(1), defs ++ InterpretedSymbols.preshipped) shouldBe 'proved
   }
 
   it should "work as dIRule in existential context" in withMathematica { _ =>
@@ -1642,17 +1642,17 @@ class DifferentialTests extends TacticTestBase {
 
   it should "not lose constant facts" in withQE { _ =>
     val result = proveBy("r>0 -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
-    result.subgoals.loneElement shouldBe "r>0 ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
+    result.subgoals.loneElement shouldBe "r>0 ==> \\forall t_ (t_>=0 -> t_/r+v>0)".asSequent
   }
 
   it should "not choke on constant fact 'true'" in withQE { _ =>
     val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL('L) & solve(1))
-    result.subgoals.loneElement shouldBe "r>0, true ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
+    result.subgoals.loneElement shouldBe "r>0, true ==> \\forall t_ (t_>=0 -> t_/r+v>0)".asSequent
   }
 
   it should "not choke on constant conjunct with 'true'" in withQE { _ =>
     val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
-    result.subgoals.loneElement shouldBe "r>0&true ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
+    result.subgoals.loneElement shouldBe "r>0&true ==> \\forall t_ (t_>=0 -> t_/r+v>0)".asSequent
   }
 
   it should "retain quantified facts without trying to diffcut" in withQE { _ =>
@@ -1667,7 +1667,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "preserve const facts when solving in context" in withQE { _ =>
     val result = proveBy("A>0 -> [a:=A;][{v'=1/A}]v>0".asFormula, implyR(1) & solve(1, 1::Nil))
-    result.subgoals.loneElement shouldBe "A>0 ==> [a:=A;]\\forall t_ (t_>=0 -> 1/A*t_+v>0)".asSequent
+    result.subgoals.loneElement shouldBe "A>0 ==> [a:=A;]\\forall t_ (t_>=0 -> t_/A+v>0)".asSequent
   }
 
   it should "solve triple integrator with division" in withMathematica { _ =>
@@ -1677,7 +1677,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "solve double integrator with sum of constants" in withQE { _ =>
     val result = proveBy("y<b, x<=0, Y()>=0, Z()<Y() ==> [{y'=x, x'=-Y()+Z()}]y<b".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (-Y()+Z())*(t_^2/2)+x*t_+y<b)".asSequent
+    result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (Z()-Y())*(t_^2/2)+x*t_+y<b)".asSequent
   }
 
   "endODEHeuristic" should "instantiate with duration in positive polarity in succedent" in withQE { _ =>

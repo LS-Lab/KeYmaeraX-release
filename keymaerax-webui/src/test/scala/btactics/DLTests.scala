@@ -312,7 +312,7 @@ class DLTests extends TacticTestBase {
     the [IllFormedTacticApplicationException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
       DLBySubst.assignEquality(1)) should have message "Unknown symbol ode;: neither file definitions nor proof definitions provide information how to expand"
     proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent, DLBySubst.assignEquality(1), Declaration(Map(
-      Name("ode", None) -> Signature(None, Trafo, None, Some("{{x'=1}}^@".asProgram), UnknownLocation)
+      Name("ode", None) -> Signature(None, Trafo, None, Right(Some("{{x'=1}}^@".asProgram)), UnknownLocation)
     ))).subgoals.loneElement shouldBe "x_0=0, x=x_0+1 ==> [{{x'=1}}^@]x>=0".asSequent
   }
 
@@ -461,10 +461,10 @@ class DLTests extends TacticTestBase {
 
   it should "FEATURE_REQUEST: keep constants around when definitions are not expanded" taggedAs TodoTest in withTactics {
     val defs = Declaration(Map(
-      Name("initial") -> Signature(Some(Tuple(Real, Real)), Bool, Some(List(Name("x")->Real, Name("y")->Real)), Some("x>2 & y>0".asFormula), UnknownLocation),
-      Name("post") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Some("x>0".asFormula), UnknownLocation),
-      Name("loopinv") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Some("x>1".asFormula), UnknownLocation),
-      Name("a") -> Signature(Some(Unit), Trafo, None, Some("x:=x+y;".asProgram), UnknownLocation)
+      Name("initial") -> Signature(Some(Tuple(Real, Real)), Bool, Some(List(Name("x")->Real, Name("y")->Real)), Right(Some("x>2 & y>0".asFormula)), UnknownLocation),
+      Name("post") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Right(Some("x>0".asFormula)), UnknownLocation),
+      Name("loopinv") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Right(Some("x>1".asFormula)), UnknownLocation),
+      Name("a") -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+y;".asProgram)), UnknownLocation)
     ))
     val result = proveBy("initial(x,y) ==> [{a{|^@|};}*]post(x)".asSequent, loop("loopinv(x)".asFormula)(1), defs)
     // sequential interpreter does not yet support keeping all abbreviations when combining provables in branchtactic

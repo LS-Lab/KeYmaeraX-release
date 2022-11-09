@@ -2588,6 +2588,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val s =
       """ArchiveEntry "Test"
         |Definitions
+        |  import kyx.math.{abs,max};
         |  Real wUp()= -1;
         |  Real wLo()=  1;
         |  Real alo, hp, rp;
@@ -2688,6 +2689,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val entry = ArchiveParser(
       """ArchiveEntry "Implicit interpreted function definition"
         |Definitions
+        |  import kyx.math.exp;
         |  implicit Real tanh(Real t) = {{tanh:=0;}; {tanh'=1-tanh^2}};
         |  Real tau;
         |  Real lambda;

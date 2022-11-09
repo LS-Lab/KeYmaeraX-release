@@ -515,7 +515,7 @@ trait UnifyUSCalculus {
   @Tactic(("US", "US"), codeName = "US", conclusion = "|- S(P)", premises = "|- P")
   def USX(S: List[SubstitutionPair]): InputTactic = inputanonP { (pr: ProvableSig) =>
     // add user-provided substitutions to the definitions
-    US(USubst(S))(pr).reapply(pr.defs ++ Declaration.fromSubst(S))
+    US(USubst(S))(pr).reapply(pr.defs ++ Declaration.fromSubst(S, pr.defs))
   }
 
 

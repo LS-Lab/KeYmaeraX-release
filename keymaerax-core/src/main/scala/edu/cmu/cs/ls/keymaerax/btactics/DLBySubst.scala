@@ -425,8 +425,11 @@ private object DLBySubst {
       pos.prettyString + ". Please apply more proof steps until the loop is top-level or use [*] iterateb instead.")
 
     //@note restrict to definitions that mention old(.) transitively
-    val invOldsDefs = Declaration(defs.decls.filter({ case (_, Signature(_, _, _, i, _)) =>
-      i.map(s => StaticSemantics.symbols(defs.exhaustiveSubst(s))).getOrElse(Set.empty).contains(TacticReservedSymbols.old) }))
+    val invOldsDefs = Declaration(defs.decls.filter({
+      case (_, Signature(_, _, _, Right(interp), _)) =>
+        interp.map(s => StaticSemantics.symbols(defs.exhaustiveSubst(s))).getOrElse(Set.empty).contains(TacticReservedSymbols.old)
+      case _ => false
+    }))
     val substInv = invOldsDefs.exhaustiveSubst(invariant)
     val ov = FormulaTools.argsOf(TacticReservedSymbols.old, substInv)
     val doloop = (ghosts: List[((Term, Variable), BelleExpr)]) => {

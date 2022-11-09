@@ -23,7 +23,7 @@ import TactixLibrary._
 class PrimeSubstituterTest extends TacticTestBase {
 
   private val ode = DifferentialProgramConst("c", AnyArg)
-  val x_ = Variable("x_",None,Real)
+  private val x_ = Variable("x_",None,Real)
 
   //@author Andre Platzer
   "Substituting primes" should "not put primes into DS&'s evolution domain constraints" in {

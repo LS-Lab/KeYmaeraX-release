@@ -57,12 +57,16 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
             }, _))
         }
         val expansions: List[(NamedSymbol, Expression, Option[Expression], Boolean)] = applicable.toList.map({
-          case (s: Function, Signature(_, sort, args, repl, loc)) => sort match {
+          case (s: Function, Signature(_, sort, args, Right(repl), loc)) => sort match {
             case Real => (s, FuncOf(s, asPairs(args)), withArgs(repl, args), loc == UnknownLocation)
             case Bool => (s, PredOf(s, asPairs(args)), withArgs(repl, args), loc == UnknownLocation)
           }
-          case (s: ProgramConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
-          case (s: SystemConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
+          case (s: Function, Signature(_, sort, args, Left(repl), loc)) => sort match {
+            case Real => (s, FuncOf(s, asPairs(args)), withArgs(Some(repl), args), loc == UnknownLocation)
+            case Bool => (s, PredOf(s, asPairs(args)), withArgs(Some(repl), args), loc == UnknownLocation)
+          }
+          case (s: ProgramConst, Signature(_, _, _, Right(repl), loc)) => (s, s, repl, loc == UnknownLocation)
+          case (s: SystemConst, Signature(_, _, _, Right(repl), loc)) => (s, s, repl, loc == UnknownLocation)
         }).filter(e => e._4 || e._3.isDefined)
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil

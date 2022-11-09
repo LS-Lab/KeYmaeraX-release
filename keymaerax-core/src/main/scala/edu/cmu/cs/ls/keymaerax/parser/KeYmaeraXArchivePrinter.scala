@@ -48,9 +48,8 @@ class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, wit
 
     val defsBlock = printDefsBlock(entry.defs, symbols)
 
-    val abbrvNames = (entry.defs.isubsts ++ InterpretedSymbols.builtin).map({
-      case Function(n, i, _, _, _) => Name(n, i) // builtins
-      case SubstitutionPair(FuncOf(Function(n, i, _, _, _), _), _) => Name(n, i) // isubsts
+    val abbrvNames = entry.defs.isubsts.map({
+      case SubstitutionPair(FuncOf(Function(n, i, _, _, _), _), _) => Name(n, i)
     })
 
     val interpretationSanitized = abbrvNames.foldLeft(entry.model.prettyString)({ case (m, n) => m.replaceAll("(" + n.prettyString + ")" + "<<.*?>>", "$1") })
@@ -107,7 +106,7 @@ object KeYmaeraXArchivePrinter {
   private val printer = new KeYmaeraXPrecedencePrinter {
     override protected def pp(q: PosInExpr, term: Term): String = term match {
       case FuncOf(f, c) =>
-        val fnName = if (InterpretedSymbols.builtin.contains(f)) f.name + f.index.map("_" + _).getOrElse("") else f.asString
+        val fnName = /* TODO print import instead of builtin if (InterpretedSymbols.builtin.contains(f)) f.name + f.index.map("_" + _).getOrElse("") else*/f.asString
         if (f.domain.isInstanceOf[Tuple]) fnName + pp(q++0, c) else fnName + "(" + pp(q++0, c) + ")"
       case _ => super.pp(q, term)
     }
@@ -139,36 +138,45 @@ object KeYmaeraXArchivePrinter {
     case _ => throw new IllegalArgumentException("Sort " + arg.prettyString + " not supported as domain of declaration; please use of of [Nothing, BaseVariable, Pair]")
   }
 
-  def printDef(domain: Sort, interpretation: Option[Expression]): String = interpretation match {
-    case Some(i) =>
+  def printDef(domain: Sort, args: Option[List[(Name, Sort)]], interpretation: Either[Formula, Option[Expression]]): String = interpretation match {
+    case Left(_) => ""
+    case Right(Some(i)) =>
       val (op, parens) = domain match {
         case Real => ("=", "("::")"::Nil)
         case Bool => ("<->", "("::")"::Nil)
         case Trafo => ("::=", "{"::"}"::Nil)
       }
-      s" $op ${parens(0)} ${printer(i)} ${parens(1)}"
-    case None => ""
+      val namedArgs = nameDots(i, args.getOrElse(List.empty).map(_._1))
+      s" $op ${parens(0)} ${printer(namedArgs)} ${parens(1)}"
+    case Right(None) => ""
   }
 
-  /** Creates a term that fits `domain`, using `name` to name arguments with start index `i` (incremented). */
-  private def createArg(domain: Sort, name: String, i: Int = 0): (Term, Int) = domain match {
-    case Unit => (Nothing, i)
-    case Real => (BaseVariable(name, Some(i)), i+1)
+  def printInterpretation(interpretation: Either[Formula, Option[Expression]]): String = interpretation match {
+    case Left(i) => "<<" + i.prettyString + ">>"
+    case Right(_) => ""
+  }
+
+  /** Creates a term that fits `domain`, using `name` to name arguments from names, returns created term and the remaining names. */
+  private def createArg(domain: Sort, names: List[Name]): (Term, List[Name]) = domain match {
+    case Unit => (Nothing, names)
+    case Real =>
+      val n :: tail = names
+      (BaseVariable(n.name, n.index), tail)
     case Tuple(l, r) =>
-      val (ls, li) = createArg(l, name, i)
-      val (rs, ri) = createArg(r, name, li)
-      (Pair(ls, rs), ri)
+      val (ls, lnames) = createArg(l, names)
+      val (rs, rnames) = createArg(r, lnames)
+      (Pair(ls, rs), rnames)
     case _ => throw new IllegalArgumentException("Sort " + domain + " not supported as domain of declaration; please use one of [Unit, Real, Tuple]")
   }
 
   /** Prints the domain of `fn` with argument names created from base name `name`. */
-  def printDomain(fn: Function, name: String): String = printDomain(createArg(fn.domain, name)._1)
+  def printDomain(fn: Function, names: List[Name]): String = printDomain(createArg(fn.domain, names)._1)
   /** Prints the `domain` with argument names created from base name `name`. */
-  def printDomain(domain: Sort, name: String): String = printDomain(createArg(domain, name)._1)
+  def printDomain(domain: Sort, names: List[Name]): String = printDomain(createArg(domain, names)._1)
 
   /** Prints a `Definitions` block, excluding base variables occurring in `symbols`. */
   def printDefsBlock(decl: Declaration, symbols: Set[NamedSymbol]): String = {
-    val defs = decl.decls.filter(_._2.domain.isDefined).filter(dn => !InterpretedSymbols.byName.exists({ case ((n, i), _) => Name(n, i) == dn._1 }))
+    val defs = decl.decls.filter(_._2.domain.isDefined)//.filter(dn => !InterpretedSymbols.byName.exists({ case ((n, i), _) => Name(n, i) == dn._1 }))
 
     val printedDecls = symbols.filter(s => !defs.keySet.contains(Name(s.name, s.index))).map({
       case Function(name, idx, domain, sort, None) =>
@@ -177,19 +185,13 @@ object KeYmaeraXArchivePrinter {
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 
-    def nameDots(e: Expression, name: String): Expression = {
-      val dots = StaticSemantics.symbols(e).filter(_.isInstanceOf[DotTerm])
-      assert(dots.map(_.index).map(_.getOrElse(0)).size == dots.size, "Interpretation uses both . and ._0")
-      dots.foldLeft(e)({ case (e, d) => e.replaceAll(d, Variable(name, Some(d.index.getOrElse(0)))) })
-    }
-
     val printedDefs = defs.map({
-      case (Name(name, idx), Signature(domain, codomain, _, interpretation, _)) =>
+      case (Name(name, idx), Signature(domain, codomain, args, interpretation, _)) =>
         val printedDomain = codomain match {
           case Trafo => "" //@todo program arguments not yet supported
-          case _ => "(" + printDomain(domain.getOrElse(Unit), "x") + ")"
+          case _ => "(" + printDomain(domain.getOrElse(Unit), args.getOrElse(List.empty).map(_._1)) + ")"
         }
-        s"  ${printSort(codomain)} ${printName(name, idx)}$printedDomain${printDef(codomain, interpretation.map(nameDots(_, "x")))};"
+        s"  ${printSort(codomain)} ${printName(name, idx)}${printInterpretation(interpretation)}$printedDomain${printDef(codomain, args, interpretation)};"
       case _ => ""
     }).filter(_.nonEmpty)
 
@@ -197,6 +199,15 @@ object KeYmaeraXArchivePrinter {
       printedDecls + (if (printedDecls.nonEmpty && printedDefs.nonEmpty) "\n" else "") +
       printedDefs.mkString("\n") + "\n" + END_BLOCK + "\n"
     else ""
+  }
+
+  private def nameDots(e: Expression, names: List[Name]): Expression = {
+    val dots = StaticSemantics.symbols(e).filter(_.isInstanceOf[DotTerm])
+    assert(dots.map(_.index).map(_.getOrElse(0)).size == dots.size, "Interpretation uses both . and ._0")
+    assert(dots.isEmpty || dots.size == names.size, "Argument names mismatch, expected name for each dot: expression " +
+      e.prettyString + " contains " + dots.size + " dots " + dots.map(_.prettyString).mkString(",") +
+      ", but got " + names.size + " names " + names.map(_.prettyString).mkString(","))
+    dots.zip(names).foldLeft(e)({ case (e, (d, v)) => e.replaceAll(d, Variable(v.name, v.index)) })
   }
 
   def printVarsBlock(symbols: Set[NamedSymbol]): String = {
@@ -261,15 +272,15 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
       case Tuple(l, r) => printSort(l) + "," + printSort(r)
     }
 
-    def printDef(domain: Sort, interpretation: Option[Expression]): String = interpretation match {
-      case Some(i) =>
+    def printDef(domain: Sort, interpretation: Either[Formula, Option[Expression]]): String = interpretation match {
+      case Right(Some(i)) =>
         val (op, parens) = domain match {
           case Real => ("=", "("::")"::Nil)
           case Bool => ("<->", "("::")"::Nil)
           case Trafo => ("::=", "{"::"}"::Nil)
         }
         s" $op ${parens(0)} ${i.prettyString} ${parens(1)}"
-      case None => ""
+      case _ => ""
     }
 
     val pp = PrettyPrinter.printer

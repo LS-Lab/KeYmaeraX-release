@@ -99,6 +99,8 @@ ArchiveEntry "CPSWeek16/Tutorial Example 4"
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=148".
 
 Definitions
+  import kyx.math.abs;
+
   Real A;
   Real b;
   Real ep;

@@ -465,14 +465,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      FixedGenerator(Nil), Declaration(Map(Name("x", None) -> Signature(None, Real, None, None, UnknownLocation))))
+      FixedGenerator(Nil), Declaration(Map(Name("x", None) -> Signature(None, Real, None, Right(None), UnknownLocation))))
     val proofSession = () => SessionManager.session(t)(proofId.toString).asInstanceOf[ProofSession]
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1) & cut("\\exists x0 x0=x".asFormula))
     // proof session should pick up new variable introduced by cut
     proofSession().defs.decls.keySet should contain (Name("x0", None))
-    proofSession().defs.decls(Name("x0", None)) shouldBe Signature(None, Real, None, None, UnknownLocation)
+    proofSession().defs.decls(Name("x0", None)) shouldBe Signature(None, Real, None, Right(None), UnknownLocation)
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
         leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
@@ -761,7 +761,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      FixedGenerator(Nil), Declaration(Map(Name("f", None) -> Signature(Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
+      FixedGenerator(Nil), Declaration(Map(Name("f", None) -> Signature(Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Right(Some("3+5".asTerm)), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f()>0").
       getResultingResponses(t).loneElement
@@ -773,7 +773,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil),
-      Declaration(Map(Name("f", None) -> Signature(Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
+      Declaration(Map(Name("f", None) -> Signature(Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Right(Some("3+5".asTerm)), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement

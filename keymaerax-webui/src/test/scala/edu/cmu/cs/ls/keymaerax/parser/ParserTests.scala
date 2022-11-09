@@ -68,7 +68,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
-    entry.defs.decls(Name("J", None)).interpretation.value shouldBe "1>=0".asFormula
+    entry.defs.decls(Name("J", None)).interpretation.right.get.value shouldBe "1>=0".asFormula
     entry.model shouldBe "J() -> [{x:=x+1;}*]J()".asFormula
   }
 
@@ -92,7 +92,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         domain.value shouldBe Real
         sort shouldBe Bool
         argNames shouldBe Some((Name("x", None), Real) :: Nil)
-        expr.value shouldBe ".>=0".asFormula
+        expr.right.get.value shouldBe "x>=0".asFormula
     }
     entry.model shouldBe "J(x) -> [{x:=x+1;}*]J(x)".asFormula
   }
@@ -117,7 +117,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         domain.value shouldBe Tuple(Real, Real)
         sort shouldBe Bool
         argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
-        expr.value shouldBe "._0>=._1".asFormula
+        expr.right.get.value shouldBe "x>=y".asFormula
     }
     entry.model shouldBe "J(x,y) -> [{x:=x+1;}*]J(x,y)".asFormula
   }
@@ -142,7 +142,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         domain.value shouldBe Unit
         sort shouldBe Trafo
         argNames shouldBe 'empty
-        expr.value shouldBe "x:=x+1;".asProgram
+        expr.right.get.value shouldBe "x:=x+1;".asProgram
     }
     entry.model shouldBe "x>=0 -> [{prg{|^@|};}*]x>=0".asFormula
   }
@@ -698,14 +698,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         domain.value shouldBe Unit
         sort shouldBe Bool
         argNames shouldBe Some(Nil)
-        expr.value shouldBe "x>=2".asFormula
+        expr.right.get.value shouldBe "x>=2".asFormula
     }
     inside (entry.defs.decls(Name("safe", None))) {
       case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Real
         sort shouldBe Bool
         argNames shouldBe Some((Name("x", None), Real) :: Nil)
-        expr.value shouldBe ".=0".asFormula
+        expr.right.get.value shouldBe "x=0".asFormula
     }
     entry.model shouldBe "init() -> [{x:=x+1;}*]safe(x)".asFormula
   }
@@ -737,14 +737,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         domain.value shouldBe Unit
         sort shouldBe Bool
         argNames shouldBe Some(Nil)
-        expr.value shouldBe "x>=y()".asFormula
+        expr.right.get.value shouldBe "x>=y()".asFormula
     }
     inside (entry.defs.decls(Name("y", None))) {
       case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Real
         argNames shouldBe Some(Nil)
-        expr.value shouldBe "3+b()".asTerm
+        expr.right.get.value shouldBe "3+b()".asTerm
     }
     entry.model shouldBe "x>=2 -> [{x:=x+b();}*]x>=0".asFormula
   }

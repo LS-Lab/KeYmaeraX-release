@@ -482,6 +482,8 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher with Logging 
   // pass 2
   private val renUMatcher = RenUnificationMatch
 
+  private val dot = DotTerm(Real, Some(0))
+
   override def apply(shape: Term, input: Term): Subst       = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
   override def apply(shape: Formula, input: Formula): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
   override def apply(shape: Program, input: Program): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
@@ -505,12 +507,12 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher with Logging 
       val r = repl match {
         case rhs: Term    => ren(
           replaceFree(
-            replaceFree(rhs)(ren(Variable("x_")),DotTerm())
-          ) (ren(DifferentialSymbol(Variable("x_"))), DotTerm())
+            replaceFree(rhs)(ren(Variable("x_")), dot)
+          ) (ren(DifferentialSymbol(Variable("x_"))), dot)
         )
         case rhs: Formula => ren(
           //@todo if this match doesn't work, could keep looking for argument in next occurrence of what
-          replaceFree(rhs)(ren(argOfPred(what.asInstanceOf[PredOf].func)), DotTerm())
+          replaceFree(rhs)(ren(argOfPred(what.asInstanceOf[PredOf].func)), dot)
         )
       }
       logger.debug("\t\t\tINFO: post-hoc optimizable: " + repl + " dottify " + r)

@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import testHelper.KeYmaeraXTestTags.TodoTest
@@ -369,7 +369,7 @@ class EqualityTests extends TacticTestBase {
 
   it should "find by top-level locator" in withQE { _ =>
     val s = "a=2 & five=abs(-5) ==>".asSequent
-    proveBy(s, BelleParser(""" absExp('L=="a=2 & five=abs(-5)") """)).
+    proveBy(s, ArchiveParser.tacticParser(""" absExp('L=="a=2 & five=abs(-5)") """)).
       subgoals.loneElement shouldBe "a=2&five=abs_, -5>=0&abs_=-5 | -5 < 0&abs_=--5 ==>".asSequent
   }
 
@@ -457,13 +457,13 @@ class EqualityTests extends TacticTestBase {
   }
 
   it should "expand with a term search locator" in withQE { _ =>
-    val result = proveBy("y=max(x,4) ==> y>=4".asSequent, BelleParser("minmax('L=={`max(x,4)`})"))
+    val result = proveBy("y=max(x,4) ==> y>=4".asSequent, ArchiveParser.tacticParser("minmax('L==\"max(x,4)\")"))
     result.subgoals.loneElement shouldBe "y=max_, x>=4&max_=x|x < 4&max_=4 ==> y>=4".asSequent
   }
 
   it should "find by top-level locator" in withQE { _ =>
     val s = "a=2 & five=max(0,5) ==>".asSequent
-    proveBy(s, BelleParser(""" minmax('L=="a=2 & five=max(0,5)") """)).
+    proveBy(s, ArchiveParser.tacticParser(""" minmax('L=="a=2 & five=max(0,5)") """)).
       subgoals.loneElement shouldBe "a=2&five=max_, 0>=5&max_=0 | 0 < 5&max_=5 ==>".asSequent
   }
 

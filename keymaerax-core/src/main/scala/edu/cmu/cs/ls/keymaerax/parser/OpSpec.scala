@@ -162,21 +162,15 @@ object OpSpec {
   import UnaryOpSpec.lUnaryOpSpecT
   import BinaryOpSpec.lBinaryOpSpec
 
-  /** Function(name,index,domain,sort) is created while filtering interpreted functions appropriately. */
-  private[parser] def func(name: String, index: Option[Int] = None, domain: Sort, sort: Sort): Function =
-  InterpretedSymbols.byName.get((name, index)) match {
-    case None => Function(name,index,domain,sort)
-    case Some(r) =>
-      assert(r.interpreted, "interpreted function")
-      core.insist(r.name==name && r.index==index && r.domain==domain && r.sort==sort, "expected domain and sort " + Function(name,index,domain,sort).fullString)
-      r
-  }
+  /** Function(name,index,domain,sort) is created. */
+  private[parser] def func(name: String, index: Option[Int] = None, domain: Sort, sort: Sort): Function = Function(name, index, domain, sort)
 
   /** The sort and domain of an interpreted function or None if uninterpreted */
-  private[parser] def interpretedFuncSortDomain(name: String): Option[(Sort, Sort)] = InterpretedSymbols.byName.get((name, None)) match {
-    case None => None
-    case Some(f) => Some(f.sort -> f.domain)
-  }
+  private[parser] def interpretedFuncSortDomain(name: String): Option[(Sort, Sort)] =
+    InterpretedSymbols.preshipped.asNamedSymbols.find(n => n.name == name && n.index.isEmpty) match {
+      case Some(f: Function) => Some(f.sort -> f.domain)
+      case _ => None
+    }
 
   // operator notation specifications
 
