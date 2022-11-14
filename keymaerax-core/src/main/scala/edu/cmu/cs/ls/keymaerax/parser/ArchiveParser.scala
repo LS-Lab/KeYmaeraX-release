@@ -45,13 +45,15 @@ case class Declaration(decls: Map[Name, Signature]) {
       (name, sig.copy(interpretation = interpretation.map(i => elaborateToSystemConsts(elaborateToFunctions(i, taboo)))))
   })).map((declAsSubstitutionPair _).tupled)
 
-  /** The subset of substs for implicitly defined functions. */
-  lazy val isubsts: List[SubstitutionPair] = substs.filter(f =>
-    f.repl match {
-      case FuncOf(e,_) => e.interpreted && e.domain == Real
+  /** The subset of substs for implicitly defined functions (have what.name == repl.name and repl.interpreted). */
+  lazy val isubsts: List[SubstitutionPair] = substs.filter({ case SubstitutionPair(what, repl) =>
+    (what, repl) match {
+      case (FuncOf(e, _), FuncOf(f, _)) =>
+        //@note filter out definitions that just forward implicitly defined functions, e.g., Real f(x,y) = min(x,y);
+        e.name == f.name && e.index == f.index && e.domain == f.domain && e.sort == f.sort && f.interpreted
       case _ => false
     }
-  )
+  })
 
   /** Returns the substitutions reachable transitively from symbols `s`. */
   def transitiveSubstsFrom(e: Expression): List[SubstitutionPair] = {

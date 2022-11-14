@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, DotTerm, Equal, FuncOf, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, StaticSemantics, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, DotTerm, Equal, FuncOf, Function, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, StaticSemantics, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -564,6 +564,80 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
+  }
+
+  it should "parse import definitions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions import kyx.math.exp; End.
+        | Problem exp(1) >= 0 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("exp", None) -> Signature(Some(Real), Real, Some(List(Name("t") -> Real)),
+          Some(FuncOf(Function("exp", None, Real, Real, Some("<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-1}++{exp'=exp,t'=1}}>(exp=1&t=0)".asFormula)), "._1".asTerm)), UnknownLocation)
+      )))
+  }
+
+  it should "parse import definitions wildcard" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions import kyx.math.*; End.
+        | Problem exp(1) >= 0 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.defs.decls.keySet should contain theSameElementsAs Set(
+      Name("abs"),
+      Name("arcsin"),
+      Name("arctan"),
+      Name("cos"),
+      Name("div"),
+      Name("e"),
+      Name("exp"),
+      Name("max"),
+      Name("min"),
+      Name("pi"),
+      Name("sin"),
+      Name("sqrt"),
+      Name("tan"),
+      Name("tanh")
+    )
+    entry.model shouldBe "exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-1}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1) >= 0".asFormula
+  }
+
+  it should "parse forward definitions to interpreted functions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions
+        |   import kyx.math.abs;
+        |   Real myAbs(Real x) = abs(x);
+        | End.
+        | Problem myAbs(-1) >= 0 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.defs.decls.keySet should contain theSameElementsAs Set(Name("abs"), Name("myAbs"))
+    entry.model shouldBe "myAbs(-1)>=0".asFormula
+  }
+
+  it should "parse multiple forward definitions to interpreted functions (with constants)" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions
+        |   import kyx.math.abs;
+        |   Real C;
+        |   Real myAbs(Real x) = abs(x*C);
+        |   Real myOtherAbs(Real x) = myAbs(x+C);
+        | End.
+        | Problem myOtherAbs(-1) >= 0 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.defs.decls.keySet should contain theSameElementsAs Set(Name("abs"), Name("C"), Name("myAbs"), Name("myOtherAbs"))
+    entry.model shouldBe "myOtherAbs(-1)>=0".asFormula
   }
 
   it should "parse lots of definitions after variables" in {
