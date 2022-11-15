@@ -19,7 +19,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
         "Implicit Definitions Examples",
         "",
         "classpath:/examples/implicitdefinitions.kyx",
-        "/examples/implicitdefinitions.png", 0),
+        "/examples/implicitdefinitions.png", 1),
       ExamplePOJO(6, "Textbook",
         "LFCPS 2018 Textbook Examples",
         "",
