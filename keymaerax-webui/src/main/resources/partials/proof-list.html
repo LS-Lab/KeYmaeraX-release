@@ -96,24 +96,21 @@
                 </div>
             </td>
             <td id="proofsactions"
-                data-intro="<strong>Open</strong> proofs, <strong>download lemmas</strong> (.kyp, includes a lemma combining a model and a finished proof in a trusted certificate), <strong>download archives</strong> (.kyx, includes a model and a specific finished or partial proof), or <strong>delete</strong> proofs."
-                data-position="bottom" ng-if="$first">
-                <span class="pull-right">
-                <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (.kyp)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
-                <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download model+proof (.kyx)" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
-                <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
-                </span>
+                data-intro="<strong>Open</strong> proofs, <strong>download lemmas</strong> (includes a lemma combining a model and a finished proof in a trusted certificate), <strong>download archives</strong> (.kyx, includes a model and a specific finished or partial proof), or <strong>delete</strong> proofs."
+                data-position="bottom"
+                ng-if="$first" ng-include="'proofactions.html'">
             </td>
-            <td ng-if="!$first">
-                <span class="pull-right">
-                <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (completed proof)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
-                <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download (partial) proof" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
-                <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
-                </span>
-            </td>
+            <td ng-if="!$first" ng-include="'proofactions.html'"></td>
         </tr>
         </tbody>
     </table>
 </div>
+
+<script type="text/ng-template" id="proofactions.html">
+    <span class="pull-right">
+    <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
+    <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (completed proof)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
+    <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download model+proof (.kyx)" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
+    <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
+    </span>
+</script>
