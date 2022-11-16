@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, DotTerm, Equal, FuncOf, Function, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, StaticSemantics, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{And, Assign, Bool, DotTerm, Equal, FuncOf, Function, GreaterEqual, Imply, Nothing, Number, Plus, Power, PredOf, Real, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}

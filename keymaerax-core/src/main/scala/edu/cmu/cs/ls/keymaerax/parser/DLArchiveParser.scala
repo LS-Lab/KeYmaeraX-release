@@ -239,7 +239,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     case (s, (n, idx), argList, e) =>
       val args = argList.map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
           , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
-          (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
+          (Name.tupled(name.getOrElse(("default_", Some(i)))), sort) :: acc
         })).getOrElse(Unit, List())
       (Name(n, idx), Signature(Some(args._1), ty, Some(args._2), None, Region.in(ctx.input.slice(0, ctx.input.length), s, e)))
   })
