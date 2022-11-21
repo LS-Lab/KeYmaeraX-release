@@ -98,7 +98,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
        $scope.model.content = fileContent;
-       if (!fileContent || fileContent == '') $scope.model.content = $scope.template.text;
+       if (!fileContent || fileContent === '') $scope.model.content = $scope.template.text;
        if ($scope.numKyxEntries(fileContent) <= 0) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
@@ -167,7 +167,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
            });
            modalInstance.result.then(
              function(result) {
-               if (result == "ok") $scope.saveContent(startProof);
+               if (result === "ok") $scope.saveContent(startProof);
                else $scope.startProof($scope.model.savedContentErrorText);
              },
              function() {
@@ -201,7 +201,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
          });
          modalInstance.result.then(
            function(result) {
-             if (result == "ok") $scope.uploadContent(false);
+             if (result === "ok") $scope.uploadContent(false);
              $scope.refreshModelList();
              $uibModalInstance.close();
            },
@@ -240,7 +240,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.aceChanged = function(e) {
        var content = e[0];
        var editor = e[1];
-       if (content.id == 1 && $scope.template.selectRange) {
+       if (content.id === 1 && $scope.template.selectRange) {
          // first edit (id==1) inserts the initial template text; move cursor to beginning of comment and select
          editor.moveCursorTo($scope.template.selectRange.start.row, $scope.template.selectRange.start.column);
          editor.getSelection().setSelectionRange(new ace.Range(
@@ -250,7 +250,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      }
 
      $scope.startProof = function(errorText) {
-       if (!errorText || errorText == '') {
+       if (!errorText || errorText === '') {
          $scope.close();
          var uri = 'models/users/' + sessionService.getUser() + '/model/' + $scope.model.modelId + '/createProof'
          $http.post(uri, {proofName: '', proofDescription: ''}).
@@ -259,7 +259,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
              console.log('Error starting new proof for model ' + modelId)
            });
        } else {
-         var modalInstance = $uibModal.open({
+         $uibModal.open({
            templateUrl: 'templates/modalMessageTemplate.html',
            controller: 'ModalMessageCtrl',
            size: 'md',
@@ -380,7 +380,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   $scope.readModelList($scope.workingDir);
 
   $scope.setWorkingDir = function(folderIdx) {
-    if (folderIdx == undefined) $scope.workingDir = [];
+    if (folderIdx === undefined) $scope.workingDir = [];
     else $scope.workingDir = $scope.workingDir.slice(0, folderIdx);
     $scope.readModelList($scope.workingDir);
   }
@@ -440,7 +440,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     $http.post("models/users/" + userId + "/importRepo", repoUrl).success(function(data) {
       $http.get("models/users/" + userId + "/").success(function(data) {
         Models.addModels(data);
-        if($location.path() == "/models") {
+        if($location.path() === "/models") {
           $route.reload();
         } else {
           $location.path( "/models" );
@@ -628,6 +628,14 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     $scope.save.editor.setReadOnly(false);
   }
 
+  $scope.firstModelError = function() {
+    if ($scope.save.editor) {
+      return $scope.save.editor.getSession().getAnnotations().find(function(e) {
+        return e.type === "error";
+      })
+    } else return undefined;
+  }
+
   /** Deletes all proofs of the model */
   $scope.deleteModelProofSteps = function(onSuccess) {
     $http.post('user/' + userid + "/model/" + modelid + "/deleteProofSteps").success(function(data) {
@@ -761,7 +769,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   $scope.proveFromTactic = function() {
     return function() {
       spinnerService.show('modelListProofLoadingSpinner');
-      var uri     = 'models/users/' + userid + '/model/' + $scope.model.id + '/createTacticProof'
+      var uri = 'models/users/' + userid + '/model/' + $scope.model.id + '/createTacticProof';
       $http.post(uri, {}).success(function(data) {
         $uibModalInstance.close();
         var proofId = data.id;
