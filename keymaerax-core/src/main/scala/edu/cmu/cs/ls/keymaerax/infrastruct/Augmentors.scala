@@ -34,6 +34,8 @@ import scala.collection.mutable.ListBuffer
  * @see [[Context]]
  */
 object Augmentors {
+  /** Indicates that variable `v` cannot be elaborated to a function symbol inside expression `e`. */
+  case class ElaborationError(msg: String, v: Variable, e: Expression, ex: Throwable) extends AssertionError(msg, ex)
 
   /**
     * Augment expressions with additional tactics-only helper functions.
@@ -483,8 +485,8 @@ object Augmentors {
           e.replaceAll(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing))
         } catch {
           case ex: ClassCastException =>
-            throw new AssertionError("assertion failed: Elaboration tried replacing " + v.prettyString +
-              " in literal bound occurrence inside " + e.prettyString, ex)
+            throw ElaborationError("Elaboration tried replacing " + v.prettyString +
+              " in literal bound occurrence inside " + e.prettyString, v, e, ex)
         }
       )
       assertConsistentKinds(StaticSemantics.symbols(replaced).filter(bySignature), "Elaboration results in inconsistent kinds")

@@ -127,7 +127,11 @@ case class Declaration(decls: Map[Name, Signature]) {
   def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T = try {
     expr.elaborateToFunctions(asNamedSymbols.toSet ++ InterpretedSymbols.builtin.toSet -- taboo).asInstanceOf[T]
   } catch {
-    case ex: AssertionError => throw ParseException("Unable to elaborate to function symbols: " + ex.getMessage, ex)
+    case ex: ElaborationError =>
+      (InterpretedSymbols.builtin.toSet -- taboo).find(n => n.name == ex.v.name && n.index == ex.v.index) match {
+        case Some(f) => throw ParseException("Name " + ex.v + " has builtin meaning as an interpreted function " + f.prettyString + ", so cannot be used as a variable", ex)
+        case None => throw ParseException("Unable to elaborate to function symbols: " + ex.getMessage, ex)
+      }
   }
 
   /** Elaborates program constants to system constants if their definition is dual-free. */
