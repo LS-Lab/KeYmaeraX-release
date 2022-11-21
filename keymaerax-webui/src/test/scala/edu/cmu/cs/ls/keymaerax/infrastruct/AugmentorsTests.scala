@@ -45,8 +45,8 @@ class AugmentorsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "complain when trying to elaborate in literal bound occurrence" in {
-    the [AssertionError] thrownBy "x=1 -> [y:=y;x:=x;]x<=2".asFormula.elaborateToFunctions(Set("x()".asFunction)) should have message
-      """assertion failed: Elaboration tried replacing x in literal bound occurrence inside x=1->[y:=y;x:=x;]x<=2""".stripMargin
+    the [ElaborationError] thrownBy "x=1 -> [y:=y;x:=x;]x<=2".asFormula.elaborateToFunctions(Set("x()".asFunction)) should have message
+      """Elaboration tried replacing x in literal bound occurrence inside x=1->[y:=y;x:=x;]x<=2""".stripMargin
   }
 
   it should "replace all (rename) variables and differential symbols" in {

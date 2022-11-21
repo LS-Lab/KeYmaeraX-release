@@ -518,11 +518,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "not parse any negative examples" in {
     val files =
       ("finishparse.key",
-        """<somewhere> Unable to elaborate to function symbols: assertion failed: Cannot elaborate:
+        """<somewhere> assertion failed: Cannot elaborate:
           |  Symbol x used with inconsistent kinds x:Trafo,x:Real
           |Found:    <unknown> at <somewhere>
           |Expected: <unknown>""".stripMargin,
-        """<somewhere> Unable to elaborate to function symbols: assertion failed: Cannot elaborate:
+        """<somewhere> assertion failed: Cannot elaborate:
           |  Symbol x used with inconsistent kinds x:Trafo,x:Real
           |Found:    <unknown> at <somewhere>
           |Expected: <unknown>""".stripMargin) ::
@@ -565,7 +565,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       """.stripMargin
 
     the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """<somewhere> Unable to elaborate to function symbols: assertion failed: Elaboration tried replacing A in literal bound occurrence inside A>=0->[x:=A;A:=2;]x>=0
+      """<somewhere> Unable to elaborate to function symbols: Elaboration tried replacing A in literal bound occurrence inside A>=0->[x:=A;A:=2;]x>=0
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
   }
