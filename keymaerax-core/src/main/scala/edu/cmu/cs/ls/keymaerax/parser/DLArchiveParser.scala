@@ -111,6 +111,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         ~ metaInfo ~
         ("End" ~ label.? ~ ".")
       ).flatMapX({ case (kind, label, name, meta, (decl, (prob, probString, tacs)), moremeta, endlabel) =>
+        Parser.parser.setAnnotationListener(al) //@note done parsing annotations; reset annotation listeners because elaborate may access them
         if (endlabel.isDefined && endlabel != label)
           Fail.opaque("end label: " + endlabel + " is optional but should be the same as the start label: " + label)
         else {
