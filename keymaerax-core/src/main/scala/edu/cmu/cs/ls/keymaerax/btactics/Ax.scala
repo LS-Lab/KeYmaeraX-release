@@ -281,6 +281,7 @@ object Ax extends Logging {
       case Some(_: Z3) => Set(
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerLemma",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.timesPowersBoth",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.timesDivInverse",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerEven",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerOdd",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNumber",
@@ -297,6 +298,7 @@ object Ax extends Logging {
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideEven",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powZero",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powNegOne",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerZero",
           "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivide0"
         )

@@ -927,8 +927,9 @@ object SimplifierV3 {
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentity.provable),
     Ax.timesIdentityNeg.provable,
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable),
-    Ax.negOneTimes.provable,
-    Ax.timesDivInverse.provable)
+    Ax.negOneTimes.provable) ++
+  //@note timesDivInverse not provable with Z3
+  (if (ToolProvider.qeTool(Some("Mathematica")).isDefined) List(Ax.timesDivInverse.provable) else List.empty)
 
   private lazy val negArith: List[ProvableSig] = List(
     Ax.minusNeg.provable,
