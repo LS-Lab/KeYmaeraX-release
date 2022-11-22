@@ -202,6 +202,17 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     parse("""dC("x^2+y^2=const", 1)""") shouldBe TactixLibrary.dC(List(Equal("x^2+y^2".asTerm, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
   }
 
+  it should "not elaborate when tactic reserved symbols are declared as variables" in {
+    parse("""dC("abbrv=const", 1)""", Declaration(Map(Name("abbrv", None) -> Signature(None, Real, None, None, UnknownLocation)))) shouldBe
+      TactixLibrary.dC(List(Equal("abbrv".asVariable, FuncOf(TacticReservedSymbols.const, Nothing))))(1)
+    parse("""dC("x^2+y^2=const", 1)""", Declaration(Map(
+      Name("const", None) -> Signature(None, Real, None, None, UnknownLocation),
+      Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+      Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+    ))) shouldBe
+      TactixLibrary.dC(List(Equal("x^2+y^2".asTerm, Variable("const"))))(1)
+  }
+
   it should "report missing arguments" in {
     the [ParseException] thrownBy parse("implyR") should have message
       """1:7 Error parsing atomicTactic at 1:1

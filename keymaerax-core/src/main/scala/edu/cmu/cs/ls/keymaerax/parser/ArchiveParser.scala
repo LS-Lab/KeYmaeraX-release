@@ -85,6 +85,11 @@ case class Declaration(decls: Map[Name, Signature]) {
     Declaration(decls ++ other.decls)
   }
 
+  /** Adds the elements of `other` that are not contained in this declaration. */
+  def addNew(other: Declaration): Declaration = {
+    this ++ Declaration(other.decls.filterNot({ case (n, _) => decls.contains(n) }))
+  }
+
   /** Definitions projected to names. */
   def project(names: Set[Name]): Declaration = Declaration(decls.filter({ case (n, _) => names.contains(n) }))
 
