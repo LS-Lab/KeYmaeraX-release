@@ -97,7 +97,7 @@ private object ToolTactics {
   }
 
   /** Prepares a QE call with all pre-processing steps, uses `order` to form the universal closure and finishes the
-    * remaining subgoals using `doQE`. */
+    * remaining subgoals using `rcf`. */
   def prepareQE(order: List[Variable], rcf: BuiltInTactic): BuiltInTactic = anon { (provable: ProvableSig) =>
     val closure = toSingleFormula andThen
       doIfFw(_.subgoals.head.succ.nonEmpty)(FOQuantifierTactics.universalClosureFw(order)(1))
@@ -156,6 +156,10 @@ private object ToolTactics {
       } else alpha
     } else provable
   }
+
+  /** QE preparation steps, forms universal closure in the `order` of variables (lexicographic if empty). */
+  @Tactic()
+  def prepareQE(order: List[Variable]): InputTactic = inputanonP { prepareQE(order, skip) }
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(defs: Declaration, order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = internal("_QE", (seq: Sequent) => {

@@ -26,6 +26,18 @@
             name="... in Z3" code-name="QE"
             exec="doInputTactic(undefined, codeName, [{ param: 'tool', type: 'string', value: 'Z3' }])"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="tool=='mathematica'||tool=='wolframengine'||tool=='wolframscript'"
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true" hide-long-help="true"
+            name="... prepare" code-name="prepareQE"
+            exec="doInputTactic(undefined, codeName, [])"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="tool=='mathematica'||tool=='wolframengine'||tool=='wolframscript'"
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true" hide-long-help="true"
+            name="... RCF" code-name="rcf"
+            exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
             name="Smart Arithmetic" code-name="smartQE" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
