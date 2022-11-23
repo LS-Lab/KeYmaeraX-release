@@ -24,6 +24,10 @@ trait HTMLPrinter {
     "!=" -> "&ne;",
     "!" -> "&not;",
     "|" -> "&or;",
+    "(&or;" -> "(|", // undo opening banana rewrite
+    "&or;)" -> "|)", // undo closing banana rewrite
+    "{&or;" -> "{|", // undo opening mustache rewrite
+    "&or;}" -> "|}", // undo closing mustache rewrite
     "<->" -> "&#8596;",
     "->" -> "&rarr;",
     "<=" -> "&leq;",
