@@ -10,7 +10,7 @@
           ng-alt-click="exprClick($event, expr.id, expr.step, expr.editable)"
           ng-right-click="exprRightClick($event, expr.id, expr.step, expr.editable)">
         <span ng-if="modeIsEdit() && expr.plain">
-            <span editable-text="replacePlainSpecialNotation(expr.plain)" onbeforesave="editExpr(expr.id, $data)">{{exprText(expr)}}</span>
+            <span editable-text="exprText(expr)" onbeforesave="editExpr(expr.id, $data)">{{exprText(expr)}}</span>
         </span>
         <span ng-if="(modeIsProve() || modeIsSelect() || !expr.plain) && expr.text" ng-bind-html="exprTextHtml(expr)"></span>
         <span ng-if="(modeIsProve() || modeIsSelect() || !expr.plain) && expr.children && expr.children.length > 0"
