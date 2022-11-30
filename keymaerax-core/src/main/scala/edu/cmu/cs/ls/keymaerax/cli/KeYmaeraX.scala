@@ -60,10 +60,10 @@ object KeYmaeraX {
 
   def main(args: Array[String]): Unit = {
     //@note 'commandLine is passed in to preserve evidence of what generated the output.
+    Configuration.setConfiguration(FileConfiguration)
     val (options, unprocessedArgs) = nextOption(Map('commandLine -> args.mkString(" ")), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
     try {
-      Configuration.setConfiguration(FileConfiguration)
       runCommand(options, Usage.cliUsage)
     } finally {
       shutdownProver()
@@ -181,13 +181,22 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tool -> value.toLowerCase), tail, usage)
         else { Usage.optionErrorReporter("-tool", usage); exit(1) }
       case "-verbose" :: tail => nextOption(options ++ Map('verbose -> true), tail, usage)
-      // aditional options
+      // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
         if(value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mathkernel -> value), tail, usage)
         else { Usage.optionErrorReporter("-mathkernel", usage); exit(1) }
       case "-jlink" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('jlink -> value), tail, usage)
         else { Usage.optionErrorReporter("-jlink", usage); exit(1) }
+      // Z3 path options
+      case "-z3path" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-")) {
+          Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false)
+          nextOption(options ++ Map('z3Path -> value), tail, usage)
+        } else {
+          Usage.optionErrorReporter("-z3path", usage)
+          exit(1)
+        }
       // global options
       case "-lax" :: tail => Configuration.set(Configuration.Keys.LAX, "true", saveToFile = false); nextOption(options, tail, usage)
       case "-strict" :: tail => Configuration.set(Configuration.Keys.LAX, "false", saveToFile = false); nextOption(options, tail, usage)
