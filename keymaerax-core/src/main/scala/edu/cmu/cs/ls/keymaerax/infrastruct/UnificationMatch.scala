@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
-import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
+import edu.cmu.cs.ls.keymaerax.bellerophon.{SeqUnificationException, SubstUnificationException, UnificationException}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.{List, Nil}
@@ -130,7 +130,7 @@ trait BaseMatcher extends Matcher with Logging {
       case f1: Formula => val f2=e2.asInstanceOf[Formula]; unifier(f1, f2, unify(f1,f2))
       case p1: DifferentialProgram if !p1.isInstanceOf[ODESystem] => val p2=e2.asInstanceOf[DifferentialProgram]; unifier(p1, p2, unify(p1,p2))
       case p1: Program => val p2=e2.asInstanceOf[Program]; unifier(p1, p2, unify(p1,p2))
-    } else throw new UnificationException(e1.prettyString, e2.prettyString, "have incompatible kinds " + e1.kind + " and " + e2.kind)
+    } else throw new UnificationException(e1, e2, "have incompatible kinds " + e1.kind + " and " + e2.kind)
 
   override def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
     e1 match {
@@ -138,7 +138,7 @@ trait BaseMatcher extends Matcher with Logging {
       case f1: Formula => apply(f1, e2.asInstanceOf[Formula])
       case p1: DifferentialProgram if !p1.isInstanceOf[ODESystem] => apply(p1, e2.asInstanceOf[DifferentialProgram])
       case p1: Program => apply(p1, e2.asInstanceOf[Program])
-    } else throw new UnificationException(e1.prettyString, e2.prettyString, "have incompatible kinds " + e1.kind + " and " + e2.kind)
+    } else throw new UnificationException(e1, e2, "have incompatible kinds " + e1.kind + " and " + e2.kind)
 
   override def apply(e1: Term, e2: Term): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
@@ -228,13 +228,13 @@ trait BaseMatcher extends Matcher with Logging {
     * @throws UnificationException always. */
   protected def ununifiable(shape: Expression, input: Expression): Nothing = {
     //println(new UnificationException(shape.toString, input.toString))
-    throw new UnificationException(shape.toString, input.toString)}
+    throw new UnificationException(shape, input)}
 
   /** Indicates that `input` cannot be matched against the pattern `shape` by raising a [[UnificationException]].
     * @throws UnificationException always. */
   protected def ununifiable(shape: Sequent, input: Sequent): Nothing = {
     //println(new UnificationException(shape.toString, input.toString))
-    throw new UnificationException(shape.toString, input.toString)}
+    throw new SeqUnificationException(shape, input)}
 
 
   /** Union of renaming substitution representations: `join(s, t)` gives the representation of `s` performed together with `t`, if compatible.
@@ -253,7 +253,7 @@ trait BaseMatcher extends Matcher with Logging {
     for (el <- s) {
       t.find(sp => sp._1 == el._1) match {
         case Some(sp) => if (sp._2 != el._2)
-          throw new UnificationException("<unifier> " + Subst(s).toString(), "<unifier> " + Subst(t).toString())
+          throw new SubstUnificationException(Subst(s), Subst(t))
         // else skip since same already present in t
         case None =>
           j = el :: j
@@ -397,7 +397,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     * @inheritdoc */
   protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
     case a: ProgramConst          => unifier(e1, e2)
-    case a: SystemConst           => if (FormulaTools.dualFree(e2)) unifier(e1, e2) else throw new UnificationException(e1.toString, e2.toString, "hybrid games with duals not allowed for SystemConst")
+    case a: SystemConst           => if (FormulaTools.dualFree(e2)) unifier(e1, e2) else throw new UnificationException(e1, e2, "hybrid games with duals not allowed for SystemConst")
     case Assign(x, t)             => e2 match {case Assign(x2,t2)    => unifies2(x,t, x2,t2) case _ => ununifiable(e1,e2)}
     case AssignAny(x)             => e2 match {case AssignAny(x2)    => unify(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                  => e2 match {case Test(f2)         => unify(f,f2) case _ => ununifiable(e1,e2)}

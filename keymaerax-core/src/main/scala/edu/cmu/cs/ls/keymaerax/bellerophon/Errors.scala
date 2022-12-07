@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{Expression, False, NamedSymbol, Provable, ProverException, Sequent}
+import edu.cmu.cs.ls.keymaerax.infrastruct.LinearMatcher.Subst
 import org.apache.commons.lang3.StringUtils
 
 /**
@@ -93,8 +94,14 @@ class BelleUnexpectedProofStateError(message: => String, val proofState: Provabl
   * @param input The expression that we were trying to match against the given shape.
   * @param info Additional information
   */
-class UnificationException(val shape: String, val input: String, info: String = "", cause: Throwable = null)
-  extends BelleCriticalException("Un-Unifiable: " + shape + "\nfor:          " + input + "\n" + info, cause) {}
+class UnificationException(val shape: Expression, val input: Expression, info: String = "", cause: Throwable = null)
+  extends BelleCriticalException("Un-Unifiable: " + shape.prettyString + "\nfor:          " + input.prettyString + "\n" + info, cause) {}
+
+class SeqUnificationException(val shape: Sequent, val input: Sequent, info: String = "", cause: Throwable = null)
+  extends BelleCriticalException("Un-Unifiable: " + shape.prettyString + "\nfor:          " + input.prettyString + "\n" + info, cause) {}
+
+class SubstUnificationException(val shape: Subst, val input: Subst, info: String = "", cause: Throwable = null)
+  extends BelleCriticalException("Un-Unifiable: <unifier> " + shape.toString + "\nfor:          <unifier> " + input + "\n" + info, cause) {}
 
 /** Tactic requirements that failed and indicate a critical logical error in using it. */
 class TacticRequirementError(message: => String) extends BelleCriticalException(message)

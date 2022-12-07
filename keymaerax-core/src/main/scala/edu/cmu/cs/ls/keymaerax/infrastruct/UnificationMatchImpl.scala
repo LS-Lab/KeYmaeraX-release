@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
+import edu.cmu.cs.ls.keymaerax.bellerophon.{SubstUnificationException, UnificationException}
 import SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
@@ -225,7 +225,7 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
       try {
         Subst(us)
       } catch {
-        case ex: Throwable => throw new UnificationException(e1.prettyString, e2.prettyString, "Invalid substitution computed", ex)
+        case ex: Throwable => throw new UnificationException(e1, e2, "Invalid substitution computed", ex)
       }
     else {
       val ren = MultiRename(RenUSubst.renamingPartOnly(us))
@@ -353,7 +353,7 @@ class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
             }
             repl match {
               case Some((what, repl)) => j = j.map({ case e if e==what => repl case x => x})
-              case None => throw new UnificationException("<unifier> " + Subst(s).toString(), "<unifier> " + Subst(t).toString())
+              case None => throw new SubstUnificationException(Subst(s), Subst(t))
             }
           }
           // else skip since same already present in t and therefore also in j

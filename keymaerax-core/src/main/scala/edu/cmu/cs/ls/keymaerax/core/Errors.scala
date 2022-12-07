@@ -11,29 +11,32 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import org.apache.commons.lang3.StringUtils
 
+import scala.collection.mutable.ListBuffer
+
 /**
   * KeYmaera X Prover Exceptions.
   */
 class ProverException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {
 
   /* @note mutable state for gathering the logical context that led to this exception */
-  private var logicalContext: String = ""
+  private val logicalContext: ListBuffer[() => (String, String)] = ListBuffer.empty
 
   /**
     * Returns the logical context, i.e. stack of proof rules or nested logical context information
     * describing in which context this exception occurred.
     */
-  def getContext: String = logicalContext
+  def getContext: String = "\nin " + logicalContext.map(_() match {
+    case (c, "") => c
+    case (c, a) => c + "\n\t(" + a + ")"
+  }).mkString("\nin ")
 
   /**
     * Add the context information to this exception, returning the resulting exception to be thrown.
     * @param context textual description of the context within which this prover exception occurred.
     * @param additionalMessage optional additional information about the situation in which this prover exception occurred, e.g., the state of affairs.
     */
-    //@todo optimizable make arguments lazy for speed?
-  def inContext(context: String, additionalMessage : String = ""): ProverException = {
-    this.logicalContext  = this.logicalContext + "\nin " + context
-    if (additionalMessage != "") this.logicalContext = this.logicalContext + "\n\t(" + additionalMessage + ")"
+  def inContext(context: => String, additionalMessage : => String = ""): ProverException = {
+    logicalContext.append(() => (context, additionalMessage))
     this
   }
 
@@ -117,7 +120,7 @@ class NoncriticalCoreException(msg: String) extends CoreException(msg)
   */
 case class InapplicableRuleException(msg: String, r: Rule, s: Sequent = null)
   extends NoncriticalCoreException(msg + "\n" +
-  "Rule " + r + (if (r.isInstanceOf[PositionRule]) s(r.asInstanceOf[PositionRule].pos) else "") +
+  "Rule " + r.name + (r match { case pr: PositionRule => pr.pos case _ => "" }) +
   (if (s != null) " applied to " + s else "")) {
 }
 

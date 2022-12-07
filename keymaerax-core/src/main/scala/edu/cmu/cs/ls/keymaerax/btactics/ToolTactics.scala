@@ -607,10 +607,10 @@ private object ToolTactics {
           case ex: UnificationException =>
             //@note looks for specific transform position until we have better formula diff
             //@note Exception reports variable unifications and function symbol unifications swapped
-            if (ex.input.asExpr.isInstanceOf[FuncOf] && !ex.shape.asExpr.isInstanceOf[FuncOf]) {
-              FormulaTools.posOf(e, ex.shape.asExpr) match {
+            if (ex.input.isInstanceOf[FuncOf] && !ex.shape.isInstanceOf[FuncOf]) {
+              FormulaTools.posOf(e, ex.shape) match {
                 case Some(pp) =>
-                  TactixLibrary.transform(ex.input.asExpr)(pos.topLevel ++ pp) &
+                  TactixLibrary.transform(ex.input)(pos.topLevel ++ pp) &
                     DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) |
                   TactixLibrary.transform(expandTo)(pos) &
                     DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
@@ -619,9 +619,9 @@ private object ToolTactics {
                     DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
               }
             } else {
-              FormulaTools.posOf(e, ex.input.asExpr) match {
+              FormulaTools.posOf(e, ex.input) match {
                 case Some(pp) =>
-                  TactixLibrary.transform(ex.shape.asExpr)(pos.topLevel ++ pp) &
+                  TactixLibrary.transform(ex.shape)(pos.topLevel ++ pp) &
                     DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) |
                   TactixLibrary.transform(expandTo)(pos) &
                     DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
