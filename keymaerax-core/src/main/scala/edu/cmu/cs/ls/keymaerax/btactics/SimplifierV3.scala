@@ -115,32 +115,27 @@ object SimplifierV3 {
     * Checks if x unifies with t,
     * If applicable, checks for the A[unif] in the context
     * Then unifies the conclusion appropriately
-    * Note: can avoid unifying again in the proof?
     */
   private def applyTermProvable(t:Term, ctx:context, pr:ProvableSig) : Option[(Term,Formula,ProvableSig)] = {
     //todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
-      case Imply(prem,Equal(k,v)) => {
-        val unif = try { UnificationMatch(k,t) } catch { case e:UnificationException => return None}
+      case Imply(prem,Equal(k,v)) =>
+        val unif = try { UnificationMatch(k,t) } catch { case _: UnificationException => return None}
         val uprem = unif(prem)
-        if(ctx.contains(uprem)){
+        if (ctx.contains(uprem)) {
           val concl = unif(v)
-          //@todo construct substitution
-          val proof = ProvableSig.startPlainProof(Imply(uprem,Equal(t,unif(v))))(byUS(pr), 0)
+          val proof = ProvableSig.startPlainProof(Imply(uprem,Equal(t,unif(v))))(pr(unif.usubst), 0)
           //assert(proof.isProved)
           Some(concl,uprem,proof)
         }
         else None
-      }
-      case Equal(k,v) => {
+      case Equal(k,v) =>
         val unif = try { UnificationMatch(k,t) } catch { case _: UnificationException => return None}
         val concl = unif(v)
-        //@todo construct substitution
-        val proof = ProvableSig.startPlainProof(Imply(True, Equal(t, unif(v))))(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(byUS(pr), 0)
+        val proof = ProvableSig.startPlainProof(Imply(True, Equal(t, unif(v))))(ImplyRight(SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(pr(unif.usubst), 0)
         //assert(proof.isProved)
         Some(concl,True,proof)
-      }
-      case _ => ??? //Illegal shape of rewrite
+      case r => throw new IllegalArgumentException("Illegal shape of rewrite: expected equality or conditional equality, but got " + r.prettyString)
     }
   }
 
