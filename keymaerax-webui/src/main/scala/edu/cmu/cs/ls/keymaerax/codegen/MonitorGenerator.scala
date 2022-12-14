@@ -56,7 +56,7 @@ abstract class MonitorGenerator(conjunctionsAs: Symbol,
     @tailrec
     private def toSafetyMargin(p: Formula): CTerm = Try(ModelPlex.toMetric(p)).toOption match {
       case Some(c: ComparisonFormula) =>
-        assert(c.right == Number(0))
+        assert(c.right == Number(0), "Expected literal 0, but got: " + c.right.prettyString)
         // safety margin>=0 -> p is true, so decrease strict inequalities by machine epsilon (false alerts are safe)
         val margin: Term = c match {
           case _: GreaterEqual => c.left
@@ -79,12 +79,11 @@ abstract class MonitorGenerator(conjunctionsAs: Symbol,
     private def compileProgramFormula(f: Formula): CMargin = f match {
       case True => CMeasureZeroMargin(CTrue)
       case Diamond(Test(p), q) =>
-        val successDist = toSafetyMargin(p)
-        val successPrg = if (onlyEqualities(p)) CMeasureZeroMargin(successDist) else CSafetyMargin(successDist)
-        val errorDist = CNeg(successDist)
+        val pDist = toSafetyMargin(p)
+        val successPrg = if (onlyEqualities(p)) CMeasureZeroMargin(pDist) else CSafetyMargin(pDist)
         CIfThenElse(compileFormula(p),
           successPrg and compileProgramFormula(q),
-          CErrorMargin(errorId(p), errorDist, p.prettyString)
+          CErrorMargin(errorId(p), pDist, p.prettyString)
         )
       case Or(Diamond(Test(p: ComparisonFormula), ifP), Diamond(Test(Not(q: ComparisonFormula)), elseP)) if p==q =>
         val ifDist = p match {
