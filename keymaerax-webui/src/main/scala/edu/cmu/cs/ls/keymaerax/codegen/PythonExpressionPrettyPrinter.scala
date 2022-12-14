@@ -48,39 +48,66 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case _ => Set(p)
   }
 
-  def printDefinitions(e: CExpression): String = e match {
-    case d: CDisjunctiveSafetyMargin =>
-      val disjuncts = flattenDisjuncts(d)
-      val nestedDefs = disjuncts.map(printDefinitions).mkString("\n")
-      val disjunctDefs = disjuncts.
-        filter({ case _: CConjunctiveSafetyMargin => true case _: CIfThenElse => true case _ => false }).
-        map(d => {
-          s"""def Or${uniqueName(d)}($PRE, $CURR, $PARAMS):
+  /** Prints nested definitions, introduces one Python function per atomic comparisons in `prgs`, one per if-then-else program,
+   * and one per "complex" program as identified by `filter`. Prefixes the complex function names with `prefix`. */
+  private def printDefs(prgs: Set[CProgram], filter: CProgram=>Boolean, prefix: String): List[(CExpression, String)] = {
+    val nestedDefs = prgs.map(printDefinitions).reduceOption(_++_).getOrElse(List.empty)
+    val atomicComparisonDefs = prgs.
+      filter({ case _: CSafetyMargin => true case _ => false }).
+      map({
+        case CSafetyMargin(d) =>
+          d -> s"""def Cond${uniqueName(d)}($PRE, $CURR, $PARAMS):
+                  |  return ${print(d)}""".stripMargin
+      })
+    val prgsDefs = prgs.
+      filter({ case _: CIfThenElse => true case p => filter(p) }).
+      map(d => {
+        d ->
+          s"""def $prefix${uniqueName(d)}($PRE, $CURR, $PARAMS):
              |${print(d).linesWithSeparators.map("  " + _).mkString}""".stripMargin
-        }).mkString("\n")
-      nestedDefs + "\n" + disjunctDefs
-    case c: CConjunctiveSafetyMargin =>
-      val conjuncts = flattenConjuncts(c)
-      val nestedDefs = conjuncts.map(printDefinitions).mkString("\n")
-      val conjunctDefs = conjuncts.
-        filter({ case _: CDisjunctiveSafetyMargin => true case _: CIfThenElse => true case _ => false }).
-        map(d => {
-          s"""def And${uniqueName(d)}($PRE, $CURR, $PARAMS):
-             |${print(d).linesWithSeparators.map("  " + _).mkString}""".stripMargin
-        }).mkString("\n")
-      nestedDefs + "\n" + conjunctDefs
-    case CIfThenElse(_, ifP, elseP: CIfThenElse) =>
-      val elsePDef =
-        s"""def IfThenElse${uniqueName(elseP)}($PRE, $CURR, $PARAMS):
-           |${print(elseP).linesWithSeparators.map("  " + _).mkString}""".stripMargin
-      s"""${printDefinitions(ifP)}
-         |${printDefinitions(elseP)}
-         |$elsePDef""".stripMargin
-    case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
-    case _ => ""
+      })
+    nestedDefs ++ atomicComparisonDefs ++ prgsDefs
   }
 
-  override def apply(e: CExpression): (String, String) = (printDefinitions(e), print(e))
+  /** Prints Python function definitions for (some) duplicate elements in `e`. */
+  def printDefinitions(e: CExpression): List[(CExpression, String)] = e match {
+    case d: CDisjunctiveSafetyMargin => printDefs(flattenDisjuncts(d), _.isInstanceOf[CConjunctiveSafetyMargin], "Or")
+    case c: CConjunctiveSafetyMargin => printDefs(flattenConjuncts(c), _.isInstanceOf[CDisjunctiveSafetyMargin], "And")
+    case CIfThenElse(cond, ifP, elseP) =>
+      val condDefText = print(cond)
+      val condDef =
+        if (condDefText.length > 100) {
+          List(cond ->
+            s"""def Cond${uniqueName(cond)}($PRE, $CURR, $PARAMS):
+               |  return $condDefText""".stripMargin)
+        } else List.empty
+      val ifPDef = printDefinitions(ifP)
+      condDef ++ ifPDef ++ printDefinitions(elseP) ++ (elseP match {
+        case nestedIf: CIfThenElse =>
+          List(elseP -> s"""def IfThenElse${uniqueName(nestedIf)}($PRE, $CURR, $PARAMS):
+                           |${print(nestedIf).linesWithSeparators.map("  " + _).mkString}""".stripMargin)
+        case _ => List.empty
+      })
+    case CSafetyMargin(d) =>
+      List(d ->
+        s"""def Margin${uniqueName(d)}($PRE, $CURR, $PARAMS):
+         |  return ${print(d)}""".stripMargin)
+    case CErrorMargin(_, CNeg(d), _) =>
+      List(d ->
+        s"""def Margin${uniqueName(d)}($PRE, $CURR, $PARAMS):
+           |  return ${print(d)}""".stripMargin)
+    case CErrorMargin(_, d, _) =>
+      List(d ->
+        s"""def Cond${uniqueName(d)}($PRE, $CURR, $PARAMS):
+           |  return ${print(d)}""".stripMargin)
+    case _ => List.empty
+  }
+
+  override def apply(e: CExpression): (String, String) = {
+    //@todo change signature
+    val defs = printDefinitions(e)
+    (defs.distinct.map(_._2).mkString("\n"), print(e))
+  }
 
   private def uniqueName(fml: CExpression): String = {
     val hashcode = fml.hashCode()
@@ -123,24 +150,22 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
     case CTrue => "True"
     case CFalse => "False"
-    case CIfThenElse(f, ifP, elseP: CIfThenElse) =>
-      s"""if ${print(f)}:
-         |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
-         |else:
-         |  IfThenElse${uniqueName(elseP)}($PRE, $CURR, $PARAMS)""".stripMargin
-    case CIfThenElse(f, ifP, elseP: CErrorMargin) =>
-      s"""if ${print(f)}:
-         |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
-         |else:
-         |  return ${print(elseP).linesWithSeparators.map(INDENT + _).mkString.stripPrefix(INDENT)}""".stripMargin
     case CIfThenElse(f, ifP, elseP) =>
-      s"""if ${print(f)}:
+      val condDefText = print(f)
+      val cond = if (condDefText.length > 100) s"Cond${uniqueName(f)}($PRE, $CURR, $PARAMS)" else condDefText
+      val elsePText = elseP match {
+        case _: CIfThenElse => s"IfThenElse${uniqueName(elseP)}($PRE, $CURR, $PARAMS)"
+        case _: CErrorMargin => s"return ${print(elseP).linesWithSeparators.map(INDENT + _).mkString.stripPrefix(INDENT)}"
+        case _ => s"${print(elseP).linesWithSeparators.map(INDENT + _).mkString}"
+      }
+      s"""if $cond:
          |${print(ifP).linesWithSeparators.map(INDENT + _).mkString}
          |else:
-         |${print(elseP).linesWithSeparators.map(INDENT + _).mkString}""".stripMargin
+         |  $elsePText""".stripMargin
     case CMeasureZeroMargin(e: CExpression) => s"Verdict(0, ${print(e)})"
-    case CSafetyMargin(e: CExpression) => s"Verdict(1, ${print(e)})"
-    case CErrorMargin(id: Int, v: CExpression, _: String) => s"Verdict($id, ${print(v)})"
+    case CSafetyMargin(e) => s"Verdict(1, Margin${uniqueName(e)}($PRE, $CURR, $PARAMS))"
+    case CErrorMargin(id: Int, CNeg(v), _: String) => s"Verdict($id, -Margin${uniqueName(v)}($PRE, $CURR, $PARAMS))"
+    case CErrorMargin(id: Int, v, _) => s"Verdict($id, Margin${uniqueName(v)}($PRE, $CURR, $PARAMS))"
     case d: CDisjunctiveSafetyMargin =>
       val disjuncts = flattenDisjuncts(d)
       val (complexDisjuncts, atomicDisjuncts) = disjuncts.
