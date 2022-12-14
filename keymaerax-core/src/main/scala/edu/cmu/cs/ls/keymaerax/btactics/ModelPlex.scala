@@ -22,7 +22,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.{Atom, OneOf, QETacticTool, Simplificat
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, ProvableInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 
 import scala.collection.immutable.{List, ListMap, Nil}
 import scala.collection.mutable.ListBuffer
@@ -223,7 +223,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     normalizeInputFormula(fml) match {
       case f@Imply(init, Box(prg, _)) =>
-        val (conjecture, constAssumptions) = conjectureOf(f, prg)
+        val (conjecture, constAssumptions) = conjectureOf(init, prg)
         ModelPlexConjecture(init, conjecture, constAssumptions)
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml.prettyString + "; formula must be propositionally equivalent to A -> [prg;]P")
     }
@@ -822,6 +822,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   })
 
   def chaseToTests(combineTests: Boolean): BuiltInPositionTactic = {
+    //@note very slow on large formulas
     chaseI(3,3, (e:Expression) => e match {
       case Or(_, _) => Ax.orRecursor :: Nil
       case And(_, _) => Ax.invtestd :: Nil
@@ -1110,7 +1111,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         case _ => Left(None)
       }
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case fn@FuncOf(f@Function(n, i, d, _, None), args) if d != Unit =>
+        case fn@FuncOf(f@Function(n, i, d, _, _), args) if d != Unit =>
           if (StaticSemantics.freeVars(args).intersect(bv).isEmpty) {
             //@note can abbreviate, fn does not depend on any of the quantified variables
             if (!subst.subsDefsInput.exists(_.what == fn)) {
@@ -1118,7 +1119,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
               val abbrv = FuncOf(f.copy(
                 name = n + i.map(_.toString).getOrElse(""),
                 index = Some(is(fn.func)),
-                domain = Unit), Nothing)
+                domain = Unit,
+                interp = None), Nothing)
               subst = subst ++ USubst(List(SubstitutionPair(abbrv, fn)))
               Right(abbrv)
             } else Right(fn)
@@ -1128,7 +1130,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
               case FuncOf(wfn, _) => wfn == f
               case _ => false
             }) match {
-              case None => throw new IllegalArgumentException("Function " + fn.prettyString + " depends on quantified variable " + bv + " and so must be expanded, but got no definition how to expand; please make unobservable")
+              case None =>
+                if (InterpretedSymbols.preshipped.contains(n, i)) Left(None)
+                else throw new IllegalArgumentException("Function " + fn.prettyString + " depends on quantified variable " + bv + " and so must be expanded, but got no definition how to expand; please make unobservable")
               case Some(d) =>
                 val s = USubst(List(d))
                 subst = subst ++ s
