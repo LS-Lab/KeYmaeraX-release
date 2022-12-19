@@ -515,8 +515,9 @@ object AssessmentProver {
           (have, expected) match {
             case (TextArtifact(Some(hs)), TextArtifact(Some(es))) =>
               val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
-              val hsTrimmed = trim.findFirstMatchIn(hs).map(_.group("text")).getOrElse("")
-              val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
+              val extract = (s: String) => trim.findFirstMatchIn(s.lines.reduceOption(_+_).getOrElse("")).map(_.group("text")).getOrElse("")
+              val hsTrimmed = extract(hs)
+              val esTrimmed = extract(es)
               val minLength = args.getOrElse("minLength", "8").toInt
               val fracOfSol = args.getOrElse("fracOfSol", "0.3").toDouble
               if (hsTrimmed.length >= fracOfSol * esTrimmed.length)

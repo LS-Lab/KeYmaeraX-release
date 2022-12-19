@@ -587,6 +587,11 @@ class AssessmentProverTests extends TacticTestBase {
       left.value.conclusion shouldBe "==> explanation&full<->explanation&full".asSequent
   }
 
+  it should "accept long enough answers with line breaks" in {
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("A\n good\n answer\n with line\n breaks"))).
+      left.value.conclusion shouldBe "==> explanation&full<->explanation&full".asSequent
+  }
+
   it should "not accept too short answers" in {
     AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Short"))).
       right.value shouldBe "Please elaborate your explanation"
