@@ -58,6 +58,7 @@ object Usage {
       |  -tool mathematica|z3 choose which tool to use for real arithmetic
       |  -mathkernel MathKernel(.exe) path to Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to Mathematica J/Link library directory
+      |  -z3path path/to/z3 path to Z3 executable
       |  -timeout  how many seconds to try proving before giving up, forever if <=0
       |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
