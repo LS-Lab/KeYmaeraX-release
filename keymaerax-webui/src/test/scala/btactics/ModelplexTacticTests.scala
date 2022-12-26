@@ -1,9 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
+import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper.timed
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
@@ -398,6 +400,46 @@ class ModelplexTacticTests extends TacticTestBase {
     opt1Result.subgoals.loneElement shouldBe "==> ((dpost>=0&d^2-dpost^2<=2*b()*(mpost-m)&vdespost>=0)&SBpost=SB&vpost=v&statepost=state&dopost=d&zpost=z&tpost=t&mopost=m&apost=a|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&(apost>=-b()&apost<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)|v>=vdes&(apost < 0&apost>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)".asSequent
 
     report(opt1Result.subgoals.head.succ.head, opt1Result, "ETCS controller monitor (forward chase)")
+  }
+
+  it should "find controller monitor condition from safety proof" in withMathematica { tool =>
+    val Some(entry) = ArchiveParser.getEntry("ICFEM09/Proposition 5: Safety",
+      io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/etcs/etcs.kyx")).mkString)
+    val model = entry.expandedModel.asInstanceOf[Formula]
+
+    val unobservable: ListMap[NamedSymbol, Option[Formula]] = ListMap.empty // add sensor definitions here if some variables should be unobservable
+    val sensorDefs = unobservable.filter(_._1.isInstanceOf[Variable])
+    val allVars = StaticSemantics.boundVars(entry.expandedModel.asInstanceOf[Formula]).toSet.filter(_.isInstanceOf[BaseVariable]).toList
+
+    val ModelPlexConjecture(init, modelMonitorInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, allVars, unobservable)
+    println("Monitor specification: " + modelMonitorInput.prettyString)
+
+    Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, "Resolve", saveToFile = false)
+    val chaseStartPos = List.fill(unobservable.size)(0) ++ (if (unobservable.values.exists(_.isDefined)) 1::Nil else Nil)
+    val foResult = timed(proveBy(modelMonitorInput, ModelPlex.controllerMonitorByChase(1, chaseStartPos)), "Chasing")
+    println("FO result: " + foResult)
+
+    val opt1Result = timed(proveBy(foResult, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions,
+      unobservable.keySet.toList, Some(ModelPlex.mxSimplify))(1)), "Opt. 1")
+    StaticSemantics.freeVars(opt1Result.subgoals.loneElement).toSet[NamedSymbol].intersect(unobservable.keySet) shouldBe 'empty
+    println("Opt. 1 result: " + opt1Result)
+
+    val qfResult = timed(proveBy(entry.defs.exhaustiveSubst(opt1Result.subgoals.loneElement), SimplifierV3.simplify(1)), "Simplifying")
+
+    val testResult = timed(proveBy(qfResult, PropositionalTactics.rightAssociate(1) & ModelPlex.chaseToTests(combineTests=false)(1)), "Combining tests")
+
+    val testProg = testResult.subgoals.loneElement.succ.loneElement
+    val Imply(_, Box(Loop(prg), _)) = entry.expandedModel
+    val inputs = CodeGenerator.getInputs(prg) -- sensorDefs.keySet.map(_.asInstanceOf[BaseVariable])
+    println("Inputs: " + inputs)
+    val sensors = sensorDefs.values.flatMap(_.map(StaticSemantics.freeVars(_).toSet)).reduceOption(_ ++ _).getOrElse(Set.empty).map(_.asInstanceOf[BaseVariable])
+    println("Sensors: " + sensors)
+
+    println("Generating Python code")
+    val stateVars = allVars.map(_.asInstanceOf[BaseVariable]).toSet ++ sensors -- sensorDefs.keySet.map(_.asInstanceOf[BaseVariable])
+    println("Monitor state: " + stateVars)
+    val monitorPythonCode = timed((new PythonGenerator(new PythonMonitorGenerator('resist, entry.defs), init, entry.defs))(testProg, stateVars, inputs, entry.name), "Printing Python code")
+    println(monitorPythonCode)
   }
 
   "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
