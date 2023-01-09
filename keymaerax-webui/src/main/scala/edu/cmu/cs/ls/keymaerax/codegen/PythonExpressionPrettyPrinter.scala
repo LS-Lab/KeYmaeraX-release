@@ -56,7 +56,7 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
       filter({ case _: CSafetyMargin => true case _ => false }).
       map({
         case CSafetyMargin(d) =>
-          d -> s"""def Cond${uniqueName(d)}($PRE, $CURR, $PARAMS):
+          d -> s"""def Margin${uniqueName(d)}($PRE, $CURR, $PARAMS):
                   |  return ${print(d)}""".stripMargin
       })
     val prgsDefs = prgs.
@@ -98,7 +98,7 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
            |  return ${print(d)}""".stripMargin)
     case CErrorMargin(_, d, _) =>
       List(d ->
-        s"""def Cond${uniqueName(d)}($PRE, $CURR, $PARAMS):
+        s"""def Margin${uniqueName(d)}($PRE, $CURR, $PARAMS):
            |  return ${print(d)}""".stripMargin)
     case _ => List.empty
   }
