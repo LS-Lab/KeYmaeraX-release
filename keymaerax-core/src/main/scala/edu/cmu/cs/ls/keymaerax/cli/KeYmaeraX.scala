@@ -183,11 +183,21 @@ object KeYmaeraX {
       case "-verbose" :: tail => nextOption(options ++ Map('verbose -> true), tail, usage)
       // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
-        if(value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mathkernel -> value), tail, usage)
-        else { Usage.optionErrorReporter("-mathkernel", usage); exit(1) }
+        if (value.nonEmpty && !value.startsWith("-")) {
+          Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
+          nextOption(options ++ Map('mathkernel -> value), tail, usage)
+        } else {
+          Usage.optionErrorReporter("-mathkernel", usage)
+          exit(1)
+        }
       case "-jlink" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('jlink -> value), tail, usage)
-        else { Usage.optionErrorReporter("-jlink", usage); exit(1) }
+        if (value.nonEmpty && !value.startsWith("-")) {
+          Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
+          nextOption(options ++ Map('jlink -> value), tail, usage)
+        } else {
+          Usage.optionErrorReporter("-jlink", usage)
+          exit(1)
+        }
       // Z3 path options
       case "-z3path" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {

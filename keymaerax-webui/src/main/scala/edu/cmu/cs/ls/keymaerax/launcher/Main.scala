@@ -38,19 +38,26 @@ object Main {
   //@todo set via -log command line option
   private val logFile = false
 
+  /** Command line flag to launch the prover in this JVM (if not set, spawns another JVM). */
+  private val LAUNCH_FLAG = "-launch"
+
+  /** Command line flags to display help. */
+  private val HELP_FLAGS = List("-help", "--help", "-h", "-?")
+
+  /** Command line flag to start with UI. */
+  private val UI_FLAG = "-ui"
+
   def main(args: Array[String]): Unit = {
     // prelaunch help without launching an extra JVM
     Configuration.setConfiguration(FileConfiguration)
-    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
+    if (args.length > 0 && HELP_FLAGS.contains(args(0))) {
       println("KeYmaera X Prover" + " " + VERSION)
       println(KeYmaeraX.help)
       sys.exit(1)
     }
 
     // isFirstLaunch indicates that an extra big-stack JVM still has to be launched
-    val isFirstLaunch = if (args.length >= 1) {
-      !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
-    } else true
+    val isFirstLaunch = !args.contains(LAUNCH_FLAG)
 
     if (isFirstLaunch) {
       IS_RELAUNCH_PROCESS = true
@@ -64,15 +71,15 @@ object Main {
         if (javaVersionCompatibility._1.isEmpty) {
           println("WARNING: Unexpected Java Version not known to be compatible: " + javaVersionCompatibility._2)
         }
-        var assertsEnabled = false;
+        var assertsEnabled = false
         assertion({assertsEnabled = true; assertsEnabled}) // intentional lazy side-effect of setting assertsEnabled to true if -ea
         // now assertsEnabled is set to the correct value (true if -ea, false if -da)
-        val cmd = (java :: "-Xss20M" :: (if (assertsEnabled) "-ea" else "-da") :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
-          (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
+        val cmd = (java :: "-Xss20M" :: (if (assertsEnabled) "-ea" else "-da") :: "-jar" :: keymaeraxjar :: LAUNCH_FLAG :: Nil) ++ args ++
+          (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) UI_FLAG :: Nil else Nil)
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
-    } else if (args.contains("-ui")) {
+    } else if (args.contains(UI_FLAG)) {
       if (!(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on"))) {
         // Initialize the loading dialog splash screen.
         LoadingDialogFactory()
@@ -83,9 +90,8 @@ object Main {
       LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
       clearCacheIfDeprecated()
 
-      assert(args.head.equals("-launch"))
-      startServer(args.tail)
-      //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
+      assert(args.contains(LAUNCH_FLAG))
+      startServer(args.filter(_ != LAUNCH_FLAG))
       //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     } else {
       KeYmaeraX.main(args)
@@ -96,7 +102,7 @@ object Main {
     LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
-    launcherDebug("-launch -- starting KeYmaera X Web UI server HyDRA.")
+    launcherDebug(LAUNCH_FLAG + " -- starting KeYmaera X Web UI server HyDRA.")
 
     if (System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)

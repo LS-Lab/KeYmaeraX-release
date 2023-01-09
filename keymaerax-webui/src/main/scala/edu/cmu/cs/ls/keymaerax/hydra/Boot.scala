@@ -154,7 +154,7 @@ object HyDRAInitializer extends Logging {
 
     try {
       val preferredTool = preferredToolFromConfig
-      val config = configFromDB(options, database, preferredTool)
+      val config = toolConfig(options, preferredTool)
       createTool(options, config, preferredTool)
     } catch {
       case e: Throwable =>
@@ -223,9 +223,9 @@ object HyDRAInitializer extends Logging {
     assert(provider.tools().forall(_.isInitialized), "Tools should be initialized after init()")
   }
 
-  private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
+  private def toolConfig(options: OptionMap, preferredTool: String): ToolProvider.Configuration = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
-    ToolConfiguration.config(tool.toLowerCase)
+    ToolConfiguration.config(tool.toLowerCase, options.map({ case (k, v) => k.toString.stripPrefix("'") -> v.toString }))
   }
 
   private def preferredToolFromConfig: String = {

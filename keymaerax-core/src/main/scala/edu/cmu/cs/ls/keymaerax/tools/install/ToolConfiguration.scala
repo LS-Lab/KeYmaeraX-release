@@ -20,7 +20,7 @@ object ToolConfiguration {
   case class ConfigSuggestion(version: String, kernelPath: String, kernelName: String, jlinkPath: String, jlinkName: String)
 
   /** Returns the Mathematica configuration. */
-  def mathematicaConfig(preferred: Map[String, String] = Map.empty): Map[String, String] = {
+  def mathematicaConfig(preferred: Map[String, String]): Map[String, String] = {
     def tcpip: String = {
       Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).
         map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("false")
