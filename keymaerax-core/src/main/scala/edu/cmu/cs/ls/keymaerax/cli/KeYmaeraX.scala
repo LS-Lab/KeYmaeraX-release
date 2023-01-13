@@ -207,6 +207,38 @@ object KeYmaeraX {
           Usage.optionErrorReporter("-jlink", usage)
           exit(1)
         }
+      case "-jlinkinterface" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-") && (value == "string" || value == "expr")) {
+          Configuration.set(Configuration.Keys.JLINK_USE_EXPR_INTERFACE, (value == "expr").toString, saveToFile = false)
+          nextOption(options, tail, usage)
+        } else {
+          Usage.optionErrorReporter("-jlinkinterface", usage)
+          exit(1)
+        }
+      case "-qemethod" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-") && (value == "Reduce" || value == "Resolve")) {
+          Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, value, saveToFile = false)
+          nextOption(options, tail, usage)
+        } else {
+          Usage.optionErrorReporter("-qemethod", usage)
+          exit(1)
+        }
+      case "-jlinktcpip" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false")) {
+          Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, value, saveToFile = false)
+          nextOption(options, tail, usage)
+        } else {
+          Usage.optionErrorReporter("-jlinktcpip", usage)
+          exit(1)
+        }
+      case "-parallelqe" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false")) {
+          Configuration.set(Configuration.Keys.MATHEMATICA_PARALLEL_QE, value, saveToFile = false)
+          nextOption(options, tail, usage)
+        } else {
+          Usage.optionErrorReporter("-parallelqe", usage)
+          exit(1)
+        }
       // Z3 path options
       case "-z3path" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {
