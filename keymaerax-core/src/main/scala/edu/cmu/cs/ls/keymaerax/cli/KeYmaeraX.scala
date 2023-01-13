@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{FileReader, PrintWriter}
+import java.io.{File, FileReader, PrintWriter}
 import java.util.concurrent.TimeUnit
 import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
@@ -21,7 +21,6 @@ import scala.annotation.tailrec
 import scala.collection.immutable.Nil
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.reflect.io.File
 
 /** KeYmaera X basic command line interface. */
 object KeYmaeraX {
@@ -184,16 +183,26 @@ object KeYmaeraX {
       // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {
-          Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
-          nextOption(options ++ Map('mathkernel -> value), tail, usage)
+          if (new File(value).exists) {
+            Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
+            nextOption(options ++ Map('mathkernel -> value), tail, usage)
+          } else {
+            println("[Error -mathkernel] Mathematica kernel file does not exist: " + value)
+            exit(2)
+          }
         } else {
           Usage.optionErrorReporter("-mathkernel", usage)
           exit(1)
         }
       case "-jlink" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {
-          Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
-          nextOption(options ++ Map('jlink -> value), tail, usage)
+          if (new File(value).exists) {
+            Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
+            nextOption(options ++ Map('jlink -> value), tail, usage)
+          } else {
+            println("[Error -jlink] Path to JLink native library does not exist: " + value)
+            exit(2)
+          }
         } else {
           Usage.optionErrorReporter("-jlink", usage)
           exit(1)
@@ -201,8 +210,13 @@ object KeYmaeraX {
       // Z3 path options
       case "-z3path" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {
-          Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false)
-          nextOption(options ++ Map('z3Path -> value), tail, usage)
+          if (new File(value).exists) {
+            Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false)
+            nextOption(options ++ Map('z3Path -> value), tail, usage)
+          } else {
+            println("[Error -z3path] Z3 executable does not exist: " + value)
+            exit(2)
+          }
         } else {
           Usage.optionErrorReporter("-z3path", usage)
           exit(1)
