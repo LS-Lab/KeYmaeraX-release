@@ -65,13 +65,17 @@ object Usage {
       |  -jlinkinterface string|expr whether to send Mathematica commands as
       |                              strings (more robust) or as
       |                              expr (supports larger queries)
+      |                              Default: string (unless configured in keymaerax.conf)
       |  -jlinktcpip true|false whether to connect to Mathematica with
       |                         process communication or
       |                         over TCP/IP (more robust)
+      |                         Default: false (unless configured in keymaerax.conf)
       |  -qemethod Reduce|Resolve whether to use
       |                           Reduce (solves equations and eliminates quantifiers) or
       |                           Resolve (eliminates quantifiers)
+      |                           Default: Reduce (unless configured in keymaerax.conf)
       |  -parallelqe true|false whether to attempt multiple QE alternatives in parallel
+      |                         Default: false (unless configured in keymaerax.conf)
       |  -z3path path/to/z3 path to Z3 executable
       |  -timeout  how many seconds to try proving before giving up, forever if <=0
       |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
