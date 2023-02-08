@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.reflect.runtime.universe
+
 
 /**
  * Implementation: [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus
@@ -18,7 +20,10 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * @author Nathan Fulton
  * @see [[SequentCalculus]]
  */
-private object ProofRuleTactics extends Logging {
+private object ProofRuleTactics extends TacticProvider with Logging {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (ProofRuleTactics.getClass, universe.typeOf[ProofRuleTactics.type])
+
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */

@@ -31,6 +31,8 @@ libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
 
 libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.2"
 
+libraryDependencies += "org.reflections" % "reflections" % "0.10.2"
+
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 

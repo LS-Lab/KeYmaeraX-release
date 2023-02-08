@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, Tactic}
 
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 
 /**
   * Note: this is meant to be a watered down version of SimplifierV2
@@ -29,7 +30,9 @@ import scala.collection.immutable._
   * Created by yongkiat on 12/19/16.
   */
 
-object SimplifierV3 {
+object SimplifierV3 extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (SimplifierV3.getClass, universe.typeOf[SimplifierV3.type])
 
   private val namespace = "simplifierv3"
 

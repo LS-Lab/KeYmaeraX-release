@@ -15,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{exhaustiveEqL2R, uniformR
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.reflect.runtime.universe
+
 
 /**
   * Sequent Calculus for propositional and first-order logic.
@@ -22,7 +24,10 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * @author Stefan Mitsch
   * @see [[SequentCalculus]]
   */
-object SequentCalculus extends SequentCalculus
+object SequentCalculus extends TacticProvider with SequentCalculus {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (SequentCalculus.getClass, universe.typeOf[SequentCalculus.type])
+}
 
 /**
   * Sequent Calculus for propositional and first-order logic.

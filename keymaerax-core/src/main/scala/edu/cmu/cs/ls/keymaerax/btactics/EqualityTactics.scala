@@ -15,12 +15,15 @@ import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 
 /**
  * Implementation: Tactics to rewrite equalities and introduce abbreviations.
   *
  */
-private object EqualityTactics {
+private object EqualityTactics extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (EqualityTactics.getClass, universe.typeOf[EqualityTactics.type])
 
   private val namespace = "eq"
 

@@ -16,12 +16,16 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{::, List, Nil}
+import scala.reflect.runtime.universe
 import scala.util.Try
 
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.
  */
-private[keymaerax] object PropositionalTactics extends Logging {
+private[keymaerax] object PropositionalTactics extends TacticProvider with Logging {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (PropositionalTactics.getClass, universe.typeOf[PropositionalTactics.type])
+
   /**
    * Inverse of [[SequentCalculus.implyR]].
    * @author Nathan Fulton

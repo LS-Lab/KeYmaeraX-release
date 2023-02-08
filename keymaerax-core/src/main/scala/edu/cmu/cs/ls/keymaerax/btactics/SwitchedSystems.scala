@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Nil
+import scala.reflect.runtime.universe
 
 /**
   * Provides support for generating switched system models
@@ -22,7 +23,9 @@ import scala.collection.immutable.Nil
   *
   */
 
-object SwitchedSystems {
+object SwitchedSystems extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (SwitchedSystems.getClass, universe.typeOf[SwitchedSystems.type])
 
   private val namespace = "switchedsys"
   private val debugTactic = false

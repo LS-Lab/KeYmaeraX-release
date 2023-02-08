@@ -17,6 +17,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{Context, FormulaTools, PosInExpr, Po
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.reflect.runtime.universe
+
 /**
   * Approximations
   * @todo More Ideas:
@@ -31,7 +33,10 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   *       and statements in discrete fragments for programs or in ev dom constraints.
   * @author Nathan Fulton
   */
-object Approximator extends Logging {
+object Approximator extends TacticProvider with Logging {
+
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (Approximator.getClass, universe.typeOf[Approximator.type])
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 

@@ -27,6 +27,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
+import scala.reflect.runtime.universe
 import scala.util.Try
 
 /**
@@ -35,7 +36,9 @@ import scala.util.Try
   * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
  * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
-private object DifferentialTactics extends Logging {
+private object DifferentialTactics extends TacticProvider with Logging {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (DifferentialTactics.getClass, universe.typeOf[DifferentialTactics.type])
 
   private val namespace = "differentialtactics"
 

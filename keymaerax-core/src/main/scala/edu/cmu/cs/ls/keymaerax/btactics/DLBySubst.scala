@@ -20,18 +20,22 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
+import scala.reflect.runtime.universe
 import scala.util.{Failure, Success, Try}
 
 /**
   * Implementation: some dL tactics using substitution tactics.
   * Created by nfulton on 11/3/15.
   */
-private object DLBySubst {
+private object DLBySubst extends TacticProvider {
+
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (DLBySubst.getClass, universe.typeOf[DLBySubst.type])
 
   private[btactics] lazy val monb2 = byUS(Ax.monb2)
 
   /** whether games are currently allowed */
-  private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
+  private[this] val isGame: Boolean = Try({Dual(AssignAny(Variable("x"))); true}).getOrElse(false)
 
   /** @see [[HilbertCalculus.G]] */
   lazy val G: BelleExpr = {
