@@ -64,10 +64,10 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   //@todo store the parser for speed
-  val belleParser: String => BelleExpr = (s => fastparse.parse(s, fullTactic(_)) match {
+  val belleParser: String => BelleExpr = s => fastparse.parse(s, fullTactic(_)) match {
     case Parsed.Success(value, _) => value
     case f: Parsed.Failure => throw parseException(f)
-  })
+  }
 
   import JavaWhitespace._
 
@@ -148,20 +148,17 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   def argumentInterior[_: P](argInfo: ArgInfo): P[Seq[Any]] = P(
     argInfo match {
-      case FormulaArg(name, allowsFresh) => formula.map(f => List(defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(f)))))
-      case TermArg(name, allowsFresh) => term(true).map(t => List(defs.implicitSubst(defs.elaborateToFunctions(t))))
-      case ExpressionArg(name, allowsFresh) =>
-        // I feel like we should never actually hit this because of the cases before it, but ???
-        expression.map(e => List(defs.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))))
-      case VariableArg(name, allowsFresh) => DLParser.variable.map(List(_))
-      case GeneratorArg(name) => Fail.opaque("unimplemented: generator argument")
-      case StringArg(name, allowsFresh) => DLParser.stringInterior.map(List(_))
-      case SubstitutionArg(name, allowsFresh) => (("(" ~/ substPair ~ ")") | substPair).map(List(_))
-      case PosInExprArg(name, allowsFresh) => posInExpr.map(List(_))
-      case OptionArg(arg) => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
-      case ListArg(arg) =>
-        argList(argumentInterior(arg)).map(_.flatten)
-      case NumberArg(_, _) => DLParser.numberLiteral.map(List(_))
+      case _: FormulaArg => formula.map(f => List(defs.elaborateFull(f)))
+      case _: TermArg => term(true).map(t => List(defs.elaborateFull(t)))
+      case _: ExpressionArg => expression.map(e => List(defs.elaborateFull(e)))
+      case _: VariableArg => DLParser.variable.map(List(_))
+      case _: GeneratorArg => Fail.opaque("unimplemented: generator argument")
+      case _: StringArg => DLParser.stringInterior.map(List(_))
+      case _: SubstitutionArg => (("(" ~/ substPair ~ ")") | substPair).map(List(_))
+      case _: PosInExprArg => posInExpr.map(List(_))
+      case _: OptionArg => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
+      case ListArg(arg) => argList(argumentInterior(arg)).map(_.flatten)
+      case _: NumberArg => DLParser.numberLiteral.map(List(_))
     }
   )
 
@@ -231,7 +228,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   )("tactic(...)",implicitly).
     map({case (t,args) => tacticProvider(t, args, defs)})
 
-  def builtinTactic[_: P]: P[BelleExpr] = (
+  def builtinTactic[_: P]: P[BelleExpr] =
     ("doall" ~ "(" ~/ tactic ~ ")").map(OnAll) |
     ("partial" ~ "(" ~/ tactic ~ ")").map(PartialTactic(_, None)) |
     ("let" ~ "(" ~ "\"" ~/ DLParser.comparison ~ "\"" ~ ")" ~ "in" ~ "(" ~/ tactic ~ ")").flatMap({
@@ -246,10 +243,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
         Pass(tactics(s))
       }
     }) |
-    ( /*todo: lots of builtins to implement */
-      "USMatch".!
-      ).map(_ => fastparse.parse("skip", atomicTactic(_)).get.value)
-    )
+    "USMatch".!.map(_ => fastparse.parse("skip", atomicTactic(_)).get.value)
 
   def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ (
     eitherTac.rep(min=2,sep=","./).
@@ -276,7 +270,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
       (blank ~ "using" ~~ blank ~/ "\"" ~ argList(expression) ~ "\"").?
     ).map({
       case (tac, None) => tac
-      case (tac, Some(es)) => Using(es.map(defs.elaborateToFunctions(_)).map(defs.elaborateToSystemConsts), tac)
+      case (tac, Some(es)) => Using(es.map(defs.elaborateFull(_)), tac)
     })
 
   def partialTac[_: P]: P[BelleExpr] = (eitherTac ~~ (blank ~ "partial").map(_ => "partial").?).map({
@@ -321,12 +315,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
         // No hashes, just return Here for PosIn
         fastparse.parse(str, fullExpression(_)) match {
           case Parsed.Success(value, _) =>
-            defs.elaborateToSystemConsts(defs.elaborateToFunctions(value)) match {
+            defs.elaborateFull(value) match {
               case f: Formula => Pass((f, HereP))
               case FuncOf(fn, arg) => Pass((PredOf(fn.copy(sort=Bool), arg), HereP)) //@note for ambiguous locators, e.g. 'R=="p(x)"
             }
           case failure: Parsed.Failure =>
-            val tr = failure.trace()
             // What information do we expose here??
             Fail
         }
@@ -342,13 +335,11 @@ class DLBelleParser(override val printer: BelleExpr => String,
         val noHashes = str.substring(0, hashStart) + lp + sub + rp + str.substring(hashEnd+1,str.length)
         fastparse.parse(noHashes, fullExpression(_)) match {
           case failure: Parsed.Failure =>
-            val tr = failure.trace()
             // What information do we expose here??
             Fail
           case Parsed.Success(expr, _) =>
             fastparse.parse(sub, fullExpression(_)) match {
               case failure: Parsed.Failure =>
-                val tr = failure.trace()
                 // What information do we expose here??
                 Fail
               case Parsed.Success(sub, _) =>
@@ -363,7 +354,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
                 posIn match {
                   case Some(pi) =>
-                    Pass((defs.elaborateToSystemConsts(defs.elaborateToFunctions(expr)), pi))
+                    Pass((defs.elaborateFull(expr), pi))
                   case None =>
                     Fail.opaque("Parsed a position locator with subexpression successfully, but could not find subexpression: " + sub.prettyString + " in expression " + expr.prettyString)
                 }
