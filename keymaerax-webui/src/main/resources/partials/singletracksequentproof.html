@@ -152,21 +152,15 @@
                 <div ng-include="'siblinglinks.html'" replace-include></div>
             </div>
             <!-- only display fetch elements on non-root nodes -->
-            <div ng-if="step != '()'" class="col-sm-12 k4-proofrow-annotation">
-                ...
-                <ul>
-                    <li>
-                        <!-- load parent -->
-                        <span class="k4-withcontextmenu fa fa-plus-square-o"
-                              ng-click="fetchSectionParent(deductionPath.sections[0])"
-                              uib-tooltip="Fetch parent step"
-                              tooltip-popup-delay="1000"
-                              ng-right-click="fetchParentRightClick($event)" tabindex="-1"
-                              uib-popover-template="'navigateTowardsRootPopover.html'"
-                              popover-title="Proof history" popover-placement="auto bottom" popover-trigger="'rightClick'"
-                              ng-if="!deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed"></span>
-                    </li>
-                </ul>
+            <div ng-if="step != '()'" class="col-sm-12">
+                <span class="k4-withcontextmenu fa fa-ellipsis-h"
+                      ng-click="fetchSectionParent(deductionPath.sections[0])"
+                      uib-tooltip="Fetch parent step"
+                      tooltip-popup-delay="1000"
+                      ng-right-click="fetchParentRightClick($event)" tabindex="-1"
+                      uib-popover-template="'navigateTowardsRootPopover.html'"
+                      popover-title="Proof history" popover-placement="auto bottom" popover-trigger="'rightClick'"
+                      ng-if="!deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed"></span>
             </div>
         </div>
         <!-- Justification -->
@@ -263,14 +257,14 @@
 <script type="text/ng-template" id="mainSiblinglinks.html">
     <ul>
         <li ng-if="siblings(deductionPath.sections[0].path[0]).length > 0">
-            <i class="fa fa-caret-right"></i></span>
+            <i class="fa fa-caret-right"></i>
         </li>
     </ul>
 </script>
 <script type="text/ng-template" id="siblinglinks.html">
     <ul>
         <li ng-if="siblings(step).length > 0">
-            <i class="fa fa-caret-right"></i></span>
+            <i class="fa fa-caret-right"></i>
         </li>
     </ul>
 </script>
