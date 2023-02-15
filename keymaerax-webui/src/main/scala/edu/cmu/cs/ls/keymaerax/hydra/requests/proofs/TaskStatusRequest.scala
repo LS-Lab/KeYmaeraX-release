@@ -5,27 +5,24 @@
 package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable, BelleValue, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.TaskStatusResponse
-import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstraction, ReadRequest, Response, UserProofRequest}
+import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstraction, DbProofTree, ReadRequest, Response, UserProofRequest}
 
-import scala.collection.immutable.{List, Nil, Seq}
+import scala.collection.immutable.List
 
 class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
-    type Progress = (Option[(BelleExpr, Long)], Seq[(BelleExpr, Either[BelleValue, BelleThrowable])])
-    val (isDone, progress: Option[Progress]) = executor.synchronized {
+    val (isDone, currentStep: Option[(BelleExpr, Long)]) = executor.synchronized {
       executor.getTask(taskId) match {
         case Some(task) =>
           val progressList = task.interpreter match {
             case SpoonFeedingInterpreter(_, _, _, _, _, interpreterFactory, _, _, _, _) =>
               //@note the inner interpreters have CollectProgressListeners attached
-              interpreterFactory(Nil).listeners.flatMap({
-                case l@CollectProgressListener(p) => Some(
-                  l.getCurrentTactic.map(f => (f._1, System.currentTimeMillis() - f._2)),
-                  scala.collection.immutable.Seq(p:_*))
+              interpreterFactory(List.empty).listeners.flatMap({
+                case l: CollectProgressListener => l.getCurrentTactic.map(f => (f._1, System.currentTimeMillis() - f._2))
                 case _ => None
               }).headOption
             case _ => None
@@ -34,6 +31,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
         case _ => (!executor.contains(taskId) || executor.isDone(taskId), None)
       }
     }
-    TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", progress) :: Nil
+    val progress = DbProofTree(db, proofId).nodes
+    List(TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", currentStep, progress))
   }
 }

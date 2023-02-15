@@ -20,7 +20,7 @@
              ng-if="runningTask.progress && runningTask.progress.length > 0">
             <ol>
                 <li ng-repeat="step in runningTask.progress">
-                    {{step}}
+                    {{step.maker}}
                 </li>
             </ol>
         </div>
