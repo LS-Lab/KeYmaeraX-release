@@ -266,6 +266,9 @@ trait ProofTree {
   /** All proof nodes anywhere in the proof tree, including root, inner nodes, and leaves. */
   def nodes: List[ProofTreeNode]
 
+  /** The proof's leaves (open and closed) */
+  def leaves: List[ProofTreeNode]
+
   /** The proof's open goals, which are the leaves that are not done yet */
   def openGoals: List[ProofTreeNode]
 
@@ -432,12 +435,16 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
 
 object DbPlainExecStepProofTreeNode extends Logging {
   /** Initializes a proof tree node from a recorded execution step. The branch identifies the subgoal created by the
-    * execution step. If None, the node refers to the steps source node. */
+    * execution step. If None, the node refers to the step's source (parent) node. */
   def fromExecutionStep(db: DBAbstraction, proof: ProofTree)(step: ExecutionStepPOJO, branch: Option[Int]): DbPlainExecStepProofTreeNode = branch match {
     case None => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.previousStep, Some(step.branchOrder)), proof,
       () => { logger.debug("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proof.info.proofId, step.previousStep.get).get})
     case Some(b) => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.stepId, Some(b)), proof,
       () => step)
+  }
+  /** Initializes a proof tree node from a recorded execution step. */
+  def fromExecutionStep(db: DBAbstraction, proof: ProofTree, step: ExecutionStepPOJO): DbPlainExecStepProofTreeNode = {
+    DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.stepId, None), proof, () => step)
   }
 }
 
@@ -621,28 +628,35 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
     case Some(root) => root
   }
 
-  /** The proof's open goals */
-  override def openGoals: List[ProofTreeNode] = {
+  private def stepNodes(steps: List[(ExecutionStepPOJO, List[Int])]): List[ProofTreeNode] = {
     //@note alternative that loads the entire trace in case the plainOpenSteps outer join becomes slow again
-//    val trace = dbTrace
-//    // a final step is one that doesn't have a successor for each of its subgoals
-//    val finalSteps = trace.filter(parent => trace.count(s => parent.stepId == s.previousStep) < parent.numSubgoals)
-//    // final step and non-covered branches
-//    val finalOpenBranches = finalSteps.map(f => f ->
-//      ((0 until f.numSubgoals).toSet -- trace.filter(s => f.stepId == s.previousStep).map(_.branchOrder)).toList)
+    //    val trace = dbTrace
+    //    // a final step is one that doesn't have a successor for each of its subgoals
+    //    val finalSteps = trace.filter(parent => trace.count(s => parent.stepId == s.previousStep) < parent.numSubgoals)
+    //    // final step and non-covered branches
+    //    val finalOpenBranches = finalSteps.map(f => f ->
+    //      ((0 until f.numSubgoals).toSet -- trace.filter(s => f.stepId == s.previousStep).map(_.branchOrder)).toList)
 
-    val openSteps = dbOpenGoals
-    val finalOpenBranches = openSteps.map({ case (f, closed) => f ->
-      ((0 until f.numSubgoals).toSet -- closed).toList})
+    val openBranches = steps.map({ case (f, closed) => f -> ((0 until f.numSubgoals).toSet -- closed).toList})
 
     val goalNodes: List[ProofTreeNode] =
-      if (root.children.isEmpty && !root.isProved) root::Nil
-      else finalOpenBranches.flatMap({ case (fs, subgoals) => subgoals.map(sgi =>
-        DbPlainExecStepProofTreeNode.fromExecutionStep(db, this)(fs, Some(sgi))
-      )})
+      if (root.children.isEmpty && !root.isProved) List(root)
+      else openBranches.flatMap({
+        case (fs, subgoals) =>
+          if (fs.numSubgoals > 0) subgoals.map(sgi =>
+            DbPlainExecStepProofTreeNode.fromExecutionStep(db, this)(fs, Some(sgi)))
+          // closed proofs without subgoals
+          else List(DbPlainExecStepProofTreeNode.fromExecutionStep(db, this, fs))
+       })
 
     goalNodes
   }
+
+  /** @inheritdoc */
+  override def openGoals: List[ProofTreeNode] = stepNodes(dbOpenGoals)
+
+  /** @inheritdoc */
+  override def leaves: List[ProofTreeNode] = stepNodes(dbLeaves)
 
   /** All proof nodes, in order of step execution. */
   override def nodes: List[ProofTreeNode] = { load(); loadedNodes }
@@ -719,6 +733,8 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   private lazy val dbRoot = locate(DbStepPathNodeId(None, None)).get
 
   private lazy val dbOpenGoals = db.getPlainOpenSteps(proofId.toInt)
+
+  private lazy val dbLeaves = db.getPlainLeafSteps(proofId.toInt)
 
   private var loadedRoot: Option[ProofTreeNode] = None
 

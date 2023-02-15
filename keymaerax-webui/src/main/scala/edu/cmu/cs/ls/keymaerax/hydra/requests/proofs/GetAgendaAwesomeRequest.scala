@@ -26,14 +26,15 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
       }))
 
     val tree: ProofTree = DbProofTree(db, proofId)
-    val leaves = tree.openGoals
-    val closed = tree.openGoals.isEmpty && tree.isProved
+    val leaves = tree.leaves
+    val closed = tree.isProved
 
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
 
     // Goals in web UI
-    val agendaItems: List[AgendaItem] = leaves.map(n =>
-      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
+    val agendaItems: List[AgendaItem] = leaves.
+      filterNot(_.isProved).
+      map(n => AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     // add unexpanded functions, predicates, programs of the open goals of all leaves to the proof session
     session(proofId) = leaves.flatMap(_.parent).foldLeft(proofSession)(RequestHelper.updateProofSessionDefinitions)
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
