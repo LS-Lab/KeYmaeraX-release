@@ -404,13 +404,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           }
           if (response.data.closed || agendaItems.length === 0) {
             // proof might be finished
-            if(!theAgenda.proofStatusDisplayed) {
-              theAgenda.proofStatusDisplayed = true
-              $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
-              console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
-            } else {
-              console.log("Not showing agenda.isEmpty because it was already displayed.")
-            }
+            $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
           }
         })
         .catch(function(error) {
