@@ -46,27 +46,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
 
       scope.fetchPathAll = function(sectionIdx) {
         let section = scope.deductionPath.sections[sectionIdx];
-        let sectionEnd = section.path[section.path.length-1];
-        if (sectionEnd !== scope.proofTree.root) {
-          $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + sectionEnd + '/pathall').success(function(data) {
-            // TODO use numParentsUntilComplete to display some information
-            $.each(data.path, function(i, ptnode) { scope.updateProof(scope.agenda, scope.proofTree, ptnode); });
-          });
-        }
+        sequentProofData.fetchPathAll(scope.userId, scope.proofId, scope.agenda, scope.proofTree, section);
       }
 
-      /**
-       * Adds a proof tree node and updates the agenda sections.
-       */
+      /** Adds a proof tree node and updates the agenda sections. */
       scope.updateProof = function(agenda, proofTree, proofTreeNode) {
-        let items = $.map(proofTreeNode.children, function(e) { return agenda.itemsByProofStep(e); });
-        $.each(items, function(i, v) {
-          let childSectionIdx = agenda.childSectionIndex(v.id, proofTreeNode);
-          if (childSectionIdx >= 0) {
-            proofTree.addNode(proofTreeNode);
-            agenda.updateSection(proofTree, proofTreeNode, v, childSectionIdx);
-          }
-        });
+        sequentProofData.updateProof(agenda, proofTree, proofTreeNode);
       }
 
       /**
@@ -161,7 +146,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       scope.fetchParent = function(nodeId) {
         $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + nodeId + '/parent').success(function(data) {
           scope.proofTree.addNode(data);
-          scope.updateProof(scope.agenda, scope.proofTree, data);
+          sequentProofData.updateProof(data);
         });
       }
 
@@ -192,6 +177,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         } else if (outer.codeName === "dI" && items.length > 1) {
           branchId = branchId === 0 ? 1 : 0;
         }
+        let node = scope.agenda.itemsMap[nodeId];
+        console.log("Look up by node ID returns same node: " + node === items[branchId])
         return items[branchId];
       }
 

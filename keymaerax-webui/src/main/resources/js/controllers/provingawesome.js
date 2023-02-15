@@ -156,7 +156,8 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                       function(taskError) {
                         console.log("Failed proving: " + lemma.name + "(" + lemma.proofId + ")")
                       },
-                      undefined
+                      undefined,
+                      false
                     );
                   }).then(function(response) {
                     spinnerService.show('tacticExecutionSpinner');
@@ -171,7 +172,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                   spinnerService.show('tacticExecutionSpinner');
                   $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
                     .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
-                                               $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+                                               $scope.updateFreshProof, $scope.broadcastProofError, undefined, false /*true to update agenda while loading a proof*/); })
                     .catch(function(err) {
                       spinnerService.hide('tacticExecutionSpinner');
                       $rootScope.$broadcast("proof.message", err.data);
@@ -183,7 +184,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                 // no: open imported but not yet executed proof, run tactic with unproved lemmas remaining open
                 $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
                   .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
-                                             $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+                                             $scope.updateFreshProof, $scope.broadcastProofError, undefined, false /*true to update agenda while loading a proof*/); })
                   .catch(function(err) {
                     spinnerService.hide('tacticExecutionSpinner');
                     $rootScope.$broadcast("proof.message", err.data);
@@ -191,9 +192,10 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               }
             );
           } else {
+            $scope.taskExplanation.selection = 'Tactic';
             $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
               .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
-                                         $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+                                         $scope.updateFreshProof, $scope.broadcastProofError, undefined, false /*true to update agenda while loading a proof*/); })
               .catch(function(err) {
                 spinnerService.hide('tacticExecutionSpinner');
                 $rootScope.$broadcast("proof.message", err.data);
@@ -202,7 +204,10 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         });
       } else {
         spinnerService.show('proofLoadingSpinner');
-        sequentProofData.fetchAgenda($scope.userId, $scope.proofId);
+        sequentProofData.fetchAgenda($scope.userId, $scope.proofId, function(agenda) {
+            spinnerService.hideAll();
+            agenda.selectByIndex(0);
+        });
         derivationInfos.sequentApplicableDefinitions($scope.userId, $scope.proofId, sequentProofData.agenda.selectedTab).then(function(defs) {
           $scope.definitions = defs;
         });
@@ -316,7 +321,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     future: undefined,
     lastStep: undefined,
     info: undefined,
-    start: function(proofId, nodeId, taskId, info, onTaskComplete, onTaskError, taskStepwiseRequest) {
+    start: function(proofId, nodeId, taskId, info, onTaskComplete, onTaskError, taskStepwiseRequest, pollAgenda) {
       $scope.runningTask.proofId = proofId;
       $scope.runningTask.nodeId = nodeId;
       $scope.runningTask.taskId = taskId;
@@ -334,21 +339,29 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
           spinnerService.hide('tacticExecutionSpinner');
           if (reason !== 'stopped') showMessage($uibModal, reason);
-          else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId);
+          else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId, function(agenda) {
+              agenda.selectByIndex(0);
+          });
           return reason;
         }
       );
-      $scope.runningTask.poll(taskId, 0);
+      $scope.runningTask.poll(taskId, 0, pollAgenda);
       return runningTaskPromise;
     },
-    poll: function(taskId, elapsed) {
+    poll: function(taskId, elapsed, pollAgenda) {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
-          if (response.data.currentStep) $scope.runningTask.currentStep = response.data.currentStep;
-          if (response.data.progress) $scope.runningTask.progress = response.data.progress;
+          $scope.runningTask.currentStep = response.data.currentStep;
+          $scope.runningTask.progress = response.data.progress;
+          if (pollAgenda) $scope.sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId, function(agenda, proofTree) {
+              agenda.selectByIndex(-1);
+              let item = agenda.selectedItem().deduction
+              item.isCollapsed = false;
+              sequentProofData.fetchPathAll($scope.userId, $scope.proofId, agenda, proofTree, item.sections[0]);
+          });
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
-          else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
-          else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
+          else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1, pollAgenda); }, 50);
+          else $timeout(function() { $scope.runningTask.poll(taskId, elapsed, pollAgenda); }, 1000);
         })
         .catch(function(error) { $scope.runningTask.future.reject(error); });
     },
@@ -467,7 +480,9 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
           $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
           spinnerService.hide('tacticExecutionSpinner');
           if (reason !== 'stopped') showMessage($uibModal, reason);
-          else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId);
+          else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId, function(agenda) {
+              agenda.selectByIndex(0);
+          });
           return reason;
         }
       );
@@ -656,7 +671,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         }
 
         $scope.runningTask.start(response.data.proofId, response.data.nodeId, response.data.taskId, response.data.info,
-          onStepwiseTaskComplete, onStepwiseTaskError);
+          onStepwiseTaskComplete, onStepwiseTaskError, undefined, false);
       })
       .catch(function(err) {
         spinnerService.hide('magnifyingglassSpinner');
@@ -705,7 +720,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
         spinnerService.show('tacticExecutionSpinner')
         $http.get(uri + '?stepwise=false')
-          .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+          .then(function(response) {
+              $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
+                  $scope.updateMainProof, $scope.broadcastProofError, stepwise, false); })
           .catch(function(err) {
             spinnerService.hide('tacticExecutionSpinner');
             $rootScope.$broadcast("proof.message", err.data);
@@ -728,7 +745,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         var uri = formulaId !== undefined ? base + '/' + formulaId + '/doInputAt/' + tacticId : base + '/doInput/' + tacticId
         var stepwise = { method: 'POST', url: uri + '?stepwise=true', data: input};
         $http.post(uri + '?stepwise=false', input)
-          .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+          .then(function(response) {
+              $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
+                  $scope.updateMainProof, $scope.broadcastProofError, stepwise, false); })
           .catch(function(err) {
             spinnerService.hide('tacticExecutionSpinner');
             $rootScope.$broadcast("proof.message", err.data);
@@ -742,7 +761,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/' + fml1Id + '/' + fml2Id + '/doAt/' + tacticId;
       var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
       $http.get(uri + '?stepwise=false')
-        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+        .then(function(response) {
+            $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
+                $scope.updateMainProof, $scope.broadcastProofError, stepwise, false); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
           $rootScope.$broadcast("proof.message", err.data);
@@ -757,7 +778,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doSearch/' + where + '/' + tacticId;
       var stepwise = input !== undefined ? { method: 'POST', url: uri + '?stepwise=true', data: input } : { method: 'GET', url: uri + '?stepwise=true' };
       var request = input !== undefined ? $http.post(uri + '?stepwise=false', input) : $http.get(uri + '?stepwise=false')
-      request.then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+      request.then(function(response) {
+          $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
+              $scope.updateMainProof, $scope.broadcastProofError, stepwise, false); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
         });
@@ -778,7 +801,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             var updateProof = stepwise ? $scope.updateFreshProof : $scope.updateMainProof
             return $http.post(uri + '?stepwise='+stepwise, tacticText)
               .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
-                                         updateProof, $scope.broadcastProofError, undefined); })
+                                         updateProof, $scope.broadcastProofError, undefined, false); })
               .catch(function(err) {
                 spinnerService.hideAll();
                 if (err.data.errorThrown != undefined) {

@@ -77,6 +77,13 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          }
        },
        selectById: function(itemId) { this.select(this.itemsMap[itemId]); },
+       /** Selects an agenda item by index if none selected yet. */
+       selectByIndex: function(index) {
+         if (this.selectedId() === undefined) {
+           let agendaItems = this.items();
+           if (agendaItems.length > 0) this.select(agendaItems[index]);
+         }
+       },
        itemsByProofStep: function(ptNodeId) {
          return $.grep(this.items(), function(e) {
            return $.grep(e.deduction.sections, function(v) { return v.path.indexOf(ptNodeId) >= 0; }).length > 0; });
@@ -157,6 +164,7 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         htmlNodeId: function(nodeId) { return nodeId.replace(/[()]/g, "").replace(/,/g, "-"); },
         /** Highlights the operator where the step that created sequent/node `nodeId` was applied. */
         highlightNodeStep: function(nodeId, highlight) {
+          if (!nodeId) return undefined
           // branching tactic: tree may include other child
           let nodeIdHead = nodeId.split(",")[0];
           let node = undefined;
@@ -177,6 +185,7 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
               }
             } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
           }
+          return node;
         },
         highlightedNode: function() {
           let theNodes = $.map(this.nodesMap, function(v) { return v; });
@@ -347,7 +356,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       } else {
         // undo on a reloaded/partially loaded proof (proof tree does not contain node with ID `nodeId`)
         sequentProofData.clear();
-        sequentProofData.fetchAgenda(userId, proofId);
+        sequentProofData.fetchAgenda(userId, proofId, function(agenda) {
+          agenda.selectByIndex(0);
+        });
       }
     },
 
@@ -376,13 +387,13 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     /** Fetches the agenda from the server for the purpose of continuing a proof */
-    fetchAgenda: function(userId, proofId) { this.doFetchAgenda(userId, proofId, 'agendaawesome'); },
+    fetchAgenda: function(userId, proofId, doneCallback) { this.doFetchAgenda(userId, proofId, 'agendaawesome', doneCallback); },
 
     /** Fetches the agenda from the server for the purpose of browsing a proof from root to leaves */
-    fetchBrowseAgenda: function(userId, proofId) { this.doFetchAgenda(userId, proofId, 'browseagenda'); },
+    fetchBrowseAgenda: function(userId, proofId) { this.doFetchAgenda(userId, proofId,'browseagenda', undefined); },
 
     /** Fetches a proof's agenda of kind `agendaKind` from the server */
-    doFetchAgenda: function(userId, proofId, agendaKind) {
+    doFetchAgenda: function(userId, proofId, agendaKind, doneCallback) {
       let theProofTree = this.proofTree;
       let theAgenda = this.agenda;
       let theTactic = this.tactic;
@@ -397,12 +408,8 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theProofTree.nodesMap = response.data.proofTree.nodes;
           theProofTree.root = response.data.proofTree.root;
           theProofTree.isProved = response.data.proofTree.isProved;
-          let agendaItems = theAgenda.items();
-          if (agendaItems.length > 0 && theAgenda.selectedId() === undefined) {
-            // select first task if nothing is selected yet
-            theAgenda.select(agendaItems[0]);
-          }
-          if (response.data.closed || agendaItems.length === 0) {
+          //@todo add proof nodes to agenda
+          if (response.data.closed || theAgenda.items().length === 0) {
             // proof might be finished
             $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
           }
@@ -410,7 +417,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         .catch(function(error) {
           $rootScope.$broadcast('agenda.loadError', userId, proofId, error.data);
         })
-        .finally(function() { spinnerService.hideAll(); });
+        .finally(function() { if (doneCallback) doneCallback(theAgenda, theProofTree); });
     },
 
     /** Updates the agenda and the proof tree with new items resulting from a tactic */
@@ -454,6 +461,31 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       } else {
         $rootScope.$broadcast('agenda.updateWithoutProgress');
       }
+    },
+
+    /** Fetches all nodes in the section on the path to the root. */
+    fetchPathAll: function(userId, proofId, agenda, proofTree, section) {
+      let sectionEnd = section.path[section.path.length-1];
+      let that = this
+      if (sectionEnd !== proofTree.root) {
+        $http.get('proofs/user/' + userId + '/' + proofId + '/' + sectionEnd + '/pathall').success(function(data) {
+          // TODO use numParentsUntilComplete to display some information
+          $.each(data.path, function(i, ptnode) { that.updateProof(agenda, proofTree, ptnode); });
+        });
+      }
+    },
+
+    /** Adds a proof tree node and updates the agenda sections. */
+    updateProof: function(agenda, proofTree, proofTreeNode) {
+      //@todo remove agenda and proofTree arguments
+      let items = $.map(proofTreeNode.children, function(e) { return agenda.itemsByProofStep(e); });
+      $.each(items, function(i, v) {
+        let childSectionIdx = agenda.childSectionIndex(v.id, proofTreeNode);
+        if (childSectionIdx >= 0) {
+          proofTree.addNode(proofTreeNode);
+          agenda.updateSection(proofTree, proofTreeNode, v, childSectionIdx);
+        }
+      });
     }
   }
 }]);

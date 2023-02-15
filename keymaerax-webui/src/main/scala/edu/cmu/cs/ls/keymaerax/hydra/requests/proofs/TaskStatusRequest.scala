@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.TaskStatusResponse
-import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstraction, DbProofTree, ReadRequest, Response, UserProofRequest}
+import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstraction, DbProofTree, ReadRequest, Response, UserProofRequest, VerboseTraceToTacticConverter}
 
 import scala.collection.immutable.List
 
@@ -31,7 +31,8 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
         case _ => (!executor.contains(taskId) || executor.isDone(taskId), None)
       }
     }
-    val progress = DbProofTree(db, proofId).nodes
-    List(TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", currentStep, progress))
+    val tree = DbProofTree(db, proofId)
+    val (tacticProgress, _) = tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
+    List(TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", currentStep, tree.nodes, tacticProgress))
   }
 }

@@ -151,9 +151,10 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.fmlListHtml = function(fmls) {
-                return $sce.trustAsHtml(fmls.map(function(f) {
+                if (fmls) return $sce.trustAsHtml(fmls.map(function(f) {
                     return formulaTools.formatSubscriptIndex(formulaTools.formatSpecialNotation(f.formula.string))
                 }).join(", "));
+                else return undefined
             }
 
             scope.formulaAxiomsMap = {};

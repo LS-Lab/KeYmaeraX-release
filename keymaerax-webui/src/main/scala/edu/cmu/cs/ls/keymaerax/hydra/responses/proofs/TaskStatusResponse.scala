@@ -4,18 +4,20 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra.responses.proofs
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable, BelleValue}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.hydra.{ProofTreeNode, Response}
 import spray.json.{JsArray, JsNull, JsNumber, JsObject, JsString, JsValue}
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.List
 
 case class TaskStatusResponse(proofId: String,
                               nodeId: String,
                               taskId: String,
                               status: String,
                               currentStep: Option[(BelleExpr, Long)],
-                              progress: List[ProofTreeNode]) extends Response {
+                              stepsProgress: List[ProofTreeNode],
+                              tacticProgress: String
+                             ) extends Response {
   def getJson: JsValue = {
     JsObject(
       "proofId" -> JsString(proofId),
@@ -28,11 +30,14 @@ case class TaskStatusResponse(proofId: String,
         "duration" -> currentStep.map(c => JsNumber(c._2)).getOrElse(JsNull),
         "stepStatus" -> JsNull
       ),
-      "progress" -> JsArray(progress.map(e =>
-        JsObject(
-          "maker" -> JsString(e.maker.getOrElse("<unknown>"))
-        )
-      ):_*)
+      "progress" -> JsObject(
+        "steps" -> JsArray(stepsProgress.map(e =>
+          JsObject(
+            "id" -> JsString(e.id.toString),
+            "maker" -> JsString(e.maker.getOrElse("<unknown>")))
+        ):_*),
+        "tactic" -> JsString(tacticProgress)
+      )
     )
   }
 

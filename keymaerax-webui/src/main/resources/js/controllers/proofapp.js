@@ -27,7 +27,9 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
         setTheme(response.data);
         if ($routeParams.proofId) {
           // refresh the proof view
-          sequentProofData.fetchAgenda(sessionService.getUser(), $routeParams.proofId);
+          sequentProofData.fetchAgenda(sessionService.getUser(), $routeParams.proofId, function(agenda) {
+            agenda.selectByIndex(0);
+          });
         }
       });
     }
