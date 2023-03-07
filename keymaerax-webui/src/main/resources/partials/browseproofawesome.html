@@ -55,13 +55,14 @@
                        ng-model="proofAnimation.animateInterval"
                        min="1" step="1"/>
             </label>
-            <a class="btn btn-default" ng-click="proofAnimation.togglePlay()">
-                <i class="fa" ng-class="{'fa-play':!proofAnimation.isDone && !proofAnimation.isPlaying, 'fa-pause':!proofAnimation.isDone && proofAnimation.isPlaying, 'fa-check':proofAnimation.isDone}"></i>
-                <span ng-if="proofAnimation.isDone">Done</span>
-                <span ng-if="!proofAnimation.isDone">
-                    <span ng-if="!proofAnimation.isPlaying">Play</span>
-                    <span ng-if="proofAnimation.isPlaying">Pause</span>
-                </span>
+            <a class="btn btn-default" ng-if="!proofAnimation.isDone" ng-click="proofAnimation.togglePlay()">
+                <i class="fa" ng-class="{'fa-play':!proofAnimation.isPlaying, 'fa-pause':proofAnimation.isPlaying}"></i>
+                <span ng-if="!proofAnimation.isPlaying">Play</span>
+                <span ng-if="proofAnimation.isPlaying">Pause</span>
+            </a>
+            <a class="btn btn-default" ng-if="proofAnimation.isDone" ng-click="proofAnimation.restart()">
+                <i class="fa fa-repeat"></i>
+                <span>Replay</span>
             </a>
         </div>
     </div>

@@ -529,6 +529,17 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
         togglePlay: function() {
             $scope.proofAnimation.isPlaying = !$scope.proofAnimation.isPlaying;
             if (!$scope.proofAnimation.isDone && $scope.proofAnimation.isPlaying) $scope.animateProof($scope.userId, $scope.proofId);
+        },
+        restart: function() {
+            sequentProofData.clear();
+            sequentProofData.doFetchAgenda($scope.userId, $scope.proofId,'browseagenda', function(agenda, proofTree) {
+                $scope.agenda = agenda;
+                $scope.prooftree = proofTree;
+                $scope.agenda.selectById("()");
+                $scope.proofAnimation.isDone = false;
+                $scope.proofAnimation.isPlaying = true;
+                $scope.animateProof($scope.userId, $scope.proofId);
+            });
         }
     }
 
@@ -552,7 +563,6 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
                 } else {
                     $scope.proofAnimation.isPlaying = false;
                     $scope.proofAnimation.isDone = true;
-                    //@todo start over again
                 }
             }
         }

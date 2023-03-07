@@ -14,7 +14,7 @@ makeLazyNode = function(http, userId, proofId, node) {
     } else {
       theNode.sequent = {};
       http.get('proofs/user/' + userId + '/' + proofId + '/' + theNode.id + '/sequent').then(function(response) {
-        if (response.data.sequent !== undefined) {
+        if (response.data.sequent) {
           theNode.sequent.ante = response.data.sequent.ante;
           theNode.sequent.succ = response.data.sequent.succ;
           theNode.sequent.ante.forEach(function(f) { f.use = true; });
@@ -63,16 +63,16 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          $.each(this.items(), function(i, e) { e.isSelected = false; });
          if (item) {
            item.isSelected = true;
-           this.selectedTab.tabId = item.id;
+           this.selectedTab = item.id;
          } else {
            // select last item
            let items = this.items();
            if (items.length > 0) {
              let lastItem = items[items.length-1];
              lastItem.isSelected = true;
-             this.selectedTab.tabId = lastItem.id;
+             this.selectedTab = lastItem.id;
            } else {
-             this.selectedTab.tabId = undefined;
+             this.selectedTab = undefined;
            }
          }
        },

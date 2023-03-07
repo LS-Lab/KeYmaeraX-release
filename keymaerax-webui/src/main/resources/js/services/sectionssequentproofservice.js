@@ -40,7 +40,7 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          $.each(this.items(), function(i, e) { e.isSelected = false; });
          if (item) {
            item.isSelected = true;
-           this.selectedTab.tabId = item.id;
+           this.selectedTab = item.id;
          }
        },
        selectById: function(itemId) { this.select(this.itemsMap[itemId]); },
