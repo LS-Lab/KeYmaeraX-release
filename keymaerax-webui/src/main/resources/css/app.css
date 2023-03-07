@@ -1013,11 +1013,14 @@ del {
 .k4-fill-half-screen {
   height: calc(50vh - 130px);
   position: relative;
+  overflow: scroll;
 }
 
 .k4-align-bottom {
   position: absolute;
   bottom: 0;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .modal-errorreport {
