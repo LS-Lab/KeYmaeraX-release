@@ -1897,8 +1897,15 @@ object ODEInvariance extends TacticProvider {
     ).reduce(vecvec_sum)
   }
 
+  @Tactic("[']n", longDisplayName = "nilsolve",
+    premises = "Γ,x=x0,t=0 |- [x'=f(x),t'=1&q(x)&x=y(x0,t)]p(x), Δ",
+    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
+    revealInternalSteps = false, displayLevel = "menu")
+  def nilpotentSolve : DependentPositionTactic = nilpotentSolve(false)
+
+
   /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
-    * with x'=f(x) a linear, nilpotent ODE
+    * with x'=f(x) a linear, nilpotent ODE, solve the differential equation.
     *
     * Adds the (polynomial) solution x=Phi(x_0,t) of that ODE to the domain constraint
     *
@@ -1909,7 +1916,7 @@ object ODEInvariance extends TacticProvider {
     * --------------- (nilpotent solve)
     * G |- [x'=f(x)&Q]P
     *
-    * @param solveEnd whether to continue with weaken and QE (see rule rendition above)
+    * @param solveEnd whether to continue with differential weaken and QE (see rule rendition above)
     * @return See the rule rendition above
     *         Special failure cases:
     *         1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be treated as non-linear even though it is really linear
