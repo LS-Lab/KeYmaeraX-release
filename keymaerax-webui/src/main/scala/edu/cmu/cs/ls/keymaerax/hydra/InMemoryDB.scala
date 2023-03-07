@@ -256,6 +256,15 @@ class InMemoryDB extends DBAbstraction {
       filter(e => e._2.length < e._1.numSubgoals)
   }
 
+  /** @inheritdoc */
+  override def getPlainLeafSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] = {
+    val trace = proofSteps(proofId)
+    val nodesPlusChildren = trace.map(parent => (parent, trace.filter(s => parent.stepId == s.previousStep)))
+    nodesPlusChildren.
+      filter({ case (p, cs) => p.numSubgoals != cs.length }).
+      map({ case (p, cs) => p -> cs.map(_.branchOrder) })
+  }
+
   override def getPlainExecutionStep(executionId: Int, stepId: Int): Option[ExecutionStepPOJO] =
     getExecutionSteps(executionId).find(_.stepId.contains(stepId))
 

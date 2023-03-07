@@ -16,11 +16,15 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
+import scala.reflect.runtime.universe
 
 /**
  * @author Nathan Fulton
  */
-object DebuggingTactics {
+object DebuggingTactics extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (DebuggingTactics.getClass, universe.typeOf[DebuggingTactics.type])
+
   import TacticFactory._
 
   //@todo import a debug flag as in Tactics.DEBUG

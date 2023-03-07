@@ -43,6 +43,11 @@ class SimplifierV3Tests extends TacticTestBase {
     proveBy(fml, SimplifierV3.simplify(1)).subgoals.loneElement shouldBe "==> x>0 & z>=y -> (z-y)/x >= 0".asSequent
   }
 
+  it should "keep rational constants" in withMathematica { _ =>
+    val fml = "1/2*x^2 >= 0".asFormula
+    proveBy(fml, SimplifierV3.simplify(1)).subgoals.loneElement shouldBe "==> 1/2*x^2 >= 0".asSequent
+  }
+
   it should "do dependent arithmetic simplification" in withMathematica { _ =>
     val fml = "ar > 0 -> (x - 0 + 0 * y + 0 + 0/ar >= 0 - k)".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))

@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 
 /**
   * Differential Equation Calculus for differential dynamic logic.
@@ -18,7 +19,10 @@ import scala.collection.immutable._
   * @author Stefan Mitsch
   * @see [[HilbertCalculus]]
   */
-object DifferentialEquationCalculus extends DifferentialEquationCalculus
+object DifferentialEquationCalculus extends TacticProvider with DifferentialEquationCalculus {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (DifferentialEquationCalculus.getClass, universe.typeOf[DifferentialEquationCalculus.type])
+}
 
 /**
   * Differential Equation Calculus for differential dynamic logic.

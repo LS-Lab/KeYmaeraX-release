@@ -879,28 +879,39 @@ object SQLite {
           row.numopensubgoals > 0 &&
           row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)))
 
+    private lazy val leavesQuery = Compiled((proofId: Column[Int]) =>
+      Executionsteps.filter(row =>
+        row.proofid === proofId &&
+          (row.numsubgoals === 0 || row.numopensubgoals > 0) &&
+          row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)))
+
     // performance degrades a little with increasing database volume
     private def closedBranchesSql(proofId: Int, openSteps: Set[Int]) =
       sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE proofId=$proofId AND status='Finished' AND previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
 
-    /** @inheritdoc */
-    final override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
-      val openSteps = openStepsQuery(proofId).list.map(step => {
+    private def getPlainFinishedSteps(proofId: Int, steps: List[Executionsteps#TableElementType]): List[(ExecutionStepPOJO, List[Int])] = synchronizedTransaction({
+      val stepsPOJOs = steps.map(step => {
         val (ruleName: String, branchLabel: Option[String]) = splitNameLabel(step.rulename.get)
         ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
           step.userexecuted.get.toBoolean, ruleName, branchLabel, step.numsubgoals, step.numopensubgoals)
       })
-      val closedBranches = closedBranchesSql(proofId, openSteps.flatMap(_.stepId).toSet).list.toMap
+      val closedBranches = closedBranchesSql(proofId, stepsPOJOs.flatMap(_.stepId).toSet).list.toMap
 
       def parseClosedBranches(closed: Option[String]): List[Int] = closed match {
         case None => Nil
         case Some(s) => s.split(",").map(_.toInt).toList
       }
 
-      openSteps.map(s => (s, parseClosedBranches(closedBranches.get(s.stepId.get))))
+      stepsPOJOs.map(s => (s, parseClosedBranches(closedBranches.get(s.stepId.get))))
     })
+
+    /** @inheritdoc */
+    final override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = getPlainFinishedSteps(proofId, openStepsQuery(proofId).list)
+
+    /** @inheritdoc */
+    final override def getPlainLeafSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])] = getPlainFinishedSteps(proofId, leavesQuery(proofId).list)
 
     private lazy val executionStepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
       Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId &&

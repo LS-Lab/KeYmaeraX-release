@@ -136,11 +136,14 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Expands all symbols in expression `arg` fully. */
   def expandFull[T <: Expression](arg: T): T = try {
-    exhaustiveSubst(elaborateToFunctions(elaborateToSystemConsts(arg)))
+    exhaustiveSubst(implicitSubst(elaborateToFunctions(elaborateToSystemConsts(arg))))
   } catch {
     case ex: SubstitutionClashException =>
       throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
   }
+
+  /** Elaborates the expression `expr` fully (functions, constants, builtin/imported functions), but does not expand. */
+  def elaborateFull[T <: Expression](expr: T): T = implicitSubst(elaborateToSystemConsts(elaborateToFunctions(expr)))
 
   /** Elaborates variable uses of declared functions, except those listed in taboo. */
   //@todo need to look into concrete programs that implement program constants when elaborating

@@ -16,12 +16,15 @@ import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 
 /** Interval Arithmetic
   *
   * @author Fabian Immler
   */
-object IntervalArithmeticV2 {
+object IntervalArithmeticV2 extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (IntervalArithmeticV2.getClass, universe.typeOf[IntervalArithmeticV2.type])
 
   def mathematicaFriendly(d: BigDecimal) : Term =
     Times(Number(BigDecimal(d.bigDecimal.unscaledValue())), Power(Number(10), Number(-d.scale)))

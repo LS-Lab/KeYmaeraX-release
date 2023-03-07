@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import scala.collection.immutable
 import scala.collection.immutable.Nil
 import scala.collection.mutable.ListBuffer
+import scala.reflect.runtime.universe
 
 /**
   * Implements ODE tactics for liveness.
@@ -30,7 +31,9 @@ import scala.collection.mutable.ListBuffer
   * Created by yongkiat on 24 Feb 2020.
   */
 
-object ODELiveness {
+object ODELiveness extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (ODELiveness.getClass, universe.typeOf[ODELiveness.type])
 
   private val namespace = "odeliveness"
 

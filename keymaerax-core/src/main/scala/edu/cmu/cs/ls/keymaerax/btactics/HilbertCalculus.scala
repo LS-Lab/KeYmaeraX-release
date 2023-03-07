@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
+import scala.reflect.runtime.universe
 
 /**
   * Hilbert Calculus for differential dynamic logic.
@@ -24,7 +25,10 @@ import scala.collection.mutable.ListBuffer
   * @author Stefan Mitsch
   * @see [[HilbertCalculus]]
   */
-object HilbertCalculus extends HilbertCalculus
+object HilbertCalculus extends TacticProvider with HilbertCalculus {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (HilbertCalculus.getClass, universe.typeOf[HilbertCalculus.type])
+}
 
 /**
   * Hilbert Calculus for differential dynamic logic.
@@ -472,7 +476,10 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
 }
 
-object Derive extends Derive
+object Derive extends TacticProvider with Derive {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (Derive.getClass, universe.typeOf[Derive.type])
+}
 
 /**
   * Derive: provides individual differential axioms bundled as [[HilbertCalculus.derive]].

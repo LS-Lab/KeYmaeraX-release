@@ -12,12 +12,16 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 
 
 /**
  * Implementation: [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
  */
-protected object FOQuantifierTactics {
+protected object FOQuantifierTactics extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (FOQuantifierTactics.getClass, universe.typeOf[FOQuantifierTactics.type])
+
   /** Proves exists by duality from universal base tactic */
   //@todo use "exists eliminate" instead
   def existsByDuality(base: BuiltInPositionTactic, atTopLevel: Boolean = false): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>

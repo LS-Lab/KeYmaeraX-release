@@ -115,9 +115,10 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
         root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
-        leaves shouldBe 'empty
+        agenda shouldBe 'empty
+        leaves.loneElement.maker shouldBe Some("QE")
     }
 
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
@@ -126,6 +127,63 @@ class ScriptedRequestTests extends TacticTestBase {
         loc shouldBe Map(
           regionIn(tacticText, """QE""").head -> "()"
         )
+    }
+  }}
+
+  it should "close with a simple tactic" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ArchiveEntry \"Test\" ProgramVariables Real x; End. Problem x>=0 -> x>=0 End. End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", implyR(1))
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
+        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
+        agenda.loneElement.id shouldBe "(1,0)"
+        leaves.loneElement.numSubgoals shouldBe 1
+        leaves.loneElement.goal shouldBe Some("x>=0 ==> x>=0".asSequent)
+        leaves.loneElement.maker shouldBe Some("implyR(1)")
+        leaves.loneElement.localProvable.conclusion shouldBe "==> x>=0 -> x>=0".asSequent
+        leaves.loneElement.localProvable.subgoals.loneElement shouldBe leaves.loneElement.goal.get
+    }
+
+    tacticRunner("(1,0)", id)
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
+        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
+        agenda shouldBe 'empty
+        leaves.loneElement.numSubgoals shouldBe 0
+        leaves.loneElement.goal shouldBe 'empty
+        leaves.loneElement.maker shouldBe Some("id")
+        leaves.loneElement.localProvable.conclusion shouldBe "x>=0 ==> x>=0".asSequent
+        leaves.loneElement.localProvable shouldBe 'proved
+    }
+  }}
+
+  it should "report closed and open goals" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ArchiveEntry \"Test\" Problem p() | q() -> q() | p() End. End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", implyR(1))
+    tacticRunner("(1,0)", orR(1))
+    tacticRunner("(2,0)", orL(-1))
+    tacticRunner("(3,0)", id)
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
+        root should have ('goal (Some("==> p() | q() -> q() | p()".asSequent)))
+        agenda.loneElement.id shouldBe "(3,1)"
+        leaves.size shouldBe 2
+        leaves(0).goal shouldBe 'empty
+        leaves(0).maker shouldBe Some("id")
+        leaves(1).goal shouldBe Some("q() ==> q(), p()".asSequent)
+        leaves(1).maker shouldBe Some("orL(-1)")
     }
   }}
 
@@ -375,9 +433,10 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
         root should have ('goal (Some("==> x>=0 -> [{v:=*;?v>=0; {x'=v}}*] x>=0".asSequent)))
-        leaves shouldBe 'empty
+        agenda shouldBe 'empty
+        leaves.loneElement.maker shouldBe Some("auto")
     }
   }}
 

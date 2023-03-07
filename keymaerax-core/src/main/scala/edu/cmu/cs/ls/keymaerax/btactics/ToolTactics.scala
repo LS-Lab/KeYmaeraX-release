@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec
 import scala.annotation.tailrec
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -31,7 +32,9 @@ import scala.util.{Failure, Success, Try}
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-private object ToolTactics {
+private object ToolTactics extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (ToolTactics.getClass, universe.typeOf[ToolTactics.type])
 
   private val namespace = "tooltactics"
 

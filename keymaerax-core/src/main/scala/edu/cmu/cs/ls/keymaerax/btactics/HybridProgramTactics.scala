@@ -10,12 +10,17 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 
+import scala.reflect.runtime.universe
+
 /**
   * Implementation: Tactics for manipulating box/diamond properties about hybrid programs.
   *
   * @author Nathan Fulton
   */
-private object HybridProgramTactics {
+private object HybridProgramTactics extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (HybridProgramTactics.getClass, universe.typeOf[HybridProgramTactics.type])
+
   import TacticFactory._
   import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 

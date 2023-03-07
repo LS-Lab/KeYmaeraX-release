@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, Tactic}
 
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 
 /**
   * Note: this is meant to be a watered down version of SimplifierV2
@@ -29,7 +30,9 @@ import scala.collection.immutable._
   * Created by yongkiat on 12/19/16.
   */
 
-object SimplifierV3 {
+object SimplifierV3 extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (SimplifierV3.getClass, universe.typeOf[SimplifierV3.type])
 
   private val namespace = "simplifierv3"
 
@@ -922,9 +925,7 @@ object SimplifierV3 {
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentity.provable),
     Ax.timesIdentityNeg.provable,
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable),
-    Ax.negOneTimes.provable) ++
-  //@note timesDivInverse not provable with Z3
-  (if (ToolProvider.qeTool(Some("Mathematica")).isDefined) List(Ax.timesDivInverse.provable) else List.empty)
+    Ax.negOneTimes.provable)
 
   private lazy val negArith: List[ProvableSig] = List(
     Ax.minusNeg.provable,
@@ -960,14 +961,19 @@ object SimplifierV3 {
   //  qeTermProof("F_()+G_()-F_()","G_()"),
   //  qeTermProof("F_()+G_()-G_()","F_()"),
 
-  def arithBaseIndex (t:Term,ctx:context) : List[ProvableSig] = t match {
+  def arithBaseIndex(t: Term, ctx: context): List[ProvableSig] = t match {
     case Neg(_)      => negArith
     case Plus(_,_)   => plusArith
     case Minus(_,_)  => minusArith
-    case Times(_,_)  => mulArith
+    case Times(a,_)  =>
+      // if `a` is a rational constant (term without symbols) simplify without timesDivInverse
+      if (StaticSemantics.symbols(a).isEmpty) mulArith
+      else mulArith ++
+        //@note timesDivInverse not provable with Z3
+        (if (ToolProvider.qeTool(Some("Mathematica")).isDefined) List(Ax.timesDivInverse.provable) else List.empty)
     case Divide(_,_) => divArith
     case Power(_,_)  => powArith
-    case _           => List()
+    case _           => List.empty
   }
 
   //This generates theorems on the fly to simplify ground arithmetic (only for integers)

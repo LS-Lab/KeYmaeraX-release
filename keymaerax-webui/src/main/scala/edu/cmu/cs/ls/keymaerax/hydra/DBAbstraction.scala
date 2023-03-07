@@ -130,7 +130,8 @@ object ExecutionStepStatus extends Enumeration {
 
 case class TacticExecutionPOJO(executionId: Int, proofId: Int)
 
-case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
+case class ExecutionStepPOJO(stepId: Option[Int],
+                             executionId: Int,
                              previousStep: Option[Int],
                              branchOrder: Int,
                              status: ExecutionStepStatus,
@@ -335,9 +336,14 @@ trait DBAbstraction {
   /** Returns the first step of the proof */
   def getFirstExecutionStep(proofId: Int) : Option[ExecutionStepPOJO]
 
-  /** Returns a list of steps that do not have successors for each of their subgoals.
-    * Along with each step, it lists the step's subgoals that are actually closed. */
-  def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])]
+  /** Returns a list of steps that do not have successors for each of their subgoals
+   *  (excludes steps that have no subgoals or all subgoals closed).
+   *  Along with each step, it lists the step's subgoals that are actually closed. */
+  def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])]
+
+  /** Returns the leaf steps of the proof regardless of whether open or closed.
+   *  Along with each step, it lists the step's subgoals that are actually closed. */
+  def getPlainLeafSteps(proofId: Int): List[(ExecutionStepPOJO, List[Int])]
 
   /** Returns the execution step with id `stepId` of proof `proofId` in plain database form. */
   def getPlainExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStepPOJO]

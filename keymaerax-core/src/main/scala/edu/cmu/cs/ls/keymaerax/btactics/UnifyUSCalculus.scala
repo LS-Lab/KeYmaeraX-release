@@ -26,6 +26,7 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable._
+import scala.reflect.runtime.universe
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.
@@ -35,7 +36,10 @@ import scala.collection.immutable._
   * @author Andre Platzer
   * @see [[UnifyUSCalculus]]
   */
-object UnifyUSCalculus extends UnifyUSCalculus
+object UnifyUSCalculus extends TacticProvider with UnifyUSCalculus {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (UnifyUSCalculus.getClass, universe.typeOf[UnifyUSCalculus.type])
+}
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.

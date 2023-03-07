@@ -17,13 +17,17 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 
 import scala.annotation.tailrec
+import scala.reflect.runtime.universe
 
 /**
   * Tactics for simplifying arithmetic sub-goals.
   *
   * @author Nathan Fulton
   */
-object ArithmeticSimplification {
+object ArithmeticSimplification extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (ArithmeticSimplification.getClass, universe.typeOf[ArithmeticSimplification.type])
+
   //region Tactics
 
   lazy val smartCoHideAt = new DependentPositionTactic("smartCoHideAt") {

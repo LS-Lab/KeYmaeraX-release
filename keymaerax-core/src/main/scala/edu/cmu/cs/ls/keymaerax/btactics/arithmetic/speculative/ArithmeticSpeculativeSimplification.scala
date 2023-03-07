@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, ToolTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticProvider, ToolTactics}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnalysis}
@@ -18,12 +18,15 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 import scala.collection.mutable.ListBuffer
+import scala.reflect.runtime.universe
 
 /**
   * Tactics for simplifying arithmetic sub-goals.
   * @author Stefan Mitsch
   */
-object ArithmeticSpeculativeSimplification {
+object ArithmeticSpeculativeSimplification extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (ArithmeticSpeculativeSimplification.getClass, universe.typeOf[ArithmeticSpeculativeSimplification.type])
 
   private val DEBUG = true
 

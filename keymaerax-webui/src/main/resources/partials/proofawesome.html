@@ -17,10 +17,10 @@
         </p>
         <div class="tactic-spinner-progresslist"
              uib-collapse="!runningTask.showProgressList"
-             ng-if="runningTask.progress && runningTask.progress.length > 0">
+             ng-if="runningTask.progress.steps.length > 0">
             <ol>
-                <li ng-repeat="step in runningTask.progress">
-                    {{step}}
+                <li ng-repeat="step in runningTask.progress.steps">
+                    {{step.maker}}
                 </li>
             </ol>
         </div>

@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.smartHide
@@ -27,6 +26,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.{AllOf, Atom, Mathematica, OneOf}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.{List, _}
+import scala.reflect.runtime.universe
 import scala.util.Try
 
 /**
@@ -69,10 +69,13 @@ import scala.util.Try
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   * @see [[ToolProvider]]
   */
-object TactixLibrary extends HilbertCalculus
+object TactixLibrary extends TacticProvider with HilbertCalculus
   with SequentCalculus
   with DifferentialEquationCalculus
   with HybridProgramCalculus {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (TactixLibrary.getClass, universe.typeOf[TactixLibrary.type])
+
   import Generator.Generator
 
   private val logger = LoggerFactory.getLogger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies

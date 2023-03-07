@@ -149,6 +149,7 @@ object MathematicaOpSpec {
     InterpretedMathOpSpec(symbol("Exp")) -> InterpretedSymbols.expF,
     InterpretedMathOpSpec(symbol("Sin")) -> InterpretedSymbols.sinF,
     InterpretedMathOpSpec(symbol("Cos")) -> InterpretedSymbols.cosF,
+    InterpretedMathOpSpec(symbol("Tan")) -> InterpretedSymbols.tanF,
     LiteralMathOpSpec(symbol("E")) -> InterpretedSymbols.E,
     LiteralMathOpSpec(symbol("Pi")) -> InterpretedSymbols.PI
   )

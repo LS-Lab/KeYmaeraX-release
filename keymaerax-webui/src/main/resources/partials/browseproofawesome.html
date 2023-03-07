@@ -47,38 +47,58 @@
 </spinner>
 <div>
 
-<div class="row" ng-controller="BrowseProofCtrl">
-    <div class="col-md-12">
-        <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
-        <uib-tabset justified="true" active="agenda.selectedTab">
-            <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
-                     deselect="agenda.deselect(task)" select="agenda.select(task)">
-                <uib-tab-heading>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <span class="text-muted" ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length === 0">
-                                <i class="fa fa-check"></i>&nbsp;<span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
-                            </span>
-                            <span ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length > 0">
-                                <i class="fa fa-globe"></i>&nbsp;<span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
-                            </span>
+<div class="container" ng-controller="BrowseProofCtrl">
+    <div class="row">
+        <div class="col-md-12">
+            <label>Step every:
+                <input type="number"
+                       ng-model="proofAnimation.animateInterval"
+                       min="1" step="1"/>
+            </label>
+            <a class="btn btn-default" ng-click="proofAnimation.togglePlay()">
+                <i class="fa" ng-class="{'fa-play':!proofAnimation.isDone && !proofAnimation.isPlaying, 'fa-pause':!proofAnimation.isDone && proofAnimation.isPlaying, 'fa-check':proofAnimation.isDone}"></i>
+                <span ng-if="proofAnimation.isDone">Done</span>
+                <span ng-if="!proofAnimation.isDone">
+                    <span ng-if="!proofAnimation.isPlaying">Play</span>
+                    <span ng-if="proofAnimation.isPlaying">Pause</span>
+                </span>
+            </a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
+            <uib-tabset justified="true" active="agenda.selectedTab">
+                <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
+                         deselect="agenda.deselect(task)" select="agenda.select(task)">
+                    <uib-tab-heading>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <span class="text-muted" ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length === 0">
+                                    <i class="fa fa-check"></i>&nbsp;<span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
+                                </span>
+                                <span ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length > 0">
+                                    <i class="fa fa-globe"></i>&nbsp;<span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                </uib-tab-heading>
+                    </uib-tab-heading>
 
-                <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
-                <div class="container" id="provingsequentview">
-                    <k4-browse-sequentproof
-                        user-id="userId"
-                        proof-id="proofId"
-                        node-id="task.id"
-                        deduction-path="task.deduction"
-                        proof-tree="prooftree"
-                        agenda="agenda"
-                        ng-if="task.isSelected"></k4-browse-sequentproof>
-                </div>
-            </uib-tab>
-        </uib-tabset>
+                    <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
+                    <div class="container" id="provingsequentview">
+                        <k4-browse-sequentproof
+                            user-id="userId"
+                            proof-id="proofId"
+                            node-id="task.id"
+                            deduction-path="task.deduction"
+                            proof-tree="prooftree"
+                            agenda="agenda"
+                            is-auto-playing="proofAnimation.isPlaying"
+                            ng-if="task.isSelected"></k4-browse-sequentproof>
+                    </div>
+                </uib-tab>
+            </uib-tabset>
+        </div>
     </div>
 </div>
 

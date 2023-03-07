@@ -31,6 +31,7 @@ object InterpretedSymbols {
   lazy val E: Function    = read("e")
   lazy val sinF: Function = read("sin")
   lazy val cosF: Function = read("cos")
+  lazy val tanF: Function = read("tan")
   lazy val PI: Function   = read("pi")
 
   /** The nondifferentiable builtin interpreted function symbols (all << fml >>-defined functions

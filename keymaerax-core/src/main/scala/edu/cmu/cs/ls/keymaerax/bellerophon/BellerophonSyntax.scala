@@ -605,6 +605,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   }
 
   override def prettyString: String = positionTactic.prettyString + "(" + locator.prettyString + ")"
+
+  override def toString: String = prettyString + "\n with locator " + locator.toString + ")"
 }
 
 abstract case class BuiltInTwoPositionTactic(name: String) extends NamedBelleExpr {

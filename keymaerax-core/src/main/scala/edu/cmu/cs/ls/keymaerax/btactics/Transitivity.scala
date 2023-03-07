@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable
+import scala.reflect.runtime.universe
 
 /**
   * Proves goals of the form a>=b,b>=c |- a >= c with arbitrarily many intermediate (in)equalities.
@@ -23,7 +24,9 @@ import scala.collection.immutable
   *       has form a > c.
   * @author Nathan Fulton
   */
-object Transitivity {
+object Transitivity extends TacticProvider {
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (Transitivity.getClass, universe.typeOf[Transitivity.type])
 
   @Tactic(names = "Close Transitive",
     conclusion = "a>=b, b >= c, c >= z |- a >= z")

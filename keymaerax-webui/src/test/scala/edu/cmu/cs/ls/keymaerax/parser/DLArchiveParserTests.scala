@@ -6,10 +6,11 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, OnAll, ReflectiveExpressionBuilder, Using}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, Find, OnAll, ReflectiveExpressionBuilder, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -1192,7 +1193,7 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
         |""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> Unable to elaborate to function symbols: assertion failed: Elaboration tried replacing y in literal bound occurrence inside y:=y+1;
+      """<somewhere> Unable to elaborate to function symbols: Elaboration tried replacing y in literal bound occurrence inside y:=y+1;
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
   }
@@ -1697,8 +1698,7 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "allow explicit initial times" in {
-
-    val exp1 = {
+    {
       val fns = ODEToInterpreted.fromProgram(
         Parser.parser.programParser("{{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}}"), "s".asVariable)
       fns(0)
@@ -1841,11 +1841,11 @@ class DLArchiveParserTests extends TacticTestBase {
       """.stripMargin
     ).loneElement
     //TODO: shouldBes
-    parsed.name shouldBe ("05: Short Bouncing Ball: single hop")
+    parsed.name shouldBe "05: Short Bouncing Ball: single hop"
   }
 
   it should "parse example archive LFCPS 07: Bouncing Ball" in {
-    val parsed = ArchiveParser.parser.parse(
+    ArchiveParser.parser.parse(
       raw"""ArchiveEntry "07: Bouncing Ball"
          |Description "7.4: Acrophobic Bouncing Ball".
          |
@@ -1995,7 +1995,7 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse iteratedexp.kyx from implicit functions paper" in {
-    val parsed = ArchiveParser.parser.parse(
+    ArchiveParser.parser.parse(
       raw"""Theorem "double iterated exponential"
          |
          |Definitions
@@ -2058,7 +2058,7 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse FIDE21/01 exponential decay" in {
-    val parsed = ArchiveParser.parser.parse(
+    ArchiveParser.parser.parse(
       raw"""Lemma "FIDE21/01-Exponential decay"
            |  ProgramVariables
            |    Real x;
@@ -2296,6 +2296,32 @@ class DLArchiveParserTests extends TacticTestBase {
         |End.
         |""".stripMargin
       ArchiveParser(input).head.tactics.head._3 shouldBe Using(List(PredOf(edu.cmu.cs.ls.keymaerax.core.Function("p", None, Real, Bool), Number(5))), QE)
+  }
+
+  it should "elaborate imported symbols in tactic locators" in withTactics {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions import kyx.math.abs; End.
+        |Problem abs(-1)>=1 -> 1>=1 End.
+        |Tactic "Proof" implyR('R=="abs(-1)>=1 -> 1>=1") End.
+        |End.
+        |""".stripMargin
+    val entry = ArchiveParser(input).head
+    entry.tactics.head._3 shouldBe implyR(Find.FindRDef(
+      Imply(
+        GreaterEqual(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1)),
+        GreaterEqual(Number(1), Number(1))), PosInExpr.HereP, entry.defs ++ TacticReservedSymbols.asDecl))
+  }
+
+  it should "elaborate imported symbols in using" in withTactics {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions import kyx.math.abs; End.
+        |Problem abs(-1) >= 1 End.
+        |Tactic "Proof" QE using "abs(-1) >= 1 :: nil" End.
+        |End.
+        |""".stripMargin
+    ArchiveParser(input).head.tactics.head._3 shouldBe Using(List(GreaterEqual(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))), QE)
   }
 
   it should "reset tactic definitions at the start of each tactic" in withTactics {
