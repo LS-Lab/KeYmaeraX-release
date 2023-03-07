@@ -352,8 +352,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
   .directive('k4BrowseSequentproof', ['$http', '$uibModal', '$q', '$timeout', 'sequentProofData', 'spinnerService', 'derivationInfos',
       function($http, $uibModal, $q, $timeout, sequentProofData, spinnerService, derivationInfos) {
     /* The directive's internal control. */
-    function link(scope, element, attrs) {
-
+    let link = function(scope) {
       scope.isProofRootVisible = function() {
         let root = scope.proofTree.nodesMap[scope.proofTree.root];
         return scope.deductionPath.sections[scope.deductionPath.sections.length - 1].path.indexOf(root.id) >= 0;
@@ -484,7 +483,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
             nodeId: '=',
             deductionPath: '=',
             proofTree: '=',
-            agenda: '='
+            agenda: '=',
+            isAutoPlaying: '='
         },
         link: link,
         templateUrl: 'partials/browsesingletracksequentproof.html'

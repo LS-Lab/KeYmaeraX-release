@@ -402,7 +402,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
       $scope.closed = data.closed;
       $scope.stepCount= data.stepCount;
       $scope.date = data.date;
-      if (data.stepCount == 0 && data.tactic !== undefined && data.tactic !== null) {
+      if (data.stepCount === 0 && data.tactic !== undefined && data.tactic !== null) {
         // imported but not yet executed proof
         spinnerService.show('tacticExecutionSpinner')
         $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
@@ -517,10 +517,56 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
 angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
     function($scope, $rootScope, $http, $routeParams, $q, $uibModal, $timeout, sequentProofData, spinnerService, sessionService) {
 
-  $scope.proofId = $routeParams.proofId;
-  $scope.userId = sessionService.getUser();
-  $scope.agenda = sequentProofData.agenda;
-  $scope.prooftree = sequentProofData.proofTree;
+    $scope.proofId = $routeParams.proofId;
+    $scope.userId = sessionService.getUser();
+    $scope.agenda = sequentProofData.agenda;
+    $scope.prooftree = sequentProofData.proofTree;
+
+    $scope.proofAnimation = {
+        animateInterval: 5,
+        isPlaying: false,
+        isDone: false,
+        togglePlay: function() {
+            $scope.proofAnimation.isPlaying = !$scope.proofAnimation.isPlaying;
+            if (!$scope.proofAnimation.isDone && $scope.proofAnimation.isPlaying) $scope.animateProof($scope.userId, $scope.proofId);
+        }
+    }
+
+    /** Animates the proof by fetching children automatically. */
+    $scope.animateProof = function(userId, proofId) {
+        if ($scope.proofAnimation.isPlaying) {
+            let selectedLeaf = $scope.agenda.selectedItem().deduction.sections[0].path[0];
+            if ($scope.prooftree.nodesMap[selectedLeaf].children.length > 0) {
+                // more children to fetch on current path
+                $scope.doFetchNodeChildren(userId, proofId, selectedLeaf);
+                $timeout($scope.animateProof, $scope.proofAnimation.animateInterval*1000, true, userId, proofId);
+            } else {
+                // switch tab
+                let items = $scope.agenda.items();
+                let unfinishedPaths = $.grep(items, function (e) {
+                    return $scope.prooftree.nodesMap[e.deduction.sections[0].path[0]].children.length > 0;
+                });
+                if (unfinishedPaths.length > 0) {
+                    $scope.agenda.select(unfinishedPaths[0]);
+                    $timeout($scope.animateProof, $scope.proofAnimation.animateInterval*1000, true, userId, proofId);
+                } else {
+                    $scope.proofAnimation.isPlaying = false;
+                    $scope.proofAnimation.isDone = true;
+                    //@todo start over again
+                }
+            }
+        }
+    }
+
+    $scope.doFetchNodeChildren = function(userId, proofId, nodeId) {
+        $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/browseChildren')
+            .then(function(response) {
+                //$rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
+                sequentProofData.updateAgendaAndTree(userId, response.data.proofId, response.data);
+                //sequentProofData.tactic.fetch($scope.userId, response.data.proofId);
+            })
+            .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+    }
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
