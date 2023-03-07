@@ -48,7 +48,7 @@
 <div>
 
 <div class="container" ng-controller="BrowseProofCtrl">
-    <div class="row">
+    <div class="row well well-compact">
         <div class="col-md-12">
             <label>Step every:
                 <input type="number"
@@ -86,16 +86,18 @@
                     </uib-tab-heading>
 
                     <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
-                    <div class="container" id="provingsequentview">
-                        <k4-browse-sequentproof
-                            user-id="userId"
-                            proof-id="proofId"
-                            node-id="task.id"
-                            deduction-path="task.deduction"
-                            proof-tree="prooftree"
-                            agenda="agenda"
-                            is-auto-playing="proofAnimation.isPlaying"
-                            ng-if="task.isSelected"></k4-browse-sequentproof>
+                    <div class="row k4-fill-screen" id="provingsequentview">
+                        <div class="col-md-12 k4-align-bottom">
+                            <k4-browse-sequentproof
+                                user-id="userId"
+                                proof-id="proofId"
+                                node-id="task.id"
+                                deduction-path="task.deduction"
+                                proof-tree="prooftree"
+                                agenda="agenda"
+                                is-auto-playing="proofAnimation.isPlaying"
+                                ng-if="task.isSelected"></k4-browse-sequentproof>
+                        </div>
                     </div>
                 </uib-tab>
             </uib-tabset>

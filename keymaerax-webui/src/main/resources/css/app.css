@@ -1009,6 +1009,11 @@ del {
   height: calc(100vh - 130px);
 }
 
+.k4-align-bottom {
+  position: absolute;
+  bottom: 0;
+}
+
 .modal-errorreport {
   z-index: 2000 !important; /* larger than internal log popover */
 }
