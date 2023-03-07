@@ -86,7 +86,7 @@
                     </uib-tab-heading>
 
                     <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
-                    <div class="row k4-fill-screen" id="provingsequentview">
+                    <div class="row k4-fill-half-screen" id="provingsequentview">
                         <div class="col-md-12 k4-align-bottom">
                             <k4-browse-sequentproof
                                 user-id="userId"
@@ -97,6 +97,38 @@
                                 agenda="agenda"
                                 is-auto-playing="proofAnimation.isPlaying"
                                 ng-if="task.isSelected"></k4-browse-sequentproof>
+                        </div>
+                    </div>
+                    <div class="row" id="provingtactics" ng-if="task.isSelected">
+                        <div class="col-sm-12">
+                            <div class="panel panel-default">
+                                <div class="panel-heading panel-heading-compact">
+                                    <div class="row">
+                                        <div class="col-sm-2" ng-if="taskExplanation.selection=='Tactic'">
+                                            <div class="btn-group-sm k4-nobreak">
+                                                <label class="btn btn-secondary" ng-model="taskExplanation.selection"
+                                                       uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic), toggle between explicit search tactic style and positional tactic style"
+                                                       tooltip-placement="auto top">
+                                                    Tactic
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel-body k4-no-padding">
+                                    <div class="row" ng-if="taskExplanation.selection=='Tactic'">
+                                        <div class="col-sm-12 k4-half-screenheight"
+                                             ng-cloak data-intro="Clicks are recorded as tactic here. Append to program proof steps instead of clicking. <dl class='dl-horizontal'><dt><code>s ; t</code></dt><dd>Run t after s</dd><dt><code>s | t</code></dt><dd>Run t if s fails</dd><dt><code>t*</code></dt><dd>Repeat t exhaustively</dd><dt><code>t*n</code></dt><dd>Run t n times</dd><dt><code>&lt;(t1,...tn)</code></dt><dd>Run ti on subgoal i</dd><dt><code>doall(t)</code></dt><dd>Run t on every subgoal</dd><dt>t(j)</dt><dd>Apply t at position j</dd><dt>1, 2, 3, ..., 'Rlast</dt><dd>Succedent positions</dd><dt>-1, -2, -3, ..., 'Llast</dt><dd>Antecedent positions</dd><dt>4.0.1</dt><dd>Subposition, second child of first child of succedent 4</dd><dt>'L, 'R</dt><dd>Search left/right for first applicable formula</dd></dl>" data-position="bottom">
+                                            <k4-tactic-editor
+                                                    user-id="userId" proof-id="proofId" node-id="task.id"
+                                                    on-tactic-script="onTacticScript(tacticText, stepwise)"
+                                                    on-node-selected="onNodeInTacticSelected(nodeId)">
+                                            </k4-tactic-editor>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- could have further tabs: e.g., graphical tactic editor -->
                         </div>
                     </div>
                 </uib-tab>

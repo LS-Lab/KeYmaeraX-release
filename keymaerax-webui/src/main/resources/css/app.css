@@ -1007,6 +1007,12 @@ del {
 
 .k4-fill-screen {
   height: calc(100vh - 130px);
+  position: relative;
+}
+
+.k4-fill-half-screen {
+  height: calc(50vh - 130px);
+  position: relative;
 }
 
 .k4-align-bottom {

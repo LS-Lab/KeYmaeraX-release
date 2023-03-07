@@ -521,6 +521,9 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
     $scope.userId = sessionService.getUser();
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
+    $scope.taskExplanation = {
+        selection: "Tactic"
+    }
 
     $scope.proofAnimation = {
         animateInterval: 5,
