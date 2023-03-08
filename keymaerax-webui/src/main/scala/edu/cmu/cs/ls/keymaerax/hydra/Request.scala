@@ -206,7 +206,14 @@ object RequestHelper {
     val undefinedSymbols = symbols.filter({
       case Function(_, _, _, _, Some(_)) => false
       case _ => true
-    }).filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
+    }).filter(s => !proofSession.defs.asNamedSymbols.exists({
+      // do not update interpreted functions, interpretation may not be recorded in proof nodes
+      case ds@Function(n, i, dom, srt, Some(_)) => s match {
+        case Function(sn, si, sd, ss, None) => n == sn && i == si && dom == sd && srt == ss
+        case _ => ds == s
+      }
+      case ds => ds == s
+    })) -- elaboratedToFns
     val nodeFml = node.children.flatMap(_.localProvable.subgoals.map(_.toFormula)).reduceRightOption(And).getOrElse(True)
     val collectedArgs = ArchiveParser.declarationsOf(nodeFml, Some(undefinedSymbols))
 
