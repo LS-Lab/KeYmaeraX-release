@@ -134,6 +134,9 @@ case class Declaration(decls: Map[Name, Signature]) {
     }
   }
 
+  /** Applies implicit definition substitutions to sequent `s`. */
+  def implicitSubst(s: Sequent): Sequent = if (isubsts.nonEmpty) USubst(isubsts)(s) else s
+
   /** Expands all symbols in expression `arg` fully. */
   def expandFull[T <: Expression](arg: T): T = try {
     exhaustiveSubst(implicitSubst(elaborateToFunctions(elaborateToSystemConsts(arg))))
