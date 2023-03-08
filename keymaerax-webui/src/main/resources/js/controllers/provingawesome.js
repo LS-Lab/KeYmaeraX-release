@@ -580,6 +580,12 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
             })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
     }
+}).filter('limitHtml', function() {
+    return function(text, limit) {
+        let content = String(text).replace(/<[^>]+>/gm, '');
+        let length = content.length;
+        return length > limit ? content.slice(0, limit - 1) + "..." : content;
+    }
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
