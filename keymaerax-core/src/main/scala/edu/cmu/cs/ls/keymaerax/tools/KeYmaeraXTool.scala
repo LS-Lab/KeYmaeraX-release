@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELog
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, BelleProvable, BelleValue, DependentTactic, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, ProverSetupException, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXArchiveParser, Parser}
@@ -98,7 +98,24 @@ object KeYmaeraXTool extends Tool {
     )
     val initLibrary = config.getOrElse(INIT_DERIVATION_INFO_REGISTRY, "true").toBoolean
     Configuration.withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      DerivationInfoRegistry.init(initLibrary)
+      val to = ToolProvider.qeTool() match {
+        case Some(t: ToolOperationManagement) =>
+          val oldto = t.getOperationTimeout
+          t.setOperationTimeout(Configuration.getInt(Configuration.Keys.AXIOM_DERIVE_TIMEOUT).getOrElse(10))
+          Some(oldto)
+        case _ => None
+      }
+      try {
+        DerivationInfoRegistry.init(initLibrary)
+      } catch {
+        case t: Throwable =>
+          println("Error deriving axioms, KeYmaera X continues with restricted functionality; details: " + t.getMessage)
+      } finally {
+        (to, ToolProvider.qeTool()) match {
+          case (Some(to), Some(t: ToolOperationManagement)) => t.setOperationTimeout(to)
+          case _ => // nothing to do
+        }
+      }
     }
 
     val generator = new ConfigurableGenerator[GenProduct]()

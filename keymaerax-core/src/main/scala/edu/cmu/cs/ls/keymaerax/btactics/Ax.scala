@@ -277,42 +277,14 @@ object Ax extends Logging {
     val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
-    val exclude: Set[String] = ToolProvider.qeTool() match {
-      case Some(_: Z3) => Set(
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerLemma",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.timesPowersBoth",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.timesDivInverse",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerEven",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerOdd",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNumber",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNeg",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideRat",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.normalizeCoeff0",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerEven",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerOdd",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormAdd",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormNeg",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormMinus",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormTimes",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormDivide",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideEven",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powZero",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powNegOne",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerZero",
-          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivide0"
-        )
-      case _ => Set.empty
-    }
-
     val failures = mutable.Buffer.empty[(String,Throwable)]
     fieldMirrors.indices.foreach(idx => {
       try {
         val fm = fieldMirrors(idx)
-        if (!exclude.contains(fm.symbol.fullName)) {
-          fm()
-          DerivationInfo.seeName(fm.symbol.name.toString)
-        }
+        logger.info("Deriving: " + fm.symbol.fullName + "...")
+        fm()
+        logger.info("done")
+        DerivationInfo.seeName(fm.symbol.name.toString)
       } catch {
         case e: Throwable =>
           failures += (fns(idx) -> e)
@@ -320,7 +292,7 @@ object Ax extends Logging {
       }
     })
     if (failures.nonEmpty)
-      throw new Exception(s"WARNING: Encountered $failures failures when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
+      throw new Exception(s"WARNING: Encountered ${failures.size} errors when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
   }
 
 
