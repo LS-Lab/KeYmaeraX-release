@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.hydra.{ConfigurationPOJO, ErrorResponse, HyDRAServerConfig, LocalhostOnlyRequest, RegisteredOnlyRequest, Response}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ExtractDatabaseResponse
@@ -23,7 +24,7 @@ class ExtractDatabaseRequest() extends LocalhostOnlyRequest with RegisteredOnlyR
       val today = Calendar.getInstance().getTime
       val fmt = new SimpleDateFormat("MDY")
 
-      val extractionPath = System.getProperty("user.home") + File.separator + s"extracted_${fmt.format(today)}.sqlite"
+      val extractionPath = Configuration.KEYMAERAX_HOME_PATH + File.separator + s"extracted_${fmt.format(today)}.sqlite"
       val dbPath = productionDatabase.dblocation
 
       val src = new File(dbPath)

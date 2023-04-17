@@ -1,5 +1,6 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.btactics.{InvariantGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
@@ -10,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
+import java.io.File
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 
@@ -219,7 +221,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   //Timing tests
   "DependencyAnalysis" should "record time to re-prove the ODE logs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
-    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/ODElog.txt")
+    val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "ODElog.txt")
     val problems = ls("AxiomaticODESolver").flatMap(r => {
       stripSeq(r._1) match {
         case None => None
@@ -247,7 +249,7 @@ class DependencyAnalysisTests extends TacticTestBase {
   }
 
   "DependencyAnalysis" should "record time to re-prove the ETCS logs" taggedAs IgnoreInBuildTest  in withMathematica { qeTool =>
-    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/ETCS.txt")
+    val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "ETCS.txt")
     val problems = ls("ETCS").flatMap(r => {
       stripSeq(r._1) match {
         case None => None
@@ -275,7 +277,7 @@ class DependencyAnalysisTests extends TacticTestBase {
   }
 
   "DependencyAnalysis" should "record time to re-prove the STTT logs" taggedAs IgnoreInBuildTest  in withMathematica { qeTool =>
-    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/STTT.txt")
+    val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "STTT.txt")
     val problems = ls("STTT").flatMap(r => {
       stripSeq(r._1) match {
         case None => None
@@ -303,7 +305,7 @@ class DependencyAnalysisTests extends TacticTestBase {
   }
 
   "DependencyAnalysis" should "record time to re-prove the chilled water logs" taggedAs IgnoreInBuildTest  in withMathematica { qeTool =>
-    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/chilled.txt")
+    val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "chilled.txt")
     val problems = ls("Chilled water").flatMap(r => {
       stripSeq(r._1) match {
         case None => None
@@ -361,7 +363,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     val pof = inducedOrd(transClose(analyseModalVars(p2, varSetToBaseVarSet(StaticSemantics.vars(p2).toSet), false).mapValues(v => v._1)))
     val pot = inducedOrd(transClose(analyseModalVars(p2, varSetToBaseVarSet(StaticSemantics.vars(p2).toSet), true).mapValues(v => v._1)))
 
-    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/lab2.txt")
+    val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lab2.txt")
 
     val problems = ls("L2").flatMap(r => Some(Test(True), r._2))
 
@@ -395,7 +397,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     val pof = inducedOrd(transClose(analyseModalVars(p3, varSetToBaseVarSet(StaticSemantics.vars(p3).toSet), false).mapValues(v => v._1)))
     val pot = inducedOrd(transClose(analyseModalVars(p3, varSetToBaseVarSet(StaticSemantics.vars(p3).toSet), true).mapValues(v => v._1)))
 
-    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/lab3.txt")
+    val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lab3.txt")
 
     val problems = ls("L3").flatMap(r => Some(Test(True), r._2))
 

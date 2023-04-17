@@ -18,7 +18,7 @@ object PegasusInstaller extends Logging {
   val pegasusRelativeResourcePath: String = {
     val absolutePath = copyToDisk()
     val relativePath = Configuration.Pegasus.relativePath
-    assert(absolutePath == System.getProperty("user.home") + File.separator + relativePath, "Unexpected absolute/relative path")
+    assert(absolutePath == Configuration.KEYMAERAX_HOME_PATH + File.separator + relativePath, "Unexpected absolute/relative path")
     File.separator + relativePath
   }
 

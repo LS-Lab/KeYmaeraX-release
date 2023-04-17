@@ -16,10 +16,11 @@ import scala.collection.JavaConverters._
   * The purpose of this object is to have a central place for system configuration options of KeYmaera X.
   * @see [[edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX]] */
 object FileConfiguration extends Configuration {
-  private val KEYMAERAX_HOME: String = System.getProperty("KEYMAERAX_HOME", ".keymaerax")
+  private val KEYMAERAX_DIR_NAME: String = System.getProperty("KEYMAERAX_DIR_NAME", ".keymaerax")
 
   /** The user's home directory for the storage of KeYmaera X configuration and model and proof database files */
-  override val KEYMAERAX_HOME_PATH: String = System.getProperty("user.home") + File.separator + KEYMAERAX_HOME
+  override val KEYMAERAX_HOME_PATH: String =
+    System.getProperty("KEYMAERAX_HOME", System.getProperty("user.home") + File.separator + KEYMAERAX_DIR_NAME)
 
   private val CONFIG_PATH: String = System.getProperty("CONFIG_PATH", KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf")
   private val DEFAULT_CONFIG_PATH: String = "/default.conf"
@@ -87,7 +88,7 @@ object FileConfiguration extends Configuration {
   override def path(key: String): String = {
     val p = config.getString(key).replaceAllLiterally("/", File.separator)
     if (p.startsWith(File.separator)) p
-    else System.getProperty("user.home") + File.separator + p
+    else Configuration.KEYMAERAX_HOME_PATH + File.separator + p
   }
 
   override def relativePath(key: String): String = apply(key).replaceAllLiterally("/", File.separator)
