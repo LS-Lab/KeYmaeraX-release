@@ -33,7 +33,7 @@
                                             <span class="fa fa-cogs"
                                                   ng-if="!isLoading && tactic.derivation.inputGenerator && inputSuggestions.length <= 0"
                                                   uib-tooltip="Click to generate input suggestions"
-                                                  ng-click="generateInputs()"></span>
+                                                  ng-click="generateInputs($event)"></span>
                                             <span ng-if="isLoading" class="fa fa-spin fa-spinner"></span>
                                             <span ng-if="!isLoading && inputSuggestions.length > 0"
                                                   uib-tooltip="Click {{antePart.text}} to see suggestions"
@@ -61,7 +61,7 @@
                                             <span class="fa fa-cogs"
                                                   ng-if="!isLoading && tactic.derivation.inputGenerator && inputSuggestions.length <= 0"
                                                   uib-tooltip="Click to generate input suggestions"
-                                                  ng-click="generateInputs()"></span>
+                                                  ng-click="generateInputs($event)"></span>
                                             <span ng-if="isLoading" class="fa fa-spin fa-spinner"></span>
                                             <span ng-if="!isLoading && inputSuggestions.length > 0"
                                                   uib-tooltip="Click {{succPart.text}} to see suggestions"

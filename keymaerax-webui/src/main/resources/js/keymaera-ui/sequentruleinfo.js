@@ -9,21 +9,22 @@ angular.module('keymaerax.ui.directives')
           tactic: '='
       },
       templateUrl: 'templates/sequentRuleTemplate.html',
-      link: function(scope, element, attrs) {
+      link: function(scope) {
         scope.saveValue = function(input, newValue) {
           return input.saveValue(scope.userId, scope.proofId, scope.nodeId, newValue);
         }
 
         scope.inputSuggestions = [];
 
-        scope.generateInputs = function() {
+        scope.generateInputs = function(event) {
+          event.stopPropagation();
           if (scope.tactic.derivation && scope.tactic.derivation.inputGenerator && scope.tactic.derivation.inputGenerator !== '') {
             scope.isLoading = true;
             return $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.tactic.derivation.inputGenerator)
               .then(function(response) {
                 scope.isLoading = false;
                 if (response.data.candidates && response.data.candidates.length > 0) {
-                  var result = response.data.candidates[0].fmls;
+                  let result = response.data.candidates[0].fmls;
                   scope.inputSuggestions = result;
                   return result;
                 } else return [];

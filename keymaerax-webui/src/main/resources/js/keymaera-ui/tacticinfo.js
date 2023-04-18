@@ -1,5 +1,5 @@
 angular.module('keymaerax.ui.directives')
-  .directive('k4TacticInfo', ['$http', 'derivationInfos', function($http, derivationInfos) {
+  .directive('k4TacticInfo', [function() {
     return {
       restrict: 'AE',
       scope: {
@@ -13,10 +13,10 @@ angular.module('keymaerax.ui.directives')
           onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
       },
       templateUrl: 'templates/tacticInfoTemplate.html',
-      link: function(scope, element, attrs) {
+      link: function(scope) {
         scope.applyTactic = function(tacticId) {
-          var s = scope.tactic.selectedDerivation().derivation;
-          if (s.selectedKeyPos && s.selectedKeyPos != s.defaultKeyPos) {
+          let s = scope.tactic.selectedDerivation().derivation;
+          if (s.selectedKeyPos && s.selectedKeyPos !== s.defaultKeyPos) {
             scope.onInputTactic({ formulaId: scope.formulaId, tacticId: 'useAt',
                                   input: [{param: 'axiom', value: s.canonicalName },
                                           {param: 'key', value: '' + s.selectedKeyPos }] });

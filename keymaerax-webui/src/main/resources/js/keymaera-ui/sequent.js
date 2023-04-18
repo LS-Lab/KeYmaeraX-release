@@ -17,7 +17,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             onApplyInputTactic: '&',
             onApplyTwoPositionTactic: '&'
         },
-        link: function(scope, elem, attr) {
+        link: function(scope, elem) {
             scope.sequentSuggestions = [];
 
             if (!scope.readOnly && scope.userId && scope.userId !== "" && scope.proofId && scope.proofId !== "" &&
@@ -32,15 +32,15 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.getCounterExample = function(additionalAssumptions) {
                 //@todo timeout request canceller
                 spinnerService.show('counterExampleSpinner');
-                var nodeId = sequentProofData.agenda.selectedId();
-                var node = sequentProofData.proofTree.node(nodeId);
-                var selected = sequentProofData.formulas.selectedIndicesIn(node.getSequent());
-                var additional = additionalAssumptions ? additionalAssumptions : {};
-                var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample'
+                let nodeId = sequentProofData.agenda.selectedId();
+                let node = sequentProofData.proofTree.node(nodeId);
+                let selected = sequentProofData.formulas.selectedIndicesIn(node.getSequent());
+                let additional = additionalAssumptions ? additionalAssumptions : {};
+                let url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample'
                 $http.get(url, { params: { assumptions: additional, fmlIndices: JSON.stringify(selected) } })
                     .then(function(response) {
-                      var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
-                      var modalInstance = $uibModal.open({
+                      let dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
+                      let modalInstance = $uibModal.open({
                         templateUrl: 'templates/counterExample.html',
                         controller: 'CounterExampleCtrl',
                         size: dialogSize,
@@ -56,7 +56,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                       modalInstance.result.then(
                         function(result) {
                           // dialog closed with request to recalculate using additional assumptions
-                          $scope.getCounterExample(result);
+                          scope.getCounterExample(result);
                         },
                         function() { /* dialog cancelled */ }
                       );
@@ -94,7 +94,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.openTacticPosInputDialog = function(tacticName) {
-              var tactics = derivationInfos.byName(scope.userId, scope.proofId, scope.nodeId, tacticName)
+              let tactics = derivationInfos.byName(scope.userId, scope.proofId, scope.nodeId, tacticName)
                 .then(function(response) {
                   return response.data;
                 });
@@ -120,9 +120,9 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.turnstileDrop = function(dragData) {
-              var formulas = $.grep(scope.sequent.ante, function(e, i) { return e.id === dragData; });
-              if (formulas.length == 1) {
-                var formula = formulas[0];
+              let formulas = $.grep(scope.sequent.ante, function(e, i) { return e.id === dragData; });
+              if (formulas.length === 1) {
+                let formula = formulas[0];
                 if (formula.formula.name === 'equals') {
                   scope.onApplyTactic({formulaId: formula.id, tacticId: 'allL2R'})
                 } else {
@@ -165,8 +165,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               close: function() {
                   //@note manually dispatch the popover hide trigger
                   if (scope.tacticPopover.openFormulaId) {
-                      var i = scope.tacticPopover.openFormulaId.indexOf(',')
-                      var fid = i >= 0 ? scope.tacticPopover.openFormulaId.substring(0, i) : scope.tacticPopover.openFormulaId
+                      let i = scope.tacticPopover.openFormulaId.indexOf(',')
+                      let fid = i >= 0 ? scope.tacticPopover.openFormulaId.substring(0, i) : scope.tacticPopover.openFormulaId
                       document.getElementById(fid).dispatchEvent(new Event('outsideClick'));
                       $document.off('click', scope.onDocumentClick);
                       scope.derivationInfos.infos = [];
@@ -201,7 +201,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               selected: undefined,
               allInfos: function(formulaId, partialLemmaName) {
                 if (partialLemmaName && partialLemmaName.length > 0) {
-                  var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' +
+                  let url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' +
                             formulaId + '/lemmas/' + encodeURIComponent(partialLemmaName);
                   return $http.get(url).then(function(response) { return response.data.lemmas; });
                 } else return [];
@@ -215,7 +215,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                                      {param: 'key', value: '' + scope.lemma.selectedKeyPos() }]);
               },
               selectedKeyPos: function() {
-                var s = scope.lemma.selected;
+                let s = scope.lemma.selected;
                 return s.selectedKeyPos ? s.selectedKeyPos : s.defaultKeyPos;
               }
             }
@@ -225,15 +225,15 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               scope.fetchFormulaAxioms(formulaId, function() {
                 scope.tacticPopover.open(formulaId);
                 //@note dispatch popover trigger on correct element and register document click to detect outsideClick
-                var i = formulaId.indexOf(',')
-                var fid = i >= 0 ? formulaId.substring(0, i) : formulaId
+                let i = formulaId.indexOf(',')
+                let fid = i >= 0 ? formulaId.substring(0, i) : formulaId
                 document.getElementById(fid).dispatchEvent(new Event('rightClick'));
                 $document.on('click', scope.onDocumentClick)
               });
             }
 
             scope.onDocumentClick = function(e) {
-                var popover = $document.find('body')[0].querySelector('.popover'); //@note the axiom popover is added to the body
+                let popover = $document.find('body')[0].querySelector('.popover'); //@note the axiom popover is added to the body
                 if (!elem[0].contains(e.target) && !popover.contains(e.target)) {
                     scope.tacticPopover.close()
                 }
@@ -264,13 +264,13 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
 
             //@see lemmaBrowser.js/useLemma
             scope.useLemma = function(formulaId, lemma) {
-              if (lemma.useLemmaTac && lemma.useLemmaTac != "verbatim") {
-                var tactic = lemma.useLemmaTac ? (lemma.useLemmaTac != "custom" ? lemma.useLemmaTac : lemma.customTac) : undefined;
-                var input = [{ type: "string", param: "lemma", value: lemma.name},
+              if (lemma.useLemmaTac && lemma.useLemmaTac !== "verbatim") {
+                let tactic = lemma.useLemmaTac ? (lemma.useLemmaTac !== "custom" ? lemma.useLemmaTac : lemma.customTac) : undefined;
+                let input = [{ type: "string", param: "lemma", value: lemma.name},
                              { type: "string", param: "tactic", value: tactic }];
                 scope.onApplyInputTactic({formulaId: formulaId, tacticId: "useLemma", input: input});
               } else {
-                var input = [{ type: "string", param: "lemma", value: lemma.name}];
+                let input = [{ type: "string", param: "lemma", value: lemma.name}];
                 scope.onApplyInputTactic({formulaId: formulaId, tacticId: "useLemma", input: input});
               }
             }

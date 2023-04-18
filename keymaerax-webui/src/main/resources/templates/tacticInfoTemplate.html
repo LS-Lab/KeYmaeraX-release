@@ -78,13 +78,13 @@
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
             </a>
             <a ng-if="tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
-               ng-click="tactic.selectedDerivation().showMissingInputError = true">
+               ng-click="$event.stopPropagation();tactic.selectedDerivation().showMissingInputError = true">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
                                    long-name="{{tactic.selectedDerivation().longName}}"
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
             </a>
             <a ng-if="!tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
-               ng-click="tactic.isOpen = !tactic.isOpen">
+               ng-click="$event.stopPropagation();tactic.isOpen = !tactic.isOpen">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
                                    long-name="{{tactic.selectedDerivation().longName}}"
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
