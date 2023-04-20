@@ -145,7 +145,7 @@ private object EqualityTactics extends TacticProvider {
           (closeIdWith(SuccPos(sequent.succ.length)).computeResult _, 0)
           )
       case Some(e) => throw new TacticInapplicableFailure("eqL2R only applicable to equalities l=r, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + eqPos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   }
 
@@ -163,7 +163,7 @@ private object EqualityTactics extends TacticProvider {
           (useAt(Ax.equalCommute)('L, Equal(rhs, lhs)).computeResult _, 0)
           )
       case Some(e) => throw new TacticInapplicableFailure("eqR2L only applicable to equalities l=r, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + eqPos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   }
 
