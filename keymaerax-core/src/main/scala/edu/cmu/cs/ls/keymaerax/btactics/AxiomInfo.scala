@@ -17,6 +17,7 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.language.implicitConversions
 import scala.collection.mutable
 import scala.reflect.runtime.{universe => ru}
+import scala.util.Try
 
 /**
   * Central list of all derivation steps (axioms, derived axioms, proof rules, tactics)
@@ -165,13 +166,14 @@ object DerivationInfoRegistry extends Logging {
   * */
   def init(initLibrary: Boolean = true): Unit = {
     /* Initialization is relatively slow, so only initialize once*/
-    if(isInit) return
+    if (isInit) return
     // Remember that initialization is in progress,
     DerivationInfo._initStatus = DerivationInfo.InitInProgress
-    if(!initLibrary) // Advanced use - user takes over in-progress initialization
-      return
+    if (!initLibrary) return // Advanced use - user takes over in-progress initialization
     // Initialize derived axioms and rules, which automatically initializes their AxiomInfo and RuleInfo too
-    Ax.prepopulateDerivedLemmaDatabase()
+    // To allow working with restricted functionality: continue initialization despite potential errors in
+    // deriving axioms, throw exception at end of initialization
+    val deriveErrors = Try(Ax.prepopulateDerivedLemmaDatabase()).toEither
 
     // Search and initialize tactic providers (provide @Tactic-annotated methods)
     val reflections = new Reflections("edu.cmu.cs.ls.keymaerax.btactics")
@@ -186,24 +188,28 @@ object DerivationInfoRegistry extends Logging {
     */
     // NB: This check used to be an assertion in NamedTactic, but that doesn't work if a tactic is mentioned before registration.
     // Instead, check the names after everything is initialized.
-    var overimplemented: Set[String] = Set()
-    DerivationInfo._seenNames.foreach((n:String) => {
+    val overimplemented = mutable.Set[String]()
+    DerivationInfo._seenNames.foreach((n: String) => {
       if (n != "Error" && !DerivationInfo.hasCodeName(n) && !n.startsWith("_"))
-        overimplemented = overimplemented + n
+        overimplemented += n
     })
-    assert(overimplemented.isEmpty, s"@Tactic init failed: NamedBelleExpr(s) named ${overimplemented.toList.mkString(", ")} but this name does not appear in DerivationInfo's list of codeNames.")
-    var unimplemented: Set[String] = Set()
+    assert(overimplemented.isEmpty, s"@Tactic init failed: NamedBelleExpr(s) named ${overimplemented.mkString(", ")} but this name does not appear in DerivationInfo's list of codeNames.")
+    val unimplemented = mutable.Set[String]()
     DerivationInfo._allInfo.foreach({ case (_, di: DerivationInfo) =>
       if (!DerivationInfo._seenNames.contains(di.codeName)) {
         di match {
           // Axioms and rules are not tracked
           case _: CoreAxiomInfo | _: AxiomaticRuleInfo | _: DerivedAxiomInfo => ()
-          case _ => unimplemented = unimplemented + di.codeName
+          case _ => unimplemented += di.codeName
         }
       }
     })
-    assert(unimplemented.isEmpty, s"@Tactic init failed: Following DerivationInfo never implemented as @Tactic: " + unimplemented.toList.mkString(", "))
+    assert(unimplemented.isEmpty, s"@Tactic init failed: Following DerivationInfo never implemented as @Tactic: " + unimplemented.mkString(", "))
     DerivationInfo._initStatus = DerivationInfo.InitComplete
+    deriveErrors match {
+      case Left(t) => throw t
+      case _ => // nothing to do
+    }
   }
 
   ////////////////////////////////////////////////////////
