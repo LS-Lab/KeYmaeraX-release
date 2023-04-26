@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, Tactic}
 
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
+import scala.util.Try
 
 /**
   * Note: this is meant to be a watered down version of SimplifierV2
@@ -918,41 +919,38 @@ object SimplifierV3 extends TacticProvider {
 //  }
 
   //These are mostly just the basic unit and identity rules
-  private lazy val mulArith: List[ProvableSig] = List(
-    Ax.zeroTimes.provable,
-    Ax.timesZero.provable,
-    Ax.timesIdentity.provable,
-    useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentity.provable),
-    Ax.timesIdentityNeg.provable,
-    useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable),
-    Ax.negOneTimes.provable)
+  private lazy val mulArith: List[ProvableSig] =
+    Try(Ax.zeroTimes.provable).toOption.toList ++
+    Try(Ax.timesZero.provable).toOption.toList ++
+    Try(Ax.timesIdentity.provable).toOption.toList ++
+    Try(useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentity.provable)).toOption.toList ++
+    Try(Ax.timesIdentityNeg.provable).toOption.toList ++
+    Try(useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable)).toOption.toList ++
+    Try(Ax.negOneTimes.provable).toOption.toList
 
-  private lazy val negArith: List[ProvableSig] = List(
-    Ax.minusNeg.provable,
-    Ax.negNeg.provable
-  )
+  private lazy val negArith: List[ProvableSig] =
+    Try(Ax.minusNeg.provable).toOption.toList ++
+    Try(Ax.negNeg.provable).toOption.toList
 
-  private lazy val plusArith: List[ProvableSig] = List(
-    Ax.plusZero.provable,
-    Ax.zeroPlus.provable,
-    Ax.plusNeg.provable,
-    Ax.negPlus.provable
-  )
+  private lazy val plusArith: List[ProvableSig] =
+    Try(Ax.plusZero.provable).toOption.toList ++
+    Try(Ax.zeroPlus.provable).toOption.toList ++
+    Try(Ax.plusNeg.provable).toOption.toList ++
+    Try(Ax.negPlus.provable).toOption.toList
 
   private lazy val minusArith: List[ProvableSig] = List(
     Ax.minusZero.provable,
     Ax.zeroMinus.provable)
 
-  //TODO: move to DerivedAxioms?
-  lazy val divArith: List[ProvableSig] = List(
-    Ax.zeroDivNez.provable,
-    useFor(Ax.gtzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(Ax.zeroDivNez.provable),
-    useFor(Ax.ltzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(Ax.zeroDivNez.provable))
+  lazy val divArith: List[ProvableSig] =
+    Try(Ax.zeroDivNez.provable).toOption.toList ++
+    Try(useFor(Ax.gtzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(Ax.zeroDivNez.provable)).toOption.toList ++
+    Try(useFor(Ax.ltzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(Ax.zeroDivNez.provable)).toOption.toList
 
-  lazy val powArith: List[ProvableSig] = List(
-    Ax.powZero.provable,
-    Ax.powOne.provable,
-    Ax.powNegOne.provable)
+  lazy val powArith: List[ProvableSig] =
+    Try(Ax.powZero.provable).toOption.toList ++
+    Try(Ax.powOne.provable).toOption.toList ++
+    Try(Ax.powNegOne.provable).toOption.toList
 
   //These may also be useful:
   //qeTermProof("F_()*(F_()^-1)","1",Some("F_()>0")), qeTermProof("(F_()^-1)*F_()","1",Some("F_()>0")))
