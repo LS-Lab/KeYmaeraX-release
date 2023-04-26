@@ -29,6 +29,7 @@ object Usage {
       case "-z3path" => println(noValueMessage + "Please use: -z3path PATH_TO_z3_FILE\n\n" + usage)
       case "-tool" => println(noValueMessage + "Please use: -tool mathematica|wolframengine|z3\n\n" + usage)
       case "-grade" => println(noValueMessage + "Please use: -grade FILENAME.json [-exportanswers [-out DIR]] [-skiponparseerror]\n\n" + usage)
+      case "-proofStatisticsPrinter" => println(noValueMessage + "Please use: -proofStatisticsPrinter [default|arch-nln|arch-hstp]\n\n" + usage)
       case _ =>  println("[Error] Unknown option " + option + "\n\n" + usage)
     }
   }

@@ -180,6 +180,7 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tool -> value.toLowerCase), tail, usage)
         else { Usage.optionErrorReporter("-tool", usage); exit(1) }
       case "-verbose" :: tail => nextOption(options ++ Map('verbose -> true), tail, usage)
+      case "-proofStatistics" :: value :: tail => nextOption(options ++ Map('proofStatisticsPrinter -> value), tail, usage)
       // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {

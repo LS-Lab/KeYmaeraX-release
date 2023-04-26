@@ -32,30 +32,6 @@ import scala.reflect.io.File
 
 /** Proof checker command-line interface implementation. */
 object KeYmaeraXProofChecker {
-  /** Common proof statistics utilities. */
-  object ProofStatistics {
-    /** Prints the CSV header. */
-    def csvHeader: String = "Name,Tactic,Status,Timeout,Duration,QE duration,RCF duration,Proof steps,Tactic size"
-  }
-  /** Collects proof statistics. */
-  case class ProofStatistics(name: String, tacticName: String, status: String, witness: Option[ProvableSig],
-                             timeout: Long, duration: Long, qeDuration: Long, rcfDuration: Long,
-                             proofSteps: Int, tacticSize: Int) {
-    /** Prints a statistics summary string. */
-    def summary: String =
-      s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
-         |Duration [ms]: $duration
-         |QE [ms]: $qeDuration, RCF [ms]: $rcfDuration
-         |Proof steps: $proofSteps
-         |Tactic size: $tacticSize""".stripMargin
-
-    /** Short single-line summary. */
-    override def toString: String = s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout[s],duration=$duration[ms],qe=$qeDuration[ms],rcf=$rcfDuration,steps=$proofSteps"
-
-    /** Prints in CSV format. */
-    def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$rcfDuration,$proofSteps,$tacticSize"
-  }
-
   /** Proves a single entry */
   def prove(name: String, input: Formula, fileContent: String, defs: Declaration,
             tacticName: String, tactic: BelleExpr, timeout: Long,
@@ -245,7 +221,13 @@ object KeYmaeraXProofChecker {
 
     statistics.foreach(println)
 
-    val csvStatistics = ProofStatistics.csvHeader + "\n" + statistics.map(_.toCsv).mkString("\n")
+    val printer = options.get('proofStatisticsPrinter) match {
+      case Some("arch-nln") => ArchNLNCsvProofStatisticsPrinter
+      case Some("arch-hstp") => ArchHSTPCsvProofStatisticsPrinter
+      case _ => CsvProofStatisticsPrinter
+    }
+
+    val csvStatistics = printer.print(statistics)
     val statisticsLogger = LoggerFactory.getLogger(getClass)
     statisticsLogger.info(MarkerFactory.getMarker("PROOF_STATISTICS"), csvStatistics)
 
