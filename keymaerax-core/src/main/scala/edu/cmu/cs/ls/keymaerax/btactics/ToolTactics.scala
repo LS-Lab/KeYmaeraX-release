@@ -48,28 +48,43 @@ private object ToolTactics extends TacticProvider {
       case _ => false
     }
     def isZ3Provider(p: ToolProvider): Boolean = p.isInstanceOf[Z3ToolProvider]
+    /** Sets the tool provider to the first successfully initialized one in `providers`. If none can be initialized,
+     * keeps the current provider and fails with `msg` (to not fail later entries in same archive file). */
+    def setFirstSuccessfulProvider(providers: List[ToolProvider], msg: String): Unit = {
+      if (providers.isEmpty) throw new TacticAssertionError(msg)
+      try {
+        val p = providers.head
+        // first try initialization, because setProvider below shuts down current provider first even if new provider
+        // does not succeed, which is problematic for later entries in same archive file (until we support temporary
+        // switches and configuration changes in tactics)
+        p.init()
+        if (p.isInitialized) ToolProvider.setProvider(p)
+        else setFirstSuccessfulProvider(providers.tail, msg)
+      } catch {
+        case _: Throwable =>
+          println("Failed to initialize first provider, attempting next")
+          setFirstSuccessfulProvider(providers.tail, msg)
+      }
+    }
     val config = ToolConfiguration.config(tool)
     tool.toLowerCase match {
       case "mathematica" =>
         if (!isWolframProvider(ToolProvider.provider)) {
-          ToolProvider.setProvider(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil))
-          if (!ToolProvider.isInitialized) {
-            ToolProvider.setProvider(MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil))
-            if (!ToolProvider.isInitialized) throw new TacticAssertionError("Failed to switch to Mathematica: unable to initialize the connection; the license may be expired.")
-          }
+          setFirstSuccessfulProvider(List(
+            MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil),
+            MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil)
+          ), "Failed to switch to Mathematica: unable to initialize the connection; the license may be expired.")
         }
       case "wolframengine" =>
         if (!isWolframProvider(ToolProvider.provider)) {
-          ToolProvider.setProvider(MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil))
-          if (!ToolProvider.isInitialized) {
-            ToolProvider.setProvider(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil))
-            if (!ToolProvider.isInitialized) throw new TacticAssertionError("Failed to switch to Wolfram Engine: unable to initialize the connection; the license may be expired (try starting Wolfram Engine from the command line to renew the license)")
-          }
+          setFirstSuccessfulProvider(List(
+            MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil),
+            MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil)
+          ), "Failed to switch to Wolfram Engine: unable to initialize the connection; the license may be expired.")
         }
       case "z3" =>
         if (!isZ3Provider(ToolProvider.provider)) {
-          ToolProvider.setProvider(new Z3ToolProvider)
-          if (!ToolProvider.isInitialized) throw new TacticAssertionError("Failed to switch to Z3: unable to initialize the connection; please check the configured path to Z3")
+          setFirstSuccessfulProvider(List(new Z3ToolProvider), "Failed to switch to Z3: unable to initialize the connection; please check the configured path to Z3")
         }
       case _ => throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
     }
