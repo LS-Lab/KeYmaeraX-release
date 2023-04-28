@@ -43,7 +43,7 @@ object Integrator extends Logging {
         Equal(ode.xp.x, Plus(
           integrator(
             xPrimeWithoutDependentVariables,
-            (diffArg, SimplifierV2.termSimp(diffArg)._1, StaticSemantics.freeVars(diffArg).toSet),
+            (diffArg, SimplifierV3.termSimp(diffArg, SimplifierV3.emptyCtx, SimplifierV3.defaultTaxs)._1, StaticSemantics.freeVars(diffArg).toSet),
             getPrimedVariables(system).toSet),
           initialValues(ode.xp.x))) +: solvedComponents
       }
@@ -100,7 +100,7 @@ object Integrator extends Logging {
   private def integrator(term: Term, time: (Term, Term, Set[Variable]), primedVars: Set[Variable]) : Term = {
     val t = time._1
     val tsimp = time._2
-    val simp = SimplifierV2.termSimp(term)._1
+    val (simp, _) = SimplifierV3.termSimp(term, SimplifierV3.emptyCtx, SimplifierV3.defaultTaxs)
     val dx = time._3 ++ primedVars
     simp match {
       case e if StaticSemantics.freeVars(e).intersect(dx).isEmpty => Times(e, t)
