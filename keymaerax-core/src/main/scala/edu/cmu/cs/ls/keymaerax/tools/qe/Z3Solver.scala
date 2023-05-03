@@ -8,11 +8,12 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.io._
-
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools._
 
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.ConcurrentHashMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.sys.process._
@@ -27,8 +28,8 @@ import scala.sys.process._
   * @author Stefan Mitsch
   */
 class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOperationManagementBase with Logging {
-  /** The currently running Z3 process. */
-  private var z3Process: Option[Process] = None
+  /** The currently running Z3 processes with their query indexes. */
+  private val z3Processes = new ConcurrentHashMap[Long, Process]
 
   /** Provides a unique index for identifying the next query, incremented on every Z3 query. */
   private var queryIndex = 0
@@ -55,8 +56,6 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   private[tools] def runZ3Smt(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
     logger.debug("[Calling Z3...] \n" + z3Command)
 
-    if (z3Process.isDefined) throw ToolCommunicationException("Z3 is busy")
-
     val smtFile = File.createTempFile(tmpFilePrefix, ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(z3Command)
@@ -67,7 +66,6 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
 
   /** Runs the process `cmd` for at most `timeout` time, and returns the resulting output. */
   private def runZ3(cmd: String, timeout: Int): String = {
-    if (z3Process.isDefined) throw ToolCommunicationException("Z3 is busy")
     //@note running on a single process, but additionally safeguard with a query index to test whether the returned
     // result fits the input query index
     val qidx: Long = synchronized { queryIndex += 1; queryIndex }
@@ -78,14 +76,14 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
         assert(i == qidx)
         result = (i, rs + "\n" + s)
     })
-    val (p, f) = synchronized {
+    val f = z3Processes.synchronized {
       val p = cmd.run(pl) // start asynchronously, log output to logger
-      z3Process = Some(p)
-      (p, Future(blocking((qidx, p.exitValue()))))
+      z3Processes.put(qidx, p)
+      Future(blocking((qidx, p.exitValue())))
     }
     try {
       val (exitQIdx, exitVal) =
-        if (timeout >= 0) Await.result(f, duration.Duration(timeout, "sec"))
+        if (timeout >= 0) Await.result(f, duration.Duration(timeout, TimeUnit.SECONDS))
         else Await.result(f, duration.Duration.Inf)
       if (exitQIdx != qidx) throw ToolCommunicationException("Expected query index on tool exit to match input query index, but exit " + exitQIdx + " != " + qidx)
       if (exitVal == 0) {
@@ -98,20 +96,20 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
       case ex: TimeoutException => throw SMTTimeoutException(s"Z3 timeout of ${timeout}s exceeded", ex)
       case ex: InterruptedException => throw ToolCommunicationException(s"Z3 interrupted", ex)
     } finally {
-      p.destroy
-      z3Process = None
+      z3Processes.remove(qidx) match {
+        case null => // nothing to do
+        case p => p.destroy()
+      }
     }
   }
 
   /** Cancels the current Z3 process. */
-  def cancel(): Boolean = z3Process match {
-    case Some(p) =>
-      p.destroy()
-      z3Process = None
-      true
-    case None => true
+  def cancel(): Boolean = z3Processes.synchronized {
+    z3Processes.forEach((_, v) => v.destroy())
+    z3Processes.clear()
+    true
   }
 
   /** @inheritdoc */
-  override def getAvailableWorkers: Int = 1
+  override def getAvailableWorkers: Int = Int.MaxValue
 }

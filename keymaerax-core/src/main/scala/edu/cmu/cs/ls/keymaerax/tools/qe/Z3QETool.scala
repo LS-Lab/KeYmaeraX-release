@@ -26,6 +26,7 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   /** @inheritdoc */
   override val name: String = "Z3QETool"
 
+  /* The solver instance */
   private var z3: Z3Solver = _
 
   /** @inheritdoc */
@@ -34,16 +35,19 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   }
 
   /** @inheritdoc */
-  override def restart(): Unit = { }
+  override def restart(): Unit = cancel()
 
   /** @inheritdoc */
-  override def shutdown(): Unit = { z3 = null }
+  override def shutdown(): Unit = {
+    cancel()
+    z3 = null
+  }
 
   /** @inheritdoc */
   override def isInitialized: Boolean = z3 != null
 
   /** @inheritdoc */
-  override def cancel(): Boolean = z3.cancel()
+  override def cancel(): Boolean = z3 == null || z3.cancel()
 
   /** @inheritdoc */
   override def quantifierElimination(formula: Formula): Formula = {

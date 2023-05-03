@@ -6,12 +6,10 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3QETool, Z3Solver}
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool, ToolExecutionException, ToolOperationManagement}
 
-import java.io.StringReader
 import scala.collection.immutable.Map
 
 /**
@@ -50,7 +48,7 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   }
 
   /** @inheritdoc */
-  override def cancel(): Boolean = z3.cancel() && z3qe.cancel()
+  override def cancel(): Boolean = (z3 == null || z3.cancel()) && z3qe.cancel()
 
   /** @inheritdoc */
   override def qe(formula: Formula): Lemma = {
