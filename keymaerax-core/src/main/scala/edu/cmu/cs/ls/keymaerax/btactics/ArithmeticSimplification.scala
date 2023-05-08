@@ -243,7 +243,8 @@ object ArithmeticSimplification extends TacticProvider {
   }
 
   private def retainStrongest(fmls: Seq[(Formula, Int)], assumptions: Formula, cex: CounterExampleTool): Seq[(Formula, Int)] = {
-    val pairs = (for (i <- fmls; j <- fmls) yield (i, j)).filter({ case (i@(p, _), j@(q, _)) =>
+    val concreteFmls = fmls.filterNot({ case (f, _) => f.isInstanceOf[PredOf] })
+    val pairs = (for (i <- concreteFmls; j <- concreteFmls) yield (i, j)).filter({ case (i@(p, _), j@(q, _)) =>
       i != j && StaticSemantics.symbols(q).subsetOf(StaticSemantics.symbols(p))
     })
     val irrelevant = pairs.filter({ case ((p, _), (q, _)) => cex.findCounterExample(Imply(And(assumptions, p), q)).isEmpty }).map(_._2)
