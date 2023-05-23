@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticProvider, ToolTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, SimplifierV3, TacticProvider, ToolTactics}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnalysis}
@@ -44,15 +44,15 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
 
   /** QE with smart hiding. */
   private lazy val smartHideQE: BelleExpr =
-    (DebuggingTactics.debug("Bound", DEBUG) & hideNonmatchingBounds & smartHide & QE & done) |
-    (DebuggingTactics.debug("Non-Bound", DEBUG) & smartHide & QE & done)
+    (DebuggingTactics.debug("Bound", DEBUG) & hideNonmatchingBounds & smartHide & DebuggingTactics.debug("Bound-hidden", DEBUG) & SimplifierV3.fullSimplify & DebuggingTactics.debug("Bound-simplified", DEBUG) & QE & done) |
+    (DebuggingTactics.debug("Non-Bound", DEBUG) & smartHide & SimplifierV3.fullSimplify & QE & done)
 
   /** QE without handling abs */
   // was "QE"
   private lazy val speculativeQENoAbs: BelleExpr = anon ((_: Sequent) => {
     (DebuggingTactics.debug("Trying orIntro and smart hiding...", DEBUG) & orIntro(smartHideQE) & DebuggingTactics.debug("... orIntro and smart hiding successful", DEBUG)) |
     (DebuggingTactics.debug("orIntro failed, trying smart hiding...", DEBUG) & smartHideQE & DebuggingTactics.debug("...smart hiding successful", DEBUG)) |
-    (DebuggingTactics.debug("All simplifications failed, falling back to ordinary QE", DEBUG) & QE & done)
+    (DebuggingTactics.debug("All simplifications failed, falling back to ordinary QE", DEBUG) & SimplifierV3.fullSimplify & QE & done)
   })
 
   /** Uses the disjunction introduction proof rule to prove a disjunctions by proving any 1 of the disjuncts. */
@@ -67,7 +67,9 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
   lazy val proveOrRefuteAbs: BelleExpr = anon ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.contains(InterpretedSymbols.absF)) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & expandAllDefs(Nil) & ToolTactics.assertNoCex & QE & done) | speculativeQENoAbs)
+    if (symbols.contains(InterpretedSymbols.absF)) exhaustiveAbsSplit & OnAll(
+      (SaturateTactic(hideR('R)) & expandAllDefs(Nil) & ToolTactics.assertNoCex & SimplifierV3.fullSimplify & QE & done)
+      | speculativeQENoAbs)
     else throw new TacticInapplicableFailure("Sequent does not contain abs")
   })
 
