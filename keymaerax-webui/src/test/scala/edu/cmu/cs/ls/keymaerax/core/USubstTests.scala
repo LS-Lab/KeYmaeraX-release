@@ -4,10 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.core
 
-import scala.collection.immutable
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, SystemTestBase}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, USubstTest, UsualTest}
@@ -34,58 +33,19 @@ import scala.language.postfixOps
 @USubstTest
 @CheckinTest
 class USubstTests extends TacticTestBase {
-  val randomTrials = 50
-  val randomComplexity = 20
-  val rand = new RandomFormula()
+  private val randomTrials = 50
+  private val randomComplexity = 20
+  private val rand = new RandomFormula()
 
-  /** Test whether `operation(data)` is either a no-op returning `data` or throws an exception of type `E`. */
-  def throwOrNoOp[In,Out,E:Manifest](operation: In => Out, data: In) = {
-    var done = false
-    try {
-      // noop
-      done = (operation(data) == data)
-    }
-    catch {
-      case ignore : Throwable => done = false
-    }
-    if (!done) a [E] should be thrownBy {
-      operation(data)
-    }
-  }
-
-
-  //@note former core.UniformSubstitutionRule used here merely for the tests to continue to work even if they are less helpful
-  @deprecated("Use Provable(USubst) rule instead")
-  private def UniformSubstitutionRule(subst: USubst, origin: Sequent) : Sequent => immutable.List[Sequent] = conclusion =>
-      try {
-        //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
-        if (subst(origin) == conclusion) immutable.List(origin)
-        else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, null, conclusion)
-        /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
-          "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
-      } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
-
-
-  val x = Variable("x", None, Real)
-  val z = Variable("z", None, Real)
-  val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
-  val p1 = Function("p", None, Real, Bool)
-  val p1_ = Function("p_", None, Real, Bool)
-  val pn = Function("p", None, Real, Bool)
-  val pn_ = Function("p_", None, Real, Bool)
-  val qn = Function("q", None, Real, Bool)
-  val qn_ = Function("q_", None, Real, Bool)
-  val ap = ProgramConst("a")
-  val ap_ = ProgramConst("a_")
-  val sys = SystemConst("a_")
-  //val f1 = Function("f", None, Real, Real)
-  val f1_ = Function("f_", None, Real, Real)
-  //val g1 = Function("g", None, Real, Real)
-  val g1_ = Function("g_", None, Real, Real)
-
-  val ctx  = Function("ctx_", None, Bool, Bool)
-  val ctxt = Function("ctx_", None, Real, Real)
-  val ctxf = Function("ctx_", None, Real, Bool)
+  private val x = Variable("x", None, Real)
+  private val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
+  private val p1 = Function("p", None, Real, Bool)
+  private val ap = ProgramConst("a")
+  private val ap_ = ProgramConst("a_")
+  private val sys = SystemConst("a_")
+  private val ctx  = Function("ctx_", None, Bool, Bool)
+  private val ctxt = Function("ctx_", None, Real, Real)
+  private val ctxf = Function("ctx_", None, Real, Bool)
 
   "Uniform substitution" should "substitute simple formula p(x) <-> ! ! p(- - x)" in {
     val p = Function("p", None, Real, Bool)
@@ -141,18 +101,7 @@ class USubstTests extends TacticTestBase {
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm()), GreaterEqual(Power(DotTerm(), Number(5)), Number(0)))))
     val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
     ProvableSig.startPlainProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
-  }
-
-  it should "old substitute simple sequent p(x) <-> ! ! p(- - x)" in {
-    val p = Function("p", None, Real, Bool)
-    val x = Variable("x", None, Real)
-    // p(x) <-> ! ! p(- - x)
-    val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
-    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm()), GreaterEqual(Power(DotTerm(), Number(5)), Number(0)))))
-    val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
-    UniformSubstitutionRule(s,
-      Sequent(IndexedSeq(), IndexedSeq(prem)))(
-        Sequent(IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(IndexedSeq(), IndexedSeq(prem)))
+    s(Sequent(IndexedSeq(), IndexedSeq(prem))) shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
 
   it should "substitute simple formula [a]p(x) <-> [a](p(x)&true)" in {
@@ -176,77 +125,30 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
     val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
     ProvableSig.startPlainProof(prem)(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
+    s(Sequent(IndexedSeq(), IndexedSeq(prem))) shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
-  it should "old substitute simple sequent [a]p(x) <-> [a](p(x)&true)" in {
-    val p = Function("p", None, Real, Bool)
-    val x = Variable("x", None, Real)
-    val a = ProgramConst("a")
-    // [a]p(x) <-> [a](p(x)&true)
-    val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
-    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm()), GreaterEqual(DotTerm(), Number(2))),
-      SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
-    val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
-    UniformSubstitutionRule(s,
-      Sequent(IndexedSeq(), IndexedSeq(prem)))(
-      Sequent(IndexedSeq(), IndexedSeq(conc))) shouldBe List(Sequent(IndexedSeq(), IndexedSeq(prem)))
-  }
-
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = ProvableSig.axioms("[:=] assign")/*Equiv(
-      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
-      PredOf(p1, fn)) // axioms.axiom("[:=])
-      */
-    val conc = "[x_:=x_+1;]x_!=x_ <-> x_+1!=x_".asFormula
+    val prem = ProvableSig.axioms("[:=] assign")
     val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm()), NotEqual(DotTerm(), "x_".asTerm)),
       SubstitutionPair(fn, "x_+1".asTerm)))
-    a [SubstitutionClashException] should be thrownBy (prem(s))
-
-  }
-  it should "old clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
-    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = Equiv(
-      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
-      PredOf(p1, fn)) // axioms.axiom("[:=])
-    val conc = "[x:=x+1;]x!=x <-> x+1!=x".asFormula
-    val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm()), NotEqual(DotTerm(), "x".asTerm)),
-      SubstitutionPair(fn, "x+1".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
-      Sequent(IndexedSeq(), IndexedSeq(prem)))(
-      Sequent(IndexedSeq(), IndexedSeq(conc)))
+    a [SubstitutionClashException] should be thrownBy prem(s)
+    a [SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = ProvableSig.axioms("[:=] assign")/*Equiv(
-      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
-      PredOf(p1, fn)) // axioms.axiom("[:=])
-      */
-    val conc = "[x_:=0;]x_=x_ <-> 0=x_".asFormula
+    val prem = ProvableSig.axioms("[:=] assign")
     val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm()), Equal(DotTerm(), "x_".asTerm)),
       SubstitutionPair(fn, "0".asTerm)))
     a [SubstitutionClashException] should be thrownBy prem(s)
-  }
-  it should "old clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
-    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = Equiv(
-      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
-      PredOf(p1, fn)) // axioms.axiom("[:=])
-    val conc = "[x:=0;]x=x <-> 0=x".asFormula
-    val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm()), Equal(DotTerm(), "x".asTerm)),
-      SubstitutionPair(fn, "0".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
-      Sequent(IndexedSeq(), IndexedSeq(prem)))(
-      Sequent(IndexedSeq(), IndexedSeq(conc)))
+    a [SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
   it should "handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = ProvableSig.axioms("[:=] assign")/*Equiv(
-      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
-      PredOf(p1, fn)) // axioms.axiom("[:=])
-      */
+    val prem = ProvableSig.axioms("[:=] assign")
     val conc = "[x_:=x_^2;][{y:=y+1;++{z:=x_+z;}*}; z:=x_+y*z;]y>x_ <-> [{y:=y+1;++{z:=x_^2+z;}*}; z:=x_^2+y*z;]y>x_^2".asFormula
 
     val y = Variable("y", None, Real)
@@ -263,52 +165,17 @@ class USubstTests extends TacticTestBase {
         Greater(y, DotTerm()))),
       SubstitutionPair(fn, "x_^2".asTerm)))
     prem(s).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
-  }
-  it should "old handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
-    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
-    val prem = Equiv(
-      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
-      PredOf(p1, fn)) // axioms.axiom("[:=])
-    val conc = "[x:=x^2;][{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]y>x <-> [{y:=y+1;++{z:=x^2+z;}*}; z:=x^2+y*z;]y>x^2".asFormula
-
-    val y = Variable("y", None, Real)
-    val z = Variable("z", None, Real)
-    val s = USubst(Seq(
-      // [{y:=y+1++{z:=.+z}*}; z:=.+y*z]y>.
-      SubstitutionPair(PredOf(p1, DotTerm()), Box(
-        Compose(
-          Choice(
-            Assign(y, Plus(y, Number(1))),
-            Loop(Assign(z, Plus(DotTerm(), z)))
-          ),
-          Assign(z, Plus(DotTerm(), Times(y, z)))),
-        Greater(y, DotTerm()))),
-      SubstitutionPair(fn, "x^2".asTerm)))
-    UniformSubstitutionRule(s, Sequent(IndexedSeq(), IndexedSeq(prem)))(Sequent(IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(IndexedSeq(), IndexedSeq(prem))))
+    s(prem.conclusion) shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
 
   it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in withQE { _ =>
     val x = Variable("x_",None,Real)
     val fml = GreaterEqual(x, Number(0))
     val prem = Ax.allV.provable
-    val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
     //a [SubstitutionClashException] should be thrownBy
     val e = intercept[ProverException] {
       prem(s)
-    }
-    (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
-  }
-  it should "old clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
-    val fml = GreaterEqual(x, Number(0))
-    val prem = Ax.allV.formula
-    val conc = Forall(Seq(x), fml)
-    val s = USubst(Seq(SubstitutionPair(p0, fml)))
-    //a [SubstitutionClashException] should be thrownBy
-    val e = intercept[ProverException] {
-      UniformSubstitutionRule(s,
-        Sequent(IndexedSeq(), IndexedSeq(prem)))(
-        Sequent(IndexedSeq(), IndexedSeq(conc)))
     }
     (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
   }
@@ -319,39 +186,18 @@ class USubstTests extends TacticTestBase {
     val fml = GreaterEqual(x, Number(0))
     val prem = ProvableInfo("V vacuous").provable
     val prog = Assign(x, Minus(x, Number(1)))
-    val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml),
       SubstitutionPair(ap, prog)))
     a [SubstitutionClashException] should be thrownBy prem(s)
+    a [SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }}
-  it should "old clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
-    withMathematica { _ => // for AxiomInfo
-      val fml = GreaterEqual(x, Number(0))
-    val prem = DerivedAxiomInfo("V vacuous").formula
-    val prog = Assign(x, Minus(x, Number(1)))
-    val conc = Box(prog, fml)
-    val s = USubst(Seq(SubstitutionPair(p0, fml),
-      SubstitutionPair(ap, prog)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
-      Sequent(IndexedSeq(), IndexedSeq(prem)))(
-      Sequent(IndexedSeq(), IndexedSeq(conc)))
-  }}
-  
+
   it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem = ProvableSig.axioms("c()' derive constant fn") //(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
-    val conc = "(x)'=0".asFormula
     val s = USubst(Seq(SubstitutionPair(aC, "x".asTerm)))
     a [SubstitutionClashException] should be thrownBy prem(s)
-  }
-  it should "old clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
-    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
-    val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
-    val conc = "(x)'=0".asFormula
-    val s = USubst(Seq(SubstitutionPair(aC, "x".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
-      Sequent(IndexedSeq(), IndexedSeq(prem)))(
-      Sequent(IndexedSeq(), IndexedSeq(conc)))
+    a [SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
   it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -359,18 +205,10 @@ class USubstTests extends TacticTestBase {
     val prem = ProvableSig.axioms("c()' derive constant fn") //"(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val s = USubst(Seq(SubstitutionPair(aC, "x'".asTerm)))
     a [SubstitutionClashException] should be thrownBy prem(s)
-  }
-  it should "old clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
-    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
-    val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
-    val conc = "(x')'=0".asFormula
-    val s = USubst(Seq(SubstitutionPair(aC, "x'".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
-      Sequent(IndexedSeq(), IndexedSeq(prem)))(
-      Sequent(IndexedSeq(), IndexedSeq(conc)))
+    a [SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
-  it should "not allow bound variables to occur free in V with assignment" taggedAs(AdvocatusTest) in {
+  it should "not allow bound variables to occur free in V with assignment" taggedAs AdvocatusTest in {
     withMathematica { _ => // for AxiomInfo
       a[SubstitutionClashException] shouldBe thrownBy {
       ProvableInfo("V vacuous").provable(USubst(
@@ -379,7 +217,7 @@ class USubstTests extends TacticTestBase {
     }}
   }
 
-  it should "not allow bound variables to occur free in V with ODE" taggedAs(AdvocatusTest) in {
+  it should "not allow bound variables to occur free in V with ODE" taggedAs AdvocatusTest in {
     withMathematica { _ => // for AxiomInfo
       a[SubstitutionClashException] shouldBe thrownBy {
       ProvableInfo("V vacuous").provable(USubst(
@@ -388,7 +226,7 @@ class USubstTests extends TacticTestBase {
     }}
   }
 
-  it should "not allow Anything-escalated substitutions on predicates of something" taggedAs(AdvocatusTest) in {
+  it should "not allow Anything-escalated substitutions on predicates of something" taggedAs AdvocatusTest in {
     withMathematica { _ => // for AxiomInfo
     val pr = ProvableInfo("V vacuous").provable(USubst(
     SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
@@ -413,7 +251,7 @@ class USubstTests extends TacticTestBase {
     // should throwOrNoop(_.conclusion == Sequent(IndexedSeq(), IndexedSeq("q(x) -> [x:=5;]q(x)".asFormula)))
   }}
 
-  it should "not allow Anything-escalated substitutions on functions of something" taggedAs(AdvocatusTest) in {
+  it should "not allow Anything-escalated substitutions on functions of something" taggedAs AdvocatusTest in {
     withMathematica { _ => // for AxiomInfo
     val pr = DerivedAxiomInfo("V vacuous").provable(USubst(
     SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "f(y)=0".asFormula) ::
@@ -522,14 +360,14 @@ class USubstTests extends TacticTestBase {
     //[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
     val pr = AxiomInfo("DG differential ghost").provable
-    val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=(z^3*y_)*y_+z^2&z>=4}]z>=9".asFormula
+    // val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=(z^3*y_)*y_+z^2&z>=4}]z>=9".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(SubstitutionPair(DifferentialProgramConst("c", Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("z")), Power(Variable("z"), Number(5)))) ::
         SubstitutionPair(UnitPredicational("q", Except(y::Nil)), GreaterEqual(Variable("z"), Number(4))) ::
         SubstitutionPair(UnitPredicational("p", Except(y::Nil)), GreaterEqual(Variable("z"), Number(9))) ::
         SubstitutionPair(UnitFunctional("a", Except(y::Nil), Real), Times(Power(Variable("z"), Number(3)), y)) ::
         SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Power(Variable("z"), Number(2))) :: Nil)
-      val inst = pr(s)
+      pr(s)
     }
   }
 
@@ -537,14 +375,14 @@ class USubstTests extends TacticTestBase {
     //[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
     val pr = AxiomInfo("DG differential ghost").provable
-    val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+(z^2*y_^2)&z>=4}]z>=9".asFormula
+    // val expected = "[{z'=z^5&z>=4}]z>=9 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+(z^2*y_^2)&z>=4}]z>=9".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(SubstitutionPair(DifferentialProgramConst("c", Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("z")), Power(Variable("z"), Number(5)))) ::
         SubstitutionPair(UnitPredicational("q", Except(y::Nil)), GreaterEqual(Variable("z"), Number(4))) ::
         SubstitutionPair(UnitPredicational("p", Except(y::Nil)), GreaterEqual(Variable("z"), Number(9))) ::
         SubstitutionPair(UnitFunctional("a", Except(y::Nil), Real), Power(Variable("z"), Number(3))) ::
         SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Times(Power(Variable("z"), Number(2)), Power(y,Number(2)))) :: Nil)
-      val inst = pr(s)
+      pr(s)
     }
   }
 
@@ -552,14 +390,14 @@ class USubstTests extends TacticTestBase {
     //[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
     val pr = AxiomInfo("DG differential ghost").provable
-    val expected = "[{z'=z^5&z>=y_}]z>=5 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=y_}]z>=5".asFormula
+    // val expected = "[{z'=z^5&z>=y_}]z>=5 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=y_}]z>=5".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(SubstitutionPair(DifferentialProgramConst("c", Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("z")), Power(Variable("z"), Number(5)))) ::
         SubstitutionPair(UnitPredicational("q", Except(y::Nil)), GreaterEqual(Variable("z"), y)) ::
         SubstitutionPair(UnitPredicational("p", Except(y::Nil)), GreaterEqual(Variable("z"), Number(5))) ::
         SubstitutionPair(UnitFunctional("a", Except(y::Nil), Real), Power(Variable("z"), Number(3))) ::
         SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Power(Variable("z"), Number(2))) :: Nil)
-      val inst = pr(s)
+      pr(s)
     }
   }
 
@@ -567,14 +405,14 @@ class USubstTests extends TacticTestBase {
     //[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
     val pr = AxiomInfo("DG differential ghost").provable
-    val expected = "[{z'=z^5&z>=4}]z>=y_ <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}]z>=y_".asFormula
+    // val expected = "[{z'=z^5&z>=4}]z>=y_ <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}]z>=y_".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(SubstitutionPair(DifferentialProgramConst("c", Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("z")), Power(Variable("z"), Number(5)))) ::
         SubstitutionPair(UnitPredicational("q", Except(y::Nil)), GreaterEqual(Variable("z"), Number(4))) ::
         SubstitutionPair(UnitPredicational("p", Except(y::Nil)), GreaterEqual(Variable("z"), y)) ::
         SubstitutionPair(UnitFunctional("a", Except(y::Nil), Real), Power(Variable("z"), Number(3))) ::
         SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Power(Variable("z"), Number(2))) :: Nil)
-      val inst = pr(s)
+      pr(s)
     }
   }
 
@@ -612,14 +450,14 @@ class USubstTests extends TacticTestBase {
     //[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
     val y = Variable("y_", None, Real)
     val pr = AxiomInfo("DG differential ghost").provable
-    val expected = "[{z'=z^5&z>=4}][{y_'=z}]z<=y_^2 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}][{y_'=z}]z<=y_^2".asFormula
+    // val expected = "[{z'=z^5&z>=4}][{y_'=z}]z<=y_^2 <-> \\exists y_ [{z'=z^5,y_'=(z^3)*y_+z^2&z>=4}][{y_'=z}]z<=y_^2".asFormula
     a[CoreException] should be thrownBy {
       val s = USubst(SubstitutionPair(DifferentialProgramConst("c", Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("z")), Power(Variable("z"), Number(5)))) ::
         SubstitutionPair(UnitPredicational("q", Except(y::Nil)), GreaterEqual(Variable("z"), Number(4))) ::
         SubstitutionPair(UnitPredicational("p", Except(y::Nil)), Box(ODESystem(AtomicODE(DifferentialSymbol(y),Variable("z"))), LessEqual(Variable("z"), Power(y,Number(2))))) ::
         SubstitutionPair(UnitFunctional("a", Except(y::Nil), Real), Power(Variable("z"), Number(3))) ::
         SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Power(Variable("z"), Number(2))) :: Nil)
-      val inst = pr(s)
+      pr(s)
     }
   }
 
@@ -689,7 +527,6 @@ class USubstTests extends TacticTestBase {
     val conc = "[{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
 
     val prog = "{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;".asProgram
-    val q_ = Function("q_", None, Real, Bool)
     val ctx_ = Function("ctx_", None, Bool, Bool)
     val s = USubst(
       SubstitutionPair(ap_, prog) ::
@@ -719,7 +556,6 @@ class USubstTests extends TacticTestBase {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
-        val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
@@ -750,7 +586,6 @@ class USubstTests extends TacticTestBase {
       withSafeClue("Random precontext " + prgString + "\n\n") {
         println("Random precontext " + prog.prettyString)
 
-        val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
@@ -779,7 +614,6 @@ class USubstTests extends TacticTestBase {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
-        val q_ = Function("q_", None, Real, Bool)
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(SubstitutionPair(ap_, prog) ::
@@ -802,7 +636,6 @@ class USubstTests extends TacticTestBase {
     val conc = Equiv(Diamond(prog, prem1), Diamond(prog, prem2))
     println("Precontext " + prog.prettyString)
 
-    val q_ = Function("q_", None, Real, Bool)
     val ctx_ = Function("ctx_", None, Bool, Bool)
 
     val s = USubst(SubstitutionPair(ap_, prog) ::
@@ -831,7 +664,6 @@ class USubstTests extends TacticTestBase {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
-        val q_ = Function("q_", None, Real, Bool)
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(SubstitutionPair(ap_, prog) ::
@@ -868,7 +700,6 @@ class USubstTests extends TacticTestBase {
       withSafeClue("Random precontext " + prgString + "\n\n") {
         println("Random precontext " + prog.prettyString)
 
-        val q_ = Function("q_", None, Real, Bool)
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(SubstitutionPair(ap_, prog) ::
@@ -899,7 +730,6 @@ class USubstTests extends TacticTestBase {
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         println("Random precontext " + prog.prettyString)
 
-        val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
@@ -1410,7 +1240,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "have no effect on other predicationals" taggedAs(CoverageTest) in {
+  it should "have no effect on other predicationals" taggedAs CoverageTest in {
     val fml = "true->P{false} | x>0".asFormula
     USubst(SubstitutionPair(PredicationalOf(Function("q",None,Bool,Bool),DotFormula),True)::Nil)(fml) shouldBe fml
   }
