@@ -754,22 +754,21 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink) extends 
     cmd
   ))
 
-  /** Creates a Lyapunov tool request with `method` and differential equation systems `sys`. */
-  private def createRequest(method: String, sys: List[ODESystem]): MExpr = {
-    applyFunc(lsymbol(method))(
-      list(sys.map(ode => {
-        val primedVars = DifferentialHelper.getPrimedVariables(ode)
-        val atomicODEs = DifferentialHelper.atomicOdes(ode)
-        val vars = list(primedVars.map(k2m):_*)
-        val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
-        list(vectorField, vars, k2m(ode.constraint))
-      }):_*)
-    )
+  /** Converts the differential equation systems `sys`. */
+  private def convertODEs(sys: List[ODESystem]): MExpr = {
+    list(sys.map(ode => {
+      val primedVars = DifferentialHelper.getPrimedVariables(ode)
+      val atomicODEs = DifferentialHelper.atomicOdes(ode)
+      val vars = list(primedVars.map(k2m):_*)
+      val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
+      list(vectorField, vars, k2m(ode.constraint))
+    }):_*)
   }
 
   /** @inheritdoc */
   override def genCLF(sys: List[ODESystem]): Option[Term] = {
-    val (_, result) = run(createCommand(createRequest("GenCLF", sys)))
+    val cmd = createCommand(applyFunc(lsymbol("GenCLF"))(convertODEs(sys)))
+    val (_, result) = run(cmd)
     result match {
       case t: Term => flattenPairs(t).headOption
       case t => throw ConversionException("Unexpected Lyapunov Function result: " + t.prettyString) //@todo
@@ -778,7 +777,11 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink) extends 
 
   /** @inheritdoc */
   override def genMLF(sys: List[ODESystem], trans: List[(Int, Int, Formula)]): List[Term] = {
-    val (_, result) = run(createCommand(createRequest("GenMLF", sys)))
+    val cmd = createCommand(applyFunc(lsymbol("GenMLF"))(
+      convertODEs(sys),
+      list(trans.map({ case (s, t, g) => list(int(s), int(t), k2m(g)) }):_*)
+    ))
+    val (_, result) = run(cmd)
     result match {
       case t: Term => flattenPairs(t)
       case t => throw ConversionException("Unexpected Lyapunov Function result: " + t.prettyString) //@todo
