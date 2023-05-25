@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
+import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.{assignbExists, cexLoop}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core._
@@ -878,6 +878,17 @@ class DLTests extends TacticTestBase {
       "inv(x), y()>=1 ==> [prg{|^@|};]inv(x)".asSequent,
       "inv(x), y()>=1 ==> post(x)".asSequent
     )
+  }
+
+  "CEX loop" should "analyze a simple example" in withMathematica { _ =>
+    val s= "x>=0 ==> [{v:=*;?v>=0;{x'=v}}*]x>=0".asSequent
+    // cexLoop should not throw an exception
+    proveBy(s, cexLoop("x>=0".asFormula)(1)).subgoals.loneElement shouldBe s
+  }
+
+  it should "find a counterexample in a simple example" in withMathematica { _ =>
+    val s= "x>=0 ==> [{v:=*;{x'=v}}*]x>=0".asSequent
+    a [BelleCEX] should be thrownBy proveBy(s, cexLoop("x>=0".asFormula)(1))
   }
 
   "Throughout" should "split simple sequences" in withTactics {

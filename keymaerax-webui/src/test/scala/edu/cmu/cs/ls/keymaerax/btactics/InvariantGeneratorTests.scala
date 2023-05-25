@@ -88,6 +88,16 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     proveBy(s, autoClose) shouldBe 'proved
   }
 
+  "Differential counterexample generator" should "analyze a simple example" in withMathematica { t =>
+    t.refuteODE(ODESystem("{x'=v}".asDifferentialProgram), List("x>=0".asFormula, "v>=0".asFormula), "x>=0".asFormula) shouldBe None
+  }
+
+  it should "find a counterexample in a simple example" in withMathematica { t =>
+    t.refuteODE(ODESystem("{x'=v}".asDifferentialProgram), List("x>=0".asFormula), "x>=0".asFormula) shouldBe Some(
+      Map("v".asNamedSymbol -> Number(-1), "x".asNamedSymbol -> Number(0))
+    )
+  }
+
   "Differential invariant generator" should "use Pegasus lazily" in withTactics {
     //@note pegasusInvariantGenerator asks ToolProvider.invGenTool
 
