@@ -20,7 +20,7 @@ import org.scalatest.time.{Days, Span}
 import scala.collection.immutable._
 
 class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
-  private val prob1 = ("!(-200 + 10 * t10_0 + v2_0 = 0 &" +
+  private lazy val prob1 = ("!(-200 + 10 * t10_0 + v2_0 = 0 &" +
     "t10_0 >= 0 &" +
     "st2_0 = 0 &" +
     "-2000 * st2_0 - 4000 * s2_0 -" +
@@ -33,7 +33,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     "-200 * st2_0 - 10 * t2_0 +" +
     "  20 * st2_0 * t2_0 + v2_0 = 0 &" +
     "t10_0 + t2_0 < 0)").asFormula
-  private val polys1 = (
+  private lazy val polys1 = (
     "st2_0," +
       "-200 + 10 * t10_0 + v2_0," +
       "-200 * st2_0 - 10 * t2_0 + 20 * st2_0 * t2_0 + v2_0," +
@@ -45,7 +45,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
       "-GEQ15^2 +  z2_0," +
       "-1 + GT16^2 * (-t10_0 - t2_0)"
     ).split(',').map(_.asTerm).toList
-  private val vars1 = ("v2_0, t10_0, st2_0, z2_0," +
+  private lazy val vars1 = ("v2_0, t10_0, st2_0, z2_0," +
     "t2_0, s2_0, GEQ11, GEQ12, GEQ13, GEQ14, GEQ15, GT16").split(',').map(_.asTerm).toList
 
   "sosSolveTool" should "return the certificate" in withMathematica { _ =>

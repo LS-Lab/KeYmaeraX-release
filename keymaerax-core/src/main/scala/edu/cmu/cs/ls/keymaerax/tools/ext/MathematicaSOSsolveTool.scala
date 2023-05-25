@@ -42,32 +42,28 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
 
   private val sossolvePath = SOSsolveInstaller.sossolveRelativeResourcePath
   private val pathSegments = scala.reflect.io.File(sossolvePath).segments.map(string)
-  private val joinedPath = fileNameJoin(list(homeDirectory.op :: pathSegments:_*))
+  private val joinedPath = fileNameJoin(list(string(Configuration.KEYMAERAX_HOME_PATH) :: pathSegments:_*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
   private val k2mU = new UncheckedBaseK2MConverter
 
-  val sossolveMain = Configuration.SOSsolve.mainFile("sossolve.wl")
-  val setOptions = applyFunc(symbol("SetOptions"))
+  private val sossolveMain = Configuration.SOSsolve.mainFile("sossolve.wl")
   private def ssymbol(s: String) = symbol(SOSSOLVE_NAMESPACE + s)
 
-  private def decodeLin(tt:Term) : (Int,Term,Term,Term) = tt match {
-    case Pair(n:Number, Pair(a, Pair(b, Pair(c, Nothing)))) if n.value.isValidInt => {
+  private def decodeLin(tt: Term) : (Int,Term,Term,Term) = tt match {
+    case Pair(n:Number, Pair(a, Pair(b, Pair(c, Nothing)))) if n.value.isValidInt =>
       (n.value.intValue(),a,b,c)
-    }
     case e =>
       throw new IllegalArgumentException("Unable to decode linear instruction: " + e)
   }
   private def decodeWitness(result: Expression): (Term, List[Term], List[(Int,Term,Term,Term)]) = result match {
-    case Pair(g,Pair(coeff,Pair(st, Pair(cofactors, Pair(lin,Nothing))))) => {
+    case Pair(g,Pair(coeff,Pair(st, Pair(cofactors, Pair(lin,Nothing))))) =>
       val sos =
         (PegasusM2KConverter.decodeTermList(coeff) zip PegasusM2KConverter.decodeTermList(st)).map(
           {cs => Times(cs._1,Power(cs._2,Number(2)))}
         ).foldLeft(g)(Plus.apply)
       val linls = PegasusM2KConverter.decodeTermList(lin)
-
       (sos, PegasusM2KConverter.decodeTermList(cofactors), linls.map(decodeLin))
-    }
     case e =>
       throw new IllegalArgumentException("Expected pair of sos and cofactors but got " + e)
   }
