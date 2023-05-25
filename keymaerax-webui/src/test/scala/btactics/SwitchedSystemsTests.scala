@@ -1,6 +1,5 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
 import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -117,7 +116,6 @@ class SwitchedSystemsTests extends TacticTestBase {
   it should "parse and print time-dependent switching system" in withMathematica { _ =>
     val ode1 = "x'=-x".asDifferentialProgram
     val ode2 = "x'=-x^3".asDifferentialProgram
-    val ode3 = "x'=-x^5".asDifferentialProgram
 
     val mode1 = ("mode1", ode1, None,
       List(
@@ -502,7 +500,7 @@ class SwitchedSystemsTests extends TacticTestBase {
       ("mode2", ode2, List(("mode1", "x1=0".asFormula)))
     ), Variable("mode"))
 
-    val pr = proveBy(Imply("mode1()!=mode2()".asFormula,stabilitySpec(ss)),
+    proveBy(Imply("mode1()!=mode2()".asFormula,stabilitySpec(ss)),
       implyR(1) &
         proveStabilityStateMLF(Nil)(1)) shouldBe 'proved
     proveBy(Imply("mode1()!=mode2()".asFormula,attractivitySpec(ss)),
@@ -666,7 +664,6 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val ode1 = ODESystem("x'=-1".asDifferentialProgram, "x > 0".asFormula)
     val ode2 = ODESystem("x'=-1".asDifferentialProgram, "x >= 0".asFormula)
-    val ode3 = ODESystem("x'=-1".asDifferentialProgram, "x > 0".asFormula)
 
     odeActive(ode1, True).isEmpty shouldBe false //Some((Unable to leave ODE {x'=(-1)&x>0},Map(x -> 0)))
     odeActive(ode2, True) shouldBe None
@@ -831,7 +828,7 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(tt)
 
-    tt shouldBe (
+    tt shouldBe
       ("{s_:=0;{u_:=0;++u_:=1;}}" +
         "{" +
         "   {?u_=0;{{?s_>=5;u_:=1;}s_:=0;++u_:=0;}++" +
@@ -839,7 +836,6 @@ class SwitchedSystemsTests extends TacticTestBase {
         "   {?u_=0;{s_'=1,x'=x}++" +
         "    ?u_=1;{s_'=1,x'=-x}}" +
         "}*").asProgram
-      )
   }
 
   it should "do a manual slow stability proof" in withMathematica { _ =>
