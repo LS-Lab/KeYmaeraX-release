@@ -457,7 +457,7 @@ class EqualityTests extends TacticTestBase {
   }
 
   it should "expand with a term search locator" in withQE { _ =>
-    val result = proveBy("y=max(x,4) ==> y>=4".asSequent, ArchiveParser.tacticParser("minmax('L==\"max(x,4)\")"))
+    val result = proveBy("y=max(x,4) ==> y>=4".asSequent, ArchiveParser.tacticParser("minmax('L==\"y=max(x,4)\")"))
     result.subgoals.loneElement shouldBe "y=max_, x>=4&max_=x|x < 4&max_=4 ==> y>=4".asSequent
   }
 
