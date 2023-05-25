@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, ParseException, Region, Signature, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, BuiltinSymbols, Declaration, Name, ParseException, Region, Signature, TacticReservedSymbols, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -722,7 +722,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
       (Name("g", None), Signature(Some(Unit), Real, None, Right(Some("1*f".asExpr)), UnknownLocation))
     ))
     tacticParser("hideL('L==\"f=g\")", defs) shouldBe
-      TactixLibrary.hideL(Find.FindLDef("f()=g()".asFormula, PosInExpr.HereP, defs))
+      TactixLibrary.hideL(Find.FindLDef("f()=g()".asFormula, PosInExpr.HereP, defs ++ TacticReservedSymbols.asDecl))
   }
 
   it should "elaborate variables to functions per declarations" in {
@@ -863,7 +863,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "expand definitions when parsing locators only when asked to" in {
     val defs = "safeDist() ~> y".asDeclaration
     tacticParser("hideL('L==\"s=safeDist()\")") should have ('locator (Find.FindLPlain("s=safeDist()".asFormula)))
-    tacticParser("hideL('L==\"s=safeDist()\")", defs) should have ('locator (Find.FindLDef("s=safeDist()".asFormula, PosInExpr.HereP, defs)))
+    tacticParser("hideL('L==\"s=safeDist()\")", defs) should have ('locator (Find.FindLDef("s=safeDist()".asFormula, PosInExpr.HereP, defs ++ TacticReservedSymbols.asDecl)))
   }
 
   it should "expand definitions when parsing position check locators only when asked to" in {
