@@ -314,7 +314,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |  Problem f()>0 -> p() End.
         |End.""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> Unable to elaborate to function symbols: assertion failed: Cannot elaborate:
+      """<somewhere> assertion failed: Cannot elaborate:
         |  Symbol f used with inconsistent kinds f:Unit->Real,f:Unit->Bool
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
@@ -946,7 +946,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.
         |End.""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> Unable to elaborate to function symbols: assertion failed: Cannot elaborate:
+      """<somewhere> assertion failed: Cannot elaborate:
         |  Symbol x used with inconsistent kinds x:Unit->Real,x:Real
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
