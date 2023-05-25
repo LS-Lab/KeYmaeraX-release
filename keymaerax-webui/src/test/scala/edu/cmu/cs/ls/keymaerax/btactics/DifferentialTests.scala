@@ -469,8 +469,8 @@ class DifferentialTests extends TacticTestBase {
   it should "FEATURE_REQUEST: expand special functions and constify their abbreviation if possible" taggedAs TodoTest in withQE { _ =>
     //@todo needs expand outside DConstify(...) with intermediate result between expand and DConstify stored in DB
     proveBy("[{x'=3}]abs(f())>=2".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
-      "f()>=0&abs_0()=f() | f()<0&abs_0()=-f(), true ==> abs_0()>=2".asSequent,
-      "f()>=0&abs_0()=f() | f()<0&abs_0()=-f(), true ==> [x':=3;]0>=0".asSequent
+      "f()>=0&abs_()=f() | f()<0&abs_()=-f(), true ==> abs_()>=2".asSequent,
+      "f()>=0&abs_()=f() | f()<0&abs_()=-f(), true ==> [x':=3;]0>=0".asSequent
     )
   }
 
@@ -1640,19 +1640,34 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>0, v>=0 ==> [v:=v;]\\exists t_ (t_>=0 & v*t_+x>0)".asSequent
   }
 
-  it should "not lose constant facts" in withQE { _ =>
+  it should "not lose constant facts (M)" in withMathematica { _ =>
     val result = proveBy("r>0 -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
     result.subgoals.loneElement shouldBe "r>0 ==> \\forall t_ (t_>=0 -> t_/r+v>0)".asSequent
   }
 
-  it should "not choke on constant fact 'true'" in withQE { _ =>
+  it should "not lose constant facts (Z3)" in withZ3 { _ =>
+    val result = proveBy("r>0 -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
+    result.subgoals.loneElement shouldBe "r>0 ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
+  }
+
+  it should "not choke on constant fact 'true' (M)" in withMathematica { _ =>
     val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL('L) & solve(1))
     result.subgoals.loneElement shouldBe "r>0, true ==> \\forall t_ (t_>=0 -> t_/r+v>0)".asSequent
   }
 
-  it should "not choke on constant conjunct with 'true'" in withQE { _ =>
+  it should "not choke on constant fact 'true' (Z3)" in withZ3 { _ =>
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL('L) & solve(1))
+    result.subgoals.loneElement shouldBe "r>0, true ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
+  }
+
+  it should "not choke on constant conjunct with 'true' (M)" in withMathematica { _ =>
     val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
     result.subgoals.loneElement shouldBe "r>0&true ==> \\forall t_ (t_>=0 -> t_/r+v>0)".asSequent
+  }
+
+  it should "not choke on constant conjunct with 'true' (Z3)" in withZ3 { _ =>
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
+    result.subgoals.loneElement shouldBe "r>0&true ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
   }
 
   it should "retain quantified facts without trying to diffcut" in withQE { _ =>
@@ -1665,9 +1680,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "A>0 ==> [a:=A;]\\forall t_ (t_>=0 -> a*t_+v>0)".asSequent
   }
 
-  it should "preserve const facts when solving in context" in withQE { _ =>
+  it should "preserve const facts when solving in context (M)" in withMathematica { _ =>
     val result = proveBy("A>0 -> [a:=A;][{v'=1/A}]v>0".asFormula, implyR(1) & solve(1, 1::Nil))
     result.subgoals.loneElement shouldBe "A>0 ==> [a:=A;]\\forall t_ (t_>=0 -> t_/A+v>0)".asSequent
+  }
+
+  it should "preserve const facts when solving in context (Z3)" in withZ3 { _ =>
+    val result = proveBy("A>0 -> [a:=A;][{v'=1/A}]v>0".asFormula, implyR(1) & solve(1, 1::Nil))
+    result.subgoals.loneElement shouldBe "A>0 ==> [a:=A;]\\forall t_ (t_>=0 -> 1/A*t_+v>0)".asSequent
   }
 
   it should "solve triple integrator with division" in withMathematica { _ =>
