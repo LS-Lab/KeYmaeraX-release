@@ -12,6 +12,7 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 
 import scala.collection.immutable.{::, List, Nil}
+import scala.util.Try
 
 /** Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task! */
 class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
@@ -34,6 +35,8 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
     val agendaItems: List[AgendaItem] = openGoals.map(n => AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     // add unexpanded functions, predicates, programs of the open goals of all leaves to the proof session
     session(proofId) = leaves.flatMap(_.parent).foldLeft(proofSession)(RequestHelper.updateProofSessionDefinitions)
-    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, tree.isProved, marginLeft, marginRight) :: Nil
+    //@note tree.isProved creates a merged provable, which cannot (yet) succeed when constifications (e.g., dIRule) are not proved (yet)
+    val isProved = Try(tree.isProved).toOption.getOrElse(false)
+    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, isProved, marginLeft, marginRight) :: Nil
   }
 }
