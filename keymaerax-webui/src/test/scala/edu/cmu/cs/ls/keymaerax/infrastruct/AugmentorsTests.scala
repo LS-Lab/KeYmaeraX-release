@@ -4,9 +4,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Variable}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -16,6 +18,8 @@ class AugmentorsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   override protected def beforeEach(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
+    ArchiveParser.setParser(new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
+      ReflectiveExpressionBuilder(_, _, None, _))))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
@@ -46,7 +50,7 @@ class AugmentorsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "complain when trying to elaborate in literal bound occurrence" in {
     the [AssertionError] thrownBy "x=1 -> [y:=y;x:=x;]x<=2".asPlainFormula.elaborateToFunctions(Set("x()".asPlainFunction)) should have message
-      """assertion failed: Elaboration tried replacing x in literal bound occurrence inside x=1->[y:=y;x:=x;]x<=2""".stripMargin
+      """Elaboration tried replacing x in literal bound occurrence inside x=1->[y:=y;x:=x;]x<=2""".stripMargin
   }
 
   it should "replace all (rename) variables and differential symbols" in {
