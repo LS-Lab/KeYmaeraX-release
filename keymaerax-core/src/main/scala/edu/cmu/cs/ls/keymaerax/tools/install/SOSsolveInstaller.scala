@@ -14,7 +14,7 @@ object SOSsolveInstaller extends Logging {
   val sossolveRelativeResourcePath: String = {
     val absolutePath = copyToDisk()
     val relativePath = Configuration.SOSsolve.relativePath
-    assert(absolutePath == Configuration.KEYMAERAX_HOME_PATH + File.separator + relativePath, "Unexpected absolute/relative path")
+    assert(absolutePath == Configuration.sanitizedPath(Configuration.KEYMAERAX_HOME_PATH, relativePath), "Unexpected absolute/relative path")
     File.separator + relativePath
   }
 

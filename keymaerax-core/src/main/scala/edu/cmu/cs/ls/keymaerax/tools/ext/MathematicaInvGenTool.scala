@@ -40,8 +40,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   private def invexsymbol(s: String) = symbol(INVARIANTEXTRACTOR_NAMESPACE + s)
 
   private val pegasusRelativePath = PegasusInstaller.pegasusRelativeResourcePath
-  private val relativePathSegments = scala.reflect.io.File(pegasusRelativePath).segments.map(string)
-  private val joinedPath = fileNameJoin(list(string(Configuration.KEYMAERAX_HOME_PATH) :: relativePathSegments:_*))
+  private val joinedPath = fileNameJoin(list(Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, pegasusRelativePath).map(string):_*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
   /** @inheritdoc */

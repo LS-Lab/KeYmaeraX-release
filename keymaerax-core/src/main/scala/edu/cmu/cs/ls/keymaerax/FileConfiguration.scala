@@ -88,14 +88,7 @@ object FileConfiguration extends Configuration {
   override def path(key: String): String = {
     val p = config.getString(key).replaceAllLiterally("/", File.separator)
     if (p.startsWith(File.separator)) p
-    else {
-      // backwards compatibility with old configuration entries: avoid duplicate folder name
-      val home = Configuration.KEYMAERAX_HOME_PATH
-      val homeFolders = home.split(File.separator)
-      val pFolders = p.split(File.separator)
-      if (pFolders.head == homeFolders.last) homeFolders.dropRight(1).mkString(File.separator) + File.separator + p
-      else Configuration.KEYMAERAX_HOME_PATH + File.separator + p
-    }
+    else Configuration.sanitizedPath(Configuration.KEYMAERAX_HOME_PATH, p)
   }
 
   override def relativePath(key: String): String = apply(key).replaceAllLiterally("/", File.separator)

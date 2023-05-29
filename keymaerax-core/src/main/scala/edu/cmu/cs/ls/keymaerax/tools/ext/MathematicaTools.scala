@@ -742,8 +742,7 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink) extends 
   private def lsymbol(s: String): MExpr = symbol(LYAPUNOV_NAMESPACE + s)
 
   private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
-  private val pathSegments = scala.reflect.io.File(pegasusPath).segments.map(string)
-  private val pathsList = string(Configuration.KEYMAERAX_HOME_PATH) +: pathSegments
+  private val pathsList = Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, pegasusPath).map(string)
   private val joinedPath = fileNameJoin(list(pathsList:_*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
