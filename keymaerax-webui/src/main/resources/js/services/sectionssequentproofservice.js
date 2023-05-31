@@ -275,16 +275,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
             // select first task if nothing is selected yet
             if (theAgenda.selectedId() === undefined) theAgenda.select(theAgenda.items()[0]);
           }
-          if (response.data.closed || theAgenda.items().length == 0) {
+          if (response.data.closed || theAgenda.items().length === 0) {
             // proof might be finished
-            if(!theAgenda.proofStatusDisplayed) {
-              theAgenda.proofStatusDisplayed == true
-              $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
-              console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
-            }
-            else {
-              console.log("Not showing agenda.isEmpty because it was already displayed.")
-            }
+            console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
+            $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
           }
         })
         .catch(function(data) {
@@ -318,13 +312,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
         theAgenda.select(theAgenda.itemsMap[theAgenda.selectedId()]);
-        if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
-          theAgenda.proofStatusDisplayed == true
+        if (theAgenda.itemIds().length === 0) {
           console.log("Emitting agenda.isEmpty from sequentproofservice.js 1");
           $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
-        }
-        if(theAgenda.proofStatusDisplayed == true) {
-          console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
         $rootScope.$broadcast('agenda.updateWithoutProgress');

@@ -450,13 +450,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         if (theAgenda.selectedId() === undefined && agendaIds.length > 0) {
           theAgenda.selectById(agendaIds[agendaIds.length-1]);
         }
-        if (agendaIds.length === 0 && !theAgenda.proofStatusDisplayed) {
-          theAgenda.proofStatusDisplayed = true
+        if (agendaIds.length === 0) {
           console.log("Emitting agenda.isEmpty from sequentproofservice.js 1");
           $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
-        }
-        if (theAgenda.proofStatusDisplayed === true) {
-          console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
         $rootScope.$broadcast('agenda.updateWithoutProgress');
