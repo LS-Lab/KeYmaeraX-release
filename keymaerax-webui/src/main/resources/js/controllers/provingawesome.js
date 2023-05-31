@@ -1255,13 +1255,18 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.resetProof();
 
     $scope.$on('agenda.isEmpty', function(event, data) {
-      if (data.proofId == $scope.proofId) {
+      if (data.proofId === $scope.proofId) {
         // the current controller is responsible
         $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
-          if (data.status == 'closed') {
+          if (data.status === 'closed') {
             // fetch proof
             $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/validatedStatus").then(function(response) {
-              $scope.proof = response.data; // no transformation, pass on to HTML as is
+              // no transformation, pass on to HTML as is
+              $scope.proof.checking = false;
+              $scope.proof.proofId = response.data.proofId;
+              $scope.proof.isProved = response.data.isProved;
+              $scope.proof.tactic = response.data.tactic;
+              $scope.proof.provable = response.data.provable;
             });
           } else {
             // should never happen
