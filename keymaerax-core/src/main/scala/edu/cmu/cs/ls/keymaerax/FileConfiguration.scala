@@ -16,11 +16,16 @@ import scala.collection.JavaConverters._
   * The purpose of this object is to have a central place for system configuration options of KeYmaera X.
   * @see [[edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX]] */
 object FileConfiguration extends Configuration {
-  private val KEYMAERAX_DIR_NAME: String = System.getProperty("KEYMAERAX_DIR_NAME", ".keymaerax")
+  /** The default KeYmaera X directory name in the user's home directory, if environment variable [[KEYMAERAX_HOME_PATH]] is not set. */
+  private val DEFAULT_KEYMAERAX_DIR_NAME: String = ".keymaerax"
 
   /** The user's home directory for the storage of KeYmaera X configuration and model and proof database files */
-  override val KEYMAERAX_HOME_PATH: String =
-    System.getProperty("KEYMAERAX_HOME", System.getProperty("user.home") + File.separator + KEYMAERAX_DIR_NAME)
+  override val KEYMAERAX_HOME_PATH: String = {
+    System.getenv("KEYMAERAX_HOME") match {
+      case null => System.getProperty("user.home") + File.separator + DEFAULT_KEYMAERAX_DIR_NAME
+      case h => h
+    }
+  }
 
   private val CONFIG_PATH: String = System.getProperty("CONFIG_PATH", KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf")
   private val DEFAULT_CONFIG_PATH: String = "/default.conf"
