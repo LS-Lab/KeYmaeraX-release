@@ -618,11 +618,15 @@ class DLParser extends Parser {
   // program parser
   //*****************
 
-  def programSymbol[_: P]: P[AtomicProgram] = P(
-    DLParserUtils.filterWithMsg(ident ~~ odeSpace.? ~ ";")
+  def programSymbol[_: P]: P[Program] = P(
+    DLParserUtils.filterWithMsg(ident ~~ odeSpace.? ~ (";" | "^@").!./)
         (_._2.isEmpty)("Program symbols cannot have an index").
-      map({ case (s,None,taboo) =>
-        ProgramConst(s, taboo.getOrElse(AnyArg))
+      map({ case (s,None,taboo, postfix) =>
+        val p = ProgramConst(s, taboo.getOrElse(AnyArg))
+        postfix match {
+          case ";" => p
+          case "^@" => Dual(p)
+        }
       })
   )
   //@todo combine system symbol and space taboo

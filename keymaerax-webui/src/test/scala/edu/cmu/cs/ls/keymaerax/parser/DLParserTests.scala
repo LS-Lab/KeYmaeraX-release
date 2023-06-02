@@ -173,4 +173,12 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
         |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin
   }
 
+  it should "parse dual game symbol notation" in {
+    DLParser("game;^@;") shouldBe Dual(ProgramConst("game"))
+  }
+
+  it should "parse simple dual game symbol notation" in {
+    DLParser("game^@;") shouldBe Dual(ProgramConst("game"))
+  }
+
 }
