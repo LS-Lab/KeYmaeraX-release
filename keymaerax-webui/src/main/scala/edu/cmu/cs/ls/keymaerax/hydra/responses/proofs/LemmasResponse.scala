@@ -9,9 +9,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomDisplayInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.hydra.{RequestHelper, Response}
 import spray.json.{JsArray, JsNull, JsObject, JsString, JsValue}
 
+import scala.util.Try
+
 case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
   override def getJson: JsValue = {
-    val json = infos.map(i =>
+    def getInfoJson(i: ProvableInfo): JsObject = {
       JsObject(
         "name" -> JsString(i.canonicalName),
         "codeName" -> JsString(i.codeName),
@@ -23,8 +25,9 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
           case AxiomDisplayInfo(_, f) => JsString(f)
           case _ => JsNull
         }),
-        "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(i)))
-
+        "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(i))
+    }
+    val json = infos.map(i => Try(getInfoJson(i)).toOption).filter(_.isDefined).map(_.get)
     JsObject("lemmas" -> JsArray(json:_*))
   }
 }

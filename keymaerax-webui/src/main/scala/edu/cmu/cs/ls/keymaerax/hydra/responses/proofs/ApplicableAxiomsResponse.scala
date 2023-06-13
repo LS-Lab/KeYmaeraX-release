@@ -13,6 +13,8 @@ import edu.cmu.cs.ls.keymaerax.hydra.{RequestHelper, Response}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import spray.json.{JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsValue}
 
+import scala.util.Try
+
 case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Option[DerivationInfo])],
                                     suggestedInput: Map[ArgInfo, Expression], topLevel: Boolean,
                                     suggestedPosition: Option[PositionLocator] = None) extends Response {
@@ -159,5 +161,6 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       )
   }
 
-  def getJson: JsValue = JsArray(derivationInfos.map(derivationJson):_*)
+  def getJson: JsValue = JsArray(
+    derivationInfos.map(i => Try(derivationJson(i)).toOption).filter(_.isDefined).map(_.get):_*)
 }
