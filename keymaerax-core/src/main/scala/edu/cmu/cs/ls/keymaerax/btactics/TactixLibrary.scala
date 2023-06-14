@@ -1229,7 +1229,9 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
 
     adapt match {
       case None | Some(TactixLibrary.nil) =>
-        expandAllDefs(recordedSubsts) & Idioms.doIfElse(p =>
+        (if (recordedSubsts.nonEmpty) expandAllDefs(recordedSubsts) else skip) &
+        (if (subst.isDefined) expandAllDefs(subst.get.usubst.subsDefsInput.toList) else skip) &
+        Idioms.doIfElse(p =>
           subst.map(_ (p.subgoals.head)).getOrElse(p.subgoals.head) == subst.map(_ (lemma.fact.conclusion)).getOrElse(lemma.fact.conclusion))(byLemma, cutLemma(nil))
       case Some(t) => expandAllDefs(recordedSubsts) & cutLemma(t)
     }
