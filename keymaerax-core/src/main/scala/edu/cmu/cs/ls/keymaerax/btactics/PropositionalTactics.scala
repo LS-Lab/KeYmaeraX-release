@@ -5,7 +5,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper.timed
 import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -430,9 +429,23 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
   @Tactic("equivRewriting", conclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ", premises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ")
   val equivRewriting: BuiltInTwoPositionTactic =  anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
-    val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
-    p.subgoals(0)(equivPos) match {
-      case Equiv(_,_) => instantiatedEquivRewritingImpl(p, equivPos, targetPos)
+    val seq = p.subgoals.head
+    val target = seq(targetPos).asInstanceOf[Formula]
+    seq(equivPos) match {
+      case Equiv(l, r) =>
+        if (targetPos.isTopLevel) instantiatedEquivRewritingImpl(p, equivPos, targetPos.top)
+        else {
+          val (ctx, e) = seq.at(targetPos)
+          val repl = if (e == l) r else l
+          val equiv = Equiv(ctx(e), ctx(repl))
+          (p(Cut(equiv), 0)
+            // use cut equivalence ctx(l) <-> ctx(r)
+            (instantiatedEquivRewriting(AntePos(seq.ante.length), targetPos.top), 0)
+            (HideLeft(AntePos(seq.ante.length)), 0)
+            // show cut; @todo more targeted tactic
+            (prop, 1)
+            )
+        }
       case fa: Forall =>
         /*
          * Game plan:
@@ -442,6 +455,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
          *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
          *   5. Hide the instantiated equivalence OR the original assumption.
          */
+        assert(targetPos.isTopLevel, "Equivalence rewriting of universally quantified fact only when target is top-level")
 
         // step 1
         val instantiation = computeInstantiation(fa, target)
@@ -455,7 +469,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
           (vars(fa).map(x => FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)).
             foldLeft(_: ProvableSig)({ case (pr, r) => pr(r, 0)  }), 0)
           // step 4
-          (instantiatedEquivRewritingImpl(_, cutPos, targetPos), 0)
+          (instantiatedEquivRewritingImpl(_, cutPos, targetPos.top), 0)
           // step 5
           (if (targetPos.isAnte) HideLeft(targetPos.checkAnte.top) else HideLeft(cutPos), 0)
           )
@@ -526,29 +540,29 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
     *   P<->Q, Q |-
     * }}}
     */
-  private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position): ProvableSig = {
-    assert(p.subgoals.length == 1, "Assuming one subgoal.")
+  private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: SeqPos): ProvableSig = {
+    ProofRuleTactics.requireOneSubgoal(p, "instantiatedEquivRewritingImpl")
 
     //@note equivalence == target <-> other.
-    val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte) match {
-      case e:Equiv => e
-      case f:Formula => throw new Exception(s"Expected an Equiv but found ${f.prettyString}")
-      case e@_ => throw new Exception(s"Expected an Equiv formula but found ${e.prettyString}")
+    val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte.top) match {
+      case e: Equiv => e
+      case f: Formula => throw new Exception(s"Expected an Equiv but found ${f.prettyString}")
+      case e => throw new Exception(s"Expected an Equiv formula but found $e")
     }
-    val targetValue : Formula = p.subgoals.head(targetPos.top)
-    val otherValue : Formula = if(equivalence.left == targetValue) equivalence.right else equivalence.left
+    val targetValue: Formula = p.subgoals.head(targetPos)
+    val otherValue: Formula = if (equivalence.left == targetValue) equivalence.right else equivalence.left
 
     val newEquivPos = AntePos(p.subgoals.head.ante.length)
 
     //First constraint a sequent that we can close as long as we know which positions to target with CloseId
     val postCut =
-      p.apply(Cut(equivalence), 0)
-        .apply(Close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
-        .apply(EquivLeft(newEquivPos), 0)
-        .apply(AndLeft(newEquivPos), 0)
-        .apply(AndLeft(newEquivPos), 1)
+      (p(Cut(equivalence), 0)
+        (Close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)), 1)
+        (EquivLeft(newEquivPos), 0)
+        (AndLeft(newEquivPos), 0)
+        (AndLeft(newEquivPos), 1))
 
-    if(targetPos.isAnte) {
+    if (targetPos.isAnte) {
       /*
        * Positive subgoal (A&B) is the result branch. Cleanup as follows:
        *    1. Ante reduces from
@@ -563,9 +577,9 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
           if (postCut.subgoals(0).ante.last == targetValue) AntePos(postCut.subgoals(0).ante.length - 1)
           else AntePos(postCut.subgoals(0).ante.length - 2)
 
-        postCut
-          .apply(HideLeft(redundantTargetPosition), 0)
-          .apply(HideLeft(targetPos.checkAnte.top), 0)
+        (postCut
+          (HideLeft(redundantTargetPosition), 0)
+          (HideLeft(targetPos.asInstanceOf[AntePos]), 0))
       }
 
       /*
@@ -580,9 +594,9 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
           AntePos(positiveSubgoalCleanup.subgoals(1).ante.length - 2)
       val unNegatedTargetPos = SuccPos(positiveSubgoalCleanup.subgoals(1).succ.length)
 
-      positiveSubgoalCleanup
-        .apply(NotLeft(negatedTargetPos), 1)
-        .apply(Close(targetPos.checkAnte.top, unNegatedTargetPos), 1)
+      (positiveSubgoalCleanup
+        (NotLeft(negatedTargetPos), 1)
+        (Close(targetPos.asInstanceOf[AntePos], unNegatedTargetPos), 1))
     }
     else { //targetPos is in the succedent.
       val anteTargetPos =
@@ -593,15 +607,19 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
         if (postCut.subgoals(1).ante.last == Not(otherValue)) AntePos(postCut.subgoals(1).ante.length - 1)
         else AntePos(postCut.subgoals(1).ante.length - 2)
 
-      postCut
-        .apply(Close(anteTargetPos, targetPos.checkSucc.top), 0)
-        .apply(HideRight(targetPos.checkSucc.top), 0) //@note these are not position 0 instead of position 1 because the other goal has now closed.
-        .apply(NotLeft(negatedOtherPos), 0)
-        .apply(HideLeft(AntePos(postCut.subgoals(1).ante.length-2)), 0)
+      (postCut
+        (Close(anteTargetPos, targetPos.asInstanceOf[SuccPos]), 0)
+        (HideRight(targetPos.asInstanceOf[SuccPos]), 0) //@note these are not position 0 instead of position 1 because the other goal has now closed.
+        (NotLeft(negatedOtherPos), 0)
+        (HideLeft(AntePos(postCut.subgoals(1).ante.length-2)), 0)
+        )
     }
   }
   @Tactic("instantiatedEquivRewriting")
-  val instantiatedEquivRewriting: BuiltInTwoPositionTactic = anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
+  val instantiatedEquivRewriting: BuiltInTwoPositionTactic = anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
+    assert(targetPos.isTopLevel, "Simple equivalence rewriting only when target is top-level")
+    instantiatedEquivRewritingImpl(p, equivPos, targetPos.top)
+  })
 
   //endregion
 

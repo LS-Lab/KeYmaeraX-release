@@ -59,6 +59,16 @@ class PropositionalTests extends TacticTestBase {
     proveBy("\\forall x (p(x) <-> q(x)), p(y) ==> ".asSequent, equivRewriting(-1, -2)).subgoals.loneElement shouldBe "\\forall x (p(x) <-> q(x)), q(y) ==> ".asSequent
   }
 
+  it should "rewrite in context" in withTactics {
+    proveBy("Q()<->R() ==> !Q()".asSequent, equivRewriting(AntePosition(1), SuccPosition(1, List(0)))).subgoals.
+      loneElement shouldBe "Q()<->R() ==> !R()".asSequent
+  }
+
+  it should "rewrite in equivalence" in withTactics {
+    proveBy("Q()<->R() ==> Q()<->R()".asSequent, equivRewriting(AntePosition(1), SuccPosition(1, List(0)))).subgoals.
+      loneElement shouldBe "Q()<->R() ==> R()<->R()".asSequent
+  }
+
   "toSingleFormula" should "collapse a sequent into a single formula" in withTactics {
     proveBy("a=1, b=2, c=3 ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> a=1&b=2&c=3 -> x=1|y=2".asSequent
     proveBy(" ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> true -> x=1|y=2".asSequent
