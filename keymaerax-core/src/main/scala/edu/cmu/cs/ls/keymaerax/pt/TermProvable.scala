@@ -132,8 +132,10 @@ trait ProvableSig {
     */
   def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig
 
-  /** Apply forward tactic `fw` at `subgoal`. */
-  def apply(fw: ProvableSig=>ProvableSig, subgoal: Subgoal): ProvableSig = apply(fw(sub(subgoal)), subgoal)
+  /** Apply forward tactic `fw` at `subgoal`, or on all subgoals when `subgoal` < 0. */
+  def apply(fw: ProvableSig=>ProvableSig, subgoal: Subgoal): ProvableSig =
+    if (subgoal >= 0) apply(fw(sub(subgoal)), subgoal)
+    else fw(this)
 
   /** Apply forward tactic on all subgoals. */
   def apply(fw: ProvableSig=>ProvableSig): ProvableSig = subgoals.indices.reverse.foldLeft(this)({ case (p, i) => p(fw(p.sub(i)), i) })
