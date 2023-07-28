@@ -6,16 +6,17 @@ package edu.cmu.cs.ls.keymaerax.btactics
 */
 
 
+import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics.eqL2R
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
 import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{QE, prop}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
-
 import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
@@ -125,6 +126,40 @@ class UnifyUSCalculusTest extends TacticTestBase {
   it should "reduce [c;][d;]x>1 |- x>5 to [c;d;]x>1 |- x>5 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+  }
+
+  it should "use a conditional equivalence subproof" in withTactics {
+    val mainProof = ProvableSig.startPlainProof("x=1 ==> !y*x>0 <-> !y>0".asSequent)
+    val subProof = ProvableSig.startPlainProof("==> x=1 -> (y*x>0 <-> y>0)".asSequent)(
+      implyR(1), 0)(
+      eqL2R(-1)(SuccPosition(1, List(0))), 0)(
+      useAt(Ax.timesIdentity)(SuccPosition(1, List(0, 0))), 0)(
+      CoHideRight(SuccPos(0)), 0)(
+      byUS(Ax.equivReflexive.provable), 0)
+    proveBy(mainProof, useAt(subProof, PosInExpr(List(1,0)))(1, PosInExpr(List(0,0)))).subgoals.
+      loneElement shouldBe "x=1 ==> !y>0 <-> !y>0".asSequent
+  }
+
+  it should "use an unproved conditional equivalence subproof" in withTactics {
+    val mainProof = ProvableSig.startPlainProof("P ==> !Q <-> !R".asSequent)
+    val subProof = ProvableSig.startPlainProof("==> P -> (Q<->R)".asSequent)
+    proveBy(mainProof, useAt(subProof, PosInExpr(List(1,0)))(1, PosInExpr(List(0, 0)))).subgoals should
+      contain theSameElementsInOrderAs List(
+      "==> P -> (Q<->R)".asSequent,
+      "P ==> !R <-> !R".asSequent
+    )
+  }
+
+  it should "use a conditional equality subproof" in withTactics {
+    val mainProof = ProvableSig.startPlainProof("x=1 ==> !(y*x!=y)".asSequent)
+    val subProof = ProvableSig.startPlainProof("==> x=1 -> y*x=y".asSequent)(
+      implyR(1), 0)(
+      eqL2R(-1)(SuccPosition(1, List(0))), 0)(
+      useAt(Ax.timesIdentity)(SuccPosition(1, List(0))), 0)(
+      CoHideRight(SuccPos(0)), 0)(
+      byUS(Ax.equalReflexive.provable), 0)
+    proveBy(mainProof, useAt(subProof, PosInExpr(List(1,0)))(1, PosInExpr(List(0,0)))).subgoals.
+      loneElement shouldBe "x=1 ==> !(y!=y)".asSequent
   }
 
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {

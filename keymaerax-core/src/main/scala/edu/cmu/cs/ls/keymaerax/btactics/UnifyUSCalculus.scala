@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
+import scala.util.Try
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.
@@ -737,43 +738,86 @@ trait UnifyUSCalculus {
           case Imply(prereq, remainder) =>
             if (StaticSemantics.signature(prereq).intersect(Set(DotFormula, DotTerm())).nonEmpty)
               throw new UnsupportedTacticFeature("Unimplemented case which works at a negative polarity position: " + K.ctx)
-            // try to prove prereq globally
-            /* {{{
-           *                                         fact
-           *                                   prereq -> remainder
-           * ----------------master   ----------------------------- US
-           * |- subst(prereq)         |- subst(prereq -> remainder)
-           * ------------------------------------------------------ CutRight
-           *         |- subst(remainder)
-           * }}}
-           * The resulting new fact subst(remainder) is then used via useFor
-           */
 
-            try {
-              // |- subst(prereq)
-              //@note don't call master to avoid infinite proof search for ODEs
-              val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.QE & done)
-              require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
+            val rewrite = remainder match {
+              case _: Equiv => Some((pos: AntePos) => equivRewriting(pos, p))
+              case Equal(_: DotTerm, _) => Some((pos: AntePos) => EqualityTactics.eqL2R(pos.checkAnte)(p))
+              case Equal(_, _: DotTerm) => Some((pos: AntePos) => EqualityTactics.eqR2L(pos.checkAnte)(p))
+              case _ => None
+            }
 
-              // |- subst(remainder{k})
-              val remFact: ProvableSig = (ProvableSig.startProof(subst(Context(remainder)(k)), provable.defs)
-                // |- subst(prereq)      |- subst(prereq -> remainder)
-                (CutRight(subst(prereq), SuccPos(0)), 0)
-                // prove right branch   |- subst(prereq -> remainder)
-                // right branch  |- subst(prereq -> remainder)  byUS(fact)
+            val bv = StaticSemantics.boundVars(C(subst(k)))
+
+            val sub = provable.sub(0)
+            val lastSucc = SuccPos(sub.subgoals.head.succ.length)
+            //@note don't call auto to avoid infinite proof search for ODEs
+            lazy val prereqFact = Try(TactixLibrary.proveBy(subst(prereq), TactixLibrary.QE & done)).toOption
+            lazy val prereqObligation = ProvableSig.startPlainProof(
+              Sequent(sub.subgoals.head.ante, sub.subgoals.head.succ ++ IndexedSeq(subst(prereq))))
+            lazy val prereqProof = prereqFact match {
+              case Some(prf) => prereqObligation(CoHideRight(lastSucc), 0)(byUS(prf), 0)
+              case _ => prereqObligation(prop, 0)
+            }
+
+            if (rewrite.nonEmpty &&
+              bv.intersect(StaticSemantics.freeVars(subst(prereq))).isEmpty &&
+              bv.intersect(StaticSemantics.freeVars(subst(k))).isEmpty &&
+              prereqProof.isProved) {
+              // prereq can be proved from current assumptions without considering context, equivalence is unaffected by context
+
+              val useEquivGoal = if (fact.isProved) 0 else 1
+
+              val lastAnte = AntePos(sub.subgoals.head.ante.length)
+              val lastSucc = SuccPos(sub.subgoals.head.succ.length)
+
+              val rewritten = (sub
+                (Cut(subst(fact.conclusion.succ.head)), 0)
+                // show cut using fact
+                (CoHideRight(lastSucc), 1)
                 (subst.toForward(fact), 1)
-                // left branch   |- subst(prereq)
-                (prereqFact, 0)
+                (ImplyLeft(lastAnte), 0) // 0-th subgoal: G ==> D, prereq; last subgoal: G, k ==> D
+                // G ==> D, prereq: show prereq from assumptions
+                (prereqProof, 0)
+                // G, k ==> D: rewrite equivalence
+                (rewrite.get(lastAnte), useEquivGoal)
+                (HideLeft(lastAnte), useEquivGoal)
                 )
-              remFact ensures(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
+              provable(rewritten, 0)
+            } else try {
+                // try to prove prereq globally
+                /* {{{
+                 *                                         fact
+                 *                                   prereq -> remainder
+                 * ----------------master   ----------------------------- US
+                 * |- subst(prereq)         |- subst(prereq -> remainder)
+                 * ------------------------------------------------------ CutRight
+                 *         |- subst(remainder)
+                 * }}}
+                 * The resulting new fact subst(remainder) is then used via useFor
+                 */
 
-              val remKey: PosInExpr = key.child
-              require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
-              UnifyUSCalculus.this.useAtImpl("useAtRem", remFact, remKey, defaultMatcher, inst)(p).computeResult(provable)
-            } catch {
-                  //@todo catch less
-              case err: Throwable =>
-                //@todo if global proof of prereq is unsuccessful could also rewrite (DotFormula<->bla)<-prereq to prereq&bla -> DotFormula and use the latter.
+                // |- subst(prereq)
+                require(prereqFact.isDefined && prereqFact.get.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
+
+                // |- subst(remainder{k})
+                val remFact: ProvableSig = (ProvableSig.startProof(subst(Context(remainder)(k)), provable.defs)
+                  // |- subst(prereq)      |- subst(prereq -> remainder)
+                  (CutRight(subst(prereq), SuccPos(0)), 0)
+                  // prove right branch   |- subst(prereq -> remainder)
+                  // right branch  |- subst(prereq -> remainder)  byUS(fact)
+                  (subst.toForward(fact), 1)
+                  // left branch   |- subst(prereq)
+                  (prereqFact.get, 0)
+                  )
+                remFact ensures(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
+
+                val remKey: PosInExpr = key.child
+                require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
+                UnifyUSCalculus.this.useAtImpl("useAtRem", remFact, remKey, defaultMatcher, inst)(p).computeResult(provable)
+              } catch {
+                //@todo catch less
+                case _: Throwable =>
+                  //@todo if global proof of prereq is unsuccessful could also rewrite (DotFormula<->bla)<-prereq to prereq&bla -> DotFormula and use the latter.
 
                 // global proof of prereq unsuccessful, local proof needed
                 /* {{{
