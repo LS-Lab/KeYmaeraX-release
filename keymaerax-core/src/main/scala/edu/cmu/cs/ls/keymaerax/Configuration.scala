@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax
 
 import java.io.{File, PrintWriter}
+import java.util.regex.Pattern
 import scala.collection.immutable.Map
 
 /** The KeYmaera X configuration.
@@ -237,8 +238,8 @@ object Configuration extends Configuration {
   /** Returns the sanitized path segments of `home` + `sub` without duplicate last of `home` and first of `sub`
    *  for backwards compatibility with old configuration entries. */
   def sanitizedPathSegments(home: String, sub: String): Array[String] = {
-    val hf = home.split(File.separator)
-    val sf = sub.split(File.separator)
+    val hf = home.split(Pattern.quote(File.separator))
+    val sf = sub.split(Pattern.quote(File.separator))
     if (sf.head == hf.last) hf.dropRight(1) ++ sf
     else hf ++ sf
   }
