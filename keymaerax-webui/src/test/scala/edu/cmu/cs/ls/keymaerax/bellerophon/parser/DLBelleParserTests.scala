@@ -142,6 +142,21 @@ class DLBelleParserTests
     tactic.inputs.loneElement shouldBe LessEqual(FuncOf(tanh, Variable("x")), Number(1))
   }
 
+  it should "elaborate consistently with defs" in {
+    val defs = Declaration(Map(
+      Name("p", None) ->
+        Signature(Some(Unit), Bool, None, Right(None), UnknownLocation),
+      Name("f", None) ->
+        Signature(Some(Unit), Real, None, Right(None), UnknownLocation)
+    ))
+    parse("""hideL(2=="p()")""", defs) should have('locator(Fixed(SuccPos(1), Some("p()".asFormula))))
+    parse("""hideL(2=="#f()#=2")""", defs) should have('locator
+      (Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("f()".asTerm))))
+    parse("""hideL(2=="!#p()#")""", defs) should have('locator
+      (Fixed(SuccPosition.base0(1, PosInExpr(0::Nil)), Some("p()".asFormula))))
+    parse("""hideL(2=="f()")""", defs) should have('locator(Fixed(SuccPos(1), Some("f()".asTerm)))) //This is based on: `expr already points verbatim to the sub-position, e.g. 2.1.1=="x"'
+  }
+
   it should "parse PosInExpr attached to locator" taggedAs TodoTest in {
     parse("derive('Rlast.1)") should have(Symbol("locator")(LastSucc(0, PosInExpr(1 :: Nil))))
     parse("derive('Llast.1.0.1)") should have(Symbol("locator")(LastAnte(0, PosInExpr(1 :: 0 :: 1 :: Nil))))
