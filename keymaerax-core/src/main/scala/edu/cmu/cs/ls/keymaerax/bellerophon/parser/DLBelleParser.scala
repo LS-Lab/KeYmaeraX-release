@@ -352,11 +352,8 @@ class DLBelleParser(
       else if (hashStart == -1) {
         // No hashes, just return Here for PosIn
         fastparse.parse(str, fullExpression(_)) match {
-          case Parsed.Success(value, _) => defs.elaborateFull(value) match {
-              case f: Formula => Pass((f, HereP))
-              case FuncOf(fn, arg) =>
-                Pass((PredOf(fn.copy(sort = Bool), arg), HereP)) // @note for ambiguous locators, e.g. 'R=="p(x)"
-            }
+          case Parsed.Success(value, _) =>
+            Pass((defs.elaborateFull(value), HereP))
           case failure: Parsed.Failure =>
             // What information do we expose here??
             Fail
@@ -379,21 +376,22 @@ class DLBelleParser(
               case failure: Parsed.Failure =>
                 // What information do we expose here??
                 Fail
-              case Parsed.Success(sub, _) =>
+              case Parsed.Success(subExpr, _) =>
+                val subExprCorrected = defs.elaborateFull(subExpr)
                 val posIn =
                   if (noHashes.indexOf(sub) != hashStart + 1) {
                     // marked sub-expression is not leftmost in expr, mark with "hash" placeholder function/predicate/program
                     val (markedStr, placeholder) =
-                      PositionLocator.withMarkers(noHashes, sub, hashStart, hashEnd - hashStart + 1)
+                      PositionLocator.withMarkers(noHashes, subExprCorrected, hashStart, hashEnd - hashStart + 1)
                     val markedExpr = fastparse.parse(markedStr, fullExpression(_)).get.value
                     FormulaTools.posOf(markedExpr, placeholder)
-                  } else { FormulaTools.posOf(expr, sub) }
+                  } else { FormulaTools.posOf(expr, subExprCorrected) }
 
                 posIn match {
                   case Some(pi) => Pass((defs.elaborateFull(expr), pi))
                   case None => Fail.opaque(
                       "Parsed a position locator with subexpression successfully, but could not find subexpression: " +
-                        sub.prettyString + " in expression " + expr.prettyString
+                        subExprCorrected.prettyString + " in expression " + expr.prettyString
                     )
                 }
             }
