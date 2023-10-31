@@ -81,7 +81,8 @@ object Context {
   private def context(e: Expression, pos: PosInExpr): (Expression, Expression) = e match {
     case f: Term => context(f, pos)
     case f: Formula => context(f, pos)
-    case f: DifferentialProgram => context(f, pos) //Useless case (does the same as the next). Should redirect to contextODE instead.
+    //match order-dependent
+    case f: DifferentialProgram => contextODE(f, pos)
     case f: Program => context(f, pos)
     case _ => ???  // trivial totality on possibly problematic patmats
   }
@@ -226,10 +227,11 @@ object Context {
   // flat subexpression extraction (for performance and context-generality). Just by computation-irrelevance of context(e,pos)._2 since identical code
 
   private def part(t: Expression, pos: PosInExpr): Expression = t match {
-    case f: Term    => part (f, pos)
-    case f: Formula => part (f, pos)
-    case f: DifferentialProgram => part (f, pos) //Useless case (does the same as the next). Should redirect to partODE instead.
-    case f: Program => part (f, pos)
+    case f: Term    => part(f, pos)
+    case f: Formula => part(f, pos)
+    //match order-dependent
+    case f: DifferentialProgram => partODE(f, pos)
+    case f: Program => part(f, pos)
     case _ => ???  // trivial totality on possibly problematic patmats
   }
 
@@ -292,6 +294,8 @@ object Context {
   def replaceAt(expr: Expression, pos: PosInExpr, repl: Expression): Expression = expr match {
     case f: Term    => replaceAt(f, pos, repl)
     case f: Formula => replaceAt(f, pos, repl)
+    //match order-dependent
+    case f: DifferentialProgram => replaceAtODE(f, pos, repl)
     case f: Program => replaceAt(f, pos, repl)
     case _ => ???  // trivial totality on possibly problematic patmats
   }
@@ -615,7 +619,7 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
    */
   private def instantiate(withA: Program): T = {
     assert(!isFormulaContext || isTermContext, "can only instantiate programs within a program context " + this)
-    if (withA.isInstanceOf[DifferentialProgram] && !withA.isInstanceOf[ODESystem])
+    if (withA.isInstanceOf[DifferentialProgram] && !withA.isInstanceOf[ODESystem]) //2nd test redundant: ODESystem does not extend DifferentialProgram
       instantiate(withA.asInstanceOf[DifferentialProgram])
     else
       USubst(SubstitutionPair(DotProgram, withA) :: Nil)(ctx).asInstanceOf[T]

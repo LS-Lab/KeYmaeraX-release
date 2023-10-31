@@ -50,6 +50,15 @@ class ContextTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ctx2(e2) shouldBe t
   }
 
+  it should "reconstruct the original differential program" in {
+    val c = "x' = y+2, y' = f(x)".asDifferentialProgram
+    val (ctx, e) = Context.at(c, PosInExpr(0 :: Nil))
+    ctx(e) shouldBe c
+    val (ctx2, e2) = Context.at(c, PosInExpr(1 :: 1 :: 0 :: Nil))
+    ctx2(e2) shouldBe c
+
+  }
+
   "Different context construction" should "lead to the same context" in {
     val ctx1 = Context("!⎵ -> true".asFormula)
     val ctx2 = Context("⎵ -> true".asFormula)(Context("!⎵".asFormula))
