@@ -59,34 +59,11 @@ Windows, 64bit, Mathematica 10.4+
 
 Building
 ========
-To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
-In a nutshell, install
 
-* [Java Development Kit JDK](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK](https://openjdk.java.net/) (be sure to use version 1.8-12, Java 13 onwards does not work)
-* SBT 1.3.7
-* Scala 2.12.8 
+To compile KeYmaera X from source, see the [build instructions](doc/build.md).
+To set up a development environment, see the [dev instructions](doc/develop.md).
 
-and run the following to build `keymaerax.jar`:
-
-    sbt clean assembly
-
-or the following to build the KeYmaera X core `keymaerax-core.jar` without UI:
-
-    sbt "project core" clean assembly
-
-[ScalaDoc API documentation for KeYmaera X](https://keymaeraX.org/scaladoc) can be generated locally with:
-
-    sbt unidoc
-
-This will generate ScalaDoc into `target/scala-2.12/unidoc/index.html`
-
-A quick smoke test suite can be run by:
-
-    sbt "test-only -- -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest"
-
-A single test can be run as follows:
-
-    sbt "testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests" 
+More detailed but outdated instructions are available [in the wiki on GitHub](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
 
 Publications
 ============
