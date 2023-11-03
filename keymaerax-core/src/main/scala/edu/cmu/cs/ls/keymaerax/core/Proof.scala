@@ -887,7 +887,7 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
 
 /** A rule applied to a position in a sequent.
   * @see [[SeqPos]] */
-trait PositionRule extends Rule {
+sealed trait PositionRule extends Rule {
   /** The position where this rule will be applied at. */
   val pos: SeqPos
   override def toString: String = name + " at " + pos
@@ -896,7 +896,7 @@ trait PositionRule extends Rule {
 /** A rule applied to a position in the antecedent on the left of a sequent.
   * LeftRules can only be applied to antecedent positions.
   * @see [[AntePos]] */
-trait LeftRule extends PositionRule {
+sealed trait LeftRule extends PositionRule {
   /** The position (on the left) where this rule will be applied at. */
   val pos: AntePos
 }
@@ -904,7 +904,7 @@ trait LeftRule extends PositionRule {
 /** A rule applied to a position in the succedent on the right of a sequent.
   * RightRules can only be applied to succedent positions.
   * @see [[SuccPos]] */
-trait RightRule extends PositionRule {
+sealed trait RightRule extends PositionRule {
   /** The position (on the right) where this rule will be applied at. */
   val pos: SuccPos
 }

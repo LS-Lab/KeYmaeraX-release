@@ -125,18 +125,18 @@ sealed trait Expression {
 // partitioning into types of expressions in terms of atomicity, compositeness
 
 /** Atomic expressions that do not have any proper subexpressions. */
-trait Atomic extends Expression
+sealed trait Atomic extends Expression
 /** Composite expressions that are composed of subexpressions */
-trait Composite extends Expression
+sealed trait Composite extends Expression
 
 /** Unary composite expressions that are composed of one subexpression. */
-trait UnaryComposite extends Composite {
+sealed trait UnaryComposite extends Composite {
   /** The child of this unary composite expression */
   val child: Expression
 }
 
 /** Binary composite expressions that are composed of two subexpressions. */
-trait BinaryComposite extends Composite {
+sealed trait BinaryComposite extends Composite {
   /** The left child of this binary composite expression */
   val left: Expression
   /** The right child of this binary composite expression */
@@ -146,7 +146,7 @@ trait BinaryComposite extends Composite {
 /** Function/predicate/predicational application.
   * @requires child.sort == func.domain
   * @ensures sort == func.sort */
-trait ApplicationOf extends Composite {
+sealed trait ApplicationOf extends Composite {
   insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
   //@note initialization order would dictate that subclasses either provide lazy val or early initializer.
   //insist(sort == func.sort, "sort of application is the sort of the function")
@@ -160,7 +160,7 @@ trait ApplicationOf extends Composite {
   * A named symbol such as a variable or function symbol or predicate symbol or program constant symbol.
   * @note User-level symbols should not use underscores, which are reserved for the core.
   */
-trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
+sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   //@note initialization order uses explicit dataStructureInvariant that is called in all nontrivial subclasses after val have been initialized.
   private[core] final def insistNamingConvention(): Unit = {
     insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"), "non-empty names without underscores (except at end for internal names): " + name)
@@ -200,11 +200,11 @@ trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 
 /** Expressions whose semantic interpretations have access to the state.
   * @note Not soundness-critical, merely speeds up matching in [[SubstitutionPair.freeVars]]. */
-trait StateDependent extends Expression
+sealed trait StateDependent extends Expression
 
 /** Expressions limited to a given sub state-space of only some variables and differential variables.
   * @since 4.2 */
-trait SpaceDependent extends StateDependent {
+sealed trait SpaceDependent extends StateDependent {
   /** The space that this expression lives on. */
   val space: Space
   final val index: Option[Int] = None
@@ -249,16 +249,16 @@ sealed trait Term extends Expression {
 }
 
 /** Atomic terms that have no proper subterms. */
-trait AtomicTerm extends Term with Atomic
+sealed trait AtomicTerm extends Term with Atomic
 
 /** Real terms.
   * Used for commonality instead of leaking outside the core, because inferable from sort */
-private[core] trait RTerm extends Term {
+private[core] sealed trait RTerm extends Term {
   final val sort: Sort = Real
 }
 
 /** Variables have a name and index and sort. They are either [[BaseVariable]] or [[DifferentialSymbol]]. */
-trait Variable extends NamedSymbol with AtomicTerm
+sealed trait Variable extends NamedSymbol with AtomicTerm
 object Variable {
   /** Create a BaseVariable called 'name' with the given index and sort. */
   def apply(name: String, index: Option[Int]=None, sort: Sort=Real): BaseVariable = BaseVariable(name,index,sort)
@@ -386,10 +386,10 @@ case class UnitFunctional(name: String, space: Space, sort: Sort) extends Atomic
 
 
 /** Composite terms that are composed of subterms. */
-trait CompositeTerm extends Term with Composite
+sealed trait CompositeTerm extends Term with Composite
 
 /** Unary Composite Terms, i.e. terms composed of one real subterm. */
-trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
+sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the given argument as child instead. (copy)
     * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
@@ -403,12 +403,12 @@ trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
 
 /** Unary Composite Real Terms, i.e. real terms composed of one real term.
   * Used for commonality instead of leaking outside the core, because inferable from sort. */
-private[core] trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
+private[core] sealed trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
   insist(child.sort == Real, "expected argument sort real: " + child.sort)
 }
 
 /** Binary Composite Terms, i.e. terms composed of two subterms. */
-trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
+sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the give left and right arguments instead. (copy)
     * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
@@ -422,7 +422,7 @@ trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
 
 /** Binary Composite Real Terms, i.e. real terms composed of two real terms.
   * Used for commonality instead of leaking outside the core, because inferable from sort. */
-private[core] trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
+private[core] sealed trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
   insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
   val left: Term
   val right: Term
@@ -501,10 +501,10 @@ sealed trait Formula extends Expression {
 }
 
 /** Atomic formulas that have no subformulas (but may still have subterms). */
-trait AtomicFormula extends Formula with Atomic
+sealed trait AtomicFormula extends Formula with Atomic
 
 /** Atomic comparison formula composed of two terms. */
-trait ComparisonFormula extends AtomicFormula with BinaryComposite {
+sealed trait ComparisonFormula extends AtomicFormula with BinaryComposite {
   insist(left.sort == right.sort, "expected arguments of the same sort: " + left + " and " + right)
   /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
@@ -518,7 +518,7 @@ trait ComparisonFormula extends AtomicFormula with BinaryComposite {
 
 /** Real comparison formula composed of two real terms.
   * Used for commonality instead of leaking outside the core, because inferable from sort. */
-private[core] trait RComparisonFormula extends ComparisonFormula {
+private[core] sealed trait RComparisonFormula extends ComparisonFormula {
   insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
 }
 
@@ -578,10 +578,10 @@ case class UnitPredicational(name: String, space: Space) extends AtomicFormula w
 
 
 /** Composite formulas composed of subformulas. */
-trait CompositeFormula extends Formula with Composite
+sealed trait CompositeFormula extends Formula with Composite
 
 /** Unary Composite Formulas, i.e. formulas composed of one subformula. */
-trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
+sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the given argument as child instead. (copy)
     * @example {{{
     *         Not(GreaterEqual(Variable("x"),Number(0))).reapply(NotEqual(Number(7),Number(9))) == Not(NotEqual(Number(7),Number(9)))
@@ -593,7 +593,7 @@ trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
 }
 
 /** Binary Composite Formulas, i.e. formulas composed of two subformulas. */
-trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
+sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
     *         Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, NotEqual(Number(7),Number(9))) == Or(True, NotEqual(Number(7),Number(9)))
@@ -616,7 +616,7 @@ case class Imply(left: Formula, right:Formula) extends BinaryCompositeFormula { 
 case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula { def reapply = copy }
 
 /** Quantified formulas. */
-trait Quantified extends CompositeFormula {
+sealed trait Quantified extends CompositeFormula {
   insist(vars.nonEmpty, "quantifiers bind at least one variable")
   insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   insist(vars.forall(x => x.sort == vars.head.sort), "all vars must have the same sort")
@@ -638,7 +638,7 @@ case class Forall(vars: immutable.Seq[Variable], child: Formula) extends Quantif
 case class Exists(vars: immutable.Seq[Variable], child: Formula) extends Quantified { def reapply = copy }
 
 /** Modal formulas. */
-trait Modal extends CompositeFormula {
+sealed trait Modal extends CompositeFormula {
   /** Create a formula of this constructor but with the given program and formula child as argument instead. (copy)
     * @example {{{
     *         Box(ProgramConst("b"), Less(Variable("z"),Number(0))).reapply(
@@ -694,7 +694,7 @@ sealed trait Program extends Expression {
 }
 
 /** Atomic programs that have no subprograms (but may still have subterms or subformulas). */
-trait AtomicProgram extends Program with Atomic
+sealed trait AtomicProgram extends Program with Atomic
 
 /** Uninterpreted program constant symbol / game symbol, possibly limited to the given state space.
   * The semantics of ProgramConst symbol is looked up by the state,
@@ -738,10 +738,10 @@ case class Test(cond: Formula) extends AtomicProgram
 
 
 /** Composite programs that are composed of subprograms. */
-trait CompositeProgram extends Program with Composite
+sealed trait CompositeProgram extends Program with Composite
 
 /** Unary Composite Programs, i.e. programs composed of one subprogram. */
-trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
+sealed trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
   /** Create a program of this constructor but with the given argument as child instead. (copy)
     * @example {{{
     *         Loop(ProgramConst("alpha")).reapply(Assign(Variable("x"),Number(42))) == Loop(Assign(Variable("x"),Number(42)))
@@ -752,7 +752,7 @@ trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
 }
 
 /** Binary Composite Programs, i.e. programs composed of two subprograms. */
-trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
+sealed trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
   /** Create a program of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
     *         Choice(ProgramConst("alpha"), ProgramConst("beta")).reapply(ProgramConst("gamma"), ProgramConst("delta")) == Choice(ProgramConst("gamma"), ProgramConst("delta"))
@@ -799,7 +799,7 @@ sealed trait DifferentialProgram extends Program {
 }
 
 /** Atomic differential programs that have no sub-differential-equations (but may still have subterms) */
-trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
+sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
 
 /** Uninterpreted differential program constant, limited to the given state space.
   * The semantics of arity 0 DifferentialProgramConst symbol is looked up by the state,
