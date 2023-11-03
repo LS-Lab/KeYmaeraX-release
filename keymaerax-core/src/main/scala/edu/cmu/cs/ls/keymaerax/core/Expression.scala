@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Differential Dynamic Logic expression data structures.
   * @author Andre Platzer
@@ -89,11 +90,11 @@ case class Except(taboos: immutable.Seq[Variable]) extends Space {
   * Expressions of differential dynamic logic.
   * Expressions are categorized according to the syntactic categories of the grammar of differential dynamic logic:
   *
-  * 1. [[Term terms]] are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
-  * 2. [[Formula formulas]] are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
-  * 3. [[Program hybrid programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
-  * 4. [[DifferentialProgram differential programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram]] of kind [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgramKind]]
-  * 5. [[Function function symbols]] are degenerate expressions that are syntactically incomplete, since not yet applied to arguments
+  *  1. [[Term terms]] are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
+  *  1. [[Formula formulas]] are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
+  *  1. [[Program hybrid programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
+  *  1. [[DifferentialProgram differential programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram]] of kind [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgramKind]]
+  *  1. [[Function function symbols]] are degenerate expressions that are syntactically incomplete, since not yet applied to arguments
   *     via [[FuncOf]] to form a term or via [[PredOf]] or [[PredicationalOf]] to form a formula.
   *
   * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
