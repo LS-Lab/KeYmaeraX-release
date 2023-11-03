@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{File, FileReader, PrintWriter}
@@ -71,7 +72,7 @@ object KeYmaeraX {
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
   def runCommand(options: OptionMap, usage: String): Unit = {
-    //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
+    //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scala -modelplex -codegen
     options.get('mode) match {
       case Some(Modes.GRADE) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)

@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Sequent prover, proof rules, and axioms of KeYmaera X.
   * @note Soundness-critical: Only provide sound proof rule application mechanisms.
@@ -1064,7 +1065,7 @@ case class Cut(c: Formula) extends Rule {
     ) ensures (r => r == immutable.List(
     s.glue(Sequent(immutable.IndexedSeq(c), immutable.IndexedSeq())),
     s.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(c)))),
-    "same as glueing construction")
+    "same as gluing construction")
 }
 
 /*********************************************************************************
@@ -1609,4 +1610,3 @@ case class EquivifyRight(pos: SuccPos) extends RightRule {
     immutable.List(s.updated(pos, Equiv(a, b)))
   }
 }
-

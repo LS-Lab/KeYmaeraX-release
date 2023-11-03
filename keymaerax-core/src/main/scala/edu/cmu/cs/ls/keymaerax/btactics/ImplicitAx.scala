@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -21,7 +26,7 @@ import scala.collection.immutable.List
 import scala.reflect.runtime.universe
 
 
-/** Derives axioms from implicit (differential) definitionss
+/** Derives axioms from implicit (differential) definitions
   */
 
 object ImplicitAx extends TacticProvider {

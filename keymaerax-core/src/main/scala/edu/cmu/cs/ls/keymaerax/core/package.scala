@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Differential Dynamic Logic prover Microkernel.
   * @author Andre Platzer
@@ -223,7 +224,7 @@ package object core {
     * @return `true` if `e` completed without raising any exceptions or errors.
     *        `false` if `e` raised an exception or error.
     * @example {{{
-    *  insist(noExeption(complicatedComputation), "The complicated computation should complete without throwing exceptions")
+    *  insist(noException(complicatedComputation), "The complicated computation should complete without throwing exceptions")
     * }}}
     */
   @inline final def noException[T](e: => T): Boolean =

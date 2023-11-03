@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * @note Code Review: 2016-08-02
   */
@@ -22,7 +23,7 @@ import scala.sys.process._
 
 /**
  * An abstract interface to Mathematica link implementations.
- * The link may be used synchronously or asychronously.
+ * The link may be used synchronously or asynchronously.
  * Multiple MathematicaLinks may be created by instantiating multiple copies
  * of implementing classes (depends on license).
  * 

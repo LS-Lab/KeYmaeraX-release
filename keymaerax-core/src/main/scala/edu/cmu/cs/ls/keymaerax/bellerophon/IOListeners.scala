@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -205,7 +205,7 @@ object IOListeners {
     override def kill(): Unit = {}
   }
 
-  /** A progresss listener that collects the top-level tactic progress in a buffer. */
+  /** A progress listener that collects the top-level tactic progress in a buffer. */
   case class CollectProgressListener(progress: mutable.Buffer[(BelleExpr, Either[BelleValue, Throwable])] = mutable.Buffer.empty) extends IOListener() {
     private var current: Option[(BelleExpr, Long)] = None
     override def begin(input: BelleValue, expr: BelleExpr): Unit = {

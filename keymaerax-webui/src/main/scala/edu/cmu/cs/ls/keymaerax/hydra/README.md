@@ -265,7 +265,7 @@ See ProofListResponse.scala
     ]
 
 I'm not sure if these are necessary; although they can result from a user
-action, there's probably typicallly a 1:1 between a request for the action and 
+action, there's probably typically a 1:1 between a request for the action and 
 the action itself.
 
 {
@@ -292,4 +292,4 @@ Several
 
 Jackson					- server-side JSON serialization
 MongoDB					- database
-RabittMQ				- messaging
+RabbitMQ				- messaging

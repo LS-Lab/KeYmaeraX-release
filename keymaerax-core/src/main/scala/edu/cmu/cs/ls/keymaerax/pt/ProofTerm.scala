@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.pt
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -154,7 +159,7 @@ case class RuleApplication(child: ProofTerm, rule: Rule, subgoal: Int) extends P
   val (positions: List[SeqPos], args: List[Expression]) = rule match {
     //@todo do a total pattern match on all rules in the core and produce individualized proof terms for each of them.
     //This is necessary because we need positions where the rule should be applied within the *sequent* in addition to subgoal,
-    //which is the position within the *provable*. Alternatively a subtype heirarchy for Rule would do the trick...
+    //which is the position within the *provable*. Alternatively a subtype hierarchy for Rule would do the trick...
     case Close(ante,succ)        => (List(ante, succ), List.empty)
     case CoHide2(ante, succ)     => (List(ante, succ), List.empty)
     case CutRight(fml, succ)     => (List(succ), List(fml))

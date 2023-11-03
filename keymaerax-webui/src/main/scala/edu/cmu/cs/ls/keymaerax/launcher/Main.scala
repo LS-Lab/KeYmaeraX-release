@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io._
@@ -32,7 +33,7 @@ import scala.collection.immutable.List
 object Main {
   import core.VERSION
 
-  /** This flag is set to true iff this process odes nothing but re-launch */
+  /** This flag is set to true iff this process does nothing but re-launch */
   var IS_RELAUNCH_PROCESS = false
 
   //@todo set via -log command line option
@@ -470,7 +471,7 @@ object Main {
     } catch {
       case e: IllegalArgumentException => println("Java does not reveal its version: " + e); return (None, "<unknown>")
       case e: NullPointerException     => println("Java does not reveal its version: " + e); return (None, "<unknown>")
-      case e: SecurityException => println("Java does not reveal its version because a SecurityManager interferred: " + e); return (None, "<unknown>")
+      case e: SecurityException => println("Java does not reveal its version because a SecurityManager interfered: " + e); return (None, "<unknown>")
     }
     try {
       val javaMajorMinor :: legacyUpdateVersion :: Nil =

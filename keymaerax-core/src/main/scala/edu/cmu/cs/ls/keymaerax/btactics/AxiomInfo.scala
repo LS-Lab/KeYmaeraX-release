@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -110,7 +111,7 @@ object DerivationInfoRegistry extends Logging {
     val fieldFields = keptFields.map(fn => (fn, tpe.member(ru.TermName(fn.getName)).asMethod.getter.asMethod))
     val methodFields: mutable.ArraySeq[(String, ru.MethodSymbol)] = methods.flatMap(fn => {
       val mem = tpe.member(ru.TermName(fn.getName))
-      /* Overoaded values are considered terms (not methods), and have a list of alternatives, which might be annotated.
+      /* Overloaded values are considered terms (not methods), and have a list of alternatives, which might be annotated.
       * In this case, we are only interested in the alternative that was actually annotated, not the whole method*/
       if (mem.isTerm && mem.asTerm.isOverloaded) {
         mem.asTerm.alternatives.filter(_.annotations.exists(_.tree.tpe.typeSymbol.name.toString == "InternalAnnotation"))
@@ -217,5 +218,3 @@ object DerivationInfoRegistry extends Logging {
   ////////////////////////////////////////////////////////
 
 }
-
-

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
@@ -56,7 +57,7 @@ object BelleExpr {
 }
 
 /**
-  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
+  * Algebraic Data Type whose elements are well-formed Bellerophon tactic expressions.
   * All Bellerophon tactic expressions are of type [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]],
   * which provides the following tactic combinators
   *
@@ -1007,4 +1008,3 @@ case class TheType() extends BelleType
 /** @todo Added because SequentTypes are needed for unification tactics. */
 @deprecated("remove")
 case class SequentType(s : Sequent) extends BelleType
-
