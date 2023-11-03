@@ -1,8 +1,9 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.bellerophon.parser
+
+package edu.cmu.cs.ls.keymaerax.bellerophon
 
 /**
   * Parser for concrete syntax of Bellerophon tactics language.
@@ -37,4 +38,4 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
   * In Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017.
   * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser]]
   */
-package object bellerophon {}
+package object parser {}
