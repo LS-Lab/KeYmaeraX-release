@@ -1,7 +1,8 @@
 KeYmaera X
-Copyright (C) 2014-2022 Carnegie Mellon University
+Copyright (C) 2014-2023 Carnegie Mellon University, Karlsruhe Institute of Technology
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer,
-Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell.
+Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell,
+Joscha Mennicken.
 With previous contributions by Nathan Fulton, Jan-David Quesel,
 Marcus Voelp, Ran Ji.
 
@@ -21,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 Contact Information
 
-Electronic Mail: 
+Electronic Mail:
   keymaerax@keymaerax.org
 
 Paper Mail:
@@ -31,5 +32,3 @@ Paper Mail:
   5000 Forbes Ave.
   Pittsburgh, PA 15213
   USA
-
-
