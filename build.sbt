@@ -6,6 +6,14 @@ ThisBuild / scalaVersion := "2.12.8"
 // TODO Use this version number in keymaerax-core
 ThisBuild / version := "5.0.2"
 
+// Enable more warnings
+ThisBuild / scalacOptions ++= Seq(
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-Xmaxwarns", "1000",
+)
+
 // Never execute tests in parallel across all sub-projects
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 
@@ -87,7 +95,6 @@ lazy val webui = project
     // HyDRA Settings
     // Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt
     resolvers += "Typesafe Repo" at "https://repo.akka.io/maven", // contains json-schema-validator.
-    scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
     javaOptions += "-Xss20M",
 
     // Akka
