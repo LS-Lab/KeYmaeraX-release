@@ -1,4 +1,5 @@
-import java.io.{BufferedReader, FileInputStream, FileReader}
+import java.io.{BufferedReader, FileInputStream, FileReader, InputStreamReader}
+import java.nio.charset.StandardCharsets
 import java.util.Properties
 
 ThisBuild / scalaVersion := "2.12.8"
@@ -57,7 +58,9 @@ lazy val core = project
     Compile / unmanagedJars += {
       val properties = new Properties()
       try {
-        properties.load(new FileInputStream("local.properties"))
+        val stream = new FileInputStream("local.properties")
+        val reader = new InputStreamReader(stream, StandardCharsets.UTF_8)
+        properties.load(reader)
       } catch {
         case e: Throwable => throw new Exception("Failed to load file local.properties", e)
       }
