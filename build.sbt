@@ -83,8 +83,8 @@ lazy val webui = project
     mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
 
     /// sqlite driver
-    libraryDependencies += "com.typesafe.slick" %% "slick" % "3.2.3",
-    libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
+    libraryDependencies += "com.typesafe.slick" %% "slick" % "3.4.1",
+    libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "3.4.1",
     libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2", // For SqliteTableGenerator
 
     // Akka
