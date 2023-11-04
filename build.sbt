@@ -24,7 +24,6 @@ lazy val macros = project
     name := "KeYmaeraX Macros",
 
     libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8",
-    libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
 
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
@@ -37,6 +36,8 @@ lazy val core = project
     name := "KeYmaeraX Core",
     mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
 
+    libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
+
     libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.+",
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2",
@@ -45,8 +46,6 @@ lazy val core = project
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1",
     libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
-    libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8",
     libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.1",
     libraryDependencies += "org.typelevel" %% "spire" % "0.16.2",
 
@@ -83,8 +82,6 @@ lazy val webui = project
     name := "KeYmaeraX WebUI",
     mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
 
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8",
-    libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
     libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0", // automatic resource management
 
     /// sqlite driver
