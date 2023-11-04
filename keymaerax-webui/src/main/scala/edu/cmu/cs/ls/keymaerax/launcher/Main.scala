@@ -104,12 +104,7 @@ object Main {
     KeYmaeraXLock.obtainLockOrExit()
 
     launcherDebug(LAUNCH_FLAG + " -- starting KeYmaera X Web UI server HyDRA.")
-
-    if (System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
-      edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
-    } else {
-      edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
-    }
+    edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
   }
 
   /** Clears the cache if the cache was created by a previous version of KeYmaera X */

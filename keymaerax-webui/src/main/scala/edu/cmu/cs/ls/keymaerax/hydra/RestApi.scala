@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import akka.http.scaladsl.model.StatusCodes
@@ -82,12 +83,6 @@ object RestApi extends Logging {
 
   val userPrefix: Directive[Tuple1[String]] = pathPrefix("user" / Segment)
 
-  val denied: Route = path("private" / "KeyStore.jks") {
-    get {
-      getFromResource("index_bootstrap.html")
-    }
-  }
-
   val staticRoute: Route = pathPrefix("") {
     get {
       respondWithHeader(`Cache-Control`(scala.collection.immutable.Seq(`no-cache`, `max-age`(0)))) {
@@ -131,7 +126,6 @@ object RestApi extends Logging {
   //region routing
 
   val publicRoutes: List[Route] =
-    denied ::
     staticRoute        ::
     homePage           ::
     isLocal            ::

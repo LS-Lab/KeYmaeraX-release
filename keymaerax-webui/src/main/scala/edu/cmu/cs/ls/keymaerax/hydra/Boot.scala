@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import akka.actor.ActorSystem
@@ -28,7 +29,6 @@ import scala.language.postfixOps
   *       Main.startServer should so the correct thing based upon the current value of that flag. However, from within
   *       IntelliJ, you may want to modify application.conf directly and comment out the assertion at the top of this object.
   *
-  * @see [[SSLBoot]] for SSL-enabled deployments.
   * @author Nathan Fulton
   */
 object NonSSLBoot extends App with Logging {
@@ -74,67 +74,6 @@ object NonSSLBoot extends App with Logging {
   } recover {
     case _ =>
       LoadingDialogFactory().addToStatus(0, Some("Loading failed..."))
-      System.exit(1)
-  }
-}
-
-/**
-  * Boots a server with SSL enabled.
-  *
-  * Booting from SSL requires a KeyStore.jks file in the keymaerax-webui/src/main/resources directory.
-  * The password for this key strong should be stored in the config table of the production database under the configuration key serverconfig.jks.
-  *
-  * @note The HyDRA_SSL environmental variable needs to be set properly because it is used in application.conf.
-  *       Main.startServer should so the correct thing based upon the current value of that flag. However, from within
-  *       IntelliJ, you may want to modify application.conf directly and comment out the assertion at the top of this object.
-  *
-  * @see [[NonSSLBoot]] is better if you are binding to localhost or only exposing your server to trusted clients (i.e., not on the internet or a semi-public intranet.)
-  * @author Nathan Fulton
-  */
-object SSLBoot extends App with Logging {
-  //@note when booting from IntelliJ, you will want to set HyDRA_SSL and then boot IntelliJ. Setting HyDRA_SSL in a separate terminal once IntelliJ is running won't work.
-  //Alternatively, you can comment out these assertions and then change application.conf to just say ssl-encryption = on.
-  assert(System.getenv().containsKey("HyDRA_SSL"),
-    s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently not set. (Current Environemnt: ${System.getenv.keySet().toArray().toList.mkString(", ")}).")
-  assert(System.getenv("HyDRA_SSL").equals("on"),
-    s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently set to ${System.getenv("HyDRA_SSL")}")
-
-  Configuration.setConfiguration(FileConfiguration)
-
-  //Initialize all tools.
-  HyDRAInitializer(args, HyDRAServerConfig.database)
-
-  assert(Configuration.getString(Configuration.Keys.JKS).isDefined,
-    "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
-  if (HyDRAServerConfig.host != "0.0.0.0")
-    logger.warn("WARNING: Expecting host 0.0.0.0 in SSL mode.")
-
-  //Some boilerplate code that I don't understand.
-  implicit val system: ActorSystem = ActorSystem("hydraloader") //Not sure what the significance of this name is?
-//  val sslConfig = AkkaSSLConfig()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-  implicit val timeout: Timeout = Timeout(10 seconds) //@note this might need to be much higher.
-  val config = ConfigFactory.load()
-    .withValue("akka.loglevel", ConfigValueFactory.fromAnyRef("OFF"))
-    .withValue("akka.stdout-loglevel", ConfigValueFactory.fromAnyRef("OFF"))
-
-  val api = routes
-
-  def routes : Route = RestApi.api
-
-  val https: HttpsConnectionContext = ConnectionContext.https(KyxSslConfiguration.sslContext)
-  Http().setDefaultServerHttpContext(https)
-  Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port, connectionContext = https) map {
-    _ => {
-      // Finally, print a message indicating that the server was started.
-      logger.info(s"SSL BOOT: Attempting to listen on ${HyDRAServerConfig.host}:${HyDRAServerConfig.port}. SSL requests only!")
-      logger.info("NOTE: No browser instance will open because we assume SSL-hosted servers are headless (i.e., SSL mode is for production deployments only -- if hosting locally, use NonSSLBoot!)")
-    }
-  } recover {
-    case ex =>
-      println(s"Failed to start an SSL server. ${ex.getMessage}")
-      logger.error(s"Failed to start an SSL server. ${ex.getMessage}")
       System.exit(1)
   }
 }
