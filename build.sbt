@@ -92,11 +92,6 @@ lazy val webui = project
     libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0",
     libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2",
 
-    // HyDRA Settings
-    // Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt
-    resolvers += "Typesafe Repo" at "https://repo.akka.io/maven", // contains json-schema-validator.
-    javaOptions += "-Xss20M",
-
     // Akka
     libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.1.8",
     libraryDependencies += "com.typesafe.akka" %% "akka-http-xml" % "10.1.8",
