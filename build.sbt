@@ -1,6 +1,6 @@
 import java.io.{BufferedReader, FileReader}
 
-scalaVersion in ThisBuild := "2.12.8"
+ThisBuild / scalaVersion := "2.12.8"
 
 //scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
 
@@ -9,12 +9,12 @@ version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/
 lazy val macros = (project in file("keymaerax-macros"))
 
 lazy val keymaeraxCoreAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
-  test in assembly := {},
-  mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
-  assemblyJarName in assembly := s"keymaerax-core-${version.value}.jar",
-  assemblyMergeStrategy in assembly := {
+  assembly / test := {},
+  assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
+  assembly / assemblyJarName := s"keymaerax-core-${version.value}.jar",
+  assembly / assemblyMergeStrategy := {
     case PathList("examples", xs @ _*) => MergeStrategy.last
-    case x                             => (assemblyMergeStrategy in assembly).value(x)
+    case x => (assembly / assemblyMergeStrategy).value(x)
   })
 
 // build KeYmaera X core jar with sbt "project core" clean assembly
@@ -23,19 +23,21 @@ lazy val core = (project in file("keymaerax-core"))
   .settings(
     name := "KeYmaeraX Core",
     assemblyJarName := "keymaerax-core-" + version.value + ".jar",
-    scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none"
+    ScalaUnidoc / unidoc / scalacOptions += "-Ymacro-expand:none",
   )
   .settings(keymaeraxCoreAssemblySettings: _*)
   .aggregate(macros)
 
 lazy val keymaeraxFullAssemblySettings = AssemblyPlugin.assemblySettings ++
-  Seq(test in assembly := {},
-    mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
-    assemblyJarName in assembly := "keymaerax.jar",
-    assemblyMergeStrategy in assembly := {
+  Seq(
+    assembly / test := {},
+    assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
+    assembly / assemblyJarName := "keymaerax.jar",
+    assembly / assemblyMergeStrategy := {
       case PathList("examples", xs @ _*) => MergeStrategy.last
-      case x                             => (assemblyMergeStrategy in assembly).value(x)
-    })
+      case x => (assembly / assemblyMergeStrategy).value(x)
+    },
+  )
 
 lazy val keymaerax = (project in file("keymaerax-webui"))
   .dependsOn(macros, core)
@@ -47,18 +49,18 @@ lazy val root = (project in file("."))
   .settings(
     name := "KeYmaeraX",
     assemblyJarName := "keymaerax-" + version.value + ".jar",
-    scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none",
-    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(macros)
+    ScalaUnidoc / unidoc / scalacOptions += "-Ymacro-expand:none",
+    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(macros),
   )
   .settings(keymaeraxFullAssemblySettings: _*)
   .aggregate(macros, core, keymaerax)
 
 
 // extra runtime checks for initialization order: "-Xcheckinit"
-scalacOptions in Compile ++= Seq("-doc-root-content", "rootdoc.txt")
-scalacOptions in Compile += "-Ystatistics:typer"
+Compile / scalacOptions += "-Ystatistics:typer"
 
-target in Compile in doc := baseDirectory.value / "api"
+Compile / doc / target := baseDirectory.value / "api"
+Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt")
 
 // never execute tests in parallel across all sub-projects
-concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
+Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)

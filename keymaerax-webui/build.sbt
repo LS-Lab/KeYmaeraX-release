@@ -6,11 +6,11 @@ version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/
 
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
 
-resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // ScalaMeter
+resolvers ++= Resolver.sonatypeOssRepos("snapshots") // ScalaMeter
 
-assemblyJarName in (Test, assembly) := s"keymaerax-${version.value}.jar"
+Test / assembly / assemblyJarName := s"keymaerax-${version.value}.jar"
 
-scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
+Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt")
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8"
 
@@ -59,7 +59,7 @@ libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.8"
 
 libraryDependencies += "com.typesafe.akka"   %% "akka-slf4j"     % akkaV
 
-resolvers += Resolver.sonatypeRepo("releases")
+resolvers ++= Resolver.sonatypeOssRepos("releases")
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 //endregion
@@ -70,11 +70,11 @@ addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.fu
 ////////////////////////////////////////////////////////////////////////////////
 
 watchSources ++= {{ baseDirectory map {
-  path => ((path / "src/main/resources/partials/") ** "*.html").get 
+  path => ((path / "src/main/resources/partials/") ** "*.html").get
 }}.value }
 
 watchSources ++= {{ baseDirectory map {
-  path => ((path / "src/main/resources/js") ** "*.js").get 
+  path => ((path / "src/main/resources/js") ** "*.js").get
 }}.value }
 
 watchSources ++= {{ baseDirectory map {
@@ -82,7 +82,7 @@ watchSources ++= {{ baseDirectory map {
 }}.value }
 
 watchSources ++= {{baseDirectory map {
-  path => ((path / "src/main/resources") ** "*.html").get 
+  path => ((path / "src/main/resources") ** "*.html").get
 }}.value }
 
 
@@ -90,21 +90,21 @@ watchSources ++= {{baseDirectory map {
 // Unit testing
 ////////////////////////////////////////////////////////////////////////////////
 
-parallelExecution in Test := false
+Test / parallelExecution := false
 
 // set fork to true in order to run tests in their own Java process.
 // not forking avoids broken pipe exceptions in test reporter, but forking might become necessary in certain
 // multithreaded setups (see ScalaTest documentation)
-fork in Test := false
+Test / fork := false
 
 // set HTML test report output directory
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
+Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
 
 // record and report test durations
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
+Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
 // report long-running tests (report every hour for tests that run longer than 1hr)
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-W", "3600", "3600")
+Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-W", "3600", "3600")
 
 testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 
@@ -115,7 +115,7 @@ logBuffered := false
 ////////////////////////////////////////////////////////////////////////////////
 
 // command line UI
-mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
+assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
 
 // do not run tests when building assembly
-test in assembly := {}
+assembly / test := {}

@@ -5,7 +5,7 @@ name := "KeYmaeraX-Core"
 
 version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
-assemblyJarName in assembly := s"keymaerax-core-${version.value}.jar"
+assembly / assemblyJarName := s"keymaerax-core-${version.value}.jar"
 
 scalaVersion := "2.12.8"
 
@@ -33,10 +33,10 @@ libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.2"
 
 libraryDependencies += "org.reflections" % "reflections" % "0.10.2"
 
-resolvers += Resolver.sonatypeRepo("releases")
+resolvers ++= Resolver.sonatypeOssRepos("releases")
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
-scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
+Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////
 // Mathematica Interop
@@ -53,8 +53,9 @@ scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
         None
     }
   }
+
   val properties: Properties = read("local.properties").orElse(read("default.properties")).get
   val jlinkJarLoc: String = properties.getProperty("mathematica.jlink.path")
   if (jlinkJarLoc == null) throw new Exception("Need 'mathematica.jlink.path' set to location of the Mathematica JLink.jar file in 'local.properties' before building project.")
-  unmanagedJars in Compile += file(jlinkJarLoc)
+  Compile / unmanagedJars += file(jlinkJarLoc)
 }
