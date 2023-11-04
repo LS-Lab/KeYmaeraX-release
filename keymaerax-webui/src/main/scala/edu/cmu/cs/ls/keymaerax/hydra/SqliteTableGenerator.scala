@@ -6,25 +6,28 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import slick.codegen.SourceCodeGenerator
+import slick.jdbc.SQLiteProfile
+import slick.model.Model
 
-import scala.slick.codegen.SourceCodeGenerator
-import scala.slick.driver.SQLiteDriver
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 /** Generates database interaction code (Tables.scala) based on the schema in ~/.keymaerax/keymaerax.sqlite
-  * Created by nfulton on 4/13/15.
+  *
+  * See also:
+  * https://scala-slick.org/doc/3.2.3/code-generation.html#customization
+  * https://github.com/slick/slick/blob/v3.2.3/doc/code/CodeGenerator.scala#L36-L71
+  *
+  * @author nfulton
+  * @author Joscha Mennicken
   */
 object SqliteTableGenerator {
-  /* Make sure the SQLite driver is loaded*/
-  Class.forName("org.sqlite.JDBC")
-  Configuration.setConfiguration(FileConfiguration)
-  val loc = Configuration.path(Configuration.Keys.DB_PATH)
-  val db = SQLiteDriver.simple.Database.forURL("jdbc:sqlite:"+loc)
-  val model = db.withSession({ implicit session => SQLiteDriver.createModel()})
-
   /** Works around a bug in Slick which causes its code generator to not mark auto-incremented columns as such.
     * Since the row id (named _ID) is auto-incremented (or technically allocated uniquely in a way which usually
     * coincides with auto-incrementing) we can safely say that column should always be auto-increment.*/
-  val FixedCodeGenerator = new SourceCodeGenerator(model) {
+  def FixedCodeGenerator(model: Model): SourceCodeGenerator = new SourceCodeGenerator(model) {
     override def Table = new Table(_) {
       override def Column = new Column(_) {
         /* Slick's code generator tries very hard to prevent us from just saying the column is auto-increment (the
@@ -56,8 +59,27 @@ object SqliteTableGenerator {
     }
   }
 
-  def main(args : Array[String]) : Unit =
-    FixedCodeGenerator.writeToFile(
-      "scala.slick.driver.SQLiteDriver","keymaerax-webui/src/main/scala/",
-        "edu.cmu.cs.ls.keymaerax.hydra","Tables","Tables.scala")
+  def main(args: Array[String]): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+
+    // Make sure the SQLite driver is loaded
+    Class.forName("org.sqlite.JDBC")
+
+    // Open database
+    val loc = Configuration.path(Configuration.Keys.DB_PATH)
+    val db = SQLiteProfile.api.Database.forURL("jdbc:sqlite:" + loc)
+
+    try {
+      // Fetch data model
+      val modelFuture = db.run(SQLiteProfile.createModel())
+      val model = Await.result(modelFuture, atMost = Duration.Inf)
+
+      FixedCodeGenerator(model)
+        .writeToFile(
+          "scala.slick.driver.SQLiteDriver", "keymaerax-webui/src/main/scala/",
+          "edu.cmu.cs.ls.keymaerax.hydra", "Tables", "Tables.scala")
+    } finally {
+      db.close()
+    }
+  }
 }
