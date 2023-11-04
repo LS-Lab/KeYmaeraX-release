@@ -37,7 +37,7 @@ libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2"
 // Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt
 ////////////////////////////////////////////////////////////////////////////////
 
-resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/" // contains json-schema-validtor.
+resolvers += "Typesafe Repo" at "https://repo.akka.io/maven" // contains json-schema-validator.
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
