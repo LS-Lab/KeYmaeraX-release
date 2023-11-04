@@ -1,22 +1,22 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.File
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-
-import scala.slick.driver.SQLiteDriver
 import scala.slick.codegen.SourceCodeGenerator
+import scala.slick.driver.SQLiteDriver
 
-/* Generates database interaction code (Tables.scala) based on the schema in ~/.keymaerax/keymaerax.sqlite
- * Created by nfulton on 4/13/15.
- */
+/** Generates database interaction code (Tables.scala) based on the schema in ~/.keymaerax/keymaerax.sqlite
+  * Created by nfulton on 4/13/15.
+  */
 object SqliteTableGenerator {
   /* Make sure the SQLite driver is loaded*/
   Class.forName("org.sqlite.JDBC")
+  Configuration.setConfiguration(FileConfiguration)
   val loc = Configuration.path(Configuration.Keys.DB_PATH)
   val db = SQLiteDriver.simple.Database.forURL("jdbc:sqlite:"+loc)
   val model = db.withSession({ implicit session => SQLiteDriver.createModel()})
@@ -40,6 +40,18 @@ object SqliteTableGenerator {
             super.code
           }
         }
+
+        // Yet another hack:
+        // The current slick codegen version interprets BOOLEAN columns as having the type Int.
+        // However, the code expects the two BOOLEAN columns to have the type String.
+        // This restores the previous behaviour so old databases containing string values
+        // like "true" and "false" are not broken.
+        override def rawType =
+          if (name == "userexecuted" || name == "childrenrecorded") {
+            "String"
+          } else {
+            super.rawType
+          }
       }
     }
   }

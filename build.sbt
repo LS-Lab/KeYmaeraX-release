@@ -85,7 +85,7 @@ lazy val webui = project
     /// sqlite driver
     libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0",
     libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0",
-    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2",
+    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2", // For SqliteTableGenerator
 
     // Akka
     libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.1.8",
