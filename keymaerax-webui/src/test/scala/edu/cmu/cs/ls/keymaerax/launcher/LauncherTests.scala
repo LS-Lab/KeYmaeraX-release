@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.File
@@ -9,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
-import resource._
 import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
@@ -26,8 +30,14 @@ class LauncherTests extends TacticTestBase {
     exitVal shouldBe 0
     output should include ("PROVED")
 
-    val actualFileContent = managed(scala.io.Source.fromFile(outputFileName)).apply(_.mkString)
-    val expectedProof = managed(scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyp")).apply(_.mkString)
+    val actualFileContent = {
+      val source = scala.io.Source.fromFile(outputFileName)
+      try source.mkString finally source.close()
+    }
+    val expectedProof = {
+      val source = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyp")
+      try source.mkString finally source.close()
+    }
     //@note actual file content contains evidence comments: temporary file name in comments changes on every test run
     actualFileContent should include (expectedProof)
   }
@@ -42,7 +52,11 @@ class LauncherTests extends TacticTestBase {
     exitVal shouldBe 0
     output should include ("PROVED")
 
-    val exported = KeYmaeraXExtendedLemmaParser(managed(scala.io.Source.fromFile(outputFileName)).apply(_.mkString))
+    val exported = {
+      val source = scala.io.Source.fromFile(outputFileName)
+      val input = try source.mkString finally source.close()
+      KeYmaeraXExtendedLemmaParser(input)
+    }
     exported._2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
     val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
       exported._3.loneElement.asInstanceOf[ToolEvidence].info
@@ -89,7 +103,11 @@ class LauncherTests extends TacticTestBase {
       "-" + inputFile.getName + "-" + e.name.replaceAll("\\W", "_") + ".kyp")
     val conjectures = ArchiveParser.parseFromFile(conjectureFileName)
     outputFileNames.zipWithIndex.foreach({ case (o, i) =>
-      val exported = KeYmaeraXExtendedLemmaParser(managed(scala.io.Source.fromFile(o)).apply(_.mkString))
+      val exported = {
+        val source = scala.io.Source.fromFile(o)
+        val input = try source.mkString finally source.close()
+        KeYmaeraXExtendedLemmaParser(input)
+      }
       val conjecture = conjectures(i)
       exported._2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
       val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
@@ -120,9 +138,14 @@ class LauncherTests extends TacticTestBase {
     exitVal shouldBe 1
     errors should include ("Conjectures and archives must agree on names, but got diff Bouncing Ball2")
 
+    val outputFileContents = {
+      val source = scala.io.Source.fromFile(outputFileName)
+      try source.mkString finally source.close()
+    }
+    outputFileContents shouldBe empty
+
     val outputFileNames = sourceEntries.map(e => outputFileName.stripSuffix(".kyp") +
       "-" + inputFile.getName + "-" + e.name.replaceAll("\\W", "_") + ".kyp")
-    managed(scala.io.Source.fromFile(outputFileName)).apply(_.mkString) shouldBe empty
     outputFileNames.foreach(new File(_) should not (exist))
   }
 
@@ -144,9 +167,14 @@ class LauncherTests extends TacticTestBase {
     exitVal shouldBe 1
     errors should include ("Conjectures and archives must agree on names, but got diff Bouncing Ball0,Bouncing Ball1,Bouncing Ball2")
 
+    val outputFileContents = {
+      val source = scala.io.Source.fromFile(outputFileName)
+      try source.mkString finally source.close()
+    }
+    outputFileContents shouldBe empty
+
     val outputFileNames = sourceEntries.map(e => outputFileName.stripSuffix(".kyp") +
       "-" + inputFile.getName + "-" + e.name.replaceAll("\\W", "_") + ".kyp")
-    managed(scala.io.Source.fromFile(outputFileName)).apply(_.mkString) shouldBe empty
     outputFileNames.foreach(new File(_) should not (exist))
   }
 
@@ -177,7 +205,12 @@ class LauncherTests extends TacticTestBase {
     val (output, _, exitVal) = runKeYmaeraX("-prove", inputFileName, "-out", outputFileName)
     exitVal shouldBe 0
     output should include ("PROVED")
-    managed(scala.io.Source.fromFile(outputFileName)).apply(_.mkString) should include ("tactic \"\"\"\"auto\"\"\"\"")
+
+    val outputFileContents = {
+      val source = scala.io.Source.fromFile(outputFileName)
+      try source.mkString finally source.close()
+    }
+    outputFileContents should include ("tactic \"\"\"\"auto\"\"\"\"")
   }
 
   it should "report entries with tactic nil as unfinished" in {
@@ -244,8 +277,14 @@ class LauncherTests extends TacticTestBase {
     exitVal shouldBe 0
     output should include ("duration=")
 
-    val actualFileContent = managed(scala.io.Source.fromFile(outputFileName)).apply(_.mkString)
-    val expectedProof = managed(scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyp")).apply(_.mkString)
+    val actualFileContent = {
+      val source = scala.io.Source.fromFile(outputFileName)
+      try source.mkString finally source.close()
+    }
+    val expectedProof = {
+      val source = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyp")
+      try source.mkString finally source.close()
+    }
     //@note actual file content contains evidence comments: temporary file name in comments changes on every test run
     actualFileContent should include (expectedProof)
   }

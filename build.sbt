@@ -82,8 +82,6 @@ lazy val webui = project
     name := "KeYmaeraX WebUI",
     mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
 
-    libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0", // automatic resource management
-
     /// sqlite driver
     libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0",
     libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0",

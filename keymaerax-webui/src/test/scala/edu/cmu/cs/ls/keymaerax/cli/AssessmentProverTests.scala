@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{ByteArrayOutputStream, PrintWriter}
@@ -1481,7 +1486,8 @@ class AssessmentProverTests extends TacticTestBase {
   private def extractProblems(path: String): List[Problem] = {
     val r = getClass.getResourceAsStream(path)
     require(r != null, "Unable to find " + path + "; please check that keymaerax-webui/src/test/resources" + path + " exists")
-    val content = resource.managed(io.Source.fromInputStream(r, "UTF-8")).apply(_.mkString)
+    val source = io.Source.fromInputStream(r, "UTF-8")
+    val content = try source.mkString finally source.close()
     Problem.fromString(content.linesWithSeparators.filterNot(_.startsWith("%")).mkString)
   }
 

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
@@ -32,7 +33,6 @@ import org.apache.commons.lang3.StringUtils
 
 import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
-import resource._
 
 import scala.annotation.tailrec
 
@@ -361,9 +361,18 @@ object KeYmaeraX {
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
-    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString)
-    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString))
-    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString))
+    val modelInput = {
+      val source = scala.io.Source.fromFile(modelFileNameDotKyx, edu.cmu.cs.ls.keymaerax.core.ENCODING)
+      try source.mkString finally source.close()
+    }
+    val tacticInput = tacticFileNameDotKyt.map(path => {
+      val source = scala.io.Source.fromFile(path, edu.cmu.cs.ls.keymaerax.core.ENCODING)
+      try source.mkString finally source.close()
+    })
+    val defsInput = scaladefsFilename.map(path => {
+      val source = scala.io.Source.fromFile(path, edu.cmu.cs.ls.keymaerax.core.ENCODING)
+      try source.mkString finally source.close()
+    })
     val inputFormula: Formula = ArchiveParser.parseAsFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }

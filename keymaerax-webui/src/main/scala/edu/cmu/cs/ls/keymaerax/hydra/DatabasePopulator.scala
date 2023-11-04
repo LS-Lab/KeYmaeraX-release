@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.util.Calendar
@@ -90,9 +95,12 @@ object DatabasePopulator extends Logging {
       else if (url.startsWith("classpath:/keymaerax-projects")) loadResource(GITHUB_PROJECTS_RAW_PATH + url.substring("classpath:/keymaerax-projects".length))
       else throw new Exception(s"Example '$url' neither included in build nor available in projects repository")
     } else if (url.startsWith("file://")) {
-      resource.managed(io.Source.fromFile(url.stripPrefix("file://"), edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString)
+      val path = url.stripPrefix("file://")
+      val source = io.Source.fromFile(path, edu.cmu.cs.ls.keymaerax.core.ENCODING)
+      try source.mkString finally source.close()
     } else {
-        resource.managed(io.Source.fromURL(url, edu.cmu.cs.ls.keymaerax.core.ENCODING)).apply(_.mkString)
+      val source = io.Source.fromURL(url, edu.cmu.cs.ls.keymaerax.core.ENCODING)
+      try source.mkString finally source.close()
     }
 
   /** Imports a model with info into the database; optionally records a proof obtained using `tactic`.
