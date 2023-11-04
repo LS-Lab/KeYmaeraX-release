@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -43,7 +48,6 @@ class TraceRecordingTests extends TacticTestBase   {
         TestLib.useAt(Ax.composeb, PosInExpr(1 :: Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
     val t2 = System.nanoTime()
     println("My time: " + (t2-t1)/1000000000.0)
-    db.printStats()
   }
 
   /* Same sequent and proof as the mockup for the new proof tree UI. Should give us a good sense of whether this code
@@ -51,7 +55,6 @@ class TraceRecordingTests extends TacticTestBase   {
   it should "handle branching proofs" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
       implyR(SuccPos(0)) & andR(SuccPos(0)))
-      db.printStats()
   }
 
   it should "support multiple proof steps" in withTactics {
@@ -59,6 +62,5 @@ class TraceRecordingTests extends TacticTestBase   {
       proveBy(Sequent(IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
         implyR(SuccPos(0)))
     proveBy(provable.subgoals.head, andR(SuccPos(0)))
-    db.printStats()
   }
 }

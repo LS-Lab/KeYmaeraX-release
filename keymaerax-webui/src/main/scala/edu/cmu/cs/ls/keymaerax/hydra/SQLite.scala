@@ -97,10 +97,6 @@ object SQLite {
     private val lemmaDB = cachedSQLiteLemmaDB(this)
     /** The database session */
     private var currentSession: Session = _
-    /* Statistics on the number of SQL operations performed in this session, useful for profiling. */
-    private var nUpdates = 0
-    private var nInserts = 0
-    private var nSelects = 0
 
     //<editor-fold desc="Database interaction">
 
@@ -154,10 +150,6 @@ object SQLite {
     private[this] def splitNameLabel(s: String): (String, Option[String]) = s.split(Regex.quote(RULENAME_BRANCH_SEPARATOR)).toList match {
       case rn :: Nil => (rn, None)
       case rn :: bl :: Nil => (rn, Some(bl))
-    }
-
-    def printStats(): Unit = {
-      println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
     }
 
     //</editor-fold>
@@ -225,7 +217,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def getAllConfigurations: Set[ConfigurationPOJO] = synchronizedTransaction({
-      nSelects = nSelects + 1
       Config.list.filter(_.configname.isDefined).map(_.configname.get).map(getConfiguration).toSet
     })
 
@@ -239,23 +230,19 @@ object SQLite {
       config.config.foreach(kvp => {
         val key = kvp._1
         val value = kvp._2
-        nSelects = nSelects + 1
         val configExists = Config.filter(c => c.configname === config.name && c.key === key).exists.run
 
         if (configExists) {
           val q = for {l <- Config if l.configname === config.name && l.key === key} yield l.value
           q.update(Some(value))
-          nUpdates = nUpdates + 1
         } else {
           Config.map(c => (c.configname.get, c.key.get, c.value.get)).insert((config.name, key, value))
-          nInserts = nInserts + 1
         }
       })
     })
 
     /** @inheritdoc */
     final override def getConfiguration(configName: String): ConfigurationPOJO = synchronizedTransaction({
-      nSelects = nSelects + 1
       val kvp = Config.filter(_.configname === configName)
         .filter(_.key.isDefined)
         .list
@@ -276,7 +263,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def getModelList(userId: String): List[ModelPOJO] = synchronizedTransaction({
-      nSelects = nSelects + 1
       Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get,
         element.name.get, element.date.getOrElse(""), element.filecontents.getOrElse(""),
         element.description.getOrElse(""), element.publink.getOrElse(""), element.title.getOrElse(""), element.tactic,
@@ -300,9 +286,7 @@ object SQLite {
                                    description: Option[String] = None, publink: Option[String] = None,
                                    title: Option[String] = None, tactic: Option[String] = None): Option[Int] =
       synchronizedTransaction({
-        nSelects = nSelects + 1
         if (Models.filter(_.userid === userId).filter(_.name === name).list.isEmpty) {
-          nInserts = nInserts + 1
           Some((Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
             returning Models.map(_._Id.get))
             .insert(userId, name, fileContents, date, description, publink, title, tactic))
@@ -319,12 +303,10 @@ object SQLite {
       Models.filter(_._Id === modelId).
         map(m => (m.name, m.title, m.description, m.filecontents, m.tactic)).
         update(Some(name), title, description, content, tactic)
-      nUpdates = nUpdates + 1
     })
 
     /** @inheritdoc */
     final override def addModelTactic(modelId: String, fileContents: String): Option[Int] = synchronizedTransaction({
-      nSelects = nSelects + 1
       val mId = Integer.parseInt(modelId)
       if (Models.filter(_._Id === mId).filter(_.tactic.isEmpty).list.isEmpty) {
         Some(Models.filter(_._Id === mId).map(_.tactic).update(Some(fileContents)))
@@ -333,7 +315,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def getModel(modelId: Int): ModelPOJO = synchronizedTransaction({
-      nSelects = nSelects + 1
       val models =
         Models.filter(_._Id === modelId)
           .list
@@ -378,18 +359,15 @@ object SQLite {
       synchronizedTransaction({
         Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get, u.level.get))
           .insert((username, hash, salt, iterations, Integer.parseInt(mode)))
-        nInserts = nInserts + 1
       })}
 
     /** @inheritdoc */
     final override def userExists(username: String): Boolean = synchronizedTransaction({
-      nSelects = nSelects + 1
       Users.filter(_.email === username).exists.run
     })
 
     /** @inheritdoc */
     final override def getUser(username: String): Option[UserPOJO] = synchronizedTransaction({
-      nSelects = nSelects + 1
       val users =
         Users.filter(_.email === username)
           .list
@@ -400,7 +378,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def checkPassword(username: String, password: String): Boolean = synchronizedTransaction({
-      nSelects = nSelects + 1
       Users.filter(_.email === username).list.exists({row =>
         val hash = Password.hash(password.toCharArray, row.salt.get.getBytes("UTF-8"), row.iterations.get)
         Password.hashEquals(hash, row.hash.get)
@@ -409,7 +386,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def getTempUsers: List[UserPOJO] = synchronizedTransaction({
-      nSelects = nSelects + 1
       Users.filter(_.level === 3).list.map(m => new UserPOJO(m.email.get, m.level.get))
     })
 
@@ -442,7 +418,6 @@ object SQLite {
     /** @inheritdoc */
     final override def getProofInfo(proofId: Int): ProofPOJO = synchronizedTransaction({
       val stepCount = stepCountQuery(proofId).run
-      nSelects = nSelects + 1
       val q = for { p <- Proofs if p._Id === proofId } yield (p.modelid, p.lemmaid)
       q.run.headOption match {
         case Some((modelId, lemmaId)) =>
@@ -488,9 +463,7 @@ object SQLite {
     /** @inheritdoc */
     final override def updateProofInfo(proof: ProofPOJO): Unit =
       synchronizedTransaction({
-        nSelects = nSelects + 1
         Proofs.filter(_._Id === proof.proofId).update(proofPojoToRow(proof))
-        nUpdates = nUpdates + 1
       })
 
     /** Converts the proof meta information into database format. */
@@ -502,7 +475,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def getProofsForModel(modelId: Int): List[ProofPOJO] = synchronizedTransaction({
-      nSelects = nSelects + 1
       Proofs.filter(_.modelid === modelId).list.map(p => {
         val stepCount = stepCountQuery(p._Id.get).run //@todo avoid ripple loading
         val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
@@ -553,7 +525,6 @@ object SQLite {
     /** @inheritdoc */
     final override def createProofForModel(modelId: Int, name: String, description: String, date: String,
                                            tactic: Option[String]): Int = synchronizedTransaction({
-      nInserts = nInserts + 2
       val (provableId, substTactic) = initializeProofForModel(modelId, tactic)
       val proofId =
         (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get, p.lemmaid.get,
@@ -566,7 +537,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def createProof(provable: ProvableSig): Int = synchronizedTransaction({
-      nInserts = nInserts + 3
       val provableId = createProvable(provable)
       val proofId =
         (Proofs.map(p => ( p.closed.get, p.lemmaid.get, p.istemporary.get))
@@ -599,7 +569,6 @@ object SQLite {
 
       updateOpenSubgoalsCount(step.executionId, step.previousStep)
 
-      nInserts = nInserts + 1
       stepId
     })
 
@@ -647,7 +616,6 @@ object SQLite {
         (Executables.map(_.belleexpr)
           returning Executables.map(_._Id.get))
           .insert(Some(BellePrettyPrinter(expr)))
-      nInserts = nInserts + 1
       executableId
     })
 
@@ -662,7 +630,6 @@ object SQLite {
 
     /** Allow retrieving executables in bulk to reduce the number of database queries. */
     private[this] def getExecutables(executableIds: List[Int]): List[ExecutablePOJO] = synchronizedTransaction({
-      nSelects = nSelects + 1
       val q = for {
         exe <- Executables
         if exe._Id inSetBind executableIds
@@ -687,8 +654,6 @@ object SQLite {
 
     /** @inheritdoc */
     final override def updateExecutionStep(executionStepId: Int, step: ExecutionStepPOJO): Unit = synchronizedTransaction({
-      nSelects = nSelects + 1
-      nUpdates = nUpdates + 1
       // update step
       Executionsteps.filter(_._Id === executionStepId)
         .map(dbstep => (dbstep.proofid.get, dbstep.previousstep,
