@@ -98,10 +98,6 @@ case class ProofPOJO(proofId: Int, modelId: Option[Int], name: String, descripti
 
 case class ProvablePOJO(provableId: Int, provable:ProvableSig)
 
-case class SequentPOJO(sequentId: Int, provableId: Int)
-
-case class SequentFormulaPOJO(sequentFormulaId: Int, sequentId: Int, isAnte: Boolean, index: Int, formulaStr: String)
-
 case class AgendaItemPOJO(itemId: Int, proofId: Int, initialProofNode: ProofTreeNodeId, displayName: String)
 
 /* See schema for descriptions */
@@ -128,8 +124,6 @@ object ExecutionStepStatus extends Enumeration {
     case DependsOnChildren => "DependsOnChildren"
   }
 }
-
-case class TacticExecutionPOJO(executionId: Int, proofId: Int)
 
 case class ExecutionStepPOJO(stepId: Option[Int],
                              executionId: Int,
