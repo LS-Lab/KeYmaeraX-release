@@ -38,7 +38,7 @@ lazy val core = project
 
     libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
 
-    libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.+",
+    libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.1",
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2",
     libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.2",
