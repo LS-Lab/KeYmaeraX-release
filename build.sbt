@@ -46,7 +46,6 @@ lazy val core = project
 
     assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
-    assembly / test := {},
 
     // Use Mathematica's JLink.jar as unmanaged dependency
     // The path is read from the property mathematica.jlink.path in the file local.properties
@@ -99,13 +98,8 @@ lazy val webui = project
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
 
-    //////////////
-    // Building //
-    //////////////
-
     assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
-    assembly / test := {},
 
     // Include some resources as triggers for triggered execution (~)
     watchTriggers += baseDirectory.value.toGlob / "src" / "main" / "resources" / "partials" / "*.html",
