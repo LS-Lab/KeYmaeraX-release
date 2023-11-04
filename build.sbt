@@ -1,13 +1,10 @@
-import java.io.{BufferedReader, FileInputStream, FileReader, InputStreamReader}
+import java.io.{FileInputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
 
 ThisBuild / scalaVersion := "2.12.8"
-ThisBuild / version := {
-  // TODO Make this build file the single source of truth for version number
-  // and remove or autogenerate the VERSION file in the process
-  new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
-}
+// TODO Use this version number in keymaerax-core
+ThisBuild / version := "5.0.2"
 
 // Never execute tests in parallel across all sub-projects
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
