@@ -9,6 +9,9 @@ ThisBuild / version := {
   new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 }
 
+// Never execute tests in parallel across all sub-projects
+Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
+
 lazy val macros = project
   .in(file("keymaerax-macros"))
   .disablePlugins(AssemblyPlugin)
@@ -158,22 +161,16 @@ lazy val webui = project
   )
 
 // build KeYmaera X full jar with sbt clean assembly
-lazy val root = (project in file("."))
+lazy val root = project
+  .in(file("."))
+  .aggregate(macros, core, webui)
   .enablePlugins(ScalaUnidocPlugin)
+  .disablePlugins(AssemblyPlugin)
   .settings(
     name := "KeYmaeraX",
-    assemblyJarName := "keymaerax-" + version.value + ".jar",
+
+    Compile / doc / target := baseDirectory.value / "api",
+    Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt"),
     ScalaUnidoc / unidoc / scalacOptions += "-Ymacro-expand:none",
     ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(macros),
   )
-  .aggregate(macros, core, webui)
-
-
-// extra runtime checks for initialization order: "-Xcheckinit"
-Compile / scalacOptions += "-Ystatistics:typer"
-
-Compile / doc / target := baseDirectory.value / "api"
-Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt")
-
-// never execute tests in parallel across all sub-projects
-Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
