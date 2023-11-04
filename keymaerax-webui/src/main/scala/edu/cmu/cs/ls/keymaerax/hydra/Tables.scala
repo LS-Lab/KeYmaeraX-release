@@ -29,7 +29,7 @@ trait Tables {
     AgendaitemsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
   }
   /** Table description of table agendaItems. Objects of this class serve as prototypes for rows in queries. */
-  class Agendaitems(_tableTag: Tag) extends Table[AgendaitemsRow](_tableTag, "agendaItems") {
+  class Agendaitems(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[AgendaitemsRow](_tableTag, "agendaItems") {
     def * = (_Id, proofid, stepid, subgoalid, displayname) <> (AgendaitemsRow.tupled, AgendaitemsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
@@ -49,7 +49,7 @@ trait Tables {
     lazy val proofsFk = foreignKey("proofs_FK_2", proofid, Proofs)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table Agendaitems */
-  lazy val Agendaitems = new TableQuery(tag => new Agendaitems(tag))
+  lazy val Agendaitems = new scala.slick.lifted.TableQuery(tag => new Agendaitems(tag))
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(INTEGER), PrimaryKey
@@ -63,7 +63,7 @@ trait Tables {
     ConfigRow.tupled((<<?[Int], <<?[String], <<?[String], <<?[String]))
   }
   /** Table description of table config. Objects of this class serve as prototypes for rows in queries. */
-  class Config(_tableTag: Tag) extends Table[ConfigRow](_tableTag, "config") {
+  class Config(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[ConfigRow](_tableTag, "config") {
     def * = (configid, configname, key, value) <> (ConfigRow.tupled, ConfigRow.unapply)
     
     /** Database column configId DBType(INTEGER), PrimaryKey */
@@ -76,7 +76,7 @@ trait Tables {
     val value: Column[Option[String]] = column[Option[String]]("value")
   }
   /** Collection-like TableQuery object for table Config */
-  lazy val Config = new TableQuery(tag => new Config(tag))
+  lazy val Config = new scala.slick.lifted.TableQuery(tag => new Config(tag))
   
   /** Entity class storing rows of table Executables
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
@@ -88,7 +88,7 @@ trait Tables {
     ExecutablesRow.tupled((<<?[Int], <<?[String]))
   }
   /** Table description of table executables. Objects of this class serve as prototypes for rows in queries. */
-  class Executables(_tableTag: Tag) extends Table[ExecutablesRow](_tableTag, "executables") {
+  class Executables(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[ExecutablesRow](_tableTag, "executables") {
     def * = (_Id, belleexpr) <> (ExecutablesRow.tupled, ExecutablesRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
@@ -97,7 +97,7 @@ trait Tables {
     val belleexpr: Column[Option[String]] = column[Option[String]]("belleExpr")
   }
   /** Collection-like TableQuery object for table Executables */
-  lazy val Executables = new TableQuery(tag => new Executables(tag))
+  lazy val Executables = new scala.slick.lifted.TableQuery(tag => new Executables(tag))
   
   /** Entity class storing rows of table Executionsteps
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
@@ -112,16 +112,16 @@ trait Tables {
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN)
    *  @param childrenrecorded Database column childrenRecorded DBType(BOOLEAN)
    *  @param rulename Database column ruleName DBType(STRING)
-   *  @param numsubgoals Database column numSubGoals DBType(INTEGER)
-   *  @param numopensubgoals Database column numOpenSubGoals DBType(INTEGER) */
-  case class ExecutionstepsRow(_Id: Option[Int], proofid: Option[Int], previousstep: Option[Int], branchorder: Int, status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], localprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String], rulename: Option[String], numsubgoals: Int, numopensubgoals: Int)
+   *  @param numsubgoals Database column numSubGoals DBType(INTEGER), Default(-1)
+   *  @param numopensubgoals Database column numOpenSubGoals DBType(INTEGER), Default(-1) */
+  case class ExecutionstepsRow(_Id: Option[Int], proofid: Option[Int], previousstep: Option[Int], branchorder: Int, status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], localprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String], rulename: Option[String], numsubgoals: Int = -1, numopensubgoals: Int = -1)
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[Int]], e1: GR[Int], e2: GR[Option[String]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
     ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<[Int], <<[Int]))
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
-  class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
+  class Executionsteps(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[ExecutionstepsRow](_tableTag, "executionSteps") {
     def * = (_Id, proofid, previousstep, branchorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals, numopensubgoals) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
     def ? = (_Id, proofid, previousstep, branchorder.?, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals.?, numopensubgoals.?).shaped.<>({r=>import r._; _4.map(_=> ExecutionstepsRow.tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
@@ -150,10 +150,10 @@ trait Tables {
     val childrenrecorded: Column[Option[String]] = column[Option[String]]("childrenRecorded")
     /** Database column ruleName DBType(STRING) */
     val rulename: Column[Option[String]] = column[Option[String]]("ruleName")
-    /** Database column numSubGoals DBType(INTEGER) */
-    val numsubgoals: Column[Int] = column[Int]("numSubGoals")
-    /** Database column numOpenSubGoals DBType(INTEGER) */
-    val numopensubgoals: Column[Int] = column[Int]("numOpenSubGoals")
+    /** Database column numSubGoals DBType(INTEGER), Default(-1) */
+    val numsubgoals: Column[Int] = column[Int]("numSubGoals", O.Default(-1))
+    /** Database column numOpenSubGoals DBType(INTEGER), Default(-1) */
+    val numopensubgoals: Column[Int] = column[Int]("numOpenSubGoals", O.Default(-1))
     
     /** Foreign key referencing Executables (database name executables_FK_1) */
     lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
@@ -163,9 +163,16 @@ trait Tables {
     lazy val lemmasFk = foreignKey("lemmas_FK_3", (localprovableid, resultprovableid, inputprovableid), Lemmas)(r => (r._Id, r._Id, r._Id), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.Cascade)
     /** Foreign key referencing Proofs (database name proofs_FK_4) */
     lazy val proofsFk = foreignKey("proofs_FK_4", proofid, Proofs)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.Cascade)
+    
+    /** Index over (proofid,status,numopensubgoals) (database name finishedOpenSteps) */
+    val index1 = index("finishedOpenSteps", (proofid, status, numopensubgoals))
+    /** Index over (proofid,previousstep,status) (database name finishedProofStepParent) */
+    val index2 = index("finishedProofStepParent", (proofid, previousstep, status))
+    /** Index over (proofid,status) (database name finishedProofSteps) */
+    val index3 = index("finishedProofSteps", (proofid, status))
   }
   /** Collection-like TableQuery object for table Executionsteps */
-  lazy val Executionsteps = new TableQuery(tag => new Executionsteps(tag))
+  lazy val Executionsteps = new scala.slick.lifted.TableQuery(tag => new Executionsteps(tag))
   
   /** Entity class storing rows of table Lemmas
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
@@ -177,7 +184,7 @@ trait Tables {
     LemmasRow.tupled((<<?[Int], <<?[String]))
   }
   /** Table description of table lemmas. Objects of this class serve as prototypes for rows in queries. */
-  class Lemmas(_tableTag: Tag) extends Table[LemmasRow](_tableTag, "lemmas") {
+  class Lemmas(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[LemmasRow](_tableTag, "lemmas") {
     def * = (_Id, lemma) <> (LemmasRow.tupled, LemmasRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
@@ -186,7 +193,7 @@ trait Tables {
     val lemma: Column[Option[String]] = column[Option[String]]("lemma")
   }
   /** Collection-like TableQuery object for table Lemmas */
-  lazy val Lemmas = new TableQuery(tag => new Lemmas(tag))
+  lazy val Lemmas = new scala.slick.lifted.TableQuery(tag => new Lemmas(tag))
   
   /** Entity class storing rows of table Models
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
@@ -198,15 +205,15 @@ trait Tables {
    *  @param publink Database column publink DBType(TEXT)
    *  @param title Database column title DBType(TEXT)
    *  @param tactic Database column tactic DBType(TEXT)
-   *  @param istemporary Database column isTemporary DBType(INTEGER) */
-  case class ModelsRow(_Id: Option[Int], userid: Option[String], name: Option[String], date: Option[String], description: Option[String], filecontents: Option[String], publink: Option[String], title: Option[String], tactic: Option[String], istemporary: Option[Int])
+   *  @param istemporary Database column isTemporary DBType(INTEGER), Default(Some(0)) */
+  case class ModelsRow(_Id: Option[Int], userid: Option[String], name: Option[String], date: Option[String], description: Option[String], filecontents: Option[String], publink: Option[String], title: Option[String], tactic: Option[String], istemporary: Option[Int] = Some(0))
   /** GetResult implicit for fetching ModelsRow objects using plain SQL queries */
   implicit def GetResultModelsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ModelsRow] = GR{
     prs => import prs._
     ModelsRow.tupled((<<?[Int], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[Int]))
   }
   /** Table description of table models. Objects of this class serve as prototypes for rows in queries. */
-  class Models(_tableTag: Tag) extends Table[ModelsRow](_tableTag, "models") {
+  class Models(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[ModelsRow](_tableTag, "models") {
     def * = (_Id, userid, name, date, description, filecontents, publink, title, tactic, istemporary) <> (ModelsRow.tupled, ModelsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
@@ -227,14 +234,14 @@ trait Tables {
     val title: Column[Option[String]] = column[Option[String]]("title")
     /** Database column tactic DBType(TEXT) */
     val tactic: Column[Option[String]] = column[Option[String]]("tactic")
-    /** Database column isTemporary DBType(INTEGER) */
-    val istemporary: Column[Option[Int]] = column[Option[Int]]("isTemporary")
+    /** Database column isTemporary DBType(INTEGER), Default(Some(0)) */
+    val istemporary: Column[Option[Int]] = column[Option[Int]]("isTemporary", O.Default(Some(0)))
     
     /** Foreign key referencing Users (database name users_FK_1) */
     lazy val usersFk = foreignKey("users_FK_1", userid, Users)(r => r.email, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Models */
-  lazy val Models = new TableQuery(tag => new Models(tag))
+  lazy val Models = new scala.slick.lifted.TableQuery(tag => new Models(tag))
   
   /** Entity class storing rows of table Proofs
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
@@ -244,16 +251,16 @@ trait Tables {
    *  @param date Database column date DBType(TEXT)
    *  @param closed Database column closed DBType(INTEGER)
    *  @param lemmaid Database column lemmaId DBType(INTEGER)
-   *  @param istemporary Database column isTemporary DBType(INTEGER)
+   *  @param istemporary Database column isTemporary DBType(INTEGER), Default(Some(0))
    *  @param tactic Database column tactic DBType(TEXT) */
-  case class ProofsRow(_Id: Option[Int], modelid: Option[Int], name: Option[String], description: Option[String], date: Option[String], closed: Option[Int], lemmaid: Option[Int], istemporary: Option[Int], tactic: Option[String])
+  case class ProofsRow(_Id: Option[Int], modelid: Option[Int], name: Option[String], description: Option[String], date: Option[String], closed: Option[Int], lemmaid: Option[Int], istemporary: Option[Int] = Some(0), tactic: Option[String])
   /** GetResult implicit for fetching ProofsRow objects using plain SQL queries */
   implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR{
     prs => import prs._
     ProofsRow.tupled((<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
   }
   /** Table description of table proofs. Objects of this class serve as prototypes for rows in queries. */
-  class Proofs(_tableTag: Tag) extends Table[ProofsRow](_tableTag, "proofs") {
+  class Proofs(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[ProofsRow](_tableTag, "proofs") {
     def * = (_Id, modelid, name, description, date, closed, lemmaid, istemporary, tactic) <> (ProofsRow.tupled, ProofsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
@@ -270,31 +277,31 @@ trait Tables {
     val closed: Column[Option[Int]] = column[Option[Int]]("closed")
     /** Database column lemmaId DBType(INTEGER) */
     val lemmaid: Column[Option[Int]] = column[Option[Int]]("lemmaId")
-    /** Database column isTemporary DBType(INTEGER) */
-    val istemporary: Column[Option[Int]] = column[Option[Int]]("isTemporary")
+    /** Database column isTemporary DBType(INTEGER), Default(Some(0)) */
+    val istemporary: Column[Option[Int]] = column[Option[Int]]("isTemporary", O.Default(Some(0)))
     /** Database column tactic DBType(TEXT) */
     val tactic: Column[Option[String]] = column[Option[String]]("tactic")
     
     /** Foreign key referencing Models (database name models_FK_1) */
-    lazy val modelsFk = foreignKey("models_FK_1", modelid, Models)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    lazy val modelsFk = foreignKey("models_FK_1", modelid, Models)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.Cascade)
   }
   /** Collection-like TableQuery object for table Proofs */
-  lazy val Proofs = new TableQuery(tag => new Proofs(tag))
+  lazy val Proofs = new scala.slick.lifted.TableQuery(tag => new Proofs(tag))
   
   /** Entity class storing rows of table Users
    *  @param email Database column email DBType(TEXT), PrimaryKey
    *  @param hash Database column hash DBType(TEXT)
    *  @param salt Database column salt DBType(TEXT)
    *  @param iterations Database column iterations DBType(INTEGER)
-   *  @param level Database column level DBType(INTEGER) */
-  case class UsersRow(email: Option[String], hash: Option[String], salt: Option[String], iterations: Option[Int], level: Option[Int])
+   *  @param level Database column level DBType(INTEGER), Default(Some(0)) */
+  case class UsersRow(email: Option[String], hash: Option[String], salt: Option[String], iterations: Option[Int], level: Option[Int] = Some(0))
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
   implicit def GetResultUsersRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[UsersRow] = GR{
     prs => import prs._
     UsersRow.tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
   }
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
-  class Users(_tableTag: Tag) extends Table[UsersRow](_tableTag, "users") {
+  class Users(_tableTag: scala.slick.lifted.Tag) extends profile.simple.Table[UsersRow](_tableTag, "users") {
     def * = (email, hash, salt, iterations, level) <> (UsersRow.tupled, UsersRow.unapply)
     
     /** Database column email DBType(TEXT), PrimaryKey */
@@ -305,9 +312,9 @@ trait Tables {
     val salt: Column[Option[String]] = column[Option[String]]("salt")
     /** Database column iterations DBType(INTEGER) */
     val iterations: Column[Option[Int]] = column[Option[Int]]("iterations")
-    /** Database column level DBType(INTEGER) */
-    val level: Column[Option[Int]] = column[Option[Int]]("level")
+    /** Database column level DBType(INTEGER), Default(Some(0)) */
+    val level: Column[Option[Int]] = column[Option[Int]]("level", O.Default(Some(0)))
   }
   /** Collection-like TableQuery object for table Users */
-  lazy val Users = new TableQuery(tag => new Users(tag))
+  lazy val Users = new scala.slick.lifted.TableQuery(tag => new Users(tag))
 }
