@@ -20,8 +20,6 @@ lazy val macros = project
 
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-
-    Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt"),
   )
 
 lazy val core = project
@@ -45,9 +43,6 @@ lazy val core = project
 
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-
-    Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt"),
-    ScalaUnidoc / unidoc / scalacOptions += "-Ymacro-expand:none",
 
     assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
@@ -108,8 +103,6 @@ lazy val webui = project
     // Building //
     //////////////
 
-    Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt"),
-
     assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
     assembly / test := {},
@@ -166,7 +159,6 @@ lazy val root = project
   .settings(
     name := "KeYmaeraX",
 
-    Compile / doc / target := baseDirectory.value / "api",
     Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt"),
     ScalaUnidoc / unidoc / scalacOptions += "-Ymacro-expand:none",
     ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(macros),
