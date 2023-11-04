@@ -51,34 +51,34 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       else throw ConversionException("Cannot convert number " + e + " (neither double nor big decimal)") //@note complexQ
     }
     //@note self-created MExpr with head RATIONAL are not rationalQ (type identifiers do not match)
-    else if (MathematicaOpSpec.rational.applies(e)) convertBinary(e, Divide.apply)
+    else if (MathematicaOpSpec.rational.applies(e)) convertBinary[Term](e, Divide.apply)
 
     // Arith expressions
-    else if (MathematicaOpSpec.plus.applies(e))   convertNaryL (e, Plus.apply)
-    else if (MathematicaOpSpec.minus.applies(e))  convertBinary(e, Minus.apply)
-    else if (MathematicaOpSpec.times.applies(e))  convertNaryL (e, Times.apply)
-    else if (MathematicaOpSpec.divide.applies(e)) convertBinary(e, Divide.apply)
-    else if (MathematicaOpSpec.power.applies(e))  convertBinary(e, Power.apply)
-    else if (MathematicaOpSpec.neg.applies(e))    convertUnary (e, Neg.apply)
+    else if (MathematicaOpSpec.plus.applies(e))   convertNaryL [Term](e, Plus.apply)
+    else if (MathematicaOpSpec.minus.applies(e))  convertBinary[Term](e, Minus.apply)
+    else if (MathematicaOpSpec.times.applies(e))  convertNaryL [Term](e, Times.apply)
+    else if (MathematicaOpSpec.divide.applies(e)) convertBinary[Term](e, Divide.apply)
+    else if (MathematicaOpSpec.power.applies(e))  convertBinary[Term](e, Power.apply)
+    else if (MathematicaOpSpec.neg.applies(e))    convertUnary [Term](e, Neg.apply)
 
     // Comparisons
-    else if (MathematicaOpSpec.equal.applies(e))        convertComparison(e, Equal.apply)
-    else if (MathematicaOpSpec.unequal.applies(e))      convertComparison(e, NotEqual.apply)
-    else if (MathematicaOpSpec.greater.applies(e))      convertComparison(e, Greater.apply)
-    else if (MathematicaOpSpec.greaterEqual.applies(e)) convertComparison(e, GreaterEqual.apply)
-    else if (MathematicaOpSpec.less.applies(e))         convertComparison(e, Less.apply)
-    else if (MathematicaOpSpec.lessEqual.applies(e))    convertComparison(e, LessEqual.apply)
+    else if (MathematicaOpSpec.equal.applies(e))        convertComparison[Term, Formula](e, Equal.apply)
+    else if (MathematicaOpSpec.unequal.applies(e))      convertComparison[Term, Formula](e, NotEqual.apply)
+    else if (MathematicaOpSpec.greater.applies(e))      convertComparison[Term, Formula](e, Greater.apply)
+    else if (MathematicaOpSpec.greaterEqual.applies(e)) convertComparison[Term, Formula](e, GreaterEqual.apply)
+    else if (MathematicaOpSpec.less.applies(e))         convertComparison[Term, Formula](e, Less.apply)
+    else if (MathematicaOpSpec.lessEqual.applies(e))    convertComparison[Term, Formula](e, LessEqual.apply)
     else if (MathematicaOpSpec.inequality.applies(e))   convertInequality(e)
 
     // Formulas
     else if (MathematicaOpSpec.ltrue.applies(e))      True
     else if (MathematicaOpSpec.lfalse.applies(e))     False
-    else if (MathematicaOpSpec.not.applies(e))        convertUnary(e, Not.apply)
-    else if (MathematicaOpSpec.and.applies(e))        convertNaryR(e, And.apply)
-    else if (MathematicaOpSpec.or.applies(e))         convertNaryR(e, Or.apply)
-    else if (MathematicaOpSpec.xor.applies(e))        convertBinary(e, (a: Formula, b: Formula) => Or(And(a, Not(b)), And(Not(a), b)))
-    else if (MathematicaOpSpec.implies.applies(e))    convertBinary(e, Imply.apply)
-    else if (MathematicaOpSpec.equivalent.applies(e)) convertBinary(e, Equiv.apply)
+    else if (MathematicaOpSpec.not.applies(e))        convertUnary[Formula](e, Not.apply)
+    else if (MathematicaOpSpec.and.applies(e))        convertNaryR[Formula](e, And.apply)
+    else if (MathematicaOpSpec.or.applies(e))         convertNaryR[Formula](e, Or.apply)
+    else if (MathematicaOpSpec.xor.applies(e))        convertBinary[Formula](e, (a: Formula, b: Formula) => Or(And(a, Not(b)), And(Not(a), b)))
+    else if (MathematicaOpSpec.implies.applies(e))    convertBinary[Formula](e, Imply.apply)
+    else if (MathematicaOpSpec.equivalent.applies(e)) convertBinary[Formula](e, Equiv.apply)
 
     //Quantifiers
     else if (MathematicaOpSpec.forall.applies(e)) convertQuantifier(e, Forall.apply)
