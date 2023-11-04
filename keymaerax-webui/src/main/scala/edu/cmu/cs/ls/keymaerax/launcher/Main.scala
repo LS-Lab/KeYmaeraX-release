@@ -247,7 +247,8 @@ object Main {
   private def runUpgradeScript(scriptUrl: String): Unit = {
     val script = io.Source.fromInputStream(getClass.getResourceAsStream(scriptUrl)).mkString
     val statements = script.split(";")
-    val conn = SQLite.ProdDB.sqldb.createConnection()
+    val session = SQLite.ProdDB.sqldb.createSession()
+    val conn = session.conn
     conn.setAutoCommit(false)
     try {
       conn.rollback()
@@ -259,6 +260,7 @@ object Main {
       case e: Throwable => conn.rollback(); throw e
     } finally {
       conn.close()
+      session.close()
     }
   }
 
@@ -313,7 +315,8 @@ object Main {
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
     launcherDebug("...deleting " + deleteModels.size + " guest models")
     if (deleteModels.nonEmpty) {
-      val conn = SQLite.ProdDB.sqldb.createConnection()
+      val session = SQLite.ProdDB.sqldb.createSession()
+      val conn = session.conn
       conn.createStatement().executeUpdate("PRAGMA journal_mode = WAL")
       conn.createStatement().executeUpdate("PRAGMA foreign_keys = ON")
       conn.createStatement().executeUpdate("PRAGMA synchronous = NORMAL")
@@ -326,6 +329,7 @@ object Main {
         case e: Throwable => launcherLog("Error cleaning up guest data"); throw e
       } finally {
         conn.close()
+        session.close()
       }
     }
     launcherDebug("done.")

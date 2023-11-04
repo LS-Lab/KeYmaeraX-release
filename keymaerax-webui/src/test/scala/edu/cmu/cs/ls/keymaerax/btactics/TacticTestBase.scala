@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
@@ -293,7 +298,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
       ToolProvider.shutdown()
       ToolProvider.setProvider(new NoneToolProvider())
       if (dbTester.isInitialized) {
-        dbTester().db.session.close()
+        dbTester().db.sqldb.close()
         dbTester = null
       }
       TactixInit.invSupplier = FixedGenerator(Nil)
