@@ -8,11 +8,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import fastparse._
-import MultiLineWhitespace._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import fastparse.MultiLineWhitespace.whitespace
+import fastparse._
 
 object KaisarKeywordParser {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "let", "match", "print", "for")
@@ -20,8 +20,9 @@ object KaisarKeywordParser {
 
   def identString[_: P]: P[String] = {
     // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
-    // locally import "no whitespace" so that identifiers cannot contain spaces.
-    import NoWhitespace._
+    // Thus shadow implicit whitespace definition provided by class scope
+    implicit val whitespace: Whitespace = NoWhitespace.noWhitespaceImplicit
+
     (CharIn("a-zA-Z") ~ CharIn("a-zA-Z1-9").rep ~ P("'").?).!.filter(s  => !reservedWords.contains(s))
   }
   def reserved[_: P]: P[String]  = CharIn("a-zA-Z").rep(1).!.filter(reservedWords.contains)

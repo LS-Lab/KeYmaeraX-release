@@ -5,15 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core._
-import fastparse._
-import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{DLTacticParser, TacticParser}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted.FromProgramException
+import fastparse.JavaWhitespace.whitespace
+import fastparse._
 
 import java.io.FileInputStream
 import scala.collection.immutable._
@@ -85,7 +84,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** parse a label */
   def label[_: P]: P[String] = {
-    import NoWhitespace._
+    // Shadow implicit whitespace provided by class scope
+    implicit val whitespace: Whitespace = NoWhitespace.noWhitespaceImplicit
+
     P( (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9_").rep).! )
   }
 

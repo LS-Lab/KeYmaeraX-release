@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import fastparse.Parsed.Success
 import fastparse._
 // allow Scala-style comments and ignore newlines
-import ScalaWhitespace._
+import ScalaWhitespace.whitespace
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ParserCommon._
 import edu.cmu.cs.ls.keymaerax.parser.Parser
@@ -28,8 +28,9 @@ object ParserCommon {
 
   def identOrKeyword[_: P]: P[String] = {
     // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
-    // locally import "no whitespace" so that identifiers cannot contain spaces.
-    import NoWhitespace._
+    // Shadow implicit whitespace provided by class scope
+    implicit val whitespace: Whitespace = NoWhitespace.noWhitespaceImplicit
+
     (CharIn("a-zA-Z") ~ CharIn("a-zA-Z1-9").rep ~ P("'").?).!
   }
 
@@ -42,7 +43,9 @@ object ParserCommon {
   def literal[_: P]: P[String] = "\"" ~ CharPred(c => c != '\"').rep(1).! ~ "\""
   def ident[_: P]: P[Ident] = identString.map(c => if (c.endsWith("'")) DifferentialSymbol(BaseVariable(c.dropRight(1))) else BaseVariable(c))
   def number[_: P]: P[Number] = {
-    import NoWhitespace._
+    // Shadow implicit whitespace from class scope
+    implicit val whitespace: Whitespace = NoWhitespace.noWhitespaceImplicit
+
     ("-".!.? ~  (("0" | CharIn("1-9") ~ CharIn("0-9").rep) ~ ("." ~ CharIn("0-9").rep(1)).?).!)
     .map({case (None, s) => Number(BigDecimal(s))
           case (Some("-"), s) => Number(BigDecimal("-" + s))})
@@ -362,7 +365,9 @@ object ProofParser {
   }
 
   def label[_: P]: P[Label] = {
-    import NoWhitespace._
+    // Shadow implicit whitespace provided by class scope
+    implicit val whitespace: Whitespace = NoWhitespace.noWhitespaceImplicit
+
     (Index ~ ident ~ labelDefArgs.? ~ ":" ~ !P("=")).map({case (i, id, args) => locate(Label(LabelDef(id.name, args.getOrElse(Nil))), i)})
   }
 

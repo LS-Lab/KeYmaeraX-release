@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse._
-import fastparse.internal.Util
+import fastparse.internal.{Msgs, Util}
 
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
@@ -209,37 +209,44 @@ class DLParser extends Parser {
   //*****************
 
   // Whitespace is the usual ' \t\n\r' but also comments /* ... */
-  private object DLWhitespace {
-    implicit val whitespace = {implicit ctx: ParsingRun[_] =>
+  implicit object DLWhitespace extends Whitespace {
+    override def apply(ctx: P[_]): P[Unit] = {
       val input = ctx.input
       val startIndex = ctx.index
+
       @tailrec def rec(current: Int, state: Int): ParsingRun[Unit] = {
         if (!input.isReachable(current)) {
-          if (state == 0) ctx.freshSuccessUnit(current)
-          else if (state == 1)  ctx.freshSuccessUnit(current - 1)
+          if (state == 0) {
+            if (ctx.verboseFailures) ctx.reportTerminalMsg(startIndex, Msgs.empty)
+            ctx.freshSuccessUnit(current)
+          }
+          else if (state == 1) {
+            if (ctx.verboseFailures) ctx.reportTerminalMsg(startIndex, Msgs.empty)
+            ctx.freshSuccessUnit(current - 1)
+          }
           else {
             ctx.cut = true
             val res = ctx.freshFailure(current)
-            if (ctx.verboseFailures) ctx.setMsg(startIndex, () => Util.literalize("*/"))
+            if (ctx.verboseFailures) ctx.reportTerminalMsg(startIndex, () => Util.literalize("*/"))
             res
           }
         } else {
           val currentChar = input(current)
-          (state: @switch) match{
+          (state: @switch) match {
             case 0 =>
-              (currentChar: @switch) match{
+              (currentChar: @switch) match {
                 case ' ' | '\t' | '\n' | '\r' => rec(current + 1, state)
                 case '/' => rec(current + 1, state = 1)
                 case _ => ctx.freshSuccessUnit(current)
               }
             case 1 =>
-              (currentChar: @switch) match{
+              (currentChar: @switch) match {
                 case '*' => rec(current + 1, state = 2)
                 case _ => ctx.freshSuccessUnit(current - 1)
               }
             case 2 => rec(current + 1, state = if (currentChar == '*') 3 else state)
             case 3 =>
-              (currentChar: @switch) match{
+              (currentChar: @switch) match {
                 case '/' => rec(current + 1, state = 0)
                 case '*' => rec(current + 1, state = 3)
                 case _ => rec(current + 1, state = 2)
@@ -247,6 +254,7 @@ class DLParser extends Parser {
           }
         }
       }
+
       rec(current = ctx.index, state = 0)
     }
   }
