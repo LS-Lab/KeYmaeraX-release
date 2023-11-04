@@ -1,12 +1,26 @@
 import java.io.{BufferedReader, FileReader}
 
 ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / version := {
+  // TODO Make this build file the single source of truth for version number
+  // and remove or autogenerate the VERSION file in the process
+  new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
+}
 
-//scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
+lazy val macros = project
+  .in(file("keymaerax-macros"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(
+    name := "KeYmaeraX Macros",
 
-version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8",
+    libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
 
-lazy val macros = (project in file("keymaerax-macros"))
+    resolvers ++= Resolver.sonatypeOssRepos("releases"),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+
+    Compile / doc / scalacOptions ++= Seq("-doc-root-content", "rootdoc.txt"),
+  )
 
 lazy val keymaeraxCoreAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
   assembly / test := {},
