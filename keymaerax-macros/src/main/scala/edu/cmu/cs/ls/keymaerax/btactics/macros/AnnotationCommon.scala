@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
@@ -145,13 +150,6 @@ object AnnotationCommon {
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
       case InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
-    }
-  }
-  def sequentDisplayFromObj(a: Any)(implicit c: blackbox.Context): SequentDisplay = {
-    a match {
-      case (ante: List[String], succ: List[String]) => SequentDisplay(ante, succ)
-      case sd: SequentDisplay => sd
-      case e => c.abort(c.enclosingPosition, "Expected SequentDisplay, got: " + e)
     }
   }
   def foldParams(c: blackbox.Context, paramNames: List[String])(acc: (Int, Boolean, Map[String, c.universe.Tree]), param: c.universe.Tree): (Int, Boolean, Map[String, c.universe.Tree]) = {

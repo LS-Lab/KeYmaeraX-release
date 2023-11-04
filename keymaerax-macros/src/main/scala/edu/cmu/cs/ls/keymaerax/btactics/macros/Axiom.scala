@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
@@ -150,7 +151,7 @@ class AxiomImpl (val c: whitebox.Context) {
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
       }
     }
-    annottees map (_.tree) toList match {
+    annottees.map(_.tree).toList match {
       // Annottee must be a val declaration of an axiom
       case (valDecl: ValDef) :: Nil =>
         valDecl match {

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import scala.language.experimental.macros
@@ -137,7 +142,7 @@ class RuleImpl (val c: whitebox.Context) {
       }
     }
     import c.universe._
-    annottees map (_.tree) toList match {
+    annottees.map(_.tree).toList match {
       // Annottee must be a val declaration of an axiom
       case (valDecl: ValDef) :: Nil =>
         valDecl match {

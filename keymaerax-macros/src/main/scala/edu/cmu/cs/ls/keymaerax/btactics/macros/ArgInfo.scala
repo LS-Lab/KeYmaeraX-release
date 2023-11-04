@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 /** Information on the arguments, their names and sorts, that an axiom/rule/tactic requires as input. */
@@ -22,13 +23,13 @@ case class GeneratorArg (override val name: String) extends ArgInfo {
   override val allowsFresh: List[String] = Nil
 }
 
-abstract class ExpressionArgBase (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
+abstract sealed class ExpressionArgBase (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "expression"
 }
 
 case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ExpressionArgBase (name, allowsFresh) {}
 
-abstract class TermArgBase (override val name: String, override val allowsFresh: List[String] = Nil) extends ExpressionArgBase (name, allowsFresh) {
+abstract sealed class TermArgBase (override val name: String, override val allowsFresh: List[String] = Nil) extends ExpressionArgBase (name, allowsFresh) {
   override val sort = "term"
 }
 
@@ -65,4 +66,3 @@ case class ListArg(arg: ArgInfo) extends ArgInfo {
   val sort: String = "list[" + arg.sort + "]"
   val allowsFresh: List[String] = arg.allowsFresh
 }
-

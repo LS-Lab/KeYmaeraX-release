@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import scala.annotation.{ClassfileAnnotation, StaticAnnotation}
@@ -428,7 +433,7 @@ class TacticImpl(val c: blackbox.Context) {
       def aiToVal(ai: ArgInfo): ValDef = {
         val name = ai.name
         val argTy = typeName(ai)
-        ValDef(Modifiers(), name, tq"""$argTy""", EmptyTree)
+        ValDef(Modifiers(), TermName(name), tq"""$argTy""", EmptyTree)
       }
       val (curried, typeTree) = args.foldRight[(Tree, Tree)](base)({case (arg, (acc, accTy)) =>
         val argTy = typeName(arg)
@@ -520,7 +525,7 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
     val (isDef, mods, codeName, inArgs, tRet, fOpt, params, rhs) =
-      annottees map (_.tree) toList match {
+      annottees.map(_.tree).toList match {
         case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}(((..$params) => $rhs))" :: Nil =>
           (true, mds, codeName, inArgs, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
         case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}($rhs)" :: Nil =>
