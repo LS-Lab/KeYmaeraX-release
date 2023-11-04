@@ -1,46 +1,14 @@
-META-INF/MANIFEST.MF
-*~
-out/*
-
-*.class
-*.log
-
-# sbt specific
-dist/*
+# sbt
 target/
-lib_managed/
-src_managed/
-project/boot/
-project/plugins/project/
 
-local.properties
-
-# IntelliJ IDEA specific
+# IntelliJ IDEA
 /.idea/*
 !/.idea/copyright/
 !/.idea/copyright/*
 
-# Scala-IDE specific
-.scala_dependencies
-
-4KeYmaera.iml
-out/production/
-lemmadb/
-
-#eclipse IDE specific
-.cache
-.classpath
-.project
-.settings/
-.worksheet/
-
-# Nathan-specific
-deploy.sh
-export/
-
+# macOS
 .DS_Store
-#bundled projects
-keymaerax-webui/src/main/resources/keymaerax-projects
-keymaerax-webui/src/test/resources/examples/course/labs/*
-release_scaladoc.pl
-redo
+
+# Files required for building that should not be committed
+/local.properties
+/keymaerax-webui/src/main/resources/keymaerax-projects/
