@@ -27,6 +27,7 @@ lazy val core = project
   .dependsOn(macros)
   .settings(
     name := "KeYmaeraX Core",
+    mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
 
     libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.+",
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2",
@@ -44,7 +45,8 @@ lazy val core = project
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
 
-    assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
+    Compile / run / mainClass := mainClass.value,
+    assembly / mainClass := mainClass.value,
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
 
     // Use Mathematica's JLink.jar as unmanaged dependency
@@ -71,6 +73,7 @@ lazy val webui = project
   .dependsOn(macros, core)
   .settings(
     name := "KeYmaeraX WebUI",
+    mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
 
     libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8",
     libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
@@ -98,7 +101,8 @@ lazy val webui = project
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
 
-    assembly / mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
+    Compile / run / mainClass := mainClass.value,
+    assembly / mainClass := mainClass.value,
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
 
     // Include some resources as triggers for triggered execution (~)
