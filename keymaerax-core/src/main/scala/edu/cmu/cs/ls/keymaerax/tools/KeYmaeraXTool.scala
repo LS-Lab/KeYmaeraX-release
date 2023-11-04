@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * @note Code Review: 2016-08-02
   */
@@ -109,7 +110,8 @@ object KeYmaeraXTool extends Tool {
         DerivationInfoRegistry.init(initLibrary)
       } catch {
         case t: Throwable =>
-          println("Error deriving axioms, KeYmaera X continues with restricted functionality; details: " + t.getMessage)
+          println("Error deriving axioms, KeYmaera X continues with restricted functionality; details:")
+          t.printStackTrace()
       } finally {
         (to, ToolProvider.qeTool()) match {
           case (Some(to), Some(t: ToolOperationManagement)) => t.setOperationTimeout(to)
