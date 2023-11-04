@@ -1,4 +1,5 @@
 # sbt
+/.bsp/
 target/
 
 # IntelliJ IDEA
