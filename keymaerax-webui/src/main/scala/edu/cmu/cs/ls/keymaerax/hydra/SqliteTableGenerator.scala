@@ -76,7 +76,7 @@ object SqliteTableGenerator {
 
       FixedCodeGenerator(model)
         .writeToFile(
-          "scala.slick.driver.SQLiteDriver", "keymaerax-webui/src/main/scala/",
+          "slick.jdbc.SQLiteProfile", "keymaerax-webui/src/main/scala/",
           "edu.cmu.cs.ls.keymaerax.hydra", "Tables", "Tables.scala")
     } finally {
       db.close()

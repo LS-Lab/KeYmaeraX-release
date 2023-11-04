@@ -1,9 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 // AUTO-GENERATED Slick data model
 /** Stand-alone Slick data model for immediate use */
-object Tables extends {
-  val profile = slick.driver.SQLiteDriver
-} with Tables
+object Tables extends Tables {
+  val profile = slick.jdbc.SQLiteProfile
+}
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait Tables {
@@ -32,7 +32,7 @@ trait Tables {
   }
   /** Table description of table agendaItems. Objects of this class serve as prototypes for rows in queries. */
   class Agendaitems(_tableTag: Tag) extends profile.api.Table[AgendaitemsRow](_tableTag, "agendaItems") {
-    def * = (_Id, proofid, stepid, subgoalid, displayname) <> (AgendaitemsRow.tupled, AgendaitemsRow.unapply)
+    def * = (_Id, proofid, stepid, subgoalid, displayname).<>(AgendaitemsRow.tupled, AgendaitemsRow.unapply)
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -66,7 +66,7 @@ trait Tables {
   }
   /** Table description of table config. Objects of this class serve as prototypes for rows in queries. */
   class Config(_tableTag: Tag) extends profile.api.Table[ConfigRow](_tableTag, "config") {
-    def * = (configid, configname, key, value) <> (ConfigRow.tupled, ConfigRow.unapply)
+    def * = (configid, configname, key, value).<>(ConfigRow.tupled, ConfigRow.unapply)
 
     /** Database column configId SqlType(INTEGER), PrimaryKey */
     val configid: Rep[Option[Int]] = column[Option[Int]]("configId", O.PrimaryKey)
@@ -91,7 +91,7 @@ trait Tables {
   }
   /** Table description of table executables. Objects of this class serve as prototypes for rows in queries. */
   class Executables(_tableTag: Tag) extends profile.api.Table[ExecutablesRow](_tableTag, "executables") {
-    def * = (_Id, belleexpr) <> (ExecutablesRow.tupled, ExecutablesRow.unapply)
+    def * = (_Id, belleexpr).<>(ExecutablesRow.tupled, ExecutablesRow.unapply)
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -124,9 +124,9 @@ trait Tables {
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends profile.api.Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (_Id, proofid, previousstep, branchorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals, numopensubgoals) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (_Id, proofid, previousstep, branchorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, numsubgoals, numopensubgoals).<>(ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (_Id, proofid, previousstep, Rep.Some(branchorder), status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, Rep.Some(numsubgoals), Rep.Some(numopensubgoals)).shaped.<>({r=>import r._; _4.map(_=> ExecutionstepsRow.tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = ((_Id, proofid, previousstep, Rep.Some(branchorder), status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename, Rep.Some(numsubgoals), Rep.Some(numopensubgoals))).shaped.<>({r=>import r._; _4.map(_=> ExecutionstepsRow.tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -187,7 +187,7 @@ trait Tables {
   }
   /** Table description of table lemmas. Objects of this class serve as prototypes for rows in queries. */
   class Lemmas(_tableTag: Tag) extends profile.api.Table[LemmasRow](_tableTag, "lemmas") {
-    def * = (_Id, lemma) <> (LemmasRow.tupled, LemmasRow.unapply)
+    def * = (_Id, lemma).<>(LemmasRow.tupled, LemmasRow.unapply)
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -216,7 +216,7 @@ trait Tables {
   }
   /** Table description of table models. Objects of this class serve as prototypes for rows in queries. */
   class Models(_tableTag: Tag) extends profile.api.Table[ModelsRow](_tableTag, "models") {
-    def * = (_Id, userid, name, date, description, filecontents, publink, title, tactic, istemporary) <> (ModelsRow.tupled, ModelsRow.unapply)
+    def * = (_Id, userid, name, date, description, filecontents, publink, title, tactic, istemporary).<>(ModelsRow.tupled, ModelsRow.unapply)
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -263,7 +263,7 @@ trait Tables {
   }
   /** Table description of table proofs. Objects of this class serve as prototypes for rows in queries. */
   class Proofs(_tableTag: Tag) extends profile.api.Table[ProofsRow](_tableTag, "proofs") {
-    def * = (_Id, modelid, name, description, date, closed, lemmaid, istemporary, tactic) <> (ProofsRow.tupled, ProofsRow.unapply)
+    def * = (_Id, modelid, name, description, date, closed, lemmaid, istemporary, tactic).<>(ProofsRow.tupled, ProofsRow.unapply)
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -304,7 +304,7 @@ trait Tables {
   }
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
   class Users(_tableTag: Tag) extends profile.api.Table[UsersRow](_tableTag, "users") {
-    def * = (email, hash, salt, iterations, level) <> (UsersRow.tupled, UsersRow.unapply)
+    def * = (email, hash, salt, iterations, level).<>(UsersRow.tupled, UsersRow.unapply)
 
     /** Database column email SqlType(TEXT), PrimaryKey */
     val email: Rep[Option[String]] = column[Option[String]]("email", O.PrimaryKey)
