@@ -261,16 +261,16 @@ class DLParser extends Parser {
 
   import DLWhitespace._
 
-  def fullTerm[_: P]: P[Term]   = P( Start ~ term(true) ~ End )
-  def fullFormula[_: P]: P[Formula]   = P( Start ~ formula ~ End )
-  def fullProgram[_: P]: P[Program]   = P( Start ~ program ~ End )
-  def fullDifferentialProgram[_: P]: P[DifferentialProgram]   = {
+  def fullTerm[$: P]: P[Term]   = P( Start ~ term(true) ~ End )
+  def fullFormula[$: P]: P[Formula]   = P( Start ~ formula ~ End )
+  def fullProgram[$: P]: P[Program]   = P( Start ~ program ~ End )
+  def fullDifferentialProgram[$: P]: P[DifferentialProgram]   = {
     /* Surrounding braces are not allowed in differential programs
       but some code has an extra surrounding {} */
     P( Start ~ ("{" ~ diffProgram ~ "}" | diffProgram) ~ End )
   }
 
-  def fullExpression[_: P]: P[Expression] = P( Start ~
+  def fullExpression[$: P]: P[Expression] = P( Start ~
     // try if the entire string parses as program, term, or formula, backtrack to start for each attempt since
     // cuts in program/term may prevent parsing a perfectly well-shaped term/formula
     (NoCut(program) ~ End | NoCut(term(false)) ~ End | NoCut(formula) ~ End )
@@ -278,7 +278,7 @@ class DLParser extends Parser {
     | expression ~ End
   )
 
-  def expression[_: P]: P[Expression] = P(
+  def expression[$: P]: P[Expression] = P(
     program |
       // Term followed by comparator, or ambiguous term followed by formula operators,
       // should not be parsed as a term
@@ -288,29 +288,29 @@ class DLParser extends Parser {
       formula
   )
 
-  def fullSequent[_: P]: P[Sequent]   = P( Start ~ sequent ~ End )
+  def fullSequent[$: P]: P[Sequent]   = P( Start ~ sequent ~ End )
 
-  def fullSequentList[_: P]: P[List[Sequent]]   = P( Start ~ sequentList ~ End )
+  def fullSequentList[$: P]: P[List[Sequent]]   = P( Start ~ sequentList ~ End )
 
   //*****************
   // terminals
   //*****************
 
   /** Explicit nonempty whitespace terminal. */
-  def blank[_:P]: P[Unit] = P( CharsWhileIn(" \t\r\n", 1) )
+  def blank[$: P]: P[Unit] = P( CharsWhileIn(" \t\r\n", 1) )
 
   /** parse a number literal enclosed in (), which is allowed to be a negative number */
-  def negNumberLiteral[_: P]: P[Number] = P("(" ~ P(
+  def negNumberLiteral[$: P]: P[Number] = P("(" ~ P(
     ("-".? ~~ CharIn("0-9").repX(1) ~~ ("." ~~ CharIn("0-9").repX(1)).?).!
   ).map(s => Number(BigDecimal(s))) ~ ")" ~~ !"'")
 
   /** parses a number literal */
-  def numberLiteral[_: P]: P[Number] = P(
+  def numberLiteral[$: P]: P[Number] = P(
     (CharIn("0-9").repX(1) ~~ ("." ~~/ CharIn("0-9").repX(1)).?).!
   ).map(s => Number(BigDecimal(s)))
 
   /** parses a number */
-  def number[_: P](doAmbigCuts: Boolean): P[Number] = P(
+  def number[$: P](doAmbigCuts: Boolean): P[Number] = P(
     (if (doAmbigCuts) negNumberLiteral./ else NoCut(negNumberLiteral)) |
       (if (doAmbigCuts) numberLiteral./ else NoCut(numberLiteral))
   )
@@ -328,7 +328,7 @@ class DLParser extends Parser {
     * @return the name and its index (if any).
     * @note Index is normalized so that x_00 cannot be mentioned and confused with x_0.
     * @note Keywords are not allowed as identifiers. */
-  def ident[_: P]: P[(String,Option[Int])] = P(
+  def ident[$: P]: P[(String,Option[Int])] = P(
     DLParserUtils.filterWithMsg(
       (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX ~~ ("_" ~~ !CharIn("0-9")).?).!
     )(!keywords.contains(_))("Keywords cannot be used as identifiers")
@@ -336,32 +336,32 @@ class DLParser extends Parser {
   )
 
   /** `.` or `._2`: dot parsing */
-  def dot[_:P]: P[DotTerm] = P(
+  def dot[$: P]: P[DotTerm] = P(
     ("." | "•") ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!).?
   ).map(idx => DotTerm(Real, idx.map(_.toInt)))
 
   // terminals not used here but provided for other DL parsers
 
-  def stringInterior[_: P]: P[String] =
+  def stringInterior[$: P]: P[String] =
     (CharPred(c => c != '\\' && c != '\"')./ | "\\\""./ | "\\").repX.!
 
   /** "whatevs": Parse a string literal. (([^\\"]|\\"|\\(?!"))*+) */
-  def string[_: P]: P[String] = P(
+  def string[$: P]: P[String] = P(
     "\"" ~~/ stringInterior ~~ "\""
   )
 
   /** "-532": Parse an integer literal, unnormalized. */
-  def integer[_: P]: P[Int] = P(
+  def integer[$: P]: P[Int] = P(
     ("-".? ~~ CharIn("0-9").repX(1)).!
   ).map(s => s.toInt)
 
   /** "532": Parse a (nonnegative) natural number literal, unnormalized. */
-  def natural[_: P]: P[Int] = P(
+  def natural[$: P]: P[Int] = P(
     CharIn("0-9").repX(1).!
   ).map(s => s.toInt)
 
   /** "532": Parse a (nonnegative) natural number literal, normalized. */
-  def normNatural[_: P]: P[Int] = P(
+  def normNatural[$: P]: P[Int] = P(
     ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!
   )("normalized natural number",implicitly).
     map(s => s.toInt)
@@ -372,9 +372,9 @@ class DLParser extends Parser {
   //*****************
 
 
-  def baseVariable[_: P]: P[BaseVariable] = ident.map(s => Variable(s._1,s._2,Real))
-  def diffVariable[_: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
-  def variable[_: P]: P[Variable] = P(baseVariable ~ "'".!.?).map{
+  def baseVariable[$: P]: P[BaseVariable] = ident.map(s => Variable(s._1,s._2,Real))
+  def diffVariable[$: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
+  def variable[$: P]: P[Variable] = P(baseVariable ~ "'".!.?).map{
     case (v,None) => v
     case (v,Some("'")) => DifferentialSymbol(v)
   }
@@ -409,7 +409,7 @@ class DLParser extends Parser {
    * perform all permissible cuts. If it is false, we only perform
    * cuts that are unambiguous indicators the input is a term.
    */
-  def term[_: P](doAmbigCuts: Boolean): P[Term] = P(
+  def term[$: P](doAmbigCuts: Boolean): P[Term] = P(
     (if (Parser.weakNeg) signed(summand(doAmbigCuts)) else summand(doAmbigCuts).map(t => Left(t))) ~
     // Note: on weakNeg, the summand is signed, rather than the first multiplicand
     // in `summand`, because -5*6 is parsed as -(5*6),
@@ -438,18 +438,18 @@ class DLParser extends Parser {
     }
   }
 
-  def summand[_: P](doAmbigCuts: Boolean): P[Term] =
+  def summand[$: P](doAmbigCuts: Boolean): P[Term] =
     // Lookahead is to avoid /* */ comments
     ((if (Parser.weakNeg) multiplicand(doAmbigCuts).map(t => Left(t)) else signed(multiplicand(doAmbigCuts))) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).map {
       case (left, rest) => mulDiv(getEither(left), rest)
     }
 
-  def multiplicand[_: P](doAmbigCuts: Boolean): P[Term] =
+  def multiplicand[$: P](doAmbigCuts: Boolean): P[Term] =
     (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(multiplicand(doAmbigCuts))).rep).map{ case (left, pows) =>
       (left +: pows.map(getEither)).reduceRight(Power)
     }
 
-  def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
+  def baseTerm[$: P](doAmbigCuts: Boolean): P[Term] =
     number(doAmbigCuts) |
       dot./ |
       function(doAmbigCuts).flatMapX[Term](diff) |
@@ -458,7 +458,7 @@ class DLParser extends Parser {
       termList(doAmbigCuts).flatMapX[Term](diff) |
       "__________".!.map(_ => UnitFunctional("exerciseF_", AnyArg, Real))
 
-  def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
+  def function[$: P](doAmbigCuts: Boolean): P[FuncOf] = P(
     // Note interpretations can only appear on functions (not predicates)
     // so that cut is safe
     ident ~~ ("<<" ~/ formula ~ ">>").? ~
@@ -476,22 +476,22 @@ class DLParser extends Parser {
       ts)
   })
 
-  def unitFunctional[_: P](doAmbigCuts: Boolean): P[UnitFunctional] = P(
+  def unitFunctional[$: P](doAmbigCuts: Boolean): P[UnitFunctional] = P(
     ident ~~ (if (doAmbigCuts) space else NoCut(space))
   ).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
 
   /** `p | -p`: possibly signed occurrences of what is parsed by parser `p`
    * Note we try `p` before `-p` because some parsers (like `number`)
    * also consume -s. Distinguishes between Left(Neg(x)) = (-x) and Right(Neg(x)) = -x. */
-  def signed[_: P](p: => P[Term]): P[Either[Term,Term]] =
+  def signed[$: P](p: => P[Term]): P[Either[Term,Term]] =
     p.map(t => Left(t)) | (("-" ~~ !">") ~ signed(p)).map({ case Left(t) => Right(Neg(t)) case Right(t) => Right(Neg(t)) })
 
   /** Parses term' */
-  def diff[_: P](left: Term): P[Term] =
+  def diff[$: P](left: Term): P[Term] =
     "'".!.?.map{case None => left case Some("'") => Differential(left)}
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
-  def termList[_: P](doAmbigCuts: Boolean): P[Term] = P(
+  def termList[$: P](doAmbigCuts: Boolean): P[Term] = P(
     "(" ~~ !"|" ~ (if (doAmbigCuts) Pass./ else Pass) ~
       // Note that a single-element termList can be ambiguous with formulas,
       // but a multi-element termList must be a term
@@ -501,7 +501,7 @@ class DLParser extends Parser {
     map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
-  def space[_: P]: P[Space] = P(
+  def space[$: P]: P[Space] = P(
     "(|" ~ variable.rep(sep=",") ~ "|)"
   ).map(ts => if (ts.isEmpty) AnyArg else Except(ts))
 
@@ -509,36 +509,36 @@ class DLParser extends Parser {
   // formula parser
   //*****************
 
-  def formula[_: P]: P[Formula] = P(biimplication)
+  def formula[$: P]: P[Formula] = P(biimplication)
 
   /* <-> (lowest prec, non-assoc) */
-  def biimplication[_: P]: P[Formula] =
+  def biimplication[$: P]: P[Formula] =
     (backImplication ~ (("<->"|"↔") ~/ backImplication).?).
       map{ case (left,None) => left case (left,Some(r)) => Equiv(left,r) }
 
   /* <- (left-assoc) */
-  def backImplication[_: P]: P[Formula] =
+  def backImplication[$: P]: P[Formula] =
     (implication ~~ (((blank ~ "<-" ~~ blank).opaque("\" <- \"")|(blank.? ~ "←").opaque("\"←\"")) ~/ implication).rep).
       map{ case (left, hyps) =>
         hyps.foldLeft(left){case (acc,hyp) => Imply(hyp,acc)} }
 
   /* -> (right-assoc) */
-  def implication[_: P]: P[Formula] =
+  def implication[$: P]: P[Formula] =
     (disjunct ~ (("->"|"→") ~/ disjunct).rep).
       map{ case (left, concls) => (left +: concls).reduceRight(Imply) }
 
   /* | (right-assoc) */
-  def disjunct[_: P]: P[Formula] =
+  def disjunct[$: P]: P[Formula] =
     (conjunct ~ (("|"|"∨") ~/ conjunct).rep).
       map{ case (left, conjs) => (left +: conjs).reduceRight(Or) }
 
   /* & (right-assoc) */
-  def conjunct[_: P]: P[Formula] =
+  def conjunct[$: P]: P[Formula] =
     (baseF ~ (("&"|"∧") ~/ baseF).rep).
       map{ case (left, forms) => (left +: forms).reduceRight(And) }
 
   /** Base formulas */
-  def baseF[_: P]: P[Formula] = (
+  def baseF[$: P]: P[Formula] = (
     // First try unambiguously formula things
     unambiguousBaseF |
       // Now we try parsing a comparison, which will fail & backtrack
@@ -552,7 +552,7 @@ class DLParser extends Parser {
   // Ambiguous base formula cases. Note that we still do not cut on
   // the ambiguous constructions, because we want error aggregates to
   // still allow for these ambiguous cases to actually be terms
-  def ambiguousBaseF[_: P]: P[Formula] = (
+  def ambiguousBaseF[$: P]: P[Formula] = (
     /* variables */
     (ident ~~ !"(").map{
       case (name, idx) => PredOf(Function(name, idx, Unit, Bool), Nothing)
@@ -582,7 +582,7 @@ class DLParser extends Parser {
       })
   )
 
-  def unambiguousBaseF[_: P]: P[Formula] =
+  def unambiguousBaseF[$: P]: P[Formula] =
     /* atomic formulas, constant T/F, quantifiers, modalities */
       "true".!.map(_ => True) | "false".!.map(_ => False) |
     /* Note we cannot cut after true/false because it could also
@@ -602,7 +602,7 @@ class DLParser extends Parser {
     "__________".!.map(_ => UnitPredicational("exerciseP_", AnyArg))
 
   /** Parses a comparison, given the left-hand term */
-  def comparison[_: P]: P[Formula] = P(
+  def comparison[$: P]: P[Formula] = P(
     // We don't know if the starting input is a term, but after
     // seeing the comparator we know the RHS must be a term
     (term(false) ~ comparator.! ~/ term(true)).map {
@@ -615,19 +615,19 @@ class DLParser extends Parser {
     }
   )
 
-  def comparator[_: P]: P[Unit] = P("=" ~~ !"=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<" ~~ !"-")
+  def comparator[$: P]: P[Unit] = P("=" ~~ !"=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<" ~~ !"-")
 
   /** Unit predicationals c(||) */
-  def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
+  def unitPredicational[$: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
   /** Regular predicationals C{} */
-  def predicational[_: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
+  def predicational[$: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
 
 
   //*****************
   // program parser
   //*****************
 
-  def programSymbol[_: P]: P[Program] = P(
+  def programSymbol[$: P]: P[Program] = P(
     DLParserUtils.filterWithMsg(ident ~~ odeSpace.? ~ (";" | "^@").!./)
         (_._2.isEmpty)("Program symbols cannot have an index").
       map({ case (s,None,taboo, postfix) =>
@@ -639,7 +639,7 @@ class DLParser extends Parser {
       })
   )
   //@todo combine system symbol and space taboo
-  def systemSymbol[_: P]: P[AtomicProgram] = P(
+  def systemSymbol[$: P]: P[AtomicProgram] = P(
     DLParserUtils.filterWithMsg(ident  ~~ "{|^@" ~/ variable.rep(sep=","./) ~ "|}" ~ ";")
       (_._2.isEmpty)("System symbols cannot have an index").
       map({ case (s,None,taboo) =>
@@ -647,51 +647,51 @@ class DLParser extends Parser {
       })
   )
 
-  def programExercise[_: P]: P[AtomicProgram] = "__________".!.map(_ => SystemConst("exerciseS_", AnyArg))
+  def programExercise[$: P]: P[AtomicProgram] = "__________".!.map(_ => SystemConst("exerciseS_", AnyArg))
 
-  def assign[_: P]: P[AtomicProgram] = (
+  def assign[$: P]: P[AtomicProgram] = (
     (variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term(true).map(Right(_)))  ~ ";").
       map({
         case (x, Left("*")) => AssignAny(x)
         case (x, Right(t)) => Assign(x, t)
       })
   )
-  def test[_: P]: P[Test] = ( "?" ~/ formula ~ ";").map(f => Test(f))
-  def braceP[_: P]: P[Program] = ( "{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).
+  def test[$: P]: P[Test] = ( "?" ~/ formula ~ ";").map(f => Test(f))
+  def braceP[$: P]: P[Program] = ( "{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).
     map({
       case (p,None) => p
       case (p,Some(("*",None))) => Loop(p)
       case (p,Some(("*",Some(inv)))) => inv.foreach(reportAnnotation(Loop(p),_)); Loop(p)
       case (p,Some(("×", _))) => Dual(Loop(Dual(p)))
     })
-  def odeprogram[_: P]: P[ODESystem] = ( diffProgram ~ ("&" ~/ formula.flatMapX(f => {
+  def odeprogram[$: P]: P[ODESystem] = ( diffProgram ~ ("&" ~/ formula.flatMapX(f => {
     if (StaticSemantics.isDifferential(f)) Fail.opaque("No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.")
     else Pass(f)
   })).?).
     map({case (p,f) => ODESystem(p, f.getOrElse(True))})
-  def odesystem[_: P]: P[ODESystem] = ( "{" ~ odeprogram ~ "}" ~/ annotation.?).
+  def odesystem[$: P]: P[ODESystem] = ( "{" ~ odeprogram ~ "}" ~/ annotation.?).
     map({
       case (p,None) => p
       case (p,Some(inv)) => inv.foreach(reportAnnotation(p,_)); p
     })
 
-  def baseP[_: P]: P[Program] = (
+  def baseP[$: P]: P[Program] = (
     systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP | programExercise
   )
 
-  /** Parses dual notation: baseP or baseP^@ */
-  def dual[_: P]: P[Program] = (baseP ~ "^@".!./.?).map({
+  /** Parses dual notation: baseP or baseP&#94;@ */
+  def dual[$: P]: P[Program] = (baseP ~ "^@".!./.?).map({
     case (p, None) => p
     case (p, Some("^@")) => Dual(p)
   })
 
   /** Parses an annotation */
-  def annotation[_: P]: P[Seq[Formula]] = ("@invariant" | "@variant") ~/ "(" ~/ formula.rep(min=1,sep=","./).map(_.toList) ~ ")"
+  def annotation[$: P]: P[Seq[Formula]] = ("@invariant" | "@variant") ~/ "(" ~/ formula.rep(min=1,sep=","./).map(_.toList) ~ ")"
 
-  def sequence[_: P]: P[Program] = ( (dual ~/ ";".?).rep(1) ).
+  def sequence[$: P]: P[Program] = ( (dual ~/ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
 
-  def choice[_: P]: P[Program] = (
+  def choice[$: P]: P[Program] = (
     sequence ~/ (("++"./ | "∪"./ | "--" | "∩"./).! ~ sequence).rep
   ).map({ case (p, ps) =>
       ((None, p) +: ps.map{case (s,p) => (Some(s),p)}).reduceRight[(Option[String], Program)] {
@@ -701,47 +701,47 @@ class DLParser extends Parser {
     })
 
   //@note macro-expands
-  def ifthen[_: P]: P[Program] = ( "if" ~/ "(" ~/ formula ~ ")" ~ braceP ~ ("else" ~/ braceP).? ).
+  def ifthen[$: P]: P[Program] = ( "if" ~/ "(" ~/ formula ~ ")" ~ braceP ~ ("else" ~/ braceP).? ).
     map({case (f, p, None) => Choice(Compose(Test(f),p), Test(Not(f)))
          case (f, p, Some(q)) => Choice(Compose(Test(f),p), Compose(Test(Not(f)),q))})
 
   /** program: Parses a dL program. */
-  def program[_: P]: P[Program] = P( choice )
+  def program[$: P]: P[Program] = P( choice )
 
 
   //*****************
   // differential program parser
   //*****************
 
-  def ode[_: P]: P[AtomicODE] = P( diffVariable ~ "=" ~/ term(true)).map({case (x,t) => AtomicODE(x,t)})
-  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P(
+  def ode[$: P]: P[AtomicODE] = P( diffVariable ~ "=" ~/ term(true)).map({case (x,t) => AtomicODE(x,t)})
+  def diffProgramSymbol[$: P]: P[DifferentialProgramConst] = P(
     DLParserUtils.filterWithMsg(ident ~~ odeSpace.?)(_._2.isEmpty)
                   ("Differential program symbols cannot have an index").map({
       case (s, None, None) => DifferentialProgramConst(s)
       case (s, None, Some(sp)) => DifferentialProgramConst(s, sp)
     })
   )
-  def diffExercise[_: P]: P[DifferentialProgramConst] = "__________".!.map(_ => DifferentialProgramConst("exerciseD_", AnyArg))
-  def atomicDP[_: P]: P[AtomicDifferentialProgram] = ( ode | diffProgramSymbol | diffExercise )
+  def diffExercise[$: P]: P[DifferentialProgramConst] = "__________".!.map(_ => DifferentialProgramConst("exerciseD_", AnyArg))
+  def atomicDP[$: P]: P[AtomicDifferentialProgram] = ( ode | diffProgramSymbol | diffExercise )
 
   /** {|x1,x2,x3|} parses a space declaration */
-  def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
+  def odeSpace[$: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
     map({case Some((t,ts)) => Except(ts.+:(t)) case None => AnyArg})
 
-  def diffProduct[_: P]: P[DifferentialProgram] = ( atomicDP ~ ("," ~/ atomicDP).rep ).
+  def diffProduct[$: P]: P[DifferentialProgram] = ( atomicDP ~ ("," ~/ atomicDP).rep ).
     map({case (p, ps) => (ps.+:(p)).reduceRight(DifferentialProduct.apply)})
 
   /** diffProgram: Parses a dL differential program. */
-  def diffProgram[_: P]: P[DifferentialProgram] = P( diffProduct )
+  def diffProgram[$: P]: P[DifferentialProgram] = P( diffProduct )
 
   //*****************
   // sequent parser
   //*****************
 
   /** sequent ::= `aformula1 , aformula2 , ... , aformulan ==>  sformula1 , sformula2 , ... , sformulam`. */
-  def sequent[_: P]: P[Sequent] = P( formula.rep(sep=","./) ~ "==>" ~ formula.rep(sep=","./)).
+  def sequent[$: P]: P[Sequent] = P( formula.rep(sep=","./) ~ "==>" ~ formula.rep(sep=","./)).
     map({case (ante, succ) => Sequent(ante.toIndexedSeq, succ.toIndexedSeq)})
 
   /** sequentList ::= sequent `;;` sequent `;;` ... `;;` sequent. */
-  def sequentList[_: P]: P[List[Sequent]] = P( sequent.rep(sep=";;"./ )).map(_.toList)
+  def sequentList[$: P]: P[List[Sequent]] = P( sequent.rep(sep=";;"./ )).map(_.toList)
 }

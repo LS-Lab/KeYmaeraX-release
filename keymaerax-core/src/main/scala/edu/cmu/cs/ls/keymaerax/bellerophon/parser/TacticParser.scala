@@ -65,7 +65,7 @@ trait TacticParser extends (String => BelleExpr) {
 /** DL tactic parser with fastparse-compatible entry point. */
 trait DLTacticParser extends TacticParser {
   /** Parses a dL Bellerophon tactic. */
-  def tactic[_: P]: P[BelleExpr]
+  def tactic[$: P]: P[BelleExpr]
 
   /** Sets the definitions to be used during parsing. */
   def setDefs(defs: Declaration): Unit

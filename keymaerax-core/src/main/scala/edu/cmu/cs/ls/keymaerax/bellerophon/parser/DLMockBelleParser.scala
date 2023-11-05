@@ -17,7 +17,7 @@ import scala.collection.immutable._
 class DLMockBelleParser(override val printer: BelleExpr => String,
                         tacticProvider: (String, List[Either[Seq[Any], PositionLocator]], Declaration) => BelleExpr) extends DLTacticParser {
 
-  def tactic[_: P]: P[BelleExpr] = AnyChar.repX.map(t => ParallelTactic(Nil))
+  def tactic[$: P]: P[BelleExpr] = AnyChar.repX.map(t => ParallelTactic(Nil))
 
   /** Definitions, should be provided by the outer parser through [[setDefs]]. */
   private var defs: Declaration = Declaration(Map.empty)

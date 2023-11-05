@@ -54,11 +54,11 @@ object DLAxiomParser extends (String => List[(String,Formula)]) {
 
 
   /** axiom: Parses a dL axiom. */
-  def axiom[_: P]: P[(String,Formula)] = P( "Axiom" ~ string ~ formula ~ "End.")
+  def axiom[$: P]: P[(String,Formula)] = P( "Axiom" ~ string ~ formula ~ "End.")
 
   /** axiom: Parses a dL axiom. */
-  def axiomList[_: P]: P[List[(String,Formula)]] = P( Start ~ axiom.rep(1) ~ End ).map(_.toList)
+  def axiomList[$: P]: P[List[(String,Formula)]] = P( Start ~ axiom.rep(1) ~ End ).map(_.toList)
 
   /** formula: Parses a dL formula via [[DLParser.formula]]. */
-  private def formula[_: P]: P[Formula] = DLParser.formula
+  private def formula[$: P]: P[Formula] = DLParser.formula
 }

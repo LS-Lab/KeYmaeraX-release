@@ -79,11 +79,11 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   // implementation
 
-  def sort[_: P]: P[Sort] = P( ("Real" | "Bool" | "HP" | "HG").! ).
+  def sort[$: P]: P[Sort] = P( ("Real" | "Bool" | "HP" | "HG").! ).
     map({case "Real" => Real case "Bool" => Bool case "HP" => Trafo case "HG" => Trafo})
 
   /** parse a label */
-  def label[_: P]: P[String] = {
+  def label[$: P]: P[String] = {
     // Shadow implicit whitespace provided by class scope
     implicit val whitespace: Whitespace = NoWhitespace.noWhitespaceImplicit
 
@@ -92,15 +92,15 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
 
   /** Convenience: Parse a single problem or a single formula */
-  def problemOrFormula[_: P]: P[Formula] = P( Start ~ (problem.map(_._1) | formula) ~ End )
+  def problemOrFormula[$: P]: P[Formula] = P( Start ~ (problem.map(_._1) | formula) ~ End )
 
   /** Parses a package name. */
-  def packageDecl[_: P]: P[String] = P(
+  def packageDecl[$: P]: P[String] = P(
     ("package" ~ packageIdent ~~ ("." ~~ packageIdent).repX).?.!
   )
 
   /** Parse a list of archive entries */
-  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] =
+  def archiveEntries[$: P]: P[List[ParsedArchiveEntry]] =
     for {
       //@todo add package name to identifier names
       pkg <- Start ~ packageDecl
@@ -111,13 +111,13 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       entry.withFileContent(pkgDefs.map(_._2).getOrElse("") + content)
     }).toList
 
-  def definitionsPackage[_: P]: P[Declaration] = for {
+  def definitionsPackage[$: P]: P[Declaration] = for {
     pkg <- Start ~ packageDecl
     defs <- DLParserUtils.captureWithValue(packageDefinitions(pkg)) ~ End
   } yield defs._1
 
   /** Parse a single archive entry without source. */
-  def archiveEntryNoSource[_: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = {
+  def archiveEntryNoSource[$: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = {
     val al = Parser.parser.annotationListener
     val annotations = ListBuffer.empty[(Program, Formula)]
     Parser.parser.setAnnotationListener((p: Program, f: Formula) => annotations.append((p, f)))
@@ -161,17 +161,17 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   }
 
   /** Parses a single archive entry */
-  def archiveEntry[_: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = DLParserUtils.captureWithValue(archiveEntryNoSource(shared)).map({
+  def archiveEntry[$: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = DLParserUtils.captureWithValue(archiveEntryNoSource(shared)).map({
     case (e, s) => e.copy(fileContent = s.trim)
   })
 
-  def archiveStart[_: P]: P[String] = P(
+  def archiveStart[$: P]: P[String] = P(
     ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!./.
       map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"})
   )
 
   /** meta information */
-  def metaInfo[_: P]: P[Map[String,String]] = P(
+  def metaInfo[$: P]: P[Map[String,String]] = P(
     DLParserUtils.repFold(Map.empty[String,String])(acc =>
       (metaInfoKey ~~/ blank ~ string ~ ".").
         flatMap{case (key, value) =>
@@ -181,12 +181,12 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
             Pass(acc + (key -> value))
         })
   )
-  def metaInfoKey[_: P]: P[String] = P(
+  def metaInfoKey[$: P]: P[String] = P(
     ("Description" | "Title" | "Link" | "Author" | "See" | "Illustration" | "Citation").!
   )
 
   /** Functions and ProgramVariables block in any order */
-  def allDeclarations[_: P]: P[Declaration] = {
+  def allDeclarations[$: P]: P[Declaration] = {
     DLParserUtils.repFold(Declaration(Map.empty))(curDecls => programVariables(curDecls) | definitions(curDecls))
   }
 
@@ -204,7 +204,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   }
 
   /** `SharedDefinitions declOrDef End.` parsed. */
-  def packageDefinitions[_: P](pkg: String): P[Declaration] = P(
+  def packageDefinitions[$: P](pkg: String): P[Declaration] = P(
     //@todo add package name to identifier names
     "Definitions" ~~/ blank ~
       DLParserUtils.repFold(Declaration(Map.empty))(curDecls => declOrDef(curDecls).flatMap(uniqueDecls(curDecls, _))
@@ -212,7 +212,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   )
 
   /** `Definitions declOrDef End.` parsed. */
-  def definitions[_: P](curDecls: Declaration): P[Declaration] = P(
+  def definitions[$: P](curDecls: Declaration): P[Declaration] = P(
     "Definitions" ~~/ blank ~
       DLParserUtils.repFold(curDecls)(curDecls => declOrDef(curDecls).flatMap(uniqueDecls(curDecls, _))
       ) ~ "End."
@@ -227,7 +227,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     * `import path.to.lib.{def-1, ..., def-n};` or
     * `import path.to.lib.*;`
     * */
-  def declOrDef[_: P](curDecls: Declaration): P[List[(Name, Signature)]] = (
+  def declOrDef[$: P](curDecls: Declaration): P[List[(Name, Signature)]] = (
       implicitDef(curDecls) ~ ";"
     | progDef.map(p => p::Nil)
     | declPartList.flatMap(decls => {
@@ -283,7 +283,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   })
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
-  def declPartList[_: P]: P[List[(Name,Signature)]] = (
+  def declPartList[$: P]: P[List[(Name,Signature)]] = (
     (sort ~~ blank ~/ Pass).flatMap(sort =>
       declPart(sort).rep(sep=","./).
         map(_.toList)
@@ -299,19 +299,19 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   })
 
   /** Package identifier. */
-  def packageIdent[_: P]: P[String] = P((CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9_").repX).!)
+  def packageIdent[$: P]: P[String] = P((CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9_").repX).!)
 
-  def identList[_: P]: P[Seq[Name]] = P("{" ~ ident ~ ("," ~ ident).rep ~ "}").map({
+  def identList[$: P]: P[Seq[Name]] = P("{" ~ ident ~ ("," ~ ident).rep ~ "}").map({
     case (s, i, is) => Name(s, i) +: is.map(i => Name(i._1, i._2)).toIndexedSeq
   })
 
-  def importNames[_: P]: P[Seq[Name]] = P(
+  def importNames[$: P]: P[Seq[Name]] = P(
       ident.map(i => Seq(Name(i._1, i._2)))
     | "*".!.map(s => Seq(Name(s)))
     | identList
   ).flatMap(c => Pass(c))
 
-  def importDef[_: P]: P[List[(Name, Signature)]] = P(
+  def importDef[$: P]: P[List[(Name, Signature)]] = P(
     "import" ~ (packageIdent ~~ ".").repX(1) ~~ importNames ~ ";"
   ).map({ case (pkgs, idents) =>
     val builtin = getClass.getResourceAsStream("/" + pkgs.mkString("/") + ".kyx")
@@ -361,14 +361,14 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    *  introduces a substitution for the uninterpreted function at
    *  the elaboration phase.
    */
-  def implicitDef[_: P](curDecls: Declaration): P[List[(Name,Signature)]] =
+  def implicitDef[$: P](curDecls: Declaration): P[List[(Name,Signature)]] =
     P("implicit" ~~ blank ~/ (
       // This syntax was removed in favor of syntactic restriction to ODE implicit defs
       // implicitDefInterp.map(List(_)) |
       implicitDefODE(curDecls)
     ))
 
-  def implicitDefODE[_: P](curDecls: Declaration): P[List[(Name,Signature)]] = (
+  def implicitDefODE[$: P](curDecls: Declaration): P[List[(Name,Signature)]] = (
     (declPartList ~ "=" ~/ "{" ~ program ~ "}")
       .flatMap{case (sigs, preProg) =>
         if (sigs.exists(s => !s._2.domain.contains(Real) || s._2.codomain != Real))
@@ -412,7 +412,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    * restriction to ODE implicit defs
    */
   /*
-  def implicitDefInterp[_: P]: P[(Name,Signature)] = (
+  def implicitDefInterp[$: P]: P[(Name,Signature)] = (
     (declPart ~ "=" ~ ident ~ "<->" ~ formula)
       .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, form) =>
         val formAfterSubstitutions = vars.zipWithIndex.foldLeft (
@@ -439,37 +439,37 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   */
 
   /** `Problem  formula  End.` parsed. */
-  def problem[_: P]: P[(Formula,String)] = P("Problem" ~~ blank ~/ DLParserUtils.captureWithValue(formula) ~ "End." )
+  def problem[$: P]: P[(Formula,String)] = P("Problem" ~~ blank ~/ DLParserUtils.captureWithValue(formula) ~ "End." )
 
-  def tacticProof[_: P](defs: Declaration): P[(Option[String],(BelleExpr,String))] = P( "Tactic" ~~ blank ~/ string.? ~ DLParserUtils.captureWithValue(tactic(defs)) ~ "End.")
+  def tacticProof[$: P](defs: Declaration): P[(Option[String],(BelleExpr,String))] = P( "Tactic" ~~ blank ~/ string.? ~ DLParserUtils.captureWithValue(tactic(defs)) ~ "End.")
 
 
   // externals
 
   /** Explicit nonempty whitespace terminal from [[expParser]]. */
-  def blank[_:P]: P[Unit] = expParser.blank
+  def blank[$: P]: P[Unit] = expParser.blank
 
   /** parse a number literal from [[expParser]] */
-  def number[_: P]: P[Number] = expParser.numberLiteral
+  def number[$: P]: P[Number] = expParser.numberLiteral
   /** parse an identifier from [[expParser]] */
-  def ident[_: P]: P[(String,Option[Int])] = expParser.ident
-  def string[_: P]: P[String] = expParser.string
+  def ident[$: P]: P[(String,Option[Int])] = expParser.ident
+  def string[$: P]: P[String] = expParser.string
 
-  def baseVariable[_: P]: P[BaseVariable] = expParser.baseVariable
+  def baseVariable[$: P]: P[BaseVariable] = expParser.baseVariable
 
   /** term: Parses a dL term from [[expParser]]. */
-  def term[_: P](doAmbigCuts: Boolean): P[Term] = expParser.term(doAmbigCuts)
+  def term[$: P](doAmbigCuts: Boolean): P[Term] = expParser.term(doAmbigCuts)
 
   /** formula: Parses a dL formula from [[expParser]]. */
-  def formula[_: P]: P[Formula] = expParser.formula
+  def formula[$: P]: P[Formula] = expParser.formula
 
   /** program: Parses a dL program from [[expParser]]. */
-  def program[_: P]: P[Program] = expParser.program
+  def program[$: P]: P[Program] = expParser.program
 
   /** odeprogram: Parses an ode system from [[expParser]]. */
-  def odeprogram[_: P]: P[ODESystem] = expParser.odeprogram
+  def odeprogram[$: P]: P[ODESystem] = expParser.odeprogram
 
-  def tactic[_: P](defs: Declaration): P[BelleExpr] = {
+  def tactic[$: P](defs: Declaration): P[BelleExpr] = {
     tacticParser.setDefs(defs)
     tacticParser.setDefTactics(Map.empty)
     tacticParser.tactic
