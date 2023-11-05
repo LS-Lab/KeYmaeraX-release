@@ -2,14 +2,11 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 
 //import edu.cmu.cs.ls.keymaerax.cdgl.kaisar._
-import ProofParser.locate
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser
-import fastparse.Parsed.Success
 import fastparse._
 // allow Scala-style comments and ignore newlines
-import ScalaWhitespace._
+import fastparse.ScalaWhitespace._
 
 object StrategyParser {
   private def alloc[T <: AngelStrategy](maybe: Option[Int], as: T): T = {

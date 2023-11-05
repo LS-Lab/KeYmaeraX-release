@@ -61,19 +61,19 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   override def tacticParser: TacticParser = tacticParser
 
   val archiveParser: String => List[ParsedArchiveEntry] = input => fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), archiveEntries(_)) match {
-    case Parsed.Success(value, _) =>
+    case Parsed.Success(value: List[ParsedArchiveEntry], _) =>
       if (value.length==1) List(value.head.withProblemContent(input.trim))
       else value
     case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
   }
 
   val definitionsPackageParser: String => Declaration = input => fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), definitionsPackage(_)) match {
-    case Parsed.Success(value, _) => value
+    case Parsed.Success(value: Declaration, _) => value
     case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
   }
 
   private val problemOrFormulaParser: String => Formula = input => fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)), problemOrFormula(_)) match {
-    case Parsed.Success(value, index) => value
+    case Parsed.Success(value: Formula, _) => value
     case f: Parsed.Failure => throw parseException(f) //@todo? .inContext(input)
   }
 

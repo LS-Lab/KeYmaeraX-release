@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
-import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, Parser}
 import fastparse._
 
 import scala.collection.immutable._
@@ -40,9 +40,9 @@ class DLMockBelleParser(override val printer: BelleExpr => String,
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   //@todo store the parser for speed
-  val belleParser: String => BelleExpr = (s => fastparse.parse(s, tactic(_)) match {
-    case Parsed.Success(value, index) => value
+  val belleParser: String => BelleExpr = s => fastparse.parse(s, tactic(_)) match {
+    case Parsed.Success(value: BelleExpr, _) => value
     case f: Parsed.Failure => throw parseException(f)
-  })
+  }
 
 }
