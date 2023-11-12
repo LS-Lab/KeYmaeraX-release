@@ -110,7 +110,7 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
 
 
 /** A BelleExpr that has a proper code name, so is not just used internally during application. */
-trait NamedBelleExpr extends BelleExpr {
+sealed trait NamedBelleExpr extends BelleExpr {
   /** The code name of this Belle Expression */
   val name: String
 
