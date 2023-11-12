@@ -23,6 +23,50 @@ the `JLink.jar` file is located at
 
 Finally, run `sbt --mem 2048 clean assembly` in the project root to create `keymaerax.jar`.
 
+## Tests
+
+To run a quick smoke test suite, run:
+```shell
+sbt "testOnly \
+  -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest \
+  -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest"
+```
+
+To run the full but lengthy test suite, run:
+```shell
+sbt "test \
+  -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest"
+```
+To leave out slower tests, run:
+```shell
+
+sbt "testOnly \
+  -l edu.cmu.cs.ls.keymaerax.tags.SlowTest \
+  -l edu.cmu.cs.ls.keymaerax.tags.ExtremeTest \
+  -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest \
+  -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
+```
+
+To run a single test (e.g. `BenchmarkTests`), run:
+```shell
+sbt "testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests"
+```
+You can also use wildcards:
+```shell
+sbt "testOnly *USubst*"
+```
+
+Of course, you can also use all these commands in the interactive sbt shell:
+```sbt
+testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests
+testOnly *USubst*
+```
+
+In general, `-n` specifies tags to include while `-l` specifies tags to exclude.
+If no `-n` is specified, all tests are included by default.
+For more details on running tests, see the
+[ScalaTest documentation on using scalatest with sbt](https://www.scalatest.org/user_guide/using_scalatest_with_sbt).
+
 ## Documentation
 
 Run `sbt unidoc` in the project root.
