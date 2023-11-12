@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
@@ -13,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ProvableHelper, UnificationTools}
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.immutable
 
@@ -25,7 +25,7 @@ object AnonymousLemmas {
   private val lemmaDB = LemmaDBFactory.lemmaDB
 
   /** A tactic `t` that caches its result in the lemma cache. */
-  def cacheTacticResult(t: => BelleExpr, namespace: String): BuiltInTactic = anons ((provable: ProvableSig) => {
+  def cacheTacticResult(t: => BelleExpr, namespace: String): BuiltInTactic = anon ((provable: ProvableSig) => {
     val subderivations = provable.subgoals.indices.map(i => remember(provable.sub(i), t, namespace).fact).zipWithIndex
     subderivations.foldRight(provable)({ case ((sub, i), p) =>
       val subst = UnificationTools.collectSubst(p.underlyingProvable, i, sub.underlyingProvable, provable.defs.substs)

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -697,12 +702,6 @@ object TacticFactory {
           t(provable)
         }
       }
-    def bys(t: ProvableSig => ProvableSig): BuiltInTactic =
-      new BuiltInTactic(name) {
-        @inline override def result(provable: ProvableSig): ProvableSig = {
-          t(provable)
-        }
-      }
 
     /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
      */
@@ -775,7 +774,6 @@ object TacticFactory {
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = ANON by t
   def anon(t: ProvableSig => ProvableSig): BuiltInTactic = ANON by t
-  def anons(t: ProvableSig => ProvableSig): BuiltInTactic = ANON bys t
   def anonnoop(t: ProvableSig => ProvableSig): BuiltInTactic = new BuiltInTactic(ANON) with NoOpTactic {
     @inline override def result(provable: ProvableSig): ProvableSig = t(provable)
   }
