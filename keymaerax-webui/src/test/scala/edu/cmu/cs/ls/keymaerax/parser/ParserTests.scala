@@ -5,17 +5,17 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import testHelper.CustomAssertions.withSafeClue
-import org.scalatest._
-import org.scalatest.LoneElement._
-import org.scalatest.Inside._
-import org.scalatest.OptionValues._
-import org.scalatest.prop.TableDrivenPropertyChecks._
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.Inside._
+import org.scalatest.LoneElement._
+import org.scalatest.OptionValues._
+import org.scalatest._
+import org.scalatest.prop.TableDrivenPropertyChecks._
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
@@ -157,16 +157,13 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
                   |End.
                   |End.
                 """.stripMargin
-    the [ParseException] thrownBy ArchiveParser.parser(input) should (have message
-      """4:1 Unexpected token in ProgramVariables block
-        |Found:    End at 4:1 to 4:3
-        |Expected: ;
-        |      or: ,""".stripMargin
-      or have message
-      """4:1 Error parsing programVariables at 2:1
-        |Found:    "End." at 4:1
-        |Expected: ("," | ";")
-        |Hint: Try ("," | ";")""".stripMargin)
+
+    val ex = the [ParseException] thrownBy ArchiveParser.parser(input)
+
+    ex should pointAt (4, 1)
+    ex should mention ("ProgramVariables")
+    ex.expect should include (",")
+    ex.expect should include (";")
   }
 
   it should "report useful message on missing semicolon in function definitions" in {
@@ -622,24 +619,28 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     Parser.parseExpressionList("[{x'=y,y'=f(x,y) & <{x'=4,t'=1}>x>=2*g(x,t)}]P(x,z) -> [{x'=-3,y'=-2};?P(x,y,z);]x>=2, x>=2") shouldBe List(
       "[{x'=y,y'=f(x,y) & <{x'=4,t'=1}>x>=2*g(x,t)}]P(x,z) -> [{x'=-3,y'=-2};?P(x,y,z);]x>=2".asFormula,
       "x>=2".asFormula)
-    the [ParseException] thrownBy Parser.parseExpressionList("f(x,y") should
-      (have message """1:2 Imbalanced parenthesis
-                     |Found:    ( at 1:2
-                     |Expected: """.stripMargin
-        or have message
-        """1:1 Error parsing fullExpression at 1:1
-          |Found:    "f(x,y" at 1:1
-          |Expected: (program | term ~ end-of-input | formula | expression ~ end-of-input | start-of-input ~ (program | term ~ end-of-input | formula))
-          |Hint: Try ("?" | "if" | "{" | "__________" | "(" | [0-9] | "." | "•" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | "⎵")""".stripMargin)
-    the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
-      (have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
-                     |Found:    , at 1:12 to EOF$
-                     |Expected: Term""".stripMargin
-        or have message // Not great but...
-        """1:1 Error parsing fullExpression at 1:1
-          |Found:    "f(x,y, x>=" at 1:1
-          |Expected: (program | term ~ end-of-input | formula | expression ~ end-of-input | start-of-input ~ (program | term ~ end-of-input | formula))
-          |Hint: Try ("?" | "if" | "{" | "__________" | "(" | [0-9] | "." | "•" | "true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | "⎵")""".stripMargin)
+  }
+
+  it should "fail for imbalanced parentheses in lists of expressions" in {
+    the[ParseException] thrownBy Parser.parseExpressionList("f(x,y") should
+      (
+        // KeYmaeraX parser error
+        (pointAt(1, 2)
+          and mention("Imbalanced parenthesis"))
+
+          // DLParser error
+          or pointAt(1, 1)
+        )
+
+    the[ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
+      (
+        // KeYmaeraX parser error
+        (pointAt(1, 12)
+          and mention("Operator COMMA$ expects a Term but got the Formula x>=2"))
+
+          // DLParser error
+          or pointAt(1, 1)
+        )
   }
 
   "Annotation parsing" should "populate easy loop annotations" in {

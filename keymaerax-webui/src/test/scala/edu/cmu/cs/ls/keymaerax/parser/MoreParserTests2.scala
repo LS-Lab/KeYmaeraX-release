@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.TodoTest
@@ -304,25 +305,26 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "refuse primed variables in evolution domain constraint" in {
     the [ParseException] thrownBy parser("[{x'=v,v'=3 & v'>0}]x=0") should
-      (have message
-        """1:13 No differentials can be used in evolution domain constraints
-          |Found:    v'>0 at 1:13 to 1:19
-          |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
-        or have message
-        """1:19 Error parsing program at 1:2
-          |Found:    "}]x=0" at 1:19
-          |Expected: No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.
-          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
+      (
+        // KeYmaeraX parser error
+        (pointAt (1, 13)
+          and mention ("No differentials can be used in evolution domain constraints"))
+
+          // DLParser error
+          or (pointAt (1, 19)
+            and mention ("No differentials in evolution domain constraints"))
+        )
+
     the [ParseException] thrownBy parser("[{x'=v,v'=3 & (x+v)'>0}]x=0") should
-      (have message
-        """1:13 No differentials can be used in evolution domain constraints
-          |Found:    (x+v)'>0 at 1:13 to 1:23
-          |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
-        or have message
-        """1:23 Error parsing program at 1:2
-          |Found:    "}]x=0" at 1:23
-          |Expected: No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.
-          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | No differentials in evolution domain constraints; instead of the primed variables use their right-hand sides.)""".stripMargin)
+      (
+        // KeYmaeraX parser error
+        (pointAt (1, 13)
+          and mention ("No differentials can be used in evolution domain constraints"))
+
+          // DLParser error
+          or (pointAt (1, 23)
+            and mention ("No differentials in evolution domain constraints"))
+      )
   }
 
   it should "parse standalone differential symbols" in {

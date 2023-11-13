@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixInit
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.pointAt
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
@@ -137,20 +138,13 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
   }
 
   it should "not parse p->q<-r" in {
-    the [ParseException] thrownBy DLParser("p()->q()<-r()") should have message
-      """1:9 Error parsing fullExpression at 1:1
-        |Found:    "<-r()" at 1:9
-        |Expected: ("'" | "^" | "*" | "/" | "+" | "-" | comparator | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | end-of-input)
-        |Hint: Try ("'" | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | end-of-input)""".stripMargin
-    //@note disallowed even though unambiguous because can't tell whether a formula was parenthesized once it's parsed
-    the [ParseException] thrownBy DLParser("(p()->q())<-r()") should have message
-      """1:11 Error parsing fullExpression at 1:1
-        |Found:    "<-r()" at 1:11
-        |Expected: ("'" | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | end-of-input)
-        |Hint: Try ("'" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | end-of-input)""".stripMargin
+    the [ParseException] thrownBy DLParser("p()->q()<-r()") should pointAt (1, 9)
+    the [ParseException] thrownBy DLParser("(p()->q())<-r()") should pointAt (1, 11)
 
-    DLParser("(p()->q()) <- r()") shouldBe Imply(PredOf(Function("r", None, Unit, Bool), Nothing),
-      Imply(PredOf(Function("p", None, Unit, Bool), Nothing), PredOf(Function("q", None, Unit, Bool), Nothing)))
+    DLParser("(p()->q()) <- r()") shouldBe Imply(
+      PredOf(Function("r", None, Unit, Bool), Nothing),
+      Imply(PredOf(Function("p", None, Unit, Bool), Nothing), PredOf(Function("q", None, Unit, Bool), Nothing))
+    )
   }
 
   it should "parse reverse implication of base terms" in {

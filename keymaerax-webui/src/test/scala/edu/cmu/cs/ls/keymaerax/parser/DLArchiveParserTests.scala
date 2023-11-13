@@ -16,6 +16,8 @@ import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
 import testHelper.KeYmaeraXTestTags.TodoTest
 
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers._
+
 /**
   * Tests the DL archive parser.
   * @author Stefan Mitsch
@@ -737,38 +739,18 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "not accept reserved identifiers" in {
-    the [ParseException] thrownBy parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real Real; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message
-      """2:24 Error parsing ident at 2:24
-        |Found:    "Real; End." at 2:24
-        |Expected: ident
-        |Hint: Try ()""".stripMargin
+    val keywords = List[String]("Real", "Bool", "HP")
+    keywords.foreach(kw => {
+      val ex = the [ParseException] thrownBy parse(
+        s"""ArchiveEntry "Entry 1"
+           | ProgramVariables Real $kw; End.
+           | Problem true End.
+           |End.""".stripMargin
+      )
 
-    the [ParseException] thrownBy parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real Bool; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message
-      """2:24 Error parsing ident at 2:24
-        |Found:    "Bool; End." at 2:24
-        |Expected: ident
-        |Hint: Try ()""".stripMargin
-
-    the [ParseException] thrownBy parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real HP; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message
-      """2:24 Error parsing ident at 2:24
-        |Found:    "HP; End." at 2:24
-        |Expected: ident
-        |Hint: Try ()""".stripMargin
+      ex should pointAt(2, 24)
+      ex should mention("Keywords cannot be used as identifiers")
+    })
   }
 
   it should "parse a problem without variables" in {
