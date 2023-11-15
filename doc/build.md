@@ -9,9 +9,16 @@ You will need the following tools for most artifacts:
 - [Mathematica](https://www.wolfram.com/mathematica/)
   or the [Wolfram Engine](https://www.wolfram.com/engine/)
 
-## KeYmaera X with web UI
+## KeYmaera X with and without web UI
 
-Copy the `default.properties` file to `local.properties`
+KeYmaera X can be used as CLI application or via a web UI.
+Because the web UI adds size and startup time overhead,
+two different jar files can be created:
+
+- `keymaerax-core-<version>.jar` includes just a CLI.
+- `keymaerax-webui-<version>.jar` includes both a CLI and a web UI.
+
+First, copy the `default.properties` file to `local.properties`
 and edit `mathematica.jlink.path` to point to the `JLink.jar` from your Mathematica or Wolfram Engine installation.
 If you installed Mathematica at the
 [default path](https://reference.wolfram.com/language/tutorial/WolframSystemFileOrganization.html),
@@ -21,7 +28,13 @@ the `JLink.jar` file is located at
 - `/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/JLink.jar` on macOS
 - `C:\Program Files\Wolfram Research\Mathematica\13.0\SystemFiles\Links\Jlink\Jlink.jar` on Windows
 
-Finally, run `sbt --mem 2048 clean assembly` in the project root to create `keymaerax.jar`.
+To create both jar files, run `sbt --mem 2048 assembly`.  
+To create just the core jar file, run `sbt --mem 2048 'project core' assembly`.  
+To create just the webui jar file, run `sbt --mem 2048 'project webui' assembly`.  
+To clean up build files, run `sbt clean`.
+
+The core jar file can be found at `keymaerax-core/target/scala-<scala version>/keymaerax-core-<version>.jar`.  
+The webui jar file can be found at `keymaerax-webui/target/scala-<scala version>/keymaerax-webui-<version>.jar`.  
 
 ## Tests
 
