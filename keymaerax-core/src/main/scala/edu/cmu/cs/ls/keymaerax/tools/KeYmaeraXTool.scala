@@ -110,8 +110,12 @@ object KeYmaeraXTool extends Tool {
         DerivationInfoRegistry.init(initLibrary)
       } catch {
         case t: Throwable =>
-          println("Error deriving axioms, KeYmaera X continues with restricted functionality; details:")
-          t.printStackTrace()
+          println("Error deriving axioms, KeYmaera X continues with restricted functionality.")
+          if (Configuration.getBoolean(Configuration.Keys.DEBUG).contains(true)) {
+            t.printStackTrace()
+          } else {
+            println("Run with -debug for more details.")
+          }
       } finally {
         (to, ToolProvider.qeTool()) match {
           case (Some(to), Some(t: ToolOperationManagement)) => t.setOperationTimeout(to)
