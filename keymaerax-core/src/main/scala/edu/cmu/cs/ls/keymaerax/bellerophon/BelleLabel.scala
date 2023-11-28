@@ -1,8 +1,11 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
+
+import scala.util.matching.Regex
 
 /**
   * Bellerophon labels for proof branches.
@@ -30,8 +33,8 @@ object BelleLabel {
 
   /** Converts a string to a label. */
   def fromString(s: String): List[BelleLabel] = {
-    s.split(LABEL_SEPARATOR).map(topLabel => {
-      val labels = topLabel.split(LABEL_DELIMITER)
+    s.split(Regex.quote(LABEL_SEPARATOR)).map(topLabel => {
+      val labels = topLabel.split(Regex.quote(LABEL_DELIMITER))
       val parent = BelleTopLevelLabel(labels.head)
       labels.tail.foldLeft[BelleLabel](parent)({ case (p, label) => BelleSubLabel(p, label) })
     }).toList

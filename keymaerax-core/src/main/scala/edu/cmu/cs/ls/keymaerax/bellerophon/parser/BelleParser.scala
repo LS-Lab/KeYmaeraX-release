@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -381,7 +386,7 @@ object BelleParser extends TacticParser with Logging {
 
       case r :+ ParsedBelleExpr(expr, eLoc, l) :+ BelleToken(USING, _) => st.input match {
         case BelleToken(EXPRESSION(s, delims), esLoc) :: tail =>
-          val fmls = s.stripPrefix(delims._1).stripSuffix(delims._2).split(DOUBLE_COLON).map(_.trim).toList match {
+          val fmls = s.stripPrefix(delims._1).stripSuffix(delims._2).split(Regex.quote(DOUBLE_COLON)).map(_.trim).toList match {
             case LIST_END :: Nil => Nil // explicit empty list
             case head :: Nil => Parser.parser.formulaParser(head) :: Nil // single-element lists without :: nil
             case scala.collection.:+(args, LIST_END) => args.map(Parser.parser.formulaParser) // all other lists

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
@@ -171,7 +172,7 @@ object QuizExtractor {
 
     /** Translates `\kyxline` string into an artifact. */
     def artifactsFromKyxString(s: String): Artifact = {
-      if (s.contains(TURNSTILE)) SequentArtifact(s.split(GOAL_SEP).map(_.asSequent).toList)
+      if (s.contains(TURNSTILE)) SequentArtifact(s.split(Regex.quote(GOAL_SEP)).map(_.asSequent).toList)
       else {
         "ArchiveEntry|Theorem".r.findFirstMatchIn(s) match {
           case Some(_) => ArchiveArtifact(s)

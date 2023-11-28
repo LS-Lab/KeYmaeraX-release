@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * @note Code Review 2016-08-02 LemmaDB aspects only
   */
@@ -19,12 +20,11 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable.Nil
 import scala.slick.driver.SQLiteDriver
 import scala.util.Try
-
 import scala.slick.jdbc.StaticQuery.interpolation
 import scala.slick.driver.SQLiteDriver.simple._
+import scala.util.matching.Regex
 
 /**
   * Database implementation based on SQLite and Slick. Stores and queries:
@@ -151,7 +151,7 @@ object SQLite {
     /** Converts the Int-encoded boolean `x` to bool. */
     private[this] def sqliteBoolToBoolean(x: Int) = if (x == 0) false else if (x == 1) true else throw new IllegalStateException("Expected boolean encoded as either 0 or 1, but got " + x)
 
-    private[this] def splitNameLabel(s: String): (String, Option[String]) = s.split(RULENAME_BRANCH_SEPARATOR).toList match {
+    private[this] def splitNameLabel(s: String): (String, Option[String]) = s.split(Regex.quote(RULENAME_BRANCH_SEPARATOR)).toList match {
       case rn :: Nil => (rn, None)
       case rn :: bl :: Nil => (rn, Some(bl))
     }
