@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
  * @author Stefan Mitsch
  * @note Code Review: 2016-08-16
@@ -13,8 +14,8 @@ import edu.cmu.cs.ls.keymaerax.core.VERSION
 import java.io.{File, IOException, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
-import java.util.regex.Pattern
 import scala.reflect.io.Directory
+import scala.util.matching.Regex
 
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's home directory under
@@ -32,7 +33,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   private lazy val cachePath = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
 
   /** Matches special characters in lemma names that might be problematic in file names (typically: whitespace, :, .). */
-  private val SANITIZE_REGEX = "[^\\w\\-" + Pattern.quote(File.separator) + "]"
+  private val SANITIZE_REGEX = "[^\\w\\-" + Regex.quote(File.separator) + "]"
 
   /** File handle to lemma database (creates parent directories if non-existent). */
   private lazy val lemmadbpath: File = {
