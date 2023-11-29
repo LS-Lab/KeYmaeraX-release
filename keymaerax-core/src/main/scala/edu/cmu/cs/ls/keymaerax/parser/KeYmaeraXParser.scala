@@ -2,7 +2,6 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
-
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
  *
@@ -218,6 +217,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     }
 
   override val sequentParser: String => Sequent = SequentParser.parseSequent
+
+  override val storedInferenceParser: String => List[Sequent] = KeYmaeraXStoredProvableParser
 
   lazy val strictParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = false)
   lazy val laxParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = true)

@@ -2,7 +2,6 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
-
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
  * @author
@@ -91,12 +90,12 @@ trait Parser extends (String => Expression) {
    */
   val sequentParser: String => Sequent
 
-//  /** Parse the input string in the concrete syntax as a differential dynamic logic inference.
-//    * @return A parser turning strings into the list of conclusion:subgoals corresponding to the input string.
-//    * @throws ParseException whenever its `input` is not a syntactically well-formed inference of differential dynamic logic or differential game logic.
-//    *                        Syntactical well-formedness does not require the inference to be according to a proof rule or axiom, merely plausible input.
-//    */
-//@todo add  val inferenceParser: (String => List[Sequent])
+  /** Parse the input string in the concrete syntax as a stored differential dynamic logic inference.
+    * @return A parser turning strings into the list of conclusion:subgoals corresponding to the input string.
+    * @throws ParseException whenever its `input` is not a syntactically well-formed inference of differential dynamic logic or differential game logic.
+    *                        Syntactical well-formedness does not require the inference to be according to a proof rule or axiom, merely plausible input.
+    */
+  val storedInferenceParser: (String => List[Sequent])
 
   /**
    * A pretty-printer that can write the output that this parser reads

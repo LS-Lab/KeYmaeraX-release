@@ -40,8 +40,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import java.security.MessageDigest
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.parser.DLParser
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 
 // require favoring immutable Seqs for soundness
 
@@ -1024,7 +1023,7 @@ object Provable {
     if (separator < 0) throw new ProvableStorageException("syntactically ill-formed format", storedProvable)
     val storedChecksum = storedProvable.substring(separator + 2)
     val remainder = storedProvable.substring(0, separator)
-    (try { DLParser.storedProvableParser(remainder) }
+    (try { Parser.parser.storedInferenceParser(remainder) }
     catch {
       case ex: Exception =>
         throw new ProvableStorageException("cannot be parsed: " + ex.toString, storedProvable).initCause(ex)

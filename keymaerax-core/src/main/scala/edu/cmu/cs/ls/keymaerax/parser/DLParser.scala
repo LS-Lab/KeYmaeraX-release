@@ -2,7 +2,6 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
-
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
  * @author
@@ -213,9 +212,9 @@ class DLParser extends Parser {
   val sequentListParser: String => List[Sequent] = parseAndCompare(fullSequentList(_), KeYmaeraXParser.sequentListParser, "term")
    */
 
-  /** Parse the input string in the concrete syntax as a list of differential dynamic logic sequents. */
-  val storedProvableParser: String => List[Sequent] =
-    parseAndCompare(storedProvable(_), checkAgainst.map(_ => KeYmaeraXStoredProvableParser), "provable")
+  /** Parse the input string in the concrete syntax as a stored list of differential dynamic logic sequents. */
+  override val storedInferenceParser: String => List[Sequent] =
+    parseAndCompare(storedProvable(_), checkAgainst.map(_.storedInferenceParser), "provable")
 
   /**
    * A pretty-printer that can write the output that this parser reads
