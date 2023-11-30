@@ -33,7 +33,8 @@ object KeYmaeraXTool extends Tool {
   /** Interpreter, one of "LazySequentialInterpreter" | "ExhaustiveSequentialInterpreter" */
   val INTERPRETER: String = "INTERPRETER"
 
-  val DEFAULT_LEMMA_DERIVE_TIMEOUT = 10
+  /** Default timeout if not set in config */
+  val DEFAULT_LEMMA_DERIVE_TIMEOUT = 120
 
   /** @inheritdoc */
   override val name: String = "KeYmaera"
@@ -131,7 +132,7 @@ object KeYmaeraXTool extends Tool {
                  |Try to increase the timeout using the
                  |following key in your config file:
                  |
-                 |   AXIOM_DERIVE_TIMEOUT = 10
+                 |   AXIOM_DERIVE_TIMEOUT = 120
                  |                      ^^^^^
                  |
                  |DETAILS:
