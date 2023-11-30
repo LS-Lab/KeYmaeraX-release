@@ -8,15 +8,15 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import java.io.{File, FileWriter, IOException}
-import java.time.LocalDate
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe._
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 
+import java.io.{File, FileWriter, IOException}
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.sys.process._
@@ -122,7 +122,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
 
   protected def memoryConstrained(cmd: String): String =
     if (memoryLimit < 0) cmd
-    else "MemoryConstrained[" + cmd + "," + memoryLimit*1000000 + "]"
+    else s"MemoryConstrained[$cmd, ${memoryLimit*1000000}]"
 }
 
 /**

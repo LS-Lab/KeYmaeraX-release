@@ -8,23 +8,22 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleCEX, OnAll}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleCEX
 import edu.cmu.cs.ls.keymaerax.btactics.{InvGenTool, PropositionalTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec.{mwhile, part}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Result
+import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 
 import scala.annotation.tailrec
-import scala.collection.immutable.{Map, Seq}
+import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.collection.mutable.ListBuffer
-import scala.collection.immutable.IndexedSeq
 
 /**
  * Mathematica/Wolfram Engine tool for quantifier elimination and solving differential equations.
@@ -162,7 +161,9 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   /** Runs (parallel) QE with maximum timeout. */
   private def doMaxQE(formula: Formula): Lemma = {
     mQE.timeout = qeMaxTimeout
-    if (Configuration.getBoolean(Configuration.Keys.MATHEMATICA_PARALLEL_QE).getOrElse(false) && StaticSemantics.freeVars(formula).isEmpty) {
+
+    val parallel = Configuration.getBoolean(Configuration.Keys.MATHEMATICA_PARALLEL_QE).getOrElse(false)
+    if (parallel && StaticSemantics.freeVars(formula).isEmpty) {
       // ask parallel QE to find out how to prove, then follow that recipe to get lemmas and return combined
       // result; double the work but prefers soundness over splitting soundness-critically inside QETool and
       // directly believing that result

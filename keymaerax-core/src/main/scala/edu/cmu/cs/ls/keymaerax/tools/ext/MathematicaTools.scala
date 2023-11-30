@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -13,14 +12,13 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, P
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
-import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe._
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.collection.immutable
-import scala.math.BigDecimal
 
 object UncheckedBaseConverter {
   val CONST_FN_SUFFIX = "cnstfn"

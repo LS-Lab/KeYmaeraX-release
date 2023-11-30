@@ -1,13 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.install.SOSsolveInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.qe.{KeYmaeraToMathematica, MathematicaOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaComputationTimedOutException}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 object SOSsolveTool {
   trait Result

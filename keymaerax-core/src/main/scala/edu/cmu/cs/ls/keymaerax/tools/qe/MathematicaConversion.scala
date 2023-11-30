@@ -8,7 +8,7 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Ensures, Function, Number, Quantified, UnaryCompositeFormula, UnaryCompositeTerm}
+import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Ensures, Number, Quantified, UnaryCompositeFormula, UnaryCompositeTerm}
 import edu.cmu.cs.ls.keymaerax.tools.qe.KMComparator._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MKComparator._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr

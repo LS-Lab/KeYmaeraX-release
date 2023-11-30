@@ -1,21 +1,18 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.{ExtremeTest, IgnoreInBuildTest, SlowTest}
-
-import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
-
-import scala.collection.immutable.IndexedSeq
+import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery, whenever}
 import org.scalatest.prop.Tables._
-import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.{ExtremeTest, SlowTest}
+
+import scala.collection.immutable.{IndexedSeq, _}
 
 /**
  * Continuous invariant generation tests.

@@ -5,24 +5,24 @@
 package edu.cmu.cs.ls.keymaerax.hydra.requests.tools
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
-import edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode}
+import edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core.{And, Bool, Box, Expression, Formula, FuncOf, Function, Imply, NamedSymbol, Nothing, ODESystem, PredOf, Real, Sequent, StaticSemantics, Term, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.models.ParseErrorResponse
 import edu.cmu.cs.ls.keymaerax.hydra.responses.tools.CounterExampleResponse
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, ErrorResponse, ProofTreeNode, ReadRequest, Response, UserProofRequest}
+import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.{ExpressionAugmentor, FormulaAugmentor, SequentAugmentor}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaComputationTimedOutException, ToolException}
+import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{List, Map, Nil}
 import scala.util.Try
-import spray.json._
-import spray.json.DefaultJsonProtocol._
 
 class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String,
                             assumptions: String, fmlIndices: String)
