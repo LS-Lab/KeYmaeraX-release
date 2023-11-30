@@ -17,8 +17,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRe
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXArchiveParser, Parser}
+import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Map
+import scala.annotation.tailrec
 
 /**
  * The KeYmaera X tool, initializes the pretty printer.
@@ -31,6 +32,8 @@ object KeYmaeraXTool extends Tool {
   val INIT_DERIVATION_INFO_REGISTRY: String = "INIT_DERIVATION_INFO_REGISTRY"
   /** Interpreter, one of "LazySequentialInterpreter" | "ExhaustiveSequentialInterpreter" */
   val INTERPRETER: String = "INTERPRETER"
+
+  val DEFAULT_LEMMA_DERIVE_TIMEOUT = 10
 
   /** @inheritdoc */
   override val name: String = "KeYmaera"
@@ -97,27 +100,67 @@ object KeYmaeraXTool extends Tool {
       else throw new IllegalArgumentException("Unknown interpreter: " + interpreter + "; please use one of " +
         LazySequentialInterpreter.getClass.getSimpleName + " | " + ExhaustiveSequentialInterpreter.getClass.getSimpleName)
     )
-    val initLibrary = config.getOrElse(INIT_DERIVATION_INFO_REGISTRY, "true").toBoolean
+    val shouldInitLibrary = config.getOrElse(INIT_DERIVATION_INFO_REGISTRY, "true").toBoolean
     Configuration.withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      val to = ToolProvider.qeTool() match {
-        case Some(t: ToolOperationManagement) =>
-          val oldto = t.getOperationTimeout
-          t.setOperationTimeout(Configuration.getInt(Configuration.Keys.AXIOM_DERIVE_TIMEOUT).getOrElse(10))
-          Some(oldto)
+      // set timeout and return old for later restore
+      val oldTimeout = ToolProvider.qeTool() match {
+        case Some(tool: ToolOperationManagement) => {
+          val ret = Some(tool.getOperationTimeout)
+
+          val deriveTimeout = Configuration
+            .getInt(Configuration.Keys.AXIOM_DERIVE_TIMEOUT)
+            .getOrElse(DEFAULT_LEMMA_DERIVE_TIMEOUT)
+          tool.setOperationTimeout(deriveTimeout)
+
+          ret
+        }
         case _ => None
       }
+
       try {
-        DerivationInfoRegistry.init(initLibrary)
+        DerivationInfoRegistry.init(shouldInitLibrary)
       } catch {
         case t: Throwable =>
-          println("Error deriving axioms, KeYmaera X continues with restricted functionality.")
+          // try to find the root cause
+          val details = rootCause(t) match {
+            case ex: MathematicaComputationTimedOutException =>
+              s"""Timed out while trying to derive lemmata;
+                 |Continuing with restricted functionality!
+                 |
+                 |HINT:
+                 |Try to increase the timeout using the
+                 |following key in your config file:
+                 |
+                 |   AXIOM_DERIVE_TIMEOUT = 10
+                 |                      ^^^^^
+                 |
+                 |DETAILS:
+                 |${ex.getMessage}
+                 |""".stripMargin
+            case ex =>
+              s"""Timed out while trying to derive lemmata;
+                 |Continuing with restricted functionality!
+                 |DETAILS:
+                 |${ex.getMessage}
+                 |""".stripMargin
+          }
+
+          // until logging is sorted out
+          println(t.getMessage)
+          println()
+          println(details)
+
+          LoggerFactory.getLogger(getClass)
+            .warn(details, t)
+
           if (Configuration.getBoolean(Configuration.Keys.DEBUG).contains(true)) {
             t.printStackTrace()
           } else {
             println("Run with -debug for more details.")
           }
       } finally {
-        (to, ToolProvider.qeTool()) match {
+        // Restore old timeout
+        (oldTimeout, ToolProvider.qeTool()) match {
           case (Some(to), Some(t: ToolOperationManagement)) => t.setOperationTimeout(to)
           case _ => // nothing to do
         }
@@ -130,6 +173,12 @@ object KeYmaeraXTool extends Tool {
     TactixInit.invSupplier = generator
 
     initialized = true
+  }
+
+  @tailrec private def rootCause(it: Throwable): Throwable = {
+    val cause = it.getCause
+    if (cause == null || cause == it) it
+    else rootCause(cause)
   }
 
   /** @inheritdoc */
