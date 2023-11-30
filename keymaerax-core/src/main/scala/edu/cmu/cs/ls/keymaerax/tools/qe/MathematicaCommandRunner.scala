@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import com.wolfram.jlink.{Expr, KernelLink, MathLinkException}
