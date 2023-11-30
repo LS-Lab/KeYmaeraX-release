@@ -10,13 +10,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
+import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
-import edu.cmu.cs.ls.keymaerax.tools._
-import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec.{appendTo, applyFunc, compoundExpression, fileNameJoin, homeDirectory, needs, path, quiet, setDirectory}
 import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
+import edu.cmu.cs.ls.keymaerax.tools.qe._
 
 import scala.collection.immutable
 import scala.math.BigDecimal
@@ -34,9 +35,19 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
 
   /** Extends default converter with rule and rule list handling */
   override def convert(e: MExpr): KExpr = {
-    if (isAborted(e)) throw MathematicaComputationAbortedException(e.toString)
-    else if (isFailed(e)) throw MathematicaComputationFailedException(e.toString)
-    else if (MathematicaOpSpec.rule.applies(e)) convertRule(e)
+    if (isAborted(e)) {
+      throw MathematicaComputationAbortedException(e.toString)
+    }
+
+    if (isTimedOut(e)) {
+      throw MathematicaComputationTimedOutException(e.toString)
+    }
+
+    if (isFailed(e)) {
+      throw MathematicaComputationFailedException(e.toString)
+    }
+
+    if (MathematicaOpSpec.rule.applies(e)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
       MathematicaOpSpec.rule.applies))) convertRuleList(e)
     // Derivatives are of the form Derivative[1][x]

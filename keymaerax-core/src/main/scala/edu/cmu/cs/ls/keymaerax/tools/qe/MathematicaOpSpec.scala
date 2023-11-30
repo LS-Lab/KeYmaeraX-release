@@ -247,6 +247,8 @@ object MathematicaOpSpec {
 
   def aborted: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Aborted"))
 
+  def timedOut: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$TimedOut"))
+
   def abort: LiteralMathOpSpec = LiteralMathOpSpec(makeExpr(symbol("Abort"), Array.empty[Expr]))
 
   def failed: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Failed"))
@@ -261,7 +263,14 @@ object MathematicaOpSpec {
 
   def check: NaryMathOpSpec = NaryMathOpSpec(symbol("Check"))
 
-  def timeConstrained: BinaryMathOpSpec = BinaryMathOpSpec(symbol("TimeConstrained"))
+  // Anonymous override of apply(l, r) to allow
+  // backwards-compatible use as a binary operator
+  def timeConstrained: BinaryMathOpSpec =
+    new BinaryMathOpSpec(symbol("TimeConstrained")) {
+      override def apply(l: Expr, r: Expr): Expr = {
+        makeExpr(op, Array[Expr](l, r, timedOut.op))
+      }
+    }
 
   def memoryConstrained: BinaryMathOpSpec = BinaryMathOpSpec(symbol("MemoryConstrained"))
 

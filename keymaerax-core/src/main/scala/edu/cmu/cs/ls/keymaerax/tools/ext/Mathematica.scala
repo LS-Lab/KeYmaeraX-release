@@ -131,11 +131,14 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     try {
       mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
     } catch {
-      case ex: MathematicaComputationAbortedException if !StaticSemantics.freeVars(formula).isEmpty =>
+      case ex @ (_: MathematicaComputationAbortedException | _: MathematicaComputationTimedOutException)
+        if !StaticSemantics.freeVars(formula).isEmpty => {
         // formulas that are not universally closed usually have a counterexample, skip to max QE right away for partial QE
         if (qeMaxTimeout == 0) throw ex
         else doMaxQE(formula)
-      case ex: MathematicaComputationAbortedException if qeCexTimeout != 0 =>
+      }
+      case ex @ (_: MathematicaComputationAbortedException | _: MathematicaComputationTimedOutException)
+        if qeCexTimeout != 0 => {
         mCEX.timeout = qeCexTimeout
         val cex = try {
           mCEX.findCounterExample(stripUniversalClosure(formula))
@@ -152,6 +155,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             //@note only return Lemma if no open goals (but CEX tool not trusted, so impossible to create)
             throw BelleCEX("QE counterexample:\n  formula: " + formula.prettyString + "\n  CEX: " + cex, cex, Sequent(IndexedSeq(), IndexedSeq(formula)))
         }
+      }
     }
   }
 

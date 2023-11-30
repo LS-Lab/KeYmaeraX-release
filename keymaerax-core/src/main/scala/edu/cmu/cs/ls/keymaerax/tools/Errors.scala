@@ -31,8 +31,11 @@ case class ToolExecutionException(msg: String, cause: Throwable = null) extends 
 /** User-triggered abort (e.g., by stopping from the UI). */
 case class MathematicaComputationUserAbortException(msg: String) extends ToolInternalException(msg, null)
 
-/** Abort of external computations (e.g., by TimeConstrained, by $Abort). */
+/** Abort of external computations (e.g. by $Abort). */
 case class MathematicaComputationAbortedException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+
+/** Time out of external computations (e.g. by TimeConstrained) */
+case class MathematicaComputationTimedOutException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)
 
 /** Abort of external computation due to inapplicable methods. */
 case class MathematicaInapplicableMethodException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)

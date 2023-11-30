@@ -10,9 +10,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpecula
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
 
 import scala.collection.immutable.IndexedSeq
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaComputationTimedOutException, Tool}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
@@ -329,6 +329,7 @@ class QETests extends TacticTestBase {
       val ex = the[BelleThrowable] thrownBy proveBy(fml, QE)
       ex.getCause match {
         case c: MathematicaComputationAbortedException => c.getMessage should include("Resolve")
+        case c: MathematicaComputationTimedOutException => c.getMessage should include("Resolve")
         case _ => throw ex
       }
     }

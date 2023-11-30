@@ -8,11 +8,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
-import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
+import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 
 import scala.collection.immutable.Seq
 
@@ -111,7 +111,10 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
 
     val reap = UnaryMathOpSpec(symbol("Reap"))
-    val timeConstrained = BinaryMathOpSpec(symbol("TimeConstrained"))
+
+    val timeConstrained: BinaryMathOpSpec =
+      MathematicaOpSpec.timeConstrained
+
     val set = BinaryMathOpSpec(symbol("Set"))
     val mIf = NaryMathOpSpec(symbol("If"))
     val part = BinaryMathOpSpec(symbol("Part"))

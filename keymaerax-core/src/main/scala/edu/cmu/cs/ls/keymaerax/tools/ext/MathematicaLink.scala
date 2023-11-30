@@ -14,7 +14,7 @@ import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
-import edu.cmu.cs.ls.keymaerax.tools.qe.{ExprFactory, JLinkMathematicaCommandRunner, K2MConverter, M2KConverter, MathematicaOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe._
 import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -114,7 +114,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
 
   protected def timeConstrained(cmd: String): String =
     if (timeout < 0) cmd
-    else "TimeConstrained[" + cmd + "," + timeout + "]"
+    else s"TimeConstrained[$cmd, $timeout, ${MathematicaOpSpec.timedOut.op}]"
 
   protected def memoryConstrained(cmd: MExpr): MExpr =
     if (memoryLimit < 0) cmd
@@ -299,7 +299,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     ml.synchronized {
       ml.evaluate(cmd)
       ml.waitForAnswer()
-      importResult(ml.getExpr, res => (res.toString, m2k(res)))
+      disposeAfter(ml.getExpr, res => (res.toString, m2k(res)))
     }
   }
 
@@ -358,7 +358,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
   private def getVersion: Version = {
     ml.evaluate(MathematicaOpSpec.versionNumber.op.toString)
     ml.waitForAnswer()
-    val (major, minor) = importResult(
+    val (major, minor) = disposeAfter(
       ml.getExpr,
       version => {
         logger.debug("Running " + engineName + " version " + version.toString)
@@ -368,7 +368,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
       })
     ml.evaluate(MathematicaOpSpec.releaseNumber.op.toString)
     ml.waitForAnswer()
-    val release = importResult(ml.getExpr, _.toString)
+    val release = disposeAfter(ml.getExpr, _.toString)
     Version(major, minor, release)
   }
 
@@ -411,7 +411,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
 
       ml.evaluate(MathematicaOpSpec.licenseExpirationDate.op.toString)
       ml.waitForAnswer()
-      importResult(ml.getExpr, licenseExpiredConverter)
+      disposeAfter(ml.getExpr, licenseExpiredConverter)
     } finally {
       infinity.dispose()
     }
@@ -422,7 +422,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     try {
       ml.evaluate("6*9")
       ml.waitForAnswer()
-      Some(importResult(ml.getExpr, e => e.integerQ() && e.asInt() == 54))
+      Some(disposeAfter(ml.getExpr, e => e.integerQ() && e.asInt() == 54))
     } catch {
       //@todo need better error reporting, this way it will never show up on UI
       case e: Throwable => logger.warn("WARNING: " + engineName + " may not be functional \n cause: " + e, e); None
@@ -499,7 +499,7 @@ class WolframScript extends MathematicaLink with Logging {
   def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T) = {
     wolframProcess.synchronized {
       val result = evaluate(cmd)
-      importResult(result, res => (res.toString, m2k(res)))
+      disposeAfter(result, res => (res.toString, m2k(res)))
     }
   }
 
@@ -554,7 +554,7 @@ class WolframScript extends MathematicaLink with Logging {
   /** Returns the version. */
   def getVersion: Version = {
     val mmResult = evaluate(MathematicaOpSpec.versionNumber.op.toString)
-    val (major, minor) = importResult(
+    val (major, minor) = disposeAfter(
       mmResult,
       version => {
         logger.debug("Running Wolfram Engine version " + version.toString)
@@ -564,7 +564,7 @@ class WolframScript extends MathematicaLink with Logging {
         else ("Unknown", "Unknown")
       })
     val rResult = evaluate(MathematicaOpSpec.releaseNumber.op.toString)
-    val release = importResult(rResult, _.toString)
+    val release = disposeAfter(rResult, _.toString)
     Version(major, minor, release)
   }
 
@@ -603,7 +603,7 @@ class WolframScript extends MathematicaLink with Logging {
       }
 
       val result = evaluate(MathematicaOpSpec.licenseExpirationDate.op.toString)
-      importResult(result, licenseExpiredConverter)
+      disposeAfter(result, licenseExpiredConverter)
     } finally {
       infinity.dispose()
     }
@@ -613,7 +613,7 @@ class WolframScript extends MathematicaLink with Logging {
   private def isComputing: Option[Boolean] = {
     try {
       val result = evaluate("6*9")
-      Some(importResult(result, e => e.integerQ() && e.asInt() == 54))
+      Some(disposeAfter(result, e => e.integerQ() && e.asInt() == 54))
     } catch {
       case e: Throwable => throw ToolExecutionException("Error running test computation", e)
     }

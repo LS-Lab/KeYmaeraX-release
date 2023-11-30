@@ -15,8 +15,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.{ExpressionAugmentor, Form
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaComputationTimedOutException, ToolException}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{List, Map, Nil}
@@ -103,6 +103,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                 }
               } catch {
                 case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
+                case _: MathematicaComputationTimedOutException => new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
                 case ex: ToolException => new ErrorResponse("Error executing counterexample tool", ex) :: Nil
               }
             }
@@ -157,6 +158,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
           }
         } catch {
           case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
+          case _: MathematicaComputationTimedOutException => new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
         } else new CounterExampleResponse("cex.emptysequent", additionalAssumptions) :: Nil
     }
   }

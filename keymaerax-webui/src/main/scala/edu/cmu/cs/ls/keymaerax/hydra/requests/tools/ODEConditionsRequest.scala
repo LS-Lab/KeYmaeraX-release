@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider
 import edu.cmu.cs.ls.keymaerax.core.{Box, ODESystem}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.tools.ODEConditionsResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, ErrorResponse, ReadRequest, Response, UserProofRequest}
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaComputationTimedOutException}
 
 import scala.collection.immutable.{List, Nil}
 
@@ -34,6 +34,7 @@ class ODEConditionsRequest(db: DBAbstraction, userId: String, proofId: String, n
           }
         } catch {
           case _: MathematicaComputationAbortedException => new ErrorResponse("ODE conditions search timeout.") :: Nil
+          case _: MathematicaComputationTimedOutException => new ErrorResponse("ODE conditions search timeout.") :: Nil
         }
     }
   }

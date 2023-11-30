@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
-import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaComputationFailedException}
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaComputationFailedException, MathematicaComputationTimedOutException}
 
 // favoring immutable Seqs
 import scala.collection.immutable._
@@ -29,11 +29,20 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   /** Converts a Mathematica expression to a KeYmaera expression. */
   private[tools] def convert(e: MExpr): KExpr = {
     //Exceptional states
-    if (isAborted(e)) throw MathematicaComputationAbortedException(e.toString)
-    else if (isFailed(e)) throw MathematicaComputationFailedException(e.toString)
+    if (isAborted(e)) {
+      throw MathematicaComputationAbortedException(e.toString)
+    }
+
+    if (isTimedOut(e)) {
+      throw MathematicaComputationTimedOutException(e.toString)
+    }
+
+    if (isFailed(e)) {
+      throw MathematicaComputationFailedException(e.toString)
+    }
 
     // explicit Numbers that are not rationals
-    else if (e.numberQ() && !e.rationalQ()) {
+    if (e.numberQ() && !e.rationalQ()) {
       if (e.bigDecimalQ()) Number(e.asBigDecimal()) //@note asBigDecimal does not convert doubles correctly!
       else if (e.realQ()) Number(e.asDouble()) //@note see internal type identifiers in realQ and asDouble (they fit!)
       else if (e.integerQ()) Number(BigDecimal(e.asBigInteger())) //@note e.asLong would lose precision since it truncates if not representable as long
@@ -187,7 +196,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       require(exprs.length % 2 == 1, "Expected pairs of expressions separated by operators")
       if (exprs.length == 1) Nil
       //@note Instead of importing from a newly created Mathematica expression, could also copy the comparison conversion again
-      else importResult(MathematicaOpSpec(exprs(1))(exprs(0) :: exprs(2) :: Nil), convert).asInstanceOf[ComparisonFormula] ::
+      else disposeAfter(MathematicaOpSpec(exprs(1))(exprs(0) :: exprs(2) :: Nil), convert).asInstanceOf[ComparisonFormula] ::
         // keep right-child exprs(2) around because that's the left-child for the subsequent inequality if any
         extractInequalities(exprs.tail.tail)
     }

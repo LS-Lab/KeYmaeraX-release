@@ -15,10 +15,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec
+import edu.cmu.cs.ls.keymaerax.tools._
 
 import scala.annotation.tailrec
 import scala.math.Ordering.Implicits._
@@ -110,6 +110,7 @@ private object ToolTactics extends TacticProvider {
       case Success(None) => provable
       case Failure(_: ProverSetupException) => onProverSetupError(provable) //@note no counterexample tool
       case Failure(_: MathematicaComputationAbortedException) => onTimeout(provable)
+      case Failure(_: MathematicaComputationTimedOutException) => onTimeout(provable)
       case Failure(ex) => throw ex //@note fail with all other exceptions
     }
   }
@@ -513,6 +514,7 @@ private object ToolTactics extends TacticProvider {
         case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
         case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
         case ex: MathematicaComputationAbortedException => throw new ProofSearchFailure(ex.getMessage, ex)
+        case ex: MathematicaComputationTimedOutException => throw new ProofSearchFailure(ex.getMessage, ex)
       }
 
       def leadingQuantOrder(fml: Formula): Seq[Variable] = fml match {

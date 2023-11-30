@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Box, ODESystem}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.tools.PegasusCandidatesResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, ErrorResponse, ReadRequest, Response, UserProofRequest}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaComputationTimedOutException}
 
 import scala.collection.immutable.{List, Nil}
 
@@ -36,6 +36,7 @@ class PegasusCandidatesRequest(db: DBAbstraction, userId: String, proofId: Strin
           }
         } catch {
           case _: MathematicaComputationAbortedException => new ErrorResponse("ODE invariant search timeout.") :: Nil
+          case _: MathematicaComputationTimedOutException => new ErrorResponse("ODE invariant search timeout.") :: Nil
         }
     }
   }
