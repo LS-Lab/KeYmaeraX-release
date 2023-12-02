@@ -81,10 +81,8 @@ object Main {
         runCmd(cmd)
       }
     } else if (args.contains(UI_FLAG)) {
-      if (!(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on"))) {
-        // Initialize the loading dialog splash screen.
-        LoadingDialogFactory()
-      }
+      // Initialize the loading dialog splash screen.
+      LoadingDialogFactory()
 
       exitIfDeprecated()
 

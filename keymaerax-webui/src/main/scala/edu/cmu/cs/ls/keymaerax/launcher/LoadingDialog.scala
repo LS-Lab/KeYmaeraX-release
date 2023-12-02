@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.awt.GridLayout
@@ -32,9 +37,7 @@ object LoadingDialogFactory {
   def apply(): LoadingDialog = {
     if (theDialog.isEmpty) {
       theDialog =
-        if (java.awt.GraphicsEnvironment.isHeadless ||
-          (System.getenv().containsKey("HyDRA_SSL") &&
-           System.getenv("HyDRA_SSL").equals("on"))) Some(new CLILoadingDialog())
+        if (java.awt.GraphicsEnvironment.isHeadless) Some(new CLILoadingDialog())
         else Some(new GraphicalLoadingDialog())
     }
     theDialog.get

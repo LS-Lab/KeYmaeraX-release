@@ -25,16 +25,9 @@ import scala.language.postfixOps
   * Creates a HyDRA server listening on a host and port specified in the database's config file under the configurations serverconfig.host and serverconfig.port.
   * Uses localhost and 8090 by default.
   *
-  * @note The HyDRA_SSL environmental variable needs to be set properly because it is used in application.conf.
-  *       Main.startServer should so the correct thing based upon the current value of that flag. However, from within
-  *       IntelliJ, you may want to modify application.conf directly and comment out the assertion at the top of this object.
-  *
   * @author Nathan Fulton
   */
 object NonSSLBoot extends App with Logging {
-  assert(!System.getenv().containsKey("HyDRA_SSL") || System.getenv("HyDRA_SSL").equals("off"),
-    "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
-
   Configuration.setConfiguration(FileConfiguration)
 
   //Initialize all tools.
