@@ -115,7 +115,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
   }
 
   /** Throws an exception if kernel is `null` */
-  private def ensureKernel(): Unit = {
+  @inline private def ensureKernel(): Unit = {
     if (ml == null) {
       throw ToolCommunicationException("No MathKernel set!")
     }

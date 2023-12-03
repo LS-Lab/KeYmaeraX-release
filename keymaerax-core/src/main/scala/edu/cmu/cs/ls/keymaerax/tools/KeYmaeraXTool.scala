@@ -122,31 +122,26 @@ object KeYmaeraXTool extends Tool {
         DerivationInfoRegistry.init(shouldInitLibrary)
       } catch {
         case t: Throwable =>
-          // try to find the root cause
+          /* During initialization, lemma derivation happens via reflective method access
+           * (See Ax.scala #prepopulateDerivedLemmaDatabase).
+           * Exceptions are thereby hidden behind an InvokationTargetException.
+           * Since Java 1.4, the target of this exception is also returned by #getCause(),
+           * so we can just walk up the cause chain and find the actual Exception. */
           val details = rootCause(t) match {
             case ex: MathematicaComputationTimedOutException =>
-              s"""Timed out while trying to derive lemmata;
-                 |Continuing with restricted functionality!
-                 |
-                 |HINT:
-                 |Try to increase the timeout using the
-                 |following key in your config file:
+              s"""Timed out while trying to derive lemmas. Continuing with restricted functionality!
+                 |HINT: Try to increase the timeout using the following key in your config file:
                  |
                  |   AXIOM_DERIVE_TIMEOUT = 120
                  |                      ^^^^^
                  |
-                 |DETAILS:
-                 |${ex.getMessage}
-                 |""".stripMargin
+                 |DETAILS: ${ex.getMessage}""".stripMargin
             case ex =>
-              s"""Timed out while trying to derive lemmata;
-                 |Continuing with restricted functionality!
-                 |DETAILS:
-                 |${ex.getMessage}
-                 |""".stripMargin
+              s"""Timed out while trying to derive lemmas. Continuing with restricted functionality!
+                 |DETAILS: ${ex.getMessage}""".stripMargin
           }
 
-          // until logging is sorted out
+          // TODO: until logging is sorted out
           println(t.getMessage)
           println()
           println(details)

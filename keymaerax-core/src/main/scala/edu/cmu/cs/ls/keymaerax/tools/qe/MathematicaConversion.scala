@@ -34,10 +34,7 @@ object MathematicaConversion {
 
   /**
    * Check if a Mathematica expression has been aborted.
-   *
    * @param e The expression to test.
-   * @return `true` if the expression has aborted or timed out,
-   *         `false` otherwise.
    */
   def isAborted(e: MExpr): Boolean =
     (e == MathematicaOpSpec.abort.op) ||
@@ -45,30 +42,21 @@ object MathematicaConversion {
 
   /**
    * Check if a Mathematica expression failed.
-   *
    * @param e The expression to test.
-   * @return `true` if the expression has failed,
-   *         `false` otherwise.
    */
   def isFailed(e: MExpr): Boolean =
     (e == MathematicaOpSpec.failed.op)
 
   /**
    * Check if a Mathematica expression timed out.
-   *
    * @param e The expression to test.
-   * @return `true` if the expression has timed out,
-   *         `false` otherwise.
    */
   def isTimedOut(e: MExpr): Boolean =
     (e == MathematicaOpSpec.timedOut.op)
 
   /**
    * Check if a Mathematica expression is an exception.
-   *
    * @param e The expression to test.
-   * @return `true` if the expression is an exception,
-   *         `false` otherwise.
    */
   def isException(e: MExpr): Boolean =
     (e == MathematicaOpSpec.exception.op)
