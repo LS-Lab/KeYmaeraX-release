@@ -34,7 +34,10 @@ object Context {
   /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives theoretically fast unguarded replacement contexts that are slow in practice. */
   private[keymaerax] val GUARDED = false
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
-  def apply[T <: Expression](ctx: T): Context[T] = GuardedContext(ctx)
+  def apply(ctx: Term): Context[Term] = GuardedContext(ctx)
+  def apply(ctx: Formula): Context[Formula] = GuardedContext(ctx)
+  def apply(ctx: Program): Context[Program] = GuardedContext(ctx)
+  def apply(ctx: Expression): Context[Expression] = GuardedContext(ctx)
 
   /** Whether to cross-check implementations */
   private val CROSSCHECK = false

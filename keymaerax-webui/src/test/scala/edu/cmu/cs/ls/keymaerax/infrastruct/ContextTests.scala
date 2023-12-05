@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.infrastruct
 import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.core.{Choice, PrettyPrinter, Test, True}
+import edu.cmu.cs.ls.keymaerax.core.{Choice, DotFormula, DotTerm, PrettyPrinter, Test, True}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -56,6 +56,25 @@ class ContextTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ctx(e) shouldBe c
     val (ctx2, e2) = Context.at(c, PosInExpr(1 :: 1 :: 0 :: Nil))
     ctx2(e2) shouldBe c
+
+  }
+
+  "Context(dot)" should "behave as the identity" in {
+    val ctx = Context(DotTerm())
+    val t = "0".asTerm
+    val aux = ctx(t)
+    aux shouldBe t
+
+    val ctx2 = Context(DotFormula)
+    val f = "true".asFormula
+    val aux2 = ctx2(f)
+    aux2 shouldBe f
+
+    import Context.DotProgram
+    val ctx3 = Context(DotProgram)
+    val p = "?true;".asProgram
+    val aux3 = ctx3(p)
+    aux3 shouldBe p
 
   }
 
