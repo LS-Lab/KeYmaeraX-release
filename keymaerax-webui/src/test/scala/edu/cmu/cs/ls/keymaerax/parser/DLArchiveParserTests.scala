@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -578,7 +578,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.defs should beDecl(
       Declaration(Map(
         Name("exp", None) -> Signature(Some(Real), Real, Some(List(Name("t") -> Real)),
-          Right(Some(FuncOf(Function("exp", None, Real, Real, Some("<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-1}++{exp'=exp,t'=1}}>(exp=1&t=0)".asFormula)), "._1".asTerm))), UnknownLocation)
+          Right(Some(FuncOf(Function("exp", None, Real, Real, Some("<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-1}++{exp'=exp,t'=1}}>(exp=1&t=0)".asFormula)), Variable("t")))), UnknownLocation)
       )))
   }
 
@@ -1654,9 +1654,9 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        Name("cos1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Right(Some(FuncOf(cos1, DotTerm(Real, Some(1))))), UnknownLocation),
-        Name("sin1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Right(Some(FuncOf(sin1, DotTerm(Real, Some(1))))), UnknownLocation),
-        Name("tanh", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), Right(Some(FuncOf(tanh, DotTerm(Real, Some(1))))), UnknownLocation),
+        Name("cos1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Right(Some(FuncOf(cos1, Variable("t")))), UnknownLocation),
+        Name("sin1", None) -> Signature(Some(Real), Real, Some(List((Name("t",None),Real))), Right(Some(FuncOf(sin1, Variable("t")))), UnknownLocation),
+        Name("tanh", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), Right(Some(FuncOf(tanh, Variable("x")))), UnknownLocation),
         Name("y", None) -> Signature.variable()
       )))
     entry.model shouldBe And(
@@ -1721,7 +1721,7 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.defs should beDecl(
       Declaration(Map(
         Name("exp1",None) ->
-          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Right(Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=-(2)) >>(._1)".asTerm)), UnknownLocation),
+          Signature(Some(Real),Real,Some(List((Name("s",None),Real))), Right(Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=1&s=-(2)) >>(s)".asTerm)), UnknownLocation),
         Name("y", None) -> Signature.variable()
       )))
   }
@@ -1749,10 +1749,10 @@ class DLArchiveParserTests extends TacticTestBase {
     println(entry.defs)
     entry.defs should beDecl(
       Declaration(Map(
-        Name("exp", None) -> Signature(Some(Real),Real,Some(List((Name("t",None),Real))),Right(Some(FuncOf(InterpretedSymbols.expF, "._1".asTerm))), UnknownLocation),
-        Name("exp1",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Right(Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(._1)".asTerm)), UnknownLocation),
+        Name("exp", None) -> Signature(Some(Real),Real,Some(List((Name("t",None),Real))),Right(Some(FuncOf(InterpretedSymbols.expF, Variable("t")))), UnknownLocation),
+        Name("exp1",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Right(Some("exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)".asTerm)), UnknownLocation),
         Name("foo",None) -> Signature(Some(Unit),Real,Some(List()),Right(Some(Number(5))), UnknownLocation),
-        Name("exp2",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Right(Some("exp2<< <{exp2:=._0;s:=._1;}{{exp2'=-(exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2),s'=-(1)}++{exp2'=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2,s'=1}}>(exp2=0&s=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(5)) >>(._1)".asTerm)), UnknownLocation),
+        Name("exp2",None) -> Signature(Some(Real),Real,Some(List((Name("s",None),Real))),Right(Some("exp2<< <{exp2:=._0;s:=._1;}{{exp2'=-(exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2),s'=-(1)}++{exp2'=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(s)+exp2,s'=1}}>(exp2=0&s=exp1<< <{exp1:=._0;s:=._1;}{{exp1'=-exp1,s'=-(1)}++{exp1'=exp1,s'=1}}>(exp1=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(1)&s=0) >>(5)) >>(s)".asTerm)), UnknownLocation),
         Name("y",None) -> Signature(None,Real,None,Right(None), UnknownLocation)))
     )
   }

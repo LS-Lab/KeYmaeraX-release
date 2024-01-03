@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.TacticParser
@@ -192,37 +197,33 @@ case class Declaration(decls: Map[Name, Signature]) {
     //require(signature.interpretation.isRight && signature.interpretation.right.get.isDefined, "Substitution only for defined functions")
     //val (_, Signature(domain, sort, args, Right(Some(interpretation)), loc)) = Declaration.elaborateWithDots(name, signature)
 
-    def dotArg(domain: Option[Sort], args: Option[List[(Name, Sort)]], dots: List[DotTerm]): (Term, Sort) = domain match {
-      case Some(Unit) => (Nothing, Unit)
-      case Some(s: Tuple) =>
-        assert(args.nonEmpty && args.get.size > 1)
-        val i = dots.takeRight(args.get.size).head.index.getOrElse(0)
-        (s.toDots(i)._1, s)
-      case Some(s) =>
+    //Transforms list `args` of dotted name into a term with DotTerm
+    def dotArg(domain: Sort, args: Option[List[(Name, Sort)]]): Term = domain match {
+      case Unit => Nothing
+      case s: Tuple =>
+        assert(args.nonEmpty && args.get.size > 1 && args.get.head._1.index.nonEmpty)
+        val i = args.get.head._1.index.get
+        val dotTerm = s.toDots(i)._1
+        assert(Declaration.dotsOf(dotTerm).map(_.index) == args.get.map(_._1.index).toSet)
+        dotTerm
+      case Real =>
         assert(args.nonEmpty && args.get.size == 1)
-        if (dots.nonEmpty) (dots.maxBy(_.index), s)
-        else (DotTerm(Real, Some(0)), s)
-      case None => (Nothing, Unit)
+        DotTerm(Real, args.get.head._1.index)
     }
 
     val (domain, sort, args, interpretation, loc)  = Declaration.elaborateWithDots(name, signature) match {
       case (_, Signature(domain, sort, args, Right(Some(interpretation)), loc)) =>
-        (domain, sort, args, interpretation, loc)
+        (domain.getOrElse(Unit), sort, args, interpretation, loc)
       case (Name(n, i), Signature(domain, sort, args, Left(interpretation), loc)) =>
-        val dottedArg = dotArg(domain, args, StaticSemantics.symbols(interpretation).filter(_.isInstanceOf[DotTerm]).map(_.asInstanceOf[DotTerm]).toList.sortBy(_.index))._1
-        (domain, sort, args, FuncOf(Function(n, i, domain.getOrElse(Unit), sort, Some(interpretation)), dottedArg), loc)
+        val dottedArg = dotArg(domain.getOrElse(Unit), args)
+        (domain.getOrElse(Unit), sort, args, FuncOf(Function(n, i, domain.getOrElse(Unit), sort, Some(interpretation)), dottedArg), loc)
     }
 
-    //@note symbols of interpreted function include the symbols of the interpretation
-    val symbols = interpretation match {
-      case fn@FuncOf(Function(_, _, _, _, Some(i)), _) => StaticSemantics.symbols(fn) ++ StaticSemantics.symbols(i)
-      case i => StaticSemantics.symbols(i)
-    }
-    val interpDots = symbols.filter(_.isInstanceOf[DotTerm]).map(_.asInstanceOf[DotTerm]).toList.sortBy(_.index)
-    val (arg, sig) = dotArg(domain, args, interpDots)
+
+    val dottedArg = dotArg(domain, args)
     val what = sort match {
-      case Real => FuncOf(Function(name.name, name.index, sig, signature.codomain), arg)
-      case Bool => PredOf(Function(name.name, name.index, sig, signature.codomain), arg)
+      case Real => FuncOf(Function(name.name, name.index, domain, signature.codomain), dottedArg)
+      case Bool => PredOf(Function(name.name, name.index, domain, signature.codomain), dottedArg)
       case Trafo =>
         assert(name.index.isEmpty, "Expected no index in program const name, but got " + name.index)
         assert(signature.domain.getOrElse(Unit) == Unit, "Expected domain Unit in program const signature, but got " + signature.domain)
@@ -245,7 +246,7 @@ case class Declaration(decls: Map[Name, Signature]) {
     }
 
     //@note ._0 is output of interpreted functions
-    val undeclaredDots = Declaration.dotsOf(repl) /*- DotTerm(Real, Some(0))*/ -- Declaration.dotsOf(arg)
+    val undeclaredDots = Declaration.dotsOf(repl) /*- DotTerm(Real, Some(0))*/ -- Declaration.dotsOf(dottedArg)
     if (undeclaredDots.nonEmpty) throw ParseException(
       "Function/predicate " + what.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
       UnknownLocation)
@@ -287,7 +288,7 @@ object Declaration {
     dots.toSet
   }
 
-  /** Elaborates the interpretation in `signature` to dots. */
+  /** Elaborates the argument and the interpretation in `signature` to dots. */
   def elaborateWithDots(name: Name, signature: Signature): (Name, Signature) = signature.interpretation match {
     case Right(None) => (name, signature)
     case interpretation => signature.arguments match {
@@ -305,7 +306,9 @@ object Declaration {
           if (dots.nonEmpty) dots.maxBy(_.index).index.map(_ + 1).getOrElse(0)
           else 0
 
+        //Indices continuity of dotTerms used by [[dotArg]]
         val dotTerms = argNames.zipWithIndex.map({ case (v, i) => v -> DotTerm(v._2, Some(i + nextDotI(interpDots))) })
+        val dottedArg = dotTerms.map({ case ((_, s), d) => (Name(d.name, d.index), s) })
         val dottedInterpretation = dotTerms.foldRight(interpretation)({ case (((Name(name, index), sort), dot), dotted) =>
           // signature may contain DotTerms because of anonymous arguments
           if (name != DotTerm().name) dotted match {
@@ -314,7 +317,7 @@ object Declaration {
           }
           else dotted
         })
-        (name, signature.copy(interpretation = dottedInterpretation))
+        (name, signature.copy(arguments = Some(dottedArg), interpretation = dottedInterpretation))
     }
   }
 

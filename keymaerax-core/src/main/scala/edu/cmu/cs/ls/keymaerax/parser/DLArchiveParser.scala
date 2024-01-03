@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -387,8 +387,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         // definitions in block
         val prog = curDecls.expandFull(preProg)
 
+        val varT = Variable(t.name, t.index)
         val interpFuncs = try {
-          ODEToInterpreted.fromProgram(prog,Variable(t.name,t.index))
+          ODEToInterpreted.fromProgram(prog,varT)
         } catch {
           case FromProgramException(s) => return Fail.opaque("Failed to parse implicit definition by ODE: " + s)
         }
@@ -399,7 +400,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         Pass(interpFuncs.map{f =>
           Name(f.name, f.index) -> Signature(
             domain = Some(Real), codomain = Real, arguments = Some(List((t, Real))),
-            interpretation = Right(Some(FuncOf(f, DotTerm(Real, Some(1))/* Variable(t.name, t.index, Real)*/))),
+            interpretation = Right(Some(FuncOf(f, varT))),
             loc = UnknownLocation)
         }.toList)
       }

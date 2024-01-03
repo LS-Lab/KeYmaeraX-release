@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
@@ -65,6 +70,25 @@ class DeclsTests extends TacticTestBase {
       True)
   }
 
+  it should "parse def'n that do not use its arguments" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions
+        |  Bool Cimpl(Real x, Real y, Real z) <-> true;
+        |  Real zero(Real x, Real y) = 0;
+        |End.
+        |Problem
+        |  Cimpl(0,1,2) <-> 0 = zero(3,4)
+        |End.
+        |End.
+      """.stripMargin
+
+    val parsed = ArchiveParser.parse(input).loneElement
+    parsed.model shouldBe Equiv(
+      PredOf(Function("Cimpl", None, Tuple(Real, Tuple(Real, Real)), Bool), Pair(Number(0), Pair(Number(1), Number(2)))),
+      Equal(Number(0), FuncOf(Function("zero", None, Tuple(Real, Real), Real), Pair(Number(3), Number(4)))))
+    parsed.defs.subst(parsed.model) shouldBe Equiv(True, Equal(Number(0), Number(0)))
+  }
   it should "fail to parse when the function application has the wrong assoc" in {
     val input =
       """ArchiveEntry "Test"
@@ -116,6 +140,29 @@ class DeclsTests extends TacticTestBase {
     parsed.model shouldBe "Pred(0,1,2) <-> true".asFormula
   }
 
+  it should "yield correct substitution even with unused arguments" in {
+    val input =
+      """ArchiveEntry "Test"
+        |Definitions
+        |  import kyx.math.max;
+        |  Bool Pred(Real x, Real y, Real z) <-> y <= z;
+        |  Real posSnd(Real x, Real y) = max(0,y);
+        |  Real snd<<._0 = y>>(Real x, Real y);
+        |End.
+        |Problem
+        |  Pred(0,1,2) <-> snd(0,1) != posSnd(3,4)
+        |End.
+        |End.
+      """.stripMargin
+
+    val parsed = ArchiveParser.parser(input).loneElement
+    parsed.defs.subst shouldBe USubst(
+      SubstitutionPair(FuncOf(Function("max", None, Tuple(Real, Real), Real), "(._1,._2)".asTerm), FuncOf(InterpretedSymbols.maxF, "(._1,._2)".asTerm))::
+        SubstitutionPair(PredOf(Function("Pred", None, Tuple(Real, Tuple(Real,Real)), Bool),"(._0,._1,._2)".asTerm),"._1<=._2".asFormula)::
+        SubstitutionPair(FuncOf(Function("posSnd", None, Tuple(Real, Real), Real),"(._3,._4)".asTerm),FuncOf(InterpretedSymbols.maxF, "(0,._4)".asTerm))::
+        SubstitutionPair(FuncOf(Function("snd", None, Tuple(Real, Real), Real),"(._1,._2)".asTerm),FuncOf(Function("snd", None, Tuple(Real, Real), Real, Some("._0=._2".asFormula)),"(._1,._2)".asTerm))::Nil)
+
+  }
   "Declarations type analysis" should "elaborate variables to no-arg functions per declaration" in {
     val model = """ArchiveEntry "Test"
                   |Definitions
