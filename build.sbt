@@ -2,7 +2,7 @@ import java.io.{FileInputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
 
-ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / scalaVersion := "2.12.13"
 // TODO Use this version number in keymaerax-core
 ThisBuild / version := "5.0.2"
 
@@ -23,10 +23,10 @@ lazy val macros = project
   .settings(
     name := "KeYmaeraX Macros",
 
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8",
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
 
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
   )
 
 lazy val core = project
@@ -36,7 +36,7 @@ lazy val core = project
     name := "KeYmaeraX Core",
     mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
 
-    libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8",
+    libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
 
     libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.1",
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2",
@@ -50,7 +50,7 @@ lazy val core = project
     libraryDependencies += "org.typelevel" %% "spire" % "0.16.2",
 
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
 
     Compile / run / mainClass := mainClass.value,
     assembly / mainClass := mainClass.value,
@@ -96,7 +96,7 @@ lazy val webui = project
     libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.5.23",
 
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
 
     Compile / run / mainClass := mainClass.value,
     assembly / mainClass := mainClass.value,
