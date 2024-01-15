@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -28,6 +29,7 @@ import scala.collection.immutable.{List, ListMap, Nil}
 import scala.collection.mutable.ListBuffer
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
+import scala.language.reflectiveCalls
 import scala.reflect.runtime.universe
 
 /**

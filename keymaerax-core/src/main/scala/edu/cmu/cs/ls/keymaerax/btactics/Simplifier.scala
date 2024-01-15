@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -9,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, Position}
 
-
+import scala.language.reflectiveCalls
 
 /**
   * Tactic Simplifier.simp performs term simplification everywhere within a formula,
@@ -245,4 +250,3 @@ object Simplifier {
   def simp(simps:List[Simplification] = defaultSimps):DependentPositionTactic = anon ((pos, sequent) =>
     SaturateTactic(simpOnce(simps)(pos)))
 }
-

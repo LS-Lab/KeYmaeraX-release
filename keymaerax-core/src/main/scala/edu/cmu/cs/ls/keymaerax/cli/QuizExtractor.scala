@@ -111,7 +111,7 @@ object QuizExtractor {
         assert(sol.length == 1, "Expected exactly 1 solution, but got " + sol.length + " solutions in " + rawContent)
         assert(grader.length <= 1, "Expected at most 1 grader, but got " + grader.length + " graders in " + rawContent)
         val (kyxsol, texsol, listingssol, txtsol, solfin) = sol.head
-        val (expectedArtifact, solArgs) = (kyxsol, texsol, listingssol, txtsol, solfin) match {
+        val (expectedArtifact, solArgs: Map[String, String]) = (kyxsol, texsol, listingssol, txtsol, solfin) match {
           case (Some(s), None, None, None, None) => (artifactsFromKyxString(s), Map.empty)
           case (None, Some(s), None, None, None) => (artifactsFromTexMathString(s), Map.empty)
           case (None, None, Some(s), None, None) => (ArchiveArtifact(s), Map.empty)

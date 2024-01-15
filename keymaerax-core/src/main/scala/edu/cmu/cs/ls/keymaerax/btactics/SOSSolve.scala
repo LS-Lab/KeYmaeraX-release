@@ -231,6 +231,7 @@ object SOSSolve {
     case fml: PredicationalOf => naturalExponentCheck(fml.child)
     case _ => ???
   }
+
   def naturalExponentCheck(seq: Sequent): Option[Term] = (seq.ante ++ seq.succ).collectFirst(scala.Function.unlift(naturalExponentCheck))
 
   def naturalExponentCheck : DependentTactic = anon { (seq: Sequent) => naturalExponentCheck(seq) match {

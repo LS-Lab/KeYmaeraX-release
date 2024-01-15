@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
@@ -12,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
-import scala.language.postfixOps
+import scala.language.{postfixOps, reflectiveCalls}
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 

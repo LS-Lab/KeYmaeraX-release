@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import org.scalatest.{FlatSpec, Matchers}
@@ -27,7 +32,7 @@ class BelleLexerTests extends FlatSpec with Matchers {
     testCase._1 should "lex to the appropriate terminal list" in {
       val resultingTerminalList = BelleLexer(testCase._1).map(_.terminal)
       //Note: if we don't have an expected terminal list then we're just testing that thing thing lexes.
-      if(expectedTerminalList nonEmpty) resultingTerminalList shouldBe expectedTerminalList
+      if(expectedTerminalList.nonEmpty) resultingTerminalList shouldBe expectedTerminalList
     }
   })
 }

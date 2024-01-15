@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -442,7 +443,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
             if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
               println("Works now with " + qeTool.asInstanceOf[Tool].name + "? " + formula)
               try {
-                cancelAfter(2 minutes) {
+                cancelAfter(2.minutes) {
                   a[BelleThrowable] should be thrownBy TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE) & done)
                 }
               } catch {

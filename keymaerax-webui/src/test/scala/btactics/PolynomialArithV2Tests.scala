@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -64,8 +69,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   it should "implicitly convert integers" in withMathematica { _ =>
     import PolynomialArithV2._
     val x = ofTerm("x".asTerm)
-    val a = (x + 2)*(x - 2)
-    val b = (x^2) - 4
+    val a = (x + ofInt(2))*(x - ofInt(2))
+    val b = (x^ofInt(2)) - ofInt(4)
     val prv = a.equate(b).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
@@ -88,8 +93,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val x = ofTerm("x".asTerm)
     val y = ofTerm("y".asTerm)
     val z = ofTerm("z".asTerm)
-    val p1 = 4*(x^4) + 1 + 3*(x^3) + 2*x
-    val p2 = (x^2) + x + 2
+    val p1 = ofInt(4)*(x^ofInt(4)) + ofInt(1) + ofInt(3)*(x^ofInt(3)) + ofInt(2)*x
+    val p2 = (x^ofInt(2)) + x + ofInt(2)
     val (quot, rem, prv) = p1.divideAndRemainder(p2)
     quot.term shouldBe "((-7)+-x+4*x^2)".asTerm
     rem.term shouldBe "15 + 11 * x".asTerm

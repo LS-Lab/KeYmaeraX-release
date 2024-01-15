@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -13,7 +18,7 @@ import org.scalatest.time.SpanSugar._
 import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.mutable
-import scala.language.postfixOps
+import scala.language.{postfixOps, reflectiveCalls}
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._

@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
@@ -530,7 +530,7 @@ class TactixLibraryTests extends TacticTestBase {
     var i = 0
     val count = anon ((_: Position, _: Sequent) => { i=i+1; skip })
 
-    failAfter(2 seconds) {
+    failAfter(2.seconds) {
       val result = proveBy("[{x'=1}]x>0".asFormula, autoImpl(loopauto(), count, keepQEFalse=false))
       // master uses solve after count does not make progress
       result.subgoals.loneElement shouldBe "t_>=0 ==> t_+x>0".asSequent

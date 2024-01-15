@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
+import scala.language.implicitConversions
 
 @CheckinTest
 @SummaryTest

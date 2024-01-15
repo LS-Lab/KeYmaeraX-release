@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -325,7 +330,7 @@ class TaylorModelArithTests extends TacticTestBase {
   "TM partition" should "partition" in withMathematica { _ =>
     import PolynomialArithV2._
     import TaylorModelArith._
-    val (l, r, newElemEq) = ((tm1 + Exact(42, tm1.context))^3).partition("fresh".asVariable, ((n: BigDecimal, d: BigDecimal, pp: PowerProduct)=>pp.degree==0))
+    val (l, r, newElemEq) = ((tm1 + Exact(ofInt(42), tm1.context))^3).partition("fresh".asVariable, ((n: BigDecimal, d: BigDecimal, pp: PowerProduct)=>pp.degree==0))
     l.prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ ((x+42)^3=74080+fresh+err_&0<=err_&err_<=0)".asFormula
     r.prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (fresh=5292*y0()+5292*x0()+126*y0()^2+252*x0()*y0()+126*x0()^2+y0()^3+3*x0()*y0()^2+3*x0()^2*y0()+x0()^3+err_&(-50.098)<=err_&err_<=124.22)".asFormula
     newElemEq shouldBe "fresh=(x+42)^3-(0+74080/1*1)".asFormula

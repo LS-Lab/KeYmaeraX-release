@@ -151,7 +151,7 @@ trait PolynomialRing {
     case term: Term => Seq(term)
   }
 
-  implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
+  def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
 
   // Prove "t1 = t2" by equating coefficients
   def equate(t1: Term, t2: Term) : Option[ProvableSig]
@@ -1829,7 +1829,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
             if (dyR.isOne && nyR.isConstant) {
               val (mNum, mDenom) = ny.coefficient(SparsePowerProduct(Seq()))
               val m = (mNum / mDenom).toIntExact
-              val ymPrv = (ny / dy).equate(m).getOrElse(throw new RuntimeException("expected to prove that polynomial equals integer"))
+              val ymPrv = (ny / dy).equate(ofInt(m)).getOrElse(throw new RuntimeException("expected to prove that polynomial equals integer"))
               val powerDividePrv = useDirectly(powerDivideLemma(m), Seq(("x_", nx.term), ("y_", dx.term)), Seq())
               val (nz, nzR) = (nx ^ m, ringsLibrary.ring.pow(nxR, m))
               val (dz, dzR) = (dx ^ m, ringsLibrary.ring.pow(dxR, m))
@@ -1865,13 +1865,13 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
         (nz.resetTerm, nzR, dx.resetTerm, dxR, prv)
       case a: AtomicTerm =>
         val aP = ofTerm(a)
-        (aP.resetTerm, ringsLibrary.toRing(a), 1.resetTerm, ringsLibrary.ring.getOne,
+        (aP.resetTerm, ringsLibrary.toRing(a), ofInt(1).resetTerm, ringsLibrary.ring.getOne,
           useDirectly(divideIdentity,
             Seq(
               ("x_", a),
               ("y_", rhsOf(aP.representation)),
-              ("z_", rhsOf(1.representation))
-            ), Seq(aP.representation, 1.representation)))
+              ("z_", rhsOf(ofInt(1).representation))
+            ), Seq(aP.representation, ofInt(1).representation)))
       case _ =>
         throw NonPolynomialArithmeticException("Operation not supported by polynomial arithmetic: " + term)
     }

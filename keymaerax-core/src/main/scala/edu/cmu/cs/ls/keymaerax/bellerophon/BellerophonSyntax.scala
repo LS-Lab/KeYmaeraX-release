@@ -213,7 +213,7 @@ trait NoOpTactic {}
   * @see https://stackoverflow.com/a/3896244
   */
 object NoOpTactic {
-  import languageFeature.implicitConversions
+  import scala.language.implicitConversions
   implicit def innerObj[T](o: MixNoOp[T]): T = o.obj
 
   def ::[T](o: T) = new MixNoOp(o)
