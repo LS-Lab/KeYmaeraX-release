@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -215,19 +220,16 @@ object SOSSolve {
     case PolynomialArithV2.NonSupportedExponentException(_) => Some(t)
   }
 
-  def naturalExponentCheck(fml: Formula): Option[Term] = try {
-    fml match {
-      case fml: BinaryCompositeFormula => definedOrElse(naturalExponentCheck(fml.left), naturalExponentCheck(fml.right))
-      case fml: ComparisonFormula => definedOrElse(naturalExponentCheck(fml.left), naturalExponentCheck(fml.right))
-      case fml: UnaryCompositeFormula => naturalExponentCheck(fml.child)
-      case fml: Quantified => naturalExponentCheck(fml.child)
-      case fml: Modal => naturalExponentCheck(fml.child)
-      case fml: AtomicFormula => None
-      case fml: PredOf => naturalExponentCheck(fml.child)
-      case fml: PredicationalOf => naturalExponentCheck(fml.child)
-      case _ =>
-        ???
-    }
+  def naturalExponentCheck(fml: Formula): Option[Term] = fml match {
+    case fml: BinaryCompositeFormula => definedOrElse(naturalExponentCheck(fml.left), naturalExponentCheck(fml.right))
+    case fml: ComparisonFormula => definedOrElse(naturalExponentCheck(fml.left), naturalExponentCheck(fml.right))
+    case fml: UnaryCompositeFormula => naturalExponentCheck(fml.child)
+    case fml: Quantified => naturalExponentCheck(fml.child)
+    case fml: Modal => naturalExponentCheck(fml.child)
+    case fml: AtomicFormula => None
+    case fml: PredOf => naturalExponentCheck(fml.child)
+    case fml: PredicationalOf => naturalExponentCheck(fml.child)
+    case _ => ???
   }
   def naturalExponentCheck(seq: Sequent): Option[Term] = (seq.ante ++ seq.succ).collectFirst(scala.Function.unlift(naturalExponentCheck))
 

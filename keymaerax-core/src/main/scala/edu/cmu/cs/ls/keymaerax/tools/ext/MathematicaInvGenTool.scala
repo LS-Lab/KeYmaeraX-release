@@ -265,16 +265,14 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       )
     )
 
-    try {
-      val (output, result) = runUnchecked(command.toString)
-      result match {
-        case And(Equal(_, n: Number), And(And(And( And(i1, i2), n1), n2), n3)) =>
-          assert(n.value.toInt == 5)
-          (List(i1, i2), List(n1, n2, n3))
-        case _ =>
-          logger.warn("Incorrect pattern returned: " + output)
-          (List(), List())
-      }
+    val (output, result) = runUnchecked(command.toString)
+    result match {
+      case And(Equal(_, n: Number), And(And(And( And(i1, i2), n1), n2), n3)) =>
+        assert(n.value.toInt == 5)
+        (List(i1, i2), List(n1, n2, n3))
+      case _ =>
+        logger.warn("Incorrect pattern returned: " + output)
+        (List(), List())
     }
   }
 
