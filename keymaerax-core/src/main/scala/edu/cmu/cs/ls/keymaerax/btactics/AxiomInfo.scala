@@ -179,7 +179,7 @@ object DerivationInfoRegistry extends Logging {
     // Search and initialize tactic providers (provide @Tactic-annotated methods)
     val reflections = new Reflections("edu.cmu.cs.ls.keymaerax.btactics")
     val tacticProviderTypes = reflections.get(Scanners.SubTypes.of(classOf[TacticProvider]).asClass())
-    val instances = tacticProviderTypes.map(_.getField("MODULE$").get().asInstanceOf[TacticProvider])
+    val instances = tacticProviderTypes.map(_.getField("MODULE$").get(()).asInstanceOf[TacticProvider])
     val objects = instances.map(_.getInfo)
     objects.foreach({case (cl, ct) => initClass(cl, ct)})
 

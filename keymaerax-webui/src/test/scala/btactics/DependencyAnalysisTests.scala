@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -172,7 +177,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   private def timeCall[A](f: Unit => A): Double = {
     val t0 = System.nanoTime()
-    val _ = f()
+    val _ = f(())
     val t1 = System.nanoTime()
     (t1 - t0).toDouble / 1000000000.0
   }

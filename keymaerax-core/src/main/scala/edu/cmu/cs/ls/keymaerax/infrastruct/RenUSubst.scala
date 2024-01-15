@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 
@@ -244,7 +245,7 @@ final class FastUSubstAboveURen(private[infrastruct] val subsDefsInput: immutabl
     //@note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
     //@note permutations would help simplify matters here since they are their own inverse.
     TactixLibrary.uniformRename(sp._2, sp._1))
-  override lazy val substitution: RenUSubst = reapply(subsDefs.map(sp => Pair(sp.what, sp.repl)))
+  override lazy val substitution: RenUSubst = reapply(subsDefs.map(sp => (sp.what, sp.repl)))
 
 
   override lazy val toForward: ProvableSig => ProvableSig = {
@@ -355,7 +356,7 @@ abstract class RenUSubstBase(private[infrastruct] val subsDefsInput: immutable.S
     * The uniform substitution part of this renaming uniform substitution
     * @see [[usubst]]
     */
-  def substitution: RenUSubst = reapply(subsDefs.map(sp => Pair(sp.what, sp.repl)))
+  def substitution: RenUSubst = reapply(subsDefs.map(sp => (sp.what, sp.repl)))
 
 
   /** The first step that will be performed first toward the bottom of the proof. */
@@ -634,7 +635,7 @@ final class FastURenAboveUSubst(private[infrastruct] val subsDefsInput: immutabl
     //@note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
     //@note permutations would help simplify matters here since they are their own inverse.
     TactixLibrary.uniformRename(sp._2, sp._1))*/
-  override lazy val substitution: RenUSubst = reapply(subsDefs.map(sp => Pair(sp.what, sp.repl)))
+  override lazy val substitution: RenUSubst = reapply(subsDefs.map(sp => (sp.what, sp.repl)))
 
 /*
   * {{{

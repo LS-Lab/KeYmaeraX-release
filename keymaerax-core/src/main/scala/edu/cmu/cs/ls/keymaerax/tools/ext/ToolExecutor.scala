@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import java.util.concurrent._
@@ -108,7 +113,7 @@ class ToolExecutor(poolSize: Int) extends Logging {
   private def makeFuture(task: Unit => Any): FutureTask[Either[Any, Throwable]] =
     new FutureTask(() =>
       try {
-        Left(task())
+        Left(task(()))
       } catch {
         case e: Throwable => Right(e)
       })

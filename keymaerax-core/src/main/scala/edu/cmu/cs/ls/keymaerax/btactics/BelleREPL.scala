@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.PrintWriter
@@ -86,8 +91,6 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
       case None => initProvable
       case Some(e) => interpret(Eval.tactic(scalaState + e), initProvable).underlyingProvable
     }
-
-  def ignore[A](a:Any,b:A):A = b
 
   def fullTactic:String = {
     hist.map(_._2).foldLeft("nil")((acc,e) => e + " &\n " + acc)
@@ -276,7 +279,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
       return
     }
     Console.println("Bellerophon REPL started. Type ? for usage info")
-    while (ignore(ignore(printState(state), line = scala.io.StdIn.readLine()),  line != null)) {
+    while ({printState(state); line = scala.io.StdIn.readLine(); line != null}) {
       breakable {
         val parsed =
           try { parse(line) }

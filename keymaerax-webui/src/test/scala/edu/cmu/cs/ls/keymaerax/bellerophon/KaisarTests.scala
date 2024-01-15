@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.{BRule, _}
@@ -317,9 +322,9 @@ class KaisarTests extends TacticTestBase {
     })
   }
 
-  def shouldThrow[T](f: (Unit => T)): Unit = {
+  def shouldThrow[T](f: Unit => T): Unit = {
     try {
-      val x: T = f()
+      val x: T = f(())
     } catch {
       case _ => return
     }

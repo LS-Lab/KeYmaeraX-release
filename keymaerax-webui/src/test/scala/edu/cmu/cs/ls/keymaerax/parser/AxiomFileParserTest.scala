@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
@@ -32,7 +33,7 @@ class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTeste
   "KeYmaeraXAxiomParser" should "parse the axiom file" in {
     // even AxiomBase is private[core], so get Class by Java reflection
     val clazz = Class.forName("edu.cmu.cs.ls.keymaerax.core.AxiomBase$")
-    val axiomFile = clazz.getField("MODULE$").get() invokePrivate loadAxiomString()
+    val axiomFile = clazz.getField("MODULE$").get(()) invokePrivate loadAxiomString()
     val axioms = KeYmaeraXAxiomParser(axiomFile)
     axioms.size shouldNot be <= 0
     // check for a sample
@@ -42,7 +43,7 @@ class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTeste
   "DLAxiomParser" should "parse the axiom file" in {
     // even AxiomBase is private[core], so get Class by Java reflection
     val clazz = Class.forName("edu.cmu.cs.ls.keymaerax.core.AxiomBase$")
-    val axiomFile = clazz.getField("MODULE$").get() invokePrivate loadAxiomString()
+    val axiomFile = clazz.getField("MODULE$").get(()) invokePrivate loadAxiomString()
     val axioms = DLAxiomParser(axiomFile)
     axioms.size shouldNot be <= 0
     // check for a sample
@@ -52,7 +53,7 @@ class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTeste
   "Both parsers" should "agree on the outcome" in {
     // even AxiomBase is private[core], so get Class by Java reflection
     val clazz = Class.forName("edu.cmu.cs.ls.keymaerax.core.AxiomBase$")
-    val axiomFile = clazz.getField("MODULE$").get() invokePrivate loadAxiomString()
+    val axiomFile = clazz.getField("MODULE$").get(()) invokePrivate loadAxiomString()
     val axioms1 = KeYmaeraXAxiomParser(axiomFile)
     val axioms2 = DLAxiomParser(axiomFile)
     axioms1 shouldBe axioms2

@@ -490,7 +490,7 @@ object SQLite {
     private[this] lazy val stepCountQuery = Compiled((proofId: Rep[Int]) =>
       Executionsteps.filter(row =>
         row.proofid === proofId &&
-          row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).map(_._Id).countDistinct)
+          row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).map(_._Id).distinct.length)
 
     final override def proofExists(proofId: Int): Boolean = synchronized {
       runTransactionally(Proofs.filter(_._Id === proofId).exists.result)
@@ -757,7 +757,7 @@ object SQLite {
       Executionsteps.filter(row =>
         row.proofid === proofId &&
           row.previousstep === stepId &&
-          row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).map(_._Id).countDistinct)
+          row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).map(_._Id).distinct.length)
 
     /** Recompute the open subgoals count of a step. */
     private[this] def updateOpenSubgoalsCount(proofId: Int, stepId: Option[Int]): Unit = {
@@ -795,11 +795,10 @@ object SQLite {
       /* The Executionsteps table may contain many alternate histories for the same execution. In order to reconstruct
        * the current state of the world, we must pick the most recent alternative at every opportunity.*/
       var steps = runTransactionally(executionStepsQuery(executionId).result)
-      val prevIds: scala.collection.mutable.Stack[Option[Int]] = new scala.collection.mutable.Stack()
-      prevIds.push(None)
+      var prevIds: List[Option[Int]] = List(None)
       var revResult: List[ExecutionStepPOJO] = Nil
       while (prevIds.nonEmpty) {
-        val prevId = prevIds.top
+        val prevId = prevIds.head
         val (headSteps, tailSteps) = steps.partition(_.previousstep == prevId)
         if (headSteps.nonEmpty) {
           val head = headSteps.head
@@ -809,11 +808,11 @@ object SQLite {
               head.branchorder, ExecutionStepStatus.fromString(head.status.get),
               head.executableid.get, head.inputprovableid, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean,
               ruleName, branchLabel, head.numsubgoals, head.numopensubgoals) :: revResult
-          if (headSteps.tail.isEmpty) prevIds.pop
-          prevIds.push(head._Id)
+          if (headSteps.tail.isEmpty) prevIds = prevIds.tail
+          prevIds = head._Id :: prevIds
           steps = headSteps.tail ++ tailSteps
         } else {
-          prevIds.pop
+          prevIds = prevIds.tail
           steps = tailSteps
         }
       }

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -48,7 +53,7 @@ object TaylorModelTactics extends Logging {
   private def ppSubgoals(prv: ProvableSig) = {
     prv.subgoals.zipWithIndex.map{case (s, i) => "== Subgoal " + i + "==\n" + pp.stringify(s)}.mkString("\n")
   }
-  def debug(msg: Unit => String) : Unit = logger.debug(msg())
+  def debug(msg: Unit => String) : Unit = logger.debug(msg(()))
   def debug(name: String, e: Expression) : Unit = debug(_ => "=== " + name + "===\n" + pp.stringify(e))
   def debugTac(message: => String): StringInputTactic =
     new StringInputTactic("debugTac", message::Nil) {

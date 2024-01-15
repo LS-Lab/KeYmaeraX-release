@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.scalatactic
 
 import java.io.File
@@ -22,7 +27,7 @@ class ScalaTacticCompiler {
     val directory = new VirtualDirectory("(memory)", None)
     settings.outputDirs.setSingleOutput(directory)
 
-    val reporter = new StoreReporter()
+    val reporter = new StoreReporter(settings)
     val compiler = new Global(settings, reporter)
     new compiler.Run().compileSources(sources)
 
