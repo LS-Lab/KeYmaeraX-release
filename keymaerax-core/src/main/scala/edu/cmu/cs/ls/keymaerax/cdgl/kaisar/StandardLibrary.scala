@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
@@ -39,11 +44,11 @@ object StandardLibrary {
   }
 
   /** zip triples */
-  def zip3[T1,T2,T3](xs:List[T1],ys:List[T2],zs:List[T3], node: ASTNode = Triv()):List[(T1,T2,T3)] = {
+  def zip3[T1,T2,T3](xs:List[T1],ys:List[T2],zs:List[T3], astNode: ASTNode = Triv()):List[(T1,T2,T3)] = {
     (xs, ys, zs) match {
       case (Nil, Nil, Nil) => Nil
-      case (x :: xs, y :: ys, z :: zs) => (x, y, z) :: zip3(xs, ys, zs, node)
-      case _ => throw new NodeException("Mismatched lengths in zip3"){ override val node: ASTNode = node}
+      case (x :: xs, y :: ys, z :: zs) => (x, y, z) :: zip3(xs, ys, zs, astNode)
+      case _ => throw new NodeException("Mismatched lengths in zip3"){ override val node: ASTNode = astNode}
     }
   }
 
