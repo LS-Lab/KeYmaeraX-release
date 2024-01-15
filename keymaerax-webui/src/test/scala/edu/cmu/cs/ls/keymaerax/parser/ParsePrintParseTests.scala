@@ -1,14 +1,14 @@
-package edu.cmu.cs.ls.keymaerax.parser
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => CorePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 
@@ -35,7 +35,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  override protected def beforeEach(): Unit = PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+  override protected def beforeEach(): Unit = CorePrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
 
   "Parsing of pretty-printed ODEs" should "be the same as the original parse result" in {
     val exprs = Table(
@@ -47,7 +47,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
-      Parser(PrettyPrinter(expected)) shouldBe expected
+      Parser(CorePrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -62,7 +62,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
-      Parser(PrettyPrinter(expected)) shouldBe expected
+      Parser(CorePrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -76,7 +76,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
-      Parser(PrettyPrinter(expected)) shouldBe expected
+      Parser(CorePrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -87,7 +87,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
-      Parser(PrettyPrinter(expected)) shouldBe expected
+      Parser(CorePrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -116,14 +116,14 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
-      Parser(PrettyPrinter(expected)) shouldBe expected
+      Parser(CorePrettyPrinter(expected)) shouldBe expected
     }
   }
 
   it should "print and parse small decimals without scientific notation" in {
     val expr = "0.00000001"
     val expected = Parser(expr)
-    val printed = PrettyPrinter(expected)
+    val printed = CorePrettyPrinter(expected)
     val reparsed = Parser(printed)
     reparsed shouldBe expected
   }
@@ -132,7 +132,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
     for (_ <- 1 to randomTrials) {
 		  val expected = rand.nextFormulaEpisode().nextFormula(randomComplexity)
       // asFormula runs the parser, but declares the variables occurring in the formula
-      PrettyPrinter(expected).asFormula shouldBe expected
+      CorePrettyPrinter(expected).asFormula shouldBe expected
     }
   }
 

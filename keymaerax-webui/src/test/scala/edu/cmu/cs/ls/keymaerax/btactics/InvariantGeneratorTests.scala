@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.{FileOutputStream, PrintWriter}
@@ -831,7 +832,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       } catch {
         case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
           -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
-        case ex =>
+        case ex: Throwable =>
           ex.printStackTrace()
           BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
       }

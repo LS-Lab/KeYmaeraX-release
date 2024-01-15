@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{BufferedOutputStream, BufferedWriter, File, FileOutputStream, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
@@ -1104,7 +1105,7 @@ object AssessmentProver {
       isImplied
     }
     catch {
-      case ex => false
+      case _: Throwable => false
     }
   }
 

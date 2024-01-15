@@ -1,14 +1,14 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Checks forward CdGL-style natural deduction proof terms
   * @author Brandon Bohrer
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ProofCheckException
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._

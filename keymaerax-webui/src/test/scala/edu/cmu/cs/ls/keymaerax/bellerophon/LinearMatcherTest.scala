@@ -1,13 +1,12 @@
-package edu.cmu.cs.ls.keymaerax.infrastruct
-
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
+package edu.cmu.cs.ls.keymaerax.infrastruct
+
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{LinearMatcher, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}

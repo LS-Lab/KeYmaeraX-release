@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -956,6 +961,10 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   case class Stay(p: TreePolynomial) extends Growth
   case class Sprout(sprout: Branch2) extends Growth
 
+  // We don't need the outer reference.
+  // The only thing this class is used for is being created and immediately thrown.
+  // See also: https://stackoverflow.com/a/16466541
+  @annotation.nowarn("msg=outer reference in this type test cannot be checked at run time")
   final case class UnknownPolynomialImplementationException(other: Polynomial) extends
     RuntimeException("only TreePolynomials are supported, but got " + other)
 

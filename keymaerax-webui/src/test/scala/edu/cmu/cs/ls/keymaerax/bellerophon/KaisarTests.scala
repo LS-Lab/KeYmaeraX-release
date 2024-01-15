@@ -326,7 +326,7 @@ class KaisarTests extends TacticTestBase {
     try {
       val x: T = f(())
     } catch {
-      case _ => return
+      case _: Throwable => return
     }
     false shouldBe true
   }

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.PrintWriter
@@ -339,7 +340,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         case ex: TestFailedDueToTimeoutException =>
           println(s"Done $name (failed: timeout)")
           BenchmarkResult(name, "timeout", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
-        case ex =>
+        case ex: Throwable =>
           if (expectedProved) println(s"Done $name (failed)") else println(s"Done $name (feature request: not generated and/or not proved)")
           BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
       }
@@ -380,7 +381,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         } catch {
           case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
             -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
-          case ex =>
+          case ex: Throwable =>
             ex.printStackTrace()
             BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
         }
@@ -417,4 +418,3 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
 }
-

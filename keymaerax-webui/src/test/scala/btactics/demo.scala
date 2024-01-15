@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -6,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.{Matchers, FlatSpec}
-import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**

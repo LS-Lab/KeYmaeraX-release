@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import java.io.FileWriter
@@ -295,7 +300,7 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
               outofScopeUniversal.inc(n, seq0, seq)
             case ExponentOutOfScopeFailure(_) =>
               outofScopeUniversal.inc(n, seq0, seq)
-            case ex =>
+            case ex: Throwable =>
               print("Unexpected failure:")
               println(ex)
               unknown.inc(n, seq0, seq)

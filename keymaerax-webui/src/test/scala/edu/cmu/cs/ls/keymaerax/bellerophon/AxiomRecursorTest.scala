@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.{CoreException, Formula}
@@ -196,7 +201,6 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
         } catch {
           case e: CoreException if e.getMessage.contains("duplicate differential equations") &&
             problematicAxioms.contains(ax.canonicalName) => /* ignore */
-          case e => throw e
         }
       }
     }
