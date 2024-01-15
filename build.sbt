@@ -6,13 +6,38 @@ ThisBuild / scalaVersion := "2.12.13"
 // TODO Use this version number in keymaerax-core
 ThisBuild / version := "5.0.2"
 
-// Enable more warnings
-ThisBuild / scalacOptions ++= Seq(
-  "-deprecation",
-  "-feature",
-  "-unchecked",
-  "-Xmaxwarns", "1000",
-)
+ThisBuild / scalacOptions ++= {
+  // Keymaerax has lots of warnings. Due to their volume, important warnings vanish between not-so-important ones.
+  // To make warnings useful again, this code hides the most common warnings.
+  // Over time, they should be re-enabled again and fixed.
+  //
+  // See `scalac -Wconf:help` for more details on how to write filters.
+  // See also: https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
+  val warnings = Seq(
+    // Silence all deprecation warnings originating from @deprecated annotations inside keymaerax itself
+    "cat=deprecation&origin=edu.cmu.cs.ls.keymaerax.*:s",
+
+    // Silence match exhaustivity warnings
+    "cat=other-match-analysis:s",
+    "cat=unchecked&msg=Exhaustivity analysis:s",
+
+    // Silence type erasure warnings
+    "cat=unchecked&msg=erasure:s",
+
+    // Silence warning about InternalAnnotation in macro subproject
+    // TODO Remove when preparing macros for Scala 3
+    "site=edu.cmu.cs.ls.keymaerax.btactics.macros.InternalAnnotation&msg=Classfile:s",
+
+    // Default configuration, see -Wconf:help
+    "cat=deprecation:ws",
+    "cat=feature:ws",
+    "cat=optimizer:ws",
+  )
+  Seq(
+    s"-Wconf:${warnings.mkString(",")}",
+    "-Xmaxwarns", "1000",
+  )
+}
 
 // Never execute tests in parallel across all sub-projects
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
