@@ -2,7 +2,7 @@ import java.io.{FileInputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
 
-ThisBuild / scalaVersion := "2.12.18"
+ThisBuild / scalaVersion := "2.13.12"
 // TODO Use this version number in keymaerax-core
 ThisBuild / version := "5.0.2"
 
@@ -39,7 +39,7 @@ ThisBuild / scalacOptions ++= {
   Seq(
     s"-Wconf:${warnings.mkString(",")}",
     "-Xmaxwarns", "1000",
-    "-Xsource:2.13",
+    "-Ymacro-annotations",
   )
 }
 
@@ -53,9 +53,6 @@ lazy val macros = project
     name := "KeYmaeraX Macros",
 
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-
-    resolvers ++= Resolver.sonatypeOssRepos("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
   )
 
 lazy val core = project
@@ -67,19 +64,16 @@ lazy val core = project
 
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
 
-    libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.1",
-    libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2",
+    libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
+    libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2",
-    libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.2",
-    libraryDependencies += "io.spray" %% "spray-json" % "1.3.4",
+    libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.1-42-gc68dbaa",
+    libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1",
     libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
-    libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.1",
-    libraryDependencies += "org.typelevel" %% "spire" % "0.16.2",
-
-    resolvers ++= Resolver.sonatypeOssRepos("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
+    libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.4",
+    libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
 
     Compile / run / mainClass := mainClass.value,
     assembly / mainClass := mainClass.value,
@@ -124,9 +118,6 @@ lazy val webui = project
     libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.8.5",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
 
-    resolvers ++= Resolver.sonatypeOssRepos("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),
-
     Compile / run / mainClass := mainClass.value,
     assembly / mainClass := mainClass.value,
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
@@ -140,7 +131,7 @@ lazy val webui = project
     // Testing //
     /////////////
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test,
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test,
     libraryDependencies += "org.scalamock" %% "scalamock" % "4.4.0" % Test,
     libraryDependencies += "org.pegdown" % "pegdown" % "1.6.0" % Test, // (For Html Scalatest reports)
 
