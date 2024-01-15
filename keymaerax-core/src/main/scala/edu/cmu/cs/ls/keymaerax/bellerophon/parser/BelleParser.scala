@@ -632,7 +632,6 @@ object BelleParser extends TacticParser with Logging {
             case f: Formula => expand(f)
             case FuncOf(Function(name, idx, domain, _, _), child) => PredOf(Function(name, idx, domain, Bool), expand(child))
             case e => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, l2)
-            case e => throw ParseException("Expected formula as exact position locator match, but got " + e.toString, l2)
           }
           Right(parsePositionLocator(posString, l1.spanTo(l2), Some(what), exact=matchKind==EXACT_MATCH, defs)) +: arguments(tail)
         case BelleToken(p: BASE_POSITION, l1)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, l2)::tail =>

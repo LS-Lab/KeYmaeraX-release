@@ -29,7 +29,6 @@ object StandardLibrary {
       case Nothing => Nil
       case Pair(l, r) => l :: tupleToTerms(r, node)
       case f => f :: Nil
-      case _ => throw ProofCheckException("Expected list argument to label reference, but got: " + f, node = node)
     }
   }
 
