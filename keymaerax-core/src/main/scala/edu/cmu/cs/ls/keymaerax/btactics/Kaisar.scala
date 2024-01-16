@@ -31,7 +31,7 @@ object Kaisar {
   * Important notes on implementation: The implementation is absolutely a prototype and a work in progress, though the
   * examples and case study we have implemented definitely demonstrate its applicability for non-trivial proofs.
   * Major TODOs for implementation:
-  *  - At present we lack a parser. Our tests are perfomed with a deep embedding which is then fed to the parser.
+  *  - At present we lack a parser. Our tests are performed with a deep embedding which is then fed to the parser.
   *    This gives a clear separation between the Kaisar language and Scala, which is what's important for validating the
   *    language, but obviously not desirable for production use.
   *  - We reuse existing parsers and data structures everywhere we can, which means reusing their concrete syntax too.
