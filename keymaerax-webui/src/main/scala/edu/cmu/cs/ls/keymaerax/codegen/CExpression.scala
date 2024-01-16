@@ -702,7 +702,7 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
       }).filter(_.nonEmpty).mkString(
         "void mpfrCompute(state pre, state curr, parameters const* const params) {\n  ",
         "\n  ",
-        "\n  " + arithmetic.trim().replaceAllLiterally("\n", "\n  ") + "\n}")
+        "\n  " + arithmetic.trim().replace("\n", "\n  ") + "\n}")
     }
     mpfrInit + "\n" + mpfrCompute
   }

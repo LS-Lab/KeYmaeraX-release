@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -167,7 +167,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression.
     * Skips parsing tactics if `parseTactics` is false. Requires KeYmaeraXPrettyPrinter setup if `parseTactics` is true. */
   protected override def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
-    val stripped = ParserHelper.removeBOM(input).replaceAllLiterally("\t","  ")
+    val stripped = ParserHelper.removeBOM(input).replace("\t","  ")
     val tokenStream = KeYmaeraXLexer.inMode(stripped, ProblemFileMode)
     try {
       parse(tokenStream, stripped, parseTactics)
@@ -1015,7 +1015,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
             if (lastSemiIdx >= 0) {
               val (funcDefBlock, nextDefStart) = parsedOk.splitAt(lastSemiIdx)
               (funcDefBlock, nextDefStart ++ remainder)
-            } else throw ex.copy(msg = "Unexpected token in definition", expect = ex.expect.replaceAllLiterally("<EOF>", SEMI.img))
+            } else throw ex.copy(msg = "Unexpected token in definition", expect = ex.expect.replace("<EOF>", SEMI.img))
           }
         case None => throw ex
       }

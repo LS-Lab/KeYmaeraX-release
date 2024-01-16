@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -61,7 +61,7 @@ class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, wit
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^"]*"[^"]*"""".r.findFirstIn(entry.problemContent) match {
         case Some(header) =>
-          s"""${entry.problemContent.replaceAllLiterally(header, head + " \"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
+          s"""${entry.problemContent.replace(header, head + " \"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
              #
              #$printedTactics
              #

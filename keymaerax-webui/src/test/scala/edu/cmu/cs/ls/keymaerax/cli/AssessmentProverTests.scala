@@ -1259,7 +1259,7 @@ class AssessmentProverTests extends TacticTestBase {
     def createGraderCookie(grader: Grader): Option[Submission.GraderCookie] = grader match {
       case AskGrader(Some(mode), args, _) =>
         Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({
-          case (k, v) => k + "=\"" + v.replaceAllLiterally("\"", "\\\"") + "\""
+          case (k, v) => k + "=\"" + v.replace("\"", "\\\"") + "\""
         }).mkString(",") + ")"))
       case AskGrader(None, _, _) => None
       case MultiAskGrader(main, _) =>
@@ -1331,7 +1331,7 @@ class AssessmentProverTests extends TacticTestBase {
                     case SequentArtifact(s) => s.map(_.toString).mkString(";;") :: Nil
                   }
                   exprs.zipWithIndex.foldRight(q)({
-                    case ((expr, i), answer) => answer.replaceAllLiterally(s"${AskQuestion.ARG_PLACEHOLDER}${i+1}",
+                    case ((expr, i), answer) => answer.replace(s"${AskQuestion.ARG_PLACEHOLDER}${i+1}",
                       "<%%" + expr + "%%>")
                   })
                 }

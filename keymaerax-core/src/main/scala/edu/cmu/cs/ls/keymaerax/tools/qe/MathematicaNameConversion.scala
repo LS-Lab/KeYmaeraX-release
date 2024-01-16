@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core.{DifferentialSymbol, Function, NamedSymbol, Real, Sort, Tuple, Unit, Variable, insist, Ensures}
@@ -105,7 +110,7 @@ private[tools] object MathematicaNameConversion {
       case DifferentialSymbol(_) => throw ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ =>
         assert(ns.name.count(c => c == '_') <= 1, "At most one _ in names")
-        val identifier = ns.name.replaceAllLiterally("_", UNDERSCORE_REPL)
+        val identifier = ns.name.replace("_", UNDERSCORE_REPL)
         NAMESPACE_PREFIX + (ns.index match {
           case Some(idx) => identifier + INDEX_SEP + idx
           case None      => identifier
@@ -123,7 +128,7 @@ private[tools] object MathematicaNameConversion {
 
   /** Unmasking without contracts. */
   private[tools] def uncheckedUnmaskName(maskedName: String): (String, Option[Int]) = {
-    val uscoreMaskedName = maskedName.replaceAllLiterally(UNDERSCORE_REPL, "_")
+    val uscoreMaskedName = maskedName.replace(UNDERSCORE_REPL, "_")
     if (uscoreMaskedName.startsWith(NAMESPACE_PREFIX)) {
       val strippedName = uscoreMaskedName.substring(NAMESPACE_PREFIX.length)
       strippedName.indexOf(INDEX_SEP) match {

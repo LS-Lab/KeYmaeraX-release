@@ -209,7 +209,7 @@ object QELogger extends Logging {
     val uniqueIndex: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map.empty
 
     def uniqueName(n: String): String = {
-      val name = n.replaceAllLiterally(" ", "_")
+      val name = n.replace(" ", "_")
       uniqueIndex.get(name) match {
         case Some(i) =>
           uniqueIndex(name) = i+1

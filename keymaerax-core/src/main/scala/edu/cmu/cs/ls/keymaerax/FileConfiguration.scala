@@ -91,12 +91,12 @@ object FileConfiguration extends Configuration {
 
   /** Returns the configuration entry `key` as an absolute path with file separators. */
   override def path(key: String): String = {
-    val p = config.getString(key).replaceAllLiterally("/", File.separator)
+    val p = config.getString(key).replace("/", File.separator)
     if (p.startsWith(File.separator)) p
     else Configuration.sanitizedPath(Configuration.KEYMAERAX_HOME_PATH, p)
   }
 
-  override def relativePath(key: String): String = apply(key).replaceAllLiterally("/", File.separator)
+  override def relativePath(key: String): String = apply(key).replace("/", File.separator)
 
   /** Sets the `value` of `key` and stores the configuration file (unless !`saveToFile`). */
   override def set(key: String, value: String, saveToFile: Boolean = true): Unit = {

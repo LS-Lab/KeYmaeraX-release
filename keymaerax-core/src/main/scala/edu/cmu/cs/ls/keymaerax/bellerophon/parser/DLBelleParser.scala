@@ -301,7 +301,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
 
   def escapedString[$: P]: P[String] = P(string).map(
-    _.replaceAllLiterally("\\\"","\"")
+    _.replace("\\\"","\"")
   )
 
   def escapedPositionExpression[$: P]: P[(Expression, PosInExpr)] = P(escapedString)./.

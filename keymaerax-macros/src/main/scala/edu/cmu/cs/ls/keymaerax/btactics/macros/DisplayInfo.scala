@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 /** UI display information on how to render an axiom, rule, or tactic application */
@@ -42,8 +43,8 @@ object AxiomDisplayInfo {
   def render(names: SimpleDisplayInfo, displayFormula: String): AxiomDisplayInfo = AxiomDisplayInfo(
     names,
     displayFormula.
-      replaceAllLiterally("<","&lt;").
-      replaceAllLiterally(">","&gt;").
+      replace("<","&lt;").
+      replace(">","&gt;").
       replaceAll("&lt;(/?(\\w+))&gt;", "<$1>"). // undo escaping HTML tags
       replaceFirst("__", "<span class=\"k4-axiom-key\">").
       replaceFirst("__", "</span>")

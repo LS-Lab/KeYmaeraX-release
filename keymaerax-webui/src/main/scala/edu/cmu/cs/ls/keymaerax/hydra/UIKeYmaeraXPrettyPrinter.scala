@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -66,7 +67,7 @@ trait HTMLPrinter {
 
   /** Replaces KeYmaeraX syntax with HTML characters (e.g., < becomes &lt;) and introduces opening/closing tags HTML syntax. */
   def htmlEncode(html: String): String = {
-    rewritings.foldLeft(html)({ case (s, (key, repl)) => s.replaceAllLiterally(key, repl) })
+    rewritings.foldLeft(html)({ case (s, (key, repl)) => s.replace(key, repl) })
     //@note single pass with regex matching is slower than multi-pass literal replacement
     //val mapper = (m: Match) => rewritings.get(m.group(1))
     //opPattern.replaceSomeIn(stringify(expr), mapper)
@@ -74,7 +75,7 @@ trait HTMLPrinter {
 
   /** Encodes HTML tags <>& etc. that may occur in text. */
   def htmlTagEncode(text: String): String = {
-    textTagRewritings.foldLeft(text)({ case (s, (key, repl)) => s.replaceAllLiterally(key, repl) })
+    textTagRewritings.foldLeft(text)({ case (s, (key, repl)) => s.replace(key, repl) })
   }
 }
 

@@ -58,7 +58,7 @@ object DLParser extends DLParser {
       // Cut off early if we encounter a \n
       val slice2 = if (slice.indexOf('\n') >= 0) slice.take(slice.indexOf('\n')) else slice
       // Escape "s and surround with "s
-      "\"" + slice2.replaceAllLiterally("\"","\\\"") + "\""
+      "\"" + slice2.replace("\"","\\\"") + "\""
     }
 
     /** The location of a parse failure. */

@@ -232,7 +232,7 @@ object DebuggingTactics extends TacticProvider {
   /** Placeholder for a tactic string that is not executed. */
   @Tactic("pending", codeName = "pending")
   def pending(tactic: String): StringInputTactic = {
-    val t =  tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\"")
+    val t =  tactic.replace("\"", "\\\"").replace("\\\\\"", "\\\"")
     pendingX(t)
   }
 

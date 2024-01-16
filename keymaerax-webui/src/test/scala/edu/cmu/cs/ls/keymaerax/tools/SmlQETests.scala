@@ -56,7 +56,7 @@ class SmlQETests extends TacticTestBase {
          |Duration [ms]: $duration""".stripMargin
 
     override def toCsv(infoPrinter: Map[String, String]=>String = defaultInfoPrinter): String =
-      s"""$name,$index,$status,$timeout,$duration,"${result.replaceAllLiterally("\"","\"\"")}"${infoPrinter(info)}"""
+      s"""$name,$index,$status,$timeout,$duration,"${result.replace("\"","\"\"")}"${infoPrinter(info)}"""
   }
   case class BenchmarkResultList(file: String, fileIdx: Long, overallDuration: Long,
                                  results: List[BenchmarkResultEntry]) extends BenchmarkResult {
@@ -192,7 +192,7 @@ class SmlQETests extends TacticTestBase {
           }).foreach(smtlib.printer.TailPrinter.printCommand(_, printedInfos))
           //val converted = closed(naiveNoDiv(noExp(fml), tool))
           val converted = closed(noExp(fml))
-          val content = DefaultSMTConverter(converted).replaceAllLiterally("_v_", "")
+          val content = DefaultSMTConverter(converted).replace("_v_", "")
           val fn = new File(outDir, pwd.toURI.relativize(file.toURI).getPath)
           fn.getParentFile.mkdirs()
           Files.write(Paths.get(fn.toURI), (printedInfos + content).getBytes(StandardCharsets.UTF_8))
@@ -226,7 +226,7 @@ class SmlQETests extends TacticTestBase {
       exprs.filter(_.isInstanceOf[Formula]).map(_.asInstanceOf[Formula]) match {
         case Not(fml) :: Nil =>
           val converted = negate(fml)
-          val content = DefaultSMTConverter(converted).replaceAllLiterally("_v_", "")
+          val content = DefaultSMTConverter(converted).replace("_v_", "")
           val fn = new File(outDir, pwd.toURI.relativize(file.toURI).getPath)
           fn.getParentFile.mkdirs()
           Files.write(Paths.get(fn.toURI), content.getBytes(StandardCharsets.UTF_8))
@@ -291,7 +291,7 @@ class SmlQETests extends TacticTestBase {
           }
           val fn = new File(outDir, pwd.toURI.relativize(file.toURI).getPath)
           fn.getParentFile.mkdirs()
-          Files.write(Paths.get(fn.toURI), content.replaceAllLiterally("_v_", "").getBytes(StandardCharsets.UTF_8))
+          Files.write(Paths.get(fn.toURI), content.replace("_v_", "").getBytes(StandardCharsets.UTF_8))
         case _ :: Nil => fail("Skipping" + file.getName + " because Not(fml) expected")
         case fmls => fail("Skipping" + file.getName + " because " + fmls.size + " entries (expected 1)")
       }
@@ -317,7 +317,7 @@ class SmlQETests extends TacticTestBase {
     val entries = ArchiveParser(Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/qe/harrison.kyx")).mkString)
     Table("entry", entries:_*).forEvery(entry => {
       val smt = DefaultSMTConverter(closed(naiveNoDiv(noExp(entry.model), tool).asInstanceOf[Formula]))
-      val name = entry.name.substring(entry.name.lastIndexOf('/')+1).replaceAllLiterally("(","").replaceAllLiterally(")","").replaceAllLiterally(" ", "-")
+      val name = entry.name.substring(entry.name.lastIndexOf('/')+1).replace("(","").replace(")","").replace(" ", "-")
       Files.write(Paths.get(new File(pwd, name + ".smt2").toURI), smt.getBytes(StandardCharsets.UTF_8))
     })
   }
@@ -339,7 +339,7 @@ class SmlQETests extends TacticTestBase {
       // the generated SMT2 format creates wrong SML examples; replace numbers in generated SML code manually
       println(entry.name + "\n" + SmlQENoRoundingPrinter(fml))
       val smt = plainNumberConverter(fml)
-      val name = entry.name.substring(entry.name.lastIndexOf('/')+1).replaceAllLiterally("(","").replaceAllLiterally(")","").replaceAllLiterally(" ", "-")
+      val name = entry.name.substring(entry.name.lastIndexOf('/')+1).replace("(","").replace(")","").replace(" ", "-")
       Files.write(Paths.get(new File(pwd, name + ".smt2").toURI), smt.getBytes(StandardCharsets.UTF_8))
     })
   }
@@ -350,7 +350,7 @@ class SmlQETests extends TacticTestBase {
     val entries = ArchiveParser(Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/qe/cex.kyx")).mkString)
     Table("entry", entries:_*).forEvery(entry => {
       val smt = DefaultSMTConverter(closed(entry.model.asInstanceOf[Formula]))
-      val name = entry.name.substring(entry.name.lastIndexOf('/')+1).replaceAllLiterally("(","").replaceAllLiterally(")","").replaceAllLiterally(" ", "-")
+      val name = entry.name.substring(entry.name.lastIndexOf('/')+1).replace("(","").replace(")","").replace(" ", "-")
       Files.write(Paths.get(new File(pwd, name + ".smt2").toURI), smt.getBytes(StandardCharsets.UTF_8))
     })
   }
@@ -491,7 +491,7 @@ class SmlQETests extends TacticTestBase {
       logLines.zipWithIndex.map({ case (l, i) =>
       // format e.g. {cade09converted/ETCS-d-braking-node1346.smt2, {0.090669, {379, True}}}
       val name :: duration :: _ :: result :: Nil =
-        l.replaceAllLiterally("{", "").replaceAllLiterally("}", "").split(",").map(_.trim).toList
+        l.replace("{", "").replace("}", "").split(",").map(_.trim).toList
       result match {
         case "True" => BenchmarkResultEntry(name, i, "aproved", l, TIMEOUT * 1000, (duration.toDouble*1000).toLong)
         case "False" => BenchmarkResultEntry(name, i, "disproved", l, TIMEOUT * 1000, (duration.toDouble*1000).toLong)

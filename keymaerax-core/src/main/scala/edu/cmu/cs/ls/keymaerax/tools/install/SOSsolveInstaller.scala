@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.install
 
 import java.io.{File, FileOutputStream}
@@ -37,7 +42,7 @@ object SOSsolveInstaller extends Logging {
       val sossolveSrc = Channels.newChannel(getClass.getResourceAsStream(sossolveResourcePath + n))
       sossolveDest.getChannel.transferFrom(sossolveSrc, 0, Long.MaxValue)
     })
-    val sossolveAbsPaths = sossolveResourceNames.map(sossolveDir + File.separator + _.replaceAllLiterally("/", File.separator))
+    val sossolveAbsPaths = sossolveResourceNames.map(sossolveDir + File.separator + _.replace("/", File.separator))
     assert(sossolveAbsPaths.forall(new File(_).exists()), "Missing SOSsolve files")
     sossolveDir
   }

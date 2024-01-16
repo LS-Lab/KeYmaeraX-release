@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
  * HyDRA API Responses
  *  @author Nathan Fulton
@@ -118,8 +119,8 @@ class ErrorResponse(val msg: String, val exn: Throwable = null, val severity: St
         .replaceAll("\\s+$|\\s*(\n)\\s*|(\\s)\\s*", "$1$2") //@note collapse newlines
     } else ""
   def getJson: JsValue = JsObject(
-    "textStatus" -> (if (msg != null) JsString(msg.replaceAllLiterally("[Bellerophon Runtime]", "")) else JsString("")),
-    "causeMsg" -> (if (exn != null && exn.getMessage != null) JsString(exn.getMessage.replaceAllLiterally("[Bellerophon Runtime", "")) else JsString("")),
+    "textStatus" -> (if (msg != null) JsString(msg.replace("[Bellerophon Runtime]", "")) else JsString("")),
+    "causeMsg" -> (if (exn != null && exn.getMessage != null) JsString(exn.getMessage.replace("[Bellerophon Runtime", "")) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
     "type" -> JsString(severity)
   )
@@ -142,7 +143,7 @@ object Helpers {
 
   /** Stateful format provider to read off whitespace and line breaks from a pretty-printed string. */
   case class HtmlPrettyPrintFormatProvider(format: String, wsPrinter: String => String =
-      _.replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;"))
+      _.replace("\n", "<br/>").replaceAll("\\s", "&nbsp;"))
     extends PrettyPrintFormatProvider(format, wsPrinter) {
 
   }

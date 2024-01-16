@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.PositionLocator
@@ -165,8 +170,8 @@ private object PARTIAL extends BelleTerminal("partial") {
 private abstract class BELLE_EXPRESSION(val exprString: String, val delimiters: (String, String)) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
   lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2).
     // un-escape escaped delimiters
-    replaceAllLiterally("\\" + delimiters._1, delimiters._1).
-    replaceAllLiterally("\\" + delimiters._2, delimiters._2)
+    replace("\\" + delimiters._1, delimiters._1).
+    replace("\\" + delimiters._2, delimiters._2)
 
   override def regexp: Regex = BELLE_EXPRESSION.regexp
   override val startPattern: Regex = BELLE_EXPRESSION.startPattern

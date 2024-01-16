@@ -254,7 +254,7 @@ object QuizExtractor {
     /** Translates a string `arg1="v1",arg2="v2",arg3="v\"3\"",...` into a map of arguments */
     def argsFromString(args: Option[String]): Map[String, String] = {
       args.map(GRADER_ARG.findAllMatchIn).getOrElse(Iterator.empty).
-        map(m => (m.group(ARG_NAME), m.group(ARG_VAL).replaceAllLiterally("\\\"", "\""))).
+        map(m => (m.group(ARG_NAME), m.group(ARG_VAL).replace("\\\"", "\""))).
         toMap
     }
   }

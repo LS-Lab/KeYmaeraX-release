@@ -738,7 +738,7 @@ object AssessmentProver {
         val argIdxs = args.values.flatMap(v => { ARG_INDEX.findAllMatchIn(v).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList }).toList.sorted
         val newArgIdxs = argIdxs.map(i => (i, if (i<0) i+earlier.keys.size+1 else i+earlier.keys.size))
         val mergedArgs = args.map({ case (k, v) =>
-          val rewrittenBackRefs = newArgIdxs.foldRight(v)({ case ((i, j), mv) => mv.replaceAllLiterally(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + i, QuizExtractor.AskQuestion.ARG_PLACEHOLDER + j) })
+          val rewrittenBackRefs = newArgIdxs.foldRight(v)({ case ((i, j), mv) => mv.replace(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + i, QuizExtractor.AskQuestion.ARG_PLACEHOLDER + j) })
           (k, rewrittenBackRefs)
         })
 
@@ -871,7 +871,7 @@ object AssessmentProver {
       KeYmaeraXProofChecker(60, Declaration(Map.empty))(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb))))
   }
 
-  private def nameOf(t: Term): String = StaticSemantics.freeVars(t).toSet[Variable].map(_.prettyString.replaceAllLiterally("_", "$u$")).mkString("")
+  private def nameOf(t: Term): String = StaticSemantics.freeVars(t).toSet[Variable].map(_.prettyString.replace("_", "$u$")).mkString("")
 
   /** Extracts all function subterms of term `t`. */
   private def extractFunctions(t: Term): List[Term] = {
@@ -1405,10 +1405,10 @@ object AssessmentProver {
     ex match {
       case ex: ParseException =>
         msgStream.println(questionIdentifier(problem, prompt) + "..." + Messages.PARSE_ERROR + "\n  " +
-          ex.toString.replaceAllLiterally("\n", "\n  "))
+          ex.toString.replace("\n", "\n  "))
       case _ =>
         msgStream.println(questionIdentifier(problem, prompt) + "..." + Messages.PARSE_ERROR + "\n" +
-          ex.getMessage.replaceAllLiterally("\n", "\n  "))
+          ex.getMessage.replace("\n", "\n  "))
     }
     (prompt, 0.0)
   }
@@ -1639,13 +1639,13 @@ object AssessmentProver {
     val repTacs = TACTIC_REPETITION_EXTRACTOR.findAllMatchIn(s).toList
     if (repTacs.nonEmpty) {
       val unfolded = repTacs.map(_.group(REPTAC_GROUP)).map(t => {
-        t -> (1 to args.size).map(i => t.replaceAllLiterally(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "i", s"${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}$i")).mkString(";")
+        t -> (1 to args.size).map(i => t.replace(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "i", s"${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}$i")).mkString(";")
       })
-      val replaced = unfolded.foldRight(s)({ case ((what, repl), s) => s.replaceAllLiterally(s"for ${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}i do${what}endfor", repl) })
+      val replaced = unfolded.foldRight(s)({ case ((what, repl), s) => s.replace(s"for ${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}i do${what}endfor", repl) })
       assert(!replaced.contains(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "i"), "Expected to have replaced all variable-length argument repetitions")
       expand(replaced, args, parser)
     } else {
-      val ts = (1 to args.size).foldRight(s)({ case (i, s) => s.replaceAllLiterally(s"${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}$i", args(i-1)) })
+      val ts = (1 to args.size).foldRight(s)({ case (i, s) => s.replace(s"${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}$i", args(i-1)) })
       require(!ts.contains(QuizExtractor.AskQuestion.ARG_PLACEHOLDER), "Not enough arguments provided for tactic")
       parser(ts)
     }

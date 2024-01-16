@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.install
 
 import java.io.{File, FileOutputStream}
@@ -65,7 +66,7 @@ object PegasusInstaller extends Logging {
       val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + n))
       pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
     })
-    val pegasusAbsPaths = pegasusResourceNames.map(pegasusDir + File.separator + _.replaceAllLiterally("/", File.separator))
+    val pegasusAbsPaths = pegasusResourceNames.map(pegasusDir + File.separator + _.replace("/", File.separator))
     assert(pegasusAbsPaths.forall(new File(_).exists()), "Missing Pegasus files")
     pegasusDir
   }

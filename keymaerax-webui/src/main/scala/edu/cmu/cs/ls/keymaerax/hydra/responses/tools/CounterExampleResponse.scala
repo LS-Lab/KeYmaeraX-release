@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.tools
 
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
@@ -19,19 +20,19 @@ class CounterExampleResponse(kind: String, assumptions: Option[Formula], fml: Fo
     val (boundCex, freeCex) = cex.partition(e => bv.contains(e._1))
     JsObject(
       "result" -> JsString(kind),
-      "origFormula" -> JsString(fml.prettyString.replaceAllLiterally("()", "")),
-      "additionalAssumptions" -> assumptions.map(f => JsString(f.prettyString.replaceAllLiterally("()", ""))).getOrElse(JsNull),
-      "cexFormula" -> JsString(createCexFormula(fml, cex).replaceAllLiterally("()", "")),
+      "origFormula" -> JsString(fml.prettyString.replace("()", "")),
+      "additionalAssumptions" -> assumptions.map(f => JsString(f.prettyString.replace("()", ""))).getOrElse(JsNull),
+      "cexFormula" -> JsString(createCexFormula(fml, cex).replace("()", "")),
       "cexValues" -> JsArray(
         freeCex.map(e => JsObject(
-          "symbol" -> JsString(e._1.prettyString.replaceAllLiterally("()", "")),
-          "value" -> JsString(e._2.prettyString.replaceAllLiterally("()", "")))
+          "symbol" -> JsString(e._1.prettyString.replace("()", "")),
+          "value" -> JsString(e._2.prettyString.replace("()", "")))
         ).toList:_*
       ),
       "speculatedValues" -> JsArray(
         boundCex.map(e => JsObject(
-          "symbol" -> JsString(e._1.prettyString.replaceAllLiterally("()", "")),
-          "value" -> JsString(e._2.prettyString.replaceAllLiterally("()", "")))
+          "symbol" -> JsString(e._1.prettyString.replace("()", "")),
+          "value" -> JsString(e._2.prettyString.replace("()", "")))
         ).toList:_*
       )
     )

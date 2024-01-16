@@ -70,7 +70,7 @@ class SmlQEPrinter(intPrinter: BigInt => String, realPrinter: BigDecimal => Stri
 
   /** Prints number `n`. */
   def printNum(n: BigDecimal): String = n.toBigIntExact match {
-    case Some(i) => intPrinter(i).replaceAllLiterally("-","~")
-    case None    => realPrinter(n).replaceAllLiterally("-","~")
+    case Some(i) => intPrinter(i).replace("-","~")
+    case None    => realPrinter(n).replace("-","~")
   }
 }

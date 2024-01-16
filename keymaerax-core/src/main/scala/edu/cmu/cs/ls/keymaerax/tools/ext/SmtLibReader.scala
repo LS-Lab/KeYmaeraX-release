@@ -71,7 +71,7 @@ object SmtLibReader {
 
   /** Sanitizes names by replacing `_`with [[USCORE]]. */
   private def sanitize(name: String): String = {
-    name.replaceAllLiterally("_", USCORE)
+    name.replace("_", USCORE)
   }
 
   /** Converts a formula. */

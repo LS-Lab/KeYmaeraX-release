@@ -429,7 +429,7 @@ object KeYmaeraX {
         val entryOnwardsConverted = orig.tactics.map(_._2).zip(conv.tactics.map(_._2)).foldLeft(entryOnwards)({
           case (fc, (ot, ct)) => StringUtils.replaceOnce(fc, ot, ct)
         })
-        content.replaceAllLiterally(entryOnwards, entryOnwardsConverted)
+        content.replace(entryOnwards, entryOnwardsConverted)
     })
 
     val outFile = options(Symbol("out")).toString

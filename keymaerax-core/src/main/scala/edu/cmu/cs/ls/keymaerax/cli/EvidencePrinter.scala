@@ -17,6 +17,6 @@ object EvidencePrinter {
     nocomment(options.getOrElse(Symbol("commandLine"), "<unavailable>").asInstanceOf[String]) + " */\n\n"
 
   /** Replace C-style line-comments in command line (from wildcard paths) */
-  private def nocomment(s: String): String = s.replaceAllLiterally("/*", "/STAR").replaceAllLiterally("*/", "STAR/")
+  private def nocomment(s: String): String = s.replace("/*", "/STAR").replace("*/", "STAR/")
 
 }

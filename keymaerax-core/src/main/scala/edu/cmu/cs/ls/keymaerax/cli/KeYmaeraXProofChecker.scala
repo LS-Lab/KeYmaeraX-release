@@ -240,7 +240,7 @@ object KeYmaeraXProofChecker {
 
   /** Replaces illegal characters in file names. */
   private def sanitize(filename: String): String = URLEncoder.encode(filename, "UTF-8").
-    replaceAllLiterally(URLEncoder.encode(File.separator, "UTF-8"), File.separator)
+    replace(URLEncoder.encode(File.separator, "UTF-8"), File.separator)
 
   private def proveEntry(path: Path, entry: ParsedArchiveEntry, outputFileName: String,
                          options: OptionMap): List[ProofStatistics] = {

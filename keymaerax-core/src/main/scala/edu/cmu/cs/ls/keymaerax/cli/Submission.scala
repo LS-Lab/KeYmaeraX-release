@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.AskQuestion
@@ -73,7 +78,7 @@ object Submission {
       private def sanitizeGraderMethod(m: String): String = {
         //@note \%1 is %1 in JSON
         val m1 = m.replaceAll("""(?<!\\)%""", Regex.quoteReplacement("\\%")).
-          replaceAllLiterally("\n", " ")
+          replace("\n", " ")
         //@note {` `} become \u2018 in JSON
         var i = 0
         val m2 = "\u2018".r.replaceAllIn(m1, _ => { i=i+1; if (i%2 == 1) "{`" else "`}" })

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -481,7 +482,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           }
 
         case t: StringInputTactic if t.name == "pending" && executePending =>
-          val pending = BelleParser.parseBackwardsCompatible(t.inputs.head.replaceAllLiterally("\\\"", "\""), defs)
+          val pending = BelleParser.parseBackwardsCompatible(t.inputs.head.replace("\\\"", "\""), defs)
           runTactic(pending, goal, level-1, ctx, strict, convertPending, executePending)
 
         case t: InputTactic if level > 0 =>

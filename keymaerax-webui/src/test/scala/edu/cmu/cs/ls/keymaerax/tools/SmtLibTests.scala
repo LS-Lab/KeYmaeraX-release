@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
@@ -23,8 +24,8 @@ class SmtLibTests extends TacticTestBase {
     def roundTrip(t: Formula): Formula = {
       def convertVar(v: Variable): Variable = v match {
         case bv: BaseVariable => bv.copy(name = bv.name.
-          replaceAllLiterally(SmtLibReader.USCORE, "_").
-          replaceAllLiterally(VAR_PREFIX, ""))
+          replace(SmtLibReader.USCORE, "_").
+          replace(VAR_PREFIX, ""))
       }
 
       def convertFml(f: Formula): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
@@ -37,8 +38,8 @@ class SmtLibTests extends TacticTestBase {
           case v: BaseVariable => Right(convertVar(v))
           case FuncOf(fn, args) =>
             Right(FuncOf(fn.copy(name = fn.name.
-              replaceAllLiterally(SmtLibReader.USCORE, "_").
-              replaceAllLiterally(FUNC_PREFIX, "")), args))
+              replace(SmtLibReader.USCORE, "_").
+              replace(FUNC_PREFIX, "")), args))
           case _ => Left(None)
         }
       }, f).get
