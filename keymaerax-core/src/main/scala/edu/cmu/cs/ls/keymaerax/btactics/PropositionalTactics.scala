@@ -204,13 +204,13 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
           val assms = (notsuccs ++ antes).reduceRightOption(And).getOrElse(True)
           val mpShow = Sequent(scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(Imply(assms, p)))
           //@todo tactic with timeouts results in proof repeatability issues
-          val mpLemma = proveBy(mpShow, SaturateTactic(implyR('R) | andL('L)) & EqualityTactics.expandAll & PropositionalTactics.prop &
+          val mpLemma = proveBy(mpShow, SaturateTactic(implyR(Symbol("R")) | andL(Symbol("L"))) & EqualityTactics.expandAll & PropositionalTactics.prop &
             Idioms.doIf(_.subgoals.size <= 4)(OnAll(QEX(None, Some(Number(2))))))
 
           if (mpLemma.isProved) {
             cut(p) < (
-              modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop) & SaturateTactic(hideL('L, p)),
-              useAt(mpLemma, PosInExpr(1 :: Nil))('Rlast) & PropositionalTactics.prop & done)
+              modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop) & SaturateTactic(hideL(Symbol("L"), p)),
+              useAt(mpLemma, PosInExpr(1 :: Nil))(Symbol("Rlast")) & PropositionalTactics.prop & done)
           } else throw new TacticInapplicableFailure("Failed to prove assumptions")
         }
       case _ => throw new TacticInapplicableFailure("Applicable only to implications at top-level in the antecedent")

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.util.concurrent.CancellationException
@@ -232,7 +233,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         try {
           result = apply(child, result)
           result match {
-            case BelleProvable(pr, _) if pr.isProved => break
+            case BelleProvable(pr, _) if pr.isProved => break()
             case _ => // continue
           }
         } catch {

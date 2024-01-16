@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -182,7 +183,7 @@ object InvariantProvers {
                   // try the candidate if there is one, else proceed to the next branch
                   if (next.isDefined) {
                     candidate = next
-                    break
+                    break()
                   }
                   logger.debug("loopPostMaster branch skip")
                 case _ => // ignore branches that are not about ODEs
@@ -219,7 +220,7 @@ object InvariantProvers {
             )
             ,
             /* show |- jja() is postponed since only provable when eventually jja()~>True instantiated */
-            cohide('Rlast, jja)
+            cohide(Symbol("Rlast"), jja)
             )
           ),
         generateOnTheFly(pos)

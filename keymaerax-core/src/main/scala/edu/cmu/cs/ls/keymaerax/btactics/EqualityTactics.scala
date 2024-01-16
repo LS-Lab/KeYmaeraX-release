@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -160,7 +165,7 @@ private object EqualityTactics extends TacticProvider {
         (provable
           (useAt(Ax.equalCommute)(eqPos).computeResult _, 0)
           (eqL2R(eqPos)(pos).computeResult _, 0)
-          (useAt(Ax.equalCommute)('L, Equal(rhs, lhs)).computeResult _, 0)
+          (useAt(Ax.equalCommute)(Symbol("L"), Equal(rhs, lhs)).computeResult _, 0)
           )
       case Some(e) => throw new TacticInapplicableFailure("eqR2L only applicable to equalities l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + eqPos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -315,7 +320,7 @@ private object EqualityTactics extends TacticProvider {
         if (polarity >= 0) /* positive and unknown polarity */ Forall(v :: Nil, Imply(Equal(v, e), inFml.replaceFree(e, v)))
         else Exists(v :: Nil, And(Equal(v, e), inFml.replaceFree(e, v)))
 
-      val cohidePos = if (pos.isAnte) cohide('Rlast) else cohide(pos.top)
+      val cohidePos = if (pos.isAnte) cohide(Symbol("Rlast")) else cohide(pos.top)
 
       cutAt(cutFml)(pos) <(
         /* use */ skip,
@@ -353,8 +358,8 @@ private object EqualityTactics extends TacticProvider {
         val absVar = Variable(fn.name + "_", freshAbsIdx)
         (provable
           (abbrv(abs, Some(absVar)).result _, 0)
-          (useAt(Ax.equalCommute)('L, Equal(absVar, abs)).computeResult _, 0)
-          (useAt(Ax.abs)('L, Equal(abs, absVar)).computeResult _, 0)
+          (useAt(Ax.equalCommute)(Symbol("L"), Equal(absVar, abs)).computeResult _, 0)
+          (useAt(Ax.abs)(Symbol("L"), Equal(abs, absVar)).computeResult _, 0)
           )
       } else {
         absAt(pos).computeResult(provable)
@@ -497,10 +502,10 @@ private object EqualityTactics extends TacticProvider {
           val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
           (provable
             (abbrv(minmax, Some(minmaxVar)).result _, 0)
-            (useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)).computeResult _, 0)
+            (useAt(Ax.equalCommute)(Symbol("L"), Equal(minmaxVar, minmax)).computeResult _, 0)
             (fn match {
-              case InterpretedSymbols.minF.name => useAt(Ax.min)('L, Equal(minmax, minmaxVar)).computeResult _
-              case InterpretedSymbols.maxF.name => useAt(Ax.max)('L, Equal(minmax, minmaxVar)).computeResult _
+              case InterpretedSymbols.minF.name => useAt(Ax.min)(Symbol("L"), Equal(minmax, minmaxVar)).computeResult _
+              case InterpretedSymbols.maxF.name => useAt(Ax.max)(Symbol("L"), Equal(minmax, minmaxVar)).computeResult _
               case _ => throw new AssertionError("Cannot happen")
             }, 0)
             )

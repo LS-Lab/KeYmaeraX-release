@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 import com.wolfram.jlink.{Expr, KernelLink}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleLabel
@@ -91,7 +92,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     "Mathematica 9" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in {
       val mathematica = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica")
       mathematica.init(Map("linkName" -> "/Applications/Mathematica9.app/Contents/MacOS/MathKernel"))
-      mathematica shouldBe 'initialized
+      mathematica shouldBe Symbol("initialized")
       mathematica.shutdown()
     }
   }
@@ -99,7 +100,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   "Mathematica 10" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in {
     val mathematica = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica")
     mathematica.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
-    mathematica shouldBe 'initialized
+    mathematica shouldBe Symbol("initialized")
     mathematica.shutdown()
   }
 
@@ -146,8 +147,8 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   }
 
   "Blocking kernels" should "be detected" in withMathematica { link =>
-    val lnk = PrivateMethod[MathematicaLink]('link)
-    val ml = PrivateMethod[KernelLink]('ml)
+    val lnk = PrivateMethod[MathematicaLink](Symbol("link"))
+    val ml = PrivateMethod[KernelLink](Symbol("ml"))
     val theLink = link invokePrivate lnk()
     val commandRunner = theLink match {
       case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.invokePrivate(ml()))
@@ -183,8 +184,8 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
   "Restarting Mathematica" should "work from a killed kernel" taggedAs IgnoreInBuildTest in withMathematica { link =>
     //@note Kills all WolframKernel!
-    val lnk = PrivateMethod[MathematicaLink]('link)
-    val ml = PrivateMethod[KernelLink]('ml)
+    val lnk = PrivateMethod[MathematicaLink](Symbol("link"))
+    val ml = PrivateMethod[KernelLink](Symbol("ml"))
     val theLink = link invokePrivate lnk()
     val executor: ToolExecutor = new ToolExecutor(1)
 
@@ -222,15 +223,15 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     tool.shutdown()
     for (_ <- 0 to 10) {
       tool.init(ToolConfiguration.config("mathematica"))
-      tool shouldBe 'initialized
-      tool.qe("1>0".asFormula).fact shouldBe 'proved
+      tool shouldBe Symbol("initialized")
+      tool.qe("1>0".asFormula).fact shouldBe Symbol("proved")
       tool.shutdown()
     }
   }
 
   "Expressions deeper than 256" should "FEATURE_REQUEST: evaluate both as strings and expressions" taggedAs TodoTest in withMathematica { mathematica =>
-    val lnkMethod = PrivateMethod[MathematicaLink]('link)
-    val mlMethod = PrivateMethod[KernelLink]('ml)
+    val lnkMethod = PrivateMethod[MathematicaLink](Symbol("link"))
+    val mlMethod = PrivateMethod[KernelLink](Symbol("ml"))
     val ml = mathematica.invokePrivate(lnkMethod()).asInstanceOf[JLinkMathematicaLink].invokePrivate(mlMethod())
     val x = MathematicaOpSpec.symbol("x")
     val deepExpression = (0 until 256).map(_ => x).reduce(MathematicaOpSpec.plus(_, _))

@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.codegen.PythonPrettyPrinter.{nameIdentifier, printSort}
@@ -156,7 +157,7 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
       case _ => throw new CodeGenerationException("Unsupported symbol " + expr.prettyString + " found in initial conditions " + init.prettyString)
     }
 
-    val initGen = new SimpleMonitorGenerator('resist, defs, PythonPrettyPrinter, initTermContainer)
+    val initGen = new SimpleMonitorGenerator(Symbol("resist"), defs, PythonPrettyPrinter, initTermContainer)
     val (_, initBody) = initGen(init, stateVars, inputVars, fileName)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
@@ -170,7 +171,7 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
       printParameterDeclaration(parameters) +
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
-      printVerdictDeclaration +
+      printVerdictDeclaration() +
       printFuncDefs(defs, parameters, expr) +
       initCheck + "\n" +
       bodyDefs

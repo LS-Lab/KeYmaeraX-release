@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.codegen
 
@@ -32,7 +32,7 @@ class CCodeGeneratorTests extends TacticTestBase {
   override def beforeEach(): Unit = {
     super.beforeEach()
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
-    generator = new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty)), True, Declaration(Map.empty))
+    generator = new CGenerator(new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty)), True, Declaration(Map.empty))
   }
 
   override def afterEach(): Unit = {
@@ -496,7 +496,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val result = proveBy(modelplexInput, tactic)
     val monitorFml = result.subgoals.head.succ.head
     val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-    proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe 'proved
+    proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
 
     val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
 
@@ -657,7 +657,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val Sequent(IndexedSeq(), IndexedSeq(monitorFml)) = result.subgoals.loneElement
     val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
     println("Monitor formula " + monitorFml.prettyString + "\nPretty " + reassociatedMonitorFml.prettyString)
-    proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe 'proved
+    proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
 
     val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     println("Test prog " + testProg.prettyString)
@@ -1047,7 +1047,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       CGenerator.printInputDeclaration(inputs) + "\n" +
       CGenerator.printVerdictDeclaration()
     val fallbackCode = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg, stateVars)._2
-    val monitorCode = new CMonitorGenerator('resist, Declaration(Map.empty))(monitor, stateVars)._1
+    val monitorCode = new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty))(monitor, stateVars)._1
 
     val code = s"""
        |#include <stdio.h>
@@ -1098,7 +1098,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         CGenerator.printInputDeclaration(Set()) + "\n" +
         CGenerator.printVerdictDeclaration()
     val fallbackCode = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg, stateVars)._2
-    val monitorCode = new CMonitorGenerator('resist, Declaration(Map.empty))(monitor, stateVars)._1
+    val monitorCode = new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty))(monitor, stateVars)._1
 
     val code = s"""
       |#include <stdio.h>

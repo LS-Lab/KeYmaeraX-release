@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex
@@ -44,13 +45,13 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean,
       val fallbackCode = new CControllerGenerator(defs)(ctrl, vars, inputVars)
 
       val inputModel = Imply(True, Box(ctrl, True))
-      val monitorFml = ModelPlex(inputModel, 'ctrl)
+      val monitorFml = ModelPlex(inputModel, Symbol("ctrl"))
       val monitor = monitorKind match {
         case "boolean" => monitorFml
         case "metric" => ModelPlex.toMetric(monitorFml)
       }
 
-      val monitorCode = (new CMonitorGenerator('resist, defs))(monitor, vars, inputVars)
+      val monitorCode = (new CMonitorGenerator(Symbol("resist"), defs))(monitor, vars, inputVars)
       val params = CodeGenerator.getParameters(monitor, vars)
       val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
         CGenerator.printStateDeclaration(vars) + "\n" +

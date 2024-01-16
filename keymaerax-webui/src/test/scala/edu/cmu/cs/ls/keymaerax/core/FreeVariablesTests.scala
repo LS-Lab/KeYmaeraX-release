@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
@@ -290,17 +291,17 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Fresh index computation" should "work on formulas" in {
-    TacticHelper.freshIndexInFormula("x", "true".asPlainFormula) shouldBe 'empty
-    TacticHelper.freshIndexInFormula("x", "y>0".asPlainFormula) shouldBe 'empty
+    TacticHelper.freshIndexInFormula("x", "true".asPlainFormula) shouldBe Symbol("empty")
+    TacticHelper.freshIndexInFormula("x", "y>0".asPlainFormula) shouldBe Symbol("empty")
     TacticHelper.freshIndexInFormula("x", "x>y".asPlainFormula).value shouldBe 0
     TacticHelper.freshIndexInFormula("x", "x>x_0".asPlainFormula).value shouldBe 1
     TacticHelper.freshIndexInFormula("x", "x>x_4".asPlainFormula).value shouldBe 5
   }
 
   it should "work on sequents" in {
-    TacticHelper.freshIndexInSequent("x", Sequent(scala.collection.immutable.IndexedSeq.empty, scala.collection.immutable.IndexedSeq.empty)) shouldBe 'empty
-    TacticHelper.freshIndexInSequent("x", "==> true".asPlainSequent) shouldBe 'empty
-    TacticHelper.freshIndexInSequent("x", "==> y>0".asPlainSequent) shouldBe 'empty
+    TacticHelper.freshIndexInSequent("x", Sequent(scala.collection.immutable.IndexedSeq.empty, scala.collection.immutable.IndexedSeq.empty)) shouldBe Symbol("empty")
+    TacticHelper.freshIndexInSequent("x", "==> true".asPlainSequent) shouldBe Symbol("empty")
+    TacticHelper.freshIndexInSequent("x", "==> y>0".asPlainSequent) shouldBe Symbol("empty")
     TacticHelper.freshIndexInSequent("x", "==> x>y, z>x".asPlainSequent).value shouldBe 0
     TacticHelper.freshIndexInSequent("x", "x_0>4 ==> x>5, x<7".asPlainSequent).value shouldBe 1
     TacticHelper.freshIndexInSequent("x", "x_4=7, x_5=3 ==> x>x_2, x_8<5".asPlainSequent).value shouldBe 9

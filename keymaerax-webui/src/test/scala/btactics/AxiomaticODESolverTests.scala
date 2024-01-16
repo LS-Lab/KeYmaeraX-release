@@ -27,11 +27,11 @@ import org.scalatest.LoneElement._
   * @author Stefan Mitsch
   */
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
-  private val dgc = PrivateMethod[BuiltInPositionTactic]('DGC)
+  private val dgc = PrivateMethod[BuiltInPositionTactic](Symbol("DGC"))
 
   "Selection sort" should "not have a match error" in withMathematica { _ =>
     val ode = "[{posLead'=velLead,velLead'=A,posCtrl'=velCtrl,velCtrl'=a,t'=1}] true".asFormula
-    proveBy(ode,TactixLibrary.solve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe 'proved
+    proveBy(ode,TactixLibrary.solve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe Symbol("proved")
   }
 
   "Selection sort" should "achieve intended permutation" in withMathematica { _ =>
@@ -39,7 +39,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
     val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS(Ax.equivReflexive)
     val fml = "[{w' = 2,  x' = 0, y' = 3, z' = 1}]true <-> [{x' = 0, z' = 1, w' = 2, y' = 3}]true".asFormula
-    proveBy(fml, e) shouldBe 'proved
+    proveBy(fml, e) shouldBe Symbol("proved")
   }
 
   "dfs" should "order dependencies nicely" in {
@@ -412,31 +412,31 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
-    proveBy(f, t) shouldBe 'proved
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   it should "prove the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2&a=3 -> [{x'=v,v'=a}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
-    proveBy(f, t) shouldBe 'proved
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   it should "prove the triple integrator x'''=j" in withMathematica { _ =>
     val f = "x=1&v=2&a=3&j=4 -> [{x'=v,v'=a,a'=j}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
-    proveBy(f, t) shouldBe 'proved
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   it should "prove with constant v'=0" in withMathematica { _ =>
     val f = "A>0 & B>0 & x+v^2/(2*B)<=S & v=0 -> [{x'=v,v'=0&v>=0&x+v^2/(2*B)>=S}](v>=0&x+v^2/(2*B)<=S)".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
-    proveBy(f, t) shouldBe 'proved
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   it should "prove STTT tutorial example 5 acceleration" in withMathematica { _ =>
     val f = "A>0 & B>0 & ep>0 & v>=0 & x+v^2/(2*B)<=S & x+v^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v)<=S & c=0 -> [{x'=v,v'=A,c'=1&v>=0&c<=ep}](v>=0&x+v^2/(2*B)<=S)".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
-    proveBy(f, t) shouldBe 'proved
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   //endregion
@@ -484,7 +484,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "ODE solver" should "not shadow time" ignore withMathematica { _ =>
     val fml = "[t := 0; {pos' = vel, t' = 1 & t <= T};  {pos' = vel}] (t <= T)".asFormula
     val result = proveBy(fml, normalize & solve(1) & normalize & solve(1) & normalize)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
 

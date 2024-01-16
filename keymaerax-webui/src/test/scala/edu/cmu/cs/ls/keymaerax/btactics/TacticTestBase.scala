@@ -191,7 +191,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     *    }
     * }}}
     * */
-  def withZ3(testcode: Z3 => Any, timeout: Int = -1, initLibrary: Boolean = true) {
+  def withZ3(testcode: Z3 => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
     val common = Map(Configuration.Keys.QE_TOOL -> "z3")
     val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
     withTemporaryConfig(common) {
@@ -231,7 +231,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
   /** Creates and initializes Mathematica; checks that a Matlab bridge is configured. @see[[withMathematica]]. */
     //@todo skip if not matlink set up
-  def withMathematicaMatlab(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true) {
+  def withMathematicaMatlab(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
     if (System.getProperty("KILL_MATLAB") == "true") {
       var killExit = 0
       while (killExit == 0) {
@@ -241,12 +241,12 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
       }
     }
     withMathematica (initLibrary = initLibrary, timeout = timeout, testcode = { tool =>
-      val getLink = PrivateMethod[JLinkMathematicaLink]('link)
+      val getLink = PrivateMethod[JLinkMathematicaLink](Symbol("link"))
       val link = tool invokePrivate getLink()
       link.runUnchecked("""Needs["MATLink`"]""", new M2KConverter[KExpr]() {
         override def k2m: K2MConverter[KExpr] = throw new Exception("Unexpected call to k2m")
         override def apply(e: MExpr): KExpr = {
-          e shouldBe 'symbolQ
+          e shouldBe Symbol("symbolQ")
           if (e.asString() == "$Failed") fail("Test case requires Matlab, but MATLink bridge from Mathematica to Matlab not configured")
           True
         }
@@ -441,7 +441,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
     tactic match {
       case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
-      case _ => proof shouldBe 'proved withClue entryName + "/" + tacticName
+      case _ => proof shouldBe Symbol("proved") withClue entryName + "/" + tacticName
     }
 
     if (entry.kind == "lemma") {
@@ -495,7 +495,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
       tactic match {
         case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
-        case _ => proof shouldBe 'proved withClue entry.name + "/" + tacticName
+        case _ => proof shouldBe Symbol("proved") withClue entry.name + "/" + tacticName
       }
 
       if (entry.kind == "lemma") {

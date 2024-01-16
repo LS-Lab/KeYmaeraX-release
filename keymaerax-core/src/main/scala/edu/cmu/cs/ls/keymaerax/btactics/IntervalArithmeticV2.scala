@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.math.{MathContext, RoundingMode}
@@ -622,7 +627,7 @@ object IntervalArithmeticV2 extends TacticProvider {
             (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _: Times =>
             // Bounds
-            val bnds = mult_endpoints(prec)(DecimalBounds)(ff, F)(gg, G)
+            val bnds = mult_endpoints(prec)(DecimalBounds())(ff, F)(gg, G)
             val h = mathematicaFriendly(bnds._1)
             val H = mathematicaFriendly(bnds._2)
             val multDown = multDownSeq.apply(USubst(
@@ -1101,7 +1106,7 @@ object IntervalArithmeticV2 extends TacticProvider {
       } else {
         (new StaticSingleAssignmentExpression[Formula](True), seq.succ(0))
       }
-      proveBool(precision)(qeTool)(seq.ante)(true)(BoundMap, BoundMap, ssa)(fml) match {
+      proveBool(precision)(qeTool)(seq.ante)(true)(BoundMap(), BoundMap(), ssa)(fml) match {
         case (_, _, Some(prvIa)) =>
           prv(Cut(prvIa.conclusion.succ(0)), 0)(HideRight(SuccPos(0)), 1)(prvIa, 1)(Close(AntePos(seq.ante.length), SuccPos(0)), 0)
         case _ =>

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -273,7 +278,7 @@ protected object FOQuantifierTactics extends TacticProvider {
           (pr: ProvableSig) =>
             (pr(ProofRuleTactics.boundRenameFw(x, np(x))(p).computeResult _, 0)
               (assignEqualityFw(_, p), 0)
-              (hideL('L, Equal(np(x), x)).computeResult _, 0)
+              (hideL(Symbol("L"), Equal(np(x), x)).computeResult _, 0)
               )
         )
         def localRename(pr: ProvableSig, p: Position): ProvableSig = {

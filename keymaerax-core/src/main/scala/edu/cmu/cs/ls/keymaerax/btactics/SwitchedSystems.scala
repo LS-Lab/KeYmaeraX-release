@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -535,13 +540,13 @@ object SwitchedSystems extends TacticProvider {
     // assums, [ODE] (lyap < w & |x| < eps)
     val odetac =
       dC(Less(lyap, w))(pos) < (
-        DifferentialTactics.dCClosure('Rlast) < (
-          implyRiLast & implyRiLast & cohideR('Rlast) & QE,
-          hideL('Llast) & hideL('Llast) & implyRiLast & cohideR('Rlast) &
+        DifferentialTactics.dCClosure(Symbol("Rlast")) < (
+          implyRiLast & implyRiLast & cohideR(Symbol("Rlast")) & QE,
+          hideL(Symbol("Llast")) & hideL(Symbol("Llast")) & implyRiLast & cohideR(Symbol("Rlast")) &
           implyR(1) &
           DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE
         ),
-        hideL('Llast) & implyRiLast & hideL('Llast) & implyR('Rlast) & dI('full)('Rlast)
+        hideL(Symbol("Llast")) & implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & dI(Symbol("full"))(Symbol("Rlast"))
       )
 
     val inv = And(Less(lyap, w), Less(normsq, epssq))
@@ -552,8 +557,8 @@ object SwitchedSystems extends TacticProvider {
         loop(inv)(pos) <(
           prop,
           prop,
-          implyRi & implyR(1) & andL('Llast) &
-          (choiceb('Rlast) & andR('Rlast) <(odetac, skip))*(odes.length-1) & //split per control choice
+          implyRi & implyR(1) & andL(Symbol("Llast")) &
+          (choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) <(odetac, skip))*(odes.length-1) & //split per control choice
           odetac
         )
       case _ =>
@@ -562,21 +567,21 @@ object SwitchedSystems extends TacticProvider {
           loop(inv)(pos) <(
             prop,
             prop,
-            implyRi & implyR(1) & andL('Llast) &
-            composeb('Rlast) & abstractionb('Rlast) & SaturateTactic(allR('Rlast)) &
-              (choiceb('Rlast) & andR('Rlast) <(
-              composeb('Rlast) & abstractionb('Rlast) & odetac,
+            implyRi & implyR(1) & andL(Symbol("Llast")) &
+            composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & SaturateTactic(allR(Symbol("Rlast"))) &
+              (choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) <(
+              composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & odetac,
               skip)) * (ss.odes.length-1) &
-              composeb('Rlast) & abstractionb('Rlast) & odetac
+              composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & odetac
             )
     }
 
     allR(pos) & implyR(pos) &
       cutR(epsw)(pos) < (
         QE,
-        implyR(pos) & existsL('Llast) & andL('Llast) &
+        implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) &
           existsRmon(delw)(pos) < (
-            hideL('Llast) & QE, //hide the \forall x ( ...) that was just cut
+            hideL(Symbol("Llast")) & QE, //hide the \forall x ( ...) that was just cut
             // Get rid of some unused assumptions now
             hideL(-(apos + 1)) & hideL(-(apos + 1)) & andL(-(apos + 2)) & andL(-(apos + 2)) &
             andR(pos) < (
@@ -717,22 +722,22 @@ object SwitchedSystems extends TacticProvider {
     // assums, [ODE](lyap< W & ...)
     def odetac (bd:Formula) : BelleExpr =
     dC(Less(lyap, w))(pos) < (
-      boxAnd('Rlast) & andR('Rlast)<(
-        DifferentialTactics.diffWeakenG('Rlast) & prop,
-        useAt(Ax.DCC, PosInExpr(1::Nil))('Rlast) & andR('Rlast) <(
+      boxAnd(Symbol("Rlast")) & andR(Symbol("Rlast"))<(
+        DifferentialTactics.diffWeakenG(Symbol("Rlast")) & prop,
+        useAt(Ax.DCC, PosInExpr(1::Nil))(Symbol("Rlast")) & andR(Symbol("Rlast")) <(
           //here, we don't need assums
-          (implyRiLast * 5) & cohideOnlyR('Rlast) & cohideOnlyL('Llast) &
+          (implyRiLast * 5) & cohideOnlyR(Symbol("Rlast")) & cohideOnlyL(Symbol("Llast")) &
             (implyR(1) * 5) &
             dC(bd)(1)<( //maybe DR instead?
-              implyRiLast & hideL('Llast) & implyRiLast & cohideR(1) & implyR(1) & implyR(1) &
-                dI('full)(1),
+              implyRiLast & hideL(Symbol("Llast")) & implyRiLast & cohideR(1) & implyR(1) & implyR(1) &
+                dI(Symbol("full"))(1),
               DW(1) & abstractionb(1) & hideL(-1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop
             ),
-          (hideL('Llast)*6) & dW('Rlast) & implyR(1) & dI('full)(1)
+          (hideL(Symbol("Llast"))*6) & dW(Symbol("Rlast")) & implyR(1) & dI(Symbol("full"))(1)
         )
       ),
-      hideL('Llast) & implyRiLast & (hideL('Llast)*4) & implyR('Rlast) &
-        dI('full)('Rlast)
+      hideL(Symbol("Llast")) & implyRiLast & (hideL(Symbol("Llast"))*4) & implyR(Symbol("Rlast")) &
+        dI(Symbol("full"))(Symbol("Rlast"))
     )
 
     val inv = And(Less(lyap, w), Imply(GreaterEqual(lyap,u),Less(lyap, Plus(w,Times(k,tVar)))))
@@ -743,20 +748,20 @@ object SwitchedSystems extends TacticProvider {
         loop(inv)(pos) <(
           cutR(Equal(tVar,Number(0)))(pos) <(
             id,
-            implyR(pos) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(pos) & closeT
+            implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT
           ),
           //Note: for these next two branches, the "loop" branch is moved to the first succedent position
           ArithmeticSimplification.hideFactsAbout(kis) &
-          hideL('Llast) & implyRiLast & implyRiLast & (allL('Llast) * cvars.length) & implyL('Llast) <(
-            andR('Rlast) <(prop, SaturateTactic(hideL('L)) & QE),
-            andL(-1) & implyL('Llast) <( id, QE) //todo: this last QE can be done more manually
+          hideL(Symbol("Llast")) & implyRiLast & implyRiLast & (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) <(
+            andR(Symbol("Rlast")) <(prop, SaturateTactic(hideL(Symbol("L"))) & QE),
+            andL(-1) & implyL(Symbol("Llast")) <( id, QE) //todo: this last QE can be done more manually
           ),
           ArithmeticSimplification.hideFactsAbout(TVar::eps::Nil) &
-          implyRi & implyR(1) & andL('Llast) &
+          implyRi & implyR(1) & andL(Symbol("Llast")) &
 
           (kis zip derbods).map(kb => ArithmeticSimplification.hideFactsAbout(kis.filter(_!=kb._1)) & odetac(kb._2)).reduceRight(
             (p1,p2) =>
-              choiceb('Rlast) & andR('Rlast) <(p1,p2)
+              choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) <(p1,p2)
           )
         )
       case _ =>
@@ -765,20 +770,20 @@ object SwitchedSystems extends TacticProvider {
           loop(inv)(pos) <(
             cutR(Equal(tVar,Number(0)))(pos) <(
               id,
-              implyR(pos) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(pos) & closeT
+              implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT
             ),
             //Note: for these next two branches, the "loop" branch is moved to the first succedent position
             ArithmeticSimplification.hideFactsAbout(kis) &
-              hideL('Llast) & implyRiLast & implyRiLast & (allL('Llast) * cvars.length) & implyL('Llast) <(
-              andR('Rlast) <(prop, SaturateTactic(hideL('L)) & QE),
-              andL(-1) & implyL('Llast) <( id, QE) //todo: this last QE can be done more manually
+              hideL(Symbol("Llast")) & implyRiLast & implyRiLast & (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) <(
+              andR(Symbol("Rlast")) <(prop, SaturateTactic(hideL(Symbol("L"))) & QE),
+              andL(-1) & implyL(Symbol("Llast")) <( id, QE) //todo: this last QE can be done more manually
             ),
-            implyRi & implyR(1) & andL('Llast) &
-              composeb('Rlast) & abstractionb('Rlast) & SaturateTactic(allR('Rlast)) &
+            implyRi & implyR(1) & andL(Symbol("Llast")) &
+              composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & SaturateTactic(allR(Symbol("Rlast"))) &
 
-              (kis zip derbods).map(kb => ArithmeticSimplification.hideFactsAbout(kis.filter(_!=kb._1)) & composeb('Rlast) & abstractionb('Rlast) & odetac(kb._2)).reduceRight(
+              (kis zip derbods).map(kb => ArithmeticSimplification.hideFactsAbout(kis.filter(_!=kb._1)) & composeb(Symbol("Rlast")) & abstractionb(Symbol("Rlast")) & odetac(kb._2)).reduceRight(
                 (p1,p2) =>
-                  choiceb('Rlast) & andR('Rlast) <(p1,p2)
+                  choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) <(p1,p2)
               ))
     }
 
@@ -786,26 +791,26 @@ object SwitchedSystems extends TacticProvider {
       allR(pos) & implyR(pos) & // \forall del (del>0 ->
       cutR(delw)(pos) <( //find W,
         QE,
-        implyR(pos) & existsL('Llast) & andL('Llast) & //skolemize W
+        implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) & //skolemize W
         // todo: can first try a "simpler" cut here that works (remove V<W conjunct)
         cutR(epsu)(pos) <(
-          hideL('Llast) & QE, //hide \forall x ( ||x|| < del -> V < W)
-          implyR(pos) & existsL('Llast) & andL('Llast) & //skolemize U
+          hideL(Symbol("Llast")) & QE, //hide \forall x ( ||x|| < del -> V < W)
+          implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) & //skolemize U
           cutR(derFml)(pos) < (
-            hideL('Llast) & hideL(-(apos+4)) &  //hide earlier quantified cuts
+            hideL(Symbol("Llast")) & hideL(-(apos+4)) &  //hide earlier quantified cuts
               (andR(pos) <( QE , skip))*(derivatives.length-1) & QE // QE each V' < k condition separately
             ,
             implyR(pos) &
-              (andL('Llast) * (derivatives.length-1)) &
+              (andL(Symbol("Llast")) * (derivatives.length-1)) &
               (existsL(-(apos+7))) * derivatives.length & //existsL shuffles assumption to the back
               cutR(kMin)(pos) < (
                 // hide everything except k_i < 0 assumptions
-                SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(kis) &
+                SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(kis) &
                   (1 to kis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
-                implyR(pos) & existsL('Llast) &
+                implyR(pos) & existsL(Symbol("Llast")) &
                 existsRmon(Tchoice)(pos) <(
-                  cohideOnlyL('Llast) & andL('Llast) & hideL('Llast) & QE,
-                  andL('Llast) & andR(pos) <(
+                  cohideOnlyL(Symbol("Llast")) & andL(Symbol("Llast")) & hideL(Symbol("Llast")) & QE,
+                  andL(Symbol("Llast")) & andR(pos) <(
                     id,
                     (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
                     (allL(-(apos + 4)) * cvars.length) & implyL(-(apos + 4)) <( // discharge first cut on del
@@ -937,18 +942,18 @@ object SwitchedSystems extends TacticProvider {
     // succedent has the form:
     // assums, [ODE] (lyaps < w & |x| < eps)
     def odetac (lyap : Term) : BelleExpr =
-      dC(Less(lyap, w))('Rlast) < (
-        dC(Less(normsq, epssq))('Rlast) <(
-          DW('Rlast) & G('Rlast) & prop,
-          DifferentialTactics.dCClosure('Rlast) < (
-            implyRiLast & cohideR('Rlast) & QE,
-            hideL('Llast) * 2 & implyRiLast * 3 & cohideR('Rlast) & implyR(1) * 3 &
+      dC(Less(lyap, w))(Symbol("Rlast")) < (
+        dC(Less(normsq, epssq))(Symbol("Rlast")) <(
+          DW(Symbol("Rlast")) & G(Symbol("Rlast")) & prop,
+          DifferentialTactics.dCClosure(Symbol("Rlast")) < (
+            implyRiLast & cohideR(Symbol("Rlast")) & QE,
+            hideL(Symbol("Llast")) * 2 & implyRiLast * 3 & cohideR(Symbol("Rlast")) & implyR(1) * 3 &
             DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE
           )
         )  ,
         ArithmeticSimplification.hideFactsAbout(eps::wis) &
           DebuggingTactics.debug("dI for: "+lyap,debugTactic) &
-          dI('full)('Rlast)
+          dI(Symbol("full"))(Symbol("Rlast"))
       )
 
     // Continuation
@@ -966,11 +971,11 @@ object SwitchedSystems extends TacticProvider {
             // assumes domains cover entire space, if not, the loop invariant mut split
             ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE, prop),
           prop,
-          implyRi & implyR(1) & andL('Llast) &
+          implyRi & implyR(1) & andL(Symbol("Llast")) &
             (lyaps zip wis).map(lyapwi =>
               ArithmeticSimplification.hideFactsAbout(wis.filter(_ != lyapwi._2)) & odetac(lyapwi._1)).reduceRight(
               (p1, p2) =>
-                choiceb('Rlast) & andR('Rlast) < (p1, p2)
+                choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) < (p1, p2)
             )
         )
       }
@@ -997,14 +1002,14 @@ object SwitchedSystems extends TacticProvider {
               ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE, prop),
             prop,
             composeb(1) & generalize(gen)(1) <(
-              SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
+              SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
               (lyaps zip wis).map(lyapwi =>
                 useAt(conjAssoc)(1,1::Nil) &
-                  composeb(1) & testb(1) & implyL('Llast) <(
+                  composeb(1) & testb(1) & implyL(Symbol("Llast")) <(
                   implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
-                    SaturateTactic(andL('L)) &
+                    SaturateTactic(andL(Symbol("L"))) &
                       ArithmeticSimplification.hideFactsAbout(wis.filter(_ != lyapwi._2)) &
                       implyRi & hideL(-1) & implyR(1) & implyRi & implyR(1) & odetac(lyapwi._1)
                   )
@@ -1012,11 +1017,11 @@ object SwitchedSystems extends TacticProvider {
               ).reduceRight(
                 (p1, p2) =>
                 useAt(conjSplit)(1,1::Nil) &
-                choiceb(1) & andL('Llast) & andR(1) <(
-                useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
+                choiceb(1) & andL(Symbol("Llast")) & andR(1) <(
+                useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL(Symbol("Llast")) & p1
                 ,
                 useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
-                  implyRiLast & hideL('Llast) & implyR('Rlast) & p2
+                  implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
                 )
               )
 
@@ -1030,36 +1035,36 @@ object SwitchedSystems extends TacticProvider {
       cutR(wbodFml)(pos) <(
         (andR(pos) <( QE , skip))*(lyaps.length-1) & QE, // This should follow from compactness
         implyR(pos) &
-        (andL('Llast) * (lyaps.length-1)) &
+        (andL(Symbol("Llast")) * (lyaps.length-1)) &
         (existsL(-(apos+2))) * lyaps.length & //existsL shuffles assumption to the back
         cutR(wMin)(pos) < (
           // hide everything except k_i < 0 assumptions
-          SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(wis) &
+          SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(wis) &
             (1 to wis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
           (andL(-(apos+2)) & hideL(-(apos+lyaps.length+1))) * lyaps.length &
-          implyR(pos) & existsL('Llast) &
+          implyR(pos) & existsL(Symbol("Llast")) &
             cutR(delwFml)(pos) <(
-              andL('Llast) & ArithmeticSimplification.hideFactsAbout(wis) &
+              andL(Symbol("Llast")) & ArithmeticSimplification.hideFactsAbout(wis) &
                 (andR(pos) <( QE , skip))*(lyaps.length-1) & QE
               ,
               implyR(pos) &
-                (andL('Llast) * (lyaps.length-1)) &
+                (andL(Symbol("Llast")) * (lyaps.length-1)) &
                 (existsL(-(apos+3+lyaps.length))) * lyaps.length &
                 andL(-(apos+3+lyaps.length)) * lyaps.length &
                 existsRmon(delMin)(pos) <(
                   ArithmeticSimplification.hideFactsAbout(w::wis) & QE,
-                  andL('Llast) &
+                  andL(Symbol("Llast")) &
                     andR(pos) <(
                     prop,
                     (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
                     cutR(And(lyapw, Less(normsq, epssq)))(pos) <(
                       ArithmeticSimplification.hideFactsAbout(wis) &
                       andR(pos) <(
-                        implyRiLast & implyRiLast & andL('Llast) & implyR('Rlast) & implyR('Rlast) &
+                        implyRiLast & implyRiLast & andL(Symbol("Llast")) & implyR(Symbol("Rlast")) & implyR(Symbol("Rlast")) &
                         ArithmeticSimplification.hideFactsAbout(eps::Nil) &
                         lyaps.map(_ =>
                           (allL(-(apos+1))*cvars.length) & implyL(-(apos+1)) <(
-                          implyRiLast & implyRiLast & implyRiLast & cohideR('Rlast) & QE,
+                          implyRiLast & implyRiLast & implyRiLast & cohideR(Symbol("Rlast")) & QE,
                           id
                         )).reduceRight(
                           (p1,p2) =>
@@ -1195,24 +1200,24 @@ object SwitchedSystems extends TacticProvider {
     // assums, [ODE] (Inv & |x| < eps)
     def odetac (less : Formula) : BelleExpr =
       DebuggingTactics.debug("ODE tac: "+less, debugTactic) &
-      dC(GreaterEqual(ss.timer,Number(0)))('Rlast) <( //t>=0 (trivial from t'=1)
-        dC(less)('Rlast) < (
-          dC(Less(normsq, epssq))('Rlast) <(
-            DW('Rlast) & G('Rlast) & prop,
-            DifferentialTactics.dCClosure('Rlast) < (
-              implyRiLast & cohideR('Rlast) & QE,
-              hideL('Llast) * 2 & implyRiLast * 3 & cohideR('Rlast) & implyR(1) * 3 &
+      dC(GreaterEqual(ss.timer,Number(0)))(Symbol("Rlast")) <( //t>=0 (trivial from t'=1)
+        dC(less)(Symbol("Rlast")) < (
+          dC(Less(normsq, epssq))(Symbol("Rlast")) <(
+            DW(Symbol("Rlast")) & G(Symbol("Rlast")) & prop,
+            DifferentialTactics.dCClosure(Symbol("Rlast")) < (
+              implyRiLast & cohideR(Symbol("Rlast")) & QE,
+              hideL(Symbol("Llast")) * 2 & implyRiLast * 3 & cohideR(Symbol("Rlast")) & implyR(1) * 3 &
                 DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) &
                 QE &
                 DebuggingTactics.debug("done",debugTactic)
             )
           )  ,
           ArithmeticSimplification.hideFactsAbout(eps::wis) &
-            dI('full)('Rlast) &
+            dI(Symbol("full"))(Symbol("Rlast")) &
             DebuggingTactics.debug("done",debugTactic)
         ),
         ArithmeticSimplification.keepFactsAbout(ss.timer::Nil) &
-        dI('full)('Rlast)
+        dI(Symbol("full"))(Symbol("Rlast"))
       )
 
     // Continuation
@@ -1257,29 +1262,29 @@ object SwitchedSystems extends TacticProvider {
               andR(1)<(cohideR(1) & Idioms.?(QE & done), prop)),
             prop,
             composeb(1) & generalize(gen)(1) < (
-              SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize &
+              SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize &
                 OnAll(Idioms.?(QE & done)),
               (invLess,wis).zipped.map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
-                  composeb(1) & testb(1) & implyL('Llast) <(
+                  composeb(1) & testb(1) & implyL(Symbol("Llast")) <(
                   implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                     implyRiLast & implyRiLast &
-                    SaturateTactic(andL('L)) &
+                    SaturateTactic(andL(Symbol("L"))) &
                       ArithmeticSimplification.hideFactsAbout(wis.filter(_ != wi)) &
-                      implyR('Rlast) & implyR('Rlast) & hideL('Llast) & implyRi & implyR(1) &
+                      implyR(Symbol("Rlast")) & implyR(Symbol("Rlast")) & hideL(Symbol("Llast")) & implyRi & implyR(1) &
                       odetac(less)
                   )
                 )
               ).reduceRight(
                 (p1, p2) =>
                   useAt(conjSplit)(1,1::Nil) &
-                    choiceb(1) & andL('Llast) & andR(1) <(
-                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
+                    choiceb(1) & andL(Symbol("Llast")) & andR(1) <(
+                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL(Symbol("Llast")) & p1
                     ,
                     useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
-                      implyRiLast & hideL('Llast) & implyR('Rlast) & p2
+                      implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
                   )
               )
             )
@@ -1291,36 +1296,36 @@ object SwitchedSystems extends TacticProvider {
       cutR(wbodFml)(pos) <(
         (andR(pos) <( QE , skip))*(lyaps.length-1) & QE, // This should follow from compactness
         implyR(pos) &
-          (andL('Llast) * (lyaps.length-1)) &
+          (andL(Symbol("Llast")) * (lyaps.length-1)) &
           (existsL(-(apos+2))) * lyaps.length & //existsL shuffles assumption to the back
           cutR(wMin)(pos) < (
             // hide everything except w_i < 0 assumptions
-            SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(wis) &
+            SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(wis) &
               (1 to wis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
             (andL(-(apos+2)) & hideL(-(apos+lyaps.length+1))) * lyaps.length &
-              implyR(pos) & existsL('Llast) &
+              implyR(pos) & existsL(Symbol("Llast")) &
               cutR(delwFml)(pos) <(
-                andL('Llast) & ArithmeticSimplification.hideFactsAbout(wis) &
+                andL(Symbol("Llast")) & ArithmeticSimplification.hideFactsAbout(wis) &
                   lyaps.map(lyap => DebuggingTactics.debug("lyap: "+lyap,debugTactic) & QE & done).reduceRight((p1,p2) => andR(pos) <( p1 , p2))
                 ,
                 implyR(pos) &
-                  (andL('Llast) * (lyaps.length-1)) &
+                  (andL(Symbol("Llast")) * (lyaps.length-1)) &
                   (existsL(-(apos+3+lyaps.length))) * lyaps.length &
                   andL(-(apos+3+lyaps.length)) * lyaps.length &
                   existsRmon(delMin)(pos) <(
                     ArithmeticSimplification.hideFactsAbout(w::wis) & QE,
-                    andL('Llast) &
+                    andL(Symbol("Llast")) &
                       andR(pos) <(
                         prop,
                         (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
                           cutR(And(lyapw, Less(normsq, epssq)))(pos) <(
                             ArithmeticSimplification.hideFactsAbout(wis) &
                               andR(pos) <(
-                                implyRiLast & implyRiLast & andL('Llast) & implyR('Rlast) & implyR('Rlast) &
+                                implyRiLast & implyRiLast & andL(Symbol("Llast")) & implyR(Symbol("Rlast")) & implyR(Symbol("Rlast")) &
                                   ArithmeticSimplification.hideFactsAbout(eps::Nil) &
                                   lyaps.map(_ =>
                                     (allL(-(apos+1))*cvars.length) & implyL(-(apos+1)) <(
-                                      implyRiLast & implyRiLast & implyRiLast & cohideR('Rlast) & QE,
+                                      implyRiLast & implyRiLast & implyRiLast & cohideR(Symbol("Rlast")) & QE,
                                       id
                                     )).reduceRight(
                                     (p1,p2) =>
@@ -1489,25 +1494,25 @@ object SwitchedSystems extends TacticProvider {
     def odetac (lyap: Term, bd:Formula, ki :Term) : BelleExpr =
       DebuggingTactics.debug("Enter ODE for "+lyap, debugTactic) &
       dC(Less(lyap, w))(pos) <(
-        boxAnd('Rlast) & andR('Rlast)<(
-          DifferentialTactics.diffWeakenG('Rlast) & prop,
-          useAt(Ax.DCC, PosInExpr(1::Nil))('Rlast) & andR('Rlast) <(
-            implyRiLast & hideL('Llast) &
-            implyRiLast * 3 & cohideOnlyR('Rlast) & cohideOnlyL('Llast) & implyR('Rlast) * 4 &
+        boxAnd(Symbol("Rlast")) & andR(Symbol("Rlast"))<(
+          DifferentialTactics.diffWeakenG(Symbol("Rlast")) & prop,
+          useAt(Ax.DCC, PosInExpr(1::Nil))(Symbol("Rlast")) & andR(Symbol("Rlast")) <(
+            implyRiLast & hideL(Symbol("Llast")) &
+            implyRiLast * 3 & cohideOnlyR(Symbol("Rlast")) & cohideOnlyL(Symbol("Llast")) & implyR(Symbol("Rlast")) * 4 &
             dC(bd)(1)<(
-                implyRiLast & cutR(LessEqual(ki,k))('Rlast) <(
+                implyRiLast & cutR(LessEqual(ki,k))(Symbol("Rlast")) <(
                   prop,
-                  cohideR('Rlast) & implyR(1) & implyR(1) &
-                    DebuggingTactics.debug("dI 1",debugTactic) & dI('full)(1) & DebuggingTactics.debug("done",debugTactic)
+                  cohideR(Symbol("Rlast")) & implyR(1) & implyR(1) &
+                    DebuggingTactics.debug("dI 1",debugTactic) & dI(Symbol("full"))(1) & DebuggingTactics.debug("done",debugTactic)
                 ),
               ArithmeticSimplification.hideFactsAbout(k::Nil) &
               hideL(-1) & DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop
             ),
-            (hideL('Llast)*4) & dW('Rlast) & implyR(1) & DebuggingTactics.debug("dI 2",debugTactic) & dI('full)(1) & DebuggingTactics.debug("done",debugTactic)
+            (hideL(Symbol("Llast"))*4) & dW(Symbol("Rlast")) & implyR(1) & DebuggingTactics.debug("dI 2",debugTactic) & dI(Symbol("full"))(1) & DebuggingTactics.debug("done",debugTactic)
           )
         ),
-        hideL('Llast) & implyRiLast & (hideL('Llast)*3) & implyR('Rlast) &
-          DebuggingTactics.debug("dI 3",debugTactic) & dI('full)('Rlast) & DebuggingTactics.debug("done",debugTactic)
+        hideL(Symbol("Llast")) & implyRiLast & (hideL(Symbol("Llast"))*3) & implyR(Symbol("Rlast")) &
+          DebuggingTactics.debug("dI 3",debugTactic) & dI(Symbol("full"))(Symbol("Rlast")) & DebuggingTactics.debug("done",debugTactic)
       )
 
     // Continuation
@@ -1525,7 +1530,7 @@ object SwitchedSystems extends TacticProvider {
         loop(inv)(pos) <(
           cutR(Equal(tVar,Number(0)))(pos) <(
             id,
-            implyR(pos) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(pos) &
+            implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) &
               ArithmeticSimplification.hideFactsAbout(w :: u :: k :: uis ++ kis) &
               QE
           ),
@@ -1534,9 +1539,9 @@ object SwitchedSystems extends TacticProvider {
           ArithmeticSimplification.hideFactsAbout(kis) &
             uis.map( ui =>
               ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
-                (allL('Llast) * cvars.length) & implyL('Llast) <(
-                andR('Rlast) <(prop, SaturateTactic(hideL('L)) & QE),
-                andL(-1) & andL('Llast) & implyL('Llast) <(
+                (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) <(
+                andR(Symbol("Rlast")) <(prop, SaturateTactic(hideL(Symbol("L"))) & QE),
+                andL(-1) & andL(Symbol("Llast")) & implyL(Symbol("Llast")) <(
                   ArithmeticSimplification.keepFactsAbout(u::ui::Nil) & QE,
                   QE
                 )
@@ -1546,20 +1551,20 @@ object SwitchedSystems extends TacticProvider {
           implyRi & implyR(1) &
           (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
             ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
-              DifferentialTactics.diffUnpackEvolutionDomainInitially('Rlast) &
-              cutR(And( Less(lyap,w), Imply(GreaterEqual(lyap,u),Less(lyap, Plus(w,Times(k,tVar))))))('Rlast) <(
-                implyRiLast & implyRiLast & (hideL('Llast) * 4) & QE,
-                hideL('Llast) & hideL('Llast) & implyR('Rlast) & boxAnd('Rlast) &
-                  andR('Rlast)<(
-                    DifferentialTactics.diffWeakenG('Rlast) & prop,
-                    andL('Llast) & odetac(lyap, bd, ki)
+              DifferentialTactics.diffUnpackEvolutionDomainInitially(Symbol("Rlast")) &
+              cutR(And( Less(lyap,w), Imply(GreaterEqual(lyap,u),Less(lyap, Plus(w,Times(k,tVar))))))(Symbol("Rlast")) <(
+                implyRiLast & implyRiLast & (hideL(Symbol("Llast")) * 4) & QE,
+                hideL(Symbol("Llast")) & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & boxAnd(Symbol("Rlast")) &
+                  andR(Symbol("Rlast"))<(
+                    DifferentialTactics.diffWeakenG(Symbol("Rlast")) & prop,
+                    andL(Symbol("Llast")) & odetac(lyap, bd, ki)
                   )
               )
           ).reduceRight(
             (p1, p2) =>
-            choiceb('Rlast) & andR('Rlast) <(
-              useAt(Ax.boxOrLeft,PosInExpr(1::Nil))('Rlast) & p1,
-              useAt(Ax.boxOrRight,PosInExpr(1::Nil))('Rlast) & p2
+            choiceb(Symbol("Rlast")) & andR(Symbol("Rlast")) <(
+              useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(Symbol("Rlast")) & p1,
+              useAt(Ax.boxOrRight,PosInExpr(1::Nil))(Symbol("Rlast")) & p2
             )
           )
         )
@@ -1587,14 +1592,14 @@ object SwitchedSystems extends TacticProvider {
           loop(inv)(1) <(
             cutR(Equal(tVar,Number(0)))(pos) <(
               id,
-              implyR(1) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(1) & closeT
+              implyR(1) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(1) & closeT
             ),
             //Note: for these next two branches, the "loop" branch is moved to the first succedent position
             ArithmeticSimplification.hideFactsAbout(kis) &
             uis.map( ui =>
               ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
-              implyRiLast*4 & (allL('Llast) * cvars.length) & implyL('Llast) <(
-                andR('Rlast) <(prop, SaturateTactic(hideL('L)) & SaturateTactic(implyR('R)) & QE),
+              implyRiLast*4 & (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) <(
+                andR(Symbol("Rlast")) <(prop, SaturateTactic(hideL(Symbol("L"))) & SaturateTactic(implyR(Symbol("R"))) & QE),
                 QE
               )
             ).reduceRight((p1, p2) => orL(-1) <(p1,p2)),
@@ -1603,12 +1608,12 @@ object SwitchedSystems extends TacticProvider {
               ArithmeticSimplification.hideFactsAbout(kis) & unfoldProgramNormalize & OnAll(QE),
 
               (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
-                  composeb(1) & testb(1) & implyL('Llast) <(
+                  composeb(1) & testb(1) & implyL(Symbol("Llast")) <(
                   implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
-                    implyRiLast & andL('Llast) & SaturateTactic(andL('L)) &
-                      implyR(1) & hideL('Llast) &
+                    implyRiLast & andL(Symbol("Llast")) & SaturateTactic(andL(Symbol("L"))) &
+                      implyR(1) & hideL(Symbol("Llast")) &
                     ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
                       implyRi & implyR(1) &
                       implyRi & implyR(1) & odetac(lyap, bd, ki)
@@ -1616,10 +1621,10 @@ object SwitchedSystems extends TacticProvider {
                 )
               ).reduceRight(
                 (p1, p2) =>
-                    choiceb(1) & andL('Llast) & andR(1) <(
-                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1,
+                    choiceb(1) & andL(Symbol("Llast")) & andR(1) <(
+                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL(Symbol("Llast")) & p1,
                     useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
-                      implyRiLast & hideL('Llast) & implyR('Rlast) & p2
+                      implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
                   )
               )
             )
@@ -1632,38 +1637,38 @@ object SwitchedSystems extends TacticProvider {
       allR(pos) & implyR(pos) & // \forall del (del>0 ->
       cutR(wbodFml)(pos) <( // cut Vi < Wi <= W
         (andR(pos) <( QE , skip))*(lyaps.length-1) & QE, // This should follow from compactness
-        implyR(pos) & (andL('Llast) * (lyaps.length-1)) &
+        implyR(pos) & (andL(Symbol("Llast")) * (lyaps.length-1)) &
         (existsL(-(apos+3))) * lyaps.length & //existsL shuffles assumption to the back
         cutR(wMax)(pos) < (
-          SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(wis) &
+          SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(wis) &
             (1 to wis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
           // Remove sign assumptions s on w_i
           (andL(-(apos+3)) & hideL(-(apos+lyaps.length+2))) * lyaps.length &
-          implyR(pos) & existsL('Llast) & andL('Llast) &
+          implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) &
           cutR(ubodFml)(pos) <(
             ArithmeticSimplification.hideFactsAbout(del::wis) &
               (andR(pos) <( QE , skip))*(lyaps.length-1) & QE,
-            implyR(pos) & (andL('Llast) * (lyaps.length-1)) &
+            implyR(pos) & (andL(Symbol("Llast")) * (lyaps.length-1)) &
             (existsL(-(apos+lyaps.length+5))) * lyaps.length &
             cutR(uMin)(pos) < (
-              SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(uis) &
+              SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(uis) &
                 (1 to uis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
-              implyR(pos) & existsL('Llast) & andL('Llast)*lyaps.length &
+              implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast"))*lyaps.length &
               cutR(derFml)(pos) < (
                 ArithmeticSimplification.hideFactsAbout(eps::del::uis++wis) &
                   (andR(pos) <( QE , skip))*(derivatives.length-1) & QE,
                 implyR(pos) &
-                (andL('Llast) * (derivatives.length-1)) &
+                (andL(Symbol("Llast")) * (derivatives.length-1)) &
                 (existsL(-(apos+3*lyaps.length+6))) * lyaps.length &
                 cutR(kMin)(pos) <(
                   // hide everything except k_i < 0 assumptions
-                  SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(kis) &
+                  SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(kis) &
                     (1 to kis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
-                  implyR(pos) & existsL('Llast) &
-                  (andL('Llast) * derivatives.length) &
+                  implyR(pos) & existsL(Symbol("Llast")) &
+                  (andL(Symbol("Llast")) * derivatives.length) &
                   existsRmon(Tchoice)(pos) <(
-                      hideL('Llast) * lyaps.length & cohideOnlyL('Llast) & QE,
-                      andL('Llast) & andR(pos) <(
+                      hideL(Symbol("Llast")) * lyaps.length & cohideOnlyL(Symbol("Llast")) & QE,
+                      andL(Symbol("Llast")) & andR(pos) <(
                       id,
                       (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
                       // create V_i < W assumptions
@@ -1811,19 +1816,19 @@ object SwitchedSystems extends TacticProvider {
     // assums, [ODE] (Inv & (timer >=0 & t_ >= timer))
     def odetac (less : Formula) : BelleExpr =
       DebuggingTactics.debug("odetac for: "+less, debugTactic) &
-      dC(GreaterEqual(ss.timer,Number(0)))('Rlast) <( //t>=0 (trivial from t'=1)
-        dC( GreaterEqual(tVar, ss.timer))('Rlast) < (
-          dC(less)('Rlast) <(
-            DifferentialTactics.diffWeakenG('Rlast) & prop,
+      dC(GreaterEqual(ss.timer,Number(0)))(Symbol("Rlast")) <( //t>=0 (trivial from t'=1)
+        dC( GreaterEqual(tVar, ss.timer))(Symbol("Rlast")) < (
+          dC(less)(Symbol("Rlast")) <(
+            DifferentialTactics.diffWeakenG(Symbol("Rlast")) & prop,
             DebuggingTactics.debug("enter dI",debugTactic) &
-            dI('full)('Rlast) &
+            dI(Symbol("full"))(Symbol("Rlast")) &
             DebuggingTactics.debug("done",debugTactic)
           ) ,
           ArithmeticSimplification.keepFactsAbout(ss.timer::tVar::Nil) &
-            dI('full)('Rlast)
+            dI(Symbol("full"))(Symbol("Rlast"))
         ),
         ArithmeticSimplification.keepFactsAbout(ss.timer::Nil) &
-          dI('full)('Rlast)
+          dI(Symbol("full"))(Symbol("Rlast"))
       )
 
     // Continuation
@@ -1860,7 +1865,7 @@ object SwitchedSystems extends TacticProvider {
       composeb(pos) & composeb(pos) & generalize(invMode)(pos) < (
         //note: generalize throws away context, so pos is now 1
         unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
-        andL('Llast) & assignb(1) & //timer :=0
+        andL(Symbol("Llast")) & assignb(1) & //timer :=0
           DebuggingTactics.debug("loop: " + inv, debugTactic) &
           loop(inv)(1) < (
             exhaustiveEqL2R(-2) & exhaustiveEqL2R(-3) &
@@ -1872,32 +1877,32 @@ object SwitchedSystems extends TacticProvider {
             andL(-1) & implyRiLast &
             uis.map( ui =>
               ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
-                implyRiLast*4 & (allL('Llast) * cvars.length) & implyL('Llast) <(
-                  andR('Rlast) <( Idioms.?(QE & done), SaturateTactic(hideL('L)) & SaturateTactic(implyR('R)) & QE),
+                implyRiLast*4 & (allL(Symbol("Llast")) * cvars.length) & implyL(Symbol("Llast")) <(
+                  andR(Symbol("Rlast")) <( Idioms.?(QE & done), SaturateTactic(hideL(Symbol("L"))) & SaturateTactic(implyR(Symbol("R"))) & QE),
                   QE
                 )
-            ).reduceRight((p1, p2) => orL('Llast) <(p1,p2)),
+            ).reduceRight((p1, p2) => orL(Symbol("Llast")) <(p1,p2)),
             ArithmeticSimplification.hideFactsAbout(TVar::eps::uis) &
             composeb(1) & generalize(gen)(1) < (
-              SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll( Idioms.?(QE & done)),
+              SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll( Idioms.?(QE & done)),
               (invLess,wis).zipped.map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
-                  composeb(1) & testb(1) & implyL('Llast) <(
+                  composeb(1) & testb(1) & implyL(Symbol("Llast")) <(
                   implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
-                      hideL('Llast) & andL('Llast) & andL('Llast) &
+                      hideL(Symbol("Llast")) & andL(Symbol("Llast")) & andL(Symbol("Llast")) &
                       odetac(less)
                   )
                 )
               ).reduceRight(
                 (p1, p2) =>
                   useAt(conjSplit)(1,1::Nil) &
-                    choiceb(1) & andL('Llast) & andR(1) <(
-                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
+                    choiceb(1) & andL(Symbol("Llast")) & andR(1) <(
+                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL(Symbol("Llast")) & p1
                     ,
                     useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
-                      implyRiLast & hideL('Llast) & implyR('Rlast) & p2
+                      implyRiLast & hideL(Symbol("Llast")) & implyR(Symbol("Rlast")) & p2
                   )
               )
             )
@@ -1910,26 +1915,26 @@ object SwitchedSystems extends TacticProvider {
       allR(pos) & implyR(pos) & // \forall del (del>0 ->
       cutR(wbodFml)(pos) <( // cut Vi < Wi <= W
         (andR(pos) <( QE , skip))*(lyaps.length-1) & QE, // This should follow from compactness
-        implyR(pos) & (andL('Llast) * (lyaps.length-1)) &
+        implyR(pos) & (andL(Symbol("Llast")) * (lyaps.length-1)) &
           (existsL(-(apos+3))) * lyaps.length & //existsL shuffles assumption to the back
           cutR(wMax)(pos) < (
-            SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(wis) &
+            SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(wis) &
               (1 to wis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
             // Remove sign assumptions s on w_i
             (andL(-(apos+3)) & hideL(-(apos+lyaps.length+2))) * lyaps.length &
-            implyR(pos) & existsL('Llast) & andL('Llast) &
+            implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) &
               cutR(ubodFml)(pos) <(
                 ArithmeticSimplification.hideFactsAbout(del::wis) &
                   (andR(pos) <( QE , skip))*(lyaps.length-1) & QE,
-                implyR(pos) & (andL('Llast) * (lyaps.length-1)) &
+                implyR(pos) & (andL(Symbol("Llast")) * (lyaps.length-1)) &
                   (existsL(-(apos+lyaps.length+5))) * lyaps.length &
                   cutR(uMin)(pos) < (
-                    SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(uis) &
+                    SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.keepFactsAbout(uis) &
                       (1 to uis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
-                    implyR(pos) & existsL('Llast) & andL('Llast)*lyaps.length &
+                    implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast"))*lyaps.length &
                     existsRmon(Tchoice)(pos) <(
-                      hideL('Llast) * lyaps.length & cohideOnlyL('Llast) & QE, // use u_>0 to show there exists a good choice for T_
-                      andL('Llast) & andR(pos) <(
+                      hideL(Symbol("Llast")) * lyaps.length & cohideOnlyL(Symbol("Llast")) & QE, // use u_>0 to show there exists a good choice for T_
+                      andL(Symbol("Llast")) & andR(pos) <(
                         id,
                         (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
                         // create V_i < W assumptions from V_i < W_i
@@ -2261,7 +2266,7 @@ object SwitchedSystems extends TacticProvider {
           DifferentialTactics.diffWeakenG(pos) & implyR(1) &
           andL(-1) & (allL(-1) * vars.length) & QE // can be done by subst
       ),
-      hideL(-(apos + 1)) & hideL(-(apos + 2)) & dI('full)(pos)
+      hideL(-(apos + 1)) & hideL(-(apos + 2)) & dI(Symbol("full"))(pos)
     )
 
     // The relevant tactic for a switched system
@@ -2269,7 +2274,7 @@ object SwitchedSystems extends TacticProvider {
     val looptac = loop(inv)(pos) < (
       prop,
       prop,
-      implyRi & implyR(pos) & andL('Llast) & chase(pos) &
+      implyRi & implyR(pos) & andL(Symbol("Llast")) & chase(pos) &
         SaturateTactic(andR(pos) < (skip, odetac)) & odetac
     )
 
@@ -2282,9 +2287,9 @@ object SwitchedSystems extends TacticProvider {
     allR(pos) & implyR(pos) &
       cutR(epsw)(pos) < (
         QE,
-        implyR(pos) & existsL('Llast) & andL('Llast) &
+        implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) &
           existsRmon(delw)(pos) < (
-            hideL('Llast) & QE,
+            hideL(Symbol("Llast")) & QE,
             // Get rid of some unused assumptions now
             hideL(-(apos + 1)) & hideL(-(apos + 1)) & andL(-(apos + 2)) & andL(-(apos + 2)) &
               andR(pos) < (

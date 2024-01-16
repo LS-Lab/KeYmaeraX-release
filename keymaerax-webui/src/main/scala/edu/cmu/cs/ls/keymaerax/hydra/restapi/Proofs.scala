@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
 
 import akka.http.scaladsl.server.Route
@@ -230,7 +231,7 @@ object Proofs {
 
   val proofTaskExpand: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "expand") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      parameters('strict.as[Boolean]) { strict =>
+      parameters(Symbol("strict").as[Boolean]) { strict =>
         val request = new ProofTaskExpandRequest(database, userId, proofId, nodeId, strict)
         completeRequest(request, t)
       }
@@ -326,7 +327,7 @@ object Proofs {
   }}}
 
   val doAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
+    get { parameters(Symbol("stepwise").as[Boolean]) { stepwise =>
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
     }}}
@@ -365,7 +366,7 @@ object Proofs {
 
   val doInputAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
-      parameters('stepwise.as[Boolean]) { stepwise => entity(as[String]) { params => {
+      parameters(Symbol("stepwise").as[Boolean]) { stepwise => entity(as[String]) { params => {
         val info = DerivationInfo(tacticId)
         val expectedInputs = info.inputs
         // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
@@ -408,7 +409,7 @@ object Proofs {
   }}}
 
   val doTwoPosAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, fml1Id, fml2Id, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
+    get { parameters(Symbol("stepwise").as[Boolean]) { stepwise =>
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
         Some(Fixed(parseFormulaId(fml1Id))), Some(Fixed(parseFormulaId(fml2Id))), Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
@@ -416,14 +417,14 @@ object Proofs {
   }}
 
   val doTactic: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
+    get { parameters(Symbol("stepwise").as[Boolean]) { stepwise =>
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
     }}}
   }}
 
   val doInputTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-    post { parameters('stepwise.as[Boolean]) { stepwise =>
+    post { parameters(Symbol("stepwise").as[Boolean]) { stepwise =>
       entity(as[String]) { params => {
         val info = DerivationInfo(tacticId)
         val expectedInputs = info.inputs
@@ -443,7 +444,7 @@ object Proofs {
   }}}
 
   val doCustomTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
-    post { parameters('stepwise.as[Boolean]) { stepwise =>
+    post { parameters(Symbol("stepwise").as[Boolean]) { stepwise =>
       entity(as[String]) { tactic => {
         val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic.trim.stripPrefix(";"), None, consultAxiomInfo=false, stepwise=stepwise)
         completeRequest(request, t)
@@ -458,12 +459,12 @@ object Proofs {
   }
 
   val doSearch: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
+    get { parameters(Symbol("stepwise").as[Boolean]) { stepwise =>
       val pos = posLocator(where)
       val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
       completeRequest(request, t)
     }} ~
-      post { parameters('stepwise.as[Boolean]) { stepwise =>
+      post { parameters(Symbol("stepwise").as[Boolean]) { stepwise =>
         entity(as[String]) { params => {
           val info = DerivationInfo(tacticId)
           val expectedInputs = info.inputs

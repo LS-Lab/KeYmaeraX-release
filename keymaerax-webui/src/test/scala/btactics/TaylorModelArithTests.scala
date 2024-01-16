@@ -30,11 +30,11 @@ class TaylorModelArithTests extends TacticTestBase {
   val context3 = ("-1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1, -1 <= z0(), z0() <= 1," +
     "x = x0() + y0() + rx, -0.01 <= rx, rx <= 0.02," +
     "y = 0.5*x0() - y0() + ry, 0 <= ry, ry <= 0.1").split(',').map(_.asFormula).toIndexedSeq
-  implicit val defaultOptions = new TaylorModelOptions {
+  implicit val defaultOptions: TaylorModelOptions = new TaylorModelOptions {
     override val precision = 5
     override val order = 4
   }
-  implicit val defaultTimeStepOptions = new TimeStepOptions {
+  implicit val defaultTimeStepOptions: TimeStepOptions = new TimeStepOptions {
     def remainderEstimation(i: Integer) = (0.0001, 0.0001)
   }
   lazy val lazyVals = new {
@@ -218,19 +218,19 @@ class TaylorModelArithTests extends TacticTestBase {
     val ltFml = "y < x + 5".asFormula
     val leFml = "y <= x + 5".asFormula
     val fFml = "y > x + 5".asFormula
-    TaylorModelArith.evalFormula(gtFml, context3, args).get shouldBe 'proved
-    TaylorModelArith.evalFormula(geFml, context3, args).get shouldBe 'proved
-    TaylorModelArith.evalFormula(ltFml, context3, args).get shouldBe 'proved
-    TaylorModelArith.evalFormula(leFml, context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(gtFml, context3, args).get shouldBe Symbol("proved")
+    TaylorModelArith.evalFormula(geFml, context3, args).get shouldBe Symbol("proved")
+    TaylorModelArith.evalFormula(ltFml, context3, args).get shouldBe Symbol("proved")
+    TaylorModelArith.evalFormula(leFml, context3, args).get shouldBe Symbol("proved")
     TaylorModelArith.evalFormula(fFml, context3, args) shouldBe None
-    TaylorModelArith.evalFormula(And(leFml, ltFml), context3, args).get shouldBe 'proved
-    TaylorModelArith.evalFormula(Or(fFml, And(leFml, ltFml)), context3, args).get shouldBe 'proved
-    TaylorModelArith.evalFormula(Or(And(leFml, ltFml), fFml), context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(And(leFml, ltFml), context3, args).get shouldBe Symbol("proved")
+    TaylorModelArith.evalFormula(Or(fFml, And(leFml, ltFml)), context3, args).get shouldBe Symbol("proved")
+    TaylorModelArith.evalFormula(Or(And(leFml, ltFml), fFml), context3, args).get shouldBe Symbol("proved")
   }
 
   it should "weakenContext" in withMathematica { _ =>
     val prv = tm1.weakenContext("P()".asFormula).prv
-    prv shouldBe 'proved
+    prv shouldBe Symbol("proved")
     prv.conclusion.ante shouldBe tm1.prv.conclusion.ante++Seq("P()".asFormula)
   }
 

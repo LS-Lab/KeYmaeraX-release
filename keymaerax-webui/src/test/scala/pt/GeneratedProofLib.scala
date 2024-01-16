@@ -86,17 +86,17 @@ object Num {
 } /* object Num */
 object Enum {
 
-  trait enum[A] extends Finite_Set.finite[A] {
+  trait `enum`[A] extends Finite_Set.finite[A] {
     val `Enum.enum`: List[A]
     val `Enum.enum_all`: (A => Boolean) => Boolean
     val `Enum.enum_ex`: (A => Boolean) => Boolean
   }
-  def enum[A](implicit A: enum[A]): List[A] = A.`Enum.enum`
+  def `enum`[A](implicit A: enum[A]): List[A] = A.`Enum.enum`
   def enum_all[A](a: A => Boolean)(implicit A: enum[A]): Boolean =
     A.`Enum.enum_all`(a)
   def enum_ex[A](a: A => Boolean)(implicit A: enum[A]): Boolean =
     A.`Enum.enum_ex`(a)
-  object enum {
+  object `enum` {
     implicit def `Enum.enum_unit`: enum[Unit] = new enum[Unit] {
       val `Enum.enum` = enum_unita
       val `Enum.enum_all` = (a: Unit => Boolean) => enum_all_unit(a)

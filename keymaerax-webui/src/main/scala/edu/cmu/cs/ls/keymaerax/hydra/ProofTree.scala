@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -412,7 +413,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
         case Box(Loop(_), _) =>
           //@todo provide model definitions
           val invariant = generator(goal, pos, Declaration(Map.empty)).iterator
-          if (invariant.hasNext) Map(FormulaArg("J") -> invariant.next._1)
+          if (invariant.hasNext) Map(FormulaArg("J") -> invariant.next()._1)
           else Map.empty
         case Box(_: ODESystem, p) => Map(FormulaArg("P", List("y")) -> p) //@hack for dG
         case _ => Map.empty

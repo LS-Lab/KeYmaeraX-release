@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -67,9 +72,9 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> xpost=1".asSequent
 
     val monitorCorrectnessConjecture = ModelPlex.createMonitorCorrectnessConjecture(
-      List(Variable("x")), 'ctrl, None, ListMap.empty)(model)
+      List(Variable("x")), Symbol("ctrl"), None, ListMap.empty)(model)
     println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
-    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & autoClose) shouldBe 'proved
+    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & autoClose) shouldBe Symbol("proved")
   }
 
   it should "chase away a loop by updateCalculus implicationally" in withTactics {
@@ -115,7 +120,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val byChase = ModelPlex.modelMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val byChaseResult = proveBy(modelplexInput, byChase).subgoals.loneElement
-    proveBy(Equiv(expected.toFormula, byChaseResult.toFormula), QE) shouldBe 'proved
+    proveBy(Equiv(expected.toFormula, byChaseResult.toFormula), QE) shouldBe Symbol("proved")
   }
 
   it should "find euler model monitor condition" ignore withMathematica { tool =>
@@ -213,7 +218,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val monitorFml = result.subgoals.loneElement.succ.head
     val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-    proveBy(Equiv(monitorFml, reassociatedMonitorFml), prop) shouldBe 'proved
+    proveBy(Equiv(monitorFml, reassociatedMonitorFml), prop) shouldBe Symbol("proved")
 
     // example: combine all tests for a single if-then-else condition
     val testProg2 = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=true)(1)*2)
@@ -221,7 +226,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val inputs = CodeGenerator.getInputs(prg)
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = true)
-    val code = (new CMonitorGenerator('resist, Declaration(Map.empty)))(testProg.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
+    val code = (new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty)))(testProg.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
     code._1.trim should equal (
       """/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
         |verdict boundaryDist(state pre, state curr, const parameters* const params) {
@@ -259,7 +264,7 @@ class ModelplexTacticTests extends TacticTestBase {
         |  else return post;
         |}""".stripMargin) (after being whiteSpaceRemoved)
 
-    val monitorCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty)),
+    val monitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty)),
       True, Declaration(Map.empty)))(testProg2.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
 
     val codeFileContent =
@@ -281,7 +286,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model,
       List("f","l","c").map(_.asVariable), ListMap.empty)
 
-    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)('R) &
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(Symbol("R")) &
       ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
 
@@ -327,7 +332,7 @@ class ModelplexTacticTests extends TacticTestBase {
   "Local lane control modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc-ctrl.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)('R) &
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(Symbol("R")) &
       ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(model, tactic)
 
@@ -396,7 +401,7 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.loneElement shouldBe "==> (\\forall do (do=d->\\forall mo (mo=m->\\exists m \\exists d \\exists vdes ((d>=0&do^2-d^2<=2*b()*(m-mo)&vdes>=0)&vdespost=vdes&SBpost=SB&vpost=v&statepost=state&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)))|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&\\exists a ((a>=-b()&a<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))|v>=vdes&\\exists a ((a < 0&a>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))".asSequent
 
     val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
-    StaticSemantics.boundVars(opt1Result.subgoals.loneElement) shouldBe 'empty
+    StaticSemantics.boundVars(opt1Result.subgoals.loneElement) shouldBe Symbol("empty")
     opt1Result.subgoals.loneElement shouldBe "==> ((dpost>=0&d^2-dpost^2<=2*b()*(mpost-m)&vdespost>=0)&SBpost=SB&vpost=v&statepost=state&dopost=d&zpost=z&tpost=t&mopost=m&apost=a|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&(apost>=-b()&apost<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)|v>=vdes&(apost < 0&apost>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)".asSequent
 
     report(opt1Result.subgoals.head.succ.head, opt1Result, "ETCS controller monitor (forward chase)")
@@ -421,7 +426,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val opt1Result = timed(proveBy(foResult, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions,
       unobservable.keySet.toList, Some(ModelPlex.mxSimplify))(1)), "Opt. 1")
-    StaticSemantics.freeVars(opt1Result.subgoals.loneElement).toSet[NamedSymbol].intersect(unobservable.keySet) shouldBe 'empty
+    StaticSemantics.freeVars(opt1Result.subgoals.loneElement).toSet[NamedSymbol].intersect(unobservable.keySet) shouldBe Symbol("empty")
     println("Opt. 1 result: " + opt1Result)
 
     val qfResult = timed(proveBy(entry.defs.exhaustiveSubst(opt1Result.subgoals.loneElement), SimplifierV3.simplify(1)), "Simplifying")
@@ -438,7 +443,7 @@ class ModelplexTacticTests extends TacticTestBase {
     println("Generating Python code")
     val stateVars = allVars.map(_.asInstanceOf[BaseVariable]).toSet ++ sensors -- sensorDefs.keySet.map(_.asInstanceOf[BaseVariable])
     println("Monitor state: " + stateVars)
-    val monitorPythonCode = timed((new PythonGenerator(new PythonMonitorGenerator('resist, entry.defs), init, entry.defs))(testProg, stateVars, inputs, entry.name), "Printing Python code")
+    val monitorPythonCode = timed((new PythonGenerator(new PythonMonitorGenerator(Symbol("resist"), entry.defs), init, entry.defs))(testProg, stateVars, inputs, entry.name), "Printing Python code")
     println(monitorPythonCode)
   }
 
@@ -599,19 +604,19 @@ class ModelplexTacticTests extends TacticTestBase {
   "PLDI" should "prove stopsign" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx"))
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyt")).mkString)
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "prove stopsign with direct v control" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx"))
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyt")).mkString)
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "prove stopsign with v change and disturbance" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx"))
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyt")).mkString)
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "find correct controller monitor for stopsign" in withMathematica { tool =>
@@ -706,7 +711,7 @@ class ModelplexTacticTests extends TacticTestBase {
   "ModelPlex for Veriphy" should "prove velocity car safety" in withMathematica { _ =>
     val Some(entry) = ArchiveParser.getEntry("Veriphy/Velocity Car Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs=entry.defs) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs=entry.defs) shouldBe Symbol("proved")
   }
 
   it should "derive controller monitor for velocity car safety" in withMathematica { tool =>
@@ -724,7 +729,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "prove controller monitor correctness" in withMathematica { _ =>
     val Some(entry) = ArchiveParser.getEntry("Veriphy/Controller Monitor Formula Implies Controller Monitor Specification",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
   }
 
   it should "generate a correct sandbox conjecture" in withMathematica { _ => withDatabase { db =>
@@ -732,7 +737,7 @@ class ModelplexTacticTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
     val fallback = "t:=0;v:=0;".asProgram
     val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._3,
-      Some(fallback), 'ctrl, None, synthesizeProofs = false, defs=entry.defs)(entry.model.asInstanceOf[Formula])
+      Some(fallback), Symbol("ctrl"), None, synthesizeProofs = false, defs=entry.defs)(entry.model.asInstanceOf[Formula])
 
     sandbox shouldBe
       """d>=0&V>=0&ep>=0
@@ -781,7 +786,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "prove fallback preserves controller monitor" in withMathematica { _ =>
     val Some(entry) = ArchiveParser.getEntry("Veriphy/Fallback Preserves Controller Monitor",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs=entry.defs) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3, defs=entry.defs) shouldBe Symbol("proved")
   }
 
   it should "check all archive entries" in withMathematica { _ =>
@@ -805,11 +810,11 @@ class ModelplexTacticTests extends TacticTestBase {
 
     /* Generate C code for controller monitor */
     val reassociatedCtrlMonitorFml = FormulaTools.reassociate(ctrlMonitorFml)
-    proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe 'proved
+    proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
     val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
     val ctrlInputs = CodeGenerator.getInputs(ctrlMonitorProg)
-    val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs),
+    val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs),
       init, entry.defs))(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
     ctrlMonitorCode._1.trim should equal (
       """/**************************
@@ -994,10 +999,10 @@ class ModelplexTacticTests extends TacticTestBase {
 
     /* Generate C code for controller monitor */
     val reassociatedCtrlMonitorFml = FormulaTools.reassociate(ctrlMonitorFml)
-    proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe 'proved
+    proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
     val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     val ctrlInputs = CodeGenerator.getInputs(ctrlMonitorProg)
-    val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs),
+    val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs),
       monitorInit, entry.defs))(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
     //@todo update expected code
     ctrlMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double A;\n  long double B;\n  long double T;\n  long double eps;\n} parameters;\n\ntypedef struct state {\n  long double a;\n  long double k;\n  long double t;\n  long double v;\n  long double vh;\n  long double vl;\n  long double xg;\n  long double yg;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;"
@@ -1005,10 +1010,10 @@ class ModelplexTacticTests extends TacticTestBase {
 
     /* Generate C code for plant monitor */
     val reassociatedPlantMonitorFml = FormulaTools.reassociate(plantMonitorFml)
-    proveBy(Equiv(plantMonitorFml, reassociatedPlantMonitorFml), TactixLibrary.prop) shouldBe 'proved
+    proveBy(Equiv(plantMonitorFml, reassociatedPlantMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
     val plantMonitorProg = proveBy(reassociatedPlantMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     val plantInputs = CodeGenerator.getInputs(plantMonitorProg)
-    val plantMonitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs),
+    val plantMonitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs),
       monitorInit, entry.defs))(plantMonitorProg, plantMonitorStateVars.toSet, plantInputs, "Monitor")
     //@todo update expected code
     plantMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double A;\n  long double B;\n  long double T;\n  long double a;\n  long double eps;\n  long double k;\n  long double vh;\n  long double vl;\n} parameters;\n\ntypedef struct state {\n  long double t;\n  long double t_0;\n  long double v;\n  long double v_0;\n  long double xg;\n  long double xg_0;\n  long double yg;\n  long double yg_0;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;"
@@ -1035,7 +1040,7 @@ class ModelplexTacticTests extends TacticTestBase {
     //proveBy(Equiv(ctrlMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop) shouldBe 'proved
     val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     val ctrlInputs = CodeGenerator.getInputs(ctrlMonitorProg)
-    val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs),
+    val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs),
       init, entry.defs))(ctrlMonitorProg, stateVars.toSet, ctrlInputs, "Monitor")
     println(ctrlMonitorCode)
   }
@@ -1103,7 +1108,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val tic = System.currentTimeMillis()
     val (q, proof) = PropositionalTactics.rightAssociate(p)
     val toc = System.currentTimeMillis()
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     q shouldBe predicates.reduceRight(Or)
     (toc-tic) should be <= 60000L
   }
@@ -1114,7 +1119,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val tic = System.currentTimeMillis()
     val (q, proof) = PropositionalTactics.rightAssociate(p)
     val toc = System.currentTimeMillis()
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     q shouldBe "v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost)|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x))|v+vpost=0&x=xpost&(v>0&A() < 0|A()>0&v < 0)".asFormula
     (toc-tic) should be <= 1000L
   }
@@ -1125,7 +1130,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val tic = System.currentTimeMillis()
     val (_, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
     val toc = System.currentTimeMillis()
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     (toc-tic) should be <= 1000L
   }
 

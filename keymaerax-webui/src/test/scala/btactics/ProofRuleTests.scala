@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.Find
@@ -37,7 +42,7 @@ class ProofRuleTests extends TacticTestBase {
         USubst(
           SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm))::
           SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "support derived axioms" in withTactics {
@@ -47,7 +52,7 @@ class ProofRuleTests extends TacticTestBase {
       TactixLibrary.by(Ax.notAll, //(!\forall x (p(||))) <-> \exists x (!p(||))
         theSubst))
 
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   import SequentCalculus._

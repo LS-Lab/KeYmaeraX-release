@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -27,7 +27,7 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val f = Imply(initially, Box(ODESystem(system, timeHorizon), Not(forbidden)))
     val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
 
-    proveBy(f,t) shouldBe 'proved
+    proveBy(f,t) shouldBe Symbol("proved")
   }
 
   "alongi_nelson_ex_4_1_9_page_143" should "prove by ODE" in withMathematica { _ =>
@@ -39,7 +39,7 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val f = Imply(initially, Box(ODESystem(system, constraint), Not(forbidden)))
     val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
 
-    proveBy(f,t) shouldBe 'proved
+    proveBy(f,t) shouldBe Symbol("proved")
   }
 
   "keymaera_nonlinear_diffcut" should "prove by ODE" in withMathematica { _ =>
@@ -52,7 +52,7 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
 
 
-    proveBy(f,t) shouldBe 'proved
+    proveBy(f,t) shouldBe Symbol("proved")
   }
 
 

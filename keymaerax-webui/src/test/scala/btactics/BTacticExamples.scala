@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
@@ -36,7 +36,7 @@ class BTacticExamples extends TacticTestBase  {
       (NotRight(SuccPos(1)), 0)
       (Close(AntePos(0),SuccPos(0)), 0)
       )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe "==> !!p() <-> p()".asSequent
   }
 
@@ -56,7 +56,7 @@ class BTacticExamples extends TacticTestBase  {
           id)
       )
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe "==> !!p() <-> p()".asSequent
   }
 
@@ -75,7 +75,7 @@ class BTacticExamples extends TacticTestBase  {
           id)
         )
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe "==> !!p() <-> p()".asSequent
   }
 
@@ -88,7 +88,7 @@ class BTacticExamples extends TacticTestBase  {
       Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula)),
       prop
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula))
   }
 
@@ -112,7 +112,7 @@ class BTacticExamples extends TacticTestBase  {
         // |- q(2*v+1) <-> q(2*v+1)
         byUS(equivReflexive)
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula))
   }
 
@@ -137,7 +137,7 @@ class BTacticExamples extends TacticTestBase  {
         // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
         prop
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
   }
 
@@ -164,7 +164,7 @@ class BTacticExamples extends TacticTestBase  {
         // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
         byUS(Ax.equivReflexive)
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
   }
 
@@ -185,7 +185,7 @@ class BTacticExamples extends TacticTestBase  {
         // |- x*(x+1)>=0 -> x*(x+1)>=0
         prop
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula))
   }
 
@@ -199,7 +199,7 @@ class BTacticExamples extends TacticTestBase  {
         // |- x^2<4 -> true by DW
         prop
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula))
   }
 
@@ -232,7 +232,7 @@ class BTacticExamples extends TacticTestBase  {
       // |- [{x'=22}]2*x'+(x'*y+x*y')>=0 <-> [{x'=22}]2*x'+(x'*y+x*y')>=0
       byUS(Ax.equivReflexive)
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe "==> [{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0".asSequent
   }
 
@@ -246,7 +246,7 @@ class BTacticExamples extends TacticTestBase  {
         // |- (x>0->2*(x+1)>=1)&(x=0->1>=1)
         QE
     )
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.proved shouldBe "==> [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asSequent
   }
 }

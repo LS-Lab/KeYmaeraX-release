@@ -52,19 +52,19 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   "Sequential Combinator" should "prove |- 1=2 -> 1=2" in withMathematica { _ =>
     inside (theInterpreter(implyR(1) & close, BelleProvable.plain(ProvableSig.startPlainProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+      case BelleProvable(p, _) => p shouldBe Symbol("proved")
     }
   }
 
   "Either combinator" should "prove |- 1=2 -> 1=2 by AndR | (ImplyR & Close)" in withMathematica { _ =>
     inside (theInterpreter(andR(1) | (implyR(1) & close), BelleProvable.plain(ProvableSig.startPlainProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+      case BelleProvable(p, _) => p shouldBe Symbol("proved")
     }
   }
 
   it should "prove |- 1=2 -> 1=2 by (ImplyR & Close) | AndR" in withMathematica { _ =>
     inside (theInterpreter((implyR(1) & close) | andR(1), BelleProvable.plain(ProvableSig.startPlainProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+      case BelleProvable(p, _) => p shouldBe Symbol("proved")
     }
   }
 
@@ -84,30 +84,30 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "run right if left makes no progress" in withMathematica { _ =>
     proveBy("x>=0 ==> \\forall y (y=x -> y>=0)".asSequent, prop | allR(1)).subgoals.loneElement shouldBe "x>=0 ==> y=x -> y>=0".asSequent
-    proveBy("x>=0 -> \\forall y (y=x -> y>=0)".asFormula, SaturateTactic(prop | allR('R) | exhaustiveEqL2R('Llast))) shouldBe 'proved
+    proveBy("x>=0 -> \\forall y (y=x -> y>=0)".asFormula, SaturateTactic(prop | allR(Symbol("R")) | exhaustiveEqL2R(Symbol("Llast")))) shouldBe Symbol("proved")
   }
 
   "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in withMathematica { _ =>
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & OnAll (implyR(SuccPos(0)) & close)
-    proveBy(f, expr) shouldBe 'proved
+    proveBy(f, expr) shouldBe Symbol("proved")
   }
 
   it should "move inside Eithers correctly" in withMathematica { _ =>
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & OnAll (andR(SuccPos(0)) | (implyR(SuccPos(0)) & close))
-    proveBy(f, expr) shouldBe 'proved
+    proveBy(f, expr) shouldBe Symbol("proved")
   }
 
   it should "support 'Rlike unification matching" in withMathematica { _ =>
     val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
-      SaturateTactic(orR('R)) & SaturateTactic(onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))))
+      SaturateTactic(orR(Symbol("R"))) & SaturateTactic(onAll(implyR(Symbol("Rlike"), "p_()&q_()->r_()".asFormula))))
     result.subgoals.loneElement shouldBe "a=0&b=1, f=5&g=6 ==> d=3->e=4, c=2, h=7".asSequent
   }
 
   it should "report when no unification found with 'Rlike unification matching" in withMathematica { _ =>
     the [BelleProofSearchControl] thrownBy proveBy("==> a=0, b=1, c=2->d=3".asSequent,
-      onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message
+      onAll(implyR(Symbol("Rlike"), "p_()&q_()->r_()".asFormula))) should have message
       """Not found: locator 'R~="p_()&q_()->r_()"
         |of position tactic implyR('R~="p_()&q_()->r_()")
         |does not match anywhere in succedent of
@@ -124,7 +124,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "support 'Llike unification matching" in withMathematica { _ =>
     val result = proveBy("(a=0&b=1 -> c=2) & (d=3 -> e=4) & (f=5&g=6 -> h=7) -> i=8".asFormula,
-      implyR('R) & SaturateTactic(andL('L)) & SaturateTactic(onAll(implyL('Llike, "p_()&q_()->r_()".asFormula)))
+      implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & SaturateTactic(onAll(implyL(Symbol("Llike"), "p_()&q_()->r_()".asFormula)))
     )
     result.subgoals should contain theSameElementsInOrderAs List(
       "d=3->e=4 ==> i=8, a=0&b=1, f=5&g=6".asSequent,
@@ -144,33 +144,33 @@ class SequentialInterpreterTests extends TacticTestBase {
           OnAll(andR(SuccPos(0))) |
           OnAll(implyR(SuccPos(0)) & close)
         )
-    proveBy(f, expr) shouldBe 'proved
+    proveBy(f, expr) shouldBe Symbol("proved")
   }
 
   it should "prove x=2&y=3&z=4 |- z=4" in withMathematica { _ =>
-    proveBy("x=2&y=3&z=4 ==> z=4".asSequent, SaturateTactic(andL('_)) &
+    proveBy("x=2&y=3&z=4 ==> z=4".asSequent, SaturateTactic(andL(Symbol("_"))) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
-      assertE("z=4".asFormula, "z=4 not at -3")(-3) & close) shouldBe 'proved
+      assertE("z=4".asFormula, "z=4 not at -3")(-3) & close) shouldBe Symbol("proved")
   }
 
   it should "repeat 0 times if not applicable" in withMathematica { _ =>
-    proveBy("x=2 ==> x=2".asSequent, SaturateTactic(andL('_)) & close) shouldBe 'proved
+    proveBy("x=2 ==> x=2".asSequent, SaturateTactic(andL(Symbol("_"))) & close) shouldBe Symbol("proved")
   }
 
   it should "saturate until no longer applicable" in withMathematica { _ =>
-    proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, SaturateTactic(andL('Llast)) &
+    proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, SaturateTactic(andL(Symbol("Llast"))) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
-      assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close) shouldBe 'proved
+      assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close) shouldBe Symbol("proved")
   }
 
   it should "try right branch when used in combination with either combinator" in withMathematica { _ =>
     proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent,
-      SaturateTactic(SaturateTactic(andL('Llast)) | close)) shouldBe 'proved
+      SaturateTactic(SaturateTactic(andL(Symbol("Llast"))) | close)) shouldBe Symbol("proved")
   }
 
   it should "saturate 'Rlike' unification matching" in withMathematica { _ =>
     val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
-      SaturateTactic(orR('R)) & SaturateTactic(implyR('Rlike, "p_()&q_()->r_()".asFormula))
+      SaturateTactic(orR(Symbol("R"))) & SaturateTactic(implyR(Symbol("Rlike"), "p_()&q_()->r_()".asFormula))
       )
     result.subgoals.loneElement shouldBe "a=0&b=1, f=5&g=6 ==> d=3->e=4, c=2, h=7".asSequent
   }
@@ -179,7 +179,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     val fml = "[x:=3;](x>0 & x>1 & x>2)".asFormula
     val modelContent = s"""ArchiveEntry "Test" ProgramVariables Real x; End.\n Problem ${fml.prettyString} End. End."""
     db.createProof(modelContent, "saturateTest")
-    db.proveBy(modelContent, SaturateTactic(onAll(boxAnd('R) & andR('R))) & master()) shouldBe 'proved
+    db.proveBy(modelContent, SaturateTactic(onAll(boxAnd(Symbol("R")) & andR(Symbol("R")))) & master()) shouldBe Symbol("proved")
   }}
 
   it should "not endless repeat on new labels" in withMathematica { _ =>
@@ -189,10 +189,10 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "Repeat combinator" should "repeat the specified number of times" in withMathematica { _ =>
-    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*0).subgoals.loneElement shouldBe "x=2&y=3&z=4 ==> x=2".asSequent
-    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*1).subgoals.loneElement shouldBe "x=2, y=3&z=4 ==> x=2".asSequent
-    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*2).subgoals.loneElement shouldBe "x=2, y=3, z=4 ==> x=2".asSequent
-    val ex = the [IllFormedTacticApplicationException] thrownBy proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*3)
+    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL(Symbol("L"))*0).subgoals.loneElement shouldBe "x=2&y=3&z=4 ==> x=2".asSequent
+    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL(Symbol("L"))*1).subgoals.loneElement shouldBe "x=2, y=3&z=4 ==> x=2".asSequent
+    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL(Symbol("L"))*2).subgoals.loneElement shouldBe "x=2, y=3, z=4 ==> x=2".asSequent
+    val ex = the [IllFormedTacticApplicationException] thrownBy proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL(Symbol("L"))*3)
     ex should have message "RepeatTactic failed on repetition 3"
     ex.getCause should have message
       """Not found: locator 'L
@@ -209,18 +209,18 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "+ combinator" should "saturate with at least 1 repetition" in withMathematica { _ =>
-    val result = proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, andL('Llast) & SaturateTactic(andL('Llast)))
+    val result = proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, andL(Symbol("Llast")) & SaturateTactic(andL(Symbol("Llast"))))
     result.subgoals.loneElement shouldBe "x=2, y=3, z=4 | z=5 ==> x=2".asSequent
   }
 
   it should "fail when not at least 1 repetition is possible" in withMathematica { _ =>
     a [BelleThrowable] should be thrownBy proveBy("z=4|z=5 ==> x=2".asSequent,
-      andL('Llast) & SaturateTactic(andL('Llast)))
+      andL(Symbol("Llast")) & SaturateTactic(andL(Symbol("Llast"))))
   }
 
   it should "saturate with at least 1 repetition and try right branch in combination with either combinator" in withMathematica { _ =>
     proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent,
-      SaturateTactic((andL('Llast) & SaturateTactic(andL('Llast))) | close)) shouldBe 'proved
+      SaturateTactic((andL(Symbol("Llast")) & SaturateTactic(andL(Symbol("Llast")))) | close)) shouldBe Symbol("proved")
   }
 
   "must idiom" should "fail when no change occurs" in withMathematica { _ =>
@@ -252,7 +252,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(SuccPos(0)) & close
     )
     inside (theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+      case BelleProvable(p, _) => p shouldBe Symbol("proved")
     }
   }
 
@@ -263,7 +263,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(SuccPos(0)) & close
       )
     inside (theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+      case BelleProvable(p, _) => p shouldBe Symbol("proved")
     }
   }
 
@@ -302,7 +302,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       (BelleTopLevelLabel("foo"), implyR(1) & close)
     )
     inside (theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startPlainProof("(1=1->1=1) & (!2=2 | 2=2)".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+      case BelleProvable(p, _) => p shouldBe Symbol("proved")
     }
   }
 
@@ -318,7 +318,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "not screw up empty labels" in withMathematica { _ =>
     proveBy(
-      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula, prop) shouldBe 'proved
+      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula, prop) shouldBe Symbol("proved")
   }
 
   it should "finish working branches before failing" in withMathematica { _ =>
@@ -459,7 +459,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   "Unification" should "work on 1=1->1=1" in withMathematica { _ =>
     val pattern = SequentType("==> p() -> p()".asSequent)
     val e = USubstPatternTactic(Seq((pattern, (x:RenUSubst) => implyR(SuccPos(0)) & close)))
-    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
+    proveBy("1=1->1=1".asFormula, e) shouldBe Symbol("proved")
   }
 
   it should "work when there are non-working patterns" in withMathematica { _ =>
@@ -469,7 +469,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       (pattern2, (_: RenUSubst) => error("Should never get here.")),
       (pattern1, (_: RenUSubst) => implyR(SuccPos(0)) & close)
     ))
-    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
+    proveBy("1=1->1=1".asFormula, e) shouldBe Symbol("proved")
   }
 
   it should "work when there are non-working patterns -- flipped order." in withMathematica { _ =>
@@ -479,7 +479,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       (pattern1, (_: RenUSubst) => implyR(1) & close),
       (pattern2, (_: RenUSubst) => error("Should never get here."))
     ))
-    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
+    proveBy("1=1->1=1".asFormula, e) shouldBe Symbol("proved")
   }
 
   it should "choose the first applicable unification when there are many options" in withMathematica { _ =>
@@ -489,7 +489,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       (pattern1, (_: RenUSubst) => implyR(1) & close),
       (pattern2, (_: RenUSubst) => error("Should never get here."))
     ))
-    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
+    proveBy("1=1->1=1".asFormula, e) shouldBe Symbol("proved")
   }
 
   it should "choose the first applicable unification when there are many options -- flipped order" in withMathematica { _ =>
@@ -517,12 +517,12 @@ class SequentialInterpreterTests extends TacticTestBase {
       ) & Idioms.<(close, close, master())
     })
 
-    db.proveBy(modelContent, tactic(1)) shouldBe 'proved
+    db.proveBy(modelContent, tactic(1)) shouldBe Symbol("proved")
   }}
   
   "Def tactic" should "define a tactic and apply it later" in withMathematica { _ =>
     val fml = "x>0 -> [x:=2;++x:=x+1;]x>0".asFormula
-    val tDef = DefTactic("myAssign", assignb('R))
+    val tDef = DefTactic("myAssign", assignb(Symbol("R")))
     val tactic = tDef & implyR(1) & choiceb(1) & andR(1) & OnAll(ApplyDefTactic(tDef))
     val result = proveBy(fml, tactic)
     result.subgoals should have size 2
@@ -640,7 +640,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     // should take about 1min
     failAfter(2 minutes) {
       val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
-        SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
+        SaturateTactic(implyR(Symbol("R")) | andL(Symbol("L")) | orR(Symbol("R")) | assignb(Symbol("R"))),
         BelleProvable.plain(ProvableSig.startPlainProof(Imply(ante, succ)))
       )
       result.subgoals.head.ante should have size 100
@@ -656,7 +656,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     // should take about 500ms
     failAfter(2 seconds) {
       val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil)(
-        SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
+        SaturateTactic(implyR(Symbol("R")) | andL(Symbol("L")) | orR(Symbol("R")) | assignb(Symbol("R"))),
         BelleProvable.plain(ProvableSig.startPlainProof(Imply(ante, succ)))
       )
       result.subgoals.head.ante should have size 100
@@ -679,7 +679,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       SaturateTactic(prop),
       BelleProvable.plain(ProvableSig.startPlainProof("x>0 -> x>0".asFormula))
     ) match {
-      case BelleProvable(pr, _) => pr shouldBe 'proved
+      case BelleProvable(pr, _) => pr shouldBe Symbol("proved")
     }
     listener.calls should have size 1
   }
@@ -696,7 +696,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       defs = entry.defs,
       tactic = expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "==> x>0 -> [y:=x;]y>0".asSequent, "Unexpected expand result") &
-        implyR(1) & assignb(1) & id) shouldBe 'proved
+        implyR(1) & assignb(1) & id) shouldBe Symbol("proved")
 
     proveBy(entry.model.asInstanceOf[Formula],
       defs = entry.defs,
@@ -704,7 +704,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
         expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
-        id) shouldBe 'proved
+        id) shouldBe Symbol("proved")
   }
 
   it should "replay when expanded on branches" in withMathematica { _ =>
@@ -718,7 +718,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
       expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "==> x>0 -> [y:=x; ++ ?y>0;]y>0".asSequent, "Unexpected expand result") &
-        implyR(1) & choiceb(1) & andR(1) <(assignb(1) & id, testb(1) & implyR(1) & id), entry.defs) shouldBe 'proved
+        implyR(1) & choiceb(1) & andR(1) <(assignb(1) & id, testb(1) & implyR(1) & id), entry.defs) shouldBe Symbol("proved")
 
     proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
       implyR(1) & choiceb(1) & andR(1) <(
@@ -733,7 +733,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0,y>0 ==> y>0".asSequent, "Unexpected expand result") &
         id),
-      entry.defs) shouldBe 'proved
+      entry.defs) shouldBe Symbol("proved")
   }
 
   it should "replay when expanded only on some branches" in withMathematica { _ =>
@@ -753,7 +753,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           id
         ,
         testb(1) & implyR(1) & id),
-      entry.defs) shouldBe 'proved
+      entry.defs) shouldBe Symbol("proved")
 
     // branches in reverse order
     proveBy(Sequent(IndexedSeq.empty, IndexedSeq(entry.model.asInstanceOf[Formula])),
@@ -765,7 +765,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         expandAllDefs(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
         id),
-      entry.defs) shouldBe 'proved
+      entry.defs) shouldBe Symbol("proved")
   }
 
   it should "support introducing variables for function symbols of closed provables" in withMathematica { _ =>
@@ -790,7 +790,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     )
 
     proveBy(entry.model.asInstanceOf[Formula], let("r()".asTerm, "r".asTerm, by(
-      proveBy("x^2+y^2=r() -> [{x'=r()*y,y'=-r()*x}]x^2+y^2=r()".asFormula, implyR(1) & ODE(1))))) shouldBe 'proved
+      proveBy("x^2+y^2=r() -> [{x'=r()*y,y'=-r()*x}]x^2+y^2=r()".asFormula, implyR(1) & ODE(1))))) shouldBe Symbol("proved")
   }
 
   it should "detect expanded definitions when stitching together provables" in withMathematica { _ =>
@@ -816,7 +816,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "extend parent provable" in withMathematica { _ =>
     val defs = "g(x) ~> 2*x".asDeclaration
     proveByS("min(v,0)>=0, x_0>=0, x=x_0 ==> [{x'=v}]g(x)>=g(x_0)".asSequent,
-      EqualityTactics.minmax(-1) & dIRule(1) <(QE, TactixLibrary.unfoldProgramNormalize & QE), defs) shouldBe 'proved
+      EqualityTactics.minmax(-1) & dIRule(1) <(QE, TactixLibrary.unfoldProgramNormalize & QE), defs) shouldBe Symbol("proved")
   }
 
   it should "extend parent provable on branch (1)" in withMathematica { _ =>
@@ -861,24 +861,24 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "abbreviate only temporarily" in withMathematica { _ =>
     proveBy("x>0 | x>y, y=0 | y>0 ==> x>0".asSequent,
-      Using("x>0 | x>y".asFormula :: Nil, SaturateTactic(orL('L)))).subgoals shouldBe List(
+      Using("x>0 | x>y".asFormula :: Nil, SaturateTactic(orL(Symbol("L"))))).subgoals shouldBe List(
       "x>0, y=0 | y>0 ==> x>0".asSequent, "x>y, y=0 | y>0 ==> x>0".asSequent)
   }
 
   it should "work nested" in withMathematica { _ =>
     proveBy("x>0 | x>y, y=0 | y>0 ==> x>0".asSequent,
-      Using("x>0 | x>y".asFormula :: Nil, SaturateTactic(orL('L))) <(
+      Using("x>0 | x>y".asFormula :: Nil, SaturateTactic(orL(Symbol("L")))) <(
         Using("x>0".asFormula :: "x>0".asFormula :: Nil, id),
         skip
       )).subgoals.loneElement shouldBe "x>y, y=0 | y>0 ==> x>0".asSequent
   }
 
   it should "work with QE" in withQE { _ =>
-    proveBy("x>0, y=0 | y>0 ==> x^2>0".asSequent, Using("x>0".asFormula :: "x^2>0".asFormula :: Nil, QE)) shouldBe 'proved
+    proveBy("x>0, y=0 | y>0 ==> x^2>0".asSequent, Using("x>0".asFormula :: "x^2>0".asFormula :: Nil, QE)) shouldBe Symbol("proved")
   }
 
   it should "work with loops" in withTactics {
-    proveBy("x>0, y=0 | y>0, z=0 | z=1 ==> [{x:=x+z;}*]x>0".asSequent, Using("z=0 | z=1".asFormula :: Nil, SaturateTactic(orL('L)))).
+    proveBy("x>0, y=0 | y>0, z=0 | z=1 ==> [{x:=x+z;}*]x>0".asSequent, Using("z=0 | z=1".asFormula :: Nil, SaturateTactic(orL(Symbol("L"))))).
       subgoals shouldBe List(
         "x>0, y=0 | y>0, z=0 ==> [{x:=x+z;}*]x>0".asSequent,
         "x>0, y=0 | y>0, z=1 ==> [{x:=x+z;}*]x>0".asSequent
@@ -886,7 +886,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "work with ODEs" in withTactics {
-    proveBy("x>0, y=0 | y>0, z=0 | z=1 ==> [{x'=z*x}]x>0".asSequent, Using("z=0 | z=1".asFormula :: Nil, SaturateTactic(orL('L)))).
+    proveBy("x>0, y=0 | y>0, z=0 | z=1 ==> [{x'=z*x}]x>0".asSequent, Using("z=0 | z=1".asFormula :: Nil, SaturateTactic(orL(Symbol("L"))))).
       subgoals shouldBe List(
       "x>0, y=0 | y>0, z=0 ==> [{x'=z*x}]x>0".asSequent,
       "x>0, y=0 | y>0, z=1 ==> [{x'=z*x}]x>0".asSequent
@@ -923,10 +923,10 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "be allowed but optional to mention formulas of searchy position locators" in withTactics {
     proveBy("x=2, c()=3 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent,
-      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality('R, "[x:=c();]x=2".asFormula))).
+      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality(Symbol("R"), "[x:=c();]x=2".asFormula))).
       subgoals.loneElement shouldBe "x_0=2, c()=3, x=c() ==> [x:=4;]x=4, x=2".asSequent
     proveBy("x=2, c()=3 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent,
-      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality('Rlike, "[x:=c();]x=c()".asFormula))).
+      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality(Symbol("Rlike"), "[x:=c();]x=c()".asFormula))).
       //@todo undesired renaming
       subgoals.loneElement shouldBe "x_0=2, c()=3, x=4 ==> [x_0:=c();]x_0=2, x=4".asSequent
   }

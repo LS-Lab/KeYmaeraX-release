@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
@@ -125,19 +125,19 @@ class ImplicitFunctionTests extends TacticTestBase {
     val prob = Equal(Differential(FuncOf(expF,"x".asVariable)),
                       Times(FuncOf(expF,"x".asVariable),Differential("x".asVariable)))
 
-    proveBy(prob, byUS(diffAx)) shouldBe 'proved
+    proveBy(prob, byUS(diffAx)) shouldBe Symbol("proved")
   }}
 
   it should "prove exp always positive in dL" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     val problem = Greater(FuncOf(InterpretedSymbols.expF,"x".asVariable), Number(0))
-    proveBy(problem, QE) shouldBe 'proved
+    proveBy(problem, QE) shouldBe Symbol("proved")
   }}
 
   it should "prove sin differential axiom" in withMathematica { _ =>
     import InterpretedSymbols.{sinF,cosF}
     val prob = Equal(Differential(FuncOf(sinF,"x".asVariable)),
       Times(FuncOf(cosF,"x".asVariable),Differential("x".asVariable)))
-    proveBy(prob, byUS(ImplicitAx.deriveDiffAxiom(List(sinF, cosF)).head)) shouldBe 'proved
+    proveBy(prob, byUS(ImplicitAx.deriveDiffAxiom(List(sinF, cosF)).head)) shouldBe Symbol("proved")
   }
 
   "kyx2mathematica" should "convert special implicit functions to Mathematica" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
@@ -149,11 +149,11 @@ class ImplicitFunctionTests extends TacticTestBase {
       Times(FuncOf(expF,Number(-1)),FuncOf(expF,Number(1))),
       Number(1)), QE)
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }}
 
   "QE" should "not abbreviate interpreted functions known to Mathematica" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    proveBy("exp(x)>0".asFormula, QE) shouldBe 'proved
+    proveBy("exp(x)>0".asFormula, QE) shouldBe Symbol("proved")
   }}
 
   //TODO: substitute uninterpreted for interpreted functions in these tests
@@ -162,7 +162,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // Ideally: prove by ODE(1), dI('full)(1), etc.
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: be usable as a loop invariant" taggedAs TodoTest in withMathematica { _ =>
@@ -170,21 +170,21 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // Ideally: prove using loop with loop invariants like x>=0 or exp(x)>=1
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "work with DI (1)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    proveBy("x =1 ==> [{x' = exp(x)}] x > 0".asSequent, dI()(1)) shouldBe 'proved
+    proveBy("x =1 ==> [{x' = exp(x)}] x > 0".asSequent, dI()(1)) shouldBe Symbol("proved")
   }}
 
   it should "work with DI (2)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     val s = "x>=0&y>=0&z>=0 ==> [{x' = exp(y), y' = exp(z), z'=1}] x+y+z>=0".asSequent
-    proveBy(s, dI()(1)) shouldBe 'proved
+    proveBy(s, dI()(1)) shouldBe Symbol("proved")
   }}
 
   it should "work with DI (3)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     val s = "x=5 ==> [{x' = sin(x) + 1}] x>=0".asSequent
-    proveBy(s, dI()(1)) shouldBe 'proved
+    proveBy(s, dI()(1)) shouldBe Symbol("proved")
   }}
 
   it should "FEATURE_REQUEST: model a pendulum" taggedAs TodoTest in withMathematica { _ =>
@@ -192,6 +192,6 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // end goal: prove something like this or more
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 }

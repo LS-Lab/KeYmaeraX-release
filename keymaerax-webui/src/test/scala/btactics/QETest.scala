@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -55,12 +60,12 @@ class QETest extends TacticTestBase {
     val f = "\\forall x \\forall t_ \\forall ep \\forall S \\forall B \\forall A (A>0&B>0&ep>0&t_>=0&\\forall s_ (0<=s_&s_<=t_->0*s_+0>=0&s_+0<=ep)&x+0^2/(2*B)<=S->0*(t_^2/2)+0*t_+x+(0*t_+0)^2/(2*B)<=S)".asFormula
     withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce")) {
       val r = qeTool.qe(f)
-      r.fact shouldBe 'proved
+      r.fact shouldBe Symbol("proved")
       r.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(f, True)))
     }
     withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Resolve")) {
       val r = qeTool.qe(f)
-      r.fact shouldBe 'proved
+      r.fact shouldBe Symbol("proved")
       //@note Mathematica not able to prove with Resolve!
       r.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(f, True)))
     }

@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -91,13 +92,13 @@ class Compbased extends TacticTestBase {
   "STTT Examples" should "prove remote control contract compliance" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("Remote Control Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe Symbol("proved"))
   }
 
   it should "prove obstacle contract compliance" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("Obstacle Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe Symbol("proved"))
   }
 
   it should "prove choice implementation" in withMathematica { _ =>
@@ -107,10 +108,10 @@ class Compbased extends TacticTestBase {
       Box(Compose(Choice(Compose(a, Assign(s, Number(1))), Assign(s, Number(0))), Choice(Compose(Test(Equal(s, Number(0))), b), Compose(Test(Not(Equal(s, Number(0)))), Test(True)))), p))
 
     val equalReflex = proveBy("true <-> s()=s()".asFormula, equivR(1) <(cohideR(1) & byUS(Ax.equalReflexive) & done, prop & done))
-    equalReflex shouldBe 'proved
+    equalReflex shouldBe Symbol("proved")
 
     val falseImplies = proveBy("true <-> (false -> p())".asFormula, prop & done)
-    falseImplies shouldBe 'proved
+    falseImplies shouldBe Symbol("proved")
 
     val notTrue = proveBy("false <-> !true".asFormula, prop & done)
 
@@ -131,18 +132,18 @@ class Compbased extends TacticTestBase {
             useAt(notTrue, PosInExpr(1::Nil))(1, 0::Nil) &
             useAt(falseImplies, PosInExpr(1::Nil))(1) & close
         )
-      )) shouldBe 'proved
+      )) shouldBe Symbol("proved")
   }
 
   it should "generate obstacle monitor program" in withMathematica { tool =>
     val compileEqualityTest = proveBy("<?f_()=g_();>p_(||) <-> <if (f_()=g_()) { ?p_(||); } else { ?false; }>true".asFormula, chase(1, 0::Nil) & chase(1, 1::Nil) & prop & done)
-    compileEqualityTest shouldBe 'proved
+    compileEqualityTest shouldBe Symbol("proved")
 
     val compileTest =  proveBy("<?p_();><a;>q_(||) <-> <if (p_()) { ?<a;>q_(||); } else { ?false; }>true".asFormula, testd(1, 0::Nil) & chase(1, 1::Nil) & prop & done)
-    compileTest shouldBe 'proved
+    compileTest shouldBe Symbol("proved")
 
     val compileRegionTest = proveBy("<?p_();>true <-> <if (p_()) { ?true; } else { ?false; }>true".asFormula, testd(1, 0::Nil) & chase(1, 1::Nil) & prop & done)
-    compileRegionTest shouldBe 'proved
+    compileRegionTest shouldBe Symbol("proved")
     
     //@todo wrong sign (returns a formula with <= safe, > unsafe)
     def toMetric = anon ((pos: Position, seq: Sequent) =>
@@ -200,22 +201,22 @@ class Compbased extends TacticTestBase {
   it should "prove robot contract compliance" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("Robot Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe Symbol("proved"))
   }
 
   it should "prove compatibility of obstacle and robot" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("Compatibility of Obstacle and Robot",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe Symbol("proved"))
   }
 
   it should "prove communication guarantees" in withMathematica { _ =>
     val entry1 = ArchiveParser.getEntry("Communication Guarantee Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3, defs = entry1.defs) shouldBe 'proved)
+    entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3, defs = entry1.defs) shouldBe Symbol("proved"))
     val entry2 = ArchiveParser.getEntry("Communication Guarantee Liveness",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3, defs = entry2.defs) shouldBe 'proved)
+    entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3, defs = entry2.defs) shouldBe Symbol("proved"))
   }
 
   it should "prove system safety" in withMathematica { _ =>
@@ -233,27 +234,27 @@ class Compbased extends TacticTestBase {
         "robotcomponents/Compatibility of Obstacle and Robot",
         "robotcomponents/Communication Guarantee Safety",
         "robotcomponents/Communication Guarantee Liveness"
-      )(1), defs = entry.defs) shouldBe 'proved
+      )(1), defs = entry.defs) shouldBe Symbol("proved")
 
-      entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
+      entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe Symbol("proved"))
     }
   }
 
   "Robix" should "prove the robot component" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("Robot Component",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/robix/robot.kyx")).mkString).get
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
   }
 
   it should "prove the obstacle component" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("Obstacle Component",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/robix/obstacle.kyx")).mkString).get
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
   }
 
   it should "prove compatibility" in withMathematica { _ =>
     val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/compatibility.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove monolithic model" in withMathematica { _ =>
@@ -275,7 +276,7 @@ class Compbased extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
-    val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & SaturateTactic(andL('L)) &
+    val dw: BelleExpr = exhaustiveEqR2L(hide=true)(Symbol("Llast"))*5 /* 5 old(...) in DI */ & SaturateTactic(andL(Symbol("L"))) &
       print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     val simpQE = SaturateTactic(alphaRule) & SimplifierV3.fullSimpTac() & printIndexed("SimpQE") & speculativeQE
@@ -284,43 +285,43 @@ class Compbased extends TacticTestBase {
       //@todo auto-transform
       replaceTransform("ep()".asTerm, "t".asTerm)(-7) & printIndexed("Transformed") & simpQE & print("Proved acc arithmetic")
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ print("Base case...") & simpQE & print("Base case done"),
       /* use case */ print("Use case...") & simpQE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & unfoldProgramNormalize & printIndexed("After normalize") <(
       print("Braking branch 1") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 1 done"),
       print("Braking branch 2") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 2 done"),
       print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Stopped branch 1 done"),
-      print("Acceleration branch 1") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
+      print("Acceleration branch 1") & hideL(Symbol("L"), "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
         di("a")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 1 done"),
       print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Stopped branch 2 done"),
-      print("Acceleration branch 2") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
+      print("Acceleration branch 2") & hideL(Symbol("L"), "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
         di("a")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 2 done")
       ) & print("Induction step done")
       ) & print("Proof done")
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Multiport local lane control" should "prove the leader component" in withMathematica { _ =>
     val fml = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_leader.kyx"))
-    proveBy(fml, master()) shouldBe 'proved
+    proveBy(fml, master()) shouldBe Symbol("proved")
   }
 
   it should "prove the follower component" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("Follower Component",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_follower.kyx")).mkString).get
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
   }
 
   it should "prove compatibility" in withMathematica { _ =>
     val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_compatibility.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove the monolithic system" in withMathematica { _ =>
@@ -328,22 +329,22 @@ class Compbased extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_system.kyx")).mkString).get
     withTacticProgress(entry.tactics.head._3) {
       proveBy(entry.model.asInstanceOf[Formula], _)
-    } shouldBe 'proved
+    } shouldBe Symbol("proved")
   }
 
   "ETCS" should "prove RBC component" in withMathematica { _ =>
     val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_rbc.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove train component" in withMathematica { _ =>
     val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_train.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove compatibility" in withMathematica { _ =>
     val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_compatibility.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
 }

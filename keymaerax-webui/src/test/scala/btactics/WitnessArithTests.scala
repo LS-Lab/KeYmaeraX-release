@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
@@ -34,7 +39,7 @@ class WitnessArithTests extends TacticTestBase {
 
     val problems = List(i1,i2,i3,i4,i5,i6,i7,i8).map(_.asFormula)
 
-    val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & dI(Symbol("diffInd"))(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         // Much slower
         // PolynomialArith.normaliseAt(1, 0 :: Nil) &
@@ -50,24 +55,24 @@ class WitnessArithTests extends TacticTestBase {
 
   it should "solve Lecture 11 odd order dynamics (Example 11.4)" in withMathematica { qeTool =>
     val i = "x^2 >= 2 -> [{x'=x^5+7*x^3+2*x}] x^2 >= 2".asFormula
-    val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & dI(Symbol("diffInd"))(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         SOSSolve.sos()
       )
     val res = proveBy(i, tactic)
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "solve Lecture 11 even order dynamics (Example 11.5)" in withMathematica { qeTool =>
     val i = "x^3 >= 2 -> [{x'=x^4+6*x^2+5}] x^3 >= 2".asFormula
-    val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & dI(Symbol("diffInd"))(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         OnAll(SOSSolve.sos())
       )
     val res = proveBy(i, tactic)
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "solve Lecture 11 DI arithmetic (conjuncts)" in withMathematica { qeTool =>
@@ -75,7 +80,7 @@ class WitnessArithTests extends TacticTestBase {
 
     //val insts = List((0,"1".asTerm),(1,"3*wit__0^2*x^2".asTerm))
 
-    val tactic = implyR(1) & DebuggingTactics.print("Entering diff ind") & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & DebuggingTactics.print("Entering diff ind") & dI(Symbol("diffInd"))(1) < (QE, //QE just for reflexivity, no problem
       DebuggingTactics.print("Before chase") &
         chase(1) &
         SOSSolve.sos()
@@ -83,13 +88,13 @@ class WitnessArithTests extends TacticTestBase {
 
     val res = proveBy(i, tactic)
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "solve Lecture 11 DI quartic dynamics (Example 11.7)" in withMathematica { qeTool =>
     val i = "x^3 >= -1 & a() >= 0 -> [{x'=(x-3)^4 +a()}] x^3 >= -1".asFormula
 
-    val tactic = implyR(1) & DebuggingTactics.print("Entering diff ind") & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & DebuggingTactics.print("Entering diff ind") & dI(Symbol("diffInd"))(1) < (QE, //QE just for reflexivity, no problem
       DebuggingTactics.print("Before chase") &
         chase(1) &
         SOSSolve.sos()
@@ -97,19 +102,19 @@ class WitnessArithTests extends TacticTestBase {
 
     val res = proveBy(i, tactic)
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "solve Lecture 11 DI damped oscillator" in withMathematica { qeTool =>
     val i = "w()^2*x^2 + y^2 <= c()^2 -> [{x'=y,y'=-w()^2*x-2*d()*w()*y & (w()>=0 & d()>=0)}]w()^2*x^2 + y^2 <= c()^2".asFormula
 
-    val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
+    val tactic = implyR(1) & dI(Symbol("diffInd"))(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         SOSSolve.sos())
 
     val res = proveBy(i, tactic)
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   //todo: hard
@@ -127,7 +132,7 @@ class WitnessArithTests extends TacticTestBase {
     val res = proveBy(Sequent(antes,succ), SOSSolve.sos())
 
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   "PolynomialArith" should "prove JH's example using special case witness (g=1)" in withMathematica { qeTool =>
@@ -138,7 +143,7 @@ class WitnessArithTests extends TacticTestBase {
 
     val res = proveBy(Sequent(antes,succ), SOSSolve.sos())
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "prove more JH examples (1)" in withMathematica { qeTool =>
@@ -148,7 +153,7 @@ class WitnessArithTests extends TacticTestBase {
 
     val res = proveBy(Sequent(antes,succ), SOSSolve.sos())
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "prove more JH examples (2)" in withMathematica { qeTool =>
@@ -157,7 +162,7 @@ class WitnessArithTests extends TacticTestBase {
 
     val res = proveBy(Sequent(antes,succ), SOSSolve.sos())
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   //todo: hard
@@ -174,7 +179,7 @@ class WitnessArithTests extends TacticTestBase {
       SOSSolve.sos()
     )
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   //todo: hard
@@ -189,7 +194,7 @@ class WitnessArithTests extends TacticTestBase {
 
     val res = proveBy(Sequent(antes,succ), SOSSolve.sos())
     println(res)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "prove RWV example with SOS" in withMathematica { qeTool =>
@@ -197,7 +202,7 @@ class WitnessArithTests extends TacticTestBase {
     val seq = Sequent(antes,IndexedSeq())
 
     val pr = proveBy(seq, SOSSolve.sos())
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   //todo: hard
@@ -209,7 +214,7 @@ class WitnessArithTests extends TacticTestBase {
     //    val witness = List(("1","wit_*x1^3"),("1","-9/14*wit_*x1^2*x3 + wit_*x2^2*x3"),("1","-9/14*wit_*x1^2*x2 + wit_*x2*x3^2"),("3/7","x1^4*x2*x3 - 1/2*x1^2*x2^3*x3 - 1/2*x1^2*x2*x3^3"),("3/7","-x1^5*x2 + x1*x2^3*x3^2"),("3/7","-x1^5*x3 + x1*x2^2*x3^3"),("9/28","-x1^2*x2^3*x3 + x1^2*x2*x3^3"),("3/196","wit_*x1^2*x3"),("3/196","wit_*x1^2*x2")).map( s => (s._1.asTerm,s._2.asTerm))
 
     val res = proveBy(Sequent(antes,succ),SOSSolve.sos())
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "prove JH examples from Monniaux & Corbineau, ITP'11" in withMathematica { qeTool =>
@@ -225,7 +230,7 @@ class WitnessArithTests extends TacticTestBase {
     val res = problems.map( s => proveBy(s, SOSSolve.sos())) //& genWitnessTac(ineq,witness))
 
     println(res)
-    res.map( pr => pr shouldBe 'proved)
+    res.map( pr => pr shouldBe Symbol("proved"))
   }
 
   it should "Solve a bunch of arithmetic questions" in withMathematica { qeTool =>
@@ -244,13 +249,13 @@ class WitnessArithTests extends TacticTestBase {
     val res = problems.map( s => proveBy(s, SOSSolve.sos()))
 
     println(res)
-    res.map( pr => pr shouldBe 'proved)
+    res.map( pr => pr shouldBe Symbol("proved"))
   }
 
   it should "prove a inequality" in withMathematica { _ =>
     val pr = proveBy("a > 0 & b > 0 -> a*x^2+b*y^2 >= 0".asFormula,
       SOSSolve.sos())
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 }

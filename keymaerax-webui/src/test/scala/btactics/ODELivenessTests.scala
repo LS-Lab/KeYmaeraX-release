@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
@@ -29,7 +34,7 @@ class ODELivenessTests extends TacticTestBase {
         byUS(ax)
       )
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "correctly prove affine norm bound" in withQE { _ =>
@@ -41,10 +46,10 @@ class ODELivenessTests extends TacticTestBase {
     val vdginst = getVDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
     println(vdginst)
 
-    vdginst._1 shouldBe 'proved
+    vdginst._1 shouldBe Symbol("proved")
     vdginst._1.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]v*v+z*z<=f_(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
 
-    vdginst._2 shouldBe 'proved
+    vdginst._2 shouldBe Symbol("proved")
     vdginst._2.conclusion shouldBe "==> [{c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
   }
 
@@ -52,7 +57,7 @@ class ODELivenessTests extends TacticTestBase {
     val ddginst = getDDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
     println(ddginst)
 
-    ddginst shouldBe 'proved
+    ddginst shouldBe Symbol("proved")
     ddginst.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]2*(v*(v^2+z)+z*(v*y+z))<=a_(|y_,z_,v,z|)*(v*v+z*z)+b_(|y_,z_,v,z|)->[{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)->[{c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)".asSequent
   }
 
@@ -155,7 +160,7 @@ class ODELivenessTests extends TacticTestBase {
     ))
 
     pr.subgoals.length shouldBe 4
-    proveBy(pr, prop) shouldBe 'proved
+    proveBy(pr, prop) shouldBe Symbol("proved")
   }
 
   "odeReduce" should "detect nonlinear ode" in withQE { _ =>
@@ -253,29 +258,29 @@ class ODELivenessTests extends TacticTestBase {
 
     println(pr)
     println(pr2)
-    pr shouldBe 'proved
-    pr2 shouldBe 'proved
+    pr shouldBe Symbol("proved")
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "work on simple examples (1) symbolically" in withQE { _ =>
     val pr = proveBy("a>0 ==> <{x'=a,y'=z}>x>=b()".asSequent,
       cutR("\\exists e_ (e_ > 0 & \\forall x \\forall y (a >= e_))".asFormula)(1) <(
         QE,
-        implyR(1) & existsL('Llast) & dV("e_".asTerm)(1)
+        implyR(1) & existsL(Symbol("Llast")) & dV("e_".asTerm)(1)
       )
     )
 
     val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent,
       cutR("\\exists e_ (e_ > 0 & \\forall y \\forall x (a+c >= e_))".asFormula)(2) <(
         QE,
-        implyR(2) & existsL('Llast) & dV("e_".asTerm)(2)
+        implyR(2) & existsL(Symbol("Llast")) & dV("e_".asTerm)(2)
       )
     )
 
     println(pr)
     println(pr2)
-    pr shouldBe 'proved
-    pr2 shouldBe 'proved
+    pr shouldBe Symbol("proved")
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "work on simple examples (1) automatically" in withQE { _ =>
@@ -290,14 +295,14 @@ class ODELivenessTests extends TacticTestBase {
 
     println(pr)
     println(pr2)
-    pr shouldBe 'proved
-    pr2 shouldBe 'proved
+    pr shouldBe Symbol("proved")
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
     val pr = proveBy("a()>0 ==> <{x'=a()}>x>=b()".asSequent, dVAuto()(1))
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "diff var flat flight progress [function]" in withQE { _ =>
@@ -307,7 +312,7 @@ class ODELivenessTests extends TacticTestBase {
         andR(1) <( QE , dVAuto()(1))
     )
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "diff var flat flight progress [variable]" in withQE { _ =>
@@ -317,7 +322,7 @@ class ODELivenessTests extends TacticTestBase {
         existsR("b".asTerm)(1) &
         andR(1) <( QE , dVAuto()(1)))
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "support higher derivatives" in withMathematica { _ =>
@@ -326,12 +331,12 @@ class ODELivenessTests extends TacticTestBase {
       // Should be old(x), etc.
       higherdV(List("x-100","v","a/2","j/6").map(_.asTerm))(1) &
       // This is manual by design, although this is probably the main way to do it
-      dC("a>=2*coeff2+6*coeff3*t".asFormula)(1) <( skip, dI('full)(1) ) &
-      dC("v>=coeff1+2*coeff2*t+3*coeff3*t^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
+      dC("a>=2*coeff2+6*coeff3*t".asFormula)(1) <( skip, dI(Symbol("full"))(1) ) &
+      dC("v>=coeff1+2*coeff2*t+3*coeff3*t^2".asFormula)(1) <( dI(Symbol("full"))(1), dI(Symbol("full"))(1) )
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "support semialgebraic dV (disjunctive)" in withMathematica { _ =>
@@ -346,7 +351,7 @@ class ODELivenessTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "support semialgebraic dV auto (disjunctive)" in withMathematica { _ =>
@@ -355,7 +360,7 @@ class ODELivenessTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "support semialgebraic dV auto 2" taggedAs SlowTest in withMathematica { _ =>
@@ -364,7 +369,7 @@ class ODELivenessTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   "cor" should "refine a closed domain" in withQE { _ =>
@@ -393,7 +398,7 @@ class ODELivenessTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   "univariate" should "automatically odeReduce univariate" in withMathematica { _ =>
@@ -433,7 +438,7 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml, implyR(1) & odeReduce(true,Nil)(1) & solve(1) & QE)
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "work with interleaved cases" in withQE { _ =>
@@ -441,14 +446,14 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml, implyR(1) & odeReduce(true,Nil)(1) & solve(1) & QE)
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "try manual univariate boundedness proof" in withQE { _ =>
     val fml = "a*r^2+b*r+c = 0 & (v-r=0 | v-r < 0 & a*v0^2+b*v0+c > 0 | a*v0^2+b*v0+c < 0 & v-r > 0 ) & v=v0 -> [{v' = a*v^2+b*v+c}] v^2 <= v0^2+r^2".asFormula
     val pr = proveBy(fml,
       implyR(1) & cut("\\exists d \\exists e_ \\forall v a*v^2+b*v+c=(v-r)*(d*v+e_)".asFormula) <(
-        existsL('Llast) & existsL('Llast) &
+        existsL(Symbol("Llast")) & existsL(Symbol("Llast")) &
           dC("a*v^2+b*v+c=(v-r)*(d*v+e_)".asFormula)(1) <(
             ODEInvariance.diffDivConquer("v-r".asTerm, Some("d*v+e_".asTerm))(1)
               <(
@@ -464,7 +469,7 @@ class ODELivenessTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   "FAOC" should "initialize" in withMathematica { _ =>
@@ -483,7 +488,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 1 (automatic)" in withMathematica { _ =>
@@ -495,7 +500,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 2 (manual)" in withMathematica { _ =>
@@ -515,7 +520,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 2 (automatic)" in withMathematica { _ =>
@@ -527,7 +532,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 3 (manual)" in withMathematica { _ =>
@@ -543,7 +548,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 3 (automatic)" in withMathematica { _ =>
@@ -561,7 +566,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 4 (manual)" in withMathematica { _ =>
@@ -594,7 +599,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 4 (automatic) " in withMathematica { _ =>
@@ -613,7 +618,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Examples 5,6,7 (manual) " in withMathematica { _ =>
@@ -671,14 +676,14 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     // Note: proof steps for pr2 already includes those from pr
     // Total tactic size is counted as size for tac1 + tac2
     println(pr2)
     println("Proof steps:",pr2.steps)
     println("Tactic size:",TacticStatistics.size(tac2))
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove Examples 5,6,7 (automatic) " in withMathematica { _ =>
@@ -714,14 +719,14 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     // Note: proof steps for pr2 already includes those from pr
     // Total tactic size is counted as size for tac1 + tac2
     println(pr2)
     println("Proof steps:",pr2.steps)
     println("Tactic size:",TacticStatistics.size(tac2))
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove Example 8 (manual)" in withMathematica { _ =>
@@ -750,7 +755,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Example 8 (automatic)" in withMathematica { _ =>
@@ -762,7 +767,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Sogokon & Jackson FM'15 Example 11" in withMathematica { _ =>
@@ -842,12 +847,12 @@ class ODELivenessTests extends TacticTestBase {
     println(pr1)
     println("Proof steps:",pr1.steps)
     println("Tactic size:",TacticStatistics.size(tac1))
-    pr1 shouldBe 'proved
+    pr1 shouldBe Symbol("proved")
 
     println(pr2)
     println("Proof steps:",pr2.steps)
     println("Tactic size:",TacticStatistics.size(tac2))
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove Sogokon & Jackson FM'15 Example 12" in withMathematica { _ =>
@@ -880,7 +885,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove Sogokon & Jackson FM'15 Example 15" in withMathematica { _ =>
@@ -892,14 +897,14 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove RAL goal reachability" in withMathematica { _ =>
     val seq = "v>0, vl<=v, v<=vh, a=0, eps>0, k*eps^2-2*eps < k*(x^2+y^2)-2*x, k*(x^2+y^2)-2*x < k*eps^2-2*eps, y>0 ==> <{x'=-v*k*y, y'=v*(k*x-1), v'=0 & v>=0}>( x^2+y^2<=eps^2 & (vl<=v & v<=vh) )".asSequent
 
     val tac = cut("\\exists oldv (oldv = v)".asFormula) < (
-        existsL('Llast),
+        existsL(Symbol("Llast")),
         hideR(1) & QE
       ) &
         // known invariants: v stays constant, and robot always on annulus
@@ -919,8 +924,8 @@ class ODELivenessTests extends TacticTestBase {
         ) &
         // todo: replace with old
         cut("\\exists oldhalfy (oldhalfy = y/2)".asFormula) < (
-          existsL('Llast),
-          hideL('Llast) & hideR(1) & QE
+          existsL(Symbol("Llast")),
+          hideL(Symbol("Llast")) & hideR(1) & QE
         ) &
         // As long as the goal is not yet reached, y will stay positive
         cut("[{x'=-v*k*y,y'=v*(k*x-1),v'=0&!x^2+y^2<=eps^2}] y > oldhalfy".asFormula)<(
@@ -935,7 +940,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove RAL velocity bounds" in withMathematica { _ =>
@@ -947,7 +952,7 @@ class ODELivenessTests extends TacticTestBase {
         skip,
         hideR(1) & QE
       ) &
-        orL('Llast) <(
+        orL(Symbol("Llast")) <(
           // v < vl, pick a = A
           existsR("A".asTerm)(1) & andR(1) <( QE,
             kDomainDiamond("v >= vl".asFormula)(1) <(
@@ -961,7 +966,7 @@ class ODELivenessTests extends TacticTestBase {
               // dV("A".asTerm)(1)
               dVAuto()(1)
           ),
-          orL('Llast) <(
+          orL(Symbol("Llast")) <(
             //a=0
             dDX(1, 0::1::Nil) & QE,
             // In this easy case, solve would do it after removing extra ODEs
@@ -989,7 +994,7 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println("Proof steps:",pr.steps)
     println("Tactic size:",TacticStatistics.size(tac))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
 }

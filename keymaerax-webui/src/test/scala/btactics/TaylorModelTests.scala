@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -33,7 +38,7 @@ class TaylorModelTests extends TacticTestBase {
   "TaylorModel" should "prove the lemma in order 2" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = 1 + y, y' = -x^2, t'=1}".asDifferentialProgram
     val tm = TaylorModel(ode, 2).lemma
-    tm shouldBe 'proved
+    tm shouldBe Symbol("proved")
     //    println(new KeYmaeraXPrettierPrinter(100).stringify(tm.conclusion))
     tm.conclusion shouldBe
       """
@@ -193,7 +198,7 @@ class TaylorModelTests extends TacticTestBase {
   it should "work for exp" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = x, t' = 1}".asDifferentialProgram
     val tm = TaylorModel(ode, 4).lemma
-    tm shouldBe 'proved
+    tm shouldBe Symbol("proved")
     // println(new KeYmaeraXPrettierPrinter(100).stringify(tm.conclusion))
     tm.conclusion shouldBe
       """
@@ -254,32 +259,32 @@ class TaylorModelTests extends TacticTestBase {
 
   it should "prove a lemma about van der Pol" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val tm = TaylorModel(vdp, 1).lemma
-    tm shouldBe 'proved
+    tm shouldBe Symbol("proved")
   }}
 
   it should "prove a lemma about parametrized van der Pol" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val tm = TaylorModel("{x' = y, y' = m()*(1 - x^2)*y - x,t'=1}".asDifferentialProgram, 1)
-    tm.lemma shouldBe 'proved
-    tm.timestepLemma shouldBe 'proved
+    tm.lemma shouldBe Symbol("proved")
+    tm.timestepLemma shouldBe Symbol("proved")
   }}
 
   it should "prove a lemma about coupled van der Pol" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
     val cvdp = "{x1' = y1, y1' = (1-x1^2)*y1 + b()*(x2-x1) - x1, x2' = y2, y2' = (1-x2^2)*y2 - b()*(x2-x1) - x2, t'=1}".asDifferentialProgram
     val tm = TaylorModel(cvdp, 1)
-    tm.lemma shouldBe 'proved
-    tm.timestepLemma shouldBe 'proved
+    tm.lemma shouldBe Symbol("proved")
+    tm.timestepLemma shouldBe Symbol("proved")
   }}
 
   it should "prove a lemma about Lotka-Volterra" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = 1.5*x - x*y, y'= -3*y + x*y, t' = 1}".asDifferentialProgram
     val tm = TaylorModel(ode, 2).lemma
-    tm shouldBe 'proved
+    tm shouldBe Symbol("proved")
   }}
 
   it should "prove a lemma about Lorenz" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = 10 * (y - x), y' = -y*z + 8/3*x - y, z' = x*y - 8/3*z, t' = 1}".asDifferentialProgram
     val tm = TaylorModel(ode, 1).lemma
-    tm shouldBe 'proved
+    tm shouldBe Symbol("proved")
   }}
 
   "cutTM" should "cut a Taylor model for exp, sin, cos" in withMathematica { qeTool =>
@@ -424,8 +429,8 @@ class TaylorModelTests extends TacticTestBase {
     val tm = TaylorModel(ode, 1)
     val tslemma = tm.timestepLemma
      println(pp.stringify(tslemma))
-    tslemma shouldBe 'proved
-    tslemma.conclusion.ante shouldBe 'empty
+    tslemma shouldBe Symbol("proved")
+    tslemma.conclusion.ante shouldBe Symbol("empty")
     tslemma.conclusion.succ.loneElement shouldBe
       """    (
         |      (
@@ -516,7 +521,7 @@ class TaylorModelTests extends TacticTestBase {
     val ode = "{x' = y, y' = -x, z'=z, t'=1}".asDifferentialProgram
     val tm = TaylorModel(ode, 3)
     val tslemma = tm.timestepLemma
-    tslemma shouldBe 'proved
+    tslemma shouldBe Symbol("proved")
     // println(pp.stringify(tslemma))
   }
 
@@ -524,7 +529,7 @@ class TaylorModelTests extends TacticTestBase {
     val pp = new KeYmaeraXPrettierPrinter(100)
     val tm = TaylorModel(vdp, 3)
     val tslemma = tm.timestepLemma
-    tslemma shouldBe 'proved
+    tslemma shouldBe Symbol("proved")
     // println(pp.stringify(tslemma))
   }
 

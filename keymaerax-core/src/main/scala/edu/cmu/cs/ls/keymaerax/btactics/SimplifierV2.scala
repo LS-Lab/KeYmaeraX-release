@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -341,14 +346,14 @@ object SimplifierV2 {
   {
     //Don't add redundant things to context
     if(ctx.contains(f) | f.equals(True) | f.equals(Not(False))){
-      return (ctx,hideL('Llast))
+      return (ctx,hideL(Symbol("Llast")))
     }
     f match {
       //Ands are recursively decomposed into non-Ands and added to the left of the sequent
       case And(l,r) =>
         val (ctxL,tacL) = addContext(l,ctx)
         val (ctxR,tacR) = addContext(r,ctxL)
-        (ctxR, andL('Llast) & implyRi()(AntePos(ctx.length+1), SuccPos(0)) & tacL & implyR(SuccPos(0)) & tacR)
+        (ctxR, andL(Symbol("Llast")) & implyRi()(AntePos(ctx.length+1), SuccPos(0)) & tacL & implyR(SuccPos(0)) & tacR)
       //Both the de-morganed and originals are added to the context
       case Not(u) =>
         //Apply deMorgan things to Not
@@ -365,13 +370,13 @@ object SimplifierV2 {
           //Adds f to the context, but also all of its deMorganed things
           val(ctxU,tacU) = addContext(nu,ctx:+f)
           (ctxU,
-            useAt(Ax.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('Llast) &
-              implyRi()(AntePos(ctx.length), SuccPos(0)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
+            useAt(Ax.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL(Symbol("Llast")) &
+              implyRi()(AntePos(ctx.length), SuccPos(0)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR(Symbol("_")) & tacU)
         }
       case Equal(n:Number,r) =>
         //Add the flipped version of an equality so we always rewrite left-to-right
         (ctx:+Equal(r,n),implyRi()(AntePos(ctx.length), SuccPos(0)) & useAt(eqSym,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) &
-          implyR('_))
+          implyR(Symbol("_")))
       case _ => (ctx:+f,ident)
     }
 
@@ -669,7 +674,7 @@ object SimplifierV2 {
               useAt(andLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
                 id,id
                 ),
-              hideL('Llast) & hideR(SuccPos(0)) & implyR(1)  & tac & by(rpr)),
+              hideL(Symbol("Llast")) & hideR(SuccPos(0)) & implyR(1)  & tac & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
             )
         ))
@@ -693,7 +698,7 @@ object SimplifierV2 {
               useAt(implyLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
                 id,id
                 ),
-              hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & tac & by(rpr)),
+              hideL(Symbol("Llast")) & hideR(SuccPos(0)) & implyR(1) & tac & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
             )
         ))
@@ -717,7 +722,7 @@ object SimplifierV2 {
               useAt(orLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
                 id,id
                 ),
-              hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & tac & by(rpr)),
+              hideL(Symbol("Llast")) & hideR(SuccPos(0)) & implyR(1) & tac & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
             )
         ))
@@ -731,7 +736,7 @@ object SimplifierV2 {
               useAt(equivLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
                 id,id
                 ),
-              hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
+              hideL(Symbol("Llast")) & hideR(SuccPos(0)) & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
             )
         ))
@@ -762,7 +767,7 @@ object SimplifierV2 {
               useAt(lem,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
                 id,id
                 ),
-              hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
+              hideL(Symbol("Llast")) & hideR(SuccPos(0)) & by(rpr)),
             hideR(SuccPos(0))& by(lpr))))
       case q:Quantified =>
         val (remainingCtx, droppedCtx) = ctx.partition(f => StaticSemantics.freeVars(f).toSet.intersect(q.vars.toSet).isEmpty)
@@ -770,12 +775,12 @@ object SimplifierV2 {
         val nf = q.reapply(q.vars, uf)
 
         val instantiate = q match {
-          case Forall(_, _) => allR(1) & allL('Llast)
-          case Exists(_, _) => existsL('Llast) & existsR(1)
+          case Forall(_, _) => allR(1) & allL(Symbol("Llast"))
+          case Exists(_, _) => existsL(Symbol("Llast")) & existsR(1)
         }
 
         (nf, proveBy(Sequent(ctx, IndexedSeq(Equiv(q, nf))),
-          droppedCtx.map(f => hideL('L, f)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
+          droppedCtx.map(f => hideL(Symbol("L"), f)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
             equivR(1) & onAll(instantiate & implyRi()(AntePos(remainingCtx.length), SuccPos(0)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
       case m:Modal =>
         val (uf,upr) = formulaSimp(m.child,IndexedSeq())
@@ -800,7 +805,7 @@ object SimplifierV2 {
             cut(Equiv(recf,ff)) <(
               implyRi()(AntePos(ctx.length+1), SuccPos(0)) &
                 implyRi()(AntePos(ctx.length), SuccPos(0)) & cohideR(SuccPos(0)) & byUS(equivTrans),
-              hideL('Llast) & hideR(SuccPos(0)) & by(pf)),
+              hideL(Symbol("Llast")) & hideR(SuccPos(0)) & by(pf)),
             hideR(SuccPos(0))& by(recpr))))
     }
 
@@ -827,7 +832,7 @@ object SimplifierV2 {
             cut(Equiv(normf,closef)) <(
               implyRi()(AntePos(ctx.length+1), SuccPos(0)) &
                 implyRi()(AntePos(ctx.length), SuccPos(0)) & cohideR(SuccPos(0)) & byUS(equivTrans),
-              hideL('Llast) & hideR(SuccPos(0)) & by(pr)),
+              hideL(Symbol("Llast")) & hideR(SuccPos(0)) & by(pr)),
             hideR(SuccPos(0))& by(normpr))))
 
     }

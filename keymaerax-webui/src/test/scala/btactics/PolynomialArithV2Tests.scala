@@ -36,8 +36,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
     // directly produce Provables
     val prv = PolynomialArithV2.equate(a4, bT).get
-    prv shouldBe 'proved
-    prv.conclusion.ante shouldBe 'empty
+    prv shouldBe Symbol("proved")
+    prv.conclusion.ante shouldBe Symbol("empty")
     prv.conclusion.succ.loneElement shouldBe Equal(a4, bT)
 
 
@@ -45,7 +45,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
     // prove (and close) equality
     val res = proveBy(Equal(a4, bT), PolynomialArithV2.equate(1) & done)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
 
     // normalize to zero on rhs and normal form (0 when applied on valid equality) on lhs
     val res2 = proveBy(Equal(a4, bT), PolynomialArithV2.normalizeAt(1))
@@ -61,8 +61,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val a = ofTerm(aT)
     val b = ofTerm(bT)
     val prv = (a^4).equate(b).get
-    prv shouldBe 'proved
-    prv.conclusion.ante shouldBe 'empty
+    prv shouldBe Symbol("proved")
+    prv.conclusion.ante shouldBe Symbol("empty")
     prv.conclusion.succ.loneElement shouldBe Equal(Power(aT, Number(4)), bT)
   }
 
@@ -72,8 +72,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val a = (x + ofInt(2))*(x - ofInt(2))
     val b = (x^ofInt(2)) - ofInt(4)
     val prv = a.equate(b).get
-    prv shouldBe 'proved
-    prv.conclusion.ante shouldBe 'empty
+    prv shouldBe Symbol("proved")
+    prv.conclusion.ante shouldBe Symbol("empty")
     prv.conclusion.succ.loneElement shouldBe "(x+2)*(x-2) = (x^2-4)".asFormula
   }
 
@@ -83,8 +83,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
       "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6" +
       "- 13824/81*y*z^9+256*z^12)").asTerm)
     val prv = PolynomialArithV2.equate(t1, t2).get
-    prv shouldBe 'proved
-    prv.conclusion.ante shouldBe 'empty
+    prv shouldBe Symbol("proved")
+    prv.conclusion.ante shouldBe Symbol("empty")
     prv.conclusion.succ.loneElement shouldBe Equal(t1, t2)
   }
 
@@ -105,8 +105,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     import PolynomialArithV2._
     val poly = ofTerm("(x0()+y0()+z0())^2".asTerm)
     val hornerPrv = poly.hornerForm()
-    hornerPrv shouldBe 'proved
-    hornerPrv.conclusion.ante shouldBe 'empty
+    hornerPrv shouldBe Symbol("proved")
+    hornerPrv.conclusion.ante shouldBe Symbol("empty")
     hornerPrv.conclusion.succ.loneElement shouldBe
       "(x0()+y0()+z0())^2=z0()*z0()+y0()*(z0()*2+y0())+x0()*(z0()*2+y0()*2+x0())".asFormula
     val horner2Prv = poly.hornerForm(Some(List("x0()".asTerm)))
@@ -134,8 +134,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   "Coefficient" should "construct" in withMathematica { _ =>
     import ring23._
     val coeff = Coefficient(BigDecimal("0.1"), BigDecimal("3"))
-    coeff.prv shouldBe 'proved
-    coeff.prv.conclusion.ante shouldBe 'empty
+    coeff.prv shouldBe Symbol("proved")
+    coeff.prv.conclusion.ante shouldBe Symbol("empty")
     coeff.lhs shouldBe "0.1/3".asTerm
     coeff.rhs shouldBe "0.1/3".asTerm
   }
@@ -147,8 +147,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val res = (c1*c2)*(c1*c2*c2)
     res.num shouldBe BigDecimal("18663.18755328")
     res.denom shouldBe BigDecimal("72")
-    res.prv shouldBe 'proved
-    res.prv.conclusion.ante shouldBe 'empty
+    res.prv shouldBe Symbol("proved")
+    res.prv.conclusion.ante shouldBe Symbol("empty")
     res.prv.conclusion.succ.loneElement shouldBe Equal(Times(Times(c1.lhs, c2.lhs), (Times(Times(c1.lhs, c2.lhs), c2.lhs))),
       Divide(res.numN, res.denomN)
     )
@@ -161,8 +161,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val res = (c1+c2)+(c2+c2)
     res.num shouldBe BigDecimal("4433.12")
     res.denom shouldBe BigDecimal("24")
-    res.prv shouldBe 'proved
-    res.prv.conclusion.ante shouldBe 'empty
+    res.prv shouldBe Symbol("proved")
+    res.prv.conclusion.ante shouldBe Symbol("empty")
     res.prv.conclusion.succ.loneElement shouldBe Equal(Plus(Plus(c1.lhs, c2.lhs), (Plus(c2.lhs, c2.lhs))),
       Divide(res.numN, res.denomN))
   }
@@ -440,7 +440,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   it should "normalize monomials in a polynomial" in withMathematica { _ =>
     import ring23._
     val p = (0 until 5).map(i => Const((i % 3) - 2) * Var(pa4Vars(i % 2), i % 3 + 1)).reduceLeft(_ + _) ^ 2
-    p.normalized shouldBe 'proved
+    p.normalized shouldBe Symbol("proved")
     p.normalized.conclusion.succ(0) shouldBe
       "((-2)*x^1+(-1)*y^2+0*x^3+(-2)*y^1+(-1)*x^2)^2=4*y^2+8*x*y+4*x^2+4*y^3+4*x*y^2+4*x^2*y+4*x^3+y^4+2*x^2*y^2+x^4".asFormula
   }
@@ -448,8 +448,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   it should "split coefficients" in withMathematica { _ =>
     import ring23._
     val (prv, c1, c2) = Coefficient(1, 3).split(BigDecimal("0.33333"), 1)
-    prv shouldBe 'proved
-    prv.conclusion.ante shouldBe 'empty
+    prv shouldBe Symbol("proved")
+    prv.conclusion.ante shouldBe Symbol("empty")
     prv.conclusion.succ.loneElement shouldBe "1/3=0.33333/1+0.00001/3".asFormula
     c1.lhs shouldBe "0.33333/1".asTerm
     c2.lhs shouldBe "0.00001/3".asTerm

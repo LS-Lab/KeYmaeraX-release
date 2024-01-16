@@ -86,7 +86,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     InvariantGenerator.loopInvariantGenerator(s, SuccPos(0), Declaration(Map.empty)).toList should contain theSameElementsAs List(
       "x!=ox|y!=oy".asFormula -> None, "!(x=ox&y=oy)".asFormula -> None
     )
-    proveBy(s, autoClose) shouldBe 'proved
+    proveBy(s, autoClose) shouldBe Symbol("proved")
   }
 
   "Differential counterexample generator" should "analyze a simple example" in withMathematica { t =>
@@ -113,8 +113,8 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     ToolProvider.setProvider(mockProvider(requestedInvGenerators))
 
     val gen = InvariantGenerator.differentialInvariantGenerator("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0), Declaration(Map.empty))
-    requestedInvGenerators shouldBe 'empty
-    gen should not be 'empty
+    requestedInvGenerators shouldBe Symbol("empty")
+    gen should not be Symbol("empty")
     gen.head shouldBe ("x>0".asFormula, None)
   }
 
@@ -134,18 +134,18 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")) {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen(requestedInvs))
     })
-    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
-    requestedInvs shouldBe 'empty
+    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
+    requestedInvs shouldBe Symbol("empty")
   }
 
   it should "not fail if Mathematica is unavailable" in withTactics {
     val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0), Declaration(Map.empty))
-    gen shouldBe 'empty
+    gen shouldBe Symbol("empty")
   }
 
   it should "use Pegasus if available" in withMathematica { _ =>
     val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0), Declaration(Map.empty))
-    gen should not be 'empty
+    gen should not be Symbol("empty")
     gen.head shouldBe ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PostInv"))))
   }
 
@@ -193,16 +193,16 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   }
 
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
-    proveBy("x=0 -> [{x:=-x;}*]x>=0".asFormula, autoClose) shouldBe 'proved
+    proveBy("x=0 -> [{x:=-x;}*]x>=0".asFormula, autoClose) shouldBe Symbol("proved")
   }
 
   it should "prove simple loop from postcondition invariant" in withQE { _ =>
-    proveBy("x=1 -> [{x:=x+1;}*]x>=1".asFormula, autoClose) shouldBe 'proved
+    proveBy("x=1 -> [{x:=x+1;}*]x>=1".asFormula, autoClose) shouldBe Symbol("proved")
   }
 
   it should "discrete ghost on old(.) notation in ODE annotations" in withQE { tool =>
     //@note unprovable so that we can inspect the effect of the invariant generator
-    val fastODE = PrivateMethod[DependentPositionTactic]('fastODE)
+    val fastODE = PrivateMethod[DependentPositionTactic](Symbol("fastODE"))
     val s = "==> [{x'=3}@invariant(x>=old(x))]x>=0".asSequent
     val expectedInvs =
       if (tool.name == "Mathematica") List(
@@ -311,7 +311,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "classification of problems" in withMathematica { tool => setTimeouts(tool) {
-    val mPegasus = PrivateMethod[MathematicaInvGenTool]('mPegasus)
+    val mPegasus = PrivateMethod[MathematicaInvGenTool](Symbol("mPegasus"))
     val pegasus = tool invokePrivate mPegasus()
     val classifications = entries.map(e => {
       val (model, defs) = parseStripHints(e.model)

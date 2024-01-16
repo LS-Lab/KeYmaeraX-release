@@ -310,15 +310,15 @@ object Idioms {
     }
 
     val caseTactics = cases.map({ case (Case(fml, doSimp), t) =>
-      (if (doSimp) simplifyAllButCase(fml) & SaturateTactic(TactixLibrary.hideL('L, True) | TactixLibrary.hideR('R, False)) else ident) & t}).
-      reduceRight[BelleExpr]({ case (t1, t2) => TactixLibrary.orL('Llast) & Idioms.<(t1, t2)})
+      (if (doSimp) simplifyAllButCase(fml) & SaturateTactic(TactixLibrary.hideL(Symbol("L"), True) | TactixLibrary.hideR(Symbol("R"), False)) else ident) & t}).
+      reduceRight[BelleExpr]({ case (t1, t2) => TactixLibrary.orL(Symbol("Llast")) & Idioms.<(t1, t2)})
 
     TactixLibrary.cut(caseFml) & Idioms.<(
       /*use*/ caseTactics,
       // cases might be exhaustive in itself (e.g., x>=0|x<0), or exhaustive per facts from antecedent (x=0|x>0 from x>=0)
       /*show*/
-        TactixLibrary.cohideR('Rlast) & exhaustive & TactixLibrary.done |
-        TactixLibrary.cohideOnlyR('Rlast) & exhaustive & TactixLibrary.done | exhaustive & TactixLibrary.done | ident
+        TactixLibrary.cohideR(Symbol("Rlast")) & exhaustive & TactixLibrary.done |
+        TactixLibrary.cohideOnlyR(Symbol("Rlast")) & exhaustive & TactixLibrary.done | exhaustive & TactixLibrary.done | ident
     )
   }
   def cases(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = cases()(c1, cs:_*)

@@ -73,11 +73,11 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     TaylorModelTactics.Timing.toc("Initialized PolynomialArithV2")
     proveBy(prob1, prop &
       SOSSolve.prepareArith &
-      SOSSolve.witnessSOS(1, SOSSolve.lexicographicVariableOrdering)) shouldBe 'proved
+      SOSSolve.witnessSOS(1, SOSSolve.lexicographicVariableOrdering)) shouldBe Symbol("proved")
   }
 
   "SOSSolve.sos()" should "find a certificate and prove" in withMathematica { _ =>
-    proveBy(prob1, SOSSolve.sos()) shouldBe 'proved
+    proveBy(prob1, SOSSolve.sos()) shouldBe Symbol("proved")
   }
 
   it should "illustrate automatic and interactive treatment of division" in withMathematica { _ =>
@@ -89,7 +89,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     ex1.getMessage should include ("Try a RatForm strategy to eliminate rational functions.")
 
     // prove welldefinedness of divisions with sossolve
-    proveBy(fml, sos(RatForm(true))) shouldBe 'proved
+    proveBy(fml, sos(RatForm(true))) shouldBe Symbol("proved")
 
     // assume welldefinedness of divisions: fails, but gives a hint at how to fix:
     val ex2 = the [RatFormError] thrownBy proveBy(fml, sos(RatForm(false)))
@@ -99,10 +99,10 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     proveBy(fml, prop & cut("2*ms^2*sbsc > 0".asFormula) & Idioms.<(
       sos(RatForm(false)),
       cut("ms>0&sbsc>0".asFormula) & Idioms.<(
-        cohideOnlyL('Llast) & cohideOnlyR('Rlast) & sos(),
+        cohideOnlyL(Symbol("Llast")) & cohideOnlyR(Symbol("Rlast")) & sos(),
         prop & done
       )
-    )) shouldBe 'proved
+    )) shouldBe Symbol("proved")
   }
 
   "ratFormAnte and elimRatForm" should "test" in withMathematica { _ =>

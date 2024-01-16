@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -29,7 +34,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     val minusReflex = proveBy("A_() - B_() = -B_() + A_()".asFormula,TactixLibrary.QE)
     val fml = "x - y = z".asFormula
     //Both of the following fail because of unification
-    val useAt = PrivateMethod[DependentPositionTactic]('useAt)
+    val useAt = PrivateMethod[DependentPositionTactic](Symbol("useAt"))
     proveBy(fml,(HilbertCalculus invokePrivate useAt(minusCancel,PosInExpr(0::Nil)))(SuccPosition(1, 0 :: Nil)))
     useFor(minusCancel, PosInExpr(0 :: Nil))(SuccPosition(1, 0 :: Nil))(minusReflex)
   }
@@ -67,7 +72,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     val tac = HilbertCalculus.US(pv)
     // raises exception "unification computed an incorrect unifier", should not raise exception but instead prove the axiom instance
     val res = proveBy(sequent,tac)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "prove unify DG with universal postcondition (excerpt from elsewhere)" ignore withMathematica { qeTool =>
@@ -78,7 +83,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     val tac = HilbertCalculus.US(pv)
     // raises exception "unification computed an incorrect unifier", should not raise exception but instead prove the axiom instance
     val res = proveBy(sequent,tac)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "correctly unify lists of ODEs with semantic renaming" ignore withMathematica { qeTool =>
@@ -112,7 +117,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
       "P() -> (Q_()=0 -> F_() = 0)".asFormula)
     val succs = antes
 
-    val useAt = PrivateMethod[BuiltInPositionTactic]('useAt)
+    val useAt = PrivateMethod[BuiltInPositionTactic](Symbol("useAt"))
 
     val pr = proveBy(Sequent(antes,succs),
       //The position passed in identifies the location of the key to match in rewritten position

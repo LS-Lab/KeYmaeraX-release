@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.PrintWriter
@@ -53,7 +54,7 @@ object KeYmaeraXProofChecker {
       case _ => false
     })
 
-    val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
+    val verbose = options.getOrElse(Symbol("verbose"), false).asInstanceOf[Boolean]
     val origInterpreter = BelleInterpreter.interpreter
     val listeners =
       if (verbose) qeDurationListener :: rcfDurationListener :: new PrintProgressListener(tactic) :: Nil
@@ -162,19 +163,19 @@ object KeYmaeraXProofChecker {
     * @param usage Prints usage information on option errors.
     */
   def prove(options: OptionMap, usage: String): Unit = {
-    if (options.contains('ptOut)) {
+    if (options.contains(Symbol("ptOut"))) {
       ProvableSig.PROOF_TERMS_ENABLED = true
     } else {
       ProvableSig.PROOF_TERMS_ENABLED = false
     }
 
-    require(options.contains('in), usage)
-    val inputFileName = options('in).toString
+    require(options.contains(Symbol("in")), usage)
+    val inputFileName = options(Symbol("in")).toString
     val inFiles = findFiles(inputFileName)
     val archiveContent = inFiles.map(p => p -> ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
     println("Proving entries from " + archiveContent.size + " files")
 
-    val conjectureFileName = options.get('conjecture).map(_.toString)
+    val conjectureFileName = options.get(Symbol("conjecture")).map(_.toString)
     val conjectureFiles = conjectureFileName.map(findFiles).getOrElse(List.empty)
     val conjectureContent = conjectureFiles.flatMap(p => ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).
       filterNot(_.isExercise).map(_ -> p).groupBy(_._1.name)).toMap
@@ -189,7 +190,7 @@ object KeYmaeraXProofChecker {
         || entryNamesDiff.isEmpty, "Conjectures and archives must agree on names, but got diff " + entryNamesDiff.mkString(","))
     assert(conjectureContent.values.flatMap(_.flatMap(_._1.tactics)).isEmpty, "Conjectures must not list tactics")
 
-    val outputFilePrefix = options.getOrElse('out, inputFileName).toString.stripSuffix(".kyp")
+    val outputFilePrefix = options.getOrElse(Symbol("out"), inputFileName).toString.stripSuffix(".kyp")
     val outputFileSuffix = ".kyp"
 
     //@note same archive entry name might be present in several .kyx files
@@ -221,7 +222,7 @@ object KeYmaeraXProofChecker {
 
     statistics.foreach(println)
 
-    val printer = options.get('proofStatisticsPrinter) match {
+    val printer = options.get(Symbol("proofStatisticsPrinter")) match {
       case Some("arch-nln") => ArchNLNCsvProofStatisticsPrinter
       case Some("arch-hstp") => ArchHSTPCsvProofStatisticsPrinter
       case _ => CsvProofStatisticsPrinter
@@ -244,7 +245,7 @@ object KeYmaeraXProofChecker {
   private def proveEntry(path: Path, entry: ParsedArchiveEntry, outputFileName: String,
                          options: OptionMap): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
-      (pt, options.get('ptOut)) match {
+      (pt, options.get(Symbol("ptOut"))) match {
         case (ptp: TermProvable, Some(path: String)) =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp
@@ -257,8 +258,8 @@ object KeYmaeraXProofChecker {
     }
 
     val tacticString = readTactic(options, entry.defs)
-    val reqTacticName = options.get('tacticName)
-    val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
+    val reqTacticName = options.get(Symbol("tacticName"))
+    val timeout = options.getOrElse(Symbol("timeout"), 0L).asInstanceOf[Long]
 
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
     val proofEvidence = File(sanitize(outputFileName))
@@ -308,7 +309,7 @@ object KeYmaeraXProofChecker {
   /** Reads the value of 'tactic from the `options` (either a file name or a tactic expression).
     * Default [[TactixLibrary.autoClose]] if `options` does not contain 'tactic. */
   private def readTactic(options: OptionMap, defs: Declaration): Option[BelleExpr] = {
-    options.get('tactic) match {
+    options.get(Symbol("tactic")) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
         val source = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)

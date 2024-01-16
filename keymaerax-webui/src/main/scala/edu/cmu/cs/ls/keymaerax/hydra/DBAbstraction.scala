@@ -200,7 +200,7 @@ trait DBAbstraction {
 
   def getConfiguration(configName: String): ConfigurationPOJO
 
-  def updateConfiguration(config: ConfigurationPOJO)
+  def updateConfiguration(config: ConfigurationPOJO): Unit
 
   // Users
   def userExists(username: String): Boolean
@@ -274,7 +274,7 @@ trait DBAbstraction {
 
   def getProofInfo(proofId: String): ProofPOJO = getProofInfo(proofId.toInt)
 
-  def updateProofInfo(proof: ProofPOJO)
+  def updateProofInfo(proof: ProofPOJO): Unit
 
   def updateProofName(proofId: Int, name: String): Unit = {
     val info = getProofInfo(proofId)
@@ -318,7 +318,7 @@ trait DBAbstraction {
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
   /** Truncate the execution trace at the beginning of alternativeTo and replace it with trace. */
-  def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace)
+  def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace): Unit
 
   /** Return the sequence of steps that led to the current state of the proof. Loading a trace with provables is slow. */
   def getExecutionTrace(proofID: Int, withProvables: Boolean=true): ExecutionTrace

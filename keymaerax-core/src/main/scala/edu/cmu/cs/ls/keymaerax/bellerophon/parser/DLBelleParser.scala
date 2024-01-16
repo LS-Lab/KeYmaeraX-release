@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 /**
   * Bellerophon tactic parser for Differential Dynamic Logic.
   * @author Andre Platzer
@@ -58,7 +59,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
 
   /** @inheritdoc */
   override def setDefTactics(defs: Map[String, DefTactic]): Unit = {
-    tactics.clear
+    tactics.clear()
     defs.foreach(tactics += _)
   }
 

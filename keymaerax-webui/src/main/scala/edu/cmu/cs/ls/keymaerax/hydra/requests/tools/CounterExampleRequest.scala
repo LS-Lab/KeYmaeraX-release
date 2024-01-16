@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.tools
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
@@ -89,7 +90,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
               }
             } else {
               val skolemized = TactixLibrary.proveBy(sequent,
-                SaturateTactic(TactixLibrary.alphaRule | TactixLibrary.allR('R) | TactixLibrary.existsL('L)))
+                SaturateTactic(TactixLibrary.alphaRule | TactixLibrary.allR(Symbol("R")) | TactixLibrary.existsL(Symbol("L"))))
               val fml = skolemized.subgoals.map(_.toFormula).reduceRight(And)
               val withAssumptions = additionalAssumptions match {
                 case Some(a) => Imply(a, fml)

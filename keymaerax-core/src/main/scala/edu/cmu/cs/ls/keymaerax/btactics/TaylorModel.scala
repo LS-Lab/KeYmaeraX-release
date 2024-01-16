@@ -227,7 +227,7 @@ object TaylorModelTactics extends Logging {
                   toc(" found upper bound")
                   cutL(LessEqual(l, Plus(FuncOf(InterpretedSymbols.maxF, Pair(Number(0), Times(ub, g))), c)))(pos) &
                     Idioms.<(skip,
-                      cohideOnlyR('Rlast) &
+                      cohideOnlyR(Symbol("Rlast")) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
                         andR(1) & Idioms.<(id, id),
                         cohideR(1) &
@@ -254,7 +254,7 @@ object TaylorModelTactics extends Logging {
                 case Some(ub_fml @ LessEqual(_, ub)) =>
                   cutL(LessEqual(Plus(FuncOf(InterpretedSymbols.minF, Pair(Number(0), Times(ub, g))), c), u))(pos) &
                     Idioms.<( skip,
-                      cohideOnlyR('Rlast) &
+                      cohideOnlyR(Symbol("Rlast")) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
                         andR(1) & Idioms.<(id, id),
                         cohideR(1) & useAt(Ax.timesLeMonoLemma, PosInExpr(Nil))(1) & done
@@ -485,7 +485,7 @@ object TaylorModelTactics extends Logging {
           existsLstable(-1) & andLstable(-1) & andLstable(-1) &
             useAt(Ax.eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & eqL2R(-1)(-3) &
             andR(1) & Idioms.<(close(-3, 1), skip) & hideL(-3) & hideL(-1) &
-          andLstable('Llast) * (dim-1) &
+          andLstable(Symbol("Llast")) * (dim-1) &
           (1 to dim).map { i =>
             val p = -i
             val l = -(dim + i)
@@ -500,7 +500,7 @@ object TaylorModelTactics extends Logging {
                 cohideR(1) & byUS(Ax.plusDiffRefl),
                 id
               ), hideL(-1)) &
-            andLstable('Llast) * (dim - 1) &
+            andLstable(Symbol("Llast")) * (dim - 1) &
             (andR(1) & Idioms.<(
               useAt(Ax.unfoldExistsLemma)(1) & id, skip)) * (dim - 1) &
             useAt(Ax.unfoldExistsLemma)(1) & id
@@ -551,7 +551,7 @@ object TaylorModelTactics extends Logging {
             hideL(-3) &
             debugTac("obtained initial numberic condition") &
             ringsLib.normalizeLessEquals(QE)(-2) &
-            SaturateTactic(andL('L)) &
+            SaturateTactic(andL(Symbol("L"))) &
             rewriteAnte(true)(1) &
             ringsLib.normalizeLessEquals(QE)(1) &
             debugTac("Initial Condition numeric trivialities") &
@@ -565,7 +565,7 @@ object TaylorModelTactics extends Logging {
             foldAndLessEqExists(time::Nil)(1) &
             tocTac("foldAndLessEqExists") &
             implyR(1) &
-            SaturateTactic(andL('L) | instLeq('L)) &
+            SaturateTactic(andL(Symbol("L")) | instLeq(Symbol("L"))) &
             tocTac("Saturate instLeq") &
             rewriteAnte(true)(1) &
             tocTac("rewriteAnte") &
@@ -575,8 +575,8 @@ object TaylorModelTactics extends Logging {
             coarsenTimesBounds(Minus(time, time0)) &
             tocTac("coarsenTimesBounds") &
             debugTac("coarsenTimesBounds") &
-            FOQuantifierTactics.allLs(Minus(time, time0):: remainders)('L) &
-            implyL('L) &
+            FOQuantifierTactics.allLs(Minus(time, time0):: remainders)(Symbol("L")) &
+            implyL(Symbol("L")) &
             Idioms.<(
               cohideOnlyR(2) & prop & done,
               cohideOnlyL(Find.FindLMatch("P_() & Q_()".asFormula)) &
@@ -618,7 +618,7 @@ object TaylorModelTactics extends Logging {
         ),
         implyR(1) &
         // Cut and prove lower bound for time
-        dC(LessEqual(time0, time))(1) & Idioms.<(useAt(Ax.trueAnd)(1, 0::1::Nil), dI('diffInd)(1) &
+        dC(LessEqual(time0, time))(1) & Idioms.<(useAt(Ax.trueAnd)(1, 0::1::Nil), dI(Symbol("diffInd"))(1) &
           Idioms.<(
             useAt(Ax.lessEqual, PosInExpr(0::Nil))(1) & orR(1) & hideR(1) & useAt(Ax.equalSym, PosInExpr(1::0::Nil))(1) & prop & done,
             chase(1) & ToolTactics.hideNonFOL & QE & done)) &
@@ -837,12 +837,12 @@ object TaylorModelTactics extends Logging {
                 andR(1) & Idioms.<(id,
                 andR(1) & Idioms.<(
                   debugTac("Initial Numberic condition") &
-                    SaturateTactic(andL('L)) &
+                    SaturateTactic(andL(Symbol("L"))) &
                     IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool)(1) &
                     done,
                   SaturateTactic(allR(1)) &
                     SaturateTactic(implyR(1)) &
-                    SaturateTactic(andL('L)) &
+                    SaturateTactic(andL(Symbol("L"))) &
                     debugTac("Numberic condition") &
                     IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool)(1) &
                     done

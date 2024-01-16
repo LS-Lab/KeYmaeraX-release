@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -31,22 +32,22 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Example 0" should "prove with abstract invariant J(x)" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/00_robosimple.kyx"))
-    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("J(v)".asFormula)('R) <(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop("J(v)".asFormula)(Symbol("R")) <(
       skip,
       skip,
-      print("Step") & normalize & OnAll(solve('R))
+      print("Step") & normalize & OnAll(solve(Symbol("R")))
       ) & US(USubst(SubstitutionPair(
             "J(v)".asFormula.replaceFree("v".asTerm, DotTerm()), "v<=10".asFormula.replaceFree("v".asTerm, DotTerm()))::Nil)) & OnAll(QE)
 
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Example 1" should "have 4 open goals for abstract invariant J(x,v)" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("J(x,v)".asFormula)('R) <(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop("J(x,v)".asFormula)(Symbol("R")) <(
       print("Base case"),
       print("Use case"),
-      print("Step") & normalize & OnAll(solve('R))
+      print("Step") & normalize & OnAll(solve(Symbol("R")))
       )
     val result = proveBy(s, tactic)
     result.subgoals should have size 4
@@ -69,17 +70,17 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "prove automatically with the correct conditions" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove with a manually written searchy tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
-    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("v^2<=2*b()*(m()-x)".asFormula)('R) <(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop("v^2<=2*b()*(m()-x)".asFormula)(Symbol("R")) <(
       print("Base case") & id,
       print("Use case") & QE,
-      print("Step") & normalize & solve('R) & QE
+      print("Step") & normalize & solve(Symbol("R")) & QE
       )
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "stop after ODE to let users inspect a counterexample with false speed sb condition" in withQE { _ =>
@@ -131,7 +132,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "prove braking automatically with the correct condition" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/03_robo2-justbrake.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "find the acceleration condition" in withMathematica { _ =>
@@ -152,13 +153,13 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "prove acceleration automatically with the correct condition" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/05_robo2-justacc.kyx"))
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove the full model" in withQE { _ =>
     val s = ArchiveParser.getEntry("CPSWeek Tutorial Example 1", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
-    proveBy(s, master()) shouldBe 'proved
+    proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "find a hint for SB from parsed tactic" in withMathematica { _ =>
@@ -172,18 +173,18 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { _ =>
-    def tactic(j: Formula) = implyR('R) & SaturateTactic(andL('L)) & loop(j)('R) <(
+    def tactic(j: Formula) = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop(j)(Symbol("R")) <(
       print("Base case") & id,
       print("Use case") & QE,
-      print("Step") & normalize & OnAll(solve('R) & QE)
+      print("Step") & normalize & OnAll(solve(Symbol("R")) & QE)
       )
 
     val simple = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
-    proveBy(simple, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe 'proved
+    proveBy(simple, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe Symbol("proved")
 
     val harder = ArchiveParser.getEntry("CPSWeek Tutorial Example 1", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
-    proveBy(harder, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe 'proved
+    proveBy(harder, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe Symbol("proved")
   }
 
   "2D Car" should "be provable" in withQE ({ _ =>
@@ -192,31 +193,31 @@ class CpsWeekTutorial extends TacticTestBase {
 
     def di(a: String) = {
       val accCond = "2*b()*abs(mx-x)>v^2+(A()+b())*(A()*ep()^2+2*ep()*v)|2*b()*abs(my-y)>v^2+(A()+b())*(A()*ep()^2+2*ep()*v)".asFormula
-      diffInvariant("dx^2+dy^2=1".asFormula :: "t>=0".asFormula :: s"v=old(v)+$a*t".asFormula :: Nil)('R) &
+      diffInvariant("dx^2+dy^2=1".asFormula :: "t>=0".asFormula :: s"v=old(v)+$a*t".asFormula :: Nil)(Symbol("R")) &
       DebuggingTactics.print("Now what?") &
-      dC(s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t) & -t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R) <(
+      dC(s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t) & -t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)(Symbol("R")) <(
         skip,
-        Idioms.doIf(_.subgoals.head.ante.contains(accCond))(hideL('L, accCond)) &
-        (boxAnd('R) & andR('R) <(dI()('R), skip))*3 & dI()('R) & done
+        Idioms.doIf(_.subgoals.head.ante.contains(accCond))(hideL(Symbol("L"), accCond)) &
+        (boxAnd(Symbol("R")) & andR(Symbol("R")) <(dI()(Symbol("R")), skip))*3 & dI()(Symbol("R")) & done
       )
     }
 
-    val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & SaturateTactic(andL('L)) &
+    val dw = exhaustiveEqR2L(hide=true)(Symbol("Llast"))*3 /* 3 old(...) in DI */ & SaturateTactic(andL(Symbol("L"))) &
       print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
-    def hideQE(x: String) = SaturateTactic(hideL('Llike, "dx^2+dy^2=1".asFormula)) & hideL('L, "t<=ep()".asFormula) &
-      hideL('L, s"-t*(v--b()/2*t)<=$x-${x}_0".asFormula) & hideL('L, s"$x-${x}_0<=t*(v--b()/2*t)".asFormula) &
-      hideL('L, "r!=0".asFormula) & hideL('L, "A()>=0".asFormula) & hideL('L, "ep()>0".asFormula) &
-      hideR('R, s"2*b()*abs(m$x-$x)>v^2".asFormula)
+    def hideQE(x: String) = SaturateTactic(hideL(Symbol("Llike"), "dx^2+dy^2=1".asFormula)) & hideL(Symbol("L"), "t<=ep()".asFormula) &
+      hideL(Symbol("L"), s"-t*(v--b()/2*t)<=$x-${x}_0".asFormula) & hideL(Symbol("L"), s"$x-${x}_0<=t*(v--b()/2*t)".asFormula) &
+      hideL(Symbol("L"), "r!=0".asFormula) & hideL(Symbol("L"), "A()>=0".asFormula) & hideL(Symbol("L"), "ep()>0".asFormula) &
+      hideR(Symbol("R"), s"2*b()*abs(m$x-$x)>v^2".asFormula)
 
-    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)('R) <(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)(Symbol("R")) <(
       print("Base case") & QE,
       print("Use case") & QE,
-      print("Step") & chase('R) & andR('R) <(
-        allR('R) & implyR('R) & di("-b()") & dw & prop <(hideQE("y") & QE, hideQE("x") & QE)
+      print("Step") & chase(Symbol("R")) & andR(Symbol("R")) <(
+        allR(Symbol("R")) & implyR(Symbol("R")) & di("-b()") & dw & prop <(hideQE("y") & QE, hideQE("x") & QE)
         ,
         // in tutorial: only show braking branch, acceleration takes too long (needs abs and hiding and cuts etc.)
-        SaturateTactic(allR('R) | implyR('R)) & di("A()") & dw
+        SaturateTactic(allR(Symbol("R")) | implyR(Symbol("R"))) & di("A()") & dw
         )
       )
 
@@ -228,21 +229,21 @@ class CpsWeekTutorial extends TacticTestBase {
   "Motzkin" should "be provable with DI+DW" in withQE { _ =>
     val s = ArchiveParser.getEntry("CPSWeek Tutorial Example 3", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
-    val tactic = implyR('R) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)('R) & dW('R) & prop
-    proveBy(s, tactic) shouldBe 'proved
+    val tactic = implyR(Symbol("R")) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)(Symbol("R")) & dW(Symbol("R")) & prop
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Damped oscillator" should "be provable with DI+DW" in withQE { _ =>
     val s = ArchiveParser.getEntry("CPSWeek Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
-    val tactic = implyR('R) & dI()('R)
-    proveBy(s, tactic) shouldBe 'proved
+    val tactic = implyR(Symbol("R")) & dI()(Symbol("R"))
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Self crossing" should "be provable with DI+DW" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/10-diffinv-self-crossing.kyx"))
-    val tactic = implyR('R) & diffInvariant("x^2+x^3-y^2-c=0".asFormula)('R) & dW('R) & prop
-    proveBy(s, tactic) shouldBe 'proved
+    val tactic = implyR(Symbol("R")) & diffInvariant("x^2+x^3-y^2-c=0".asFormula)(Symbol("R")) & dW(Symbol("R")) & prop
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
 }

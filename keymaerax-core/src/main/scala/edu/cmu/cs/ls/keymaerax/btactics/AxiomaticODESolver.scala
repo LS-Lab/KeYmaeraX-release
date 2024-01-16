@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -209,7 +209,7 @@ object AxiomaticODESolver {
       renameDuration &
       DebuggingTactics.debug("Renamed duration", ODE_DEBUGGER) &
       //@todo support the cases we now skip
-      (if (cutConsts) DifferentialTactics.diffCut(consts)(pos) <(skip, V('Rlast) & prop &
+      (if (cutConsts) DifferentialTactics.diffCut(consts)(pos) <(skip, V(Symbol("Rlast")) & prop &
         DebuggingTactics.done("Expected to prove constants invariant"))
        else TactixLibrary.skip) &
       DebuggingTactics.debug("AFTER preserving consts", ODE_DEBUGGER) &
@@ -521,7 +521,7 @@ object AxiomaticODESolver {
           TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(if (polarity > 0) 1 else -1, odePos) <(
             TactixLibrary.close
             ,
-            TactixLibrary.cohideR('Rlast) &
+            TactixLibrary.cohideR(Symbol("Rlast")) &
               DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.assignb(1)*contextSize &
               DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
           )
@@ -648,7 +648,7 @@ object AxiomaticODESolver {
           TactixLibrary.implyR(1) & TactixLibrary.dC(soln)(if (polarity > 0) -1 else 1, odePos) <(
             TactixLibrary.close
             ,
-            TactixLibrary.cohideR('Rlast) &
+            TactixLibrary.cohideR(Symbol("Rlast")) &
             DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.assignb(1)*(odeSize+1) &
             DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
             )

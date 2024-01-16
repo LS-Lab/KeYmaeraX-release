@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.{File, FileWriter, FilenameFilter}
@@ -34,16 +39,16 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
   private def check(pi: => ProvableInfo): Sequent = {
     DerivationInfoRegistry.init(initLibrary = false)
     println(pi.codeName + "\n" + pi.provable.conclusion)
-    pi.provable shouldBe 'proved
+    pi.provable shouldBe Symbol("proved")
     useToClose(pi)
     pi.provable.conclusion
   }
 
   private def useToClose(pi: ProvableInfo): Unit = {
-    ProvableSig.startPlainProof(pi.provable.conclusion)(pi.provable, 0) shouldBe 'proved
+    ProvableSig.startPlainProof(pi.provable.conclusion)(pi.provable, 0) shouldBe Symbol("proved")
     //@note same test as previous line, just to make sure the lemma can be used by substitution
     theInterpreter(TactixLibrary.byUS(pi), BelleProvable.plain(ProvableSig.startPlainProof(pi.provable.conclusion))) match {
-      case BelleProvable(provable, _) => provable shouldBe 'proved
+      case BelleProvable(provable, _) => provable shouldBe Symbol("proved")
       case _ => fail()
     }
   }
@@ -389,7 +394,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
       DifferentialTactics.diffInd()(1, 0::0::Nil) &
       dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0::1::Nil) &
       dI()(1, 0::1::0::Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   })
 
   "SimplifierV3" should "prove * identity neg" in withMathematica(initLibrary =  false, testcode =  { _ => check{timesIdentityNeg}})

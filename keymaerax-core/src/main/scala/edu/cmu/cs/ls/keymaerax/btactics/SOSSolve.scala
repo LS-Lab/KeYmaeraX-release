@@ -181,7 +181,7 @@ object SOSSolve {
         case (_, Some(prv)) => useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(pos) & useAt(prv, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
         case _ => throw new RuntimeException("this should not happen because we expect baseNormalize to get rid of negations.")
       }
-    }).foldLeft[BelleExpr](skip)(_ & _) & SaturateTactic(notR('R))
+    }).foldLeft[BelleExpr](skip)(_ & _) & SaturateTactic(notR(Symbol("R")))
   }
 
   // turns a ~ b into a - b ~ 0 in the antecedent

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -112,7 +113,7 @@ class ChilledWater extends TacticTestBase {
                 |    (v=1 | v=0) &
                 |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
       QE & done,
       QE & done,
       boxAnd(1) & andR(1) <(
@@ -131,7 +132,7 @@ class ChilledWater extends TacticTestBase {
         )
       )
 
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "be provable with ODE" in withMathematica { _ =>
@@ -159,7 +160,7 @@ class ChilledWater extends TacticTestBase {
         /* v=0 */
         dC("Tw<Tl".asFormula)(1)
         )
-      ) & OnAll(ODE('R)) & done
+      ) & OnAll(ODE(Symbol("R"))) & done
 
     val odeALessEqualTw = skip <(
       /* v:=1;Tw:=a; */ dC("Tw=a()".asFormula)(1),
@@ -170,7 +171,7 @@ class ChilledWater extends TacticTestBase {
         orL(FindLPlain("v=1|v=0".asFormula)),
         skip
         )
-      ) & OnAll(ODE('R)) & done
+      ) & OnAll(ODE(Symbol("R"))) & done
 
     //@note and once again
     val odePropRest = skip <(
@@ -181,14 +182,14 @@ class ChilledWater extends TacticTestBase {
         dC("Tw=a()".asFormula)(1),
         skip //@note evolution domain already strong enough without additional diff. cut
         )
-      ) & OnAll(ODE('R)) & done
+      ) & OnAll(ODE(Symbol("R"))) & done
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
       QE & done,
       QE & done,
       boxAnd(1) & andR(1) <(
         /* Tw < Tl */
-        chase(1) & unfoldProgramNormalize & OnAll(ODE('R)) /* twLessTl */ & done,
+        chase(1) & unfoldProgramNormalize & OnAll(ODE(Symbol("R"))) /* twLessTl */ & done,
         boxAnd(1) & andR(1) <(
           /* Tl < Tlu() */
           chase(1) & unfoldProgramNormalize & odeTlLessTlu & done,
@@ -202,7 +203,7 @@ class ChilledWater extends TacticTestBase {
         )
       )
 
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Model 1" should "be provable" in withMathematica { _ =>
@@ -214,7 +215,7 @@ class ChilledWater extends TacticTestBase {
                 |    (v=1 | v=0) &
                 |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") & loop(inv)(1) & printIndexed("After loop") <(
       QE & done,
       QE & done,
       // reduce the proof to the proof of Model 0
@@ -272,8 +273,7 @@ class ChilledWater extends TacticTestBase {
         )
       )
 
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
 }
-

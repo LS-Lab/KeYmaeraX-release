@@ -1,10 +1,9 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
-
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
-
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -46,7 +45,7 @@ class HilbertTests extends TacticTestBase {
       implyR(1) &
         DW(1) &
         abstractionb(1) & allR(1) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove x>=5 -> [{x'=2&x<=9}]x<=10" in withMathematica { _ =>
@@ -54,7 +53,7 @@ class HilbertTests extends TacticTestBase {
       implyR(1) &
         DW(1) &
         abstractionb(1) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   //@todo not everything ported yet
@@ -67,7 +66,7 @@ class HilbertTests extends TacticTestBase {
         Dconst(1, 1::1:: 1::Nil) &
         Dassignb(1, 1::Nil) &
         abstractionb(1) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove (x+2*y)'=x'+2*y'" in withMathematica { _ =>
@@ -77,41 +76,41 @@ class HilbertTests extends TacticTestBase {
         useAt(Ax.Dlinear)(1, 0::1::Nil) & // Dtimes(SuccPosition(0, 0::1::Nil))
         Dvar(1, 0::1::1::Nil) &
         byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove (y)'=y forward" in withMathematica { _ =>
     val x = Variable("y")
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvar(1,0::Nil) & byUS(Ax.equalReflexive)) shouldBe 'proved
+      Dvar(1,0::Nil) & byUS(Ax.equalReflexive)) shouldBe Symbol("proved")
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvar(1,0::Nil) & byUS(Ax.equalReflexive)) shouldBe 'proved
+      Dvar(1,0::Nil) & byUS(Ax.equalReflexive)) shouldBe Symbol("proved")
   }
 
   it should "derive (y)'=y'" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (x+y)'=x'+y'" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (x*y)'=x'*y+x*y'" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (x^2)' >= 7 without crashing" in withMathematica{ _ =>
@@ -123,49 +122,49 @@ class HilbertTests extends TacticTestBase {
   it should "FEATURE_REQUEST: derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" taggedAs TodoTest in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" taggedAs TodoTest in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (5*x+2*y)'=5*x'+2*y'" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equalReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y>=6)' <-> 5*x'+2*y'>=0".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equivReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equivReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS(Ax.equivReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::1::Nil) & byUS(Ax.equivReflexive)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "reduce [{x'=7}](5*x>=6)' to [{x'=7}]5*x'>=0" in withMathematica { _ =>
@@ -191,7 +190,7 @@ class HilbertTests extends TacticTestBase {
           Dconst(1, 1::1:: 1::Nil) &
           Dassignb(1, 1::Nil) & abstractionb(1) & QE
         )
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove/derive x>=5 -> [{x'=2}]x>=5" in withMathematica { _ =>
@@ -202,7 +201,7 @@ class HilbertTests extends TacticTestBase {
         DE(1) & derive(1, 1::1::Nil) &
           Dassignb(1, 1::Nil) & abstractionb(1) & QE
         )
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   //  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x&x<=10)" in {
@@ -219,7 +218,7 @@ class HilbertTests extends TacticTestBase {
         //@todo DC should not do absolute proof of implication but contextual
         DW(1) & debug("after DW") &
         abstractionb(1) & debug("after abstraction") & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" taggedAs TodoTest in withMathematica { _ =>
@@ -230,7 +229,7 @@ class HilbertTests extends TacticTestBase {
         debug("DC to DI") & dI()(1),
         debug("DC to DW") & DW(1) & abstractionb(1) & QE
         )
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: prove x>=5 -> [x:=x+1;{x'=2}]x>=5" taggedAs TodoTest in withMathematica { _ =>
@@ -240,12 +239,12 @@ class HilbertTests extends TacticTestBase {
         useAt(Ax.assignbeq)(1) &
         step(1) & step(1) &
         useAt(Ax.DI)(1) & //@todo diffInd(1)
-        SaturateTactic(step('L) | step('R)) & abstractionb(1) & master()
-    ) shouldBe 'proved
+        SaturateTactic(step(Symbol("L")) | step(Symbol("R"))) & abstractionb(1) & master()
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove x>0 -> [x:=x+1;]x>0" in withMathematica { _ =>
-    proveBy("x>0 -> [x:=x+1;]x>0".asFormula, step(1, 1::Nil) & QE) shouldBe 'proved
+    proveBy("x>0 -> [x:=x+1;]x>0".asFormula, step(1, 1::Nil) & QE) shouldBe Symbol("proved")
   }
 
   it should "step fallback assignb/d only when index is defined" in withMathematica { _ =>
@@ -318,8 +317,8 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use box true" in withTactics {
-    proveBy("[x:=0;]true".asFormula, useAt(Ax.boxTrueAxiom)(1)) shouldBe 'proved
-    proveBy("[x:=0;]true".asFormula, HilbertCalculus.boxTrue(1)) shouldBe 'proved
+    proveBy("[x:=0;]true".asFormula, useAt(Ax.boxTrueAxiom)(1)) shouldBe Symbol("proved")
+    proveBy("[x:=0;]true".asFormula, HilbertCalculus.boxTrue(1)) shouldBe Symbol("proved")
     //@note boxTrue is an "unusual" axiom (no equivalence or implication) where useAt immediately forwards to "by",
     // which only works if [...]true is the only formula in the sequent
     the [SubderivationSubstitutionException] thrownBy proveBy("x=3 ==> [x:=0;]true".asSequent, useAt(Ax.boxTrueAxiom)(1)) should have message
@@ -333,7 +332,7 @@ class HilbertTests extends TacticTestBase {
         |  from   x=3
         |  ==>  [x:=0;]true)""".stripMargin
     proveBy("x=3 ==> [x:=0;]true".asSequent, useAt(Ax.boxTrueTrue)(1)).subgoals.loneElement shouldBe "x=3 ==> true".asSequent
-    proveBy("x=3 ==> [x:=0;]true".asSequent, HilbertCalculus.boxTrue(1)) shouldBe 'proved
+    proveBy("x=3 ==> [x:=0;]true".asSequent, HilbertCalculus.boxTrue(1)) shouldBe Symbol("proved")
     proveBy("==> [y:=1;][x:=0;]true".asSequent, HilbertCalculus.boxTrue(1, 1::Nil)).subgoals.loneElement shouldBe "==> [y:=1;]true".asSequent
     proveBy("[x:=0;]true ==> ".asSequent, HilbertCalculus.boxTrue(-1)).subgoals.loneElement shouldBe "true ==>".asSequent
   }
@@ -341,13 +340,13 @@ class HilbertTests extends TacticTestBase {
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q());]p()".asFormula)),
       chase(1) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   } 
     
   it should "prove [?p();?(p()->q()); ++ ?r();?q();]q() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q();]q()".asFormula)),
       chase(1) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?p();?(p()->q()); ++ ?!p();](p()->q()) by chase" in withTactics {
@@ -355,43 +354,43 @@ class HilbertTests extends TacticTestBase {
     //assert(AxIndex.axiomIndex(Ax.composeb)._2==PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?!p();](p()->q())".asFormula)),
       chase(1,Nil) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
   
   it should "prove [?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q()) by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q())".asFormula)),
       chase(1,Nil) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in withMathematica { _ =>
@@ -399,7 +398,7 @@ class HilbertTests extends TacticTestBase {
       // chaseWide(3) works like an update calculus
       chase(3,3)(1) &
         QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { _ =>
@@ -410,7 +409,7 @@ class HilbertTests extends TacticTestBase {
         dI()(1, 1::Nil) &
         assignb(1) & // handle updates
         QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
@@ -432,7 +431,7 @@ class HilbertTests extends TacticTestBase {
         dI()(1, 1::Nil) &
         assignb(1) & // handle updates
         QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in withTactics {
@@ -443,7 +442,7 @@ class HilbertTests extends TacticTestBase {
 
   it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withMathematica { _ =>
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (basicImpl)
-    done shouldBe 'proved
+    done shouldBe Symbol("proved")
     done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
   }
 
@@ -451,7 +450,7 @@ class HilbertTests extends TacticTestBase {
     require(basic.isProved)
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
-    done shouldBe 'proved
+    done shouldBe Symbol("proved")
     done.conclusion shouldBe Sequent(IndexedSeq(ctx(basic.conclusion.ante.head)), IndexedSeq(ctx(basic.conclusion.succ.head)))
   }
 
@@ -459,7 +458,7 @@ class HilbertTests extends TacticTestBase {
     require(basic.isProved)
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
-    done shouldBe 'proved
+    done shouldBe Symbol("proved")
     done.conclusion shouldBe Sequent(IndexedSeq(ctx(basic.conclusion.succ.head)), IndexedSeq(ctx(basic.conclusion.ante.head)))
   }
 
@@ -506,7 +505,7 @@ class HilbertTests extends TacticTestBase {
             //@todo discard ctx if DotFormula within a program
             //@todo discard ctx if DotFormula somewhere underneath an Equiv
             val done = CMon(ctx)(basicImpl)
-            done shouldBe 'proved
+            done shouldBe Symbol("proved")
             done.conclusion shouldBe Sequent(IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
           }
         } catch {

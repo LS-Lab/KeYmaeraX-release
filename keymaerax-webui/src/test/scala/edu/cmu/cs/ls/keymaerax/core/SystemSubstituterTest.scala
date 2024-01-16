@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable._
@@ -28,7 +28,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{x_'=f(||),c&H(||)}]p(||) <-> [{c,x_'=f(||)&H(||)}][x_':=f(||);]p(||)
     val pr = ProvableSig.axioms("DE differential effect (system)")
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("f",AnyArg,Real), "y'+1".asTerm) ::
       SubstitutionPair(UnitPredicational("q",AnyArg), True) ::
@@ -39,7 +39,7 @@ class SystemSubstituterTest extends TacticTestBase {
 
   "System postconditions" should "not allow ghosts in postconditions of DG differential ghost" in {
     val pr = ProvableSig.axioms("DG differential ghost")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("a",Except(y::Nil),Real), Number(0)) ::
       SubstitutionPair(UnitFunctional("b",Except(y::Nil),Real), Number(0)) ::
@@ -51,7 +51,7 @@ class SystemSubstituterTest extends TacticTestBase {
 
   it should "not allow ghosts in postconditions of DG differential ghost constant" in {
     val pr = ProvableSig.axioms("DG differential ghost constant")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("b",Except(y::Nil),Real), Number(0)) ::
       SubstitutionPair(UnitPredicational("q",Except(y::Nil)), True) ::
@@ -78,7 +78,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
     // [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
     val pr = ProvableSig.axioms("DG inverse differential ghost")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(DifferentialProgramConst("c",Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("x_")),Number(3))) ::
         SubstitutionPair(UnitFunctional("a",Except(y::Nil),Real), Number(0)) ::
@@ -107,7 +107,7 @@ class SystemSubstituterTest extends TacticTestBase {
   it should "not allow ghosts in postconditions of DG inverse differential ghost system" in {
     // [{x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
     val pr = ProvableSig.axioms("DG inverse differential ghost")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy { pr(USubst(
         SubstitutionPair(DifferentialProgramConst("c",AnyArg), AtomicODE(DifferentialSymbol(Variable("x_")),Number(0))) ::
           SubstitutionPair(UnitFunctional("a",Except(y::Nil),Real), Number(0)) ::
@@ -131,7 +131,7 @@ class SystemSubstituterTest extends TacticTestBase {
   it should "not allow ghosts in postconditions of DG inverse differential ghost system for y_=9 -> [{y_'=5,x_'=3,t'=1}]y_=9" in {
     // [{x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
     val pr = ProvableSig.axioms("DG inverse differential ghost")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     //@todo should throw or leave f,g,p,q untouched since they have subtly different spaces
     theDeductionOf(pr(USubst(
       SubstitutionPair(DifferentialProgramConst("c",AnyArg), AtomicODE(DifferentialSymbol(Variable("x_")),Number(3))) ::
@@ -147,7 +147,7 @@ class SystemSubstituterTest extends TacticTestBase {
   it should "not allow ghosts in postconditions of DG inverse differential ghost system System for y_<=m() -> [{y_'=x_,x_'=-b(),t'=1}]y_<=m()" in {
     // [{x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
     val pr = ProvableSig.axioms("DG inverse differential ghost")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     //@todo should throw or leave f,g,p,q untouched since they have subtly different spaces
     theDeductionOf(pr(USubst(
       SubstitutionPair(DifferentialProgramConst("c",AnyArg), AtomicODE(DifferentialSymbol(Variable("x_")),"-b()".asTerm)) ::
@@ -175,7 +175,7 @@ class SystemSubstituterTest extends TacticTestBase {
   "System ODEs" should "not allow ghosts in ODEs of DG differential ghost" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}]p(|y_|)
     val pr = ProvableSig.axioms("DG differential ghost")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("a",Except(y::Nil),Real), Number(0)) ::
         SubstitutionPair(UnitFunctional("b",Except(y::Nil),Real), Number(-1)) ::
@@ -208,7 +208,7 @@ class SystemSubstituterTest extends TacticTestBase {
   it should "not allow ghosts in ODEs of DG differential ghost constant" in {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=g(|y_|)&q(|y_|)}]p(|y_|)
     val pr = ProvableSig.axioms("DG differential ghost constant")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(UnitFunctional("b",Except(y::Nil),Real), Number(-1)) ::
         SubstitutionPair(UnitPredicational("q",Except(y::Nil)), True) ::
@@ -228,7 +228,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{x_'=f(|y_|)&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=g(||),x_'=f(|y_|)&q(|y_|)}]p(|y_|)
     val pr = ProvableSig.axioms("DG inverse differential ghost")
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(DifferentialProgramConst("c",Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("x_")),Variable("y_",None,Real))) ::
         SubstitutionPair(UnitFunctional("a",Except(y::Nil),Real), Number(0)) ::
@@ -258,7 +258,7 @@ class SystemSubstituterTest extends TacticTestBase {
     // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
     // ([{x_'=f(||),c&H(||)}]p(||))  ->  (\forall y_ [{y_'=g(||),x_'=f(||),c&H(||)}]p(||))
     val pr = ProvableSig.axioms("DG inverse differential ghost")
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(DifferentialProgramConst("c",Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("x_")), Variable("y_",None,Real))) ::
         SubstitutionPair(UnitFunctional("a",AnyArg,Real), Number(0)) ::
@@ -283,17 +283,17 @@ class SystemSubstituterTest extends TacticTestBase {
     val (pr,ipr) = Provable.vectorialDG(2)
 
     //[{y__1'=g1(||),y__2'=g2(||),c{|y__1,y__2|}&q(|y__1,y__2|)}]y__1*y__1+y__2*y__2<=f_(|y__1,y__2|)->[{y__1'=g1(||),y__2'=g2(||),c{|y__1,y__2|}&q(|y__1,y__2|)}]p(|y__1,y__2|)->[{c{|y__1,y__2|}&q(|y__1,y__2|)}]p(|y__1,y__2|)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     //[{c{|y__1,y__2|}&q(|y__1,y__2|)}]p(|y__1,y__2|)->[{y__1'=g1(||),y__2'=g2(||),c{|y__1,y__2|}&q(|y__1,y__2|)}]p(|y__1,y__2|)
-    ipr shouldBe 'proved
+    ipr shouldBe Symbol("proved")
 
     // Substitute some AnyArgs safely
     val spair1 = SubstitutionPair(UnitFunctional("g1", AnyArg, Real), Plus(yone,ytwo)) ::
       SubstitutionPair(UnitFunctional("g2", AnyArg, Real), Plus(yone,ytwo)) :: Nil
     val pr1 = pr(USubst(spair1))
     val ipr1 = ipr(USubst(spair1))
-    pr1 shouldBe 'proved
-    ipr1 shouldBe 'proved
+    pr1 shouldBe Symbol("proved")
+    ipr1 shouldBe Symbol("proved")
 
     // Bad substitution for the ODE c{|y__1,y__2|}~>{t'=y__1}
     a[CoreException] shouldBe thrownBy {

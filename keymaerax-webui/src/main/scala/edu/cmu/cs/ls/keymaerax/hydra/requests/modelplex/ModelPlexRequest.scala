@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.modelplex
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, TacticAssertionError, TacticInapplicableFailure}
@@ -86,7 +87,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               new ModelPlexSandboxResponse(model, monitorConjecture, sandbox) :: Nil
             case "C" =>
               val ctrlInputs = CodeGenerator.getInputs(monitorCond)
-              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, model.defs), init, model.defs))(monitorCond, stateVars, ctrlInputs, "Monitor")
+              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), model.defs), init, model.defs))(monitorCond, stateVars, ctrlInputs, "Monitor")
               val inputs = CodeGenerator.getInputs(prg)
               val fallbackCode = new CControllerGenerator(model.defs)(prg, stateVars, inputs)
               val declarations = ctrlMonitorCode._1.trim
@@ -166,7 +167,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
             val inputs = CodeGenerator.getInputs(prg)
-            val monitor = (new CGenerator(new CMonitorGenerator('resist, model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
+            val monitor = (new CGenerator(new CMonitorGenerator(Symbol("resist"), model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
             val code =
               s"""${monitor._1}
                  |${monitor._2}
@@ -187,7 +188,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             new ModelPlexCCodeResponse(model, code) :: Nil
           case "Python" =>
             val inputs = CodeGenerator.getInputs(prg)
-            val monitor = (new PythonGenerator(new PythonMonitorGenerator('min, model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
+            val monitor = (new PythonGenerator(new PythonMonitorGenerator(Symbol("min"), model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
             val code =
               s"""${monitor._1}
                  |${monitor._2}""".stripMargin

@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -138,8 +138,8 @@ class SMTQETests extends TacticTestBase {
 
   it should "handle abs" in withZ3 { _ =>
     val f = "abs(x-y)>v^2 -> (x-y)^2>0".asFormula
-    proveBy(f, TactixLibrary.abs(1, 0::0::Nil) & TactixLibrary.QE) shouldBe 'proved
-    proveBy(f, TactixLibrary.QE) shouldBe 'proved
+    proveBy(f, TactixLibrary.abs(1, 0::0::Nil) & TactixLibrary.QE) shouldBe Symbol("proved")
+    proveBy(f, TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "not exceed a timeout" ignore withZ3 { z3 =>
@@ -168,12 +168,12 @@ class SMTQETests extends TacticTestBase {
 
   "Z3Reports" should "prove intervalUpDivide" in withZ3 { z3 =>
     val intervalUpDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))"
-    z3.qe(intervalUpDivideStr.asFormula).fact shouldBe 'proved
+    z3.qe(intervalUpDivideStr.asFormula).fact shouldBe Symbol("proved")
   }
 
   it should "prove intervalDownDivide" in withZ3 { z3 =>
     val intervalDownDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x/y <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(z<=xx/yy & z<=xx/Y & z<=X/yy & z<=X/Y))))"
-    z3.qe(intervalDownDivideStr.asFormula).fact shouldBe 'proved
+    z3.qe(intervalDownDivideStr.asFormula).fact shouldBe Symbol("proved")
 
   }
 }

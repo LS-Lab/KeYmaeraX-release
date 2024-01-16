@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedDependentPositionTactic, AppliedDependentPositionTacticWithAppliedInput, AppliedPositionTactic, BelleExpr, BranchTactic, CaseTactic, EitherTactic, Find, SaturateTactic, SeqTactic}
@@ -31,16 +32,16 @@ class DBTests extends TacticTestBase {
     forEvery(tactics) { (name, fileContent, tactic) =>
       val tacticString = BellePrettyPrinter(tactic)
       val modelId = db.db.createModel(db.user.userName, name, fileContent, "", None, None, None, Some(tacticString))
-      modelId shouldBe 'defined
+      modelId shouldBe Symbol("defined")
       val modelEntry = db.db.getModel(modelId.get)
       val storedTactic = modelEntry.tactic
-      storedTactic shouldBe 'defined
+      storedTactic shouldBe Symbol("defined")
       //@note compare pretty printed because text locations differ when tactic is read from a file vs. from stored tactic
       BellePrettyPrinter(ArchiveParser.tacticParser(storedTactic.get)) shouldBe BellePrettyPrinter(tactic)
 
       val proofId = db.db.createProofForModel(modelId.get, name, "", "", Some(tacticString))
       val storedProofTactic = db.db.getProofInfo(proofId).tactic
-      storedProofTactic shouldBe 'defined
+      storedProofTactic shouldBe Symbol("defined")
       BellePrettyPrinter(ArchiveParser.tacticParser(storedProofTactic.get)) shouldBe BellePrettyPrinter(tactic)
     }
 

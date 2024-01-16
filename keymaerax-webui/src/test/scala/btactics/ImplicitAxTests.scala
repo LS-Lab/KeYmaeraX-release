@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.ImplicitAx._
@@ -66,14 +71,14 @@ class ImplicitAxTests extends TacticTestBase {
 
     val ax = DcomposeFull
     println(ax)
-    ax.fact shouldBe 'proved
+    ax.fact shouldBe Symbol("proved")
   }
 
   it should "prove flip axiom" in withMathematica { _ =>
 
     val ax = flipPartial
     println(ax)
-    ax.fact shouldBe 'proved
+    ax.fact shouldBe Symbol("proved")
   }
 
   "reverse" should "prove there and back style axiom" in withMathematica { _ =>
@@ -82,7 +87,7 @@ class ImplicitAxTests extends TacticTestBase {
 
     println(pr)
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     pr.conclusion shouldBe "==> p_(x__1,x__2)->[{x__1'=f__1(x__1,x__2),x__2'=f__2(x__1,x__2)&q_(x__1,x__2)}]<{x__1'=-f__1(x__1,x__2),x__2'=-f__2(x__1,x__2)&q_(x__1,x__2)}>p_(x__1,x__2)".asSequent
   }
 
@@ -91,7 +96,7 @@ class ImplicitAxTests extends TacticTestBase {
     val pr = defExpandToBox("e'=e".asDifferentialProgram)
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     pr.conclusion shouldBe "==>  <{e'=-e&q_(e)}>p_(e)|<{e'=e&q_(e)}>p_(e)->[{e'=e&q_(e)}]<{e'=-e&q_(e)}>p_(e)|[{e'=-e&q_(e)}]<{e'=e&q_(e)}>p_(e)".asSequent
   }
 
@@ -100,7 +105,7 @@ class ImplicitAxTests extends TacticTestBase {
     val pr = defExpandToBox("s'=c,c'=-s".asDifferentialProgram)
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     pr.conclusion shouldBe "==>  <{s'=-c,c'=--s&q_(s,c)}>p_(s,c)|<{s'=c,c'=-s&q_(s,c)}>p_(s,c)->[{s'=c,c'=-s&q_(s,c)}]<{s'=-c,c'=--s&q_(s,c)}>p_(s,c)|[{s'=-c,c'=--s&q_(s,c)}]<{s'=c,c'=-s&q_(s,c)}>p_(s,c)".asSequent
   }
 
@@ -108,7 +113,7 @@ class ImplicitAxTests extends TacticTestBase {
 
     val ax = firstDer
     println(ax)
-    ax.fact shouldBe 'proved
+    ax.fact shouldBe Symbol("proved")
   }
 
   it should "prove forward partial derivatives" in withMathematica { _ =>
@@ -116,7 +121,7 @@ class ImplicitAxTests extends TacticTestBase {
 
     println(pr)
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     pr.conclusion shouldBe "==>  [{x__1'=f__1(x__1,x__2,t_),x__2'=f__2(x__1,x__2,t_),t_'=h_()}](x__1=g__1(t_)&x__2=g__2(t_))->[t_':=h_();]((g__1(t_))'=f__1(g__1(t_),g__2(t_),t_)&(g__2(t_))'=f__2(g__1(t_),g__2(t_),t_))".asSequent
   }
 
@@ -128,7 +133,7 @@ class ImplicitAxTests extends TacticTestBase {
     println(axs)
 
     axs.length shouldBe 1
-    axs(0) shouldBe 'proved
+    axs(0) shouldBe Symbol("proved")
     axs(0).conclusion shouldBe "==>  (exp<<<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0)>>(g(|TDIFFAX_|)))'=exp<<<{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0)>>(g(|TDIFFAX_|))*(g(|TDIFFAX_|))'".asSequent
   }
 
@@ -141,8 +146,8 @@ class ImplicitAxTests extends TacticTestBase {
     println(axs)
 
     axs.length shouldBe 2
-    axs(0) shouldBe 'proved
-    axs(1) shouldBe 'proved
+    axs(0) shouldBe Symbol("proved")
+    axs(1) shouldBe Symbol("proved")
     axs(0).conclusion shouldBe "==>  (sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))'=cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|))*(g(|TDIFFAX_|))'".asSequent
     axs(1).conclusion shouldBe "==>  (cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))'=(-sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))*(g(|TDIFFAX_|))'".asSequent
   }
@@ -156,7 +161,7 @@ class ImplicitAxTests extends TacticTestBase {
     println(axs)
 
     axs.length shouldBe 1
-    axs(0) shouldBe 'proved
+    axs(0) shouldBe Symbol("proved")
     axs(0).conclusion shouldBe "==>  (expt<< <{e:=._0;t:=._1;}{{e'=-t,t'=-(1)}++{e'=t,t'=1}}>(e=1&t=0) >>(g(|TDIFFAX_|)))'=g(|TDIFFAX_|)*(g(|TDIFFAX_|))'".asSequent
 
   }
@@ -170,7 +175,7 @@ class ImplicitAxTests extends TacticTestBase {
     println(axs)
 
     axs.length shouldBe 1
-    axs(0) shouldBe 'proved
+    axs(0) shouldBe Symbol("proved")
     axs(0).conclusion shouldBe "==>  (exptt<< <{e:=._0;t:=._1;}{{e'=-t,t'=-(1)}++{e'=t,t'=1}}>(e=1&t=10) >>(g(|TDIFFAX_|)))'=g(|TDIFFAX_|)*(g(|TDIFFAX_|))'".asSequent
 
   }
@@ -184,7 +189,7 @@ class ImplicitAxTests extends TacticTestBase {
     println(axs)
 
     axs.length shouldBe 1
-    axs(0) shouldBe 'proved
+    axs(0) shouldBe Symbol("proved")
     axs(0).conclusion shouldBe "==>  (expA<< <{e:=._0;t:=._1;}{{e'=-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(t)*e,t'=-(1)}++{e'=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(t)*e,t'=1}}>(e=1&t=10) >>(g(|TDIFFAX_|)))'=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(g(|TDIFFAX_|))*expA<< <{e:=._0;t:=._1;}{{e'=-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(t)*e,t'=-(1)}++{e'=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(t)*e,t'=1}}>(e=1&t=10) >>(g(|TDIFFAX_|))*(g(|TDIFFAX_|))'".asSequent
 
   }
@@ -215,8 +220,8 @@ class ImplicitAxTests extends TacticTestBase {
     axs.length shouldBe 2
     axs(0)._1 shouldBe sin
     axs(1)._1 shouldBe cos
-    axs(0)._2 shouldBe 'proved
-    axs(1)._2 shouldBe 'proved
+    axs(0)._2 shouldBe Symbol("proved")
+    axs(1)._2 shouldBe Symbol("proved")
     axs(0)._2.conclusion shouldBe "==>  (sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))'=cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|))*(g(|TDIFFAX_|))'".asSequent
     axs(1)._2.conclusion shouldBe "==>  (cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))'=(-sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))*(g(|TDIFFAX_|))'".asSequent
   }
@@ -232,8 +237,8 @@ class ImplicitAxTests extends TacticTestBase {
     axs.length shouldBe 2
     axs(0)._1 shouldBe sin
     axs(1)._1 shouldBe cos
-    axs(0)._2 shouldBe 'proved
-    axs(1)._2 shouldBe 'proved
+    axs(0)._2 shouldBe Symbol("proved")
+    axs(1)._2 shouldBe Symbol("proved")
     axs(0)._2.conclusion shouldBe "==>  (sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))'=cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|))*(g(|TDIFFAX_|))'".asSequent
     axs(1)._2.conclusion shouldBe "==>  (cos<<<{sin:=*;cos:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))'=(-sin<<<{cos:=*;sin:=._0;t:=._1;}{{sin'=-cos,cos'=--sin,t'=-(1)}++{sin'=cos,cos'=-sin,t'=1}}>(sin=0&cos=1&t=0)>>(g(|TDIFFAX_|)))*(g(|TDIFFAX_|))'".asSequent
   }
@@ -244,7 +249,7 @@ class ImplicitAxTests extends TacticTestBase {
     val ax = deriveInitAxiom(exp)
     println(ax)
 
-    ax shouldBe 'proved
+    ax shouldBe Symbol("proved")
   }
 
   "derivedaxiominfo" should "derive and store diff ax 1" in withMathematica { _ =>
@@ -263,9 +268,9 @@ class ImplicitAxTests extends TacticTestBase {
     val dcos = getDiffAx(cos)
 
     dsin.isDefined shouldBe true
-    dsin.get.provable shouldBe 'proved
+    dsin.get.provable shouldBe Symbol("proved")
     dcos.isDefined shouldBe true
-    dcos.get.provable shouldBe 'proved
+    dcos.get.provable shouldBe Symbol("proved")
   }
 
   it should "diff ax fail gracefully" in withMathematica { _ =>
@@ -294,9 +299,9 @@ class ImplicitAxTests extends TacticTestBase {
     println(dsin)
     println(dcos)
     dsin.isDefined shouldBe true
-    dsin.get.provable shouldBe 'proved
+    dsin.get.provable shouldBe Symbol("proved")
     dcos.isDefined shouldBe true
-    dcos.get.provable shouldBe 'proved
+    dcos.get.provable shouldBe Symbol("proved")
   }
 
   it should "init ax fail gracefully" in withMathematica { _ =>
@@ -356,7 +361,7 @@ class ImplicitAxTests extends TacticTestBase {
       ))
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove exp > 1" in withMathematica { _ =>
@@ -373,7 +378,7 @@ class ImplicitAxTests extends TacticTestBase {
       ))
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "manual proof with weird subexpression" in withMathematica { _ =>
@@ -388,7 +393,7 @@ class ImplicitAxTests extends TacticTestBase {
       )
     )
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "multivariate auto proof" in withMathematica { _ =>
@@ -403,7 +408,7 @@ class ImplicitAxTests extends TacticTestBase {
       )
     )
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "multivariate manual proof sin/cos" in withMathematica { _ =>
@@ -414,12 +419,12 @@ class ImplicitAxTests extends TacticTestBase {
     val pr = proveBy(Equal(Plus(Power(FuncOf(sin,"z".asTerm),Number(2)),Power(FuncOf(cos,"z".asTerm),Number(2))), Number(1)),
       diffUnfold(Variable("z"), Number(0))(1) <(
         QE,
-        dI('full)(1),
-        dI('diffInd)(1) <(id, Dassignb(1) & QE)
+        dI(Symbol("full"))(1),
+        dI(Symbol("diffInd"))(1) <(id, Dassignb(1) & QE)
       )
     )
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "multivariate manual proof sin/cos 2" in withMathematica { _ =>
@@ -466,7 +471,7 @@ class ImplicitAxTests extends TacticTestBase {
         ODEInvariance.dgVdbx(Gn,p1::p2::Nil)(1) & DW(1) & TactixLibrary.G(1) & QE
       ))
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "multivariate manual proof sin/cos auto" in withMathematica { _ =>
@@ -496,7 +501,7 @@ class ImplicitAxTests extends TacticTestBase {
       ))
     println(pr)
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "multivariate manual proof sin/cos auto 2" in withMathematica { _ =>
@@ -519,7 +524,7 @@ class ImplicitAxTests extends TacticTestBase {
         ODEInvariance.dRI(1)
       ))
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove example with no semialgebraic invariant" in withMathematica { _ =>
@@ -536,7 +541,7 @@ class ImplicitAxTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "expand abbreviations of interpreted symbols in ODE" in withMathematica { _ =>
@@ -551,7 +556,7 @@ class ImplicitAxTests extends TacticTestBase {
       QE,
       ODE(1),
       ODE(1)
-    ), entry.defs) shouldBe 'proved
+    ), entry.defs) shouldBe Symbol("proved")
   }
 
   it should "diff unfold D existentials" in withMathematica { _ =>
@@ -566,7 +571,7 @@ class ImplicitAxTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove pi with RCF" in withMathematica { _ =>
@@ -576,7 +581,7 @@ class ImplicitAxTests extends TacticTestBase {
     )
     println(pr)
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "work correctly with composition" in withMathematica { _=>
@@ -586,7 +591,7 @@ class ImplicitAxTests extends TacticTestBase {
     )
     println(pr)
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "work with composition correctly 2" in withMathematica { _ =>
@@ -595,6 +600,6 @@ class ImplicitAxTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 }

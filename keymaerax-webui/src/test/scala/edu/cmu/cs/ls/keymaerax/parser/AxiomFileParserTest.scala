@@ -20,7 +20,7 @@ import scala.collection.immutable.Map
 @CheckinTest
 class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
 
-  private val loadAxiomString = PrivateMethod[String]('loadAxiomString)
+  private val loadAxiomString = PrivateMethod[String](Symbol("loadAxiomString"))
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

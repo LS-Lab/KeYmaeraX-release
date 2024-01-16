@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics.components
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -35,7 +40,7 @@ object ComponentSystem extends TacticProvider {
   )
   private lazy val assignmentIndependence2 = AnonymousLemmas.remember(
     "[x_:=*;][y_:=t_();]p_(x_,y_) <-> [y_:=t_();][x_:=*;]p_(x_,y_)".asFormula,
-    master() & allL('Llast) & id & done,
+    master() & allL(Symbol("Llast")) & id & done,
     namespace
   )
   private lazy val assignmentIndependence3 = AnonymousLemmas.remember(
@@ -115,7 +120,7 @@ object ComponentSystem extends TacticProvider {
           chase(1, 0::Nil) & chase(1, 1::Nil) & equivR(1) &
             OnAll(
               SaturateTactic(OnAll(allR(1) | prop)) &
-                Idioms.?(OnAll(SaturateTactic(implyL('L) <(prop, nil) | allL('L)) & prop & done))
+                Idioms.?(OnAll(SaturateTactic(implyL(Symbol("L")) <(prop, nil) | allL(Symbol("L"))) & prop & done))
             )
         )
         val rensubst = (_: Option[Subst]) => RenUSubst(
@@ -178,7 +183,7 @@ object ComponentSystem extends TacticProvider {
                 proveBy(Imply(Box(ODESystem(xsys, h), p), have),
                   implyR(1) & DifferentialTactics.diffRefine(h)(1) <(
                     cut(universalXClosure) <(
-                      allL('Llast)*ys.size & id & done
+                      allL(Symbol("Llast"))*ys.size & id & done
                       ,
                       hideR(1) & useAt(partitionedOdeLemma, PosInExpr(1::Nil))(1, List.fill(ys.size)(0)) &
                         ys.indices.reverse.
@@ -210,7 +215,7 @@ object ComponentSystem extends TacticProvider {
                 proveBy(Imply(Box(Test(h), p), have),
                   implyR(1) & DifferentialTactics.diffRefine(h)(1) <(
                     cut(universalXClosure) <(
-                      allL('Llast)*ys.size & id & done
+                      allL(Symbol("Llast"))*ys.size & id & done
                       ,
                       hideR(1) & useAt(partitionedOdeLemma, PosInExpr(1::Nil))(1, List.fill(ys.size)(0)) &
                         allR(1)*ys.size & dW(1) & useAt(Ax.testb, PosInExpr(1::Nil))(1) &
@@ -471,7 +476,7 @@ object ComponentSystem extends TacticProvider {
               dropPlant(plant1Vars)(pos ++ PosInExpr(1::1::1::Nil)) & DebuggingTactics.print("Step 2.12 done") &
               composeb(pos ++ PosInExpr(1::Nil)) & dropControl(pos ++ PosInExpr(1::1::Nil)) & // drop ctrl2
               composeb(pos) & dropControl(pos ++ PosInExpr(1::Nil)) & DebuggingTactics.print("Step 2.13 done") & // drop delta2
-              hideL('Llast) &
+              hideL(Symbol("Llast")) &
               // use step lemma
               (anon ((pp: Position, ss: Sequent) => ss.sub(pp) match {
                 case Some(have@Box(_, p)) =>
@@ -494,7 +499,7 @@ object ComponentSystem extends TacticProvider {
               DebuggingTactics.print("Step done") & DebuggingTactics.done("Step")
             ,
             // show
-            justifyFout(fout, plant2Vars, c2ComGuaranteeLiveness, c2use, c2step)('Rlast)
+            justifyFout(fout, plant2Vars, c2ComGuaranteeLiveness, c2use, c2step)(Symbol("Rlast"))
           ) & DebuggingTactics.print("Done disassembling system into components") & DebuggingTactics.done("Disassembling system into components")
       case Some(e) => throw new TacticInapplicableFailure("proveSystemCompStep only applicable to box properties, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)

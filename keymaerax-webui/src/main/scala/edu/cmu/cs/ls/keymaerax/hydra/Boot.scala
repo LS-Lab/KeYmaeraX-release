@@ -79,7 +79,7 @@ object HyDRAInitializer extends Logging {
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
   def apply(args: Array[String], database: DBAbstraction): String = {
-    val options = KeYmaeraX.nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
+    val options = KeYmaeraX.nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList)
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 
@@ -117,7 +117,7 @@ object HyDRAInitializer extends Logging {
       }
     }
 
-    options.get('open) match {
+    options.get(Symbol("open")) match {
       case None => "" //@note start with model list
       case Some(archive) =>
         if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
@@ -142,7 +142,7 @@ object HyDRAInitializer extends Logging {
   }
 
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
-    val tool: String = options.getOrElse('tool, preferredTool).toString
+    val tool: String = options.getOrElse(Symbol("tool"), preferredTool).toString
     val provider = tool.toLowerCase() match {
       case "mathematica" => ToolProvider.initFallbackZ3(MathematicaToolProvider(config), "Mathematica")
       case "wolframengine" => ToolProvider.initFallbackZ3(WolframEngineToolProvider(config), "Wolfram Engine")
@@ -155,7 +155,7 @@ object HyDRAInitializer extends Logging {
   }
 
   private def toolConfig(options: OptionMap, preferredTool: String): ToolProvider.Configuration = {
-    val tool: String = options.getOrElse('tool, preferredTool).toString
+    val tool: String = options.getOrElse(Symbol("tool"), preferredTool).toString
     ToolConfiguration.config(tool.toLowerCase, options.map({ case (k, v) => k.toString.stripPrefix("'") -> v.toString }))
   }
 

@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable._
@@ -23,11 +23,11 @@ class InterpretedFunctionTest extends TacticTestBase {
     val wrong = "f(-1)=1".asFormula
     val intbase = "abs(-1)=1".asFormula
     val pr = proveBy(intbase, QE)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     //@todo Either SubstitutionClashException or a result that isn't proved or isn't of the form wrong
     val pr2 = pr(USubst(SubstitutionPair(FuncOf(Function("abs",None,Real,Real,None),DotTerm()), FuncOf(Function("f",None,Real,Real),DotTerm())) :: Nil))
     pr2.conclusion shouldBe pr.conclusion
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy (pr(USubst(SubstitutionPair(FuncOf(InterpretedSymbols.absF,DotTerm()), FuncOf(Function("f",None,Real,Real),DotTerm())) :: Nil)))
   }
 
@@ -35,7 +35,7 @@ class InterpretedFunctionTest extends TacticTestBase {
     val wrong = "0=1".asFormula
     val intbase = "abs(-1)=1".asFormula
     val pr = proveBy(intbase, QE)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     //@todo Either SubstitutionClashException or a result that isn't proved or isn't of the form wrong
     val pr2 = pr(USubst(SubstitutionPair(FuncOf(Function("abs",None,Real,Real,None),DotTerm()), Number(0)) :: Nil))
     pr2.conclusion shouldBe pr.conclusion

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleCEX, BelleThrowable}
@@ -305,7 +310,7 @@ class ToolTacticsTests extends TacticTestBase {
       ToolTactics.switchSolver("Z3") & checkTool("Z3") & implyR(1) &
       ToolTactics.switchSolver("Mathematica") & checkTool("Mathematica") &
       ToolTactics.switchSolver("Mathematica") & checkTool("Mathematica") &
-      master()) shouldBe 'proved
+      master()) shouldBe Symbol("proved")
   }
 
   "Check for counterexample" should "not fail on uninterpreted predicates with _-suffixed names" in withMathematica { _ =>

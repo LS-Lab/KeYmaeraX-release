@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -671,7 +676,7 @@ class DLTests extends TacticTestBase {
 
   "Loop" should "work with abstract invariant" in withTactics {
     val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
-    val tactic = implyR('R) & loop("J(x)".asFormula)('R) <(skip, skip, assignb('R))
+    val tactic = implyR(Symbol("R")) & loop("J(x)".asFormula)(Symbol("R")) <(skip, skip, assignb(Symbol("R")))
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3
@@ -699,7 +704,7 @@ class DLTests extends TacticTestBase {
     //@note regression test for bug where listeners were not notified correctly because of exception in close
     val model = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> [{x:=x+1;}*]x>0 End. End."""
     val fml = ArchiveParser.parseAsFormula(model)
-    val tactic = implyR('R) & loop("x>0".asFormula)('R)
+    val tactic = implyR(Symbol("R")) & loop("x>0".asFormula)(Symbol("R"))
 
     val proofId = db.createProof(model)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
@@ -709,12 +714,12 @@ class DLTests extends TacticTestBase {
     result.subgoals.size shouldBe 3
     val finalTree = DbProofTree(db.db, proofId.toString).load()
     finalTree.openGoals.flatMap(_.goal) should contain theSameElementsAs result.subgoals
-    (finalTree.nodes.toSet - finalTree.root).foreach(_.maker shouldBe 'defined)
+    (finalTree.nodes.toSet - finalTree.root).foreach(_.maker shouldBe Symbol("defined"))
   }}
 
   it should "work with multi-variate abstract invariant" in withTactics {
     val fml = "x>1 & y < -1 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
-    val tactic = implyR('R) & loop("J(x,y)".asFormula)('R) <(skip, skip, normalize)
+    val tactic = implyR(Symbol("R")) & loop("J(x,y)".asFormula)(Symbol("R")) <(skip, skip, normalize)
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3

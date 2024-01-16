@@ -78,7 +78,7 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(IndexedSeq() ++ a, IndexedSeq() ++ b)
 
-  def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
+  def testRule(rule: Rule, in: Sequent, out: List[Sequent]): Unit = {
     println("\tCheck " + rule) //@TODO turn into "should" output?
     val pn = ProvableSig.startPlainProof(in)
     val resList = pn.apply(rule, 0).subgoals

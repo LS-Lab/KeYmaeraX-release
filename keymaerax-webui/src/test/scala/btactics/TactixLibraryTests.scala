@@ -51,7 +51,7 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
         diffInvariant("x>=5".asFormula)(1) & dW(1) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove x>=5 -> [{{x'=2}}*]x>=5 by loop invariants" in withMathematica { _ =>
@@ -64,7 +64,7 @@ class TactixLibraryTests extends TacticTestBase {
           ,
             solve(1) & OnAll(QE)
       )
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   "ChooseSome" should "find the right cut for x>=7 -> x>=5" in withMathematica { _ =>
@@ -78,19 +78,19 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
         ChooseSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & QE & done)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { _ =>
     proveBy("x>=5 ==> [{x'=x^2}]x>=5".asSequent,
       ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & QE & done)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "generate and auto prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { _ =>
     proveBy("x>=5 ==> [{x'=x^2}]x>=5".asSequent,
       ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & autoClose)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
 
@@ -104,7 +104,7 @@ class TactixLibraryTests extends TacticTestBase {
           ,
           solve(1) & OnAll(QE & done)
           ))
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { _ =>
@@ -117,13 +117,13 @@ class TactixLibraryTests extends TacticTestBase {
             ,
             solve(1) & OnAll(QE & done)
             ))
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "generate and auto prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { _ =>
     proveBy("x>=5 ==> [{{x'=2}}*]x>=5".asSequent,
       ChooseSome(someList, (inv:Formula) => loop(inv)(1) & autoClose)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   "LetInspect" should "post-hoc instantiate a j closing \\exists j 5+3=j" in withMathematica{ _ =>
@@ -137,7 +137,7 @@ class TactixLibraryTests extends TacticTestBase {
       ) & byUS(Ax.equalReflexive)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
   }
 
   it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica { _ =>
@@ -151,7 +151,7 @@ class TactixLibraryTests extends TacticTestBase {
       ) & byUS(Ax.equalReflexive)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
   }
 
   it should "post-hoc instantiate a j closing \\exists j (x+x)'=j" ignore withMathematica { _ =>
@@ -165,7 +165,7 @@ class TactixLibraryTests extends TacticTestBase {
         derive(1, 0::Nil))
         & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x)'=jj".asFormula))
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" unifiable but not by mere matching, needs a proper unifier instead of a single sided matcher */
@@ -180,7 +180,7 @@ class TactixLibraryTests extends TacticTestBase {
           derive(1, 0::Nil))
         & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
@@ -195,7 +195,7 @@ class TactixLibraryTests extends TacticTestBase {
         derive(1, 1::Nil))
         & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj jj=(x+x*y)'".asFormula))
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
   }
 
   it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica{ _ =>
@@ -209,7 +209,7 @@ class TactixLibraryTests extends TacticTestBase {
           derive(1, 0::Nil))
         & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
   }
 
   def feedOneAfterTheOther[A<:Expression](list: List[A]) : (ProvableSig,ProverException)=>Seq[Expression] = {
@@ -223,15 +223,15 @@ class TactixLibraryTests extends TacticTestBase {
 
   "sAI" should "prove x>=0 -> [{x'=x^2+x+1}]x>=0" in withMathematica { _ =>
     val fml = "x>=0 -> [{x'=x^2+x+1}]x>=0".asFormula
-    proveBy(fml, implyR(1) & ODEInvariance.sAIclosedPlus()(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & ODEInvariance.sAIclosedPlus()(1)) shouldBe Symbol("proved")
   }
 
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).map(_ -> None).toStream
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     //@note postcondition is invariant, loopPostMaster won't ask invariant generator
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe Symbol("proved")
   }
 
   it should "find an invariant for curvebot" in withMathematica { _ =>
@@ -244,7 +244,7 @@ class TactixLibraryTests extends TacticTestBase {
                 #   }*
                 #  ] !(x=ox & y=oy)""".stripMargin('#').asFormula
     //@note postcondition is invariant
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe Symbol("proved")
   }
 
   it should "find an invariant for curvebot with fns" in withMathematica { _ =>
@@ -257,7 +257,7 @@ class TactixLibraryTests extends TacticTestBase {
                 #   }*
                 #  ] !(x=ox() & y=oy())""".stripMargin('#').asFormula
     //@note postcondition is invariant
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe Symbol("proved")
   }
 
   it should "eventually run out of ideas" taggedAs SlowTest in withMathematica { _ =>
@@ -296,8 +296,8 @@ class TactixLibraryTests extends TacticTestBase {
       implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
-    proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proof shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" taggedAs TodoTest in withMathematica { _ =>
@@ -308,8 +308,8 @@ class TactixLibraryTests extends TacticTestBase {
       implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).toStream)(1)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
-    proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proof shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
   }
 
   it should "find by assignb an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -324,8 +324,8 @@ class TactixLibraryTests extends TacticTestBase {
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
-    proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proof shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
   }
 
   it should "find by step an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -340,8 +340,8 @@ class TactixLibraryTests extends TacticTestBase {
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
-    proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proof shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
   }
 
   it should "find by chase an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -356,13 +356,13 @@ class TactixLibraryTests extends TacticTestBase {
       )
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
-    proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proof shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
   }
 
   "Normalize" should "prove simple formula" in {
     val f = "y>0 -> [x:=y;]x>0".asFormula
-    proveBy(f, normalize) shouldBe 'proved
+    proveBy(f, normalize) shouldBe Symbol("proved")
   }
 
   it should "unfold simple formula" in {
@@ -439,7 +439,7 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "use abstraction" in {
     val f = "x>=0 -> [y:=y+1;]x>=0".asFormula
-    proveBy(f, normalize) shouldBe 'proved
+    proveBy(f, normalize) shouldBe Symbol("proved")
   }
 
   it should "inherit labels from core rules" in {
@@ -497,7 +497,7 @@ class TactixLibraryTests extends TacticTestBase {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
         })
-      ) shouldBe 'proved
+      ) shouldBe Symbol("proved")
     case _ => // nothing to test
   }
 
@@ -509,7 +509,7 @@ class TactixLibraryTests extends TacticTestBase {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
         })
-      ) should (not be 'proved)
+      ) should (not be Symbol("proved"))
     case _ => // nothing to test
   }
 
@@ -522,7 +522,7 @@ class TactixLibraryTests extends TacticTestBase {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
         })
-      ) should (not be 'proved)
+      ) should (not be Symbol("proved"))
     case _ => // nothing to test
   }
 
@@ -544,8 +544,8 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   it should "exhaustively apply propositional" in withTactics {
-    proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
-    proveBy("true<->(p()<->q())&q()->p()".asFormula, PropositionalTactics.prop) shouldBe 'proved
+    proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe Symbol("proved")
+    proveBy("true<->(p()<->q())&q()->p()".asFormula, PropositionalTactics.prop) shouldBe Symbol("proved")
   }
 
   it should "inherit labels from core rules with prop" in {
@@ -561,13 +561,13 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "search for expected formula if positions shifted" in withTactics {
     proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
-      implyR(1) & chaseAtX('R, "y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula)).subgoals.
+      implyR(1) & chaseAtX(Symbol("R"), "y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula)).subgoals.
       loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
   it should "chase everywhere" in withTactics {
     proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
-      SaturateTactic(chaseAtX('R))).subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
+      SaturateTactic(chaseAtX(Symbol("R")))).subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
   it should "FEATURE_REQUEST: chase multiple tactic options" taggedAs TodoTest in withMathematica { _ =>
@@ -683,7 +683,7 @@ class TactixLibraryTests extends TacticTestBase {
                 |  ]
                 |  (posCtrl <= posLead) /* safety condition */""".stripMargin.asFormula
 
-    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
   }, 180)
 
   it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
@@ -702,13 +702,13 @@ class TactixLibraryTests extends TacticTestBase {
         |End.
         |End.""".stripMargin).head.model.asInstanceOf[Formula]
 
-    proveBy(problem, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy(problem, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
   }
 
   it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
     val problem = ArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kyx")).mkString).get.model.asInstanceOf[Formula]
-    proveBy(problem, autoClose) shouldBe 'proved
+    proveBy(problem, autoClose) shouldBe Symbol("proved")
   }
 
   it should "prove ETCS fully automatically" in withMathematica { _ =>
@@ -717,7 +717,7 @@ class TactixLibraryTests extends TacticTestBase {
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString).get
     withTacticProgress(autoClose, List("_ALL"))(
       proveBy(entry.model.asInstanceOf[Formula], _, defs=entry.defs)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove ATC-2 fully automatically" in withMathematica { _ =>
@@ -726,7 +726,7 @@ class TactixLibraryTests extends TacticTestBase {
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString).get
     withTacticProgress(autoClose, List("_ALL"))(
       proveBy(entry.model.asInstanceOf[Formula], _, defs=entry.defs)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: prove an event-triggered system fully automatically" taggedAs TodoTest in withMathematica { _ =>
@@ -736,7 +736,7 @@ class TactixLibraryTests extends TacticTestBase {
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).get
     withTacticProgress(autoClose, List("_ALL"))(
       proveBy(entry.model.asInstanceOf[Formula], _, defs=entry.defs)
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>
@@ -749,7 +749,7 @@ class TactixLibraryTests extends TacticTestBase {
              {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
            }*
          ] x <= m""".stripMargin(' ').asFormula
-    proveBy(problem1, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy(problem1, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
 
     val problem2 = """
       v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
@@ -760,28 +760,28 @@ class TactixLibraryTests extends TacticTestBase {
              {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
            }*
          ] x <= m""".stripMargin(' ').asFormula
-    proveBy(problem2, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy(problem2, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
   }
 
   it should "try the postcondition" in withQE { _ =>
     val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=y; } }*]x<=y".asFormula
-    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
   }
 
   it should "try the preocondition" in withQE { _ =>
     val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=x-1/(y-x); } }*]x<=y".asFormula
-    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy(fml, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
   }
 
   it should "apply safeabstraction and find the correct recursors" in withQE { _ =>
     // provable with safeabstraction, which is an anon tactic; triggers master autoTacticIndex comparison with loop and
     // returns wrong recursor if autoTacticIndex comparison bug
-    proveBy("x>=0 -> [y:=2;]x>=0".asFormula, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy("x>=0 -> [y:=2;]x>=0".asFormula, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
   }
 
   it should "use auto modus ponens" in withQE { _ =>
     val s = "Y>y, X>y, y < x&x<=Y->P(x) ==>  y < x&x<=min(X,Y)->P(x)".asSequent
-    proveBy(s, auto(TactixLibrary.invGenerator, None)) shouldBe 'proved
+    proveBy(s, auto(TactixLibrary.invGenerator, None)) shouldBe Symbol("proved")
   }
 
   it should "not fail when trying to chase non-toplevel" in withQE { _ =>
@@ -805,17 +805,17 @@ class TactixLibraryTests extends TacticTestBase {
         |Problem loopinv(x,v) & b>0 & ep>=0 -> [{ctrl;t:=0;ode;}*@invariant(loopinv(x,v))]x<=m End.
         |End.""".stripMargin).head
 
-    proveBy(Sequent(IndexedSeq(), IndexedSeq(entry.model.asInstanceOf[Formula])), autoClose, entry.defs) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq(), IndexedSeq(entry.model.asInstanceOf[Formula])), autoClose, entry.defs) shouldBe Symbol("proved")
   }
 
   "useLemma" should "use unification to bridge between function symbols and terms" in withTactics {
     val lemmaName = "tests/useLemma/tautology1"
     val lemma = proveBy("f()>0 -> f()>0".asFormula, prop)
-    lemma shouldBe 'proved
+    lemma shouldBe Symbol("proved")
     LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
-    proveBy("==> f()>0 -> f()>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
-    proveBy("==> x>0 -> x>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
-    proveBy("==> x^2+y>0 -> x^2+y>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    proveBy("==> f()>0 -> f()>0".asSequent, useLemmaX(lemmaName, None)) shouldBe Symbol("proved")
+    proveBy("==> x>0 -> x>0".asSequent, useLemmaX(lemmaName, None)) shouldBe Symbol("proved")
+    proveBy("==> x^2+y>0 -> x^2+y>0".asSequent, useLemmaX(lemmaName, None)) shouldBe Symbol("proved")
   }
 
   it should "use recorded substitutions" in withTactics {
@@ -823,16 +823,16 @@ class TactixLibraryTests extends TacticTestBase {
     val defs = "f(x) ~> x^2".asDeclaration
     // emulate entry without definition, but proof introduces user-provided substitutions
     val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, USX(defs.substs) & prop)
-    lemma shouldBe 'proved
+    lemma shouldBe Symbol("proved")
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil),
       Some("user" + File.separator + lemmaName)))
     // using lemma verbatim should work
-    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe Symbol("proved")
     // but insist on a definition when lemma is used non-verbatim, since otherwise might be difficult for user to follow
     // (conclusion would change after applying the lemma)
     val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), defs)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
     result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
 
     // report missing substitution/definition
@@ -858,14 +858,14 @@ class TactixLibraryTests extends TacticTestBase {
         |Problem f(x)>0->f(x)>0 End.
         |End.""".stripMargin).head
     val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, expand("f") & prop, defs = entry.defs)
-    lemma shouldBe 'proved
+    lemma shouldBe Symbol("proved")
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, ToolEvidence(List("model" -> entry.fileContent, "tactic" -> """expand "f"; prop"""))::Nil),
       Some("user" + File.separator + lemmaName)))
     // insist on providing definitions also where lemma is used to detect conflicts between lemma definition and other definition
-    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None), entry.defs) shouldBe 'proved
+    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None), entry.defs) shouldBe Symbol("proved")
     val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), entry.defs)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
     result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
     val otherDefs = "f(x) ~> x+1 :: nil".asDeclaration
     the [IllFormedTacticApplicationException] thrownBy proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None), otherDefs) should
@@ -876,7 +876,7 @@ class TactixLibraryTests extends TacticTestBase {
     val lemmaName = "tests/useLemma/tautology2"
     val defs = "f(x) ~> x^2".asDeclaration
     val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(USubst(defs.substs)) & prop, defs = defs)
-    lemma shouldBe 'proved
+    lemma shouldBe Symbol("proved")
     lemma.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil)),
@@ -901,7 +901,7 @@ class TactixLibraryTests extends TacticTestBase {
   "useLemmaAt" should "apply at provided key" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
-    lemma shouldBe 'proved
+    lemma shouldBe Symbol("proved")
     LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(1::Nil)))(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
     proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
@@ -910,7 +910,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "apply with default key .1 in succedent" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
-    lemma shouldBe 'proved
+    lemma shouldBe Symbol("proved")
     LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, None)(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
   }
@@ -918,7 +918,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "apply with default key .0 in antecedent" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
-    lemma shouldBe 'proved
+    lemma shouldBe Symbol("proved")
     LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
   }

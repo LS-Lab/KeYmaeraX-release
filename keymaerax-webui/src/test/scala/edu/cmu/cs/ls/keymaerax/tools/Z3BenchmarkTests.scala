@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
@@ -28,7 +29,7 @@ class Z3BenchmarkTests extends TacticTestBase {
     forEvery(examples) { (name, seq) =>
       whenever(tool.isInitialized) {
         println(s"Proving $name with Z3 ${seq.prettyString}")
-        proveBy(seq, TactixLibrary.QEX(None, qeTimeout)) shouldBe 'proved
+        proveBy(seq, TactixLibrary.QEX(None, qeTimeout)) shouldBe Symbol("proved")
       }
     }
   }

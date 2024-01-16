@@ -88,15 +88,15 @@ object KeYmaeraX {
     println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
     //@note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(
-      nextOption(Map('commandLine -> args.mkString(" ")), args.toList),
-      Map('mode -> Modes.UI))
+      nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList),
+      Map(Symbol("mode") -> Modes.UI))
 
     try {
       //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
-      options.get('mode) match {
+      options.get(Symbol("mode")) match {
         case Some(Modes.CODEGEN) =>
           val toolConfig =
-            if (options.contains('quantitative)) {
+            if (options.contains(Symbol("quantitative"))) {
               configFromFile(Tools.MATHEMATICA) //@note quantitative ModelPlex uses Mathematica to simplify formulas
             } else {
               configFromFile("z3")
@@ -110,7 +110,7 @@ object KeYmaeraX {
           initializeProver(combineConfigs(options, configFromFile("z3")), usage)
           repl(options)
         case Some(Modes.UI) => launchUI(args) //@note prover initialized in web UI launcher
-        case Some(Modes.CONVERT) => options.get('conversion) match {
+        case Some(Modes.CONVERT) => options.get(Symbol("conversion")) match {
           case Some("verboseTactics") | Some("verbatimTactics") =>
             initializeProver(combineConfigs(options, configFromFile("z3")), usage)
             convertTactics(options, usage)
@@ -138,11 +138,11 @@ object KeYmaeraX {
 
   private def configFromFile(defaultTool: String): OptionMap = {
     Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
-      case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
+      case Tools.MATHEMATICA => Map(Symbol("tool") -> Tools.MATHEMATICA) ++
         ToolConfiguration.mathematicaConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
-      case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++
+      case Tools.WOLFRAMENGINE => Map(Symbol("tool") -> Tools.WOLFRAMENGINE) ++
         ToolConfiguration.wolframEngineConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
-      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config(Map.empty).map({ case (k, v) => Symbol(k) -> v })
+      case Tools.Z3 => Map(Symbol("tool") -> Tools.Z3) ++ ToolConfiguration.z3Config(Map.empty).map({ case (k, v) => Symbol(k) -> v })
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
@@ -161,45 +161,45 @@ object KeYmaeraX {
       case "-help" :: _ => println(usage); exit(1)
       // actions
       case "-sandbox" :: tail =>
-        nextOption(map ++ Map('sandbox -> true), tail)
+        nextOption(map ++ Map(Symbol("sandbox") -> true), tail)
       case "-modelplex" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.MODELPLEX, 'in -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("mode") -> Modes.MODELPLEX, Symbol("in") -> value), tail)
         else { Usage.optionErrorReporter("-modelPlex", usage); exit(1) }
-      case "-isar" :: tail => nextOption(map ++ Map('isar -> true), tail)
+      case "-isar" :: tail => nextOption(map ++ Map(Symbol("isar") -> true), tail)
       case "-codegen" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("mode") -> Modes.CODEGEN, Symbol("in") -> value), tail)
         else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
-      case "-quantitative" :: tail => nextOption(map ++ Map('quantitative -> true), tail)
+      case "-quantitative" :: tail => nextOption(map ++ Map(Symbol("quantitative") -> true), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
-        val newMap = List('tactic, 'scaladefs).zip(posArgs).foldLeft(map){case (acc,(k,v)) => acc ++ Map(k -> v)}
+        val newMap = List(Symbol("tactic"), Symbol("scaladefs")).zip(posArgs).foldLeft(map){case (acc,(k,v)) => acc ++ Map(k -> v)}
         if (model.nonEmpty  && !model.toString.startsWith("-"))
-          nextOption(newMap ++ Map('mode -> Modes.REPL, 'model -> model), restArgs)
+          nextOption(newMap ++ Map(Symbol("mode") -> Modes.REPL, Symbol("model") -> model), restArgs)
         else { Usage.optionErrorReporter("-repl", usage); exit(1) }
-      case "-ui" :: tail => /*launchUI(tail.toArray);*/ nextOption(map ++ Map('mode -> Modes.UI), tail)
+      case "-ui" :: tail => /*launchUI(tail.toArray);*/ nextOption(map ++ Map(Symbol("mode") -> Modes.UI), tail)
       // action options
       case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("out") -> value), tail)
         else { Usage.optionErrorReporter("-out", usage); exit(1) }
       case "-fallback" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("fallback") -> value), tail)
         else { Usage.optionErrorReporter("-fallback", usage); exit(1) }
       case "-vars" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("vars") -> makeVariables(value.split(","))), tail)
         else { Usage.optionErrorReporter("-vars", usage); exit(1) }
       case "-monitor" :: value :: tail =>
-        if(value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
+        if(value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("monitor") -> Symbol(value)), tail)
         else { Usage.optionErrorReporter("-monitor", usage); exit(1) }
-      case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
+      case "-interactive" :: tail => nextOption(map ++ Map(Symbol("interactive") -> true), tail)
       // aditional options
-      case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
-      case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
-      case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
+      case "-interval" :: tail => require(!map.contains(Symbol("interval"))); nextOption(map ++ Map(Symbol("interval") -> true), tail)
+      case "-nointerval" :: tail => require(!map.contains(Symbol("interval"))); nextOption(map ++ Map(Symbol("interval") -> false), tail)
+      case "-dnf" :: tail => require(!map.contains(Symbol("dnf"))); nextOption(map ++ Map(Symbol("dnf") -> true), tail)
       // global options
       case "-launch" :: tail => launched(); nextOption(map, tail)
       case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("timeout") -> value.toLong), tail)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ =>
         val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
@@ -218,24 +218,24 @@ object KeYmaeraX {
    */
   def modelplex(options: OptionMap): Unit = {
     //@TODO remove option, hol config no longer necessary
-    if (options.contains('ptOut)) {
+    if (options.contains(Symbol("ptOut"))) {
       //@TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
       ProvableSig.PROOF_TERMS_ENABLED = false
     } else {
       ProvableSig.PROOF_TERMS_ENABLED = false
     }
-    require(options.contains('in), usage)
+    require(options.contains(Symbol("in")), usage)
 
-    val in = options('in).toString
+    val in = options(Symbol("in")).toString
     val inputEntry = ArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
 
     val verifyOption: Option[ProvableSig => Unit] =
-      if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
+      if (options.getOrElse(Symbol("verify"), false).asInstanceOf[Boolean]) {
         Some({case ptp:TermProvable =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp
-          val pwPt = new PrintWriter(options('ptOut).asInstanceOf[String]+".pt")
+          val pwPt = new PrintWriter(options(Symbol("ptOut")).asInstanceOf[String]+".pt")
           pwPt.write(source)
           pwPt.close()
         case _:ProvableSig => ()
@@ -246,16 +246,16 @@ object KeYmaeraX {
     val inputFileName = in.split('#')(0).dropRight(4)
 
     val outputFileName =
-      if (options.contains('out)) options('out).toString
+      if (options.contains(Symbol("out"))) options(Symbol("out")).toString
       else inputFileName + ".kym"
 
     val kind =
-      if (options.contains('sandbox)) 'sandbox
-      else if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
-      else 'model
+      if (options.contains(Symbol("sandbox"))) Symbol("sandbox")
+      else if (options.contains(Symbol("monitor"))) options(Symbol("monitor")).asInstanceOf[Symbol]
+      else Symbol("model")
 
-    if (options.contains('sandbox)) {
-      val fallback = options.get('fallback) match {
+    if (options.contains(Symbol("sandbox"))) {
+      val fallback = options.get(Symbol("fallback")) match {
         case Some(fallbackPrgString: String) => fallbackPrgString.asProgram
         case _ => inputEntry.model match {
           case Imply(_, Box(Loop(Compose(ctrl, _)), _)) => ctrl
@@ -275,7 +275,7 @@ object KeYmaeraX {
         inputEntry.name,
         inputEntry.tactics.head._3,
         Some(fallback),
-        kind = 'ctrl,
+        kind = Symbol("ctrl"),
         checkProvable =  None,
         synthesizeProofs = false,
         defs = inputEntry.defs)(inputModel)
@@ -318,8 +318,8 @@ object KeYmaeraX {
       pw.write(archive)
       pw.close()
       println(s"Sandbox synthesis successful: $outputFileName")
-    } else if (options.contains('vars)) {
-      val result = ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
+    } else if (options.contains(Symbol("vars"))) {
+      val result = ModelPlex(options(Symbol("vars")).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
       printModelplexResult(inputModel, result, outputFileName, options)
     } else {
       val result = ModelPlex(inputModel, kind, verifyOption)
@@ -339,13 +339,13 @@ object KeYmaeraX {
     pw.write(output)
     pw.close()
 
-    options.get('ptOut) match {
+    options.get(Symbol("ptOut")) match {
       case Some(path:String) =>
         val pwHOL = new PrintWriter(outputFileName + ".holconfiggen")
         // @TODO: Robustify
         val Imply(init, Box(Compose(Test(bounds),Loop(Compose(ctrl,plant))),safe)) = model
         val consts = StaticSemantics.signature(model)
-        pwHOL.write(HOLConverter.configFile(consts,options('vars).asInstanceOf[Array[Variable]].toList,bounds,init,fml))
+        pwHOL.write(HOLConverter.configFile(consts,options(Symbol("vars")).asInstanceOf[Array[Variable]].toList,bounds,init,fml))
         pwHOL.close()
 
       case None => ()
@@ -353,10 +353,10 @@ object KeYmaeraX {
   }
 
   def repl(options: OptionMap): Unit = {
-    require(options.contains('model), usage)
-    val modelFileNameDotKyx = options('model).toString
-    val tacticFileNameDotKyt = options.get('tactic).map(_.toString)
-    val scaladefsFilename = options.get('scaladefs).map(_.toString)
+    require(options.contains(Symbol("model")), usage)
+    val modelFileNameDotKyx = options(Symbol("model")).toString
+    val tacticFileNameDotKyt = options.get(Symbol("tactic")).map(_.toString)
+    val scaladefsFilename = options.get(Symbol("scaladefs")).map(_.toString)
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
@@ -386,10 +386,10 @@ object KeYmaeraX {
   /** Executes all entries in `options('in)` to convert their tactics into `options('conversion)` format.
     * Prints the result to `options('out)`. */
   def convertTactics(options: OptionMap, usage: String): Unit = {
-    require(options.contains('in) && options.contains('out) && options.contains('conversion), usage)
+    require(options.contains(Symbol("in")) && options.contains(Symbol("out")) && options.contains(Symbol("conversion")), usage)
 
-    val kyxFile = options('in).toString
-    val how = options('conversion).toString
+    val kyxFile = options(Symbol("in")).toString
+    val how = options(Symbol("conversion")).toString
 
     val src = scala.io.Source.fromFile(kyxFile.split("#")(0))
     val fileContent = try { src.mkString } finally { src.close() }
@@ -432,7 +432,7 @@ object KeYmaeraX {
         content.replaceAllLiterally(entryOnwards, entryOnwardsConverted)
     })
 
-    val outFile = options('out).toString
+    val outFile = options(Symbol("out")).toString
     val pw = new PrintWriter(outFile)
     pw.write(convertedContent)
     pw.close()

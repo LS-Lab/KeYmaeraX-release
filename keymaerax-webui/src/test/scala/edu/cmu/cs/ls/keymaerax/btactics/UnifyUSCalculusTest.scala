@@ -1,10 +1,9 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
-
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
-
 
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics.eqL2R
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
@@ -35,56 +34,56 @@ class UnifyUSCalculusTest extends TacticTestBase {
   val rand = new RandomFormula() //(-4317240407825764493L)
 
   "useAt" should "prove ([a;][b;]p(x)) ==> [a;b;]p(x)" in withTactics {
-    proveBy("([a;][b;]p(x)) ==> [a;b;]p(x)".asSequent, useAt(Ax.composeb)(1) & id) shouldBe 'proved
+    proveBy("([a;][b;]p(x)) ==> [a;b;]p(x)".asSequent, useAt(Ax.composeb)(1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove ([a;][b;]p(x)) -> [a;b;]p(x)" in withTactics {
-    proveBy("([a;][b;]p(x)) -> [a;b;]p(x)".asFormula, useAt(Ax.composeb)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
+    proveBy("([a;][b;]p(x)) -> [a;b;]p(x)".asFormula, useAt(Ax.composeb)(1, 1::Nil) & implyR(1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove [a;b;]p(x) ==> ([a;][b;]p(x))" in withTactics {
-    proveBy("[a;b;]p(x) ==> ([a;][b;]p(x))".asSequent, useAt(Ax.composeb)(-1) & id) shouldBe 'proved
+    proveBy("[a;b;]p(x) ==> ([a;][b;]p(x))".asSequent, useAt(Ax.composeb)(-1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove [a;b;]p(x) -> ([a;][b;]p(x))" in withTactics {
-    proveBy("[a;b;]p(x) -> ([a;][b;]p(x))".asFormula, useAt(Ax.composeb)(1, 0::Nil) & implyR(1) & id) shouldBe 'proved
+    proveBy("[a;b;]p(x) -> ([a;][b;]p(x))".asFormula, useAt(Ax.composeb)(1, 0::Nil) & implyR(1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove (p()->q()) ==> [?p();]q()" in withTactics {
-    proveBy("(p()->q()) ==> [?p();]q()".asSequent, useAt(Ax.testb)(1) & id) shouldBe 'proved
+    proveBy("(p()->q()) ==> [?p();]q()".asSequent, useAt(Ax.testb)(1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove (p()->q()) -> [?p();]q()" in withTactics {
-    proveBy("(p()->q()) -> [?p();]q()".asFormula, useAt(Ax.testb)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
+    proveBy("(p()->q()) -> [?p();]q()".asFormula, useAt(Ax.testb)(1, 1::Nil) & implyR(1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove [?p();]q() ==> (p()->q())" in withTactics {
-    proveBy("[?p();]q() ==> (p()->q())".asSequent, useAt(Ax.testb)(-1) & id) shouldBe 'proved
+    proveBy("[?p();]q() ==> (p()->q())".asSequent, useAt(Ax.testb)(-1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove [?p();]q() -> (p()->q())" in withTactics {
-    proveBy("[?p();]q() -> (p()->q())".asFormula, useAt(Ax.testb)(1, 0::Nil) & implyR(1) & id) shouldBe 'proved
+    proveBy("[?p();]q() -> (p()->q())".asFormula, useAt(Ax.testb)(1, 0::Nil) & implyR(1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove (1>=1) ==> 1+0>=1" in withTactics {
-    proveBy("(1>=1) ==> 1+0>=1".asSequent, useAt(Ax.plusZero)(1,0::Nil) & id) shouldBe 'proved
+    proveBy("(1>=1) ==> 1+0>=1".asSequent, useAt(Ax.plusZero)(1,0::Nil) & id) shouldBe Symbol("proved")
   }
 
   it should "prove (1>=1) -> 1+0>=1" in withTactics {
-    proveBy("(1>=1) -> 1+0>=1".asFormula, useAt(Ax.plusZero)(1,1::0::Nil) & implyR(1) & id) shouldBe 'proved
+    proveBy("(1>=1) -> 1+0>=1".asFormula, useAt(Ax.plusZero)(1,1::0::Nil) & implyR(1) & id) shouldBe Symbol("proved")
   }
 
   it should "prove 1+0>=1 ==> 1>=1" in withTactics {
-    proveBy("1+0>=1 ==> 1>=1".asSequent, useAt(Ax.plusZero)(-1,0::Nil) & id) shouldBe 'proved
+    proveBy("1+0>=1 ==> 1>=1".asSequent, useAt(Ax.plusZero)(-1,0::Nil) & id) shouldBe Symbol("proved")
   }
 
   it should "prove 1+0>=1 -> 1>=1" in withTactics {
-    proveBy("1+0>=1 -> 1>=1".asFormula, useAt(Ax.plusZero)(1,0::0::Nil) & implyR(1) & id) shouldBe 'proved
+    proveBy("1+0>=1 -> 1>=1".asFormula, useAt(Ax.plusZero)(1,0::0::Nil) & implyR(1) & id) shouldBe Symbol("proved")
   }
 
 
   it should "prove x+1>0 -> [x:=x+1;]x>0" in withTactics {
-    proveBy("x+1>0 -> [x:=x+1;]x>0".asFormula, useAt(Ax.assignbAxiom)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
+    proveBy("x+1>0 -> [x:=x+1;]x>0".asFormula, useAt(Ax.assignbAxiom)(1, 1::Nil) & implyR(1) & id) shouldBe Symbol("proved")
   }
 
   "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in withTactics {
@@ -165,13 +164,13 @@ class UnifyUSCalculusTest extends TacticTestBase {
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q());]p()".asFormula)),
       chase(1) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   } 
     
   it should "prove [?p();?(p()->q()); ++ ?r();?q();]q() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q();]q()".asFormula)),
       chase(1) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?p();?(p()->q()); ++ ?!p();](p()->q()) by chase" in withTactics {
@@ -179,43 +178,43 @@ class UnifyUSCalculusTest extends TacticTestBase {
     //assert(AxIndex.axiomIndex(Ax.composeb)._2==PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?!p();](p()->q())".asFormula)),
       chase(1,Nil) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
   
   it should "prove [?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q()) by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q())".asFormula)),
       chase(1,Nil) & prop
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
       chase(1,Nil) & QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in withMathematica { qeTool =>
@@ -223,7 +222,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
       // chaseWide(3) works like an update calculus
       chase(3,3)(1) &
         QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "chase games" in {
@@ -250,7 +249,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
 
   it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in withMathematica { qeTool =>
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (basicImpl)
-    done shouldBe 'proved
+    done shouldBe Symbol("proved")
     done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
   }
 
@@ -258,7 +257,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     require(basic.isProved)
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
-    done shouldBe 'proved
+    done shouldBe Symbol("proved")
     done.conclusion shouldBe Sequent(IndexedSeq(ctx(basic.conclusion.ante.head)), IndexedSeq(ctx(basic.conclusion.succ.head)))
   }
 
@@ -266,7 +265,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     require(basic.isProved)
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
-    done shouldBe 'proved
+    done shouldBe Symbol("proved")
     done.conclusion shouldBe Sequent(IndexedSeq(ctx(basic.conclusion.succ.head)), IndexedSeq(ctx(basic.conclusion.ante.head)))
   }
 
@@ -313,7 +312,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
             //@todo discard ctx if DotFormula within a program
             //@todo discard ctx if DotFormula somewhere underneath an Equiv
             val done = CMon(ctx)(basicImpl)
-            done shouldBe 'proved
+            done shouldBe Symbol("proved")
             done.conclusion shouldBe Sequent(IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
           }
         } catch {

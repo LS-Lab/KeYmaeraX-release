@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -50,20 +50,20 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   it should "not throw away transitivity info" in withMathematica { _ =>
     val goal = "x=y, y=z, z>0 ==> x>0".asSequent
     proveBy(goal, smartHide).subgoals.loneElement shouldBe "x=y, y=z, z>0 ==> x>0".asSequent
-    proveBy(goal, smartHide & TactixLibrary.QE) shouldBe 'proved
+    proveBy(goal, smartHide & TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "forget useless stuff" in withMathematica { _ =>
     val goal = "x>y, y>z, a>0, z>0 ==> x>0".asSequent
     proveBy(goal, smartHide).subgoals.loneElement shouldBe "x>y, y>z, z>0 ==> x>0".asSequent
-    proveBy(goal, smartHide & TactixLibrary.QE) shouldBe 'proved
+    proveBy(goal, smartHide & TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "forget useless stuff about ODEs" in withMathematica { _ =>
     val goal = "x>y, y>z, a>0, z>0 ==> [{x'=1}]x>0".asSequent
     val result = proveBy(goal, smartHide)
     result.subgoals.loneElement shouldBe "x>y, y>z, z>0 ==> [{x'=1}]x>0".asSequent
-    proveBy(result.subgoals.loneElement, diffInvariant("x>0".asFormula)(1) & dW(1) & QE) shouldBe 'proved
+    proveBy(result.subgoals.loneElement, diffInvariant("x>0".asFormula)(1) & dW(1) & QE) shouldBe Symbol("proved")
   }
 
   "smartSuccHide" should "simplify x=1 ==> x-1,y=1 to x=1 ==> x=1" in {
@@ -80,20 +80,20 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   "replaceTransform" should "work in the antecedent" in withMathematica { _ =>
     proveBy("t<=ep, v>=0, x>=x_0+v*ep ==> x>=x_0+v*t".asSequent,
-      transformEquality("ep=t".asFormula)(-3) & id) shouldBe 'proved
+      transformEquality("ep=t".asFormula)(-3) & id) shouldBe Symbol("proved")
   }
 
   it should "work in the succedent" in withMathematica { _ =>
     proveBy("t<=ep, v>=0, x>=x_0+v*ep ==> a<5, x>=x_0+v*t, b<7".asSequent,
-      transformEquality("t=ep".asFormula)(2) & id) shouldBe 'proved
+      transformEquality("t=ep".asFormula)(2) & id) shouldBe Symbol("proved")
   }
 
   "absQE" should "prove abs(x-y)>=t -> abs(x-y+0)>=t+0" in withMathematica { _ =>
-    proveBy("abs(x-y)>=t ==> abs(x-y+0)>=t+0".asSequent, ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
+    proveBy("abs(x-y)>=t ==> abs(x-y+0)>=t+0".asSequent, ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe Symbol("proved")
   }
 
   it should "prove abs(x-y)>=t -> abs(x-y)>=t+0" in withMathematica { _ =>
-    proveBy("abs(x-y)>=t ==> abs(x-y)>=t+0".asSequent, ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe 'proved
+    proveBy("abs(x-y)>=t ==> abs(x-y)>=t+0".asSequent, ArithmeticSpeculativeSimplification.proveOrRefuteAbs) shouldBe Symbol("proved")
   }
 
   it should "prove a Robix example" in withMathematica { _ =>
@@ -103,7 +103,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       replaceTransform("ep".asTerm, "t".asTerm)(-8, "abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
       ArithmeticSpeculativeSimplification.proveOrRefuteAbs
 
-    proveBy(fml, tactic) shouldBe 'proved
+    proveBy(fml, tactic) shouldBe Symbol("proved")
   }
 
   "exhaustiveAbsSplit" should "handle nested abs" in withMathematica { _ =>
@@ -234,7 +234,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val tactic = SaturateTactic(alphaRule) &
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
       abs(2, 0::Nil) & abs(-8, 0::Nil) & orL(-18) & OnAll(orL(-17)) &
-      OnAll(SaturateTactic(andL('_))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)))
+      OnAll(SaturateTactic(andL(Symbol("_")))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))))
     val s = proveBy(fml, tactic)
     // only check atoms
     val signs = SignAnalysis.computeSigns(s.subgoals.head)
@@ -275,7 +275,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val tactic = SaturateTactic(alphaRule) &
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
       abs(1, 0::Nil) & abs(-8, 0::Nil) & orL(-18) & OnAll(orL(-17)) &
-      OnAll(SaturateTactic(andL('_))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)))
+      OnAll(SaturateTactic(andL(Symbol("_")))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))))
     val s = proveBy(fml, tactic)
     val signs = SignAnalysis.computeSigns(s.subgoals.head)
     val bounds = SignAnalysis.bounds(s.subgoals.head.succ, signs, SuccPos)
@@ -295,7 +295,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   "Bounds hiding" should "find formulas with non-matching bounds" in withMathematica { _ =>
     val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
-    proveBy(s, QE) shouldBe 'proved
+    proveBy(s, QE) shouldBe Symbol("proved")
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-5)
   }
 
@@ -311,10 +311,10 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   it should "hide formulas with non-matching bounds" in withMathematica { _ =>
     val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
-    proveBy(s, QE) shouldBe 'proved
+    proveBy(s, QE) shouldBe Symbol("proved")
     val boundHidden = proveBy(s, ArithmeticSpeculativeSimplification.hideNonmatchingBounds)
     boundHidden.subgoals.loneElement shouldBe "v>=0, -B<0, v^2<=2*B*(m-x), v<0, 2*C-C^2>=0 ==> x<=m".asSequent
-    proveBy(boundHidden.subgoals.loneElement, ArithmeticSpeculativeSimplification.speculativeQE) shouldBe 'proved
+    proveBy(boundHidden.subgoals.loneElement, ArithmeticSpeculativeSimplification.speculativeQE) shouldBe Symbol("proved")
   }
 
   it should "work on a Robix example" in withMathematica { _ =>
@@ -322,7 +322,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val tactic = SaturateTactic(alphaRule) &
       replaceTransform("ep".asTerm, "t".asTerm)(-8, s"abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V()))".asFormula) &
       abs(1, 0::Nil) & abs(-8, 0::Nil) & orL(-18) & OnAll(orL(-17)) &
-      OnAll(SaturateTactic(andL('_))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)))
+      OnAll(SaturateTactic(andL(Symbol("_")))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))))
 
     //@todo hideNonmatchingBounds does not yet work on the "middle" (<= vs. >=) abs branches
     val s = proveBy(fml, tactic switch(
@@ -340,7 +340,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   it should "hide inconsistent sign formulas" in withMathematica { _ =>
     val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
-    proveBy(s, ArithmeticSpeculativeSimplification.hideInconsistentSigns & QE) shouldBe 'proved
+    proveBy(s, ArithmeticSpeculativeSimplification.hideInconsistentSigns & QE) shouldBe Symbol("proved")
   }
 
   "Multiple hidings together" should "figure it out" in withMathematica { _ =>
@@ -349,11 +349,11 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     boundHidden.subgoals.loneElement shouldBe "v>=0, -B<0, v^2<=2*B*(m-x), v<0, 2*C-C^2>=0 ==> x<=m".asSequent
     val smartHidden = proveBy(boundHidden.subgoals.loneElement, smartHide)
     smartHidden.subgoals.loneElement shouldBe "v>=0, -B<0, v^2<=2*B*(m-x), v<0 ==> x<=m".asSequent
-    proveBy(smartHidden.subgoals.loneElement, QE) shouldBe 'proved
+    proveBy(smartHidden.subgoals.loneElement, QE) shouldBe Symbol("proved")
   }
 
   "smartQE" should "support using notation" in withMathematica { _ =>
     proveBy("a^2<=1, abs(x)<=a, b=2 ==> abs(x)^2<=1".asSequent,
-      """ smartQE using "a^2<=1 :: abs(x)<=a :: abs(x)^2<=1 :: nil" """.asTactic) shouldBe 'proved
+      """ smartQE using "a^2<=1 :: abs(x)<=a :: abs(x)^2<=1 :: nil" """.asTactic) shouldBe Symbol("proved")
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -40,22 +40,22 @@ object Transitivity extends TacticProvider {
     DebuggingTactics.debug(s"[closeTransitive] formulas: ${transitiveInequalities.map(_.prettyString).reduce(_ + "," + _)}", true)
     TactixLibrary.cut(transitivityLemma(transitiveInequalities)) <(
       instantiations(transitiveInequalities).map(variableAndTerm => {
-        val instantiateTactic : BelleExpr = TactixLibrary.allL(variableAndTerm._1, variableAndTerm._2)('Llast)
+        val instantiateTactic : BelleExpr = TactixLibrary.allL(variableAndTerm._1, variableAndTerm._2)(Symbol("Llast"))
         instantiateTactic
-      }).reduce(_ & _) & TactixLibrary.implyL('Llast) <(
+      }).reduce(_ & _) & TactixLibrary.implyL(Symbol("Llast")) <(
         closeIds(transitiveInequalities)
         ,
         TactixLibrary.id
       )
       ,
-      TactixLibrary.cohideR('Rlast) & TactixLibrary.QE
+      TactixLibrary.cohideR(Symbol("Rlast")) & TactixLibrary.QE
     )
 
   })
 
   def closeIds(formulas: List[Formula]) : BelleExpr = formulas match {
     case e :: Nil => TactixLibrary.id
-    case e :: es => TactixLibrary.andR('Rlast) <(closeIds(es),TactixLibrary.id)
+    case e :: es => TactixLibrary.andR(Symbol("Rlast")) <(closeIds(es),TactixLibrary.id)
   }
 
   /** Computes the sequence of variable ~> term instantiations for the transitivity lemma.

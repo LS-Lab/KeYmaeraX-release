@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -27,8 +32,8 @@ class BigDecimalQEToolTests extends TacticTestBase  {
       val u = Number(BigDecimalQETool.eval(t))
       val fml = Equal(t, u)
       val res = mathematica.qe(fml).fact
-      res shouldBe 'proved
-      res.conclusion.ante shouldBe 'empty
+      res shouldBe Symbol("proved")
+      res.conclusion.ante shouldBe Symbol("empty")
       res.conclusion.succ.loneElement shouldBe Equiv(fml, True)
     } catch {
       case iae: IllegalArgumentException =>
@@ -66,8 +71,8 @@ class BigDecimalQEToolTests extends TacticTestBase  {
     try {
       val b = if (BigDecimalQETool.eval(fml)) True else False
       val res = mathematica.qe(fml).fact
-      res shouldBe 'proved
-      res.conclusion.ante shouldBe 'empty
+      res shouldBe Symbol("proved")
+      res.conclusion.ante shouldBe Symbol("empty")
       res.conclusion.succ.loneElement shouldBe
         Equiv(fml, b)
     } catch {

@@ -96,7 +96,7 @@ class KaisarTests extends TacticTestBase {
       val up: UP = UP(List(Left("assm(x)".asExpr)), Auto())
       val show: Show = Show(p, up)
       val sp: SP = BRule(RBAssume(Variable("x"), pq), List(show))
-      Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe Symbol("proved")
     })
   }
   "Proof with one program that modifies nothing" should "prove" in withTactics {
@@ -105,7 +105,7 @@ class KaisarTests extends TacticTestBase {
       val prog = "?p();".asProgram
       val pr: Provable = Provable.startProof(box)
       val sp = BRule(RBAssume(Variable("x"), "p()".asFormula), List(Show("p()".asFormula, UP(List(Left("assm(x)".asExpr)), Auto()))))
-      Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe Symbol("proved")
 
     })
   }
@@ -116,7 +116,7 @@ class KaisarTests extends TacticTestBase {
       val sp =
         BRule(RBAssign(Assign("x".asVariable, "1".asTerm)),
           List(Show("1>0".asFormula, UP(List(), Auto()))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
 
@@ -127,7 +127,7 @@ class KaisarTests extends TacticTestBase {
       val sp =
         BRule(RBAssign(Assign("x".asVariable, "1".asTerm)),
           List(Show("x>0".asFormula, UP(List(), Auto()))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
 
@@ -142,7 +142,7 @@ class KaisarTests extends TacticTestBase {
           List(
             BRule(RBAssign(Assign("x".asVariable, "1".asTerm)),
               List(Show("1>0".asFormula, UP(List(), Auto()))))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
 
@@ -157,7 +157,7 @@ class KaisarTests extends TacticTestBase {
           List(
             BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
               List(Show("2 - 1>0".asFormula, UP(List(), Auto()))))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   /* Use facts */
@@ -172,7 +172,7 @@ class KaisarTests extends TacticTestBase {
           List(Have("xBig".asVariable, "2 > 1".asFormula, Show("2 > 1".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
             BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
               List(Show("2 - 1>0".asFormula, UP(List(), Auto())))))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
 
@@ -189,7 +189,7 @@ class KaisarTests extends TacticTestBase {
             Have("xNonZero".asVariable, "2 != 0".asFormula, Show("2 != 0".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
               BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
                 List(Show("2 - 1>0".asFormula, UP(List(), Auto()))))))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof with two facts further in future" should "prove" in {
@@ -207,7 +207,7 @@ class KaisarTests extends TacticTestBase {
                 Have("xNonZero".asVariable, "x != 0".asFormula, Show("x != 0".asFormula, UP(List(Left("p(x)".asFormula)), Kaisar.RCF())),
                   BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
                     List(Show("x>0".asFormula, UP(List(), Auto()))))))))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof with two facts further in future with time travel" should "prove" in {
@@ -229,7 +229,7 @@ class KaisarTests extends TacticTestBase {
                         PrintGoal("After third assign",
                           BRule(RBAssign(Assign("x".asVariable, "x - 1".asTerm)),
                             List(Show("2-1>0".asFormula, UP(List(), Auto())))))))))))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof with loop with one invariant, no constant formulas" should "prove" in {
@@ -242,7 +242,7 @@ class KaisarTests extends TacticTestBase {
               BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)), List(Show("x >= 0".asFormula, UP(List(), Auto())))),
               Finally(Show("x>= 0".asFormula, UP(List(), Auto()))))),
             List())))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof with loop with two successive invariants, no constant formulas" should "prove" in {
@@ -262,7 +262,7 @@ class KaisarTests extends TacticTestBase {
                     List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
                       List(Show("y >= 1".asFormula, UP(List(), Auto())))))),
                   tail = Finally(Show("y>= 0".asFormula, UP(List(), Auto())))))), tails = List())))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof of loop where constant proposition matters" should "prove" in {
@@ -275,7 +275,7 @@ class KaisarTests extends TacticTestBase {
               inv = BRule(RBAssign(Assign("x".asVariable, "x+y".asTerm)),
                 List(Show("x >= 0".asFormula, UP(List(), Auto())))),
               tail = Finally(Show("x>= 0".asFormula, UP(List(), Auto()))))), tails = List())))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof of easy differential invariant" should "prove" in {
@@ -288,7 +288,7 @@ class KaisarTests extends TacticTestBase {
               inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
               tail = Finally(Show("x^2 + y^2 > 0".asFormula, UP(List(), Auto()))))
           ), List())))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof with double differential invariant" should "prove" in {
@@ -305,7 +305,7 @@ class KaisarTests extends TacticTestBase {
                   tail = Finally(Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto()))))
             )
           ), List())))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "Proof with world's easiest diff ghost" should "prove" in {
@@ -318,7 +318,7 @@ class KaisarTests extends TacticTestBase {
               Inv("J".asVariable, "x*y^2=1".asFormula, Show("x*y^2=1".asFormula, UP(List(), Auto())), Show("x*y^2=1".asFormula, UP(List(), Auto())),
                 Finally(Show("x > 0".asFormula, UP(List(), Auto())))))
           ), List())))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
 
@@ -355,7 +355,7 @@ class KaisarTests extends TacticTestBase {
       val sp: SP =
         BRule(RBAssume("xy".asVariable, "x > 1 & y = 0".asFormula),
           List(Show("(x-1)^2 != (x+1)^2".asFormula, UP(Nil, Kaisar.RCF()))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "POPL'18 Old Draft Example 1b" should "prove" in {
@@ -365,7 +365,7 @@ class KaisarTests extends TacticTestBase {
         BRule(RBAssume("xy".asVariable, "x_() & y_()".asFormula), List(
           Show("wild()".asFormula, UP(Nil, Kaisar.RCF()))
         ))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   "POPL'18 Old Draft Example 1c" should "prove" in {
@@ -378,7 +378,7 @@ class KaisarTests extends TacticTestBase {
             Show("x != 0".asFormula, UP(List(Left("assm(xy)".asExpr)), Kaisar.RCF())),
             Show("wild()".asFormula, UP(Nil, Kaisar.RCF())))
         ))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
 
@@ -401,7 +401,7 @@ class KaisarTests extends TacticTestBase {
               Show("wild()".asFormula, UP(List(Left("assm(w)".asFormula)), Kaisar.RCF()))
             )
           )))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
 
@@ -442,7 +442,7 @@ class KaisarTests extends TacticTestBase {
               )
             ))
           ))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   /*# Example 2b
@@ -464,7 +464,7 @@ show (x > 2y) using J by auto
               Show("x>2*y".asFormula, UP(List(), Auto()))))
           ))
         ))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   /*# Example 2c
@@ -492,7 +492,7 @@ show (x > 2y) using J by auto
               )))
           ))
         ))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   // x=0&y=1->[{{y:= (1/2)*y}*};{{x:=x+y;y:=(1/2)*y}*};{{x:=x+y}*}]x >= 0
@@ -521,7 +521,7 @@ show (y >= 0) using J1 J2 J3 by R
               duh))), List())
 
       //History:History(List(HCTimeStep(t1), HCRename(y,y_0,None), HCTimeStep(init), HCTimeStep(init)))
-      Kaisar.eval(sp, h, g, Provable.startProof(seq)) shouldBe 'proved
+      Kaisar.eval(sp, h, g, Provable.startProof(seq)) shouldBe Symbol("proved")
 
     })
     /*====== About to second inv ======
@@ -569,7 +569,7 @@ show (y >= 0) using J1 J2 J3 by R
                                         PrintGoal("About to show final goal",
                                           Show("x >= 0".asFormula, UP(List(), Kaisar.RCF())))))),
                                     List())))))), List())))))), List())))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   /*  g>0&y>=H&H>0&vy=0 ->
@@ -615,7 +615,7 @@ show _  using J assms by auto
                     , Finally(
                       PrintGoal("End",
                         Show("wild()".asFormula, UP(List(Left("assm(J)".asExpr), Left("assm(assms)".asExpr)), Auto())))))), List())))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   // x>0&y>0 -> [{x'=-x,y'=x}]y>0
@@ -642,7 +642,7 @@ show (Jy > 0) using assms Jy by auto
                     // TODO: Fix context management
                     Finally(Show("y > 0".asFormula, UP(List(Left("assm(assms)".asFormula), Left("assm(Jy)".asFormula)), Auto())))
                   ))))), List()))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
     })
   }
   /*  # Example 1a
@@ -666,7 +666,7 @@ show (Jy > 0) using assms Jy by auto
               ))
             ))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -691,7 +691,7 @@ show (Jy > 0) using assms Jy by auto
               ))
             ))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -723,7 +723,7 @@ show (Jy > 0) using assms Jy by auto
                       Show("v > vBound_".asFormula, UP(List(Left("assm(res)".asExpr)), CloseId())))
                   )))))))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -742,7 +742,7 @@ show (Jy > 0) using assms Jy by auto
                   Show("v>-(g/rp)^(1/2)".asFormula, UP(List(Left("assm(nz)".asExpr), Left("assm(gT)".asExpr), Left("assm(v)".asExpr), Left("assm(gt)".asExpr)), Kaisar.RCF()))
                 ))))))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -776,7 +776,7 @@ show (Jy > 0) using assms Jy by auto
                         Show("goal_()".asFormula, UP(List(Left("assm(res)".asFormula)), CloseId())))
                     ))))))))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -840,7 +840,7 @@ show (Jy > 0) using assms Jy by auto
                 Finally(
                   PrintGoal("About to conclude",
                     Show(post, UP(List(Left("assm(assms)".asExpr), Left("assm(J)".asExpr)), Auto())))))), List()))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -887,7 +887,7 @@ show (Jy > 0) using assms Jy by auto
                 Finally(
                   PrintGoal("About to conclude",
                     Show(post, UP(List(Left("assm(assms)".asExpr), Left("assm(J)".asExpr)), Auto())))))), List()))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -936,7 +936,7 @@ show (Jy > 0) using assms Jy by auto
                   PrintGoal("About to conclude",
                     //TODO: Badness
                     Show(post, UP(List(Left("assm(assms)".asExpr), Left("assm(DCCONST)".asExpr), Left("assm(DYN)".asExpr)), Auto()))))))), List()))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -1008,7 +1008,7 @@ finally show _ using ghostInv by R
                     duh), duh,
                     Finally(
                       Show(lowPost, UP(List(Left("assm(niceAssume)".asExpr), Left("assm(xdown)".asExpr)), Auto()))))))), List()))))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(lowPara)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(lowPara)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -1187,7 +1187,7 @@ finally show _ using ghostInv by R
                   Finally(Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))),
                   List()))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem1)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem1)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -1245,7 +1245,7 @@ finally show _ using ghostInv by R
             Show("wild()".asFormula, UP(List(Left("neg(assm(greatCurve))".asExpr)), Kaisar.RCF())))
         ))
 
-      Kaisar.eval(sp, h, c, pr) shouldBe 'proved
+      Kaisar.eval(sp, h, c, pr) shouldBe Symbol("proved")
     })
   }
 
@@ -1445,7 +1445,7 @@ finally show _ using ghostInv by R
                                                                             ))))))))))), List())))))))))))))))))))))))))))))))))),
                   Finally(Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))), List()))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem2)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem2)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -1621,7 +1621,7 @@ finally show _ using ghostInv by R
                 , Finally(Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))), List())))))
       //)
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem5)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem5)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -1771,7 +1771,7 @@ finally show _ using ghostInv by R
           ))))
 
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe 'proved
+      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -1828,7 +1828,7 @@ finally show _ using ghostInv by R
                   Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))))))
         ))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe 'proved
+      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -1974,7 +1974,7 @@ finally show _ using ghostInv by R
                                                     ))))))))))))))))))))))))))))))))
                   , Finally(Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))), List()))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem5)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem5)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -2157,7 +2157,7 @@ finally show _ using ghostInv by R
                                                                                                             Kaisar.SmartQE()))))))))))))))))))))))))))))), List())))))))))))))))))))))))))))))))))))))))))
                   , Finally(Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))), List()))))))
       val time = System.currentTimeMillis()
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem77)) shouldBe 'proved
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem77)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -2213,7 +2213,7 @@ finally show _ using ghostInv by R
                         PrintGoal("SG2",
                           BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
                             Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))))))))))))))))
-      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe 'proved
+      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe Symbol("proved")
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
@@ -2286,7 +2286,7 @@ finally show _ using ghostInv by R
                           Have("someAssms".asVariable, "A() >= 0 & V() > 0 & Da()<=1".asFormula, Show("wild()".asFormula, UP(List(Left("assm(assms)".asExpr), Left("assm(goodCurve)".asExpr)), Kaisar.Auto())),
                             Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),union(assm(J),union(assm(xBound),union(assm(xoBound),union(assm(safeObs),union(assm(perturb),union(assm(wfDir),union(assm(assms),union(assm(goodCurve),union(assm(dC),assm(actBEq))))))))))))".asExpr)),
                               Kaisar.SmartQE()))))))))))))))))))
-      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe 'proved
+      Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe Symbol("proved")
  {}   })
   }
 }

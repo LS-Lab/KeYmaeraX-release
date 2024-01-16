@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -139,9 +139,9 @@ object IsabelleSyntax {
 
     (ff,proveBy(Imply(ff,f),
       SaturateTactic(OnAll(?
-      (implyR(1) & andL('Llast) & lastImplyRi & SaturateTactic(andL('L)) &
-        ?((useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('R)) |
-          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('R)))))) & onAll(prop)))
+      (implyR(1) & andL(Symbol("Llast")) & lastImplyRi & SaturateTactic(andL(Symbol("L"))) &
+        ?((useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR(Symbol("R"))) |
+          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR(Symbol("R"))))))) & onAll(prop)))
   }
 
 

@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax
 
@@ -39,9 +39,9 @@ object FileConfiguration extends Configuration {
   private val config = {
     val config = new PropertiesConfiguration()
     if (!Files.exists(Paths.get(CONFIG_PATH))) {
-      config.read(scala.io.Source.fromInputStream(getClass.getResourceAsStream(DEFAULT_CONFIG_PATH)).reader)
+      config.read(scala.io.Source.fromInputStream(getClass.getResourceAsStream(DEFAULT_CONFIG_PATH)).reader())
       config.write(new PrintWriter(new File(CONFIG_PATH)))
-    } else config.read(scala.io.Source.fromFile(CONFIG_PATH).reader)
+    } else config.read(scala.io.Source.fromFile(CONFIG_PATH).reader())
     updateConfig(config)
   }
 
@@ -112,7 +112,7 @@ object FileConfiguration extends Configuration {
 
   private def updateConfig(config: PropertiesConfiguration): PropertiesConfiguration = {
     val default = new PropertiesConfiguration()
-    default.read(scala.io.Source.fromInputStream(getClass.getResourceAsStream(DEFAULT_CONFIG_PATH)).reader)
+    default.read(scala.io.Source.fromInputStream(getClass.getResourceAsStream(DEFAULT_CONFIG_PATH)).reader())
     val missing = default.getKeys().asScala.toSet -- config.getKeys().asScala.toSet
     if (missing.nonEmpty) {
       missing.foreach(m => config.setProperty(m, default.getString(m)))

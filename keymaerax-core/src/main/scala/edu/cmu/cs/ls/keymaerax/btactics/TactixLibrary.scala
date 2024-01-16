@@ -142,8 +142,8 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)('R) | doStep(index)('L) | id |
-      DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil)))
+    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | id |
+      DLBySubst.safeabstractionb(Symbol("R")) | PropositionalTactics.autoMP(Symbol("L")) | nil)))
   }
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
@@ -162,7 +162,7 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil)))
+    SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | id | DLBySubst.safeabstractionb(Symbol("R")) | nil)))
   }
 
   @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true, displayLevel = "menu")
@@ -188,8 +188,8 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
           //@todo avoid recursion
           def recurse: DependentTactic = anon { (result: Sequent) => {
             //@note implyR etc. could get recursor formula from index, but assignb and others have unknown outcome
-            val anteDiff = (result.ante.toSet -- seq.ante).map(f => ?(chaseAt(index)('L, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-            val succDiff = (result.succ.toSet -- seq.succ).map(f => ?(chaseAt(index)('R, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+            val anteDiff = (result.ante.toSet -- seq.ante).map(f => ?(chaseAt(index)(Symbol("L"), f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+            val succDiff = (result.succ.toSet -- seq.succ).map(f => ?(chaseAt(index)(Symbol("R"), f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
             if (pos.isAnte) { if (anteDiff.eq(skip)) succDiff else if (succDiff.eq(skip)) anteDiff else anteDiff & succDiff }
             else { if (succDiff.eq(skip)) anteDiff else if (anteDiff.eq(skip)) succDiff else succDiff & anteDiff }
           }}
@@ -211,7 +211,7 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    SaturateTactic(OnAll(SaturateTactic(Idioms.doIf(!_.isProved)(id | alphaRule)) & (doStep(index)('R) | doStep(index)('L) | nil)))
+    SaturateTactic(OnAll(SaturateTactic(Idioms.doIf(!_.isProved)(id | alphaRule)) & (doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | nil)))
   }
 
   /** Automated propositional reasoning, only keeps result if proved. */
@@ -269,11 +269,11 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
       if (seq.isFOL) {
         skip /* master continues */
       } else {
-        SaturateTactic(close | alphaRule | loop('R) /* loopauto recurses into master */) &
+        SaturateTactic(close | alphaRule | loop(Symbol("R")) /* loopauto recurses into master */) &
           //@note loopauto should have closed all goals; but continue for programs without loop
           Idioms.doIf(!_.isProved)( /* loop-free: decompose and handle ODE in context before splitting */
-            SaturateTactic(composeChase('R)) &
-            SaturateTactic(odeInContext(odeR)('R)) /* master continues after ODEs in context */)
+            SaturateTactic(composeChase(Symbol("R"))) &
+            SaturateTactic(odeInContext(odeR)(Symbol("R"))) /* master continues after ODEs in context */)
       }
     })
 
@@ -289,15 +289,15 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
 
     val autoStep =
       id |
-      SaturateTactic(onAll(doStep(index)('R))) | SaturateTactic(onAll(doStep(index)('L))) |
+      SaturateTactic(onAll(doStep(index)(Symbol("R")))) | SaturateTactic(onAll(doStep(index)(Symbol("L")))) |
       Idioms.doIf(_.subgoals.exists(!_.isFOL))(
-        loop('R) |
-        expandAllDefs(Nil) & odeR('R) | solve('R) | solve('L) |
-        DLBySubst.safeabstractionb('R) |
-        odeInContext(odeR)('R) | odeInContext(odeR)('L) |
+        loop(Symbol("R")) |
+        expandAllDefs(Nil) & odeR(Symbol("R")) | solve(Symbol("R")) | solve(Symbol("L")) |
+        DLBySubst.safeabstractionb(Symbol("R")) |
+        odeInContext(odeR)(Symbol("R")) | odeInContext(odeR)(Symbol("L")) |
         hpExpand
       ) |
-      PropositionalTactics.autoMP('L) |
+      PropositionalTactics.autoMP(Symbol("L")) |
       nil
 
     onAll(decomposeToODE) &
@@ -423,7 +423,7 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = loop(nextOrElse(gen(sequent, pos, defs).map(_._1).iterator,
         throw new BelleNoProgress("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
-      private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
+      private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next() else otherwise
     }
   }
   @Tactic("loopAuto", codeName = "loopAuto", longDisplayName = "Loop with Invariant Automation", conclusion = "Γ |- [a*]P, Δ")
@@ -566,7 +566,7 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
 
         ToolProvider.qeTool() match {
           case Some(t: Mathematica) => try {
-            val di = proveBy(seq, DifferentialTactics.diffInd(auto = 'diffInd)(pos) < (
+            val di = proveBy(seq, DifferentialTactics.diffInd(auto = Symbol("diffInd"))(pos) < (
               ToolTactics.prepareQE(Nil, nil),
               SaturateTactic(Dassignb(pos)) & ToolTactics.prepareQE(Nil, nil)
             ))
@@ -574,7 +574,7 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
             val dwPlain = proveBy(dwBase, ToolTactics.prepareQE(Nil, nil))
             val dwSmartBase = proveBy(dwBase, autoMonotonicityTransform)
             val dwSmart = proveBy(dwSmartBase, smartHide & ToolTactics.prepareQE(Nil, nil))
-            val dwPropBase = proveBy(dwSmartBase, SaturateTactic(orL('L) | andR('R)) & OnAll(smartHide & ToolTactics.prepareQE(Nil, nil)))
+            val dwPropBase = proveBy(dwSmartBase, SaturateTactic(orL(Symbol("L")) | andR(Symbol("R"))) & OnAll(smartHide & ToolTactics.prepareQE(Nil, nil)))
 
             val diAttempt = AllOf(di.subgoals.map(s => Atom(s.succ.head)))
             val dwSmartAttempt = Atom(dwSmart.subgoals.head.succ.head)
@@ -1220,10 +1220,10 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
     val byLemma = subst.map(by(lemma, _)).getOrElse(by(lemma))
     def cutLemma(t: BelleExpr) = cut(subst.map(_ (conclusion)).getOrElse(conclusion)) < (
       t & Idioms.doIf(!_.isProved)(label("Lemma available as assumption")),
-      cohideR('Rlast) &
-        (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast) * (lemma.fact.conclusion.ante.size - 1)
+      cohideR(Symbol("Rlast")) &
+        (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL(Symbol("Llast")) * (lemma.fact.conclusion.ante.size - 1)
         else /* sanitized toFormula returns conclusion */ skip) &
-        (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast) * (lemma.fact.conclusion.succ.size - 1)
+        (if (lemma.fact.conclusion.succ.nonEmpty) orR(Symbol("Rlast")) * (lemma.fact.conclusion.succ.size - 1)
         else /* sanitized toFormula returns conclusion */ skip) &
         byLemma
     )

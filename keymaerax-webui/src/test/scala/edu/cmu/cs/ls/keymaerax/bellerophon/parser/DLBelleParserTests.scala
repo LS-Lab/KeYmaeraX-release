@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
@@ -59,13 +59,13 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "parse integer position locators" in {
-    parse("""hideL(-3=="x>=0")""") should have ('locator (Fixed(AntePos(2), Some("x>=0".asFormula))))
-    parse("""hideR(2~="x>=0")""") should have ('locator (Fixed(SuccPos(1), Some("x>=0".asFormula), exact=false)))
-    parse("""trueAnd(2.1.1=="true&x=2")""") should have ('locator
+    parse("""hideL(-3=="x>=0")""") should have (Symbol("locator") (Fixed(AntePos(2), Some("x>=0".asFormula))))
+    parse("""hideR(2~="x>=0")""") should have (Symbol("locator") (Fixed(SuccPos(1), Some("x>=0".asFormula), exact=false)))
+    parse("""trueAnd(2.1.1=="true&x=2")""") should have (Symbol("locator")
       (Fixed(SuccPosition.base0(1, PosInExpr(1::1::Nil)), Some("true&x=2".asFormula), exact=true)))
-    parse("""trueAnd(2~="[x:=2;]#(true&x=2)#")""") should have ('locator
+    parse("""trueAnd(2~="[x:=2;]#(true&x=2)#")""") should have (Symbol("locator")
       (Fixed(SuccPosition.base0(1, PosInExpr(1::Nil)), Some("true&x=2".asFormula), exact=false)))
-    parse("""trueAnd(2.1=="[x:=2;]#(true&x=2)#")""") should have ('locator
+    parse("""trueAnd(2.1=="[x:=2;]#(true&x=2)#")""") should have (Symbol("locator")
       (Fixed(SuccPosition.base0(1, PosInExpr(1::Nil)), Some("true&x=2".asFormula), exact=true)))
     the [ParseException] thrownBy parse("""trueAnd(2.1.1=="[x:=2;]#(true&x=2)#")""") should have message
       """1:37 Error parsing locator at 1:9
@@ -97,8 +97,8 @@ class DLBelleParserTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "parse PosInExpr attached to locator" taggedAs TodoTest in {
-    parse("derive('Rlast.1)") should have ('locator (LastSucc(0, PosInExpr(1::Nil))))
-    parse("derive('Llast.1.0.1)") should have ('locator (LastAnte(0, PosInExpr(1::0::1::Nil))))
+    parse("derive('Rlast.1)") should have (Symbol("locator") (LastSucc(0, PosInExpr(1::Nil))))
+    parse("derive('Llast.1.0.1)") should have (Symbol("locator") (LastAnte(0, PosInExpr(1::0::1::Nil))))
   }
 
   it should "allow omitting parentheses for sole empty list argument" in {

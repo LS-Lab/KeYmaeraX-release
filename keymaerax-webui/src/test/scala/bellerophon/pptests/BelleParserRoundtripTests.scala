@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -40,8 +45,8 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "position tactics with locators" in withTactics {
-    roundTrip(TactixLibrary.andL('L), "andL('L)")
-    roundTrip(TactixLibrary.andR('R), "andR('R)")
+    roundTrip(TactixLibrary.andL(Symbol("L")), "andL('L)")
+    roundTrip(TactixLibrary.andR(Symbol("R")), "andR('R)")
   }
 
   it should "combinators" in withTactics {

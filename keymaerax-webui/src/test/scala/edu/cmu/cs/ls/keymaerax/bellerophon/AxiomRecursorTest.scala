@@ -51,14 +51,14 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
     //@todo this might fail when the instance requires semantic renaming
     u.toCore(keyPart) shouldBe instance
 
-    if (axiom.displayLevel != 'internal) {
+    if (axiom.displayLevel != Symbol("internal")) {
       println(axiom + "\ndisplayLevel=" + axiom.displayLevel)
       // useAt(axiom) should result in all recursors being well-defined
       println("useAt(" + axiom.codeName + ")(1)")
       val pr = TactixLibrary.proveBy(instance, TactixLibrary.useAt(axiom)(1))
       println(pr)
       for (pos <- axiom.recursor) {
-        pr.subgoals.head.succ(0).sub(pos) shouldBe 'defined
+        pr.subgoals.head.succ(0).sub(pos) shouldBe Symbol("defined")
       }
     }
     true
@@ -133,7 +133,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
   //@todo not all arity 1 predicationals will be supported during unification
   "Random Instance Unification" should "FEATURE_REQUEST: instantiate keys of schematic axioms to random schematic instantiations" taggedAs TodoTest in withQE {_ => instantiateRandomSchematic()}
 
-   private def instantiateRandomSchematic() {
+   private def instantiateRandomSchematic(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
@@ -156,7 +156,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
 
  "Random Renamed Instance Unification" should "FEATURE_REQUEST: instantiate keys of schematic axioms to random schematic instantiations" taggedAs TodoTest in withQE {_ => instantiateRandomRenamed()}
 
-  private def instantiateRandomRenamed() {
+  private def instantiateRandomRenamed(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {
@@ -180,7 +180,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
 
   "Random Renamed Instance Unification optimistic" should "FEATURE_REQUEST: instantiate keys of all axioms to random schematic instantiations" taggedAs TodoTest in withQE {_ => instantiateRandomKey()}
 
-  private def instantiateRandomKey() {
+  private def instantiateRandomKey(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {

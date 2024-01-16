@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.PrintWriter
@@ -24,24 +29,24 @@ object CodeGen {
     *                - 'quantitative (optional) Whether to generate a quantitative or boolean monitor (default: true)
     * @param usage Usage information to print on wrong usage. */
   def codegen(options: OptionMap, usage: String): Unit = {
-    require(options.contains('in), usage)
+    require(options.contains(Symbol("in")), usage)
 
-    val inputFileName = options('in).toString
+    val inputFileName = options(Symbol("in")).toString
     val inputFile =
       if (inputFileName.contains("#")) File(inputFileName.substring(0, inputFileName.lastIndexOf("#")))
       else File(inputFileName)
 
     val inputFormulas = ArchiveParser.parseFromFile(inputFileName)
     var outputFile = inputFile.changeExtension("c")
-    if (options.contains('out)) outputFile = File(options('out).toString)
+    if (options.contains(Symbol("out"))) outputFile = File(options(Symbol("out")).toString)
 
     val vars: Option[Set[BaseVariable]] =
-      if (options.contains('vars)) Some(options('vars).asInstanceOf[Array[BaseVariable]].toSet)
+      if (options.contains(Symbol("vars"))) Some(options(Symbol("vars")).asInstanceOf[Array[BaseVariable]].toSet)
       else None
 
-    val interval = options.getOrElse('interval, true).asInstanceOf[Boolean]
+    val interval = options.getOrElse(Symbol("interval"), true).asInstanceOf[Boolean]
     val head = EvidencePrinter.stampHead(options)
-    val quantitative = options.getOrElse('quantitative, false).asInstanceOf[Boolean]
+    val quantitative = options.getOrElse(Symbol("quantitative"), false).asInstanceOf[Boolean]
     val written = inputFormulas.map(e => {
       val outputFileName =
         if (inputFormulas.size <= 1) outputFile.toString()
@@ -86,7 +91,7 @@ object CodeGen {
 
     val codegenStart = Platform.currentTime
     //@todo input variables (nondeterministically assigned in original program)
-    val output = (new CGenerator(new CMonitorGenerator('resist, entry.defs), True, entry.defs))(inputFormula, theVars, Set(), outputFileName)
+    val output = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs))(inputFormula, theVars, Set(), outputFileName)
     Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName)
     pw.write(head)
@@ -116,7 +121,7 @@ object CodeGen {
     assert(monitorProgProof.subgoals.size == 1, "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString)
     val Imply(True, monitorProg) = monitorProgProof.subgoals.head.toFormula
     val inputs = CodeGenerator.getInputs(monitorProg)
-    val monitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs), True, entry.defs))(monitorProg, monitorStateVars, inputs, "Monitor")
+    val monitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs))(monitorProg, monitorStateVars, inputs, "Monitor")
 
     val pw = new PrintWriter(outputFileName)
     pw.write(head)

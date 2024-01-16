@@ -98,7 +98,7 @@ object Tools {
 
   val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
     pathEnd {
-      get { parameters('assumptions.as[String], 'fmlIndices.as[String]) { (assumptions: String, fmlIndices: String) =>
+      get { parameters(Symbol("assumptions").as[String], Symbol("fmlIndices").as[String]) { (assumptions: String, fmlIndices: String) =>
         val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions, fmlIndices)
         completeRequest(request, t)
       }}

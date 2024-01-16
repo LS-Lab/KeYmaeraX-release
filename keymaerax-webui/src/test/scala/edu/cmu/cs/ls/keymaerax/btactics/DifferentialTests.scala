@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -242,11 +247,11 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "prove single variable" in withQE { _ =>
-    proveBy("v>=0 -> [{x'=v}][x':=v;]x'>=0".asFormula, Dassignb(1, 1::1::Nil) & implyR(1) & abstractionb(1) & QE) shouldBe 'proved
+    proveBy("v>=0 -> [{x'=v}][x':=v;]x'>=0".asFormula, Dassignb(1, 1::1::Nil) & implyR(1) & abstractionb(1) & QE) shouldBe Symbol("proved")
   }
 
   it should "prove single const" in withQE { _ =>
-    proveBy("v()>=0 -> [{x'=v()}][x':=v();]x'>=0".asFormula, Dassignb(1, 1::1::Nil) & implyR(1) & abstractionb(1) & QE) shouldBe 'proved
+    proveBy("v()>=0 -> [{x'=v()}][x':=v();]x'>=0".asFormula, Dassignb(1, 1::1::Nil) & implyR(1) & abstractionb(1) & QE) shouldBe Symbol("proved")
   }
 
   it should "assign flat variable" in withTactics {
@@ -285,11 +290,11 @@ class DifferentialTests extends TacticTestBase {
   }
 
   "diffInd" should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "step into a constified ODE" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    proveByS("x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent, dI(auto='diffInd)(1), _.value should contain theSameElementsAs List(
+    proveByS("x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent, dI(auto=Symbol("diffInd"))(1), _.value should contain theSameElementsAs List(
       BelleLabels.dIInit, BelleLabels.dIStep
     ), "a()~>a".asDeclaration).subgoals should contain theSameElementsInOrderAs
       "x>=a()&a()>=0, true ==> x>=a()".asSequent ::
@@ -297,53 +302,53 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "auto-prove x>=5 -> [{x'=2}]!x<5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    proveBy("x>=5 -> [{x'=2}]!x<5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
-    proveBy("x>=5 -> [{x'=2}](!x<5 | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
-    proveBy("x>=5 -> [{x'=2}](!(x<5 & (x<2 & !x>3)) | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 -> [{x'=2}]!x<5".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
+    proveBy("x>=5 -> [{x'=2}](!x<5 | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
+    proveBy("x>=5 -> [{x'=2}](!(x<5 & (x<2 & !x>3)) | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "disregard other modalities when auto-proving x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    proveBy("x>=5, [y:=3;]y<=3 ==> [{x'=2}]x>=5".asSequent, dI()(1)) shouldBe 'proved
+    proveBy("x>=5, [y:=3;]y<=3 ==> [{x'=2}]x>=5".asSequent, dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "behave as DI rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    val result = proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI('none)(1))
+    val result = proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI(Symbol("none"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, true ==> x>=5".asSequent
     result.subgoals.last shouldBe "x>=5, true ==> [{x'=2}](x>=5)'".asSequent
   }
 
   it should "behave as diffInd rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    val result = proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI('diffInd)(1))
+    val result = proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI(Symbol("diffInd"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, true ==> x>=5".asSequent
     result.subgoals.last shouldBe "x>=5, true ==> [x':=2;]x'>=0".asSequent
   }
 
   it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x)" in withQE { _ =>
-    proveBy("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "auto-prove x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withQE { _ =>
-    proveBy("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "behave as DI on x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withQE { _ =>
-    val result = proveBy("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula, implyR(1) & dI('none)(1))
+    val result = proveBy("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula, implyR(1) & dI(Symbol("none"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x*x+y*y>=8, true ==> x*x+y*y>=8".asSequent
     result.subgoals.last shouldBe "x*x+y*y>=8, true ==> [{x'=5*y,y'=-5*x}](x*x+y*y>=8)'".asSequent
   }
 
   it should "behave as diffInd on x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withQE { _ =>
-    val result = proveBy("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula, implyR(1) & dI('diffInd)(1))
+    val result = proveBy("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula, implyR(1) & dI(Symbol("diffInd"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x*x+y*y>=8, true ==> x*x+y*y>=8".asSequent
     result.subgoals.last shouldBe "x_0*x_0+y_0*y_0>=8, true ==> [y':=-5*x;][x':=5*y;]x'*x+x*x'+(y'*y+y*y')>=0".asSequent
   }
 
   it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5" in withQE { _ =>
-    proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, assignb(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, assignb(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5 in reverse" in withQE { _ =>
@@ -351,48 +356,48 @@ class DifferentialTests extends TacticTestBase {
       dI()(1, 1::Nil) &
         assignb(1) & // handle updates
         QE
-    ) shouldBe 'proved
+    ) shouldBe Symbol("proved")
   }
 
   it should "x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
-    val result = proveBy("x>=5 ==> [{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd('none)(1))
+    val result = proveBy("x>=5 ==> [{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("none"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, true ==> x>=5".asSequent
     result.subgoals.last shouldBe "x>=5, true ==> [{x'=2}](x>=5)'".asSequent
   }
 
   it should "x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
-    val result = proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd('none)(1, 1::Nil))
+    val result = proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("none"))(1, 1::Nil))
     result.subgoals.loneElement shouldBe "x>=5 ==> [x:=x+1;](true->x>=5&[{x'=2}](x>=5)')".asSequent
   }
 
   it should "fail constification in context if ODE consts are bound outside" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
-    proveBy("x>=5, y=2 ==> [x:=x+1;][{x'=y}]x>=y".asSequent, DifferentialTactics.diffInd('full)(1, 1::Nil)).
+    proveBy("x>=5, y=2 ==> [x:=x+1;][{x'=y}]x>=y".asSequent, DifferentialTactics.diffInd(Symbol("full"))(1, 1::Nil)).
       subgoals.loneElement shouldBe "x>=5, y()=2 ==> [x:=x+1;](true->x>=y()&y()>=0)".asSequent
     the [BelleProofSearchControl] thrownBy proveBy("x>=5 ==> [y:=2;x:=x+1;][{x'=y}]x>=y".asSequent,
-      DifferentialTactics.diffInd('full)(1, 1::Nil)) should
+      DifferentialTactics.diffInd(Symbol("full"))(1, 1::Nil)) should
       have message "Unable to constify in context ReplContext{{[y:=2;x:=x+1;][{x'=y}]x>=y at .1}}, because it binds y"
   }
 
   it should "autoprove x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
-    val result = proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd('full)(1, 1::Nil))
+    val result = proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("full"))(1, 1::Nil))
     result.subgoals.loneElement shouldBe "x>=5 ==> [x:=x+1;](true->x>=5&2>=0)".asSequent
   }
 
   it should "autoprove x>=5&y>=0 -> [{x'=y}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
-    val result = proveBy("x>=5&y>=0 ==> [x:=x+1;][{x'=y}]x>=5".asSequent, DifferentialTactics.diffInd('full)(1, 1::Nil))
+    val result = proveBy("x>=5&y>=0 ==> [x:=x+1;][{x'=y}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("full"))(1, 1::Nil))
     result.subgoals.loneElement shouldBe "x>=5&y>=0 ==> [x:=x+1;](true->x>=5&y>=0)".asSequent
   }
 
   it should "x>=5 -> [{x'=2&x>7}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    val result = proveBy("x>=5 ==> [{x'=2 & x>7}]x>=5".asSequent, DifferentialTactics.diffInd('diffInd)(1))
+    val result = proveBy("x>=5 ==> [{x'=2 & x>7}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("diffInd"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, x>7 ==> x>=5".asSequent
     result.subgoals.last shouldBe "x_0>=5, x_0>7, x>7 ==> [x':=2;]x'>=0".asSequent
   }
 
   it should "keep context around" in withQE { _ =>
-    val result = proveBy("x>=5&A()>0 -> [{x'=A()}]x>=5".asFormula, implyR(1) & dI('diffInd)(1))
+    val result = proveBy("x>=5&A()>0 -> [{x'=A()}]x>=5".asFormula, implyR(1) & dI(Symbol("diffInd"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5&A()>0, true ==> x>=5".asSequent
     result.subgoals.last shouldBe "x>=5&A()>0, true ==> [x':=A();]x'>=0".asSequent
@@ -408,12 +413,12 @@ class DifferentialTests extends TacticTestBase {
         |  [{x'=y, y'=z, z'=x^2 & y >=0}]x>=0
         |End.
         |End.""".stripMargin
-    proveBy(ArchiveParser.parseAsFormula(input), implyR(1) & dI('full)(1)) shouldBe 'proved
+    proveBy(ArchiveParser.parseAsFormula(input), implyR(1) & dI(Symbol("full"))(1)) shouldBe Symbol("proved")
   }
 
   it should "prove with and without frame constraint y'=0" in withQE { _ =>
-    proveBy("x=y ==> [{x'=2 & x>=0}]x>=y".asSequent, dI('full)('R)) shouldBe 'proved
-    proveBy("x=y ==> [{x'=2, y'=0 & x>=0}]x>=y".asSequent, dI('full)('R)) shouldBe 'proved
+    proveBy("x=y ==> [{x'=2 & x>=0}]x>=y".asSequent, dI(Symbol("full"))(Symbol("R"))) shouldBe Symbol("proved")
+    proveBy("x=y ==> [{x'=2, y'=0 & x>=0}]x>=y".asSequent, dI(Symbol("full"))(Symbol("R"))) shouldBe Symbol("proved")
   }
 
   it should "report when invariant not true in the beginning" in withQE { _ =>
@@ -443,7 +448,7 @@ class DifferentialTests extends TacticTestBase {
 
 
   it should "work with quantified postconditions" in withMathematica { _ =>
-    proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+    proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI(auto=Symbol("diffInd"))(1)).subgoals should contain theSameElementsInOrderAs List(
       "true ==> \\exists y y<=x".asSequent,
       "true ==> [x':=3;]\\forall y y'<=x'".asSequent
     )
@@ -452,15 +457,15 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "expand special functions" in withQE { _ =>
-    proveBy("[{x'=3}]abs(x)>=2".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+    proveBy("[{x'=3}]abs(x)>=2".asFormula, dI(auto=Symbol("diffInd"))(1)).subgoals should contain theSameElementsInOrderAs List(
       "true ==> x>=0&x>=2 | x<0&-x>=2".asSequent,
       "true ==> [x':=3;]((x'>=0&x'>=0) & x'<=0&-x'>=0)".asSequent
     )
-    proveBy("[{x'=3}]max(x,4)>=2".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+    proveBy("[{x'=3}]max(x,4)>=2".asFormula, dI(auto=Symbol("diffInd"))(1)).subgoals should contain theSameElementsInOrderAs List(
       "true ==> x>=4&x>=2 | x<4&4>=2".asSequent,
       "true ==> [x':=3;]((x'>=0&x'>=0) & x'<=0&0>=0)".asSequent
     )
-    proveBy("[{x'=3}]min(x,4)<=6".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+    proveBy("[{x'=3}]min(x,4)<=6".asFormula, dI(auto=Symbol("diffInd"))(1)).subgoals should contain theSameElementsInOrderAs List(
       "true ==> x<=4&x<=6 | x>4&4<=6".asSequent,
       "true ==> [x':=3;]((x'<=0&x'<=0) & x'>=0&0<=0)".asSequent
     )
@@ -468,14 +473,14 @@ class DifferentialTests extends TacticTestBase {
 
   it should "FEATURE_REQUEST: expand special functions and constify their abbreviation if possible" taggedAs TodoTest in withQE { _ =>
     //@todo needs expand outside DConstify(...) with intermediate result between expand and DConstify stored in DB
-    proveBy("[{x'=3}]abs(f())>=2".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+    proveBy("[{x'=3}]abs(f())>=2".asFormula, dI(auto=Symbol("diffInd"))(1)).subgoals should contain theSameElementsInOrderAs List(
       "f()>=0&abs_()=f() | f()<0&abs_()=-f(), true ==> abs_()>=2".asSequent,
       "f()>=0&abs_()=f() | f()<0&abs_()=-f(), true ==> [x':=3;]0>=0".asSequent
     )
   }
 
   it should "work when not sole formula in succedent" in withQE { _ =>
-    proveBy("x>=0 ==> [{x'=1}]x>=0, false".asSequent, dI()(1)) shouldBe 'proved
+    proveBy("x>=0 ==> [{x'=1}]x>=0, false".asSequent, dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "not be applicable on non-FOL postcondition" in withQE { _ =>
@@ -484,7 +489,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "leave uninterpreted function symbols untouched" in withMathematica { _ =>
-    proveBy("test(x)>=0 ==> [{x'=2}]test(x)>=0".asSequent, dI(auto='diffInd)(1)).subgoals should
+    proveBy("test(x)>=0 ==> [{x'=2}]test(x)>=0".asSequent, dI(auto=Symbol("diffInd"))(1)).subgoals should
       contain theSameElementsInOrderAs List(
       "test(x)>=0, true ==> test(x)>=0".asSequent,
       "test(x_0)>=0, true ==> [x':=2;](test(x))'>=0".asSequent
@@ -498,7 +503,7 @@ class DifferentialTests extends TacticTestBase {
         |  ProgramVariables Real x, y; End.
         |  Problem unitCircle(x,y) -> [{x'=y, y'=-x}]unitCircle(x,y) End.
         |End.""".stripMargin).head
-    proveByS(entry.sequent, implyR(1) & dI(auto='full)(1), entry.defs) shouldBe 'proved
+    proveByS(entry.sequent, implyR(1) & dI(auto=Symbol("full"))(1), entry.defs) shouldBe Symbol("proved")
   }
 
   it should "work with uninterpreted and interpreted functions" in withMathematica { _ =>
@@ -509,19 +514,19 @@ class DifferentialTests extends TacticTestBase {
         |==>
         |[{x'=-v*sin(theta),y'=v*cos(theta),v'=-b(),theta'=w,w'=(-b())/r,t'=1&((t<=ep()&v>=0)&t>=0)&v=v_0-b()*t}](-t*(v_0-b()/2*t)<=x-x_0&x-x_0<=t*(v_0-b()/2*t))
         |""".stripMargin.asSequent
-    proveBy(s, dI(auto='full)(1), defs ++ InterpretedSymbols.preshipped) shouldBe 'proved
+    proveBy(s, dI(auto=Symbol("full"))(1), defs ++ InterpretedSymbols.preshipped) shouldBe Symbol("proved")
   }
 
   it should "work as dIRule in existential context" in withMathematica { _ =>
-    proveBy("x>0 ==> \\exists y [{x'=-x,y'=1/2*y}]x*y^2=1".asSequent, dI(auto='diffInd)(1, 0::Nil)).subgoals.
+    proveBy("x>0 ==> \\exists y [{x'=-x,y'=1/2*y}]x*y^2=1".asSequent, dI(auto=Symbol("diffInd"))(1, 0::Nil)).subgoals.
       loneElement shouldBe "x>0 ==> \\exists y (true->x*y^2=1&\\forall x \\forall y [y':=1/2*y;][x':=-x;]x'*y^2+x*(2*y^(2-1)*y')=0)".asSequent
   }
 
   "odeInvariant" should "prove STTT Example 9b invariant" in withQE { _ =>
     val seq = "Kp()=2, Kd()=3, v>=0, xm<=x, xr=(xm+S())/2, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2, true ==> [{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent
-    proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe 'proved
-    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = false)(1)) shouldBe 'proved
-    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = true)(1)) shouldBe 'proved
+    proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe Symbol("proved")
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = false)(1)) shouldBe Symbol("proved")
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = true)(1)) shouldBe Symbol("proved")
   }
 
   "Derive" should "derive quantifiers" in withTactics {
@@ -1023,11 +1028,11 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "let us directly prove variable x+y^2*3-z = x+y^2*3-z by abbreviation" in withQE { _ =>
-    proveBy("x+y^2*3-z=x+y^2*3-z".asFormula, let(FuncOf(Function("s_",None,Unit,Real),Nothing), "x+y^2*3-z".asTerm, by(Ax.equalReflexive))) shouldBe 'proved
+    proveBy("x+y^2*3-z=x+y^2*3-z".asFormula, let(FuncOf(Function("s_",None,Unit,Real),Nothing), "x+y^2*3-z".asTerm, by(Ax.equalReflexive))) shouldBe Symbol("proved")
   }
 
   it should "prove const [x':=5;](x+c())'>=0 directly" in withQE { _ =>
-    proveBy("[x':=5;](x+c())'>=0".asFormula, derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe 'proved
+    proveBy("[x':=5;](x+c())'>=0".asFormula, derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe Symbol("proved")
   }
 
   it should "probably not prove variable [x':=5;](x+y)'>=0 unless derive is too powerful" in withQE { _ =>
@@ -1038,85 +1043,85 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove const [x':=5;](x+c())'>=0" in withQE { _ =>
     proveBy("[x':=5;](x+c())'>=0".asFormula,
-      derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe 'proved
+      derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable [x':=5;](x+y)'>=0" in withQE { _ =>
     //@note proof waited too long. Should have gone constant before diffind
     val result = TactixLibrary.proveBy("[x':=5;](x+y>=0)'".asFormula,
       let(FuncOf(Function("y",None,Unit,Real),Nothing), Variable("y"), derive(1,1::Nil) & Dassignb(1) & QE))
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
     //@note result is the internal provable of a BelleDelayedSubstProvable
     result.conclusion shouldBe "==> [x':=5;](x+y()>=0)'".asSequent
     //@note delayed provable ultimately resolves once all the differentials are gone
-    val fullResult = TactixLibrary.proveBy("x+y>=0 ==> [{x'=5}]x+y>=0".asSequent, dI('none)(1) <(
+    val fullResult = TactixLibrary.proveBy("x+y>=0 ==> [{x'=5}]x+y>=0".asSequent, dI(Symbol("none"))(1) <(
       id,
       DifferentialTactics.DE(1) & abstractionb(1) & allR(1) & cohideR(1) & by(result)
     ))
-    fullResult shouldBe 'proved
+    fullResult shouldBe Symbol("proved")
     fullResult.conclusion shouldBe "x+y>=0 ==> [{x'=5}]x+y>=0".asSequent
   }
 
   it should "prove const [{x'=5}](x+c())'>=0" in withQE { _ =>
     proveBy("[{x'=5}](x+c())'>=0".asFormula,
-      derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE) shouldBe 'proved
+      derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable [{x'=5}](x+y)'>=0" in withQE { _ =>
     //@note proof waited too long. Should have gone constant before diffind
     TactixLibrary.proveBy("[{x'=5}](x+y)'>=0".asFormula,
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe Symbol("proved")
   }
 
   it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0" in withQE { _ =>
     proveBy("x+c()>=0 -> [{x'=5}]x+c()>=0".asFormula,
-      implyR(1) & dI('full)(1)) shouldBe 'proved
+      implyR(1) & dI(Symbol("full"))(1)) shouldBe Symbol("proved")
   }
 
   it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0 manual" in withQE { _ =>
     proveBy("x+c()>=0 -> [{x'=5}]x+c()>=0".asFormula,
-      implyR(1) & dI('none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
+      implyR(1) & dI(Symbol("none"))(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0 manual" in withQE { _ =>
     proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), dI('none)(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), dI(Symbol("none"))(1) <(close , derive(1,1::Nil) & DE(1) & G(1) & Dassignb(1) & QE))) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0" in withQE { _ =>
     proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), dI('full)(1))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), dI(Symbol("full"))(1))) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable x+y+z>=0 -> [{x'=5,y'=2}]x+y+z>=0" in withQE { _ =>
     proveBy("x+y+z>=0 -> [{x'=5,y'=2}]x+y+z>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), dI('full)(1))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), dI(Symbol("full"))(1))) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable x+z>=0&y+z>=0 -> [{x'=5,y'=2}](x+z>=0&y+z>=0)" in withQE { _ =>
     proveBy("x+z>=0&y+z>=0 -> [{x'=5,y'=2}](x+z>=0&y+z>=0)".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), dI('full)(1))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), dI(Symbol("full"))(1))) shouldBe Symbol("proved")
   }
 
   it should "prove const a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0 directly" in withQE { _ =>
-    proveBy("a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable x>=0 & v>=0 -> [{x'=v}]x>=0" in withQE { _ =>
     proveBy("x>=0 & v>=0 -> [{x'=v}]x>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("v",None,Unit,Real),Nothing), Variable("v"), dI('full)(1))) shouldBe 'proved
+      let(FuncOf(Function("v",None,Unit,Real),Nothing), Variable("v"), dI(Symbol("full"))(1))) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0" in withQE { _ =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("a",None,Unit,Real),Nothing), Variable("a"), dI('full)(1))) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("a",None,Unit,Real),Nothing), Variable("a"), dI(Symbol("full"))(1))) shouldBe Symbol("proved")
   }
 
   it should "perhaps prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 directly if diffInd were powerful enough" in withQE { _ =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & dI('full)(1)) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & dI(Symbol("full"))(1)) shouldBe Symbol("proved")
   }
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 despite silly names" in withQE { _ =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), dI('full)(1))) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), dI(Symbol("full"))(1))) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: expand definitions only temporarily in dI but not in result" taggedAs TodoTest in withMathematica { _ =>
@@ -1408,43 +1413,43 @@ class DifferentialTests extends TacticTestBase {
     val s = "==> x>0 -> [{x'=x}]x>0".asSequent
     val t = prop & dG("{z'=(-1/2)*z+0}".asDifferentialProgram, Some("x*z^2=1".asFormula))(1) &
       existsR("1/x^(1/2)".asTerm)(1) & dI()(1) & QE
-    proveBy(s, t) shouldBe 'proved
+    proveBy(s, t) shouldBe Symbol("proved")
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0 positionally" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
       dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & dI()(1, 0::Nil) & QE)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
       dG("{y'=(1/2)*y+0}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & existsR("1/x^(1/2)".asTerm)(1) & dI()(1) & QE)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) &
       dG("{y'=(-1/2)*y+0}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & dI()(1, 0::Nil) & existsR("1/x^(1/2)".asTerm)(1) & QE)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "prove x>0->[{x'=-x+1}]x>0 by ghosts" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) &
       dG("{y'=(1/2)*y+0}".asDifferentialProgram, Some("x*y^2>0".asFormula))(1) & dI()(1, 0::Nil) & QE)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "prove x>0&a<0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { _ =>
     val result = proveBy("x>0&a<0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) &
       dG("{y'=(-a/2)*y+0}".asDifferentialProgram, Some("x*y^2>0".asFormula))(1) & dI()(1, 0::Nil) & QE)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "prove x>0&a>0&b>=0->[{x'=a*x+b}]x>0 by ghosts" in withMathematica { _ =>
     val result = proveBy("x>0&a>0&b>=0->[{x'=a*x+b}]x>0".asFormula, implyR(1) &
       dG("{y'=(-a/2)*y+0}".asDifferentialProgram, Some("x*y^2>0".asFormula))(1) & dI()(1, 0::Nil) & QE)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   "DA by DG+transform" should "add y'=1 to [x'=2]x>0" in withQE { _ =>
@@ -1485,11 +1490,11 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "add time if not present and ask Mathematica if no solution provided as part of master" in withQE { _ =>
-    proveBy("x>b ==> [{x'=2}]x>b".asSequent, master()) shouldBe 'proved
+    proveBy("x>b ==> [{x'=2}]x>b".asSequent, master()) shouldBe Symbol("proved")
   }
 
   it should "diffSolve add time if not present and ask Mathematica" in withQE { _ =>
-    proveBy("x>b ==> [{x'=2}]x>b".asSequent, solve(1) & QE) shouldBe 'proved
+    proveBy("x>b ==> [{x'=2}]x>b".asSequent, solve(1) & QE) shouldBe Symbol("proved")
   }
 
   it should "work with box property" in withQE { _ =>
@@ -1651,12 +1656,12 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "not choke on constant fact 'true' (M)" in withMathematica { _ =>
-    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL('L) & solve(1))
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL(Symbol("L")) & solve(1))
     result.subgoals.loneElement shouldBe "r>0, true ==> \\forall t_ (t_>=0 -> t_/r+v>0)".asSequent
   }
 
   it should "not choke on constant fact 'true' (Z3)" in withZ3 { _ =>
-    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL('L) & solve(1))
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL(Symbol("L")) & solve(1))
     result.subgoals.loneElement shouldBe "r>0, true ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
   }
 
@@ -1777,7 +1782,7 @@ class DifferentialTests extends TacticTestBase {
               print(conjecture)
               val result = proveBy(conjecture,
                 implyR(1) & dI()(1))
-              result shouldBe 'proved
+              result shouldBe Symbol("proved")
             }
         }
       }
@@ -1785,52 +1790,52 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "prove boring case" in withQE { _ =>
-    proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
   it should "FEATURE_REQUEST: prove ^0 case" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
-    proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
   it should "FEATURE_REQUEST: prove crazy ^0 case" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
-    proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
   it should "FEATURE_REQUEST: prove crazy case" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
-    proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
   "Open Differential Invariant" should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withQE { _ =>
-    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
+    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
-    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, openDiffInd(1, 1::Nil)) shouldBe 'proved
+    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, openDiffInd(1, 1::Nil)) shouldBe Symbol("proved")
   }
 
   it should "prove 5<x^3 -> [{x'=x^3+x^4}]5<x^3" in withQE { _ =>
-    proveBy("5<x^3 -> [{x'=x^3+x^4}]5<x^3".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
+    proveBy("5<x^3 -> [{x'=x^3+x^4}]5<x^3".asFormula, implyR(1) & openDiffInd(1)) shouldBe Symbol("proved")
   }
 
   it should "prove x^3>5 -> [{x'=7*x^3+x^8}]x^3>5" in withQE { _ =>
-    proveBy("x^3>5 -> [{x'=7*x^3+x^8}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
+    proveBy("x^3>5 -> [{x'=7*x^3+x^8}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe Symbol("proved")
   }
 
   it should "open diff ind x>b() |- [{x'=2}]x>b()" in withQE { _ =>
-    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), openDiffInd(1)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), openDiffInd(1)) shouldBe Symbol("proved")
   }
 
   it should "open diff ind x>b |- [{x'=2}]x>b" in withQE { _ =>
-    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), openDiffInd(1)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), openDiffInd(1)) shouldBe Symbol("proved")
   }
 
   it should "disregard other modalities" in withQE { _ =>
-    proveBy("x>b, [y:=3;]y<=3 ==> <z:=2;>z=2, [{x'=2}]x>b".asSequent, openDiffInd(2)) shouldBe 'proved
+    proveBy("x>b, [y:=3;]y<=3 ==> <z:=2;>z=2, [{x'=2}]x>b".asSequent, openDiffInd(2)) shouldBe Symbol("proved")
   }
 
   it should "directly prove x>0 -> [{x'=x}]x>0" in withQE { _ =>
-    proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
+    proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe Symbol("proved")
   }
 
   /**
@@ -1844,133 +1849,133 @@ class DifferentialTests extends TacticTestBase {
       DifferentialTactics.dgDbx("x*A+B()".asTerm)(1))
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   it should "prove equational darboux with consts" in withQE { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x=0 & a = 5 & b=0 ==> [{x'=a*x+b}] x-b=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("5".asTerm)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("5".asTerm)(1)) shouldBe Symbol("proved")
   }
 
   it should "prove fractional darboux" in withMathematica { _ =>
     //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
     //assumes z^2 non-zero already in evol domain
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2, z' = (A*x+B())/z & y = x^2 & z^2 > 0}] x+z=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("(x*A+B())/z^2".asTerm)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("(x*A+B())/z^2".asTerm)(1)) shouldBe Symbol("proved")
   }
 
   it should "prove >= darboux" in withQE { _ =>
     //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe Symbol("proved")
   }
 
   it should "prove <= darboux" in withQE { _ =>
     //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val seq = "-(x+z)<=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] -(x+z)<=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe Symbol("proved")
   }
 
   it should "auto-prove >= darboux" in withMathematica { _ =>
     //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe Symbol("proved")
   }
 
   it should "prove >= fractional darboux" in withQE { _ =>
     //(x+z)' =  (1/z^2)(x+z) + x^2 >= (1/z^2)(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val seq = "x+z>=0 ==> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = x^2}] x+z>=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("1/z^2".asTerm)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("1/z^2".asTerm)(1)) shouldBe Symbol("proved")
   }
 
   it should "prove < darboux" in withMathematica { _ =>
     //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
     val seq = "x+z<0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe Symbol("proved")
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe Symbol("proved")
   }
 
   it should "prove > darboux" in withMathematica { _ =>
     //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
     val seq = "-(x+z)>0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] -(x+z)>0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe Symbol("proved")
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe Symbol("proved")
   }
 
   it should "automatically find equational darboux" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x), z' = A*z*x+B()*z}] 0=-x-z".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe Symbol("proved")
   }
 
   it should "fail with evolution domain constraints" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
     val pr = TactixLibrary.proveBy(seq, Idioms.?(DifferentialTactics.dgDbxAuto(1)))
-    pr should not be 'proved
+    pr should not be Symbol("proved")
     //The automatically generated remainder term goal is left open
     pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
   }
 
   it should "prove work with constified" in withMathematica { _ =>
     val seq = "y=0, x > 0 ==> [{x'=k*x+y}] x+y>0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("k".asVariable)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("k".asVariable)(1)) shouldBe Symbol("proved")
   }
 
   "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val seq = "-x<=0 ==> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] -x<=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "prove a strict barrier certificate (Z3)" in withZ3 { _ =>
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val seq = "-x<=0 ==> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] -x<=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "prove a strict barrier certificate 1 (Z3)" in withZ3 { _ =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "prove a strict barrier certificate 2 (Z3)" in withZ3 { _ =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "correctly Dconstify" in withQE { _ =>
     val seq = "b=1,x>b==> [{x'=-1 & x > 1}] x>b".asSequent
-    TactixLibrary.proveBy(seq,  DifferentialTactics.dgBarrier(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq,  DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "correctly Dconstify 2" in withQE { _ =>
     val seq = "b=1,x>b,a=-1==> [{x'=a & x > 1}] x*a^2>b".asSequent
     withTacticProgress(DifferentialTactics.dgBarrier(1), "barrier" :: Nil) {
       TactixLibrary.proveBy(seq,  _)
-    } shouldBe 'proved
+    } shouldBe Symbol("proved")
   }
 
   it should "handle Z3 ghost cuts correctly" in withQE { _ =>
     val seq = " (-1/3 + x)^2 + 2*(-1/3 + y)^2 < 1/25  ==> y=1,  [{x'=x*(2-x-y), y'=x-y & x >0 & y > 0}] (3/8*x+23/56*x^2-123/56*y+3/14*x*y+29/28*y^2-1<0)".asSequent
     val pr = proveBy(seq, DifferentialTactics.dgBarrier(2))
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   "DConstV" should "extend domain constraint with const assumptions" in withMathematica {_ =>
@@ -1984,7 +1989,7 @@ class DifferentialTests extends TacticTestBase {
     val seq = "f()>0 & v>0 & x=0 & a>0, <{x'=c+f()}> x>0, x=0&c<0&(v<0 | x>0) ==> z=1 | a>0, !x=5, [{v'=a+b,x'=y+f() & x>=v | x>=5}]v>0, x=5 -> y=1".asSequent
     val pr = TactixLibrary.proveBy(seq,
       //This changes positions!: SaturateTactic(alphaRule)
-      SaturateTactic(andL('L)) & DifferentialTactics.DconstV(3))
+      SaturateTactic(andL(Symbol("L"))) & DifferentialTactics.DconstV(3))
     pr.subgoals.loneElement shouldBe
       "<{x'=c+f()&true}>x>0, f()>0, x=0, v>0, c < 0, v < 0|x>0, x=0, a>0 ==> z=1|a>0, !x=5, [{v'=a+b,x'=y+f()&f()>0&a>0&(x>=v|x>=5)}]v>0, x=5->y=1".asSequent
   }
@@ -2055,12 +2060,12 @@ class DifferentialTests extends TacticTestBase {
     prv.subgoals.head shouldBe "t=0, x=1 ==> x>=1 & x<=1+3*t".asSequent
     // differential invariant
     prv.subgoals(1).succ.loneElement shouldBe "t<=1/2&x>=1&x<=1+3*t->min((x,0+3*1-x))>0".asFormula
-    proveBy(prv, Idioms.<(QE, QE)) shouldBe 'proved
+    proveBy(prv, Idioms.<(QE, QE)) shouldBe Symbol("proved")
   }
 
   "taylorB" should "prove second order Taylor bound for exponential function" in withMathematica { _ =>
     val prv = proveBy("x0=x & t=0 ==> [{x'=x,t'=1&x>=0}]x0+x0*t+x0/2*t^2<=x".asSequent, DifferentialTactics.taylorB(1))
-    prv shouldBe 'proved
+    prv shouldBe Symbol("proved")
   }
 
   "taylorStep" should "correctly execute a step on the exponential function" in withMathematica { _ =>
@@ -2119,9 +2124,9 @@ class DifferentialTests extends TacticTestBase {
       (l1, l2, l3) match {
         case (Some(r1), Some(r2), Some(r3)) =>
           try {
-            proveBy(Equal(r1, r2), QE) shouldBe 'proved
-            proveBy(Equal(r2, r3), QE) shouldBe 'proved
-            proveBy(Equal(r3, r1), QE) shouldBe 'proved //this should be unnecessary
+            proveBy(Equal(r1, r2), QE) shouldBe Symbol("proved")
+            proveBy(Equal(r2, r3), QE) shouldBe Symbol("proved")
+            proveBy(Equal(r3, r1), QE) shouldBe Symbol("proved") //this should be unnecessary
           } catch {
             case _: BelleThrowable =>
               // Ignores failures due to division by 0

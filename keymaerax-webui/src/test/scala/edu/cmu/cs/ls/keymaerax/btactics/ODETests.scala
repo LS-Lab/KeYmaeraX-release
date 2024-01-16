@@ -35,34 +35,34 @@ import org.scalatest.time.SpanSugar._
 class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
 
   "ODE" should "prove x>0 -> [{x'=-x}]x>0" in withMathematica { _ =>
-    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove after unstable diffcut position" in withMathematica { _ =>
     TactixLibrary.proveBy(
       "(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2 ==> [{x'=v,y'=w,v'=-1*w,w'=--1*v&true}](!(x=ox&y=oy)), x=ox&y=oy".asSequent,
-      ODE(1)) shouldBe 'proved
+      ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "do a ghost with Z3" in withZ3 { _ =>
-    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove FM tutorial 4" in withMathematica { _ => withDatabase { db =>
     val modelContent = ArchiveParser.getEntry("FM16/Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
-    db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
+    db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }}
 
   it should "prove STTT tutorial 3a cases" in withQE { _ =>
-    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), x+v^2/(2*B()) < S()\n  ==>  [{x'=v,v'=A()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe 'proved
-    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), x+v^2/(2*B()) < S()\n  ==>  [{x'=v,v'=A()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe 'proved
-    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), v=0\n  ==>  [{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), x+v^2/(2*B()) < S()\n  ==>  [{x'=v,v'=A()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe Symbol("proved")
+    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), x+v^2/(2*B()) < S()\n  ==>  [{x'=v,v'=A()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe Symbol("proved")
+    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), v=0\n  ==>  [{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove a double integrator with events" in withMathematica { _ =>
     val s = "x()>=0, A()>0, B()>0, y<=x()|(y-x())^2<=2*B()*(i-j), x()>=0, y>=0, A()>0, B()>0, j<=i, y<=x()|(y-x())^2<=4*B()*(i-j) ==> [{j'=y,y'=A(),i'=x()&y>=0&!(y<=x()|(y-x())^2<=2*B()*(i-j))}]((x()>=0&y>=0&A()>0&B()>0&j<=i)&(y<=x()|(y-x())^2<=2*B()*(i-j)))".asSequent
-    proveBy(s, ODE(1)) shouldBe 'proved
+    proveBy(s, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove a barrier certificate" in withQE { _ =>
@@ -76,26 +76,26 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
 
     TactixInit.differentialInvGenerator = new FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])](
       ("x^2 + x*y + y^2 - 111/59 <= 0".asFormula -> Some(AnnotationProofHint(tryHard = false))) :: Nil)
-    proveBy(fml, implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove when invariants are present in negated form" in withQE { _ =>
     val s = "x!=ox | y!=oy, (x+w/1-ox)^2+(y-v/1-oy)^2 != v^2+w^2 ==> [{x'=v, y'=w, v'=1*w, w'=-1*v}]!(x=ox & y=oy)".asSequent
-    proveBy(s, ODE(1)) shouldBe 'proved
+    proveBy(s, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove when postcondition is invariant" in withMathematica { _ =>
     // tests that trivial invariant generator results are not accidentally discarded
     // (e.g., Pegasus will return (True,PostInv) as an invariant, which is discarded in relevance filtering)
     val seq = "y=2*(x1^2+x2^2) ==>  [{x1'=-x1-x2,x2'=x1-x2,y'=- 1*y&true}]x1^2+2*x2^2-y<=0".asSequent
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: prove when postcondition is invariant" taggedAs TodoTest in withZ3 { _ =>
     // tests that trivial invariant generator results are not accidentally discarded
     // (e.g., Pegasus will return (True,PostInv) as an invariant, which is discarded in relevance filtering)
     val seq = "y=2*(x1^2+x2^2) ==>  [{x1'=-x1-x2,x2'=x1-x2,y'=- 1*y&true}]x1^2+2*x2^2-y<=0".asSequent
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "fall back to dI in non-top positions" in withQE { _ =>
@@ -106,152 +106,152 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
   }
 
   it should "prove STTT Example 9b subgoal fast" in withMathematica { _ =>
-    proveBy("Kp()=2, Kd()=3, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm_0)/2)^2, xr=(xm_0+S())/2, v>=0, xm_0<=x, xm=x, 5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2\n  ==>  [{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("Kp()=2, Kd()=3, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm_0)/2)^2, xr=(xm_0+S())/2, v>=0, xm_0<=x, xm=x, 5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2\n  ==>  [{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: work in existential context" taggedAs TodoTest in withQE { _ =>
-    proveBy("x=1 ==> \\exists y [{x'=y}@invariant(x>=1)]x>=0".asSequent, ODE(1, 0::Nil)) shouldBe 'proved // or at least not fail in dC
+    proveBy("x=1 ==> \\exists y [{x'=y}@invariant(x>=1)]x>=0".asSequent, ODE(1, 0::Nil)) shouldBe Symbol("proved") // or at least not fail in dC
   }
 
   "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3 { _ =>
     the [BelleThrowable] thrownBy TactixLibrary.proveBy("\\forall x_0 (x_0>0&true->\\forall x (x>0->-x>=0))".asFormula, QE) should have message
       "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall x_0 \\forall x (x_0>0&x>0->-x>=0)\n"
-    TactixLibrary.proveBy("\\forall y__0 \\forall x_0 (x_0*y__0^2>0->x_0>0)".asFormula, QE) shouldBe 'proved
-    TactixLibrary.proveBy("true->2!=0".asFormula, QE) shouldBe 'proved
-    TactixLibrary.proveBy("\\forall x_0 (x_0>0->\\exists y_ (true->x_0*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula, QE) shouldBe 'proved
+    TactixLibrary.proveBy("\\forall y__0 \\forall x_0 (x_0*y__0^2>0->x_0>0)".asFormula, QE) shouldBe Symbol("proved")
+    TactixLibrary.proveBy("true->2!=0".asFormula, QE) shouldBe Symbol("proved")
+    TactixLibrary.proveBy("\\forall x_0 (x_0>0->\\exists y_ (true->x_0*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula, QE) shouldBe Symbol("proved")
   }
 
   it should "prove a postcondition invariant that requires trying hard" in withMathematica { _ =>
-    proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: prove a postcondition invariant that requires trying hard" taggedAs TodoTest in withZ3 { _ =>
-    proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe Symbol("proved")
   }
 
   "QE" should "be able to prove the arithmetic subgoal from x'=-x case" in withQE { _ =>
     val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
-    TactixLibrary.proveBy(f, QE) shouldBe 'proved
+    TactixLibrary.proveBy(f, QE) shouldBe Symbol("proved")
   }
 
   "Pretest" should "PDEify x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)" in withQE { _ =>
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "-1")) {
-      TactixLibrary.proveBy("x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+      TactixLibrary.proveBy("x^2+y^2=1&f=x -> [{x'=-y,y'=f,f'=-y}](x^2+y^2=1&f=x)".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
     }
   }
 
   it should "autocut x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0" in withQE { _ =>
-    TactixLibrary.proveBy("x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "solve to prove x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0" in withQE { _ =>
-    TactixLibrary.proveBy("x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9" in withQE { _ =>
-    TactixLibrary.proveBy("w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "cut to prove x>=0&v>=0&a>=0->[{x'=v,v'=a,a'=a^2}]x>=0" in withQE { _ =>
-    TactixLibrary.proveBy("x>=0&v>=0&a>=0->[{x'=v,v'=a,a'=a^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>=0&v>=0&a>=0->[{x'=v,v'=a,a'=a^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "cut to prove x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0" in withQE { _ =>
-    TactixLibrary.proveBy("x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   "DGauto" should "DGauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { _ =>
-    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "DGauto x>0->[{x'=-x+1}]x>0" in withMathematica { _ =>
     //@note: ghost is y'=1/2*y for x*y^2>0
-    proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+    proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "DGauto x>0&a()>0->[{x'=-a()*x}]x>0" in withMathematica { _ =>
-    proveBy("x>0&a()>0->[{x'=-a()*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+    proveBy("x>0&a()>0->[{x'=-a()*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "DGauto x>0&a>0->[{x'=-a*x}]x>0" in withMathematica { _ =>
-    proveBy("x>0&a>0->[{x'=-a*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+    proveBy("x>0&a>0->[{x'=-a*x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "DGauto x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0" in withMathematica { _ =>
-    proveBy("x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+    proveBy("x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "DGauto x>0->[{x'=-a*x,a'=4&a>0}]x>0" in withMathematica { _ =>
-    proveBy("x>0->[{x'=-a*x,a'=4&a>0}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
+    proveBy("x>0->[{x'=-a*x,a'=4&a>0}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "DGauto x>0 |- [{x'=2}]x>0" in withMathematica { _ =>
     //@note: ghost is y'=x*y for x*y^2>0
-    proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula)), DGauto(1)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>0".asFormula)), DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "DGauto x>b() |- [{x'=2}]x>b()" in withMathematica { _ =>
-    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), DGauto(1)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), DGauto(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: DGauto x>b |- [{x'=2}]x>b" taggedAs TodoTest in withMathematica { _ =>
-    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), DGauto(1)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), DGauto(1)) shouldBe Symbol("proved")
   }
 
   "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" taggedAs SummaryTest in withQE { _ =>
-    proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withQE { _ =>
-    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "split and prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withQE { _ =>
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & boxAnd(1) & andR(1) <(
       ODE(1),
       ODE(1)
-      )) shouldBe 'proved
+      )) shouldBe Symbol("proved")
   }
 
   it should "split and on all prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withQE { _ =>
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & boxAnd(1) & andR(1) & onAll(
       ODE(1)
-      )) shouldBe 'proved
+      )) shouldBe Symbol("proved")
   }
 
   it should "split* and on all prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withQE { _ =>
     proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & SaturateTactic(onAll(Idioms.?(boxAnd(1) & andR(1)))) & onAll(
       ODE(1)
-    )) shouldBe 'proved
+    )) shouldBe Symbol("proved")
   }
 
   it should "prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withQE { _ =>
-    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove x>0 -> [{x'=-x}]x>0 by DA" taggedAs SummaryTest in withMathematica { _ =>
-    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "prove x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0" in withQE { _ =>
-    proveBy("x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy("x>0&y>0&a>0->[{x'=y,y'=y*a}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "cut to prove x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0" in withQE { _ =>
-    TactixLibrary.proveBy("x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "cut to prove x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" in withQE { _ =>
-    TactixLibrary.proveBy("x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "PDEify to prove x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" in withMathematica { _ =>
     //@todo Z3
-    TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "work with nested ODEs" in withQE { _ =>
-    proveBy("x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula, (unfoldProgramNormalize & ODE(1) & dWPlus(1))*3) shouldBe 'proved
+    proveBy("x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula, (unfoldProgramNormalize & ODE(1) & dWPlus(1))*3) shouldBe Symbol("proved")
   }
 
   it should "work with solvable maybe bound" in withQE { _ =>
@@ -323,7 +323,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
         |  )
       """.stripMargin.asTactic
 
-    TactixLibrary.proveBy(f, t) shouldBe 'proved
+    TactixLibrary.proveBy(f, t) shouldBe Symbol("proved")
 
 
   }}
@@ -428,7 +428,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
           whenever(qeTool.isInitialized) {
             println("Proving " + formula)
             if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
-              TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+              TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe Symbol("proved")
             }
           }
       }
@@ -465,21 +465,21 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     forEvery (nops) {
       formula =>
         whenever(tool.isInitialized) {
-          TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+          TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe Symbol("proved")
         }
     }
   }
 
   it should "use an annotated differential invariant" in withMathematica { _ =>
-    proveBy("x=3 & y=4 ==> [{x'=-y,y'=x}]x^2+y^2=25".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("x=3 & y=4 ==> [{x'=-y,y'=x}]x^2+y^2=25".asSequent, ODE(1)) shouldBe Symbol("proved")
     //@todo find out whether ODE uses the annotated invariant at all
-    proveBy("x=3 & y=4 ==> [{x'=-y,y'=x}@invariant(x^2+y^2=old(x^2+y^2))]x^2+y^2<=25".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("x=3 & y=4 ==> [{x'=-y,y'=x}@invariant(x^2+y^2=old(x^2+y^2))]x^2+y^2<=25".asSequent, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "use annotated differential invariants" in withMathematica { _ =>
     //@todo find out whether ODE uses the annotated invariant at all
     val g = "z>0, x=3, y=4 ==> [{x'=-z*y,y'=z*x,z'=z}@invariant(z>=old(z), x^2+y^2=old(x^2+y^2))]x^2+y^2=25".asSequent
-    proveBy(g, ODE(1)) shouldBe 'proved
+    proveBy(g, ODE(1)) shouldBe Symbol("proved")
   }
 
   it should "interpret implications as differential invariants in simple ODE" in withMathematica { _ =>
@@ -516,7 +516,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
 
   it should "prove x>=0->[{x'=x}]x>=0 via ODE" in withMathematica { _ =>
     val f = "x>=0->[{x'=x}]x>=0".asFormula
-    proveBy(f, implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy(f, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }
 
   //todo: Move?
@@ -541,7 +541,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
               |  )
               |)""".stripMargin.asTactic
 
-    proveBy(formula, tactic) shouldBe 'proved
+    proveBy(formula, tactic) shouldBe Symbol("proved")
   }
 
   //todo: Move?
@@ -571,7 +571,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
                    |  hideR(1) ; QE
                    |)""".stripMargin.asTactic
 
-    proveBy(formula, tactic) shouldBe 'proved
+    proveBy(formula, tactic) shouldBe Symbol("proved")
   }
 
   //todo: Move?
@@ -607,10 +607,10 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
           dC("x-x1 < 0".asFormula)(1) < ( id,id) )
         ,
         hideR(1) & dC("x >= x0".asFormula)(1)
-        <( dC("x-x1 >= (x0-x1)+x0*t".asFormula)(1) <(dW(1)&QE,dI('full)(1)), ODE(1))
+        <( dC("x-x1 >= (x0-x1)+x0*t".asFormula)(1) <(dW(1)&QE,dI(Symbol("full"))(1)), ODE(1))
       )
     )
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   //todo: Move?
@@ -619,16 +619,16 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     val pr = proveBy(fml,implyR(1) &
       cut("\\exists u1 \\exists u3 ( (u1^2+u3^2) !=0 & u1 -u3*(x^2-y^2)=0)".asFormula)
         <(
-        SaturateTactic(existsL('L)) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
+        SaturateTactic(existsL(Symbol("L"))) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
           <(
           dWPlus(1) & QE,
-          dI('full)(1)
+          dI(Symbol("full"))(1)
         ),
         hideR(1) & QE
       )
     )
     //println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   "ODE Counterexample" should "disprove a wrong conjecture" in withMathematica { _ =>

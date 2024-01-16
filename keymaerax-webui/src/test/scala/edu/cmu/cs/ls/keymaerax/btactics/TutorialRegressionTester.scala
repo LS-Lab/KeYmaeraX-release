@@ -113,7 +113,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
       println(s"$tutorialName, model $name, tactic ${tactic._1}")
       println(s"Duration [ms]: ${end - start}")
       println("Tactic LOC/normalized LOC/steps: " +
-        Source.fromString(tactic._2).getLines.size + "/" +
+        Source.fromString(tactic._2).getLines().size + "/" +
         TacticStatistics.lines(t) + "/" +
         TacticStatistics.size(t))
       println("Proof steps: " + proof.steps)
@@ -130,7 +130,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
 
       t match {
         case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
-        case _ => proof shouldBe 'proved withClue tutorialName + "/" + name + "/" + tactic._1
+        case _ => proof shouldBe Symbol("proved") withClue tutorialName + "/" + name + "/" + tactic._1
       }
     }
   }

@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -1713,7 +1713,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       case l => l
     }))
 
-    val parse = PrivateMethod[List[ParsedArchiveEntry]]('parse)
+    val parse = PrivateMethod[List[ParsedArchiveEntry]](Symbol("parse"))
     parser invokePrivate parse(tokens, text, true) // should not fail
     the [ParseException] thrownBy (parser invokePrivate parse(wrongTokens, text, true)) should
       have message """<somewhere> Even though archive parses, extracted problem does not parse (try reformatting):

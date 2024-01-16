@@ -90,7 +90,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val synthEnd = System.currentTimeMillis()
 
     val stepwiseQEProof = ModelPlex.stepwisePartialQE(synthResult.subgoals.loneElement.succ.loneElement, assumptions, entry.defs, tool)
-    stepwiseQEProof shouldBe 'proved
+    stepwiseQEProof shouldBe Symbol("proved")
 
     val expand = StaticSemantics.symbols(synthResult.subgoals.head) -- StaticSemantics.symbols(stepwiseQEProof.conclusion)
     val subst = USubst(entry.defs.substs.filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty }))
@@ -104,8 +104,8 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
     val end = System.currentTimeMillis()
 
-    StaticSemantics.boundVars(qf) shouldBe 'empty
-    StaticSemantics.freeVars(qf).intersect(unobservable.keySet.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])) shouldBe 'empty
+    StaticSemantics.boundVars(qf) shouldBe Symbol("empty")
+    StaticSemantics.freeVars(qf).intersect(unobservable.keySet.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])) shouldBe Symbol("empty")
 
     report(synthResult.subgoals.head.succ.head, qf, qfProof, entry.name, start, intermediate, synthEnd, end)
 
@@ -123,7 +123,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val observable = stateVars.diff(unobservable.keySet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])) ++
       sensorsForUnobservables.map(_.asInstanceOf[BaseVariable])
     println("Exporting code...")
-    val (monitorCodeDefs, monitorCodeBody) = (new PythonGenerator(new PythonMonitorGenerator('resist, entry.defs), init, entry.defs))(testProg, observable, inputs, "Monitor")
+    val (monitorCodeDefs, monitorCodeBody) = (new PythonGenerator(new PythonMonitorGenerator(Symbol("resist"), entry.defs), init, entry.defs))(testProg, observable, inputs, "Monitor")
     println(monitorCodeDefs + monitorCodeBody)
     println("...done")
 
@@ -182,7 +182,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
     val monitor = deriveMonitor(curvedBot, Some(curvedBot.tactics.head._3), ListMap.empty, tool)
     val expected = "(xr+w/(-1)-xo)^2+(yr-v/(-1)-yo)^2!=v^2+w^2&(xrpost+wpost/(-1)-xo)^2+(yrpost-vpost/(-1)-yo)^2!=vpost^2+wpost^2&apost=(-1)&wpost_0=w&vpost_0=v&xrpost_0=xr&yrpost_0=yr|(xr+w-xo)^2+(yr-v-yo)^2!=v^2+w^2&(xr+w/1-xo)^2+(yr-v/1-yo)^2!=v^2+w^2&(xrpost+wpost/1-xo)^2+(yrpost-vpost/1-yo)^2!=vpost^2+wpost^2&apost=1&wpost_0=w&vpost_0=v&xrpost_0=xr&yrpost_0=yr".asFormula
-    proveBy(Equiv(monitor, expected), propClose) shouldBe 'proved
+    proveBy(Equiv(monitor, expected), propClose) shouldBe Symbol("proved")
   }
 
   it should "derive an approximated model monitor with unobservable parameter" in withMathematica { tool =>
@@ -215,7 +215,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     monitor shouldBe "(-1)<=fpost&fpost<=(m()-l)/ep()&0<=l&0<=ep()&0<=lpost&cpost<=ep()&cpost>=0&lpost=l+fpost*cpost".asFormula
 
     val monitor2 = deriveMonitor(entry, None, unobservable, tool)
-    proveBy(Equiv(monitor, monitor2), QE) shouldBe 'proved
+    proveBy(Equiv(monitor, monitor2), QE) shouldBe Symbol("proved")
 
     //@note autoClose uses nilpotentsolve, which introduces internal time_ and so need indexed post-variable instead of named
     val monitor3 = deriveMonitor(entry, Some(TactixLibrary.autoClose),
@@ -248,7 +248,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
     val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions,
       unobservable.keySet.toList, Some(ModelPlex.mxSimplify), INDEXED_POST_VAR)(1))
-    StaticSemantics.freeVars(opt1Result.subgoals.loneElement).toSet[Variable].map(_.name).intersect(unobservable.keySet.map(_.name)) shouldBe 'empty
+    StaticSemantics.freeVars(opt1Result.subgoals.loneElement).toSet[Variable].map(_.name).intersect(unobservable.keySet.map(_.name)) shouldBe Symbol("empty")
     println(opt1Result.subgoals.loneElement)
   }
 

@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable._
@@ -43,14 +44,14 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
     val prem = ProvableSig.startPlainProof(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall x p(||)".asFormula)))(
       Close(AntePos(0),SuccPos(0)), 0
     )
-    prem shouldBe 'proved
+    prem shouldBe Symbol("proved")
     // assumed premise |- \forall x p(||) -> \forall y p(||)
     // unsound conclusion y>=0 |- \forall x y>=0 -> \forall y y>=0
     val conc = ProvableSig.startPlainProof(Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))(
       HideLeft(AntePos(0)), 0) (
       ImplyRight(SuccPos(0)), 0
     )
-    conc should not be 'proved
+    conc should not be Symbol("proved")
     conc.subgoals should be (IndexedSeq(Sequent(IndexedSeq("\\forall x y>=0".asFormula), IndexedSeq("\\forall y y>=0".asFormula))))
     // bound renaming would prove unsound conc from prem if it forgets to clash on semantic renaming
     a [RenamingClashException] shouldBe thrownBy {prem(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall y p(||)".asFormula)),
@@ -62,13 +63,13 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
         BoundRenaming(Variable("y"), Variable("x"), SuccPos(0))
       )
       // wouldBe from now on
-      clash shouldBe 'proved
+      clash shouldBe Symbol("proved")
       clash.conclusion should be(Sequent(IndexedSeq("\\forall x p(||)".asFormula), IndexedSeq("\\forall y p(||)".asFormula)))
       val subst = clash(USubst(SubstitutionPair("p(||)".asFormula, "y>=0".asFormula) :: Nil))
-      subst shouldBe 'proved
+      subst shouldBe Symbol("proved")
       val unsound = conc(subst, 0)
       unsound.conclusion should be(Sequent(IndexedSeq("y>=0".asFormula), IndexedSeq("\\forall x y>=0 -> \\forall y y>=0".asFormula)))
-      unsound shouldBe 'proved
+      unsound shouldBe Symbol("proved")
     }
   }
 
@@ -87,7 +88,7 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
       * }}}
       */
     val prem = ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
-    prem should not be 'proved
+    prem should not be Symbol("proved")
     a [RenamingClashException] shouldBe thrownBy {ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))(
       UniformRenaming(Variable("y"),Variable("x")), 0
     )}
@@ -121,7 +122,7 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
 
   it should "allow semantic renaming forward of proved provables" in {
     val p = ProvableSig.startPlainProof("[a;]x>=0 -> [a;]x>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0)
-    p shouldBe 'proved
+    p shouldBe Symbol("proved")
     RenUSubst.UniformRenamingForward(p, "x".asVariable, "y".asVariable).conclusion shouldBe "==> [a;]y>=0 -> [a;]y>=0".asSequent
   }
 
@@ -188,7 +189,7 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
 //    val proof = proof1
     import TactixLibrary._
     val proof = TactixLibrary.proveBy("(x+y)'=x'+y'".asFormula, derive(1, 0::Nil) & byUS(Ax.equalReflexive))
-    proof shouldBe 'proved
+    proof shouldBe Symbol("proved")
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula))
     a [CoreException] shouldBe thrownBy{proof(UniformRenaming(DifferentialSymbol(Variable("x")), DifferentialSymbol(Variable("z"))), 0)}
     // this prolongation wouldBe a proof of unsound (x+y)'=z'+y'

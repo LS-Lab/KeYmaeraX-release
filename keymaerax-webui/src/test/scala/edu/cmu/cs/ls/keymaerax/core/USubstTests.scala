@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -231,7 +232,7 @@ class USubstTests extends TacticTestBase {
     val pr = ProvableInfo("V vacuous").provable(USubst(
     SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "q(y)".asFormula) ::
       SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("q(y) -> [x:=5;]q(y)".asFormula))
     // this should not prove x=0->[x:=5;]x=0
 //    a [SubstitutionClashException] should be thrownBy {
@@ -256,7 +257,7 @@ class USubstTests extends TacticTestBase {
     val pr = DerivedAxiomInfo("V vacuous").provable(USubst(
     SubstitutionPair(PredOf(Function("p",None,Unit,Bool), Nothing), "f(y)=0".asFormula) ::
       SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
     // this should not prove x=0->[x:=5;]x=0
     theDeductionOf {
@@ -337,7 +338,7 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(UnitPredicational("p",Except(y::Nil)), GreaterEqual(Variable("z"),Number(9))) ::
       SubstitutionPair(UnitFunctional("b",Except(y::Nil),Real) , Power(Variable("z"),Number(3))) :: Nil)
     val inst = pr(s)
-    inst shouldBe 'proved
+    inst shouldBe Symbol("proved")
     inst.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected))
   }
 
@@ -352,7 +353,7 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(UnitFunctional("a",Except(y::Nil),Real) , Power(Variable("z"),Number(3))) ::
       SubstitutionPair(UnitFunctional("b",Except(y::Nil),Real) , Power(Variable("z"),Number(2))) :: Nil)
     val inst = pr(s)
-    inst shouldBe 'proved
+    inst shouldBe Symbol("proved")
     inst.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected))
   }
 
@@ -427,7 +428,7 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(UnitFunctional("a", Except(y::Nil), Real), Power(Variable("z"), Number(3))) ::
       SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Power(Variable("z"), Number(2))) :: Nil)
     val inst = pr(s)
-    inst shouldBe 'proved
+    inst shouldBe Symbol("proved")
     inst.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected))
   }
 
@@ -442,7 +443,7 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(UnitFunctional("a", Except(y::Nil), Real), Power(Variable("z"), Number(3))) ::
       SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Power(Variable("z"), Number(2))) :: Nil)
     val inst = pr(s)
-    inst shouldBe 'proved
+    inst shouldBe Symbol("proved")
     inst.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected))
   }
 
@@ -470,7 +471,7 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(UnitPredicational("p", Except(y::Nil)), Forall(Seq(y), GreaterEqual(Power(y,Number(2)), Number(0)))) ::
       SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Number(1)) :: Nil)
     val inst = pr(s)
-    inst shouldBe 'proved
+    inst shouldBe Symbol("proved")
     inst.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected))
   }
 
@@ -484,17 +485,17 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(UnitPredicational("p", Except(y::Nil)), Forall(Seq(y), GreaterEqual(Power(y,Number(2)), Number(0)))) ::
       SubstitutionPair(UnitFunctional("b", Except(y::Nil), Real), Number(1)) :: Nil)
     val inst = pr(s)
-    inst shouldBe 'proved
+    inst shouldBe Symbol("proved")
     inst.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected))
     val inst2 = inst(Sequent(IndexedSeq(), IndexedSeq(expected2)),
       UniformRenaming(y, Variable("x")))
-    inst2 shouldBe 'proved
+    inst2 shouldBe Symbol("proved")
     inst2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected2))
     val inst3 = (ProvableSig.startPlainProof(expected2)
       (UniformRenaming(y, Variable("x")), 0)
       (inst, 0)
       )
-    inst3 shouldBe 'proved
+    inst3 shouldBe Symbol("proved")
     inst3.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(expected2))
   }
 

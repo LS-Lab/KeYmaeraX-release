@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.ODEStability._
@@ -29,7 +34,7 @@ class ODEStabilityTests extends TacticTestBase {
           unfoldProgramNormalize &
             //There is del s.t. ||x||<del -> v < k
             cutR("\\exists del (del > 0 & del < eps & \\forall theta \\forall w (theta*theta+w*w < del*del -> a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 < k))".asFormula)(1) <(
-              hideL('Llast) & QE,
+              hideL(Symbol("Llast")) & QE,
               unfoldProgramNormalize &
                 existsR("del".asTerm)(1) & andR(1) <(
                 prop,
@@ -67,7 +72,7 @@ class ODEStabilityTests extends TacticTestBase {
           prop,
           ODELiveness.kDomainDiamond("theta*theta+w*w < del*del".asFormula)(1) <(
             prop,
-            andL('Llast) &
+            andL(Symbol("Llast")) &
             // Move the forall quantified antecedent into domain constraint
             // TODO: make tactic that adds universals directly into domain (without the universals)
             dC("(theta*theta+w*w < del*del->[{theta'=w,w'=-a()*theta-b()*w&true}]theta*theta+w*w < eps*eps)".asFormula)(1) <(
@@ -111,7 +116,7 @@ class ODEStabilityTests extends TacticTestBase {
                 ODELiveness.saveBox(1) &
                 cutR("\\exists bnd \\forall theta \\forall w (theta*theta+w*w < 1 * 1 -> a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 >= bnd)".asFormula)(1) <(
                   cohideR(1) & QE,
-                  implyR(1) & existsL('Llast) &
+                  implyR(1) & existsL(Symbol("Llast")) &
                   ODELiveness.kDomainDiamond("a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 < bnd ".asFormula)(1) <(
                     hideL(-7) & hideL(-4) & hideL(-2) & ODELiveness.dV(None)(1) &
                       //Nasty
@@ -119,7 +124,7 @@ class ODEStabilityTests extends TacticTestBase {
                         byUS(qe),
                         implyR(1) & existsL(-3) & existsR("bnd".asTerm)(1) & andR(1) <(
                           prop,
-                          andL('Llast) & cohideOnlyL('Llast) & unfoldProgramNormalize &
+                          andL(Symbol("Llast")) & cohideOnlyL(Symbol("Llast")) & unfoldProgramNormalize &
                           allL(-1) & allL(-1) & implyL(-1) <(prop, prop)
                         )
                       ),
@@ -145,7 +150,7 @@ class ODEStabilityTests extends TacticTestBase {
     )
 
     println(pr5)
-    pr5 shouldBe 'proved
+    pr5 shouldBe Symbol("proved")
   }
 
   it should "prove global exponential stability for pendulum" in withMathematica { _ =>
@@ -170,7 +175,7 @@ class ODEStabilityTests extends TacticTestBase {
     )
 
     println(pr1)
-    pr1 shouldBe 'proved
+    pr1 shouldBe Symbol("proved")
   }
 
   it should "prove stability for inverted pendulum" taggedAs testHelper.KeYmaeraXTestTags.SlowTest in withMathematica { _ =>
@@ -190,7 +195,7 @@ class ODEStabilityTests extends TacticTestBase {
           unfoldProgramNormalize &
             //There is del s.t. ||x||<del -> v < k
             cutR("\\exists del (del > 0 & del < eps & \\forall theta \\forall w (theta*theta+w*w < del*del -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < k))".asFormula)(1) <(
-              hideL('Llast) & QE,
+              hideL(Symbol("Llast")) & QE,
               unfoldProgramNormalize &
                 existsR("del".asTerm)(1) & andR(1) <(
                 prop,
@@ -205,7 +210,7 @@ class ODEStabilityTests extends TacticTestBase {
                         // This part is slightly simpler without having to close over the sub-domain
                         dC("(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < k".asFormula)(1) <(
                           ODEInvariance.sAIRankOne()(1),
-                          dR(True)(1)< ( dI('full)(1), ODE(1))
+                          dR(True)(1)< ( dI(Symbol("full"))(1), ODE(1))
                         )
                       ,
                       dWPlus(1) & allL(-7) & allL(-7) & prop
@@ -228,7 +233,7 @@ class ODEStabilityTests extends TacticTestBase {
             prop,
             ODELiveness.kDomainDiamond("theta*theta+w*w < del*del".asFormula)(1) <(
               prop,
-              andL('Llast) &
+              andL(Symbol("Llast")) &
                 // Move the forall quantified antecedent into domain constraint
                 // TODO: make tactic that adds universals directly into domain (without the universals)
                 dC("(theta*theta+w*w < del*del->[{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}]theta*theta+w*w < eps*eps)".asFormula)(1) <(
@@ -272,7 +277,7 @@ class ODEStabilityTests extends TacticTestBase {
                       ODELiveness.saveBox(1) &
                       cutR("\\exists bnd \\forall theta \\forall w (theta*theta+w*w < 1 * 1 -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 >= bnd)".asFormula)(1) <(
                         cohideR(1) & QE,
-                        implyR(1) & existsL('Llast) &
+                        implyR(1) & existsL(Symbol("Llast")) &
                           ODELiveness.kDomainDiamond("(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < bnd ".asFormula)(1) <(
                             hideL(-7) & hideL(-4) & hideL(-2) & ODELiveness.dV(None)(1) &
                               //Nasty
@@ -280,7 +285,7 @@ class ODEStabilityTests extends TacticTestBase {
                                 byUS(qe),
                                 implyR(1) & existsL(-3) & existsR("bnd".asTerm)(1) & andR(1) <(
                                   prop,
-                                  andL('Llast) & cohideOnlyL('Llast) & unfoldProgramNormalize &
+                                  andL(Symbol("Llast")) & cohideOnlyL(Symbol("Llast")) & unfoldProgramNormalize &
                                     allL(-1) & allL(-1) & implyL(-1) <(prop, prop)
                                 )
                               ),
@@ -306,7 +311,7 @@ class ODEStabilityTests extends TacticTestBase {
     )
 
     println(pr5)
-    pr5 shouldBe 'proved
+    pr5 shouldBe Symbol("proved")
   }
 
   it should "prove stability for 1st and 3rd axis of rigid body" in withMathematica { _ =>
@@ -379,8 +384,8 @@ class ODEStabilityTests extends TacticTestBase {
         )
     )
 
-    pr1 shouldBe 'proved
-    pr3 shouldBe 'proved
+    pr1 shouldBe Symbol("proved")
+    pr3 shouldBe Symbol("proved")
   }
 
   it should "prove global asymptotic stability for 1st and 3rd axis of rigid body with friction" in withMathematica { _ =>
@@ -403,7 +408,7 @@ class ODEStabilityTests extends TacticTestBase {
           // Prove that solutions are trapped in I1() * x1^2 + I2() * x2^2 + I3() * x3^2 <= old()
           cutR("\\exists r (I1() * x1^2 + I2() * x2^2 + I3() * x3^2 = r)".asFormula)(1) <(
             QE,
-            implyR(1) & existsL('Llast) &
+            implyR(1) & existsL(Symbol("Llast")) &
             ODELiveness.compatCut("x2*x2+x1*x1+x3*x3<=r/I3()".asFormula)(1) <(skip , hideR(1) &
               dC("I1() * x1^2 + I2() * x2^2 + I3() * x3^2 <= r".asFormula)(1) <(
                 ODE(1),
@@ -457,7 +462,7 @@ class ODEStabilityTests extends TacticTestBase {
             prop,
             ODELiveness.kDomainDiamond("x2*x2+x3*x3 < del*del".asFormula)(1) <(
               prop,
-              andL('Llast) &
+              andL(Symbol("Llast")) &
                 // Move the forall quantified antecedent into domain constraint
                 // TODO: make tactic that adds universals directly into domain (without the universals)
                 dC("(x2*x2+x3*x3 < del*del->[{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}]x2*x2+x3*x3 < eps*eps)".asFormula)(1) <(
@@ -548,7 +553,7 @@ class ODEStabilityTests extends TacticTestBase {
             prop,
             ODELiveness.kDomainDiamond("x1*x1+x2*x2 < del*del".asFormula)(1) <(
               prop,
-              andL('Llast) &
+              andL(Symbol("Llast")) &
                 // Move the forall quantified antecedent into domain constraint
                 // TODO: make tactic that adds universals directly into domain (without the universals)
                 dC("(x1*x1+x2*x2 < del*del->[{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}]x1*x1+x2*x2 < eps*eps)".asFormula)(1) <(
@@ -593,8 +598,8 @@ class ODEStabilityTests extends TacticTestBase {
 
     println(pr14)
     println(pr24)
-    pr14 shouldBe 'proved
-    pr24 shouldBe 'proved
+    pr14 shouldBe Symbol("proved")
+    pr24 shouldBe Symbol("proved")
   }
 
   it should "prove epsilon stability for Moore-Greitzer Jet Engine" in withMathematica { _ =>
@@ -629,7 +634,7 @@ class ODEStabilityTests extends TacticTestBase {
             //There is del s.t. ||x||<del -> v < k
             //From paper, this del can be del = eps' = 5*10^-11
             cutR(s"\\exists del (del > 0 & del < eps+tau & \\forall x1 \\forall x2 (x1*x1+x2*x2 < del*del -> $lyapstr < 2.95 * 10^-19))".asFormula)(1) <(
-              hideL('Llast) & QE,
+              hideL(Symbol("Llast")) & QE,
               unfoldProgramNormalize &
                 existsR("del".asTerm)(1) & andR(1) <(
                 prop,
@@ -654,7 +659,7 @@ class ODEStabilityTests extends TacticTestBase {
     )
 
     println(pr1)
-    pr1 shouldBe 'proved
+    pr1 shouldBe Symbol("proved")
   }
 
   it should "prove 3rd order stability for pendulum" in withMathematica { _ =>
@@ -677,11 +682,11 @@ class ODEStabilityTests extends TacticTestBase {
         unfoldProgramNormalize &
         //On ||x||=tau, there is a global lower bound on k
         cutR("\\exists k (k > 0 & \\forall theta \\forall w (theta*theta+w*w = tau*tau -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 >= k))".asFormula)(1) <(
-          hideL('Llast) & QE,
+          hideL(Symbol("Llast")) & QE,
           unfoldProgramNormalize &
           //There is del s.t. ||x||<del -> v < k
           cutR("\\exists del (del > 0 & del < tau & \\forall theta \\forall w (theta*theta+w*w < del*del -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < k))".asFormula)(1) <(
-            hideL('Llast) & hideL(-6) & QE,
+            hideL(Symbol("Llast")) & hideL(-6) & QE,
             unfoldProgramNormalize &
             existsR("del".asTerm)(1) & andR(1) <(
               prop,
@@ -728,7 +733,7 @@ class ODEStabilityTests extends TacticTestBase {
             prop,
             ODELiveness.kDomainDiamond("theta*theta+w*w < del*del".asFormula)(1) <(
               prop,
-              andL('Llast) &
+              andL(Symbol("Llast")) &
                 // Move the forall quantified antecedent into domain constraint
                 // TODO: make tactic that adds universals directly into domain (without the universals)
                 dC("(theta*theta+w*w < del*del->[{theta'=w,w'= -a*(theta - theta^3/6)-b*w&true}]theta*theta+w*w < eps*eps)".asFormula)(1) <(

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   * @author Nathan Fulton
   */
 class TransitivityTacticTests extends TacticTestBase {
-  private lazy val setupTactic = TactixLibrary.implyR(1) & SaturateTactic(TactixLibrary.andL('L))
+  private lazy val setupTactic = TactixLibrary.implyR(1) & SaturateTactic(TactixLibrary.andL(Symbol("L")))
 
   "Search function" should "Find result" in withMathematica { _ =>
     val f = "a>=b & b >= c -> a >= c".asFormula

@@ -131,28 +131,28 @@ object PolynomialArith extends Logging {
   private lazy val gtAnteZ: ProvableSig = remember("f_() > g_() <-> f_() >= g_() & f_() - g_() != 0 ".asFormula, QE, namespace).fact
 
   private lazy val existsOr1 = remember("(\\exists x_ p_(x_) | \\exists y_ q_(y_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
-    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("y_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop), namespace).fact
+    prop & OnAll(existsL(Symbol("L")) & prop) <( existsR(Symbol("R")), existsR(Symbol("R")), existsR("y_".asTerm)(Symbol("R")), existsR("x_".asTerm)(Symbol("Rlast"))) & OnAll(prop), namespace).fact
 
   private lazy val existsSame = remember("(\\exists x_ p_(x_) | \\exists x_ q_(x_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
-    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("x_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop), namespace).fact
+    prop & OnAll(existsL(Symbol("L")) & prop) <( existsR(Symbol("R")), existsR(Symbol("R")), existsR("x_".asTerm)(Symbol("R")), existsR("x_".asTerm)(Symbol("Rlast"))) & OnAll(prop), namespace).fact
 
   private lazy val existsOr2 = remember("\\exists x_ p_(x_) | q_() <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
-    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop), namespace).fact
+    prop & OnAll(SaturateTactic(existsL(Symbol("L"))) & SaturateTactic(existsR(Symbol("R"))) & prop), namespace).fact
 
   private lazy val existsOr3 = remember("q_() | \\exists x_ p_(x_) <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
-    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop), namespace).fact
+    prop & OnAll(SaturateTactic(existsL(Symbol("L"))) & SaturateTactic(existsR(Symbol("R"))) & prop), namespace).fact
 
   private lazy val existsAnd1 = remember("(\\exists x_ p_(x_) & \\exists y_ q_(y_)) <-> (\\exists x_ \\exists y_ (p_(x_) & q_(y_)))".asFormula,
-    prop & OnAll(SaturateTactic(existsL('L)) & prop) <( existsR('R) & existsR('R) & prop, existsR('R) & prop, existsR('R) & prop), namespace).fact
+    prop & OnAll(SaturateTactic(existsL(Symbol("L"))) & prop) <( existsR(Symbol("R")) & existsR(Symbol("R")) & prop, existsR(Symbol("R")) & prop, existsR(Symbol("R")) & prop), namespace).fact
 
   private lazy val existsAnd2 = remember("(\\exists x_ p_(x_) & q_()) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
-    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop), namespace).fact
+    prop & OnAll(SaturateTactic(existsL(Symbol("L"))) & SaturateTactic(existsR(Symbol("R"))) & prop), namespace).fact
 
   private lazy val existsAnd3 = remember("(q_() & \\exists x_ p_(x_)) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
-    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop), namespace).fact
+    prop & OnAll(SaturateTactic(existsL(Symbol("L"))) & SaturateTactic(existsR(Symbol("R"))) & prop), namespace).fact
 
   private lazy val existsRename = remember("(\\exists x_ p_(x_) & \\exists x_ q_(x_)) <-> (\\exists x_ p_(x_) & \\exists z_ q_(z_))".asFormula,
-    prop & OnAll(SaturateTactic(existsL('L)) & prop) <(existsR("x_".asTerm)('R), existsR("z_".asTerm)('R)) & OnAll(prop), namespace).fact
+    prop & OnAll(SaturateTactic(existsL(Symbol("L"))) & prop) <(existsR("x_".asTerm)(Symbol("R")), existsR("z_".asTerm)(Symbol("R"))) & OnAll(prop), namespace).fact
 
   //A=0 | B = 0 <-> A*B=0
   //A=0 & B = 0 <-> A^2+B^2=0
@@ -885,8 +885,8 @@ object PolynomialArith extends Logging {
 
     //g >0 -> g+s_i^2 != 0
     cut(pf.conclusion.succ.head) < (
-      implyL('Llast) < (tac & id,ident)&
-      notL('Llast) &
+      implyL(Symbol("Llast")) < (tac & id,ident)&
+      notL(Symbol("Llast")) &
         //Run the instructions
         inst.foldRight[BelleExpr](ident)(
           (h, tac) =>

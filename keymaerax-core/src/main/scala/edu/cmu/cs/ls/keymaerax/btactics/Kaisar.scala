@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -733,14 +738,14 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
           case (x,(fml, inv:SP))::Nil =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
             val cc = c.add(x, AntePos(invSeq.ante.length-1))
-            val e = hideL('Llast)*(invs.length - (done.length + 1))
+            val e = hideL(Symbol("Llast"))*(invs.length - (done.length + 1))
             val tail = eval(inv, hh, cc, Provable.startProof(invSeq))
             assert(tail.isProved, "Failed to prove first inductive case subgoal " + fml + " in subproof " + inv + ", left behind provable " + tail.prettyString)
             e  & useAt(ElidingProvable(tail, Declaration(Map.empty)), PosInExpr(Nil))(1)
           case (x, (fml,pre:SP))::fps =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
             val cc = c.add(x, AntePos(invSeq.ante.length-1))
-            val hide = hideL('Llast)*(invs.length - (done.length + 1))
+            val hide = hideL(Symbol("Llast"))*(invs.length - (done.length + 1))
             val tail = ElidingProvable(eval(pre, hh, cc, Provable.startProof(invSeq)), Declaration(Map.empty))
             assert(tail.isProved, "Failed to prove additional inductive case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
             val e1 = hide & useAt(tail, PosInExpr(Nil))(1)
@@ -754,7 +759,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val unpack:BelleExpr =
         if (invs.length > 1) {
             andL(AntePosition(1)) &
-            andL('Llast) * (invs.length - 2)
+            andL(Symbol("Llast")) * (invs.length - 2)
         }
           else {
           def rot(pr:ProvableSig,p:SuccPosition):ProvableSig = ElidingProvable(rotAnte(pr.underlyingProvable), pr.defs)
@@ -770,7 +775,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
           & indCase(vars.zip(indFmls.zip(invs)),c))
       val pr:Provable = interpret(e, ggg)
       val pr1 = rotAnte(pr)
-      val killAnds = if(invs.length <= 1) TactixLibrary.nil else (andL('Llast)*(invs.length-1))
+      val killAnds = if(invs.length <= 1) TactixLibrary.nil else (andL(Symbol("Llast"))*(invs.length-1))
       val pr2 = interpret(killAnds,pr1)
       eval(lastTail, hh, cc, pr2, nInvs+1)
     }
@@ -808,8 +813,8 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       def unflatAnd(l:List[Formula]):Formula = l match {case List(l) => l case (x::xs) => And(x,unflatAnd(xs))}
       val conj = unflatAnd(flatAnd(g4.subgoals.head.ante.last,nInvs))
       val cutConj = cut(conj)<(hideL(conjPos), hideR(1) & (hideL(-1)*(anteSize-1)) & prop)
-      val killAnds = if(nInvs > 0) {andL('Llast)*(nInvs)} else nil
-      val killTrue = if(nInvs > 0) {hideL(AntePosition(anteSize+1))} else {hideL('Llast)}
+      val killAnds = if(nInvs > 0) {andL(Symbol("Llast"))*(nInvs)} else nil
+      val killTrue = if(nInvs > 0) {hideL(AntePosition(anteSize+1))} else {hideL(Symbol("Llast"))}
       val pr = interpret(cutConj & killAnds & killTrue, g4)
       eval(t.asInstanceOf[Finally].tail, hh, cc, pr)
     }
@@ -834,7 +839,7 @@ private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = 
     val last = acc.subgoals.head.ante.length+1
     val e:BelleExpr =
       discreteGhost(v,Some(vv))(1) &
-      TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
+      TactixLibrary.exhaustiveEqR2L(hide=false)(Symbol("Llast")) &
       TactixLibrary.eqL2R(-last)(1) &
       (if (invCurrent) {TactixLibrary.eqL2R(-last)(1 + accVs.length - last)} else { nil })
     (interpret(e, acc), vv::accVs)
@@ -896,7 +901,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val pr2Help = Provable.startProof(rename.subgoals.head.updated(AntePos(sequent.ante.length),fmlLate))
           val G1 = pr2Help.conclusion.ante
           val FG1:Formula = G1.reduceRight(And)
-          val pr2Hid = interpret(hideL('Llast)*(bvs.toSet.size), pr2Help)
+          val pr2Hid = interpret(hideL(Symbol("Llast"))*(bvs.toSet.size), pr2Help)
           val pr2Start = Provable.startProof(pr2Hid.subgoals.head)
           val G2 = pr2Hid.subgoals.head.ante//.tail
           val FG2:Formula = And(G2.last, G2.dropRight(1).reduceRight(And))
@@ -916,7 +921,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val ppa = Provable.startProof(pp2.subgoals.head)
           val ppa1 = interpret(hideL(-1)*(G1.length-1), ppa)
           val ppa2 = interpret(monb, ppa1)
-          val ppa3 = interpret(((andL('Llast))*(G2.length-1)), ppa2)
+          val ppa3 = interpret(((andL(Symbol("Llast")))*(G2.length-1)), ppa2)
           val ppa35 = rotAnte(ppa3)
           val ppa4 = interpret(useAt(ElidingProvable(pr2, Declaration(Map.empty)), PosInExpr(Nil))(1), ppa35)
           val ppb = Provable.startProof(pp2.subgoals.tail.head)

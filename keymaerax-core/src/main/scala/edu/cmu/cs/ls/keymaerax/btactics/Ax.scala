@@ -1704,7 +1704,7 @@ object Ax extends Logging {
         useAt(diamond, PosInExpr(1::Nil))(-1) & notL(-1) &
         useAt(notAnd)(-2, 1::Nil) & useAt(implyExpand, PosInExpr(1::Nil))(-2, 1::Nil) &
         useAt(converseImply)(-2, 1::Nil) & useAt(doubleNegation)(-2, 1::0::Nil) &
-        useAt(K, PosInExpr(0::Nil))(-2) & implyL(-2) <(HilbertCalculus.V('Rlast) & id, id)
+        useAt(K, PosInExpr(0::Nil))(-2) & implyL(-2) <(HilbertCalculus.V(Symbol("Rlast")) & id, id)
         ,
         useAt(diamond, PosInExpr(1::Nil))(-1) & useAt(notAnd)(-1, 0::1::Nil) &
         useAt(implyExpand, PosInExpr(1::Nil))(-1, 0::1::Nil) & notL(-1) &
@@ -2262,7 +2262,7 @@ object Ax extends Logging {
       useAt(iterated)(1, 1::1::1::Nil) &
       cut("<a_;>p_(||) -> <a_;>(p_(||) | <a_;><{a_;}*>p_(||))".asFormula) <(
         /* use */ prop,
-        /* show */ hideR(1) & implyR('_) & mond & prop
+        /* show */ hideR(1) & implyR(Symbol("_")) & mond & prop
         )
   )
 
@@ -2282,7 +2282,7 @@ object Ax extends Logging {
       useAt(iterateb)(1, 0::1::1::Nil) &
       cut("[a_;](p_(||) & [a_;][{a_;}*]p_(||)) -> [a_;]p_(||)".asFormula) <(
         /* use */ prop,
-        /* show */ hideR(1) & implyR('_) & HilbertCalculus.monb & prop
+        /* show */ hideR(1) & implyR(Symbol("_")) & HilbertCalculus.monb & prop
 
         )
   )
@@ -2593,7 +2593,7 @@ object Ax extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (p_(x_) & q_()) <-> \\exists x_ p_(x_) & q_()".asFormula)),
       equivR(1) <(
         existsL(-1) & andR(1) <(existsR("x_".asVariable)(1) & prop & done, prop & done),
-        andL('L) & existsL(-1) & existsR("x_".asVariable)(1) & prop & done
+        andL(Symbol("L")) & existsL(-1) & existsR("x_".asVariable)(1) & prop & done
       )
     )
 
@@ -3182,10 +3182,10 @@ object Ax extends Logging {
   lazy val DWeakenAnd: DerivedAxiomInfo = derivedAxiom("DW differential weakening and",
     Sequent(IndexedSeq(), IndexedSeq("[{c_&q_(||)}]p_(||) -> ([{c_&q_(||)}](q_(||)&p_(||)))".asFormula)),
     implyR(1) & cut("[{c_&q_(||)}](q_(||)->(p_(||)->(q_(||)&p_(||))))".asFormula) <(
-      /* use */ useAt(K, PosInExpr(0::Nil))('Llast) & implyL('Llast) <(
-        cohide('Rlast) & byUS(DWbase) & done,
-        useAt(K, PosInExpr(0::Nil))('Llast) & implyL('Llast) <(close, close)),
-      /* show */ G('Rlast) & prop
+      /* use */ useAt(K, PosInExpr(0::Nil))(Symbol("Llast")) & implyL(Symbol("Llast")) <(
+        cohide(Symbol("Rlast")) & byUS(DWbase) & done,
+        useAt(K, PosInExpr(0::Nil))(Symbol("Llast")) & implyL(Symbol("Llast")) <(close, close)),
+      /* show */ G(Symbol("Rlast")) & prop
       )
   )
 
@@ -3846,7 +3846,7 @@ object Ax extends Logging {
         useAt(Ax.DGpp, (us: Option[Subst]) => us.get ++ RenUSubst(
           (UnitFunctional("a", Except(Variable("y_", None, Real) :: Nil), Real), Neg(Divide("g(|y_,z_|)".asTerm, Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real) :: Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
-        cutR("\\exists y_ y_>0".asFormula)(1) < (cohideR(1) & QE, implyR(1) & existsL('Llast)) &
+        cutR("\\exists y_ y_>0".asFormula)(1) < (cohideR(1) & QE, implyR(1) & existsL(Symbol("Llast"))) &
         useAt(assignbexistsy, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("f_()".asTerm, dbx_internal) :: Nil))(1) &
         useAt(selfassignby)(1) &
         useAt(ally, PosInExpr(0 :: Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
@@ -3862,7 +3862,7 @@ object Ax extends Logging {
                 cohide2(-1, 1) & HilbertCalculus.monb &
                 byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e_()".asFormula), IndexedSeq("ep()*y()^2 + e_()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
             ),
-            cohideOnlyL('Llast) &
+            cohideOnlyL(Symbol("Llast")) &
               implyRi &
               useAt(DBXgtz, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g(|z_|)".asTerm, "(-g(|y_,z_|)/2)".asTerm) :: Nil))(1) &
               derive(1, PosInExpr(1 :: 0 :: Nil)) &
@@ -3897,7 +3897,7 @@ object Ax extends Logging {
     derivedAxiom("DBX=",
       Sequent(IndexedSeq(), IndexedSeq("(e_(|y_,z_|)=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e_(|y_,z_|)=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e_(|y_,z_|))'=g(|y_,z_|)*e_(|y_,z_|)".asFormula)),
       implyR(1) & implyR(1) &
-        useAt(dbxEqArith)('Llast) & andL('Llast) &
+        useAt(dbxEqArith)(Symbol("Llast")) & andL(Symbol("Llast")) &
         useAt(dbxEqArith)(1,PosInExpr(1::Nil)) &
         TactixLibrary.boxAnd(1) & andR(1) <(
         hideL(-3) & exchangeL(-1,-2) & implyRi &
@@ -3985,7 +3985,7 @@ object Ax extends Logging {
     implyR(1) &
       useAt(dbxNeArith)(1,0::Nil) &
       useAt(dbxNeArith)(1,1::1::Nil) &
-      implyR(1) & orL('Llast) <(
+      implyR(1) & orL(Symbol("Llast")) <(
       useAt(Ax.boxOrLeft)(1) & exchangeL(-1,-2) & implyRi &
         useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) & monb &
         byUS(TactixLibrary.proveBy("e_() != 0->f()=g() ==> e_()>0 -> f()>=g()".asSequent, QE & done)),
@@ -5999,7 +5999,7 @@ object Ax extends Logging {
       "rx_() * gcd_() * ry_() = dz_())" +
       "->" +
       "x_() + y_() = nz_() / dz_()").asFormula,
-    implyR(1) & andL('Llast)*5 &
+    implyR(1) & andL(Symbol("Llast"))*5 &
       (eqL2R(-1)(1) & hideL(-1))*2 &
       (eqR2L(-1)(1) & hideL(-1))*4 &
       QE & done
@@ -6014,7 +6014,7 @@ object Ax extends Logging {
       "rx_() * gcd_() * ry_() = dz_())" +
       "->" +
       "x_() - y_() = nz_() / dz_()").asFormula,
-    implyR(1) & andL('Llast)*5 &
+    implyR(1) & andL(Symbol("Llast"))*5 &
       (eqL2R(-1)(1) & hideL(-1))*2 &
       (eqR2L(-1)(1) & hideL(-1))*4 &
       QE & done
@@ -6027,7 +6027,7 @@ object Ax extends Logging {
       "ny_() * dx_() = dz_())" +
       "->" +
       "x_() / y_() = nz_() / dz_()").asFormula,
-    implyR(1) & andL('Llast)*3 &
+    implyR(1) & andL(Symbol("Llast"))*3 &
       (eqL2R(-1)(1) & hideL(-1))*2 &
       (eqR2L(-1)(1) & hideL(-1))*2 &
       QE & done
@@ -6040,7 +6040,7 @@ object Ax extends Logging {
       "dx_() * dy_() = dz_())" +
       "->" +
       "x_() * y_() = nz_() / dz_()").asFormula,
-    implyR(1) & andL('Llast)*3 &
+    implyR(1) & andL(Symbol("Llast"))*3 &
       (eqL2R(-1)(1) & hideL(-1))*2 &
       (eqR2L(-1)(1) & hideL(-1))*2 &
       QE & done
@@ -6056,7 +6056,7 @@ object Ax extends Logging {
       ")" +
       "->" +
       "x_() ^ y_() = nz_() / dz_()").asFormula,
-    implyR(1) & andL('Llast)*5 &
+    implyR(1) & andL(Symbol("Llast"))*5 &
       (eqL2R(-1)(1) & hideL(-1))*6 &
       cohideR(1) & byUS(Ax.equalReflexive)
   )
@@ -6066,7 +6066,7 @@ object Ax extends Logging {
       "-nx_() = nz_())" +
       "->" +
       "-x_() = nz_() / dx_()").asFormula,
-    implyR(1) & andL('Llast)*1 &
+    implyR(1) & andL(Symbol("Llast"))*1 &
       (eqL2R(-1)(1) & hideL(-1))*1 &
       (eqR2L(-1)(1) & hideL(-1))*1 &
       QE & done

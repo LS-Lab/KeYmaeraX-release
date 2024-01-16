@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
@@ -141,7 +142,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Trafo
-        argNames shouldBe 'empty
+        argNames shouldBe Symbol("empty")
         expr.right.get.value shouldBe "x:=x+1;".asProgram
     }
     entry.model shouldBe "x>=0 -> [{prg{|^@|};}*]x>=0".asFormula
@@ -646,7 +647,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   "Annotation parsing" should "populate easy loop annotations" in {
     val input = "x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0"
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=1".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     Parser(input)
   }
@@ -654,7 +655,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "add () to functions used as variables" in {
     val input = "ArchiveEntry \"Test\" Definitions Real y(); End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -662,7 +663,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "report functions non-expanded" in {
     val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -670,7 +671,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "report functions non-expanded (2)" in {
     val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+z(); Real z() = 7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -678,7 +679,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "FEATURE_REQUEST: detect cycles when expanding functions recursively to their definition" taggedAs TodoTest ignore {
     val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+z(); Real z() = 7*y(); End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -686,7 +687,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "add () and report functions non-expanded" in {
     val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+7; End. ProgramVariables Real x; End. Problem x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -714,7 +715,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "report properties non-expanded in annotations" in {
     val input = "ArchiveEntry \"Test\" Definitions Bool inv() <-> x>=1; End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
@@ -722,7 +723,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "report functions in properties non-expanded" in {
     val input = "ArchiveEntry \"Test\" Definitions Real y() = 3+7; Bool inv() <-> x>=y(); End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     ArchiveParser.parser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
@@ -730,7 +731,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "add () to functions in properties" in {
     val input = "ArchiveEntry \"Test\" Definitions Real b; Real y() = 3+b; Bool inv() <-> x>=y(); End. ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+b;}*@invariant(inv())]x>=0 End. End."
     val listener = mock[(Program,Formula) => Unit]
-    (listener.apply _).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once
+    (listener.apply _).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     val entry = ArchiveParser.parser(input).loneElement
     inside (entry.defs.decls(Name("inv", None))) {
@@ -792,7 +793,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "populate easy ODE annotations" in {
     val input = "x>=2 -> [{x'=1}@invariant(x>=1)]x>=0"
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once
+    (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     Parser(input)
   }
@@ -800,7 +801,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "populate ODE annotations with old(.)" in {
     val input = "x>=2 -> [{x'=1}@invariant(x>=old(x))]x>=0"
     val listener = mock[(Program, Formula) => Unit]
-    (listener.apply _).expects("{x'=1}".asProgram, "x>=old(x)".asFormula).once
+    (listener.apply _).expects("{x'=1}".asProgram, "x>=old(x)".asFormula).once()
     Parser.parser.setAnnotationListener(listener)
     Parser(input)
   }
@@ -809,8 +810,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     val input = "x>=3 -> [{x'=1}@invariant(x>=2, x>=1)]x>=0"
     val listener = mock[(Program, Formula) => Unit]
     inSequence {
-      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once
-      (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once
+      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once()
+      (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once()
     }
     Parser.parser.setAnnotationListener(listener)
     Parser(input)
@@ -820,7 +821,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     val input = "x>=3 -> [x:=2; ++ x:=3; {x'=1}@invariant(x>=2)]x>=0"
     val listener = mock[(Program, Formula) => Unit]
     inSequence {
-      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once
+      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once()
     }
     Parser.parser.setAnnotationListener(listener)
     Parser(input)
@@ -830,7 +831,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     val input = "x=0 -> <{x:=x+1;}*@variant(\\exists i i+x>=5)>x>=5"
     val listener = mock[(Program, Formula) => Unit]
     inSequence {
-      (listener.apply _).expects("{x:=x+1;}*".asProgram, "\\exists i i+x>=5".asFormula).once
+      (listener.apply _).expects("{x:=x+1;}*".asProgram, "\\exists i i+x>=5".asFormula).once()
     }
     Parser.parser.setAnnotationListener(listener)
     Parser(input)

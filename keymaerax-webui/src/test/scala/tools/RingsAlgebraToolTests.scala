@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package tools
 
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
@@ -65,7 +70,7 @@ class RingsAlgebraToolTests extends TacticTestBase  {
     val ringsLieDerivative = R.lieDerivative(odemap.mapValues(R.toRing).get)(t)
     val lieDerivative = DifferentialHelper.lieDerivative("{x'=-y,y'=-x^2,z'=14*x*y*z}".asDifferentialProgram, t)
     val res = proveBy(Equal(R.fromRing(ringsLieDerivative), lieDerivative), TactixLibrary.QE)
-    res shouldBe 'proved
+    res shouldBe Symbol("proved")
   }
 
   it should "compute Horner form" in {

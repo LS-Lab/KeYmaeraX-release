@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -68,7 +68,7 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
   lazy val proveOrRefuteAbs: BelleExpr = anon ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
     if (symbols.contains(InterpretedSymbols.absF)) exhaustiveAbsSplit & OnAll(
-      (SaturateTactic(hideR('R)) & expandAllDefs(Nil) & ToolTactics.assertNoCex & SimplifierV3.fullSimplify & QE & done)
+      (SaturateTactic(hideR(Symbol("R"))) & expandAllDefs(Nil) & ToolTactics.assertNoCex & SimplifierV3.fullSimplify & QE & done)
       | speculativeQENoAbs)
     else throw new TacticInapplicableFailure("Sequent does not contain abs")
   })
@@ -105,10 +105,10 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
     val absTactic = (anteAbs++succAbs).
       //@note p+inExpr navigates to sub-expression since p are top
       map({ case (f,p) => (f, absPos(f).sortBy(_.pos.length).reverse.map(inExpr => p ++ inExpr)) }).
-      map({ case (_,p) => p.map(pos => OnAll(abs(pos) & orL('Llast))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip) }).
+      map({ case (_,p) => p.map(pos => OnAll(abs(pos) & orL(Symbol("Llast")))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip) }).
         reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
 
-    absTactic & OnAll(SaturateTactic(andL('_))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)))
+    absTactic & OnAll(SaturateTactic(andL(Symbol("_")))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))))
   })
 
   /** Hides formulas with non-matching bounds. */

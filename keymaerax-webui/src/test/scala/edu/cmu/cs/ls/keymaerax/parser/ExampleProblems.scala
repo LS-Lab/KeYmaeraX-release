@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
@@ -382,7 +383,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      argNames shouldBe 'empty
+      argNames shouldBe Symbol("empty")
       interpretation.value shouldBe "x:=*; ?x<=5; ++ x:=y;".asProgram
     }
     entry.model shouldBe "y<=5 -> [a{|^@|};]x<=5".asFormula
@@ -414,7 +415,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      argNames shouldBe 'empty
+      argNames shouldBe Symbol("empty")
       interpretation.value shouldBe "x:=*; ?p(x,5); ++ x:=f(y);".asProgram
     }
     entry.model shouldBe "y<=5 -> [a{|^@|};]x<=5".asFormula
@@ -447,13 +448,13 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      argNames shouldBe 'empty
+      argNames shouldBe Symbol("empty")
       interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
     entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      argNames shouldBe 'empty
+      argNames shouldBe Symbol("empty")
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
     entry.annotations should contain theSameElementsInOrderAs List(("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula))
@@ -488,13 +489,13 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      argNames shouldBe 'empty
+      argNames shouldBe Symbol("empty")
       interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
     entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      argNames shouldBe 'empty
+      argNames shouldBe Symbol("empty")
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
     entry.annotations should contain theSameElementsInOrderAs List(("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula))

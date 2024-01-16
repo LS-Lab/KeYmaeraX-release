@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
@@ -33,9 +38,9 @@ class SimplifierV3Tests extends TacticTestBase {
   }
 
   it should "simplify propositional" in withTactics {
-    proveBy("!p(), !q(), r()&p() | r()&q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
-    proveBy("r()&p() | r()&q(), !p(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
-    proveBy("!p(), r()&p() | r()&q(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe 'proved
+    proveBy("!p(), !q(), r()&p() | r()&q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe Symbol("proved")
+    proveBy("r()&p() | r()&q(), !p(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe Symbol("proved")
+    proveBy("!p(), r()&p() | r()&q(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe Symbol("proved")
   }
 
   it should "do beautification simplification" in withMathematica { _ =>
@@ -134,7 +139,7 @@ class SimplifierV3Tests extends TacticTestBase {
     val fml = "\\exists y (y = 0 -> y-x = 0)".asFormula
     val ctxt = IndexedSeq("x=0".asFormula)
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), SimplifierV3.simpTac(List(custom1))(1) & TactixLibrary.close)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "handle modalities (poorly) " in withMathematica { _ =>
@@ -364,7 +369,7 @@ class SimplifierV3Tests extends TacticTestBase {
   }
 
   it should "FEATURE_REQUEST: consider remaining succedent when simplifying a formula in the succedent" taggedAs TodoTest in withMathematica { _ =>
-    proveBy("x=1 ==> x=1 & y=2, y!=2".asSequent, simplifyAllCtx(1)) shouldBe 'proved
+    proveBy("x=1 ==> x=1 & y=2, y!=2".asSequent, simplifyAllCtx(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: find contradictions hidden in double negations" taggedAs TodoTest in withMathematica { _ =>

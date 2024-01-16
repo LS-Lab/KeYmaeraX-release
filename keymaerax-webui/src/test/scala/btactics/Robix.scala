@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -48,26 +49,26 @@ class Robix extends TacticTestBase {
       s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
       s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula :: Nil)
 
-    val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+    val dw: BelleExpr = SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = SaturateTactic(alphaRule) & printIndexed("Before replaceTransform") &
-      replaceTransform("ep()".asTerm, "t".asTerm)('Llike, "abs(x-xo)>v^2/(2*B()) + (A()/B()+1)*(A()/2*ep()^2+ep()*v)".asFormula) &
+      replaceTransform("ep()".asTerm, "t".asTerm)(Symbol("Llike"), "abs(x-xo)>v^2/(2*B()) + (A()/B()+1)*(A()/2*ep()^2+ep()*v)".asFormula) &
       printIndexed("After replaceTransform") & speculativeQE & print("Proved acc arithmetic")
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") <(
       print("Braking branch") & di("-B()")(1) & dw & prop & onAll(speculativeQE) & print("Braking branch done"),
       print("Stopped branch") & di("0")(1) & dw & prop & onAll(speculativeQE) & print("Stopped branch done"),
-      print("Acceleration branch") & hideL('L, "abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())".asFormula) &
+      print("Acceleration branch") & hideL(Symbol("L"), "abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())".asFormula) &
         di("a")(1) & dw & prop <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch done")
       ) & print("Induction step done")
       ) & print("Proof done")
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "be provable with only braking for a stationary obstacle" in withMathematica { _ =>
@@ -90,16 +91,16 @@ class Robix extends TacticTestBase {
       s"-(t-t_0) * (v - $a/2*(t-t_0)) <= x - old(x) & x - old(x) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula ::
       s"-(t-t_0) * (v - $a/2*(t-t_0)) <= y - old(y) & y - old(y) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula :: Nil)
 
-    val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+    val dw: BelleExpr = SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") &
       print("Braking") & augmentTime & di("-B()")(1) & dw & prop & onAll(speculativeQE) &
       print("Induction step done")
     ) & print("Proof done")
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "synthesize a controller monitor" in withMathematica { tool =>
@@ -133,8 +134,8 @@ class Robix extends TacticTestBase {
   it should "prove just the acceleration x arithmetic" in withMathematica { qeTool =>
     val accArith = "A()>=0, B()>0, V()>=0, ep()>0, -B()<=a, a<=A(), r!=0, abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V())), v_0>=0, r_0!=0, -t*V()<=xo-xo_0, xo-xo_0<=t*V(), -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), v=v_0+a*t, dx^2+dy^2=1, t>=0, t<=ep(), v>=0 ==> v=0, abs(x-xo)>v^2/(2*B())+V()*(v/B())".asSequent
 
-    val tactic = replaceTransform("ep()".asTerm, "t".asTerm)('L, "abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) &
-      hideR('R, "v=0".asFormula) & hideL('L, "t<=ep()".asFormula) & hideL('L, "ep()>0".asFormula) & hideL('L, "-B()<=a".asFormula) & speculativeQE & done
+    val tactic = replaceTransform("ep()".asTerm, "t".asTerm)(Symbol("L"), "abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) &
+      hideR(Symbol("R"), "v=0".asFormula) & hideL(Symbol("L"), "t<=ep()".asFormula) & hideL(Symbol("L"), "ep()>0".asFormula) & hideL(Symbol("L"), "-B()<=a".asFormula) & speculativeQE & done
 //@note manual variant of speculativeQE above
 //      abs(1, 0::Nil) & abs(-7, 0::Nil) & orL(-16) & onAll(orL(-15) partial) &
 //      onAll((andL('_)*) partial) & onAll((exhaustiveEqL2R(hide=true)('L)*) partial) <(
@@ -144,15 +145,15 @@ class Robix extends TacticTestBase {
 //        hideL(-10, "-t*(v_0+a*t-a/2*t)<=x-x_0".asFormula) & hideL(-9, "xo-xo_0<=t*V()".asFormula) & QE
 //        )
 
-    proveBy(accArith, tactic) shouldBe 'proved
+    proveBy(accArith, tactic) shouldBe Symbol("proved")
   }
 
   it should "prove just the acceleration y arithmetic" in withMathematica { _ =>
     val accArith = "A()>=0, B()>0, V()>=0, ep()>0, -B()<=a, a<=A(), r!=0, abs(y_0-yo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V())), v_0>=0, r_0!=0, -t*V()<=yo-yo_0, yo-yo_0<=t*V(), -t*(v-a/2*t)<=y-y_0, y-y_0<=t*(v-a/2*t), v=v_0+a*t, dx^2+dy^2=1, t>=0, t<=ep(), v>=0 ==> v=0, abs(y-yo)>v^2/(2*B())+V()*(v/B())".asSequent
 
     val tactic = SaturateTactic(alphaRule) &
-      replaceTransform("ep()".asTerm, "t".asTerm)('L, "abs(y_0-yo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) &
-      hideR('R, "v=0".asFormula) & hideL('L, "t<=ep()".asFormula) & hideL('L, "ep()>0".asFormula) & hideL('L, "-B()<=a".asFormula) & speculativeQE & done
+      replaceTransform("ep()".asTerm, "t".asTerm)(Symbol("L"), "abs(y_0-yo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) &
+      hideR(Symbol("R"), "v=0".asFormula) & hideL(Symbol("L"), "t<=ep()".asFormula) & hideL(Symbol("L"), "ep()>0".asFormula) & hideL(Symbol("L"), "-B()<=a".asFormula) & speculativeQE & done
 //@note manual variant of speculativeQE above
 //      abs(1, 0::Nil) & abs(-7, 0::Nil) & orL(-16) & onAll(orL(-15) partial) &
 //      onAll((andL('_)*) partial) & onAll((exhaustiveEqL2R(hide=true)('L)*) partial) <(
@@ -162,7 +163,7 @@ class Robix extends TacticTestBase {
 //        hideL(-10, "-t*(v_0+a*t-a/2*t)<=y-y_0".asFormula) & hideL(-9, "yo-yo_0<=t*V()".asFormula) & QE
 //        )
 
-    proveBy(accArith, tactic) shouldBe 'proved
+    proveBy(accArith, tactic) shouldBe Symbol("proved")
   }
 
   "Passive Safety straight and curve" should "be provable" in withMathematica { _ =>
@@ -183,39 +184,39 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
-    val dw: BelleExpr = SaturateTactic(andL('_)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+    val dw: BelleExpr = SaturateTactic(andL(Symbol("_"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     val hideIrrelevantAssumptions: BelleExpr =
       onAll(
-        hideL('L, "dx^2+dy^2=1".asFormula) &
-        hideL('L, "r!=0".asFormula) &
-        hideL('L, "dxo^2+dyo^2<=V()^2".asFormula))
+        hideL(Symbol("L"), "dx^2+dy^2=1".asFormula) &
+        hideL(Symbol("L"), "r!=0".asFormula) &
+        hideL(Symbol("L"), "dxo^2+dyo^2<=V()^2".asFormula))
 
     val brakeStoppedArith: BelleExpr =
       hideIrrelevantAssumptions <(
-        hideR('R, "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE,
-        hideR('R, "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE,
-        hideR('R, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE)
+        hideR(Symbol("R"), "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE,
+        hideR(Symbol("R"), "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE,
+        hideR(Symbol("R"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE)
 
-    def accArithTactic(fml: Formula): BelleExpr = implyR(1) & SaturateTactic(andL('L)) & cutL(fml)(AntePos(4)) <(
-      hideL('L, "t<=ep()".asFormula) & hideL('L, "ep()>0".asFormula) & hideL('L, "-B()<=a".asFormula) & speculativeQE & done
+    def accArithTactic(fml: Formula): BelleExpr = implyR(1) & SaturateTactic(andL(Symbol("L"))) & cutL(fml)(AntePos(4)) <(
+      hideL(Symbol("L"), "t<=ep()".asFormula) & hideL(Symbol("L"), "ep()>0".asFormula) & hideL(Symbol("L"), "-B()<=a".asFormula) & speculativeQE & done
       ,
-      hideR('Rlike, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) &
+      hideR(Symbol("Rlike"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) &
       //@note abbreviate and hide terms over x and xo so that speculativeQE can find lots of formulas to hide
-      EqualityTactics.abbrv("abs(x_0-xo_0)".asTerm, Some("absXXo".asVariable)) & hideL('Llast) &
+      EqualityTactics.abbrv("abs(x_0-xo_0)".asTerm, Some("absXXo".asVariable)) & hideL(Symbol("Llast")) &
         printIndexed("hidden") &
       speculativeQE & done
       ) & print("Proved acc arithmetic: " + fml)
 
     val accArithX = "A()>=0&B()>0&V()>=0&ep()>0&abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V()))&v_0>=0&-B()<=a&a<=A()&-t*V()<=xo-xo_0&xo-xo_0<=t*V()&-t*(v-a/2*t)<=x-x_0&x-x_0<=t*(v-a/2*t)&v=v_0+a*t&t>=0&t<=ep()&v>=0->abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula
     val accArithXLemma = proveBy(accArithX, accArithTactic("abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula))
-    accArithXLemma shouldBe 'proved
+    accArithXLemma shouldBe Symbol("proved")
 
     val accArithY = "A()>=0&B()>0&V()>=0&ep()>0&abs(y_0-yo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v_0+V()))&v_0>=0&-B()<=a&a<=A()&-t*V()<=yo-yo_0&yo-yo_0<=t*V()&-t*(v-a/2*t)<=y-y_0&y-y_0<=t*(v-a/2*t)&v=v_0+a*t&t>=0&t<=ep()&v>=0->abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula
     val accArithYLemma = proveBy(accArithY, accArithTactic("abs(y_0-yo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula))
-    accArithYLemma shouldBe 'proved
+    accArithYLemma shouldBe Symbol("proved")
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ QE & print("Base case done"),
       /* use case */ QE & print("Use case done"),
       /* induction step */ chase(1) & allR(1)*2 & implyR(1) & andR(1) <(
@@ -225,71 +226,71 @@ class Robix extends TacticTestBase {
           ),
         print("Free drive branch") & andR(1) <(
           (implyR(1) & allR(1))*2 & implyR(1) & andR(1) <(
-            implyR(1) & SaturateTactic(andL('L)) & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & di("0")(1) & dw & prop
-              & hideIrrelevantAssumptions & hideR('R, "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE & print("Free drive branch 1 done"),
-            implyR(1) & SaturateTactic(andL('L)) & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & di("-B()")(1) & dw & prop
-              & hideIrrelevantAssumptions & hideR('R, "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE & print("Free drive branch 2 done")
+            implyR(1) & SaturateTactic(andL(Symbol("L"))) & hideL(Symbol("L"), "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & di("0")(1) & dw & prop
+              & hideIrrelevantAssumptions & hideR(Symbol("R"), "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE & print("Free drive branch 1 done"),
+            implyR(1) & SaturateTactic(andL(Symbol("L"))) & hideL(Symbol("L"), "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & di("-B()")(1) & dw & prop
+              & hideIrrelevantAssumptions & hideR(Symbol("R"), "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & QE & print("Free drive branch 2 done")
             ),
             allR (1) & implyR(1) & andR(1) <(
               allR(1) & implyR(1) & allR(1)*2 & implyR(1) & allR(1) & implyR(1) & andR(1) <(
-                implyR(1) & SaturateTactic(andL('L)) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) & di("a")(1) & dw & prop
+                implyR(1) & SaturateTactic(andL(Symbol("L"))) & hideL(Symbol("L"), "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
-                    hideR('R, "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "v=0".asFormula)
-                      & hideL('L, "dx^2+dy^2=1".asFormula)
-                      & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
-                      & hideL('L, "yo-yo_0<=t*V()".asFormula) & hideL('L, "-t*V()<=yo-yo_0".asFormula)
-                      & hideL('L, "w=0".asFormula) & hideL('L, "w=0".asFormula) & print("Free drive branch 3 lemma prep")
-                      & cut(accArithXLemma.conclusion.succ.head) <(prop, cohide('Rlast) & by(accArithXLemma))
+                    hideR(Symbol("R"), "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "v=0".asFormula)
+                      & hideL(Symbol("L"), "dx^2+dy^2=1".asFormula)
+                      & hideL(Symbol("L"), "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v-a/2*t)<=y-y_0".asFormula)
+                      & hideL(Symbol("L"), "yo-yo_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=yo-yo_0".asFormula)
+                      & hideL(Symbol("L"), "w=0".asFormula) & hideL(Symbol("L"), "w=0".asFormula) & print("Free drive branch 3 lemma prep")
+                      & cut(accArithXLemma.conclusion.succ.head) <(prop, cohide(Symbol("Rlast")) & by(accArithXLemma))
                       & print("Free drive branch 3 done"),
-                    hideR('R, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "v=0".asFormula)
-                      & hideL('L, "dx^2+dy^2=1".asFormula)
-                      & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
-                      & hideL('L, "xo-xo_0<=t*V()".asFormula) & hideL('L, "-t*V()<=xo-xo_0".asFormula)
-                      & hideL('L, "w=0".asFormula) & hideL('L, "w=0".asFormula) & print("Free drive branch 4 lemma prep")
-                      & cut(accArithYLemma.conclusion.succ.head) <(prop, cohide('Rlast) & by(accArithYLemma))
+                    hideR(Symbol("R"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "v=0".asFormula)
+                      & hideL(Symbol("L"), "dx^2+dy^2=1".asFormula)
+                      & hideL(Symbol("L"), "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v-a/2*t)<=x-x_0".asFormula)
+                      & hideL(Symbol("L"), "xo-xo_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=xo-xo_0".asFormula)
+                      & hideL(Symbol("L"), "w=0".asFormula) & hideL(Symbol("L"), "w=0".asFormula) & print("Free drive branch 4 lemma prep")
+                      & cut(accArithYLemma.conclusion.succ.head) <(prop, cohide(Symbol("Rlast")) & by(accArithYLemma))
                       & print("Free drive branch 4 done")
                   ),
-                implyR(1) & SaturateTactic(andL('_)) & cutL("!w=0".asFormula)(AntePos(8)) <(
-                    notL('L, "!w=0".asFormula) & id  & print("Free drive branch 5 done"),
-                    hideR('R, "[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,xo'=dxo,yo'=dyo,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())))".asFormula)
+                implyR(1) & SaturateTactic(andL(Symbol("_"))) & cutL("!w=0".asFormula)(AntePos(8)) <(
+                    notL(Symbol("L"), "!w=0".asFormula) & id  & print("Free drive branch 5 done"),
+                    hideR(Symbol("R"), "[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,xo'=dxo,yo'=dyo,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())))".asFormula)
                       & QE & print("Free drive branch 6 done")
                   )
                 ),
               (allR(1) & implyR(1))*2 & allR(1)*2 & implyR(1) & allR(1) & implyR(1) & andR(1) <(
-                implyR('R) & SaturateTactic(andL('L)) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) & di("a")(1) & dw & prop
+                implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & hideL(Symbol("L"), "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
-                    hideR('R, "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "v=0".asFormula)
-                      & hideL('L, "dx^2+dy^2=1".asFormula)
-                      & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
-                      & hideL('L, "yo-yo_0<=t*V()".asFormula) & hideL('L, "-t*V()<=yo-yo_0".asFormula)
-                      & hideL('L, "r_0!=0".asFormula) & hideL('L, "w=0".asFormula) & hideL('L, "w*r=v_0".asFormula)
+                    hideR(Symbol("R"), "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "v=0".asFormula)
+                      & hideL(Symbol("L"), "dx^2+dy^2=1".asFormula)
+                      & hideL(Symbol("L"), "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v-a/2*t)<=y-y_0".asFormula)
+                      & hideL(Symbol("L"), "yo-yo_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=yo-yo_0".asFormula)
+                      & hideL(Symbol("L"), "r_0!=0".asFormula) & hideL(Symbol("L"), "w=0".asFormula) & hideL(Symbol("L"), "w*r=v_0".asFormula)
                       & print("Free drive branch 7 lemma prep")
-                      & cut(accArithXLemma.conclusion.succ.head) <(prop, cohide('Rlast) & by(accArithXLemma))
+                      & cut(accArithXLemma.conclusion.succ.head) <(prop, cohide(Symbol("Rlast")) & by(accArithXLemma))
                       & print("Free drive branch 7 done"),
-                    hideR('R, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "v=0".asFormula)
-                      & hideL('L, "dx^2+dy^2=1".asFormula)
-                      & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
-                      & hideL('L, "xo-xo_0<=t*V()".asFormula) & hideL('L, "-t*V()<=xo-xo_0".asFormula)
-                      & hideL('L, "r_0!=0".asFormula) & hideL('L, "w=0".asFormula) & hideL('L, "w*r=v_0".asFormula)
+                    hideR(Symbol("R"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "v=0".asFormula)
+                      & hideL(Symbol("L"), "dx^2+dy^2=1".asFormula)
+                      & hideL(Symbol("L"), "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v-a/2*t)<=x-x_0".asFormula)
+                      & hideL(Symbol("L"), "xo-xo_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=xo-xo_0".asFormula)
+                      & hideL(Symbol("L"), "r_0!=0".asFormula) & hideL(Symbol("L"), "w=0".asFormula) & hideL(Symbol("L"), "w*r=v_0".asFormula)
                       & print("Free drive branch 8 lemma prep")
-                      & cut(accArithYLemma.conclusion.succ.head) <(prop, cohide('Rlast) & by(accArithYLemma))
+                      & cut(accArithYLemma.conclusion.succ.head) <(prop, cohide(Symbol("Rlast")) & by(accArithYLemma))
                       & print("Free drive branch 8 done")
                   ),
-                implyR('R) & SaturateTactic(andL('L)) & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) & di("a")(1) & dw & prop
+                implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & hideL(Symbol("L"), "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) & di("a")(1) & dw & prop
                   & hideIrrelevantAssumptions <(
-                    hideR('R, "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "v=0".asFormula)
-                      & hideL('L, "y-y_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=y-y_0".asFormula)
-                      & hideL('L, "yo-yo_0<=t*V()".asFormula) & hideL('L, "-t*V()<=yo-yo_0".asFormula)
-                      & hideL('L, "r_0!=0".asFormula)
+                    hideR(Symbol("R"), "abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "v=0".asFormula)
+                      & hideL(Symbol("L"), "y-y_0<=t*(v-a/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v-a/2*t)<=y-y_0".asFormula)
+                      & hideL(Symbol("L"), "yo-yo_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=yo-yo_0".asFormula)
+                      & hideL(Symbol("L"), "r_0!=0".asFormula)
                       & print("Free drive branch 9 lemma prep")
-                      & cut(accArithXLemma.conclusion.succ.head) <(prop, cohide('Rlast) & by(accArithXLemma))
+                      & cut(accArithXLemma.conclusion.succ.head) <(prop, cohide(Symbol("Rlast")) & by(accArithXLemma))
                       & print("Free drive branch 9 done"),
-                    hideR('R, "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR('R, "v=0".asFormula)
-                      & hideL('L, "x-x_0<=t*(v-a/2*t)".asFormula) & hideL('L, "-t*(v-a/2*t)<=x-x_0".asFormula)
-                      & hideL('L, "xo-xo_0<=t*V()".asFormula) & hideL('L, "-t*V()<=xo-xo_0".asFormula)
-                      & hideL('L, "r_0!=0".asFormula)
+                    hideR(Symbol("R"), "abs(x-xo)>v^2/(2*B())+V()*(v/B())".asFormula) & hideR(Symbol("R"), "v=0".asFormula)
+                      & hideL(Symbol("L"), "x-x_0<=t*(v-a/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v-a/2*t)<=x-x_0".asFormula)
+                      & hideL(Symbol("L"), "xo-xo_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=xo-xo_0".asFormula)
+                      & hideL(Symbol("L"), "r_0!=0".asFormula)
                       & print("Free drive branch 10 lemma prep")
-                      & cut(accArithYLemma.conclusion.succ.head) <(prop, cohide('Rlast) & by(accArithYLemma))
+                      & cut(accArithYLemma.conclusion.succ.head) <(prop, cohide(Symbol("Rlast")) & by(accArithYLemma))
                       & print("Free drive branch 10 done")
                   )
                 )
@@ -298,7 +299,7 @@ class Robix extends TacticTestBase {
         ) & print("Induction step done")
       ) & print("Proof done")
 
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Passive Safety straight and curve using curvature" should "be provable" in withMathematica { _ =>
@@ -319,26 +320,26 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
     
-    val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+    val dw: BelleExpr = SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = SaturateTactic(alphaRule) & printIndexed("Before transform") &
       //@todo auto-transform
-      replaceTransform("ep()".asTerm, "t".asTerm)('Llike, "abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))".asFormula) & speculativeQE & printIndexed("After transform") & print("Proved acc arithmetic")
+      replaceTransform("ep()".asTerm, "t".asTerm)(Symbol("Llike"), "abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))".asFormula) & speculativeQE & printIndexed("After transform") & print("Proved acc arithmetic")
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") <(
       print("Braking branch") & di("-B()")(1) & dw & prop & onAll(speculativeQE) & print("Braking branch done"),
       print("Stopped branch") & di("0")(1) & dw & prop & onAll(speculativeQE) & print("Stopped branch done"),
-      print("Acceleration branch") & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) &
+      print("Acceleration branch") & hideL(Symbol("L"), "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) &
         di("a")(1) & dw & prop & onAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch done")
       ) & print("Induction step done")
       ) & print("Proof done")
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Passive Safety straight and curve using curvature with additional braking branch" should "be provable" in withMathematica { _ =>
@@ -359,42 +360,42 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
-    val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+    val dw: BelleExpr = SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = SaturateTactic(alphaRule) &
       //@todo auto-transform
-      replaceTransform("ep()".asTerm, "t".asTerm)('Llike, "abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))".asFormula) & speculativeQE & print("Proved acc arithmetic")
+      replaceTransform("ep()".asTerm, "t".asTerm)(Symbol("Llike"), "abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))".asFormula) & speculativeQE & print("Proved acc arithmetic")
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") <(
       print("Braking branch") & di("-B()")(1) & dw & prop & onAll(speculativeQE) & print("Braking branch done"),
-      print("Light braking branch") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
+      print("Light braking branch") & hideL(Symbol("L"), "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
         di("-B()/2")(1) & dw & prop & onAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0")) <(
         hideFactsAbout("y", "yo") & speculativeQE,
         hideFactsAbout("x", "xo") & speculativeQE
         ) & print("Light braking branch done"),
       print("Stopped branch") & di("0")(1) & dw & prop & onAll(speculativeQE) & print("Stopped branch done"),
-      print("Acceleration branch") & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) &
+      print("Acceleration branch") & hideL(Symbol("L"), "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) &
         di("a")(1) & dw & prop & onAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch done")
       ) & print("Induction step done")
       ) & print("Proof done")
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   def passiveOrientationDI(a: String): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val diHide = a match {
       case "-b()" =>
-        hideL('Llike, "v=0|abs(beta)+v^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x-ox)>v^2/(2*b())+V()*(v/b())|abs(y-oy)>v^2/(2*b())+V()*(v/b()))".asFormula)
+        hideL(Symbol("Llike"), "v=0|abs(beta)+v^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x-ox)>v^2/(2*b())+V()*(v/b())|abs(y-oy)>v^2/(2*b())+V()*(v/b()))".asFormula)
       case "0" => nil
       case "A()" =>
-        hideL('Llike, "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r_0)) < gamma()&(isVisible_0 < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) &
-        hideL('Llike, "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) &
-        hideL('Llike, "v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < gamma()*abs(r)".asFormula)
+        hideL(Symbol("Llike"), "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r_0)) < gamma()&(isVisible_0 < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) &
+        hideL(Symbol("Llike"), "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) &
+        hideL(Symbol("Llike"), "v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < gamma()*abs(r)".asFormula)
     }
 
     val formulas = ("t>=0" :: "dx^2 + dy^2 = 1" :: s"v = old(v) + $a*t" ::
@@ -420,45 +421,45 @@ class Robix extends TacticTestBase {
         |          & (isVisible < 0 | abs(x-ox) > v^2/(2*b()) + V()*(v/b()) | abs(y-oy) > v^2/(2*b()) + V()*(v/b()))))
       """.stripMargin.asFormula
 
-    val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+    val dw: BelleExpr = SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
-    val allImplyTactic = SaturateTactic(SaturateTactic(allR('R)) & implyR('R))
+    val allImplyTactic = SaturateTactic(SaturateTactic(allR(Symbol("R"))) & implyR(Symbol("R")))
 
-    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ QE & print("Base case done"),
       /* use case */ QE & print("Use case done"),
-      /* step */ SaturateTactic(andL('L)) & chase('R) & allR('R)*2 & implyR('R) & andR('R) <(
-        print("Braking") & allImplyTactic & passiveOrientationDI("-b()")('R) & dw & SaturateTactic(alphaRule) & print("After alpha braking") &
-          (andR('R) <(id, skip))*3 & orR('R) & DebuggingTactics.print("Braking arithmetic") & passiveOrientationBrakingArithTactic & print("Braking branch done"),
-        andR('R) <(
-          print("Stopped") & allImplyTactic & passiveOrientationDI("0")('R) & dw & SaturateTactic(alphaRule) & print("After alpha stopped") &
-            (andR('R) <(id, skip))*3 & orR('R) & DebuggingTactics.print("Stopped arithmetic") & passiveOrientationStoppedArithTactic & print("Stopped branch done"),
-          print("Accelerating") & allImplyTactic & passiveOrientationDI("A()")('R) & dw & SaturateTactic(alphaRule) & print("After alpha accelerating") &
-            (andR('R) <(id, skip))*3 & orR('R) & DebuggingTactics.print("Acc arithmetic") & passiveOrientationAccArithTactic & print("Acc branch done")
+      /* step */ SaturateTactic(andL(Symbol("L"))) & chase(Symbol("R")) & allR(Symbol("R"))*2 & implyR(Symbol("R")) & andR(Symbol("R")) <(
+        print("Braking") & allImplyTactic & passiveOrientationDI("-b()")(Symbol("R")) & dw & SaturateTactic(alphaRule) & print("After alpha braking") &
+          (andR(Symbol("R")) <(id, skip))*3 & orR(Symbol("R")) & DebuggingTactics.print("Braking arithmetic") & passiveOrientationBrakingArithTactic & print("Braking branch done"),
+        andR(Symbol("R")) <(
+          print("Stopped") & allImplyTactic & passiveOrientationDI("0")(Symbol("R")) & dw & SaturateTactic(alphaRule) & print("After alpha stopped") &
+            (andR(Symbol("R")) <(id, skip))*3 & orR(Symbol("R")) & DebuggingTactics.print("Stopped arithmetic") & passiveOrientationStoppedArithTactic & print("Stopped branch done"),
+          print("Accelerating") & allImplyTactic & passiveOrientationDI("A()")(Symbol("R")) & dw & SaturateTactic(alphaRule) & print("After alpha accelerating") &
+            (andR(Symbol("R")) <(id, skip))*3 & orR(Symbol("R")) & DebuggingTactics.print("Acc arithmetic") & passiveOrientationAccArithTactic & print("Acc branch done")
           )
         )
       )
 
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   def passiveOrientationBrakingArithTactic: BelleExpr =
-    orL('L, "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) <(
+    orL(Symbol("L"), "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) <(
     hideR(2) & QE,
-    andL('L) & andR('R) <(
-      hideL('L, "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) & QE,
-      hideL('L, "abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()".asFormula) &
-        hideL('L, "beta=beta_0+t/r*(v--b()/2*t)".asFormula) &
-        SaturateTactic(orR('R)) &
-        orL('Llast, "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) <(
+    andL(Symbol("L")) & andR(Symbol("R")) <(
+      hideL(Symbol("L"), "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) & QE,
+      hideL(Symbol("L"), "abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()".asFormula) &
+        hideL(Symbol("L"), "beta=beta_0+t/r*(v--b()/2*t)".asFormula) &
+        SaturateTactic(orR(Symbol("R"))) &
+        orL(Symbol("Llast"), "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) <(
           id,
-          hideR('R, "isVisible < 0".asFormula) & hideR('R, "v=0".asFormula) & hideL('L, "t<=ep()".asFormula) &
-            hideL('L, "dx^2+dy^2=1".asFormula) & hideL('L, "w*r=v".asFormula) & hideL('L, "odx^2+ody^2<=V()^2".asFormula) &
-            hideL('L, "r!=0".asFormula) & hideL('L, "gamma()>0".asFormula) & hideL('L, "ep()>0".asFormula) &
-            orL('Llast, "abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) <(
-              hideR('R, "abs(y-oy)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL('L, "y-y_0<=t*(v--b()/2*t)".asFormula) & hideL('L, "-t*(v--b()/2*t)<=y-y_0".asFormula) & hideL('L, "oy-oy_0<=t*V()".asFormula) & hideL('L, "-t*V()<=oy-oy_0".asFormula) &
+          hideR(Symbol("R"), "isVisible < 0".asFormula) & hideR(Symbol("R"), "v=0".asFormula) & hideL(Symbol("L"), "t<=ep()".asFormula) &
+            hideL(Symbol("L"), "dx^2+dy^2=1".asFormula) & hideL(Symbol("L"), "w*r=v".asFormula) & hideL(Symbol("L"), "odx^2+ody^2<=V()^2".asFormula) &
+            hideL(Symbol("L"), "r!=0".asFormula) & hideL(Symbol("L"), "gamma()>0".asFormula) & hideL(Symbol("L"), "ep()>0".asFormula) &
+            orL(Symbol("Llast"), "abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) <(
+              hideR(Symbol("R"), "abs(y-oy)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL(Symbol("L"), "y-y_0<=t*(v--b()/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v--b()/2*t)<=y-y_0".asFormula) & hideL(Symbol("L"), "oy-oy_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=oy-oy_0".asFormula) &
                 QE,
-              hideR('R, "abs(x-ox)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL('L, "x-x_0<=t*(v--b()/2*t)".asFormula) & hideL('L, "-t*(v--b()/2*t)<=x-x_0".asFormula) & hideL('L, "ox-ox_0<=t*V()".asFormula) & hideL('L, "-t*V()<=ox-ox_0".asFormula) &
+              hideR(Symbol("R"), "abs(x-ox)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL(Symbol("L"), "x-x_0<=t*(v--b()/2*t)".asFormula) & hideL(Symbol("L"), "-t*(v--b()/2*t)<=x-x_0".asFormula) & hideL(Symbol("L"), "ox-ox_0<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=ox-ox_0".asFormula) &
                 QE
               )
           )
@@ -469,27 +470,27 @@ class Robix extends TacticTestBase {
     val s = """beta=beta_0+t/r*(v--b()/2*t), V()>=0, w*r=v, A()>=0, b()>0, -t*V()<=oy-oy_0, oy-oy_0<=t*V(), ep()>0, -t*V()<=ox-ox_0, ox-ox_0<=t*V(), gamma()>0, -t*(v--b()/2*t)<=y-y_0, y-y_0<=t*(v--b()/2*t), v_0>=0, v=v_0+-b()*t, -t*(v--b()/2*t)<=x-x_0, x-x_0<=t*(v--b()/2*t), r!=0, dx^2+dy^2=1, v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())), odx^2+ody^2<=V()^2, t>=0, t<=ep(), v>=0
                 |  ==>  v=0, abs(beta)+v^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x-ox)>v^2/(2*b())+V()*(v/b())|abs(y-oy)>v^2/(2*b())+V()*(v/b()))""".stripMargin.asSequent
 
-    proveBy(s, passiveOrientationBrakingArithTactic) shouldBe 'proved
+    proveBy(s, passiveOrientationBrakingArithTactic) shouldBe Symbol("proved")
   }
 
   def passiveOrientationStoppedArithTactic: BelleExpr =
-    orL('L, "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) <(
+    orL(Symbol("L"), "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) <(
       hideR(2) & QE,
-      andL('L) & andR('R) <(
+      andL(Symbol("L")) & andR(Symbol("R")) <(
         QE,
-        hideL('L, "abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()".asFormula) &
-          hideL('L, "beta=beta_0+t/r*(v-0/2*t)".asFormula) &
-          SaturateTactic(orR('R)) &
-          orL('Llast, "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) <(
+        hideL(Symbol("L"), "abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()".asFormula) &
+          hideL(Symbol("L"), "beta=beta_0+t/r*(v-0/2*t)".asFormula) &
+          SaturateTactic(orR(Symbol("R"))) &
+          orL(Symbol("Llast"), "isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())".asFormula) <(
             id,
-            hideR('R, "abs(y-oy)>v^2/(2*b())+V()*(v/b())".asFormula) & hideR('R, "abs(x-ox)>v^2/(2*b())+V()*(v/b())".asFormula) &
-              hideR('R, "isVisible < 0".asFormula) &
-              hideL('L, "t<=ep()".asFormula) & hideL('L, "w*r=v".asFormula) & hideL('L, "r!=0".asFormula) &
-              hideL('L, "gamma()>0".asFormula) & hideL('L, "ep()>0".asFormula) & hideL('L, "x-x_0<=t*(v-0/2*t)".asFormula) &
-              hideL('L, "-t*(v-0/2*t)<=x-x_0".asFormula) & hideL('L, "y-y_0<=t*(v-0/2*t)".asFormula) &
-              hideL('L, "-t*(v-0/2*t)<=y-y_0".asFormula) & hideL('L, "ox-ox_0<=t*V()".asFormula) &
-              hideL('L, "-t*V()<=ox-ox_0".asFormula) & hideL('L, "oy-oy_0<=t*V()".asFormula) &
-              hideL('L, "-t*V()<=oy-oy_0".asFormula) & QE
+            hideR(Symbol("R"), "abs(y-oy)>v^2/(2*b())+V()*(v/b())".asFormula) & hideR(Symbol("R"), "abs(x-ox)>v^2/(2*b())+V()*(v/b())".asFormula) &
+              hideR(Symbol("R"), "isVisible < 0".asFormula) &
+              hideL(Symbol("L"), "t<=ep()".asFormula) & hideL(Symbol("L"), "w*r=v".asFormula) & hideL(Symbol("L"), "r!=0".asFormula) &
+              hideL(Symbol("L"), "gamma()>0".asFormula) & hideL(Symbol("L"), "ep()>0".asFormula) & hideL(Symbol("L"), "x-x_0<=t*(v-0/2*t)".asFormula) &
+              hideL(Symbol("L"), "-t*(v-0/2*t)<=x-x_0".asFormula) & hideL(Symbol("L"), "y-y_0<=t*(v-0/2*t)".asFormula) &
+              hideL(Symbol("L"), "-t*(v-0/2*t)<=y-y_0".asFormula) & hideL(Symbol("L"), "ox-ox_0<=t*V()".asFormula) &
+              hideL(Symbol("L"), "-t*V()<=ox-ox_0".asFormula) & hideL(Symbol("L"), "oy-oy_0<=t*V()".asFormula) &
+              hideL(Symbol("L"), "-t*V()<=oy-oy_0".asFormula) & QE
             )
         )
       )
@@ -498,48 +499,48 @@ class Robix extends TacticTestBase {
     val fml = """V()>=0, A()>=0, b()>0, ep()>0, gamma()>0, v_0>=0, dx_0^2+dy_0^2=1, r!=0, v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b())), odx^2+ody^2<=V()^2, v_0=0, t_0=0, w_0*r=v_0, beta=beta_0+t/r*(v-0/2*t), w*r=v, -t*V()<=oy-oy_0, oy-oy_0<=t*V(), -t*V()<=ox-ox_0, ox-ox_0<=t*V(), -t*(v-0/2*t)<=y-y_0, y-y_0<=t*(v-0/2*t), v=v_0+0*t, -t*(v-0/2*t)<=x-x_0, x-x_0<=t*(v-0/2*t), dx^2+dy^2=1, t>=0, t<=ep(), v>=0
                 |  ==>  v=0, abs(beta)+v^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x-ox)>v^2/(2*b())+V()*(v/b())|abs(y-oy)>v^2/(2*b())+V()*(v/b()))""".stripMargin.asSequent
 
-    proveBy(fml, passiveOrientationStoppedArithTactic) shouldBe 'proved
+    proveBy(fml, passiveOrientationStoppedArithTactic) shouldBe Symbol("proved")
   }
 
   def passiveOrientationAccArithTactic: BelleExpr =
     printIndexed("Acc before hiding") &
-    hideL('L, "dx^2+dy^2=1".asFormula) & hideL('L, "w*r=v".asFormula) & hideL('L, "odx^2+ody^2<=V()^2".asFormula) &
-    hideL('L, "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r_0)) < gamma()&(isVisible_0 < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) &
-    hideL('L, "r_0!=0".asFormula) & hideR('R, "v=0".asFormula) & andR('R) <(
-      hideL('L, "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) & QE,
-      orR('R)*2 & orL('L, "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) <(
+    hideL(Symbol("L"), "dx^2+dy^2=1".asFormula) & hideL(Symbol("L"), "w*r=v".asFormula) & hideL(Symbol("L"), "odx^2+ody^2<=V()^2".asFormula) &
+    hideL(Symbol("L"), "v_0=0|abs(beta_0)+v_0^2/(2*b()*abs(r_0)) < gamma()&(isVisible_0 < 0|abs(x_0-ox_0)>v_0^2/(2*b())+V()*(v_0/b())|abs(y_0-oy_0)>v_0^2/(2*b())+V()*(v_0/b()))".asFormula) &
+    hideL(Symbol("L"), "r_0!=0".asFormula) & hideR(Symbol("R"), "v=0".asFormula) & andR(Symbol("R")) <(
+      hideL(Symbol("L"), "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) & QE,
+      orR(Symbol("R"))*2 & orL(Symbol("L"), "isVisible < 0|abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) <(
         id,
-        hideR('R, "isVisible < 0".asFormula) & hideL('L, "beta=beta_1+t/r*(v-A()/2*t)".asFormula) & hideL('L, "beta_1=0".asFormula) &
-          hideL('L, "v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < gamma()*abs(r)".asFormula) & hideL('L, "r!=0".asFormula) & hideL('L, "gamma()>0".asFormula) &
-          orL('L, "abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) <(
-            hideR('R, "abs(y-oy)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL('L, "y-y_0<=t*(v-A()/2*t)".asFormula) &
-              hideL('L, "-t*(v-A()/2*t)<=y-y_0".asFormula) & hideL('L, "oy-oy_1<=t*V()".asFormula) & hideL('L, "-t*V()<=oy-oy_1".asFormula) &
-              abs('R, "abs(x-ox)".asTerm) & abs('L, "abs(x_0-ox_1)".asTerm) &
-              orL('L, "x_0-ox_1>=0&abs_1=x_0-ox_1|x_0-ox_1 < 0&abs_1=-(x_0-ox_1)".asFormula) <(
-                andL('L) & hideL('L, "x-x_0<=t*(v-A()/2*t)".asFormula) & hideL('L, "-t*V()<=ox-ox_1".asFormula) &
-                orL('L, "x-ox>=0&abs_0=x-ox|x-ox < 0&abs_0=-(x-ox)".asFormula) <(QE, hideR(1) & QE)
+        hideR(Symbol("R"), "isVisible < 0".asFormula) & hideL(Symbol("L"), "beta=beta_1+t/r*(v-A()/2*t)".asFormula) & hideL(Symbol("L"), "beta_1=0".asFormula) &
+          hideL(Symbol("L"), "v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < gamma()*abs(r)".asFormula) & hideL(Symbol("L"), "r!=0".asFormula) & hideL(Symbol("L"), "gamma()>0".asFormula) &
+          orL(Symbol("L"), "abs(x_0-ox_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))|abs(y_0-oy_1)>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) <(
+            hideR(Symbol("R"), "abs(y-oy)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL(Symbol("L"), "y-y_0<=t*(v-A()/2*t)".asFormula) &
+              hideL(Symbol("L"), "-t*(v-A()/2*t)<=y-y_0".asFormula) & hideL(Symbol("L"), "oy-oy_1<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=oy-oy_1".asFormula) &
+              abs(Symbol("R"), "abs(x-ox)".asTerm) & abs(Symbol("L"), "abs(x_0-ox_1)".asTerm) &
+              orL(Symbol("L"), "x_0-ox_1>=0&abs_1=x_0-ox_1|x_0-ox_1 < 0&abs_1=-(x_0-ox_1)".asFormula) <(
+                andL(Symbol("L")) & hideL(Symbol("L"), "x-x_0<=t*(v-A()/2*t)".asFormula) & hideL(Symbol("L"), "-t*V()<=ox-ox_1".asFormula) &
+                orL(Symbol("L"), "x-ox>=0&abs_0=x-ox|x-ox < 0&abs_0=-(x-ox)".asFormula) <(QE, hideR(1) & QE)
                 ,
-                andL('L) & hideL('L, "-t*(v-A()/2*t)<=x-x_0".asFormula) & hideL('L, "ox-ox_1<=t*V()".asFormula) &
-                orL('L, "x-ox>=0&abs_0=x-ox|x-ox < 0&abs_0=-(x-ox)".asFormula) <(
+                andL(Symbol("L")) & hideL(Symbol("L"), "-t*(v-A()/2*t)<=x-x_0".asFormula) & hideL(Symbol("L"), "ox-ox_1<=t*V()".asFormula) &
+                orL(Symbol("L"), "x-ox>=0&abs_0=x-ox|x-ox < 0&abs_0=-(x-ox)".asFormula) <(
                   hideR(1) & QE,
                   cutL("abs_1>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula)(AntePos(5)) <(
-                    hideL('L, "t<=ep()".asFormula) & QE,
-                    hideR('R, "abs_0>v^2/(2*b())+V()*(v/b())".asFormula) & QE
+                    hideL(Symbol("L"), "t<=ep()".asFormula) & QE,
+                    hideR(Symbol("R"), "abs_0>v^2/(2*b())+V()*(v/b())".asFormula) & QE
                     )
                   )
 
               ),
-            hideR('R, "abs(x-ox)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL('L, "x-x_0<=t*(v-A()/2*t)".asFormula) &
-              hideL('L, "-t*(v-A()/2*t)<=x-x_0".asFormula) & hideL('L, "ox-ox_1<=t*V()".asFormula) & hideL('L, "-t*V()<=ox-ox_1".asFormula) &
-              abs('R, "abs(y-oy)".asTerm) & abs('L, "abs(y_0-oy_1)".asTerm) &
+            hideR(Symbol("R"), "abs(x-ox)>v^2/(2*b())+V()*(v/b())".asFormula) & hideL(Symbol("L"), "x-x_0<=t*(v-A()/2*t)".asFormula) &
+              hideL(Symbol("L"), "-t*(v-A()/2*t)<=x-x_0".asFormula) & hideL(Symbol("L"), "ox-ox_1<=t*V()".asFormula) & hideL(Symbol("L"), "-t*V()<=ox-ox_1".asFormula) &
+              abs(Symbol("R"), "abs(y-oy)".asTerm) & abs(Symbol("L"), "abs(y_0-oy_1)".asTerm) &
               cutL("abs_1>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula)(-14, "abs_1>v_0^2/(2*b())+V()*(v_0/b())+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))".asFormula) <(
-                hideL('L, "t<=ep()".asFormula) &
-                orL('L, "y_0-oy_1>=0&abs_1=y_0-oy_1|y_0-oy_1 < 0&abs_1=-(y_0-oy_1)".asFormula) <(
-                  andL('L) & hideL('L, "y-y_0<=t*(v-A()/2*t)".asFormula) & hideL('L, "-t*V()<=oy-oy_1".asFormula) &
-                  orL('L, "y-oy>=0&abs_0=y-oy|y-oy < 0&abs_0=-(y-oy)".asFormula) <(QE, hideR(1) & QE)
+                hideL(Symbol("L"), "t<=ep()".asFormula) &
+                orL(Symbol("L"), "y_0-oy_1>=0&abs_1=y_0-oy_1|y_0-oy_1 < 0&abs_1=-(y_0-oy_1)".asFormula) <(
+                  andL(Symbol("L")) & hideL(Symbol("L"), "y-y_0<=t*(v-A()/2*t)".asFormula) & hideL(Symbol("L"), "-t*V()<=oy-oy_1".asFormula) &
+                  orL(Symbol("L"), "y-oy>=0&abs_0=y-oy|y-oy < 0&abs_0=-(y-oy)".asFormula) <(QE, hideR(1) & QE)
                   ,
-                  andL('L) & hideL('L, "-t*(v-A()/2*t)<=y-y_0".asFormula) & hideL('L, "oy-oy_1<=t*V()".asFormula) &
-                  orL('L, "y-oy>=0&abs_0=y-oy|y-oy < 0&abs_0=-(y-oy)".asFormula) <(hideR(1) & QE, QE)
+                  andL(Symbol("L")) & hideL(Symbol("L"), "-t*(v-A()/2*t)<=y-y_0".asFormula) & hideL(Symbol("L"), "oy-oy_1<=t*V()".asFormula) &
+                  orL(Symbol("L"), "y-oy>=0&abs_0=y-oy|y-oy < 0&abs_0=-(y-oy)".asFormula) <(hideR(1) & QE, QE)
                 ),
                 hideR(1, "abs_0>v^2/(2*b())+V()*(v/b())".asFormula) & QE
               )
@@ -558,7 +559,7 @@ class Robix extends TacticTestBase {
 
     val tactic = passiveOrientationAccArithTactic
 
-    proveBy(fml, tactic) shouldBe 'proved
+    proveBy(fml, tactic) shouldBe Symbol("proved")
   }
 
   "Passive safety with curvature and uncertainty" should "prove" ignore withZ3 { _ =>
@@ -580,26 +581,26 @@ class Robix extends TacticTestBase {
       "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
       "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
-    val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
+    val dw: BelleExpr = SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
     def accArithTactic: BelleExpr = SaturateTactic(alphaRule) & printIndexed("Before replaceTransform") &
       //@todo auto-transform
-      replaceTransform("ep()".asTerm, "t".asTerm)('Llike, "abs(mx-mxo)>(mv+Dv())^2/(2*B()*Da())+V()*(mv+Dv())/(B()*Da())+Dpr()+Dpo()+(A()/(B()*Da())+1)*(A()/2*ep()^2+ep()*(mv+Dv()+V()))".asFormula) & prop & onAll(print("QE") & speculativeQE) & print("Proved acc arithmetic")
+      replaceTransform("ep()".asTerm, "t".asTerm)(Symbol("Llike"), "abs(mx-mxo)>(mv+Dv())^2/(2*B()*Da())+V()*(mv+Dv())/(B()*Da())+Dpr()+Dpo()+(A()/(B()*Da())+1)*(A()/2*ep()^2+ep()*(mv+Dv()+V()))".asFormula) & prop & onAll(print("QE") & speculativeQE) & print("Proved acc arithmetic")
 
-    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop(invariant)('R) <(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop(invariant)(Symbol("R")) <(
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") <(
       print("Braking branch") & di("-B()")(1) & dw & prop & onAll(print("QE") & speculativeQE) & print("Braking branch done"),
       print("Stopped branch") & di("0")(1) & dw & prop & onAll(print("QE") & speculativeQE) & print("Stopped branch done"),
-      print("Acceleration branch") & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*Da()*B())+V()*(v/(Da()*B()))|abs(y-yo_0)>v^2/(2*Da()*B())+V()*(v/(Da()*B()))".asFormula) &
+      print("Acceleration branch") & hideL(Symbol("L"), "v=0|abs(x-xo_0)>v^2/(2*Da()*B())+V()*(v/(Da()*B()))|abs(y-yo_0)>v^2/(2*Da()*B())+V()*(v/(Da()*B()))".asFormula) &
         di("a")(1) & dw & prop & onAll(hideFactsAbout("dxo", "dyo")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch done")
       ) & print("Induction step done")
       ) & print("Proof done")
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   "Reach goal before deadline expires" should "be provable" in withZ3 { _ =>
@@ -610,12 +611,12 @@ class Robix extends TacticTestBase {
                       |				& (xr <= xg - Delta() -> (vr >= A()*ep() & T > (xg - Delta() - xr)/(A()*ep()) + ep() + Vmax()/b()) /* travel + realize to stop + stopping */
                       |				                     | (vr <= A()*ep() & T > ep()-vr/A() + (xg - Delta() - xr)/(A()*ep()) + ep() + Vmax()/b())) /* acc. + travel + realize to stop + stopping */""".stripMargin.asFormula
 
-    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop(invariant)(1) & Idioms.<(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop(invariant)(1) & Idioms.<(
       print("Base case") & QE & done,
       print("Use case") & QE & done,
-      print("Induction step") & unfoldProgramNormalize & onAll(ODE('R) & done)
+      print("Induction step") & unfoldProgramNormalize & onAll(ODE(Symbol("R")) & done)
     )
 
-    proveBy(s, tactic) shouldBe 'proved
+    proveBy(s, tactic) shouldBe Symbol("proved")
   }
 }

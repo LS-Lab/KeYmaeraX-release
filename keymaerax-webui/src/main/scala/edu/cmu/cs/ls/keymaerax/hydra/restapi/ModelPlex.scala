@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
 
 import akka.http.scaladsl.server.Route
@@ -19,7 +20,7 @@ object ModelPlex {
 
   val modelplex: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment / Segment / Segment) { (modelId, artifact, monitorKind, monitorShape, conditionKind) => pathEnd {
     get {
-      parameters('vars.as[String] ?) { vars => {
+      parameters(Symbol("vars").as[String] ?) { vars => {
         val theVars: List[String] = vars match {
           case Some(v) => v.parseJson match {
             case a: JsArray => a.elements.map({ case JsString(s) => s}).toList
@@ -33,7 +34,7 @@ object ModelPlex {
 
   val testSynthesis: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "testcase" / "generate" / Segment / Segment / Segment ) { (modelId, monitorKind, amount, timeout) => pathEnd {
     get {
-      parameters('kinds.as[String] ?) { kinds => {
+      parameters(Symbol("kinds").as[String] ?) { kinds => {
         val theKinds: Map[String,Boolean] = kinds match {
           case Some(v) => v.parseJson.asJsObject.fields.map({case (k, JsBoolean(v)) => k -> v})
         }

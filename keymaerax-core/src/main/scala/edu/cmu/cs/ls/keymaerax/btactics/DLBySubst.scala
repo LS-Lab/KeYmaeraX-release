@@ -98,8 +98,8 @@ private object DLBySubst extends TacticProvider {
               foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
         cut(Imply(ctx(qPhi), ctx(b))) <(
-          /* use */ implyL('Llast) <(hideR(pos.topLevel) /* result remains open */ , closeIdWith('Llast)),
-          /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
+          /* use */ implyL(Symbol("Llast")) <(hideR(pos.topLevel) /* result remains open */ , closeIdWith(Symbol("Llast"))),
+          /* show */ cohide(Symbol("Rlast")) & CMon(pos.inExpr) & implyR(1) &
           assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
           topAbstraction(1) & id
           )
@@ -194,13 +194,13 @@ private object DLBySubst extends TacticProvider {
         })
 
         cut(Imply(qPhi, Box(prg, qPhi))) <(
-          /* use */ (implyL('Llast) <(
+          /* use */ (implyL(Symbol("Llast")) <(
             hideR(pos.topLevel) /* result */,
             cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
-              assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &
-              assertE(b, "abstractionb: original box")('Rlast) & ?(monb) &
-              assertT(1, 1) & assertE(qPhi, "abstractionb: quantified predicate")('Llast) &
-              assertE(phi, "abstractionb: original predicate")('Rlast) & (allL('Llast)*vars.size) &
+              assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")(Symbol("Llast")) &
+              assertE(b, "abstractionb: original box")(Symbol("Rlast")) & ?(monb) &
+              assertT(1, 1) & assertE(qPhi, "abstractionb: quantified predicate")(Symbol("Llast")) &
+              assertE(phi, "abstractionb: original predicate")(Symbol("Rlast")) & (allL(Symbol("Llast"))*vars.size) &
               diffRename(1) &
               assertT(1, 1) & assertT(s => s.ante.head match {
                 case Forall(_, _) => phi match {
@@ -210,7 +210,7 @@ private object DLBySubst extends TacticProvider {
                 case _ => true
               }, "abstractionb: foralls must match") & id
             )),
-          /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
+          /* show */ hideR(pos.topLevel) & implyR(Symbol("Rlast")) & V(Symbol("Rlast")) & closeIdWith(Symbol("Llast"))
         )
       case Some(e) => throw new TacticInapplicableFailure("Top-level abstraction only applicable to box properties, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -268,7 +268,7 @@ private object DLBySubst extends TacticProvider {
 
         val skolemize: ProvableSig=>ProvableSig =
           if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
-          else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL('Llast)
+          else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL(Symbol("Llast"))
           else ident
 
         if (StaticSemantics.freeVars(p).contains(x) && StaticSemantics.freeVars(p).isInfinite) {
@@ -289,8 +289,8 @@ private object DLBySubst extends TacticProvider {
         } else {
           if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
             (ident, useAt(assignAx)(pos) andThen skolemize andThen
-              (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) andThen hideL('Llast)
-              else if (pos.isTopLevel && pos.isAnte) eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) andThen hideL(AntePosition.base0(sequent.ante.length - 1))
+              (if (pos.isTopLevel && pos.isSucc) eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) andThen hideL(Symbol("Llast"))
+              else if (pos.isTopLevel && pos.isAnte) eqL2R(AntePosition.base0(sequent.ante.length - 1))(Symbol("Llast"), p) andThen hideL(AntePosition.base0(sequent.ante.length - 1))
               else ident))
           } else {
             //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
@@ -334,7 +334,7 @@ private object DLBySubst extends TacticProvider {
           useAt(if (universal) Ax.assigndEqualityAll else Ax.assigndEqualityAxiom)(pos) andThen
           ProofRuleTactics.uniformRenameFw(y, x) andThen
           (if (pos.isTopLevel && pos.isSucc) allR(pos) andThen implyR(pos)
-           else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL('Llast)
+           else if (pos.isTopLevel && pos.isAnte) existsL(pos) andThen andL(Symbol("Llast"))
            else ident), 0)
       case Some(e) => throw new TacticInapplicableFailure("assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -488,17 +488,17 @@ private object DLBySubst extends TacticProvider {
               /* c */ useAt(Ax.I)(pos) & andR(pos) <(
                 andR(pos) <(
                   label(replaceTxWith(initCase)),
-                  (andR(pos) <(expandInit & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
-                    (andR(pos) <(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
-                    notR(pos) & SaturateTactic(andL('L)) & close & done),
+                  (andR(pos) <(expandInit & SaturateTactic(andL(Symbol("L"))) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
+                    (andR(pos) <(notR(pos) & closeIdWith(Symbol("Llast")), TactixLibrary.nil))*(constSuccs.size-1) &
+                    notR(pos) & SaturateTactic(andL(Symbol("L"))) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
-                  (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                   else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
+                  (if (consts.nonEmpty) andL(Symbol("Llast"))*consts.size & hideL(Symbol("Llast"), Not(False)) & notL(Symbol("Llast"))*(constSuccs.size-1)
+                   else andL(Symbol("Llast")) & hideL(Symbol("Llast"), True)) & label(replaceTxWith(indStep)),
                   andL(-1) & hideL(-1, oldified) & expandPrg & V(1) & close(-1, 1) & done)
               ),
               /* c -> d */
               cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-              andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1) &
+              andL(Symbol("Llast"))*consts.size & hideL(Symbol("Llast"), Not(False)) & notL(Symbol("Llast"))*(constSuccs.size-1) &
               label(replaceTxWith(useCase))
             )
           }
@@ -650,7 +650,7 @@ private object DLBySubst extends TacticProvider {
           val v0 = Variable(v.name, Some(v.index.getOrElse(-1)+1))  //@note want v__0 in result instead of x2
 
           def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(id, skip))*(consts.size-1) & close)
-          val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(Ax.andTrue)('Llast)
+          val splitConsts = if (consts.nonEmpty) andL(Symbol("Llast"))*consts.size else useAt(Ax.andTrue)(Symbol("Llast"))
 
           val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
@@ -663,7 +663,7 @@ private object DLBySubst extends TacticProvider {
             assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(replaceTxWith(BelleLabels.initCase))
             ,
             cohide(pp) & implyR(1) & byUS(Ax.conflat) <(
-              existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(replaceTxWith(BelleLabels.useCase))
+              existsL(Symbol("Llast")) & andL(Symbol("Llast")) & splitConsts & uniformRename(ur) & label(replaceTxWith(BelleLabels.useCase))
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
               useAt(Ax.pVd, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -753,7 +753,7 @@ private object DLBySubst extends TacticProvider {
           val execAssignment = assignEquality(pos) &
             //@note allR2L does not allow rewriting numbers
             (if (!e.isInstanceOf[Number] && pos.isTopLevel) {
-              if (pos.isSucc) TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) // from implyR
+              if (pos.isSucc) TactixLibrary.exhaustiveEqR2L(hide=false)(Symbol("Llast")) // from implyR
               else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
             } else skip)
 

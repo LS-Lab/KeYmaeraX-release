@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -19,10 +19,10 @@ class EquivalenceTests extends TacticTestBase {
     val equivPos = -1
     val t = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) /*end setup*/ & TactixLibrary.equivL(equivPos) <(
       TactixLibrary.andL(equivPos) & TactixLibrary.id,
-      TactixLibrary.andL(equivPos) & TactixLibrary.notL('Llast).*(2) & TactixLibrary.id
+      TactixLibrary.andL(equivPos) & TactixLibrary.notL(Symbol("Llast")).*(2) & TactixLibrary.id
     )
 
-    proveBy(f,t) shouldBe 'proved
+    proveBy(f,t) shouldBe Symbol("proved")
   }
 
   "Instantiated Equiv Rewriting" should "prove by a built-in tactic" in withTactics {

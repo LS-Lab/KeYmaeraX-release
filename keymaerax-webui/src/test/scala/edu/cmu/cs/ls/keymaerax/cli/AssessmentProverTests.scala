@@ -41,23 +41,23 @@ class AssessmentProverTests extends TacticTestBase {
   "Extractor" should "extract grading information" in {
     inside (Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol{\kyxline"x>=0"} \end{problem}""")) {
       case p :: Nil =>
-        p.name shouldBe 'empty
-        p.points shouldBe 'empty
+        p.name shouldBe Symbol("empty")
+        p.points shouldBe Symbol("empty")
         p.label should contain ("prob:withoutpoints")
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
     }
     inside (Problem.fromString("""\begin{problem} \ask \sol{It is a text answer with $x=5$ some math} \end{problem}""")) {
       case p :: Nil =>
-        p.name shouldBe 'empty
-        p.points shouldBe 'empty
-        p.label shouldBe 'empty
+        p.name shouldBe Symbol("empty")
+        p.points shouldBe Symbol("empty")
+        p.label shouldBe Symbol("empty")
         p.questions shouldBe List(AskQuestion(None, Map.empty,
           TextArtifact(Some("It is a text answer with $x=5$ some math")),
           List(TextArtifact(Some("It is a text answer with $x=5$ some math"))), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[1.0]\label{prob:first} \ask \sol{\kyxline"x>=0"} \end{problem}""")) {
       case p :: Nil =>
-        p.name shouldBe 'empty
+        p.name shouldBe Symbol("empty")
         p.points should contain (1.0)
         p.label should contain ("prob:first")
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
@@ -300,25 +300,25 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "handle expected n/a" in withZ3 { _ =>
     AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
-      check(ExpressionArtifact("n/a")).left.value shouldBe 'proved
+      check(ExpressionArtifact("n/a")).left.value shouldBe Symbol("proved")
     AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
-      check(ExpressionArtifact("N/A")).left.value shouldBe 'proved
+      check(ExpressionArtifact("N/A")).left.value shouldBe Symbol("proved")
     AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
       check(ExpressionArtifact("f(x)")).right.value shouldBe "Incorrect f(x)"
   }
 
   "Polynomial equality" should "prove simple term examples" in withZ3 { _ =>
-    AssessmentProver.polynomialEquality("2*x^2".asTerm, "x^2*2".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("x^3*y^2".asTerm, "y * x/1^2 * 4*x^2/2^2 * y".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("2*x^2".asTerm, "x^(1+3-2)*(3-1)/(-1+2)".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("x^2^3".asTerm, "x^8".asTerm) shouldBe 'proved
+    AssessmentProver.polynomialEquality("2*x^2".asTerm, "x^2*2".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("x^3*y^2".asTerm, "y * x/1^2 * 4*x^2/2^2 * y".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("2*x^2".asTerm, "x^(1+3-2)*(3-1)/(-1+2)".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("x^2^3".asTerm, "x^8".asTerm) shouldBe Symbol("proved")
   }
 
   it should "prove non-constant polynomial exponentials" in withZ3 { _ =>
-    AssessmentProver.polynomialEquality("e^(6*t)".asTerm, "e^((5+1)*t)".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("e^2^t".asTerm, "e^(3-1)^t".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("(e^2)^(t^1)".asTerm, "(e^(3-1))^t".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("e^x+e^y".asTerm, "e^(2*x/2)+e^(1*y*(1^2))".asTerm) shouldBe 'proved
+    AssessmentProver.polynomialEquality("e^(6*t)".asTerm, "e^((5+1)*t)".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("e^2^t".asTerm, "e^(3-1)^t".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("(e^2)^(t^1)".asTerm, "(e^(3-1))^t".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("e^x+e^y".asTerm, "e^(2*x/2)+e^(1*y*(1^2))".asTerm) shouldBe Symbol("proved")
     the [IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality("e^(6*t)".asTerm, "f^(6*t)".asTerm) should
       have message "requirement failed: Expected all function symbols to match, but found non-matching symbols (pow,Set(e, t)) vs. (pow,Set(f, t))"
     // true but doesn't work
@@ -327,13 +327,13 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   it should "prove non-constant divisions" in withZ3 { _ =>
-    AssessmentProver.polynomialEquality("x^2/x".asTerm, "x^2/(2*x/2)".asTerm) shouldBe 'proved
+    AssessmentProver.polynomialEquality("x^2/x".asTerm, "x^2/(2*x/2)".asTerm) shouldBe Symbol("proved")
   }
 
   it should "prove functions" in withZ3 { _ =>
-    AssessmentProver.polynomialEquality("sin(x)".asTerm, "sin(0+x/1)".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("sin(x)*cos(y)".asTerm, "cos(2*y/2)*sin(0+x/1)".asTerm) shouldBe 'proved
-    AssessmentProver.polynomialEquality("sin(x)*sin(y)".asTerm, "sin(x*1)*sin(y*1)".asTerm) shouldBe 'proved
+    AssessmentProver.polynomialEquality("sin(x)".asTerm, "sin(0+x/1)".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("sin(x)*cos(y)".asTerm, "cos(2*y/2)*sin(0+x/1)".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("sin(x)*sin(y)".asTerm, "sin(x*1)*sin(y*1)".asTerm) shouldBe Symbol("proved")
     the [IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality("sin(x)*sin(y)".asTerm, "sin(x)*sin(z)".asTerm) should
       have message "requirement failed: Expected all function symbols to match, but found non-matching symbols (sin,Set(x)),(sin,Set(y)) vs. (sin,Set(x)),(sin,Set(z))"
     the [IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality("sin(x)*sin(y)".asTerm, "sin(z)*sin(y)".asTerm) should
@@ -343,23 +343,23 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   it should "prove simple formula examples" in withZ3 { _ =>
-    AssessmentProver.polynomialEquality("true".asFormula, "true".asFormula, normalize=false) shouldBe 'proved
-    AssessmentProver.polynomialEquality("[ctrl;]true".asFormula, "[ctrl;]true".asFormula, normalize=false) shouldBe 'proved
-    AssessmentProver.polynomialEquality("[ctrl;]P()".asFormula, "[ctrl;]P()".asFormula, normalize=false) shouldBe 'proved
+    AssessmentProver.polynomialEquality("true".asFormula, "true".asFormula, normalize=false) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("[ctrl;]true".asFormula, "[ctrl;]true".asFormula, normalize=false) shouldBe Symbol("proved")
+    AssessmentProver.polynomialEquality("[ctrl;]P()".asFormula, "[ctrl;]P()".asFormula, normalize=false) shouldBe Symbol("proved")
     inside (AssessmentProver.polynomialEquality("x>=0".asFormula, "x+0*5>=2-4*1/2".asFormula, normalize=false)) {
       case p =>
         p.conclusion shouldBe "==> x=x+0*5 & 0=2-4*1/2".asSequent
-        p shouldBe 'proved
+        p shouldBe Symbol("proved")
     }
     inside (AssessmentProver.polynomialEquality("[x:=2;][?x>=0;]x>=0".asFormula, "[x:=3-1;][?x+0*5>=2-4*1/2;]x+0>=1-1".asFormula, normalize=false)) {
       case p =>
         p.conclusion shouldBe "==> x=x & 2=3-1 & x=x+0*5&0=2-4*1/2 & x=x+0 & 0=1-1".asSequent
-        p shouldBe 'proved
+        p shouldBe Symbol("proved")
     }
     inside (AssessmentProver.polynomialEquality("[x':=2;]x>=0".asFormula, "[x':=3-1;]x>=0".asFormula, normalize=false)) {
       case p =>
         p.conclusion shouldBe "==> x'=x' & 2=3-1 & x=x & 0=0".asSequent
-        p shouldBe 'proved
+        p shouldBe Symbol("proved")
     }
     the [IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
       "x>=0".asFormula, "x+0*5>2-4*1/2".asFormula, normalize=false) should have message
@@ -376,17 +376,17 @@ class AssessmentProverTests extends TacticTestBase {
     inside (AssessmentProver.polynomialEquality("x>=0".asFormula, "x+0*5>=2-4*1/2".asFormula, normalize=true)) {
       case p =>
         p.conclusion shouldBe "==> x=x+0*5-(2-4*1/2) & 0=0".asSequent
-        p shouldBe 'proved
+        p shouldBe Symbol("proved")
     }
     inside (AssessmentProver.polynomialEquality("x>=0".asFormula, "-(x+0*5)<=-(2-4*1/2)".asFormula, normalize=true)) {
       case p =>
         p.conclusion shouldBe "==> x=-(2-4*1/2)--(x+0*5) & 0=0".asSequent
-        p shouldBe 'proved
+        p shouldBe Symbol("proved")
     }
     inside (AssessmentProver.polynomialEquality("x>=0 & y=2".asFormula, "!(!-(x+0*5)<=-(2-4*1/2) | y!=2)".asFormula, normalize=true)) {
       case p =>
         p.conclusion shouldBe "==> x=-(2-4*1/2)--(x+0*5) & 0=0 & y-2=y-2 & 0=0".asSequent
-        p shouldBe 'proved
+        p shouldBe Symbol("proved")
     }
     the [IllegalArgumentException] thrownBy AssessmentProver.polynomialEquality(
       "x>=0".asFormula, "-(x+0*5) < -(2-4*1/2)".asFormula, normalize=true) should have message
@@ -396,7 +396,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "return useful error messages" in withZ3 { _ =>
     // expected single expression, ok to answer with a list of duplicate elements
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3")).
-      check(ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).left.value shouldBe 'proved
+      check(ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).left.value shouldBe Symbol("proved")
     // expected single expression, not ok to answer with a list
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3")).
       check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))) shouldBe Right(
@@ -406,23 +406,23 @@ class AssessmentProverTests extends TacticTestBase {
     // expected list of expression that happens to be one element (make it a list by duplicating element),
     // ok to answer with a single expression
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).
-      check(ExpressionArtifact("-3")).left.value shouldBe 'proved
+      check(ExpressionArtifact("-3")).left.value shouldBe Symbol("proved")
     // expected list of expressions, ok to answer with a list
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).
       check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))).right.value shouldBe "" // wrong but syntactically ok
   }
 
   "Value equality" should "prove simple examples" in withZ3 { _ =>
-    AssessmentProver.valueEquality("1".asTerm, "1".asTerm) shouldBe 'proved
-    AssessmentProver.valueEquality("1".asTerm :: "2".asTerm :: Nil, "1+0".asTerm :: "4-2".asTerm :: Nil) shouldBe 'proved
-    AssessmentProver.valueEquality("1".asTerm, "2".asTerm) shouldNot be ('proved)
-    AssessmentProver.valueEquality("1".asTerm :: "1".asTerm :: Nil, "2-1".asTerm :: "2-2".asTerm :: Nil) shouldNot be ('proved)
+    AssessmentProver.valueEquality("1".asTerm, "1".asTerm) shouldBe Symbol("proved")
+    AssessmentProver.valueEquality("1".asTerm :: "2".asTerm :: Nil, "1+0".asTerm :: "4-2".asTerm :: Nil) shouldBe Symbol("proved")
+    AssessmentProver.valueEquality("1".asTerm, "2".asTerm) shouldNot be (Symbol("proved"))
+    AssessmentProver.valueEquality("1".asTerm :: "1".asTerm :: Nil, "2-1".asTerm :: "2-2".asTerm :: Nil) shouldNot be (Symbol("proved"))
   }
 
   "DI result check" should "prove simple DI examples" in withZ3 { _ =>
-    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [v':=w;][w':=-v;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe 'proved
-    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [w':=-v;][v':=w;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe 'proved
-    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [w':=-v;v':=w;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe 'proved
+    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [v':=w;][w':=-v;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe Symbol("proved")
+    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [w':=-v;][v':=w;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe Symbol("proved")
+    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [w':=-v;v':=w;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe Symbol("proved")
     the [IllegalArgumentException] thrownBy
       AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> 2*v*w+2*w*v=0".asSequent, diffAssignsMandatory=true, normalize=false) should
       have message "requirement failed: Differential assignments do not match: expected assignments to v',w' but found none"
@@ -432,8 +432,8 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   it should "allow (partially) executed differential assignments on request" in withZ3 { _ =>
-    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [w':=-v;]2*v*w+2*w*w'=0".asSequent, diffAssignsMandatory=false, normalize=false) shouldBe 'proved
-    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> 2*v*w-2*w*v=0".asSequent, diffAssignsMandatory=false, normalize=false) shouldBe 'proved
+    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [w':=-v;]2*v*w+2*w*w'=0".asSequent, diffAssignsMandatory=false, normalize=false) shouldBe Symbol("proved")
+    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> 2*v*w-2*w*v=0".asSequent, diffAssignsMandatory=false, normalize=false) shouldBe Symbol("proved")
     the [TacticInapplicableFailure] thrownBy AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> 2*v*w=2*w*v".asSequent, diffAssignsMandatory=false, normalize=false) should
       have message "Terms not equal (by equating coefficients): 2*v*w+2*w*(-v)-0, 2*v*w"
     the [TacticInapplicableFailure] thrownBy
@@ -448,31 +448,31 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   it should "normalize" in withZ3 { _ =>
-    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [v':=w;][w':=-v;]2*v*w=2*w*v".asSequent, diffAssignsMandatory=true, normalize=true) shouldBe 'proved
-    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> 2*v*w=2*w*v".asSequent, diffAssignsMandatory=false, normalize=true) shouldBe 'proved
+    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [v':=w;][w':=-v;]2*v*w=2*w*v".asSequent, diffAssignsMandatory=true, normalize=true) shouldBe Symbol("proved")
+    AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> 2*v*w=2*w*v".asSequent, diffAssignsMandatory=false, normalize=true) shouldBe Symbol("proved")
   }
 
   "QE equivalence" should "prove simple examples" in withZ3 { _ =>
     AssessmentProver.qe("x>=0".asFormula, "0<=x".asFormula, Equiv)
-    AssessmentProver.qe("x>=4".asFormula, "x>=0 & x^2>=16".asFormula, Equiv) shouldBe 'proved
-    AssessmentProver.qe("x=1".asFormula, "x^2>=1 & x^2<=x".asFormula, Equiv) shouldBe 'proved
+    AssessmentProver.qe("x>=4".asFormula, "x>=0 & x^2>=16".asFormula, Equiv) shouldBe Symbol("proved")
+    AssessmentProver.qe("x=1".asFormula, "x^2>=1 & x^2<=x".asFormula, Equiv) shouldBe Symbol("proved")
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      AssessmentProver.qe("x>=4".asFormula, "abs(x)>=4 & abs(x)<=x".asFormula, Equiv) shouldBe 'proved
+      AssessmentProver.qe("x>=4".asFormula, "abs(x)>=4 & abs(x)<=x".asFormula, Equiv) shouldBe Symbol("proved")
     }
-    AssessmentProver.qe("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula, Equiv) shouldBe 'proved
-    AssessmentProver.qe("x>=4".asFormula, "\\exists y (y>=2 & x>=y^2)".asFormula, Equiv) shouldBe 'proved
+    AssessmentProver.qe("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula, Equiv) shouldBe Symbol("proved")
+    AssessmentProver.qe("x>=4".asFormula, "\\exists y (y>=2 & x>=y^2)".asFormula, Equiv) shouldBe Symbol("proved")
   }
 
   "Syntactic sequent equality" should "prove simple examples" in {
-    AssessmentProver.syntacticEquality(List("x>0 ==> x>=0".asSequent), List("x>0 ==> x>=0".asSequent)) shouldBe 'proved
-    AssessmentProver.syntacticEquality(List("x>0,y>0 ==> x>=0".asSequent), List("y>0,x>0 ==> x>=0".asSequent)) shouldBe 'proved
-    AssessmentProver.syntacticEquality(List("x>0 ==> x>=0,y>0".asSequent), List("x>0 ==> y>0,x>=0".asSequent)) shouldBe 'proved
+    AssessmentProver.syntacticEquality(List("x>0 ==> x>=0".asSequent), List("x>0 ==> x>=0".asSequent)) shouldBe Symbol("proved")
+    AssessmentProver.syntacticEquality(List("x>0,y>0 ==> x>=0".asSequent), List("y>0,x>0 ==> x>=0".asSequent)) shouldBe Symbol("proved")
+    AssessmentProver.syntacticEquality(List("x>0 ==> x>=0,y>0".asSequent), List("x>0 ==> y>0,x>=0".asSequent)) shouldBe Symbol("proved")
     AssessmentProver.syntacticEquality(
       List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent),
-      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent)) shouldBe 'proved
+      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent)) shouldBe Symbol("proved")
     AssessmentProver.syntacticEquality(
       List("y>0 ==> y>=0".asSequent, "x>0 ==> x>=0".asSequent),
-      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent)) shouldBe 'proved
+      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent)) shouldBe Symbol("proved")
     the [InapplicableUnificationKeyFailure] thrownBy AssessmentProver.syntacticEquality(
       List("y>0 ==> y>=0".asSequent, "x>0 ==> x>=0".asSequent, "z>0 ==> z>0".asSequent),
       List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent, "y>0 ==> y>0".asSequent)) should have message
@@ -496,21 +496,21 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Differential invariant checker" should "prove simple examples" in withZ3 { _ =>
-    AssessmentProver.dICheck(ODESystem("{x'=1,y'=2}".asDifferentialProgram), "2*x=y".asFormula) shouldBe 'proved
-    AssessmentProver.dICheck(ODESystem("{x'=x,y'=-y}".asDifferentialProgram), "x*y=1".asFormula) shouldBe 'proved
-    AssessmentProver.dICheck(ODESystem("{x'=-y,y'=x}".asDifferentialProgram), "x^2+y^2=1".asFormula) shouldBe 'proved
+    AssessmentProver.dICheck(ODESystem("{x'=1,y'=2}".asDifferentialProgram), "2*x=y".asFormula) shouldBe Symbol("proved")
+    AssessmentProver.dICheck(ODESystem("{x'=x,y'=-y}".asDifferentialProgram), "x*y=1".asFormula) shouldBe Symbol("proved")
+    AssessmentProver.dICheck(ODESystem("{x'=-y,y'=x}".asDifferentialProgram), "x^2+y^2=1".asFormula) shouldBe Symbol("proved")
     AssessmentProver.dICheck(ODESystem("{x'=1,y'=2}".asDifferentialProgram), "3*x=y".asFormula).subgoals.loneElement shouldBe "3*x=y, true ==> 3*1=2".asSequent
   }
 
   "Generic prove checker" should "prove simple examples" in withZ3 { _ =>
     AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), ExpressionArtifact("A() -> [prg;]B()")).
-      check(ExpressionArtifact("A()->[prg;]B()")).left.value shouldBe 'proved
+      check(ExpressionArtifact("A()->[prg;]B()")).left.value shouldBe Symbol("proved")
     AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("A() ==> [prg;]B()".asSequent::Nil)).
-      check(SequentArtifact("==> A() -> [prg;]B()".asSequent::Nil)).left.value shouldBe 'proved
+      check(SequentArtifact("==> A() -> [prg;]B()".asSequent::Nil)).left.value shouldBe Symbol("proved")
     val p = AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("==> A() -> [prg;]B()".asSequent::"[sys;]C() ==> ".asSequent::Nil)).
       check(SequentArtifact("A() ==> [prg;]B()".asSequent::"==> [sys;]C() -> false&x=4".asSequent::Nil))
     p.left.value.conclusion shouldBe "==> ((A() -> [prg;]B()) <-> (true -> A() -> [prg;]B())) & ((true -> [sys;]C() -> false&x=4) <-> ([sys;]C() -> false))".asSequent
-    p.left.value shouldBe 'proved
+    p.left.value shouldBe Symbol("proved")
   }
 
   it should "prove optional question with solution as loop tactic input" in withZ3 { _ =>
@@ -521,7 +521,7 @@ class AssessmentProverTests extends TacticTestBase {
         "tactic" -> "implyR(1);loop({`\\%1`},1);auto;done"),
       ExpressionArtifact("false")). //@note ignored because question will be used instead
       check(ExpressionArtifact("x>1&y>=0")
-    ).left.value shouldBe 'proved
+    ).left.value shouldBe Symbol("proved")
   }
 
   it should "prove optional question with a list of diffcuts" in withZ3 { _ =>
@@ -533,7 +533,7 @@ class AssessmentProverTests extends TacticTestBase {
       ),
       ExpressionArtifact("false")). //@note ignored because question will be used instead
       check(ListExpressionArtifact("a>=1".asFormula :: "v>=2".asFormula :: "x>=3".asFormula :: Nil)
-    ).left.value shouldBe 'proved
+    ).left.value shouldBe Symbol("proved")
   }
 
   it should "prove optional question with solution as uniform substitution tactic input" in withZ3 { _ =>
@@ -545,7 +545,7 @@ class AssessmentProverTests extends TacticTestBase {
       ExpressionArtifact("false") //@note ignored because question will be used instead
     ).check(
       ExpressionArtifact("x<=m-V*(T-t)")
-    ).left.value shouldBe 'proved
+    ).left.value shouldBe Symbol("proved")
   }
 
   it should "reply with expected answer type to wrong answer format" in {
@@ -563,16 +563,16 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Program equivalence" should "prove simple examples" in withZ3 { _ =>
-    AssessmentProver.prgEquivalence("a;b;c;".asProgram, "{a;b;};c;".asProgram) shouldBe 'proved
-    AssessmentProver.prgEquivalence("a;++b;++c;".asProgram, "{a;++b;}++c;".asProgram) shouldBe 'proved
-    AssessmentProver.prgEquivalence("{a;++b;}{c;++d;++e;}".asProgram, "{a;++b;}{{c;++d;}++e;}".asProgram) shouldBe 'proved
-    AssessmentProver.prgEquivalence("x:=2;++y:=3;".asProgram, "y:=4-1;++z:=2;x:=z;".asProgram) shouldBe 'proved
+    AssessmentProver.prgEquivalence("a;b;c;".asProgram, "{a;b;};c;".asProgram) shouldBe Symbol("proved")
+    AssessmentProver.prgEquivalence("a;++b;++c;".asProgram, "{a;++b;}++c;".asProgram) shouldBe Symbol("proved")
+    AssessmentProver.prgEquivalence("{a;++b;}{c;++d;++e;}".asProgram, "{a;++b;}{{c;++d;}++e;}".asProgram) shouldBe Symbol("proved")
+    AssessmentProver.prgEquivalence("x:=2;++y:=3;".asProgram, "y:=4-1;++z:=2;x:=z;".asProgram) shouldBe Symbol("proved")
   }
 
   "Formula implication" should "succeed for simple examples" in withZ3 { _ =>
-    AssessmentProver.formulaImplication("a=0".asFormula, "a=0".asFormula) shouldBe 'proved
-    AssessmentProver.formulaImplication("a=0 & b=0".asFormula, "a=0".asFormula) shouldBe 'proved
-    AssessmentProver.formulaImplication("x>=0 & a=1".asFormula, "x>0 | a=1".asFormula) shouldBe 'proved
+    AssessmentProver.formulaImplication("a=0".asFormula, "a=0".asFormula) shouldBe Symbol("proved")
+    AssessmentProver.formulaImplication("a=0 & b=0".asFormula, "a=0".asFormula) shouldBe Symbol("proved")
+    AssessmentProver.formulaImplication("x>=0 & a=1".asFormula, "x>0 | a=1".asFormula) shouldBe Symbol("proved")
   }
 
 //  "Formula implication" should "not prove false implications" in withZ3 { _ =>
@@ -580,11 +580,11 @@ class AssessmentProverTests extends TacticTestBase {
 //  }
 
   it should "prove simple system loops" in withZ3 { _ =>
-    AssessmentProver.prgEquivalence("{a{|^@|};++b{|^@|};}*".asProgram, "{b{|^@|};++a{|^@|};}*".asProgram) shouldBe 'proved
+    AssessmentProver.prgEquivalence("{a{|^@|};++b{|^@|};}*".asProgram, "{b{|^@|};++a{|^@|};}*".asProgram) shouldBe Symbol("proved")
   }
 
   it should "elaborate to system loops when dual does not occur literally" in withZ3 { _ =>
-    AssessmentProver.prgEquivalence("{a;++b;}*".asProgram, "{b;++a;}*".asProgram) shouldBe 'proved
+    AssessmentProver.prgEquivalence("{a;++b;}*".asProgram, "{b;++a;}*".asProgram) shouldBe Symbol("proved")
   }
 
   "Explanation check" should "accept long enough answers" in {
@@ -1164,10 +1164,10 @@ class AssessmentProverTests extends TacticTestBase {
     expected.foreach(e => {
       val parseFailedLines = parseFailedLinesById.getOrElse(e._1.id, List.empty)
       val gradedLines = gradedLinesById.getOrElse(e._1.id, List.empty)
-      parseFailedLines.intersect(gradedLines) shouldBe 'empty
+      parseFailedLines.intersect(gradedLines) shouldBe Symbol("empty")
       uniformAnswer match {
         case None | Some((_, true)) =>
-          parseFailedLines shouldBe 'empty
+          parseFailedLines shouldBe Symbol("empty")
           checkGradedLines(gradedLines, e._2)
         case _ =>
           e._1.name match {
@@ -1177,16 +1177,16 @@ class AssessmentProverTests extends TacticTestBase {
                   val trimmed = if (expected.trim.startsWith("{")) expected.stripPrefix("{").stripSuffix("}").trim else expected.trim
                   if (trimmed.startsWith(QuizExtractor.AskQuestion.KYXLINE) || trimmed.startsWith(QuizExtractor.AskQuestion.MATH_DELIM)) {
                     //parsed answer
-                    gradedLines shouldBe 'empty
+                    gradedLines shouldBe Symbol("empty")
                     parseFailedLines.size shouldBe 1
                   } else {
                     //text answer
-                    parseFailedLines shouldBe 'empty
+                    parseFailedLines shouldBe Symbol("empty")
                     checkGradedLines(gradedLines, e._2)
                   }
                 case "\\solfinask" =>
                   //parsed answer
-                  gradedLines shouldBe 'empty
+                  gradedLines shouldBe Symbol("empty")
                   parseFailedLines.size shouldBe 1
               }
             })
@@ -1241,7 +1241,7 @@ class AssessmentProverTests extends TacticTestBase {
     w.flush()
     w.close()
 
-    val options = Map('in -> f.getAbsolutePath)
+    val options = Map(Symbol("in") -> f.getAbsolutePath)
     val msgsStream = new ByteArrayOutputStream()
     val resultsStream = new ByteArrayOutputStream()
     AssessmentProver.grade(options, msgsStream, resultsStream, "")
@@ -1455,7 +1455,7 @@ class AssessmentProverTests extends TacticTestBase {
         val result = grader.check(t)
         result match {
           case Left(l) =>
-            l shouldBe 'proved withClue (t + ": " + result.right.toOption.getOrElse("<unknown>"))
+            l shouldBe Symbol("proved") withClue (t + ": " + result.right.toOption.getOrElse("<unknown>"))
             println("Successfully verified sol")
           case Right(msg) =>
             msg shouldBe "INSPECT" withClue t
@@ -1471,7 +1471,7 @@ class AssessmentProverTests extends TacticTestBase {
           case Left(l) => grader match {
             case _: AnyChoiceGrader if l.isProved =>
               l.conclusion shouldBe "==> anychoice&partial <-> anychoice&partial".asSequent withClue t
-            case _ => l shouldNot be ('proved) withClue t
+            case _ => l shouldNot be (Symbol("proved")) withClue t
           }
           case Right(_) => //
         }
@@ -1532,7 +1532,7 @@ class AssessmentProverTests extends TacticTestBase {
       val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
         case (c, _) =>
           //@note any other combination of selected choices
-          val incorrectCombinations = q.choices.toSet.subsets.filter(_ != c.toSet)
+          val incorrectCombinations = q.choices.toSet.subsets().filter(_ != c.toSet)
           (ChoiceArtifact(c.map(_.text)), incorrectCombinations.map(c => ChoiceArtifact(c.map(_.text).toList)))
       }
       (AnyChoiceGrader(Map.empty[String, String], correct), correct :: Nil, incorrect.toList)

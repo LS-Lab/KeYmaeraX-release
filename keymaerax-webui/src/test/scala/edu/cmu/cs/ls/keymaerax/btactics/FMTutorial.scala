@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -23,7 +24,7 @@ class FMTutorial extends TacticTestBase {
   "Example 1" should "be provable with master" in withQE { _ => withDatabase { db =>
     val modelContent = ArchiveParser.getEntry("FM16/Tutorial Example 1", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
-    db.proveBy(modelContent, master()) shouldBe 'proved
+    db.proveBy(modelContent, master()) shouldBe Symbol("proved")
   }}
 
   "Example 2" should "stop in the right place" in withMathematica { _ => withDatabase { db =>
@@ -40,19 +41,19 @@ class FMTutorial extends TacticTestBase {
   "Example 3" should "be provable with master" in withQE { _ => withDatabase { db =>
     val modelContent = ArchiveParser.getEntry("FM16/Tutorial Example 3", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
-    db.proveBy(modelContent, master()) shouldBe 'proved
+    db.proveBy(modelContent, master()) shouldBe Symbol("proved")
   }}
 
   "Example 4" should "be provable with master" in withQE { _ => withDatabase { db =>
     val modelContent = ArchiveParser.getEntry("FM16/Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
-    db.proveBy(modelContent, master()) shouldBe 'proved
+    db.proveBy(modelContent, master()) shouldBe Symbol("proved")
   }}
 
   "Example 5" should "be provable with tactic" in withMathematica { _ =>
     val entry = ArchiveParser.getEntry("FM16/Tutorial Example 5", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
-    proveBy(entry.expandedModel.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    proveBy(entry.expandedModel.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
   }
 
 }

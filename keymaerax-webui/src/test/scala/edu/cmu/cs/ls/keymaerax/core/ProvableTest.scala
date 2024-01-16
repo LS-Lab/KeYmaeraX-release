@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -99,10 +99,10 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     mergedProving.steps shouldBe 3
 
     val otherProving = moreProving.sub(0)(CloseTrue(SuccPos(0)), 0)
-    otherProving shouldBe 'proved
+    otherProving shouldBe Symbol("proved")
     otherProving.steps shouldBe 1
     val otherMergedProving = moreProving(otherProving, 0)
-    otherMergedProving shouldBe 'proved
+    otherMergedProving shouldBe Symbol("proved")
     otherMergedProving.steps shouldBe 3
   }
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -512,14 +517,14 @@ object ODELiveness extends TacticProvider {
 
     val tac =
       cut(precond)<(
-      existsL('Llast) &
-        cut(Exists(oldvar::Nil,Equal(x,oldvar))) <( existsL('Llast) & exhaustiveEqL2R('Llast), cohideR('Rlast) & QE) &
+      existsL(Symbol("Llast")) &
+        cut(Exists(oldvar::Nil,Equal(x,oldvar))) <( existsL(Symbol("Llast")) & exhaustiveEqL2R(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         andL(-(seq.ante.length+1)) &
         cut(Box(sys, LessEqual( Times(x,x), Plus( Times(oldvar,oldvar), Times(rootvar,rootvar)) ) )) <(
           (hideL(-(seq.ante.length+1)) * 3) & removeODENonLin(uode,true, hideL(-(seq.ante.length+1)) & cont, LessEqual( Times(x,x), Plus( Times(oldvar,oldvar), Times(rootvar,rootvar)) ))(pos),
           // From here, we don't need any extra information
           (hideL(-1) * seq.ante.length) &
-          cohideOnlyR('Rlast) & splittac
+          cohideOnlyR(Symbol("Rlast")) & splittac
         )
         ,
       by(starter))
@@ -568,7 +573,7 @@ object ODELiveness extends TacticProvider {
         val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1 :: 1 :: Nil)).get.asInstanceOf[Formula]
 
         cutL(concl)(pos) < (cont,
-          cohideOnlyR('Rlast) &
+          cohideOnlyR(Symbol("Rlast")) &
             useAt(finalrw, PosInExpr(1 :: Nil))(1) &
             odeUnify(1) &
             hideNonFOLLeft & ODE(1) & done
@@ -662,7 +667,7 @@ object ODELiveness extends TacticProvider {
         // Apply the reduction
         red &
         //Moves back into diamond
-        useAt(Ax.box, PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) &
+        useAt(Ax.box, PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL(Symbol("Llast")) &
         useAt(Ax.doubleNegation)(seq.succ.length, 1 :: Nil) &
         SequentCalculus.exchangeR(Position(seq.succ.length),pos)
     }
@@ -1029,7 +1034,7 @@ object ODELiveness extends TacticProvider {
 
     // Introduces the time variable in a mildly gross way so that it is set to 0 initially
     val timetac =
-      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
       vDG(timer)(pos)
 
     val p = property.sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
@@ -1064,7 +1069,7 @@ object ODELiveness extends TacticProvider {
           DebuggingTactics.done("Unable to prove "+ bnd + " strictly positive."), //G |- e_() > 0
         odeReduce(strict = false, Nil)(pos) &
         Idioms.?(cohideR(pos) & byUScaught(ex))), // existence
-        (odeUnify(pos) & dI('full)(pos) & done |
+        (odeUnify(pos) & dI(Symbol("full"))(pos) & done |
           skip)
           //DebuggingTactics.done("Unable to prove derivative lower bound using "+ bnd +".")
         // derivative lower bound
@@ -1127,7 +1132,7 @@ object ODELiveness extends TacticProvider {
 
     cutR(qe)(pos) <(
       label(BelleLabels.dVderiv) & tac ,
-      implyR(pos) & existsL('Llast) & andL('Llast) & dV(eps,true)(pos) &
+      implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) & dV(eps,true)(pos) &
         andR(pos) <(
           andR(pos) <(
             id,
@@ -1137,10 +1142,10 @@ object ODELiveness extends TacticProvider {
               odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
           odeUnify(pos) &
             dR(lie,false)(pos) <(
-                  cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI('full)(1),
+                  cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI(Symbol("full"))(1),
             // add the quantified assumption manually
             dC(quantliecheck)(pos) <(
-              DifferentialTactics.diffWeakenG(pos) & implyR(1) & andL(-1) & (allL('Llast)*bvs.length) & implyL('Llast) <(
+              DifferentialTactics.diffWeakenG(pos) & implyR(1) & andL(-1) & (allL(Symbol("Llast"))*bvs.length) & implyL(Symbol("Llast")) <(
                 id,
                 id
               )
@@ -1178,7 +1183,7 @@ object ODELiveness extends TacticProvider {
 
     // Introduces the time variable in a mildly gross way so that it is set to 0 initially
     val timetac =
-      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
     //Symbolic lower bound
@@ -1206,8 +1211,8 @@ object ODELiveness extends TacticProvider {
 
     starter & timetac &
     cut(Exists(List(oldp),inv)) <(
-      existsL('Llast),
-      cohideR('Rlast) & QE //this should be a trivial QE question
+      existsL(Symbol("Llast")),
+      cohideR(Symbol("Rlast")) & QE //this should be a trivial QE question
     ) &
     kDomainDiamond(oldpbound)(pos) <(
       useAt(axren,PosInExpr(1::Nil))(pos)& andR(pos) <(
@@ -1249,7 +1254,7 @@ object ODELiveness extends TacticProvider {
 
     // Introduces the time variable in a mildly gross way so that it is set to 0 initially
     val timetac =
-      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
     val eps = TacticHelper.freshNamedSymbol("eps".asVariable, seq)
@@ -1315,10 +1320,10 @@ object ODELiveness extends TacticProvider {
       cutR(qe)(pos) <(
         label(BelleLabels.dVderiv) & tac
         ,
-      implyR(pos) & existsL('Llast) & andL('Llast) &
+      implyR(pos) & existsL(Symbol("Llast")) & andL(Symbol("Llast")) &
       cut(Exists(List(oldp),inv)) <(
-        existsL('Llast) & allL(-(seq.ante.length+3)),
-        cohideR('Rlast) & QE //this should be a trivial QE question
+        existsL(Symbol("Llast")) & allL(-(seq.ante.length+3)),
+        cohideR(Symbol("Rlast")) & QE //this should be a trivial QE question
       ) &
       kDomainDiamond(oldpbound)(pos) <(
           hideL(-(seq.ante.length+3)) &
@@ -1333,7 +1338,7 @@ object ODELiveness extends TacticProvider {
               // add the quantified assumption manually
               dC(quantliecheck1)(pos) <(
                 DifferentialTactics.diffWeakenG(pos) &
-                  implyR(1) & andL(-1) & (allL('Llast)*bvs.length) &
+                  implyR(1) & andL(-1) & (allL(Symbol("Llast"))*bvs.length) &
                   id
                 ,
                 V(pos) & id
@@ -1379,7 +1384,7 @@ object ODELiveness extends TacticProvider {
     implyR(1) & andL(-1) & useAt(exRWge.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e_() * t}](!p(||) + e_()* t >= 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e_()*t, p()+e_()*t>=0 ==> f_()>=0".asSequent,QE)),
+      DW(1) & G(1) & prop & hideL(Symbol("L"), "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e_()*t, p()+e_()*t>=0 ==> f_()>=0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
@@ -1391,7 +1396,7 @@ object ODELiveness extends TacticProvider {
     implyR(1) & andL(-1) & useAt(exRWgt.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e_() * t}](!p(||) + e_()* t > 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e_()*t, p()+e_()*t>0 ==> f_()>0".asSequent,QE)),
+      DW(1) & G(1) & prop & hideL(Symbol("L"), "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e_()*t, p()+e_()*t>0 ==> f_()>0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
@@ -1435,7 +1440,7 @@ object ODELiveness extends TacticProvider {
 
     // Introduces the time variable in a mildly gross way so that it is set to 0 initially
     val timetac =
-      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
     val p = property.sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
@@ -1539,10 +1544,10 @@ object ODELiveness extends TacticProvider {
 
     saveBox(pos) & dDR(R)(pos) < (
       // Remove the saveBox to reduce clutter
-      hideL('Llast),
+      hideL(Symbol("Llast")),
       DifferentialTactics.dCClosure(pos)<(
-        hideL('Llast) & skip ,
-        odeUnify(pos) & hideL('Llast) )
+        hideL(Symbol("Llast")) & skip ,
+        odeUnify(pos) & hideL(Symbol("Llast")) )
     )
   }}
 

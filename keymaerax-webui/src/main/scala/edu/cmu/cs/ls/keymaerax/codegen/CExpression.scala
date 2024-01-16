@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.codegen
 import edu.cmu.cs.ls.keymaerax.codegen.CPrettyPrinter.{CURR, PARAMS, PRE}
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Sort}
@@ -736,8 +737,8 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
   }
 
   override def apply(e: CExpression): (String, String) = {
-    mpfrVars.clear
-    topExpressions.clear
+    mpfrVars.clear()
+    topExpressions.clear()
     topExpressions.append(e)
     createMpfrVars(e)
     (printMpfr() + printDefinitions(e), print(e))

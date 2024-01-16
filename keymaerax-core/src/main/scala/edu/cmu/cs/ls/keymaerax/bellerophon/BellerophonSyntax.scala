@@ -362,15 +362,15 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     */
   //@todo turn into properly type-checkable locator arguments without going crazy long.
   final def apply(locator: Symbol, inExpr: PosInExpr): T = locator match {
-    case 'L => apply(FindL(0, None, HereP, exact=true, BuiltinSymbols.all))
-    case 'R => apply(FindR(0, None, HereP, exact=true, BuiltinSymbols.all))
-    case '_ => this match {
+    case Symbol("L") => apply(FindL(0, None, HereP, exact=true, BuiltinSymbols.all))
+    case Symbol("R") => apply(FindR(0, None, HereP, exact=true, BuiltinSymbols.all))
+    case Symbol("_") => this match {
       case _: LeftTactic => apply(FindL(0, None, HereP, exact=true, BuiltinSymbols.all))
       case _: RightTactic => apply(FindR(0, None, HereP, exact=true, BuiltinSymbols.all))
       case _ => throw new IllFormedTacticApplicationException("Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
-    case 'Llast => apply(LastAnte(0, inExpr))
-    case 'Rlast => apply(LastSucc(0, inExpr))
+    case Symbol("Llast") => apply(LastAnte(0, inExpr))
+    case Symbol("Rlast") => apply(LastSucc(0, inExpr))
   }
   final def apply(locator: Symbol): T = apply(locator, HereP)
 
@@ -389,18 +389,18 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     * @see [[apply()]]
     */
   final def apply(locator: Symbol, expected: Expression, defs: Declaration): T = locator match {
-    case 'L => apply(FindL(0, Some(expected), HereP, exact=true, defs))
-    case 'Llike => apply(FindL(0, Some(expected), HereP, exact=false, defs))
-    case 'R => apply(FindR(0, Some(expected), HereP, exact=true, defs))
-    case 'Rlike => apply(FindR(0, Some(expected), HereP, exact=false, defs))
-    case '_ => this match {
+    case Symbol("L") => apply(FindL(0, Some(expected), HereP, exact=true, defs))
+    case Symbol("Llike") => apply(FindL(0, Some(expected), HereP, exact=false, defs))
+    case Symbol("R") => apply(FindR(0, Some(expected), HereP, exact=true, defs))
+    case Symbol("Rlike") => apply(FindR(0, Some(expected), HereP, exact=false, defs))
+    case Symbol("_") => this match {
       case _: LeftTactic => apply(FindL(0, Some(expected), HereP, exact=true, defs))
       case _: RightTactic => apply(FindR(0, Some(expected), HereP, exact=true, defs))
       case _ => throw new IllFormedTacticApplicationException("Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
-    case 'Llast => logger.info("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
-    case 'Rlast => logger.info("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
+    case Symbol("Llast") => logger.info("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
+    case Symbol("Rlast") => logger.info("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
   }
   final def apply(locator: Symbol, expected: Expression): T = apply(locator, expected, BuiltinSymbols.all)
 

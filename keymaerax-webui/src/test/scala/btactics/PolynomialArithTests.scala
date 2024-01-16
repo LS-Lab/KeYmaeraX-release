@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
@@ -121,9 +126,9 @@ class PolynomialArithTests extends TacticTestBase {
     p4 shouldBe "0+4/3*(1*x^1)+4/5*(1*b()^2)".asTerm
     p5 shouldBe "0+2/5*(1*a()^2)+2/5*(1*b()^2)".asTerm
 
-    r3 shouldBe 'proved
-    r4 shouldBe 'proved
-    r5 shouldBe 'proved
+    r3 shouldBe Symbol("proved")
+    r4 shouldBe Symbol("proved")
+    r5 shouldBe Symbol("proved")
   }
 
   "PolynomialArith" should "do mono mul with proof" in withMathematica { qeTool =>
@@ -139,9 +144,9 @@ class PolynomialArithTests extends TacticTestBase {
     m4 shouldBe "1*y^2*x()^4".asTerm
     m5 shouldBe "1*a()^2*x()^2".asTerm
 
-    r3 shouldBe 'proved
-    r4 shouldBe 'proved
-    r5 shouldBe 'proved
+    r3 shouldBe Symbol("proved")
+    r4 shouldBe Symbol("proved")
+    r5 shouldBe Symbol("proved")
   }
 
   "PolynomialArith" should "do poly mono mul with proof" in withMathematica { qeTool =>
@@ -150,7 +155,7 @@ class PolynomialArithTests extends TacticTestBase {
     val (p2,r2) = mulPolyMono(p1,Divide(Number(2),Number(5)),m1)
 
     p2 shouldBe "0+1/1*(1*x^7*a()^5)+1/1*(1*x^5*a()^5*y()^2)".asTerm
-    r2 shouldBe 'proved
+    r2 shouldBe Symbol("proved")
   }
 
   "PolynomialArith" should "do poly mul with proof" in withMathematica { qeTool =>
@@ -164,8 +169,8 @@ class PolynomialArithTests extends TacticTestBase {
     p4 shouldBe "0+1/2*(1*x^2*y^1)+5/6*(1*y^1*a()^2)+4/5*(1*x^2*a()^2)+4/3*(1*a()^4)".asTerm
     p5 shouldBe "0+5/4*(1*x^2*y^2)+25/12*(1*y^2*a()^2)+1/10*(1*x^4*y^1)+13/3*(1*x^2*y^1*a()^2)+125/18*(1*y^1*a()^4)+4/25*(1*x^4*a()^2)+56/15*(1*x^2*a()^4)+52/9*(1*a()^6)".asTerm
 
-    r4 shouldBe 'proved
-    r5 shouldBe 'proved
+    r4 shouldBe Symbol("proved")
+    r5 shouldBe Symbol("proved")
   }
 
   "PolynomialArith" should "do iterated squares with proof" in withMathematica { qeTool =>
@@ -178,9 +183,9 @@ class PolynomialArithTests extends TacticTestBase {
     t2 shouldBe "(((x+z+y)^2)^2)^2*(x+z+y)".asTerm
     t3 shouldBe "(((xyz+yzx)^2*(xyz+yzx))^2)^2".asTerm
 
-    r1 shouldBe 'proved
-    r2 shouldBe 'proved
-    r3 shouldBe 'proved
+    r1 shouldBe Symbol("proved")
+    r2 shouldBe Symbol("proved")
+    r3 shouldBe Symbol("proved")
   }
 
   "PolynomialArith" should "do poly normalize with proof" in withMathematica { qeTool =>
@@ -200,12 +205,12 @@ class PolynomialArithTests extends TacticTestBase {
 
     println(t1,t2,t3,t4,t5,t6)
     (checkPoly(t1),checkPoly(t2),checkPoly(t3),checkPoly(t4),checkPoly(t5),checkPoly(t6)) shouldBe (true,true,true,true,true,true)
-    r1 shouldBe 'proved
-    r2 shouldBe 'proved
-    r3 shouldBe 'proved
-    r4 shouldBe 'proved
-    r5 shouldBe 'proved
-    r6 shouldBe 'proved
+    r1 shouldBe Symbol("proved")
+    r2 shouldBe Symbol("proved")
+    r3 shouldBe Symbol("proved")
+    r4 shouldBe Symbol("proved")
+    r5 shouldBe Symbol("proved")
+    r6 shouldBe Symbol("proved")
   }
 
   "PolynomialArith" should "do mono div" in withMathematica { qeTool =>

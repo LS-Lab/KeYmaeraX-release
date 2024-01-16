@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import cc.redberry.rings.bigint.BigInteger
@@ -53,7 +58,7 @@ class RingsLibrary(terms: Traversable[Term]) {
       }
     )).toMap
 
-  implicit val ring = MultivariateRing(Q,ringsNames.map(_._2).toArray)
+  implicit val ring: MultivariateRing[Rational[BigInteger]] = MultivariateRing(Q,ringsNames.map(_._2).toArray)
   type Ring = MultivariatePolynomial[Rational[BigInteger]]
   def toRing(term:Term) : Ring = {
     term match {
@@ -299,7 +304,7 @@ class RingsLibrary(terms: Traversable[Term]) {
           SequentCalculus.cut(Equal(Minus(b, a), d)) &
           Idioms.<(
             eqL2R(-seq.ante.length - 1)(pos) & hideL(-seq.ante.length - 1),
-            cohideR('Rlast) & qeTac & done
+            cohideR(Symbol("Rlast")) & qeTac & done
           )
       }
     }

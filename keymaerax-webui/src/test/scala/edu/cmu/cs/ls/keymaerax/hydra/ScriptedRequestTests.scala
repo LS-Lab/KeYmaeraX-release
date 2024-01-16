@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -37,8 +38,8 @@ class ScriptedRequestTests extends TacticTestBase {
     val request = new UploadArchiveRequest(db.db, "guest", modelContents, None)
     request.resultingResponses() should contain theSameElementsAs ModelUploadResponse(Some("1"), None)::Nil
     db.db.getModelList("guest").loneElement should have(
-      'name ("Test"),
-      'keyFile (modelContents))
+      Symbol("name") ("Test"),
+      Symbol("keyFile") (modelContents))
   }
 
   it should "save content but report parse errors" in withDatabase { db =>
@@ -46,13 +47,13 @@ class ScriptedRequestTests extends TacticTestBase {
     val request = new UploadArchiveRequest(db.db, "guest", modelContents, Some("Simple"))
     val response = request.resultingResponses().loneElement
     response shouldBe a [ModelUploadResponse]
-    response should (have ('errorText (Some(
+    response should (have (Symbol("errorText") (Some(
         """2:22 Expected ";":2:22, found "]x=1 End. "
           |Found:    "]x=1 End. " at 2:22
           |Expected: program at 2:16
           |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")""".stripMargin)))
       or have (
-      'errorText (Some (
+      Symbol("errorText") (Some (
         """2:22 Error parsing program at 2:16
           |Found:    "]x=1 End. " at 2:22
           |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")
@@ -81,14 +82,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1)) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
-        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
-        leaves.loneElement should have ('goal (Some("x>=0 ==> x>=0".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>=0 -> x>=0".asSequent)))
+        leaves.loneElement should have (Symbol("goal") (Some("x>=0 ==> x>=0".asSequent)))
     }
 
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
@@ -110,14 +111,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", QE) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
-        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
-        agenda shouldBe 'empty
+        root should have (Symbol("goal") (Some("==> x>=0 -> x>=0".asSequent)))
+        agenda shouldBe Symbol("empty")
         leaves.loneElement.maker shouldBe Some("QE")
     }
 
@@ -141,7 +142,7 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", implyR(1))
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
-        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>=0 -> x>=0".asSequent)))
         agenda.loneElement.id shouldBe "(1,0)"
         leaves.loneElement.numSubgoals shouldBe 1
         leaves.loneElement.goal shouldBe Some("x>=0 ==> x>=0".asSequent)
@@ -153,13 +154,13 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("(1,0)", id)
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
-        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
-        agenda shouldBe 'empty
+        root should have (Symbol("goal") (Some("==> x>=0 -> x>=0".asSequent)))
+        agenda shouldBe Symbol("empty")
         leaves.loneElement.numSubgoals shouldBe 0
-        leaves.loneElement.goal shouldBe 'empty
+        leaves.loneElement.goal shouldBe Symbol("empty")
         leaves.loneElement.maker shouldBe Some("id")
         leaves.loneElement.localProvable.conclusion shouldBe "x>=0 ==> x>=0".asSequent
-        leaves.loneElement.localProvable shouldBe 'proved
+        leaves.loneElement.localProvable shouldBe Symbol("proved")
     }
   }}
 
@@ -177,10 +178,10 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("(3,0)", id)
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
-        root should have ('goal (Some("==> p() | q() -> q() | p()".asSequent)))
+        root should have (Symbol("goal") (Some("==> p() | q() -> q() | p()".asSequent)))
         agenda.loneElement.id shouldBe "(3,1)"
         leaves.size shouldBe 2
-        leaves(0).goal shouldBe 'empty
+        leaves(0).goal shouldBe Symbol("empty")
         leaves(0).maker shouldBe Some("id")
         leaves(1).goal shouldBe Some("q() ==> q(), p()".asSequent)
         leaves(1).maker shouldBe Some("orL(-1)")
@@ -199,8 +200,8 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("(1,0)", solve(1, 1::Nil))
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
-        root should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
-        leaves.loneElement should have ('goal (Some("x>=0&v>=0 ==> [v:=v;]\\exists t_ (t_>=0 & v*t_+x>=0)".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
+        leaves.loneElement should have (Symbol("goal") (Some("x>=0&v>=0 ==> [v:=v;]\\exists t_ (t_>=0 & v*t_+x>=0)".asSequent)))
     }
   }}
 
@@ -216,19 +217,19 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("(1,0)", loop("x>=1".asFormula)(1))
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, l1::l2::l3::Nil, _, _, _, _) =>
-        root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
-        l1 should have ('goal (Some("x>=2 ==> x>=1".asSequent)))
-        l2 should have ('goal (Some("x>=1 ==> x>=0".asSequent)))
-        l3 should have ('goal (Some("x>=1 ==> [x:=x+1;]x>=1".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
+        l1 should have (Symbol("goal") (Some("x>=2 ==> x>=1".asSequent)))
+        l2 should have (Symbol("goal") (Some("x>=1 ==> x>=0".asSequent)))
+        l3 should have (Symbol("goal") (Some("x>=1 ==> [x:=x+1;]x>=1".asSequent)))
     }
 
     tacticRunner("(2,2)", assignb(1))
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, l1::l2::l3::Nil, _, _, _, _) =>
-        root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
-        l1 should have ('goal (Some("x>=1 ==> x+1>=1".asSequent)))
-        l2 should have ('goal (Some("x>=2 ==> x>=1".asSequent)))
-        l3 should have ('goal (Some("x>=1 ==> x>=0".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
+        l1 should have (Symbol("goal") (Some("x>=1 ==> x+1>=1".asSequent)))
+        l2 should have (Symbol("goal") (Some("x>=2 ==> x>=1".asSequent)))
+        l3 should have (Symbol("goal") (Some("x>=1 ==> x>=0".asSequent)))
     }
 
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
@@ -266,14 +267,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", hideR(1)) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
-        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
-        leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>=0 -> x>=0".asSequent)))
+        leaves.loneElement should have (Symbol("goal") (Some(" ==> ".asSequent)))
     }
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, _) => tacticText shouldBe
@@ -291,9 +292,9 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", andR(1)) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, loc) =>
@@ -319,9 +320,9 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", andR(1) <(skip, prop)) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, loc) => tacticText should equal (
@@ -428,14 +429,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", auto(TactixLibrary.invGenerator, None)) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, leaves, agenda, _, _, _) =>
-        root should have ('goal (Some("==> x>=0 -> [{v:=*;?v>=0; {x'=v}}*] x>=0".asSequent)))
-        agenda shouldBe 'empty
+        root should have (Symbol("goal") (Some("==> x>=0 -> [{v:=*;?v>=0; {x'=v}}*] x>=0".asSequent)))
+        agenda shouldBe Symbol("empty")
         leaves.loneElement.maker shouldBe Some("auto")
     }
   }}
@@ -449,15 +450,15 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", dC("[{x'=2,y'=3}]P(x,y)".asFormula :: Nil)(1)) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, l1::l2::Nil, _, _, _, _) =>
-        root should have ('goal (Some("==> [{x'=4}]x>=0".asSequent)))
-        l1 should have ('goal (Some("==> [{x'=4 & true & [{x'=2,y'=3}]P(x,y)}]x>=0".asSequent)))
-        l2 should have ('goal (Some("==> [{x'=4}][{x'=2,y'=3}]P(x,y)".asSequent)))
+        root should have (Symbol("goal") (Some("==> [{x'=4}]x>=0".asSequent)))
+        l1 should have (Symbol("goal") (Some("==> [{x'=4 & true & [{x'=2,y'=3}]P(x,y)}]x>=0".asSequent)))
+        l2 should have (Symbol("goal") (Some("==> [{x'=4}][{x'=2,y'=3}]P(x,y)".asSequent)))
     }
   }}
 
@@ -470,14 +471,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", ArchiveParser.tacticParser("""universalClosure("x::y::nil",1)""")) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, l0::Nil, _, _, _, _) =>
-        root should have ('goal (Some("==> x>0 & y>0 -> x>=0".asSequent)))
-        l0 should have ('goal (Some("==> \\forall x \\forall y (x>0 & y>0 -> x>=0)".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>0 & y>0 -> x>=0".asSequent)))
+        l0 should have (Symbol("goal") (Some("==> \\forall x \\forall y (x>0 & y>0 -> x>=0)".asSequent)))
     }
   }}
 
@@ -490,16 +491,16 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", ArchiveParser.tacticParser("""dC("x>=1::x>=2::nil",1)""")) should have (
-      'proofId (proofId.toString),
-      'parent (DbProofTree(db.db, proofId.toString).root),
-      'progress (true)
+      Symbol("proofId") (proofId.toString),
+      Symbol("parent") (DbProofTree(db.db, proofId.toString).root),
+      Symbol("progress") (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, l0::l1::l2::Nil, _, _, _, _) =>
-        root should have ('goal (Some("==> [{x'=2}]x>=0".asSequent)))
-        l0 should have ('goal (Some("==> [{x'=2 & (true & x>=1) & x>=2}]x>=0".asSequent)))
-        l1 should have ('goal (Some("==> [{x'=2}]x>=1".asSequent)))
-        l2 should have ('goal (Some("==> [{x'=2 & true & x>=1}]x>=2".asSequent)))
+        root should have (Symbol("goal") (Some("==> [{x'=2}]x>=0".asSequent)))
+        l0 should have (Symbol("goal") (Some("==> [{x'=2 & (true & x>=1) & x>=2}]x>=0".asSequent)))
+        l1 should have (Symbol("goal") (Some("==> [{x'=2}]x>=1".asSequent)))
+        l2 should have (Symbol("goal") (Some("==> [{x'=2 & true & x>=1}]x>=2".asSequent)))
     }
   }}
 
@@ -514,8 +515,8 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", "tactic myImply as (implyR(1);nil); myImply")
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, root, l1::Nil, _, _, _, _) =>
-        root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
-        l1 should have ('goal (Some("x>=2 ==> [{x:=x+1;}*]x>=0".asSequent)))
+        root should have (Symbol("goal") (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
+        l1 should have (Symbol("goal") (Some("x>=2 ==> [{x:=x+1;}*]x>=0".asSequent)))
     }
   }}
 
@@ -550,7 +551,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("(2,1)", dIRule(1))
     // proof session should not pick up elaborated variables
-    proofSession().defs.decls(Name("x0", None)).domain should not be 'defined
+    proofSession().defs.decls(Name("x0", None)).domain should not be Symbol("defined")
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
         leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
@@ -571,11 +572,11 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", implyR(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("implyR(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply}"))
+    response should have (Symbol("msg") ("implyR(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply}"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
-        leaves.loneElement should have ('goal (Some("==> x>=0 -> [x:=x+1;]x>=0".asSequent)))
+        leaves.loneElement should have (Symbol("goal") (Some("==> x>=0 -> [x:=x+1;]x>=0".asSequent)))
     }
   }}
 
@@ -589,13 +590,13 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(1, 1::Nil))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("""Axiom choiceb [a;++b;]p(||)<->[a;]p(||)&[b;]p(||) cannot be applied: The shape of
+    response should have (Symbol("msg") ("""Axiom choiceb [a;++b;]p(||)<->[a;]p(||)&[b;]p(||) cannot be applied: The shape of
                                   |  expression               [v:=v;]<{x'=v}>x>=0
                                   |  does not match axiom key [a;++b;]p(||)""".stripMargin))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
-        leaves.loneElement should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
+        leaves.loneElement should have (Symbol("goal") (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
     }
   }}
 
@@ -609,11 +610,11 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("choiceb(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply\n  from\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply}"))
+    response should have (Symbol("msg") ("choiceb(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply\n  from\n==> 1:  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0\tImply}"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
-        leaves.loneElement should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
+        leaves.loneElement should have (Symbol("goal") (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
     }
   }}
 
@@ -628,11 +629,11 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1::Nil))
     response shouldBe a [ErrorResponse]
     //@note dG immediately calls an ANON tactic, which is the one that actually raises the error
-    response should have ('msg ("dG only applicable to box ODEs, but got [v:=v;]<{x'=v}>x>=0"))
+    response should have (Symbol("msg") ("dG only applicable to box ODEs, but got [v:=v;]<{x'=v}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
-        leaves.loneElement should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
+        leaves.loneElement should have (Symbol("goal") (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
     }
   }}
 
@@ -741,7 +742,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = new GetApplicableAxiomsRequest(db.db, db.user.userName, proofId.toString, "()", SuccPosition(5)).
       getResultingResponses(t).loneElement
-    response should have ('derivationInfos (Nil), 'suggestedInput (Map.empty))
+    response should have (Symbol("derivationInfos") (Nil), Symbol("suggestedInput") (Map.empty))
   }
 
   it should "work on a simple example without input suggestion" in withDatabase { db =>
@@ -754,8 +755,8 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = new GetApplicableAxiomsRequest(db.db, db.user.userName, proofId.toString, "()", SuccPosition(1)).
       getResultingResponses(t).loneElement
     response should have (
-      'derivationInfos ((DerivationInfo("implyR"), None) :: (DerivationInfo("chaseAt"), None) :: Nil),
-      'suggestedInput (Map.empty))
+      Symbol("derivationInfos") ((DerivationInfo("implyR"), None) :: (DerivationInfo("chaseAt"), None) :: Nil),
+      Symbol("suggestedInput") (Map.empty))
   }
 
   it should "work with input suggestion" in withDatabase { db =>
@@ -768,9 +769,9 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = new GetApplicableAxiomsRequest(db.db, db.user.userName, proofId.toString, "()", SuccPosition(1)).
       getResultingResponses(t).loneElement
     response should have (
-      'derivationInfos ((DerivationInfo("loop"), None)::(DerivationInfo("[*] iterate"), None)::
+      Symbol("derivationInfos") ((DerivationInfo("loop"), None)::(DerivationInfo("[*] iterate"), None)::
         (DerivationInfo("GV"), None)::Nil),
-      'suggestedInput (Map(FormulaArg("J") -> "x>-1".asFormula)))
+      Symbol("suggestedInput") (Map(FormulaArg("J") -> "x>-1".asFormula)))
   }
 
   "Tactic input checking" should "pass correct input" in withDatabase { db =>
@@ -782,7 +783,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x>1").
       getResultingResponses(t).loneElement
-    response should have ('flag (true))
+    response should have (Symbol("flag") (true))
   }
 
   it should "fail incorrect type" in withDatabase { db =>
@@ -795,8 +796,8 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x").
       getResultingResponses(t).loneElement
     response should have (
-      'flag (false),
-      'errorText (Some("Expected: formula, found: Term x"))
+      Symbol("flag") (false),
+      Symbol("errorText") (Some("Expected: formula, found: Term x"))
     )
   }
 
@@ -810,8 +811,8 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+y>0").
       getResultingResponses(t).loneElement
     response should have (
-      'flag (false),
-      'errorText (Some("argument J uses new names that do not occur in the sequent: y, is it a typo?"))
+      Symbol("flag") (false),
+      Symbol("errorText") (Some("argument J uses new names that do not occur in the sequent: y, is it a typo?"))
     )
   }}
 
@@ -824,7 +825,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f()>0").
       getResultingResponses(t).loneElement
-    response should have ('flag (true))
+    response should have (Symbol("flag") (true))
   }}
 
   it should "fail when defined functions are used without ()" in withTactics { withDatabase { db =>
@@ -836,7 +837,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement
-    response should have ('flag (true))
+    response should have (Symbol("flag") (true))
   }}
 
   "OpenProofRequest" should "populate the invariant supplier from annotations" in withTactics { withDatabase { db =>
@@ -970,7 +971,7 @@ class ScriptedRequestTests extends TacticTestBase {
             // double check extracted tactic
             println("Reproving extracted tactic...")
             val extractedTactic = ArchiveParser.tacticParser(extractedTacticString, entry.defs)
-            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
+            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe Symbol("proved")
             println("Done reproving")
         }
         println("Done (" + (System.currentTimeMillis()-start)/1000 + "s)")
@@ -1025,15 +1026,15 @@ class ScriptedRequestTests extends TacticTestBase {
     request.getResultingResponses(token).loneElement match {
       case response: RunBelleTermResponse =>
         response should have (
-          'proofId (proofIdString),
-          'nodeId (nodeId)
+          Symbol("proofId") (proofIdString),
+          Symbol("nodeId") (nodeId)
         )
         val taskId = response.taskId
         while (new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).
           loneElement.asInstanceOf[TaskStatusResponse].status == "running") {
           Thread.sleep(100)
         }
-        new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement should have ('status ("done"))
+        new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement should have (Symbol("status") ("done"))
         new TaskResultRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement
       case response: ErrorResponse if response.exn != null => fail(response.msg, response.exn)
       case response: ErrorResponse if response.exn == null => fail(response.msg)

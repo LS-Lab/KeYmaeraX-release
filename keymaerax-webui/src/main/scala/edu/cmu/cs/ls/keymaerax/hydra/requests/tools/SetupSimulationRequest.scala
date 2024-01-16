@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.tools
 
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, AxIndex, TacticHelper, TactixLibrary, ToolProvider}
@@ -56,7 +57,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
       //@note: do nothing, should be gone already
       case Diamond(ODESystem(_, _), _) => Nil
       case _ => AxIndex.axiomsFor(e)
-    })('R))
+    })(Symbol("R")))
     assert(stateRelation.subgoals.size == 1 &&
       stateRelation.subgoals.head.ante.isEmpty &&
       stateRelation.subgoals.head.succ.size == 1, "Simulation expected to result in a single formula")

@@ -30,15 +30,15 @@ import scala.collection.immutable.IndexedSeq
 class QETests extends TacticTestBase {
 
   "Implicit params" should "work for Mathematica" in withMathematica { qeTool =>
-    proveBy("1=1".asFormula, ToolTactics.fullQE(qeTool)) shouldBe 'proved
+    proveBy("1=1".asFormula, ToolTactics.fullQE(qeTool)) shouldBe Symbol("proved")
   }
 
   "Full QE" should "prove x>0 & y>0 |- x*y>0" in withMathematica { qeTool =>
-    proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>0".asFormula), IndexedSeq("x*y>0".asFormula)), ToolTactics.fullQE(qeTool)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>0".asFormula), IndexedSeq("x*y>0".asFormula)), ToolTactics.fullQE(qeTool)) shouldBe Symbol("proved")
   }
 
   it should "prove x^2<0 |-" in withMathematica { qeTool =>
-    proveBy(Sequent(IndexedSeq("x^2<0".asFormula), IndexedSeq()), ToolTactics.fullQE(qeTool)) shouldBe 'proved
+    proveBy(Sequent(IndexedSeq("x^2<0".asFormula), IndexedSeq()), ToolTactics.fullQE(qeTool)) shouldBe Symbol("proved")
   }
 
   it should "fail on |-" in withMathematica { qeTool =>
@@ -64,7 +64,7 @@ class QETests extends TacticTestBase {
 
   it should "fail (?) on internal decimal representations (2)" in withMathematica { qeTool =>
     // This isn't as bad as the above two
-    proveBy(Equal(Number(1.0),Minus(Number(4),Number(3))),ToolTactics.fullQE(qeTool)) shouldBe 'proved
+    proveBy(Equal(Number(1.0),Minus(Number(4),Number(3))),ToolTactics.fullQE(qeTool)) shouldBe Symbol("proved")
   }
 
   it should "fail x()=x" in withMathematica { qeTool =>
@@ -72,11 +72,11 @@ class QETests extends TacticTestBase {
   }
 
   it should "not choke on irrelevant predicates" in withMathematica { tool =>
-    proveBy("p_() & q_() -> 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("p_() & q_() -> 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
   }
 
   it should "close predicates if possible" in withMathematica { tool =>
-    proveBy("p_() & q_() -> p_() | 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("p_() & q_() -> p_() | 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
   }
 
   it should "not branch to be clever with predicates" in withMathematica { tool =>
@@ -86,21 +86,21 @@ class QETests extends TacticTestBase {
   }
 
   it should "not fail when already proved" in withMathematica { tool =>
-    proveBy("x>0 -> x>0".asFormula, prop & ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("x>0 -> x>0".asFormula, prop & ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
   }
 
   it should "not fail on duplicate formulas" in withMathematica { tool =>
-    proveBy("x=2, x=2, true, x=2 ==> x>=2, x>=2, x+1>=3".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("x=2, x=2, true, x=2 ==> x>=2, x>=2, x+1>=3".asSequent, ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
   }
 
   it should "abbreviate/not abbreviate interpreted symbols known to Mathematica according to the configuration" in withMathematica { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       //@todo check that generated QE call includes abs
-      proveBy("abs(x)>=0".asFormula, QE) shouldBe 'proved
+      proveBy("abs(x)>=0".asFormula, QE) shouldBe Symbol("proved")
     }
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
       //@todo check that generated QE call does not include abs
-      proveBy("abs(x)>=0".asFormula, QE) shouldBe 'proved
+      proveBy("abs(x)>=0".asFormula, QE) shouldBe Symbol("proved")
     }
   }
 
@@ -116,16 +116,16 @@ class QETests extends TacticTestBase {
   }
 
   it should "not hide equalities about interpreted function symbols" in withMathematica { tool =>
-    proveBy("abs(x) = y -> x=y | x=-y".asFormula, ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("abs(x) = y -> x=y | x=-y".asFormula, ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
   }
 
   it should "rewrite equalities about uninterpreted function symbols" in withMathematica { tool =>
-    proveBy("f(a,b) = 3 -> f(a,b)>2".asFormula, ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("f(a,b) = 3 -> f(a,b)>2".asFormula, ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
   }
 
   it should "abort on test timeout" in { the [TestFailedDueToTimeoutException] thrownBy withMathematica ({ _ =>
     val s = "A()>=0, B()>0, V()>=0, ep()>0, -B()<=a, a<=A(), r!=0, w_0*r=v_0, abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V())), t_0=0, v_0>=0, dx_0^2+dy_0^2=1, r_0!=0, -t*V()<=xo-xo_0, xo-xo_0<=t*V(), -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), v=v_0+a*t, dx^2+dy^2=1, t>=0, t<=ep(), v>=0 ==> v=0, abs(x-xo)>v^2/(2*B())+V()*(v/B())".asSequent
-    proveBy(s, QE) shouldBe 'proved
+    proveBy(s, QE) shouldBe Symbol("proved")
   }, 2) should have message "The code passed to failAfter did not complete within 2 seconds." }
 
   it should "not translate quantified predicates verbatim" in withMathematica { _ =>
@@ -140,21 +140,21 @@ class QETests extends TacticTestBase {
 
   it should "be able to run QE's internal steps" in withMathematica { _ =>
     proveBy("x>z, y=0, z>y ==> x>=0".asSequent,
-      BelleParser("applyEqualities; toSingleFormula; universalClosure(\"x::z::nil\", 1); rcf")) shouldBe 'proved
+      BelleParser("applyEqualities; toSingleFormula; universalClosure(\"x::z::nil\", 1); rcf")) shouldBe Symbol("proved")
     proveBy("x>z, y=0, z>y ==> x>=0".asSequent,
-      BelleParser("applyEqualities; toSingleFormula; universalClosure(\"nil\", 1); rcf")) shouldBe 'proved
+      BelleParser("applyEqualities; toSingleFormula; universalClosure(\"nil\", 1); rcf")) shouldBe Symbol("proved")
   }
 
   it should "abbreviate differential symbols and differentials" in withMathematica { tool =>
-    proveBy("x'>0 ==> x'>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
-    proveBy("==> (x')^2>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
-    proveBy("(f(x))'>0 ==> (f(x))'>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("x'>0 ==> x'>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
+    proveBy("==> (x')^2>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
+    proveBy("(f(x))'>0 ==> (f(x))'>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
   }
 
   it should "prove the STTT example 10 acceleration subgoal" in withMathematica { tool =>
     val s = "A()>0, B()>=b(), b()>0, lw()>0, v_0>=0, abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*c^2+c*v_0) < lw(), -B()<=a, a<=A(), r!=0, w_0*r=v_0, v=v_0+a*c, -c*(v-a/2*c)<=y-y_0, y-y_0<=c*(v-a/2*c), c>=0, v>=0 ==> abs(y-ly())+v^2/(2*b()) < lw()".asSequent
     withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
-      proveBy(s, ToolTactics.fullQE(tool)) shouldBe 'proved
+      proveBy(s, ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
     }
   }
 
@@ -162,7 +162,7 @@ class QETests extends TacticTestBase {
     val s = "A>=0, B>0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo)>v_0^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v_0), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)".asSequent
     withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
       proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform & ArithmeticSimplification.smartHide &
-        ToolTactics.fullQE(tool)) shouldBe 'proved
+        ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
     }
   }}
 
@@ -170,7 +170,7 @@ class QETests extends TacticTestBase {
     val s = "A>=0, B>0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo)>v_0^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v_0), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)".asSequent
     withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
       proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform & ArithmeticSimplification.smartHide &
-        ToolTactics.fullQE(tool)) shouldBe 'proved
+        ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
     }
   }}
 
@@ -178,7 +178,7 @@ class QETests extends TacticTestBase {
     val s = "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())), abs(x_0-xo_0)>v_0^2/(2*B)+V()*(v_0/B), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
     withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
       proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform & ArithmeticSimplification.smartHide &
-        DebuggingTactics.print("Hidden") & ToolTactics.fullQE(tool)) shouldBe 'proved
+        DebuggingTactics.print("Hidden") & ToolTactics.fullQE(tool)) shouldBe Symbol("proved")
     }
   }
 
@@ -191,18 +191,18 @@ class QETests extends TacticTestBase {
   it should "expand definitions if not provable without" in withQE { tool =>
     val defs = "p(x) ~> x=2 :: f(x) ~> x^2 :: g(x) ~> x+1 :: nil".asDeclaration
     val result = proveByS("p(x) ==> f(x) > g(x)".asSequent, ToolTactics.fullQE(defs, List.empty)(tool), defs)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
     result.conclusion shouldBe "x=2 ==> x^2 > x+1".asSequent
   }
 
   it should "expand definitions if not provable without (2)" in withMathematica { _ =>
     val defs = "g(x) ~> x^2+1".asDeclaration
-    proveByS("==> x^2/g(x)>=0".asSequent, QE, defs) shouldBe 'proved
+    proveByS("==> x^2/g(x)>=0".asSequent, QE, defs) shouldBe Symbol("proved")
   }
 
   it should "abbreviate uninterpreted functions with arity>0 since not supported by Reduce/Resolve" in withQE { tool =>
     proveBy("v>=0, t>=0, t<=ep, ep>=0, x>=v*ep+f(v) ==> x>=v*t+f(v)".asSequent,
-      ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
+      ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe Symbol("proved")
   }
 
   it should "abbreviate interpreted functions when not converting" in withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce", Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) { withMathematica { tool =>
@@ -211,7 +211,7 @@ class QETests extends TacticTestBase {
       """(x^2+y^2)^(1/2)<=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())), tau()>0, eps>0, init>=0
         |  ==>  y*y+x*x<=(exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())))^2
         |""".stripMargin.asSequent
-    proveBy(s, ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
+    proveBy(s, ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe Symbol("proved")
   }}
 
   it should "try to abbreviate interpreted functions even when converting to Mathematica is enabled and only proceed expanded on counterexample" in withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_QE_METHOD -> "Reduce", Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { tool =>
@@ -220,17 +220,17 @@ class QETests extends TacticTestBase {
       """(x^2+y^2)^(1/2)<=exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())), tau()>0, eps>0, init>=0
         |  ==>  y*y+x*x<=(exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())*init^(1/2)+2*tau()*(1-exp<< <{exp:=._0;t:=._1;}{{exp'=-exp,t'=-(1)}++{exp'=exp,t'=1}}>(exp=1&t=0) >>(-t/tau())))^2
         |""".stripMargin.asSequent
-    proveBy(s, ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
+    proveBy(s, ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe Symbol("proved")
   }}
 
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Declaration(Map.empty), Nil, Some("Mathematica"))
-    proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
+    proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe Symbol("proved")
   }
 
   it should "succeed with Z3" in withZ3 { _ =>
     val tactic = TactixLibrary.QE(Declaration(Map.empty), Nil, Some("Z3"))
-    proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
+    proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe Symbol("proved")
   }
 
   it should "fail on tool mismatch" in withMathematica { _ =>
@@ -280,7 +280,7 @@ class QETests extends TacticTestBase {
       new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
     val tactic = BelleParser("andR(1); <(QE(\"Z3\"), andR(1) ; <(QE(\"Mathematica\"), QE))")
-    proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved
+    proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe Symbol("proved")
   }
 
   "QE with timeout" should "reset timeout when done" in withTactics { withDatabase{ db => withQE { _ =>

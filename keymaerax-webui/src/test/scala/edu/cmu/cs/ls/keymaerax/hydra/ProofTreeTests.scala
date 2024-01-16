@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, Let, TacticInapplicableFailure}
@@ -57,7 +62,7 @@ class ProofTreeTests extends TacticTestBase {
     tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     tree.root.provable.subgoals.loneElement shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
 
-    tree.tactic shouldBe implyR('R, "x>0 -> x>0".asFormula) & todo
+    tree.tactic shouldBe implyR(Symbol("R"), "x>0 -> x>0".asFormula) & todo
   }
 
   it should "create a proved tree from QE" in withDatabase { db => withMathematica { _ =>
@@ -79,14 +84,14 @@ class ProofTreeTests extends TacticTestBase {
     tree.root.children.head.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     tree.root.children.head.localProvable.subgoals shouldBe empty
     tree.root.children.head.makerShortName shouldBe Some("QE")
-    tree.root.children.head shouldBe 'proved
+    tree.root.children.head shouldBe Symbol("proved")
     tree.locate("(1,0)").get.goal shouldBe tree.root.children.head.goal
 
     tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     tree.root.provable.subgoals shouldBe empty
-    tree.root.provable shouldBe 'proved
+    tree.root.provable shouldBe Symbol("proved")
 
-    tree shouldBe 'proved
+    tree shouldBe Symbol("proved")
 
     tree.tactic shouldBe QE
   }}
@@ -132,18 +137,18 @@ class ProofTreeTests extends TacticTestBase {
     c1.children should have size 1
     val c2 = c1.children.head
     c2.localProvable.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    c2.goal shouldBe 'empty
+    c2.goal shouldBe Symbol("empty")
     c2.localProvable.subgoals shouldBe empty
     c2.makerShortName shouldBe Some("QE")
     rt.locate("(2,0)").get.goal shouldBe c2.goal
 
     rt.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     rt.root.provable.subgoals shouldBe empty
-    rt.root.provable shouldBe 'proved
+    rt.root.provable shouldBe Symbol("proved")
 
-    rt shouldBe 'proved
+    rt shouldBe Symbol("proved")
 
-    rt.tactic shouldBe implyR('R, "x>0 -> x>0".asFormula) & QE
+    rt.tactic shouldBe implyR(Symbol("R"), "x>0 -> x>0".asFormula) & QE
   }}
 
   it should "create a tree with two open goals with a cut" in withDatabase { db =>
@@ -207,7 +212,7 @@ class ProofTreeTests extends TacticTestBase {
     p.subgoals(0) shouldBe g2.goal.get
     p.subgoals(1) shouldBe g1.goal.get
 
-    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> (implyR('R, "x>0->x>0".asFormula) & todo), BelleLabels.cutShow -> todo)
+    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> (implyR(Symbol("R"), "x>0->x>0".asFormula) & todo), BelleLabels.cutShow -> todo)
   }
 
   it should "use provables with definitions" in withDatabase { db => withMathematica { _ =>
@@ -389,8 +394,8 @@ class ProofTreeTests extends TacticTestBase {
     tree = DbProofTree(db, proofId.toString)
     val p = tree.root.provable
     if (expectOpenGoals.isEmpty) {
-      p shouldBe 'proved
-      tree.openGoals shouldBe 'empty
+      p shouldBe Symbol("proved")
+      tree.openGoals shouldBe Symbol("empty")
     } else {
       tree.openGoals.flatMap(_.goal) should contain theSameElementsInOrderAs expectOpenGoals
     }
@@ -716,7 +721,7 @@ class ProofTreeTests extends TacticTestBase {
 
       println(s"Run $i, duration ${end-start}: construction=${treeConstructed-start}, goals=${openGoalsFetched-treeConstructed}, suggestion=${tacticSuggestionFetch-openGoalsFetched}, execution=${tacticExecuted-tacticSuggestionFetch}")
 
-      durations(i) = end-start
+      durations(i) = end-start.toDouble
     }
 
     val tree = DbProofTree(db.db, proofId.toString)
@@ -759,7 +764,7 @@ class ProofTreeTests extends TacticTestBase {
       else goals.head.runTactic("guest", ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), implyR(1), "implyR", wait=true)
 
       val end = System.currentTimeMillis()
-      durations(i) = end-start
+      durations(i) = end-start.toDouble
     }
 
     val tree = DbProofTree(db.db, proofId.toString)
@@ -804,7 +809,7 @@ class ProofTreeTests extends TacticTestBase {
 
         val end = System.currentTimeMillis()
         avg(proof) = (avg(proof)*(i-1) + (end-start))/i
-        max(proof) = Math.max(max(proof), end-start)
+        max(proof) = Math.max(max(proof), end-start.toDouble)
       }
     }
 

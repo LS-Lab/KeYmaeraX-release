@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
@@ -74,7 +74,7 @@ class PropositionalProver extends TacticTestBase  {
   "prop" should "prove list of simple propositional tautologies" in withTactics {
     for (s <- propFacts) {
       val fact = Parser.parser.formulaParser(s)
-      TactixLibrary.proveBy(fact, prop) shouldBe 'proved
+      TactixLibrary.proveBy(fact, prop) shouldBe Symbol("proved")
     }
   }
 

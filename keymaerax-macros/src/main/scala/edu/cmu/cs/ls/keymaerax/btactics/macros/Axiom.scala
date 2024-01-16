@@ -184,13 +184,13 @@ class AxiomImpl (val c: whitebox.Context) {
             // Tactic implementation of derived axiom is always useAt
             val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonString))})""" // : (Unit => Any)
             val unif = unifier match {
-              case "surjective" => 'surjective
-              case "surjlinear" => 'surlinear
-              case "full" => 'full
-              case "linear" => 'linear
-              case "surjlinearpretend" => 'surlinearpretend
+              case "surjective" => Symbol("surjective")
+              case "surjlinear" => Symbol("surlinear")
+              case "full" => Symbol("full")
+              case "linear" => Symbol("linear")
+              case "surjlinearpretend" => Symbol("surlinearpretend")
               case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
-            val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
+            val dispLvl = displayLevel match {case "internal" => Symbol("internal") case "browse" => Symbol("browse") case "menu" => Symbol("menu") case "all" => Symbol("all")
               case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
             val info =
               if(isCore)

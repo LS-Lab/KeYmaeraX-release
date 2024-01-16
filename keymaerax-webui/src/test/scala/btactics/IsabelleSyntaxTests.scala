@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
@@ -12,7 +17,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
   "isabelle syntax" should "re-write formulas into accepted subset" in withMathematica { _ =>
     val fml = "a+b <= c -> !(c>b) | a > 0 & a+5 >= 0 <-> (c = 0 -> b >= 5 & c <= 5)".asFormula
     val (f,pf) = normalise(fml)
-    pf shouldBe 'proved
+    pf shouldBe Symbol("proved")
     //@note x!=0 would be accepted by Isabelle syntax, but semi-algebraic normaliser rewrites to x-0>0|0-x>0
     f shouldBe "(a+b-c>0|b-c>=0|a>0&a+5>=0)&((c-0>0|0-c>0)|b-5>=0&5-c>=0)|(c-(a+b)>=0&c-b>0&(0-a>=0|0-(a+5)>0))&c=0&(5-b>0|c-5>0)".asFormula
   }
@@ -20,7 +25,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
   it should "re-write terms into accepted subset" in withMathematica { _ =>
     val fml = "a-(a+b) <= a*(b-c-d)^2 & (a-b-c)!=0 | (b-(c-d))=0".asFormula
     val (f,pf) = normalise(fml)
-    pf shouldBe 'proved
+    pf shouldBe Symbol("proved")
     //@note x!=0 would be accepted by Isabelle syntax, but semi-algebraic normaliser rewrites to x-0>0|0-x>0
     f shouldBe "a*(b-c-d)^2-(a-(a+b))>=0&(a-b-c-0>0|0-(a-b-c)>0)|b-(c-d)=0".asFormula
   }
@@ -39,7 +44,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(fml)
     println(pff)
     println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "derive repeated addition bounds" in withMathematica { _ =>
@@ -47,7 +52,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(fml)
     println(pff)
     println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "derive lower bounds for different forms of squares" in withMathematica { _ =>
@@ -55,7 +60,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(fml)
     println(pff)
     //println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "derive ETCS essentials" in withMathematica { _ =>
@@ -63,7 +68,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(uf)
     println(pff)
     //println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "derive ETCS safety lemma" in withMathematica { _ =>
@@ -72,8 +77,8 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog,pff) = deriveFormulaProof(f)
     //println(prettyProg(prog))
     println(pff)
-    pf shouldBe 'proved
-    pff shouldBe 'proved
+    pf shouldBe Symbol("proved")
+    pff shouldBe Symbol("proved")
   }
 
   it should "stopsign control monitor" in withMathematica { _ =>
@@ -81,7 +86,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(uf)
     println(pff)
     //println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "stopsign with direct v control control monitor" in withMathematica { _ =>
@@ -89,7 +94,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(uf)
     println(pff)
     println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "stopsign model monitor" in withMathematica { _ =>
@@ -97,8 +102,8 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (f, pf) = normalise(uf)
     val (prog, pff) = deriveFormulaProof(f)
     //println(prettyProg(prog))
-    pf shouldBe 'proved
-    pff shouldBe 'proved
+    pf shouldBe Symbol("proved")
+    pff shouldBe Symbol("proved")
   }
 
   it should "stopsign with direct v control model monitor" in withMathematica { _ =>
@@ -106,7 +111,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(uf)
     println(pff)
     println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "stopsign with direct v control model monitor with disturbance" in withMathematica { _ =>
@@ -114,7 +119,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val (prog, pff) = isarSyntax(uf)
     println(pff)
     println(prettyProg(prog))
-    pff shouldBe 'proved
+    pff shouldBe Symbol("proved")
   }
 
   it should "common subformula eliminate" in withMathematica { _ =>

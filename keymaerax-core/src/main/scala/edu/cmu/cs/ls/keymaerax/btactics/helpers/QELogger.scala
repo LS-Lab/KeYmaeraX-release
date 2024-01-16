@@ -224,7 +224,7 @@ object QELogger extends Logging {
 
     val exporter = (f: Formula) => printPrefix(f) + DefaultSMTConverter(f) + printSuffix(f)
     val seqs = scala.collection.mutable.Set.empty[Sequent]
-    def export(e: (String, Sequent)): Unit = {
+    def `export`(e: (String, Sequent)): Unit = {
       if (!filterDuplicates || !seqs.contains(e._2)) {
         print("Exporting " + e._1 + "...")
         try {

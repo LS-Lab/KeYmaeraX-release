@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -367,7 +368,7 @@ trait SequentCalculus {
       //@todo faster implementation uses derived axiom Ax.existsDistElim
       case Some(Forall(x, _)) => cutL(Forall(x, q))(pos) <(
         label(BelleLabels.cutUse),
-        useAt(Ax.allDistElim)('Rlast) & allR('Rlast) & implyR('Rlast) & label(BelleLabels.cutShow)
+        useAt(Ax.allDistElim)(Symbol("Rlast")) & allR(Symbol("Rlast")) & implyR(Symbol("Rlast")) & label(BelleLabels.cutShow)
       )
       case Some(e) => throw new TacticInapplicableFailure("allLmon only applicable to universal quantifiers on the right, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
@@ -388,7 +389,7 @@ trait SequentCalculus {
   def allLkeep(e: Term)             : DependentPositionWithAppliedInputTactic =
     inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
       case Some(Forall(x, p)) => cut(Forall(x, p)) <(
-        allL(e)('Llast),
+        allL(e)(Symbol("Llast")),
         closeId(pos, SuccPosition(seq.succ.length + 1))
       )
       case Some(e) => throw new TacticInapplicableFailure("allLkeep only applicable to universal quantifiers on the right, but got " + e.prettyString)
@@ -616,7 +617,7 @@ trait SequentCalculus {
       sequent.ante.intersect(sequent.succ).headOption match {
         case Some(fml) => closeId(AntePos(sequent.ante.indexOf(fml)), SuccPos(sequent.succ.indexOf(fml)))
         case None =>
-          if (sequent.ante.exists({ case _: Equal => true case _ => false })) SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id
+          if (sequent.ante.exists({ case _: Equal => true case _ => false })) SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))) & id
           else throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + sequent.prettyString)
       }
     }
@@ -644,9 +645,9 @@ trait SequentCalculus {
             ProofRuleTactics.boundRenameAt(to)(pos ++ PosInExpr(1::Nil)) &
             HilbertCalculus.assignb(pos)*2
             ,
-            implyR('Rlast) & andR('Rlast) <(
+            implyR(Symbol("Rlast")) & andR(Symbol("Rlast")) <(
               Idioms.nil,
-              HilbertCalculus.assignb('Rlast) & id
+              HilbertCalculus.assignb(Symbol("Rlast")) & id
             )
           )
         } else {
@@ -656,9 +657,9 @@ trait SequentCalculus {
             ProofRuleTactics.boundRenameAt(to)(pos ++ PosInExpr(1::Nil)) &
             HilbertCalculus.assignb(pos)*2
             ,
-            implyR(pos) & implyL('Llast) <(
+            implyR(pos) & implyL(Symbol("Llast")) <(
               Idioms.nil,
-              HilbertCalculus.assignb('Llast) & id
+              HilbertCalculus.assignb(Symbol("Llast")) & id
             )
           )
         }
@@ -691,11 +692,11 @@ trait SequentCalculus {
     } else if (seq.ante.zipWithIndex.filter({ case (_, i) => anteIdxs.contains(i) }).forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(what) })
             && seq.succ.zipWithIndex.filter({ case (_, i) => succIdxs.contains(i) }).forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(to) })) {
       cut(Exists(List(what), Equal(what, to))) <(
-        existsL('Llast) & anteRewrite & succRewrite & exhaustiveEqL2R(hide=true)('Llast) &
+        existsL(Symbol("Llast")) & anteRewrite & succRewrite & exhaustiveEqL2R(hide=true)(Symbol("Llast")) &
           uniformRename(Variable(what.name, Some(what.index.map(_ + 1).getOrElse(0))), what),
-        cohide('Rlast) & existsR(to)(1) & TactixLibrary.byUS(Ax.equalReflexive))
+        cohide(Symbol("Rlast")) & existsR(to)(1) & TactixLibrary.byUS(Ax.equalReflexive))
     } else {
-      cut(Equal(what, to)) <(anteRewrite & succRewrite & exhaustiveEqL2R(hide=true)('Llast), Idioms.nil)
+      cut(Equal(what, to)) <(anteRewrite & succRewrite & exhaustiveEqL2R(hide=true)(Symbol("Llast")), Idioms.nil)
     }
   }
 
@@ -727,7 +728,7 @@ trait SequentCalculus {
     longDisplayName = "Close ⊤",
     premises = "*",
     conclusion = "Γ |- ⊤, Δ")
-  val closeT: BuiltInTactic = anon { (pr: ProvableSig) => ProofRuleTactics.closeTrue('R, True).computeResult(pr) }
+  val closeT: BuiltInTactic = anon { (pr: ProvableSig) => ProofRuleTactics.closeTrue(Symbol("R"), True).computeResult(pr) }
 //  val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]).
     * {{{
@@ -740,7 +741,7 @@ trait SequentCalculus {
     longDisplayName = "Close ⊥",
     premises = "*",
     conclusion = "Γ, ⊥ |- Δ")
-  val closeF: BuiltInTactic = anon { (pr: ProvableSig) => ProofRuleTactics.closeFalse('L, False).computeResult(pr) }
+  val closeF: BuiltInTactic = anon { (pr: ProvableSig) => ProofRuleTactics.closeFalse(Symbol("L"), False).computeResult(pr) }
 //  val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
 

@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -148,7 +149,7 @@ trait DifferentialEquationCalculus {
     contextPremises="Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
     contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true)
-  def dIRule: DependentPositionTactic = DifferentialTactics.diffInd('diffInd)
+  def dIRule: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("diffInd"))
 
   /** dIClose: Differential Invariant proves a formula to be an invariant of a differential equation closing with the usual steps to prove it invariant.
     * (uses DI, DW, DE, QE).
@@ -177,7 +178,7 @@ trait DifferentialEquationCalculus {
     contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
     contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true)
-  def dIClose: DependentPositionTactic = DifferentialTactics.diffInd('cex)
+  def dIClose: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant).
     * (uses DI, DW, DE, QE)
@@ -230,7 +231,7 @@ trait DifferentialEquationCalculus {
     * @incontext
     * @see [[HilbertCalculus.DI]]
     */
-  def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
+  def dI(auto: Symbol = Symbol("full")): DependentPositionTactic = DifferentialTactics.diffInd(auto)
 
   @Tactic(names="dI", longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
@@ -238,7 +239,7 @@ trait DifferentialEquationCalculus {
     contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
     contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true, codeName = "dI")
-  def   dIX: DependentPositionTactic = DifferentialTactics.diffInd('cex)
+  def   dIX: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
 
   /** dG(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
     * ghost of the form y'=a*y+b and the postcondition replaced by r, if provided.

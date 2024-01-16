@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package bellerophon.pptests
 
 import java.io.File
@@ -646,7 +651,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   "def tactic parser" should "parse a simple example" in {
     val tactic = tacticParser("tactic t as (assignb('R))")
-    tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb('R)))
+    tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb(Symbol("R"))))
   }
 
   it should "print indented" in {
@@ -665,18 +670,18 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "parse multipe tactic defs" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; tactic s as (implyR(1))")
-    tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb('R)) & DefTactic("s", TactixLibrary.implyR(1)))
+    tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb(Symbol("R"))) & DefTactic("s", TactixLibrary.implyR(1)))
   }
 
   it should "parse a simple example with application" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; implyR(1) ; t")
-    val tDef = DefTactic("t", TactixLibrary.assignb('R))
+    val tDef = DefTactic("t", TactixLibrary.assignb(Symbol("R")))
     tactic shouldBe (round trip tDef & (TactixLibrary.implyR(1) & ApplyDefTactic(tDef)))
   }
 
   it should "parse with multiple application" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(t))")
-    val tDef = DefTactic("t", TactixLibrary.assignb('R))
+    val tDef = DefTactic("t", TactixLibrary.assignb(Symbol("R")))
     tactic shouldBe (round trip tDef & (andR(1) <(
       ApplyDefTactic(tDef) & (TactixLibrary.prop & TactixLibrary.done),
       TactixLibrary.prop & OnAll(ApplyDefTactic(tDef)))))
@@ -688,7 +693,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "FEATURE_REQUEST: scoped definitions" taggedAs TodoTest in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; andR(1) ; <(t ; prop ; done, prop ; doall(tactic t as (unfold) ; t); t)")
-    val tDef1 = DefTactic("t", TactixLibrary.assignb('R))
+    val tDef1 = DefTactic("t", TactixLibrary.assignb(Symbol("R")))
     val tDef2 = DefTactic("t", TactixLibrary.unfoldProgramNormalize)
     tactic shouldBe (round trip tDef1 & (andR(1) <(
       ApplyDefTactic(tDef1) & (TactixLibrary.prop & TactixLibrary.done),
@@ -697,7 +702,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "allow nested defs" in {
     val tactic = tacticParser("tactic t as (tactic s as (assignb('R)) ; andR(1) ; <(s, s)) ; t")
-    val sDef = DefTactic("s", TactixLibrary.assignb('R))
+    val sDef = DefTactic("s", TactixLibrary.assignb(Symbol("R")))
     val tDef = DefTactic("t", sDef & andR(1) <(ApplyDefTactic(sDef), ApplyDefTactic(sDef)))
     tactic shouldBe (round trip tDef & ApplyDefTactic(tDef))
   }
@@ -841,14 +846,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "expand definitions when parsing arguments only when asked to" in {
     inside(tacticParser("MR(\"safeDist()>0\",1)")) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
-        'inputs ("safeDist()>0".asFormula::Nil)
+        Symbol("inputs") ("safeDist()>0".asFormula::Nil)
       )
     }
 
     inside(tacticParser("MR(\"safeDist()>0\",1)",
         Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Right(Some("y".asTerm)), null))))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
-        'inputs ("safeDist()>0".asFormula::Nil)
+        Symbol("inputs") ("safeDist()>0".asFormula::Nil)
       )
     }
   }
@@ -857,13 +862,13 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val SeqTactic(_ +: (adpt: AppliedDependentPositionTactic) +: Nil) =
       tacticParser("useLemma(\"Lemma\",\"prop\"); MR(\"safeDist()>0\",1)",
         Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Right(Some("y".asTerm)), null))))
-    adpt.pt should have ('inputs ("safeDist()>0".asFormula::Nil))
+    adpt.pt should have (Symbol("inputs") ("safeDist()>0".asFormula::Nil))
   }
 
   it should "expand definitions when parsing locators only when asked to" in {
     val defs = "safeDist() ~> y".asDeclaration
-    tacticParser("hideL('L==\"s=safeDist()\")") should have ('locator (Find.FindLPlain("s=safeDist()".asFormula)))
-    tacticParser("hideL('L==\"s=safeDist()\")", defs) should have ('locator (Find.FindLDef("s=safeDist()".asFormula, PosInExpr.HereP, defs ++ TacticReservedSymbols.asDecl)))
+    tacticParser("hideL('L==\"s=safeDist()\")") should have (Symbol("locator") (Find.FindLPlain("s=safeDist()".asFormula)))
+    tacticParser("hideL('L==\"s=safeDist()\")", defs) should have (Symbol("locator") (Find.FindLDef("s=safeDist()".asFormula, PosInExpr.HereP, defs ++ TacticReservedSymbols.asDecl)))
   }
 
   it should "expand definitions when parsing position check locators only when asked to" in {
@@ -883,8 +888,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "lex backslash followed by any character" in {
-    tacticParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR('R, "\\exists x x=0".asFormula)
-    tacticParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR('R, "\\forall x x^2>=0".asFormula)
+    tacticParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR(Symbol("R"), "\\exists x x=0".asFormula)
+    tacticParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR(Symbol("R"), "\\forall x x^2>=0".asFormula)
     the [ParseException] thrownBy tacticParser(""" hideR('R=="\x x^2=1") """) should
       (have message """1:1 Unexpected token cannot be parsed
                      |Found:    \\ at 1:1 to 1:2
@@ -904,14 +909,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val f = "x>0&y>1 -> y>1&x>0".asFormula
     val lemma = proveBy(f, TactixLibrary.prop)
     LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some(s"user${File.separator}testPropLemma")))
-    proveBy(f, "useLemma(\"testPropLemma\")".asTactic) shouldBe 'proved
+    proveBy(f, "useLemma(\"testPropLemma\")".asTactic) shouldBe Symbol("proved")
   }
 
   it should "work with tactic adaptation" in {
     val f = "x>0&y>1 -> y>1&x>0".asFormula
     val lemma = proveBy(f, TactixLibrary.prop)
     LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some(s"user${File.separator}testPropLemma")))
-    proveBy("x>0, y>1, z>2 ==> y>1&x>0".asSequent, "useLemma(\"testPropLemma\", \"prop\")".asTactic) shouldBe 'proved
+    proveBy("x>0, y>1, z>2 ==> y>1&x>0".asSequent, "useLemma(\"testPropLemma\", \"prop\")".asTactic) shouldBe Symbol("proved")
   }
 
   //endregion

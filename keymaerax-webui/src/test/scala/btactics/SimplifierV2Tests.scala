@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -94,7 +99,7 @@ class SimplifierV2Tests extends TacticTestBase {
     val fml = ("[{SB:=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);{?m-z<=SB;a:=-b;++?m-z>=SB;a:=A;}" +
       "t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m").asFormula
     val(res,pr) = rewriteLoopAux(fml,List(Variable("SB")))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     res shouldBe "[{{?m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=-b;++?m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;}t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m".asFormula
   }
 
@@ -103,7 +108,7 @@ class SimplifierV2Tests extends TacticTestBase {
     val fml = ("v^2<=2*b*(m-z)&b>0&A>=0->[{SB:=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);{?m-z<=SB;a:=-b;++?m-z>=SB;a:=A;}" +
       "t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m").asFormula
     val(res,pr) = rewriteLoopAux(fml,List(Variable("SB")))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     res shouldBe "v^2<=2*b*(m-z)&b>0&A>=0->[{{?m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=-b;++?m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;}t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m".asFormula
   }
 
@@ -111,7 +116,7 @@ class SimplifierV2Tests extends TacticTestBase {
     val fml = ("a<=b & b<=c -> v^2<=2*b*(m-z)&b>0&A>=0->[{SB:=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);{?m-z<=SB;a:=-b;++?m-z>=SB;a:=A;}" +
       "t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m").asFormula
     val(res,pr) = rewriteLoopAux(fml,List(Variable("SB")))
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     res shouldBe "a<=b&b<=c->v^2<=2*b*(m-z)&b>0&A>=0->[{{?m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=-b;++?m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;}t:=0;{z'=v,v'=a,t'=1&v>=0&t<=ep}}*]z<=m".asFormula
   }
 

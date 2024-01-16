@@ -755,12 +755,12 @@ object TaylorModelArith {
       val numbericConditionPrv = proveBy(Sequent(context, IndexedSeq(numbericCondition1)),
         andR(1) & Idioms.<(
           debugTac("Initial Numberic condition") &
-            SaturateTactic(andL('L)) &
+            SaturateTactic(andL(Symbol("L"))) &
             IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
             done,
           SaturateTactic(allR(1)) &
             SaturateTactic(implyR(1)) &
-            SaturateTactic(andL('L)) &
+            SaturateTactic(andL(Symbol("L"))) &
             debugTac("Numberic condition") &
             IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
             done
@@ -830,17 +830,17 @@ object TaylorModelArith {
                 by(numericAssumptionPrv),
                 by(nonnegativeTimeStep)
               ),
-              cut(t0.conclusion.succ(0)) & Idioms.<(eqL2R(-context.length - 1)(1) & hideL('Llast), hideR(1) & by(t0)) &
+              cut(t0.conclusion.succ(0)) & Idioms.<(eqL2R(-context.length - 1)(1) & hideL(Symbol("Llast")), hideR(1) & by(t0)) &
                 // "save" information about right Taylor models
                 saveRightTaylorModels &
                 // new initial state
                 hideOldInitialState &
                 allR(1) * vars.length &
                 implyR(1) &
-                andL('Llast) &
-                cutL(taylorModelsIvl.map(_._1).reduceRight(And))('Llast) &
+                andL(Symbol("Llast")) &
+                cutL(taylorModelsIvl.map(_._1).reduceRight(And))(Symbol("Llast")) &
                 Idioms.<(
-                  SaturateTactic(andL('L)) & skip,
+                  SaturateTactic(andL(Symbol("L"))) & skip,
                   cohideOnlyR(2) &
                     taylorModelsIvl.init.foldRight[BelleExpr](
                       useAt(taylorModelsIvl.last._3, PosInExpr(1::Nil))(1) & id){ case ((_, _, implyPrv, _), tac) =>
@@ -856,8 +856,8 @@ object TaylorModelArith {
             hideOldInitialState &
               allR(1) * vars.length &
               implyR(1) &
-              cutL((t1Eq+:taylorModelsEq.map(_._1)).reduceRight(And))('Llast) & Idioms.<(
-                SaturateTactic(andL('L)) & skip,
+              cutL((t1Eq+:taylorModelsEq.map(_._1)).reduceRight(And))(Symbol("Llast")) & Idioms.<(
+                SaturateTactic(andL(Symbol("L"))) & skip,
                 cohideR(2) &
                   useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
                     implyR(1) & useAt(t1Prv, PosInExpr(1::Nil))(1, 1::Nil) & id,
@@ -955,7 +955,7 @@ object TaylorModelArith {
     case Equal(v: Variable, rhs) =>
       val exEq = proveBy(Exists(Seq(v), eq), existsR(rhs)(1) & byUS(equalReflexive))
       proveBy(prv.apply(Cut(exEq.conclusion.succ(0)), 0)(HideRight(SuccPos(0)), 1)(CoHideRight(SuccPos(0)), 1)(exEq, 1),
-        existsL('Llast)
+        existsL(Symbol("Llast"))
       )
     case _ => throw new IllegalArgumentException("cutEq not with equality: " + eq)
   }

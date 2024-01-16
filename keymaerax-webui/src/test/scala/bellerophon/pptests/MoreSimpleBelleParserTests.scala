@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -82,8 +87,8 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "parse formula tactics" in withTactics {
     val t = parser("""loop("v >= 0",1)""").asInstanceOf[AppliedDependentPositionTactic]
-    t should have ('name ("loop"))
-    t.pt should have ('inputs (List("v>=0".asFormula)))
+    t should have (Symbol("name") ("loop"))
+    t.pt should have (Symbol("inputs") (List("v>=0".asFormula)))
   }
 
   it should "parse j(x) as a term or a formula depending on ArgInfo." in withTactics {
@@ -92,14 +97,14 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse exact matching search" in withTactics {
-    parser("""implyR('R=="x>0->x>=0")""") shouldBe TactixLibrary.implyR('R, "x>0->x>=0".asFormula)
-    parser("""andL('L=="x>0&x>=0")""") shouldBe TactixLibrary.andL('L, "x>0&x>=0".asFormula)
+    parser("""implyR('R=="x>0->x>=0")""") shouldBe TactixLibrary.implyR(Symbol("R"), "x>0->x>=0".asFormula)
+    parser("""andL('L=="x>0&x>=0")""") shouldBe TactixLibrary.andL(Symbol("L"), "x>0&x>=0".asFormula)
     parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0::Nil), exact=true, BuiltinSymbols.all))
   }
 
   it should "parse unifiable matching search" in withTactics {
-    parser("""implyR('R~="x>0->x>=0")""") shouldBe TactixLibrary.implyR('Rlike, "x>0->x>=0".asFormula)
-    parser("""andL('L~="x>0&x>=0")""") shouldBe TactixLibrary.andL('Llike, "x>0&x>=0".asFormula)
+    parser("""implyR('R~="x>0->x>=0")""") shouldBe TactixLibrary.implyR(Symbol("Rlike"), "x>0->x>=0".asFormula)
+    parser("""andL('L~="x>0&x>=0")""") shouldBe TactixLibrary.andL(Symbol("Llike"), "x>0&x>=0".asFormula)
     parser("""absExp('L~="#abs(x)#=3")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0::Nil), exact=false, BuiltinSymbols.all))
   }
 

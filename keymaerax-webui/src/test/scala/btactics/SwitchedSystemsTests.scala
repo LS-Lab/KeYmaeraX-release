@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems._
@@ -190,7 +195,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -199,7 +204,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove system stable automatically" in withMathematicaMatlab { _ =>
@@ -209,7 +214,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ss = StateDependent(List(ode1,ode2))
     val spec = stabilitySpec(ss)
 
-    proveBy(spec, proveStabilityCLF(None)(1)) shouldBe 'proved
+    proveBy(spec, proveStabilityCLF(None)(1)) shouldBe Symbol("proved")
   }
 
   it should "prove ODE stable" in withMathematica { _ =>
@@ -224,7 +229,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -233,7 +238,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove controlled stable, ignoring switching mechanism" in withMathematica { _ =>
@@ -257,7 +262,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
 
@@ -266,7 +271,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove timed stable, ignoring switching mechanism" in withMathematica { _ =>
@@ -289,7 +294,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
 
@@ -298,7 +303,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove system stable 2" in withMathematica { _ =>
@@ -313,7 +318,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -322,7 +327,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove system stable 3" in withMathematica { _ =>
@@ -337,7 +342,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -346,7 +351,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   "UGpAS MLF" should "prove state-dependent system stable" in withMathematica { _ =>
@@ -364,7 +369,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -373,7 +378,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove state-dependent system stable 2" in withMathematica { _ =>
@@ -387,7 +392,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -396,7 +401,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove state-dependent system stable 3" in withMathematica { _ =>
@@ -411,7 +416,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -420,7 +425,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove state-dependent system stable 4" in withMathematica { _ =>
@@ -442,7 +447,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
@@ -451,7 +456,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove guarded system stable 1" in withMathematica { _ =>
@@ -476,7 +481,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
     val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
@@ -485,7 +490,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
 
@@ -502,10 +507,10 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     proveBy(Imply("mode1()!=mode2()".asFormula,stabilitySpec(ss)),
       implyR(1) &
-        proveStabilityStateMLF(Nil)(1)) shouldBe 'proved
+        proveStabilityStateMLF(Nil)(1)) shouldBe Symbol("proved")
     proveBy(Imply("mode1()!=mode2()".asFormula,attractivitySpec(ss)),
       implyR(1) &
-        proveAttractivityStateMLF(Nil)(1)) shouldBe 'proved
+        proveAttractivityStateMLF(Nil)(1)) shouldBe Symbol("proved")
   }
 
   it should "prove timed system stable 1" in withMathematica { _ =>
@@ -531,7 +536,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
     val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
@@ -540,7 +545,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove timed system stable 2" in withMathematica { _ =>
@@ -564,7 +569,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
 
@@ -574,7 +579,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   // Works, but slow and requires configuring to degree 15 and factor 1.2 Taylor expansion
@@ -599,7 +604,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
     val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
@@ -608,7 +613,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "prove timed system stable 4" in withMathematica { _ =>
@@ -635,7 +640,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
 
@@ -645,7 +650,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr2)
-    pr2 shouldBe 'proved
+    pr2 shouldBe Symbol("proved")
   }
 
   it should "be robust to mode expansion" in withMathematica { _ =>
@@ -657,7 +662,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
@@ -786,7 +791,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
   // todo: need to handle arithmetic much better here (too slow / doesn't prove)
   it should "prove large ODE stable" taggedAs TodoTest ignore withMathematica { _ =>
@@ -901,7 +906,7 @@ class SwitchedSystemsTests extends TacticTestBase {
                     hideL(-1) &
                     generalize(invariant)(1) <(
                       chase(1) & hideL(-3) & QE ,
-                      andL(-1) & hideL('Llast) &
+                      andL(-1) & hideL(Symbol("Llast")) &
                         throughout(invariant)(1) <(
                           prop,
                           prop,
@@ -919,7 +924,7 @@ class SwitchedSystemsTests extends TacticTestBase {
                             andL(-1) & chase(1) & orL(-3) <(
                             andR(1) <(
                               implyR(1) &
-                                exhaustiveEqL2R('Llast) &
+                                exhaustiveEqL2R(Symbol("Llast")) &
                                 // this sequence of cuts sets things up in the right order
                                 dC("s_>=0".asFormula)(1) <(
                                   dC(Less(Times(lyap1,exp), w))(1) <(
@@ -944,7 +949,7 @@ class SwitchedSystemsTests extends TacticTestBase {
                             andR(1) <(
                               implyR(1) & hideR(1) & QE,
                               implyR(1) &
-                                exhaustiveEqL2R('Llast) &
+                                exhaustiveEqL2R(Symbol("Llast")) &
                                 dC("s_>=0".asFormula)(1) <(
                                   dC(Less(Times(lyap2,exp), w))(1) <(
                                     dC(Less(normsq,epssq))(1) <(
@@ -974,7 +979,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
   }
 
 }

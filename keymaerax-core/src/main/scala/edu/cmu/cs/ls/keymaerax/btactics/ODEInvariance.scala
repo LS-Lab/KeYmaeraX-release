@@ -225,7 +225,7 @@ object ODEInvariance extends TacticProvider {
       skip,
       implyR(pos) &
         //DebuggingTactics.print("OR STEP") &
-        orL('Llast) <(
+        orL(Symbol("Llast")) <(
           //Strict case
           //DebuggingTactics.print("Cont STEP") &
           useAt(contAx,PosInExpr(1::Nil))(pos) & id |
@@ -235,13 +235,13 @@ object ODEInvariance extends TacticProvider {
           dR(GreaterEqual(lie,Number(0)),false)(pos) <(
             //left open for outer tactic
             skip,
-            cohideOnlyL('Llast) &
+            cohideOnlyL(Symbol("Llast")) &
               //This is a special case where we don't want full DI, because we already have everything
               cohideOnlyR(pos) &
               Dconstify(
-                diffInd('diffInd)(1) <(
+                diffInd(Symbol("diffInd"))(1) <(
                   useAt(geq)(1) & orR(1) & id,
-                  cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
+                  cohideOnlyL(Symbol("Llast")) & SaturateTactic(Dassignb(1)) & implyRi &
                   useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
               ))(1) & done
           )
@@ -442,7 +442,7 @@ object ODEInvariance extends TacticProvider {
     val (tac2,tac21,tac22,tac23) = propt2 match {
       case None => (skip,skip,skip,skip)
       case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),
-        useAt(pr,PosInExpr(1::Nil))('Rlast),
+        useAt(pr,PosInExpr(1::Nil))(Symbol("Rlast")),
         useAt(pr,PosInExpr(1::Nil))(-1,PosInExpr(1::Nil)),
         useAt(pr,PosInExpr(1::Nil))(1,PosInExpr(0::1::Nil)))
     }
@@ -743,10 +743,10 @@ object ODEInvariance extends TacticProvider {
 
           //dC with old(.) moves the formula to the last position
           dC(LessEqual(left, right))(pos) < (
-            dW('Rlast) & cutR(equals)(1) <(
+            dW(Symbol("Rlast")) & cutR(equals)(1) <(
               QE & done,
               QE),
-            diffInd('full)('Rlast)
+            diffInd(Symbol("full"))(Symbol("Rlast"))
           )
       }
     }
@@ -827,7 +827,7 @@ object ODEInvariance extends TacticProvider {
 
     // Gross way of inserting time ODE in a stable way (copied from ODELiveness)
     val timetac =
-      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL(Symbol("Llast")), cohideR(Symbol("Rlast")) & QE) &
         vDG(timer)(pos)
 
     // set up the time variable
@@ -841,7 +841,7 @@ object ODEInvariance extends TacticProvider {
       chase(pos.checkTop.getPos,PosInExpr(1::Nil)) & useAt(propt.get)(pos.checkTop.getPos,PosInExpr(0::1::0::Nil)) &
       cutR(pf)(pos) <(
         DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done,
-        cohideOnlyL('Llast) &
+        cohideOnlyL(Symbol("Llast")) &
           cohideOnlyR(pos) &
           cutR(Diamond(ODESystem(DifferentialProduct(timer,ode),Greater(Number(1),Number(0))),NotEqual(timevar,Number(0))))(1) <(
             cohideR(1) & byUS(contAxTrue),
@@ -1015,7 +1015,7 @@ object ODEInvariance extends TacticProvider {
       else ghostLemLe
 
     if (lie == Number(0))
-      dC(cutp)(pos) <( skip, diffInd('full)(pos))
+      dC(cutp)(pos) <( skip, diffInd(Symbol("full"))(pos))
 
     else
     //Cuts
@@ -1028,16 +1028,16 @@ object ODEInvariance extends TacticProvider {
         dC(gtz)(pos) < (
           // Do the vdbx case manually
           boxAnd(pos) & andR(pos) < (
-            diffWeakenG(pos) & implyR(1) & andL('Llast) & id,
+            diffWeakenG(pos) & implyR(1) & andL(Symbol("Llast")) & id,
             //QE can't handle this alone: diffInd('full)(pos)
             Dconstify
             (
-              diffInd('diffInd)(pos) <(
+              diffInd(Symbol("diffInd"))(pos) <(
                 //Cleanup the goal
                 //Extra domain constraint from diffInd step
-                hideL('Llast) &
+                hideL(Symbol("Llast")) &
                 //Get rid of dbxy_=1 assumption
-                exhaustiveEqL2R(hide=true)('Llast) &
+                exhaustiveEqL2R(hide=true)(Symbol("Llast")) &
                 // TODO: The next 3 steps do not work with Dconstify
                 //useAt(leftMultId)(pos++PosInExpr(0::Nil)) &
                 //useAt(pr,PosInExpr(1::Nil))(pos) &
@@ -1045,17 +1045,17 @@ object ODEInvariance extends TacticProvider {
                 // p=0 must be true initially
                 QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
                 ,
-                cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
+                cohideOnlyR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
                   // or the negated version ((-g)y+0)p + y(p') >= 0
                   // Remove the y, turning the result into p' <= gp or gp <= p'
                   (if(negate) useAt(ghostLem2,PosInExpr(1::Nil))(1)
                   else useAt(ghostLem1,PosInExpr(1::Nil))(1)) &
                   andR(1) <(
-                    andL('Llast) & close,
+                    andL(Symbol("Llast")) & close,
                   //Now we need a real rearrangement using Q |- p' = Gp
                   cut(Equal(lie,Times(two,dp))) <(
-                    exhaustiveEqL2R('Llast) & hideL('Llast) &
+                    exhaustiveEqL2R(Symbol("Llast")) & hideL(Symbol("Llast")) &
                       //Finally apply the Frobenius bound
                       cohideR(1) & byUS(frobenius)
                     ,
@@ -1070,10 +1070,10 @@ object ODEInvariance extends TacticProvider {
           ,
           DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
-            diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
+            diffInd(Symbol("diffInd"))(pos) // Closes z > 0 invariant with another diff ghost
               <(
-              hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
-              cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+              hideL(Symbol("Llast")) & exhaustiveEqL2R(hide=true)(Symbol("Llast"))*2 & useAt(dbxEqOne)(pos) & closeT,
+              cohideR(Symbol("Rlast")) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
             )
         )
     )
@@ -1770,9 +1770,9 @@ object ODEInvariance extends TacticProvider {
       case None => (skip,skip,skip,skip)
       case Some(pr) => (
         useAt(pr)(pos ++ PosInExpr(1::Nil)),
-        useAt(pr,PosInExpr(1::Nil))('Rlast),
+        useAt(pr,PosInExpr(1::Nil))(Symbol("Rlast")),
         useAt(pr,PosInExpr(1::Nil))(-1,PosInExpr(1::Nil)),
-        useAt(pr,PosInExpr(1::Nil))('Llast)
+        useAt(pr,PosInExpr(1::Nil))(Symbol("Llast"))
       )
     }
 
@@ -1961,7 +1961,7 @@ object ODEInvariance extends TacticProvider {
 
     // Introduce the initial values x0
     val storeInitialVals =
-      x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))('Rlast)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+      x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))(Symbol("Rlast"))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
 
     // Partial solutions
     val sp = np.map(m => matvec_prod(m, oldx))
@@ -1999,10 +1999,10 @@ object ODEInvariance extends TacticProvider {
 
     val finish =
       if (solveEnd)
-        ?(diffWeakenPlus('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
-          andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
-          SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
-          SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
+        ?(diffWeakenPlus(Symbol("Rlast")) & //todo: dW repeats storing of initial values which isn't very useful here
+          andL(Symbol("Llast")) & andL(Symbol("Llast")) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+          SaturateTactic(andL(Symbol("Llast"))) & //Splits conjunction of equations up
+          SaturateTactic(exhaustiveEqL2R(true)(Symbol("Llast"))) & //rewrite
           timeoutQE & done)
       else
         skip
@@ -2013,11 +2013,11 @@ object ODEInvariance extends TacticProvider {
       //NOTE: At this point, the box question is guaranteed to be 'Rlast because existR reorders succedents
       //If existsR is changed, all the 'Rlast should turn back into pos instead
       storeInitialVals &
-      dC(cut)('Rlast) < (
+      dC(cut)(Symbol("Rlast")) < (
       finish,
       // dRI directly is actually a lot slower than the dC chain even with naive dI
       // dRI('Rlast)
-      cuts.foldLeft[BelleExpr](skip)((t, f) => dC(f)('Rlast) < (t, diffInd('full)('Rlast))) & diffInd('full)('Rlast)
+      cuts.foldLeft[BelleExpr](skip)((t, f) => dC(f)(Symbol("Rlast")) < (t, diffInd(Symbol("full"))(Symbol("Rlast")))) & diffInd(Symbol("full"))(Symbol("Rlast"))
 
       // this does the "let" once rather than on every dI -- doesn't help speed much
       //Dconstify(
@@ -2066,11 +2066,11 @@ object ODEInvariance extends TacticProvider {
 
     cutR(Or(Equal(p,zero),Or(Greater(p,zero),Less(p,zero))))(pos) <(
       cohideR(pos) &byUS(trichotomy),
-      implyR(pos) & orL('Llast) <(
+      implyR(pos) & orL(Symbol("Llast")) <(
         /* p = 0*/
         dC(Equal(p,zero))(pos) <(skip, dbx),
         /* p > 0 | p < 0 */
-        orL('Llast) <(
+        orL(Symbol("Llast")) <(
           dC(Greater(p,zero))(pos) <(skip, dbx),
           dC(Less(p,zero))(pos) <(skip, dbx)
         )
@@ -2243,11 +2243,11 @@ object ODEInvariance extends TacticProvider {
       cutR(Or(Equal(tvar,svar),NotEqual(svar,tvar)))(pos) <(
         cohideR(pos) & QE,
           //implyR moves succedent to 'Rlast
-        implyR(pos) & orL('Llast) <(
+        implyR(pos) & orL(Symbol("Llast")) <(
           //initial branch
-          useAt(Ax.DCC, PosInExpr(1::Nil))('Rlast) & andR('Rlast)<(
-            timeBound('Rlast),
-            cohideOnlyR('Rlast) & cohideOnlyL('Llast) &
+          useAt(Ax.DCC, PosInExpr(1::Nil))(Symbol("Rlast")) & andR(Symbol("Rlast"))<(
+            timeBound(Symbol("Rlast")),
+            cohideOnlyR(Symbol("Rlast")) & cohideOnlyL(Symbol("Llast")) &
             dC(GreaterEqual(tvar,svar))(1) <(
               DW(1) & G(1) & implyR(1) & implyR(1) &
               andL(-1) & hideL(-2) &
@@ -2259,18 +2259,18 @@ object ODEInvariance extends TacticProvider {
             )
           ),
           //backwards branch
-          DW('Rlast) & useAt(Ax.box,PosInExpr(1::Nil))('Rlast) & notR('Rlast) &
-          cutL(cutfml)('Llast) <(
-            (existsL('Llast) * newnames.length) &
-              useAt(Ax.pVd)('Llast) & andL('Llast) &
-              notL('Llast) & useAt(dadj)('Llast) &
-              cutL(revMon)('Llast) <(
-                implyR('Rlast) & andL('Llast) & hideL('Llast) &
+          DW(Symbol("Rlast")) & useAt(Ax.box,PosInExpr(1::Nil))(Symbol("Rlast")) & notR(Symbol("Rlast")) &
+          cutL(cutfml)(Symbol("Llast")) <(
+            (existsL(Symbol("Llast")) * newnames.length) &
+              useAt(Ax.pVd)(Symbol("Llast")) & andL(Symbol("Llast")) &
+              notL(Symbol("Llast")) & useAt(dadj)(Symbol("Llast")) &
+              cutL(revMon)(Symbol("Llast")) <(
+                implyR(Symbol("Rlast")) & andL(Symbol("Llast")) & hideL(Symbol("Llast")) &
                 cut(Or(nprstarpf,rennqrstarpf)) <(
                   //Cleanup the sequent
                   (hideL(-1) * seq.ante.length) & // hide original antecedents //@todo may cause singularities in dG!
                   hideL(-1) & // hide s_!=t_
-                  cohideOnlyR('Rlast) & //hide all succedents
+                  cohideOnlyR(Symbol("Rlast")) & //hide all succedents
                   hideL(-2) & // hide domain
                   useAt(Ax.UniqIff,PosInExpr(1::Nil))(-1) & andL(-1) &
                   implyR(1) & exchangeL(-1,-4) & exchangeL(-3,-4) & orL(-3) <(
@@ -2285,7 +2285,7 @@ object ODEInvariance extends TacticProvider {
                     //(!Q)-* branch
                     cutR(rennqrlp)(1) <(
                       hideL(-4) & lpgen(rennqrstarinst),
-                      hideL(-1) & hideL('Llast) &  hideL('Llast) & implyR(1) & rennqtac &
+                      hideL(-1) & hideL(Symbol("Llast")) &  hideL(Symbol("Llast")) & implyR(1) & rennqtac &
                       andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
                       diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
                       implyR(1) & andL(-1) & orL(-2) <( notL(-2) & id, id)
@@ -2295,12 +2295,12 @@ object ODEInvariance extends TacticProvider {
                 )
                 ,
                 //useAt(Ax.UniqIff,PosInExpr(1::Nil))('Llast),
-                cohideOnlyL('Llast) & cohideOnlyR('Rlast) & useAt(Ax.Kd,PosInExpr(1::Nil))(1) &
+                cohideOnlyL(Symbol("Llast")) & cohideOnlyR(Symbol("Rlast")) & useAt(Ax.Kd,PosInExpr(1::Nil))(1) &
                 dW(1) & QE // todo: can do manually
               )
 
             ,
-            cohideR('Rlast) & implyR(1) & barcantac &
+            cohideR(Symbol("Rlast")) & implyR(1) & barcantac &
             mond & existstac & andR(1) <(cohideR(1) & QE,id) // todo: maybe prove manually
           )
         )
@@ -2310,8 +2310,8 @@ object ODEInvariance extends TacticProvider {
         ToolTactics.hideNonFOL & ?(QE & done), //prove P* | (!Q)* from assumptions
         (if (skipLock) skip
         else {
-        cutL(qlpi)('Llast) <(skip,
-          cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+        cutL(qlpi)(Symbol("Llast")) <(skip,
+          cohideOnlyR(Symbol("Rlast")) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
           dC(Imply(Equal(tvar,svar),sys.constraint))(1) <(
             DW(1) & G(1) &
               implyR(1) & andL(-1) &
@@ -2327,13 +2327,13 @@ object ODEInvariance extends TacticProvider {
                 cohideOnlyL(-2) & DifferentialTactics.dI(1)))
            )
         ) }) &
-        implyR(1) & orL('Llast) <(
+        implyR(1) & orL(Symbol("Llast")) <(
           // P* branch
           hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
             lpgen(pstarinst),
           hideL(-3) & hideL(-1) & cutR(nqlp)(1) <(
             lpgen(nqstarinst),
-            hideL(-1) & hideL('Llast) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
+            hideL(-1) & hideL(Symbol("Llast")) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
               diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
               implyR(1) & andL(-1) &
               (if(skipLock) orL(-1) <( orL(-2) <(notL(-2) & id,id), id)
@@ -2410,16 +2410,16 @@ object ODEInvariance extends TacticProvider {
           cohideOnlyL(-1) & implyR(1) & ODELiveness.bDG(sys.ode,normbound)(1) <(
             dC(eq)(1)<(
               DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & hideL(-1) &
-              SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & QE,
+              SaturateTactic(andL(Symbol("L"))) & SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))) & QE,
               id),
             dC(eq)(1)<(
               hideL(-2) & dC(px)(1) <(
                 DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(1),SuccPos(0)) &
-                andL(-1) & hideL(-1) & SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & implyR(1) & id,
+                andL(-1) & hideL(-1) & SaturateTactic(andL(Symbol("L"))) & SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))) & implyR(1) & id,
                 dR(sys.constraint)(1)<(
                   ODELiveness.odeUnify(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & id,
                   DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(0),SuccPos(0)) &
-                  SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & implyR(1) & id
+                  SaturateTactic(andL(Symbol("L"))) & SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))) & implyR(1) & id
                 )
               ),
               id)

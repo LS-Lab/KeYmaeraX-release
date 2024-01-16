@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SaturateTactic}
@@ -19,11 +24,11 @@ object ArithmeticLibrary {
   lazy val exhaustiveBeta: BelleExpr = SaturateTactic(onAll(betaRule))
   /** Splits on the left-hand side if it results in lower number of variables */
   lazy val varEliminationLeft: BelleExpr = SaturateTactic(alphaRule) & SaturateTactic(onAll(
-    orL('Llike, "x=f_(|x|) | x=g_(|x|)".asFormula) |         // top-level case distinction
-    orL('Llike, "p_()&x=f_(|x|) | q_()&x=g_(|x|)".asFormula) // case for min/max/abs expansion
+    orL(Symbol("Llike"), "x=f_(|x|) | x=g_(|x|)".asFormula) |         // top-level case distinction
+    orL(Symbol("Llike"), "p_()&x=f_(|x|) | q_()&x=g_(|x|)".asFormula) // case for min/max/abs expansion
   ))
   /** Splits on the left-hand side to eliminate a specific variable */
   def varEliminationLeft(x: Variable): BelleExpr = SaturateTactic(alphaRule) &
-    orL('Llike, s"$x=f_(|$x|) | $x=g_(|$x|)".asFormula)         // top-level case distinction
+    orL(Symbol("Llike"), s"$x=f_(|$x|) | $x=g_(|$x|)".asFormula)         // top-level case distinction
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -148,7 +148,7 @@ object ArithmeticSimplification extends TacticProvider {
       //@todo find assumptions needed to prove transformation (remember dependencies) for Using(assumptions, QE)
       cutLR(seq(pos.top).replaceFree(what, to))(pos) <(
         skip,
-        if (pos.isAnte) implyR('Rlast) & seq.succ.indices.map(i => hideR(i+1)).reverse.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
+        if (pos.isAnte) implyR(Symbol("Rlast")) & seq.succ.indices.map(i => hideR(i+1)).reverse.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
         else implyR(pos) & seq.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
       )
     case _ => throw new IllFormedTacticApplicationException(s"Expected equality but found ${equality.prettyString}")

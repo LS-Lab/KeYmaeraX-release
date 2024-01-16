@@ -634,7 +634,7 @@ class WolframScript extends MathematicaLink with Logging {
     val exitVal = try {
       Await.result(f, duration.Duration.Inf)
     } catch {
-      case _: InterruptedException => p.destroy
+      case _: InterruptedException => p.destroy()
     } finally {
       wolframProcess = None
     }

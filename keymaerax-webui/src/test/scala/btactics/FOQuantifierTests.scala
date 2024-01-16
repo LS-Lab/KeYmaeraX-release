@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, UnexpandedDefinitionsFailure}
@@ -91,28 +96,28 @@ class FOQuantifierTests extends TacticTestBase {
     val result = proveBy("[{x'=5&x<7}]x<7".asFormula,
       dW(1) & prop)
     println(result)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "diffWeaken ouch" in withMathematica { _ =>
     val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula,
       dW(1) & dW(1) & prop)
     println(result)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "diffWeaken before loopy" in withMathematica { _ =>
     val result = proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula,
       dW(1) & loop("x>0".asFormula)(1) & master())
     println(result)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "diffWeaken before semibound" in withMathematica { _ =>
     val result = proveBy("[{x'=1&x>0}][{x:=2;++y:=2;}]x>0".asFormula,
       dW(1) & master())
     println(result)
-    result shouldBe 'proved
+    result shouldBe Symbol("proved")
   }
 
   it should "instantiate free ODE modality whatever the names" in withTactics {
@@ -492,7 +497,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "skolemize simple at any succedent position with position locator" in withTactics {
     val s = Sequent(IndexedSeq(), IndexedSeq("y>0".asFormula, "\\forall x x>0".asFormula))
-    val result = proveBy(s, allSkolemize('R))
+    val result = proveBy(s, allSkolemize(Symbol("R")))
     result.subgoals.loneElement shouldBe "==> y>0, x>0".asSequent
   }
 
@@ -569,7 +574,7 @@ class FOQuantifierTests extends TacticTestBase {
     val result = proveBy("\\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)".asFormula,
       implyR(1) & existsR(1) & allL(-1) & allR(1) & existsL(-1) & (close | skip)
     )
-    result should not be 'proved
+    result should not be Symbol("proved")
     result.isProved shouldBe false
   }
 
@@ -577,7 +582,7 @@ class FOQuantifierTests extends TacticTestBase {
     val result = proveBy("\\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)".asFormula,
       implyR(1) & existsR(Variable("y"),Variable("y"))(1) & allL(Variable("x"),Variable("x"))(-1) & allR(1) & existsL(-1) & (close | skip)
     )
-    result should not be 'proved
+    result should not be Symbol("proved")
     result.isProved shouldBe false
   }
 
@@ -585,7 +590,7 @@ class FOQuantifierTests extends TacticTestBase {
     val result = proveBy("\\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)".asFormula,
       implyR(1) & existsR(Variable("y"))(1) & allL(Variable("x"))(-1) & allR(1) & existsL(-1) & (close | skip)
     )
-    result should not be 'proved
+    result should not be Symbol("proved")
     result.isProved shouldBe false
   }
 
@@ -595,7 +600,7 @@ class FOQuantifierTests extends TacticTestBase {
         & (existsR(Variable("z"),Variable("x"))(1) | nil)
         & (close | skip))
 
-    result should not be 'proved
+    result should not be Symbol("proved")
     result.isProved shouldBe false
   }
 }

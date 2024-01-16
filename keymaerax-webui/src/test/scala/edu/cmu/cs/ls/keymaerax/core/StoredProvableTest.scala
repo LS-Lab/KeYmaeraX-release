@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -30,7 +30,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
 
   "Future-compatible Stored Provable" should "FEATURE_REQUEST: already support block quantifiers" taggedAs TodoTest in {
     val pr = Provable.startProof(Forall(Variable("x")::Variable("y")::Nil, True)) (Skolemize(SuccPos(0)), 0) (CloseTrue(SuccPos(0)), 0)
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     val str = Provable.toStorageString(pr)
     println(str)
     // toStorageString stores block quantifier, but fromStorageString reads nested quantifiers from block quantifier string
@@ -47,7 +47,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
       for (_ <- 1 to randomTrials) {
         if (Thread.currentThread().isInterrupted) cancel()
         val e = rand.nextProvable(randomComplexity).underlyingProvable
-        e shouldBe 'proved
+        e shouldBe Symbol("proved")
         val str = Provable.toStorageString(e)
         val readagain = Provable.fromStorageString(str)
         readagain shouldBe e
@@ -66,7 +66,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
       for (_ <- 1 to randomTrials) {
         if (Thread.currentThread().isInterrupted) cancel()
         val e = rand.nextProvable(randomComplexity).underlyingProvable
-        e shouldBe 'proved
+        e shouldBe Symbol("proved")
         val str = Provable.toStorageString(e)
         val readagain = Provable.fromStorageString(str)
         readagain shouldBe e
@@ -85,7 +85,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     }
 
   private def tamperFact(chksum: String, fact: Provable, randomTrials: Int= randomTrials, tamperComplexity: Int = tamperComplexity): Unit = {
-    val toExt = PrivateMethod[String]('toExternalString)
+    val toExt = PrivateMethod[String](Symbol("toExternalString"))
     val pseudotampered = Provable.invokePrivate(toExt(fact.conclusion)) +
       (if (fact.subgoals.length <= 1) "\n\\qed"
       else "\n\\from   " + fact.subgoals.map(s => Provable.invokePrivate(toExt(s))).mkString("\n\\from   ") + "\n\\qed") +

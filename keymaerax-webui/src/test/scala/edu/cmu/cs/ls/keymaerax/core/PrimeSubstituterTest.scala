@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable._
@@ -30,7 +30,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     // [{x_'=c()&q(x_)}]p(||) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(||)))
     val pr = ProvableSig.axioms("DS& differential equation solution")
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), GreaterEqual(DifferentialSymbol(x_),Number(5))) ::
@@ -51,7 +51,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     // [{x_'=c_()}]p_(x_) <-> \forall t_ (t_>=0 -> [x_:=x_+(c_()*t_);]p_(x_))
     val pr = AxiomInfo("DS differential equation solution").provable
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c_",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("p_",None,Real,Bool),DotTerm()), Equal(DifferentialSymbol(x_),Number(5))) ::
@@ -71,7 +71,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     // [{x_'=c()&q(x_)}]p(||) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(||)))
     val pr = ProvableSig.axioms("DS& differential equation solution")
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     try {
       pr(USubst(
         SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
@@ -93,7 +93,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     // [{x_'=c()&q(x_)}]p(||) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(||)))
     val pr = ProvableSig.axioms("DS& differential equation solution")
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
@@ -116,7 +116,7 @@ class PrimeSubstituterTest extends TacticTestBase {
           TactixLibrary.implyRi & byUS(Ax.DX),
           TactixLibrary.cohide(2) & DE(1) & chase(1, 1 :: Nil) & V(1) & byUS(Ax.equalReflexive))
     )
-    result should not be 'proved
+    result should not be Symbol("proved")
     result.isProved shouldBe false
   }
 
@@ -125,7 +125,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     // [{c&q(||)}]p(||) -> (q(||)->p(||))
     val pr = ProvableSig.axioms("DX differential skip")
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     //@note currently core datastructure assertion prevents bug until DX axiom is fixed
     the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(ode, "{x'=2}".asDifferentialProgram) ::
@@ -143,7 +143,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     // [{c&q(||)}]p(||) -> (q(||)->p(||))
     val pr = ProvableSig.axioms("DX differential skip")
 
-    pr shouldBe 'proved
+    pr shouldBe Symbol("proved")
     a [CoreException] shouldBe thrownBy {pr(USubst(
       SubstitutionPair(ode, "{x'=2}".asDifferentialProgram) ::
         SubstitutionPair(UnitPredicational("q",AnyArg), True) ::

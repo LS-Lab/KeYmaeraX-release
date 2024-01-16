@@ -64,9 +64,9 @@ object ImplicitAx extends TacticProvider {
       AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ = "+rhs),
       codename,
       name,
-      'surlinear,
+      Symbol("surlinear"),
       {case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      'internal,
+      Symbol("internal"),
       List(0),
       List(List(1))
     )
@@ -131,9 +131,9 @@ object ImplicitAx extends TacticProvider {
       AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ = "+rhs),
       codename,
       name,
-      'surlinear,
+      Symbol("surlinear"),
       {case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      'internal,
+      Symbol("internal"),
       List(0),
       List(List(1))
     )
@@ -193,9 +193,9 @@ object ImplicitAx extends TacticProvider {
       AxiomDisplayInfo(SimpleDisplayInfo(name,name), "__"+lhs+"__ <-> "+rhs),
       codename,
       name,
-      'surlinear,
+      Symbol("surlinear"),
       {case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      'internal,
+      Symbol("internal"),
       List(0),
       List(List(1))
     )
@@ -417,11 +417,11 @@ object ImplicitAx extends TacticProvider {
   lazy val contBox : Lemma = {
 
     val tt = proveBy("!f()-t_>0 -> [{t_'=1,c}]!f()-t_>0".asFormula,
-      implyR(1) & dI('full)(1)
+      implyR(1) & dI(Symbol("full"))(1)
     )
 
     val tt2 = proveBy("t_=g() ==> [{t_'=1,c}]t_>=g()".asSequent,
-      dI('full)(1)
+      dI(Symbol("full"))(1)
     )
 
     val arith = proveBy("f()>=0&true&x_-t_>0->!(t_=x_|!f()>=0)".asFormula,QE)
@@ -588,14 +588,14 @@ object ImplicitAx extends TacticProvider {
 
     proveBy(fml,
       implyR(1) & boxd(1) & notR(1) &
-        cutL(cutfml)('Llast) <(
+        cutL(cutfml)(Symbol("Llast")) <(
           existsL(-2)*dim & useAt(Ax.pVd)(-2) & andL(-2) & useAt(diffadj)(-2) &
           notL(-3) & andLi(keepLeft=false)(AntePos(1),AntePos(0)) & useAt(Ax.pVd,PosInExpr(0::Nil))(-1) &
-          mond & SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id,
-          cohideR('Rlast) &
+          mond & SaturateTactic(andL(Symbol("L"))) & SaturateTactic(exhaustiveEqL2R(hide=true)(Symbol("L"))) & id,
+          cohideR(Symbol("Rlast")) &
           implyR(1) & barcantac & mond &
           cut(cutfml2) <(
-            existsL('Llast) * dim & andL('Llast) * (dim-1) & eqr2l & extac & prop,
+            existsL(Symbol("Llast")) * dim & andL(Symbol("Llast")) * (dim-1) & eqr2l & extac & prop,
             cohideR(2) & QE
           )
     ))
@@ -1004,7 +1004,7 @@ object ImplicitAx extends TacticProvider {
       allR(pos) & implyR(pos) &
       // Makes subsequent ODE proofs easier by proving the postcondition already true initially
       cutR(fml.replaceFree(v0, targetVar))(pos) < (
-        label(BelleLabels.initCase) & exhaustiveEqL2R('Llast) & hideL('Llast), //Rewrite the initial value x=0
+        label(BelleLabels.initCase) & exhaustiveEqL2R(Symbol("Llast")) & hideL(Symbol("Llast")), //Rewrite the initial value x=0
         implyR(pos) &
           choiceb(pos) & andR(pos)
       )
@@ -1039,8 +1039,8 @@ object ImplicitAx extends TacticProvider {
     val expAx = existsFwdBack.fact(URename(targetVar, Variable("v_")))
 
     cutR(Exists(targetVar::Nil,Equal(targetVar,t0)))(pos) <(
-      cohideR('Rlast) & existsR(t0)(1) & byUS(Ax.equalReflexive),
-      implyR(pos) & existsL('Llast) & useAt(expAx,PosInExpr(1::Nil))(pos)
+      cohideR(Symbol("Rlast")) & existsR(t0)(1) & byUS(Ax.equalReflexive),
+      implyR(pos) & existsL(Symbol("Llast")) & useAt(expAx,PosInExpr(1::Nil))(pos)
     )
 
   }}
@@ -1105,7 +1105,7 @@ object ImplicitAx extends TacticProvider {
       val x0 = Variable(xi._1.name,Some(0))
       cutR(Exists(x0::Nil, Equal(x0,xi._2)))(1) <(
         cohideR(1) & QE,
-        implyR(1) & existsL('Llast) & eqR2L(-(i+1))(1,pos)
+        implyR(1) & existsL(Symbol("Llast")) & eqR2L(-(i+1))(1,pos)
       ) : BelleExpr
     }).reduce( _ & _ )
 
@@ -1128,7 +1128,7 @@ object ImplicitAx extends TacticProvider {
       useAt(Ax.existsOr)(1) &
       cutR(split)(1) <(
         cohideR(1) & QE,
-        implyR(1) & orR(1) & orL('Llast) <(
+        implyR(1) & orR(1) & orL(Symbol("Llast")) <(
           hideR(2) & useAt(diffadj1)(1,0::1::Nil) &
           chase(1,0::Nil) &
           barcantac &

@@ -54,6 +54,6 @@ class SimplifierTests extends TacticTestBase {
   "derived axioms" should "work how I think they do" in withMathematica { qeTool =>
     val fml = "0 * x = 0".asFormula
     val tactic = useAt(Ax.zeroTimes)(Position(1, 0::Nil)) & byUS(Ax.equalReflexive)
-    proveBy(fml, tactic) shouldBe 'proved
+    proveBy(fml, tactic) shouldBe Symbol("proved")
   }
 }

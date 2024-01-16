@@ -134,7 +134,7 @@ private object ToolTactics extends TacticProvider {
           "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
     if (!provable.isProved && provable.subgoals.forall(_.isFOL)) {
-      val alpha = provable(saturate(or(alphaRule, allR('R))), 0)
+      val alpha = provable(saturate(or(alphaRule, allR(Symbol("R")))), 0)
       if (!alpha.isProved) {
         alpha(or(
           close,
@@ -334,17 +334,17 @@ private object ToolTactics extends TacticProvider {
 
     //@todo abbreviating/expanding attempts with fallback are not ideal, rather instruct users to do those steps manually
     if (interpreted == interpretedExcept) {
-      pr(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).
+      pr(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL(Symbol("Llast"))).
         foldLeft(_)({ case (p, t) => p(t, 0) }))
     } else {
       // Try full abbreviation and search for cex
-      pr(or(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL('Llast)).
+      pr(or(interpreted.map(EqualityTactics.abbrv(_, None) andThen hideL(Symbol("Llast"))).
         foldLeft(_)({ case (p, t) => p(t, 0) })(assertNoCex(
           /* skip ahead to un-abbreviated interpreted functions immediately if unknown CEX (due to missing tool, or timeout) */
           _ => throw new ProofSearchFailure("Unknown CEX"),
           _ => throw new ProofSearchFailure("Unknown CEX")), 0)
         ,
-        interpretedExcept.map(fn => EqualityTactics.abbrv(fn, None) andThen hideL('Llast)).foldLeft(_)({ case (p, t) => p(t, 0) })
+        interpretedExcept.map(fn => EqualityTactics.abbrv(fn, None) andThen hideL(Symbol("Llast"))).foldLeft(_)({ case (p, t) => p(t, 0) })
       ), 0)
     }
   }
@@ -475,7 +475,7 @@ private object ToolTactics extends TacticProvider {
         //onall
         saturate(alphaRule) andThen or(
           close,
-          saturate(EqualityTactics.atomExhaustiveEqL2R('L)) andThen
+          saturate(EqualityTactics.atomExhaustiveEqL2R(Symbol("L"))) andThen
             hidePredicates andThen
             toSingleFormula andThen
             orderedClosure(po) andThen
@@ -495,7 +495,7 @@ private object ToolTactics extends TacticProvider {
     hidePredicates & toSingleFormula & rcf(qeTool) &
       (if (reformatAssumptions && s.ante.exists(!_.isInstanceOf[PredOf]))
         Idioms.doIf(!_.isProved)(cut(s.ante.filterNot(_.isInstanceOf[PredOf]).reduceRight(And)) <(
-          SaturateTactic(andL('L)) & SimplifierV3.fullSimpTac(),
+          SaturateTactic(andL(Symbol("L"))) & SimplifierV3.fullSimpTac(),
           QE & done
         ))
        else Idioms.nil)
@@ -576,7 +576,7 @@ private object ToolTactics extends TacticProvider {
         case result: And =>
           //@note apply same steps as QETacticTool to use `close` in applyFacts
           val facts = FormulaTools.conjuncts(result)
-          val skolemized = provable(saturate(allR('R)))
+          val skolemized = provable(saturate(allR(Symbol("R"))))
           val r = skolemized(PropositionalTactics.prop)
           //@todo sometimes expandAll does not create additional subgoals, need a better check whether to expand
           if (r.subgoals.size == facts.size) try {
@@ -805,7 +805,7 @@ private object ToolTactics extends TacticProvider {
 
     if (fact.isProved && ga.isEmpty) useAt(fact, key)(pos)
     else if (fact.isProved && ga.nonEmpty) useAt(fact, key)(pos) & (
-      if (polarity < 0) Idioms.<(skip, cohideOnlyR('Rlast) & master() & done | master())
+      if (polarity < 0) Idioms.<(skip, cohideOnlyR(Symbol("Rlast")) & master() & done | master())
       else cutAt(ga.reduce(And))(pos) & Idioms.<(
         //@todo ensureAt only closes branch when original conjecture is true
         ensureAt(pos) & OnAll(cohideOnlyR(pos) & master() & done | master() & done),

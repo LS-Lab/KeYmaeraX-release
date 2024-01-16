@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
@@ -73,7 +73,7 @@ class ArithmeticTests extends TacticTestBase {
   it should "prove after apply equalities, transform to implication, and universal closure" in withQE { _ =>
     proveBy(
       "v_0>0&x_0<s, a=v_0^2/(2*(s-x_0)), t_0=0 ==> v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asSequent,
-      TactixLibrary.QE) shouldBe 'proved
+      TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "only apply equalities for variables" in withTactics {
@@ -85,11 +85,11 @@ class ArithmeticTests extends TacticTestBase {
   }
 
   it should "prove after only apply equalities for variables" in withQE { _ =>
-    proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE) shouldBe 'proved
+    proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "abbreviate differential symbols" in withQE { _ =>
-    proveBy("5=5 | x' = 1".asFormula, TactixLibrary.QE) shouldBe 'proved
+    proveBy("5=5 | x' = 1".asFormula, TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "not support differential symbols in conversion" in {
@@ -112,18 +112,18 @@ class ArithmeticTests extends TacticTestBase {
   it should "avoid name clashes with Mathematica" in withMathematica { _ =>
     val result = proveBy("a=1, a()=2 ==> a=a()".asSequent, TactixLibrary.QE)
     result.subgoals.loneElement shouldBe "==> false".asSequent
-    proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe 'proved
+    proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "avoid name clashes with Z3" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("a=1, a()=2 ==> a=a()".asSequent, TactixLibrary.QE) should have message
       "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n1=2\n"
-    proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe 'proved
+    proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   it should "work with functions" in withQE { _ =>
-    proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
-    proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe 'proved
+    proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe Symbol("proved")
+    proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
   "counterExample" should "not choke on differential symbols" in withMathematica { tool =>
@@ -139,7 +139,7 @@ class ArithmeticTests extends TacticTestBase {
         m.size shouldBe 2
         m.keySet should contain theSameElementsAs  List("v".asVariable, "A()".asFunction)
         (m("v".asVariable), m("A()".asFunction)) match {
-          case (v: Term, a: Term) => proveBy(Less(v, a), TactixLibrary.QE) shouldBe 'proved
+          case (v: Term, a: Term) => proveBy(Less(v, a), TactixLibrary.QE) shouldBe Symbol("proved")
           case (v, a) => fail("Unexpected counterexample result, expected terms but got: " +
             v.prettyString + ", " + a.prettyString)
         }
@@ -152,7 +152,7 @@ class ArithmeticTests extends TacticTestBase {
         m.size shouldBe 2
         m.keySet should contain theSameElementsAs  List("a".asVariable, "a()".asFunction)
         (m("a".asVariable), m("a()".asFunction)) match {
-          case (v: Term, a: Term) => proveBy(Less(v, a), TactixLibrary.QE) shouldBe 'proved
+          case (v: Term, a: Term) => proveBy(Less(v, a), TactixLibrary.QE) shouldBe Symbol("proved")
           case (v, a) => fail("Unexpected counterexample result, expected terms but got: " +
             v.prettyString + ", " + a.prettyString)
         }
@@ -163,7 +163,7 @@ class ArithmeticTests extends TacticTestBase {
         m.size shouldBe 2
         m.keySet should contain theSameElementsAs  List("a".asVariable, "a()".asFunction)
         (m("a".asVariable), m("a()".asFunction)) match {
-          case (v: Term, a: Term) => proveBy(NotEqual(v, a), TactixLibrary.QE) shouldBe 'proved
+          case (v: Term, a: Term) => proveBy(NotEqual(v, a), TactixLibrary.QE) shouldBe Symbol("proved")
           case (v, a) => fail("Unexpected counterexample result, expected terms but got: " +
             v.prettyString + ", " + a.prettyString)
         }
@@ -183,31 +183,31 @@ class ArithmeticTests extends TacticTestBase {
   "transform" should "prove a simple example" in withQE { _ =>
     proveBy(
       "a<b ==> b>a".asSequent,
-      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe Symbol("proved")
   }
 
   it should "prove a simple example with modalities in other formulas" in withQE { _ =>
     proveBy(
       "a<b ==> b>a, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe Symbol("proved")
   }
 
   it should "keep enough context around to prove the transformation" in withQE { _ =>
     proveBy(
       "a+b<c, b>=0&[y:=3;]y=3, y>4 ==> a<c, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
+      TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.id) shouldBe Symbol("proved")
   }
 
   it should "work with division by zero" in withQE { _ =>
     proveBy(
       "a/b<c, b>0 ==> c>a/b".asSequent,
-      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe Symbol("proved")
   }
 
   it should "work with division by zero even with modalities somewhere" in withQE { _ =>
     proveBy(
       "a/b<c, b>0&[y:=3;]y=3 ==> c>a/b, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe Symbol("proved")
   }
 
   "simulate" should "simulate a simple example" in withMathematica { tool =>

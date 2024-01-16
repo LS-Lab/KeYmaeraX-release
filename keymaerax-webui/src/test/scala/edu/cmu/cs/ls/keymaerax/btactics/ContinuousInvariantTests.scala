@@ -41,7 +41,7 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   "Continuous invariant generation" should "generate a simple invariant" in withMathematicaMatlab { _ =>
     val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
-    proveBy(problem, ODE(1)) shouldBe 'proved
+    proveBy(problem, ODE(1)) shouldBe Symbol("proved")
 
     val (simpleInvariants, pegasusInvariants) = TactixLibrary.differentialInvGenerator(problem, SuccPos(0), Declaration(Map.empty)).splitAt(4)
     simpleInvariants should contain theSameElementsAs(
@@ -138,7 +138,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
         "c()>0 & Kp()=2 & Kd()=3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula) shouldBe true
 
-      proveBy(entry.model.asInstanceOf[Formula], implyR(1) & dI()(1)) shouldBe 'proved
+      proveBy(entry.model.asInstanceOf[Formula], implyR(1) & dI()(1)) shouldBe Symbol("proved")
     }
   }
 
@@ -160,7 +160,7 @@ class ContinuousInvariantTests extends TacticTestBase {
             TactixInit.invSupplier = FixedGenerator(Nil)
             TactixInit.loopInvGenerator = FixedGenerator(Nil)
             TactixInit.differentialInvGenerator = FixedGenerator(invariants.toList)
-            proveBy(model.asInstanceOf[Formula], implyR(1) & ODE(1)) shouldBe 'proved
+            proveBy(model.asInstanceOf[Formula], implyR(1) & ODE(1)) shouldBe Symbol("proved")
             println(name + " done")
           }
       }

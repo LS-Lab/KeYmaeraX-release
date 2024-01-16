@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -35,7 +35,7 @@ class RandomProvableTest extends FlatSpec with Matchers {
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
       val e = rand.nextProvable(randomComplexity)
-      e shouldBe 'proved
+      e shouldBe Symbol("proved")
       // prolong with conclusion identity is a no-op
       e(ProvableSig.startPlainProof(e.conclusion)) shouldBe e
       // use a fact that isn't proved and then continue above with a sub is a no-op

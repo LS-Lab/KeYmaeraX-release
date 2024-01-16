@@ -1,13 +1,13 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable
-
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
 
 /**
   * Tests the implementation of axiom schemas.
@@ -19,8 +19,8 @@ class AxiomSchemaTests  extends TacticTestBase {
   "Vectorial DG" should "return 1D VDG" in {
     val vdg = Provable.vectorialDG(1)
 
-    vdg._1 shouldBe 'proved
-    vdg._2 shouldBe 'proved
+    vdg._1 shouldBe Symbol("proved")
+    vdg._2 shouldBe Symbol("proved")
     vdg._1.conclusion shouldBe "==> [{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]y__1*y__1<=f_(|y__1|)->[{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]p(|y__1|)->[{c{|y__1|}&q(|y__1|)}]p(|y__1|)".asSequent
     vdg._2.conclusion shouldBe "==> [{c{|y__1|}&q(|y__1|)}]p(|y__1|)->[{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]p(|y__1|)".asSequent
   }
@@ -50,8 +50,8 @@ class AxiomSchemaTests  extends TacticTestBase {
 
     val f2 = Imply(Box(ODESystem(code,qpred), ppred), Box(ghostode, ppred))
 
-    vdg._1 shouldBe 'proved
-    vdg._2 shouldBe 'proved
+    vdg._1 shouldBe Symbol("proved")
+    vdg._2 shouldBe Symbol("proved")
     vdg._1.conclusion shouldBe Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(f1))
     vdg._2.conclusion shouldBe Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(f2))
 
@@ -63,7 +63,7 @@ class AxiomSchemaTests  extends TacticTestBase {
     val da = Provable.diffAdjoint(1)
 
     println(da)
-    da shouldBe 'proved
+    da shouldBe Symbol("proved")
     da.conclusion shouldBe "==>  <{x__1'=f__1(x__1)&q_(x__1)}>x__1=y__1<-><{y__1'=-f__1(y__1)&q_(y__1)}>x__1=y__1".asSequent
   }
 
@@ -76,7 +76,7 @@ class AxiomSchemaTests  extends TacticTestBase {
     val da = Provable.diffAdjoint(2)
 
     println(da)
-    da shouldBe 'proved
+    da shouldBe Symbol("proved")
     da.conclusion shouldBe "==>  <{x__1'=f__1(x__1,x__2),x__2'=f__2(x__1,x__2)&q_(x__1,x__2)}>(x__1=y__1&x__2=y__2)<-><{y__1'=-f__1(y__1,y__2),y__2'=-f__2(y__1,y__2)&q_(y__1,y__2)}>(x__1=y__1&x__2=y__2)".asSequent
   }
 }

@@ -654,7 +654,7 @@ object AssessmentProver {
                   })
                   if (lemmaResults.forall(_.isLeft)) {
                     val lemmas = lemmaResults.map(_.left.get).map(byUS)
-                    run(() => prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R)) * (e.size - 1) & BranchTactic(lemmas)))
+                    run(() => prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR(Symbol("R"))) * (e.size - 1) & BranchTactic(lemmas)))
                   } else {
                     lemmaResults.find(_.isRight).get
                   }
@@ -990,7 +990,7 @@ object AssessmentProver {
     if (realTerms.nonEmpty) {
       val combined = realTerms.map(_._2).reduceRight(And)
       val lemmas = realTerms.map({ case (_, e) => polynomialEquality(e.left, e.right) }).map(byUS).toList
-      prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R) | nil) * (realTerms.size - 1) & BranchTactic(lemmas))
+      prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR(Symbol("R")) | nil) * (realTerms.size - 1) & BranchTactic(lemmas))
     } else {
       //@note formulas without terms, such as true/false or [ctrl;]true
       syntacticEquality(a, b)
@@ -1062,14 +1062,14 @@ object AssessmentProver {
   def dICheck(ode: ODESystem, inv: Formula): ProvableSig = {
     require(!StaticSemantics.freeVars(SimplifierV3.formulaSimp(inv, HashSet.empty,
       SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).isEmpty, "Invariant " + inv.prettyString + " does not mention free variables")
-    KeYmaeraXProofChecker(60, Declaration(Map.empty))(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(dI(auto=Symbol("cex"))(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
   }
 
   /** Checks that formula `h` is equivalent differential invariant to formula `e`, i.e. (e<->h) & (e' -> h')  */
   def dIReductionCheck(h: Formula, e: Formula): ProvableSig = {
     val abbreviatePrimes = TacticFactory.anon { s: Sequent =>
       StaticSemantics.freeVars(s).toSet.filter(_.isInstanceOf[DifferentialSymbol]).
-        map(abbrvAll(_, None)).reduceRightOption[BelleExpr](_&_).getOrElse(skip) & SaturateTactic(hideL('L))
+        map(abbrvAll(_, None)).reduceRightOption[BelleExpr](_&_).getOrElse(skip) & SaturateTactic(hideL(Symbol("L")))
     }
     KeYmaeraXProofChecker(60, Declaration(Map.empty))(chase(1, PosInExpr(1::0::Nil)) & chase(1, PosInExpr(1::1::Nil)) & abbreviatePrimes &
       SimplifierV3.fullSimplify & prop & OnAll(QE & done))(
@@ -1144,7 +1144,7 @@ object AssessmentProver {
     }
     val (as, bs) = (elaborateToSystem(a), elaborateToSystem(b))
     KeYmaeraXProofChecker(60, Declaration(Map.empty))(chase(1, 0::Nil) & chase(1, 1::Nil) &
-      SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil)) | unloop))) & DebuggingTactics.done("Program is not as expected"))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(as, p), Box(bs, p)))))
+      SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil)) | unloop()))) & DebuggingTactics.done("Program is not as expected"))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(as, p), Box(bs, p)))))
   }
 
   def contractEquivalence(have: Formula, expected: Formula): ProvableSig = {
@@ -1194,9 +1194,9 @@ object AssessmentProver {
     *                - 'msg (optional) message file
     */
   def grade(options: OptionMap, usage: String): Unit = {
-    val inputFileName = options('in).toString
-    val resultFileName = options.getOrElse('res, inputFileName + ".res.json").toString
-    val msgFileName = options.getOrElse('msg, inputFileName + ".log").toString
+    val inputFileName = options(Symbol("in")).toString
+    val resultFileName = options.getOrElse(Symbol("res"), inputFileName + ".res.json").toString
+    val msgFileName = options.getOrElse(Symbol("msg"), inputFileName + ".log").toString
     val resultOut = new BufferedOutputStream(new FileOutputStream(resultFileName))
     val msgOut = new BufferedOutputStream(new FileOutputStream(msgFileName))
     try {
@@ -1224,9 +1224,9 @@ object AssessmentProver {
     *                - 'skiponparseerror (optional) skips grading on parse errors
     */
   def grade(options: OptionMap, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
-    require(options.contains('in), usage)
+    require(options.contains(Symbol("in")), usage)
 
-    val inputFileName = options('in).toString
+    val inputFileName = options(Symbol("in")).toString
     val src = Source.fromFile(inputFileName, "UTF-8")
     val input = try { src.mkString.parseJson } finally { src.close() }
     val chapter = {
@@ -1234,10 +1234,10 @@ object AssessmentProver {
       input.convertTo[Submission.Chapter]
     }
 
-    if (options.getOrElse('exportanswers, "false").toString.toBoolean) {
-      exportAnswers(chapter, options.getOrElse('out, ".").toString)
+    if (options.getOrElse(Symbol("exportanswers"), "false").toString.toBoolean) {
+      exportAnswers(chapter, options.getOrElse(Symbol("out"), ".").toString)
     } else {
-      val skipGradingOnParseError = options.get('skiponparseerror).exists(_.toString.toBoolean)
+      val skipGradingOnParseError = options.get(Symbol("skiponparseerror")).exists(_.toString.toBoolean)
       grade(chapter, msgOut, resultOut, skipGradingOnParseError)
     }
   }

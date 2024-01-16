@@ -219,7 +219,7 @@ object SimplifierV3 extends TacticProvider {
           val subst = USubst(List(SubstitutionPair(FuncOf(Function("s_", None, Unit, Real), Nothing), nt)))
           val pr = ProvableSig.startPlainProof(Imply(premise,Equal(t,nt)))(
             ImplyRight(SuccPos(0)), 0)(
-            times(andL('Llast), proofs.length-1), 0)(
+            times(andL(Symbol("Llast")), proofs.length-1), 0)(
             cuts, 0)(
             cohideR(SuccPos(0)), 0)(
             Ax.equalReflexive.provable(subst), 0)
@@ -642,7 +642,7 @@ object SimplifierV3 extends TacticProvider {
         val subst = USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), nf)))
         val pr = ProvableSig.startPlainProof(Imply(premise,Equiv(f,nf)))(
           ImplyRight(SuccPos(0)), 0)(
-          times(andL('Llast), proofs.length-1), 0)(
+          times(andL(Symbol("Llast")), proofs.length-1), 0)(
           cuts, 0)(
           cohideR(1), 0)(
           Ax.equivReflexive.provable(subst), 0)

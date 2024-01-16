@@ -61,7 +61,7 @@ object KeYmaeraX {
   def main(args: Array[String]): Unit = {
     //@note 'commandLine is passed in to preserve evidence of what generated the output.
     Configuration.setConfiguration(FileConfiguration)
-    val (options, unprocessedArgs) = nextOption(Map('commandLine -> args.mkString(" ")), args.toList, Usage.cliUsage)
+    val (options, unprocessedArgs) = nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
     try {
       runCommand(options, Usage.cliUsage)
@@ -73,7 +73,7 @@ object KeYmaeraX {
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
   def runCommand(options: OptionMap, usage: String): Unit = {
     //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scala -modelplex -codegen
-    options.get('mode) match {
+    options.get(Symbol("mode")) match {
       case Some(Modes.GRADE) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
         AssessmentProver.grade(options, System.out, System.out, usage)
@@ -109,7 +109,7 @@ object KeYmaeraX {
 
   /** Initializes the backend solvers. */
   def initializeBackend(options: OptionMap, usage: String): Unit = {
-    options.getOrElse('tool, "z3") match {
+    options.getOrElse(Symbol("tool"), "z3") match {
       case Tools.MATHEMATICA => initMathematica(options, usage)
       case Tools.WOLFRAMENGINE => initWolframEngine(options, usage)
       case Tools.WOLFRAMSCRIPT => initWolframScript(options, usage)
@@ -143,7 +143,7 @@ object KeYmaeraX {
         initializeProver(options, usage) //@note parsing a tactic requires prover (AxiomInfo)
         if (parseBelleTactic(value)) exit(0) else exit(-1)
       case "-conjecture" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('conjecture -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("conjecture") -> value), tail, usage)
         else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
       case "-parse" :: value :: _ =>
         //@note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
@@ -153,41 +153,41 @@ object KeYmaeraX {
         Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
         nextOption(options, tail, usage)
       case "-prove" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mode -> Modes.PROVE, 'in -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("mode") -> Modes.PROVE, Symbol("in") -> value), tail, usage)
         else { Usage.optionErrorReporter("-prove", usage); exit(1) }
       case "-grade" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mode -> Modes.GRADE, 'in -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("mode") -> Modes.GRADE, Symbol("in") -> value), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
-      case "-exportanswers" :: tail => nextOption(options ++ Map('exportanswers -> true), tail, usage)
-      case "-skiponparseerror" :: tail => nextOption(options ++ Map('skiponparseerror -> true), tail, usage)
+      case "-exportanswers" :: tail => nextOption(options ++ Map(Symbol("exportanswers") -> true), tail, usage)
+      case "-skiponparseerror" :: tail => nextOption(options ++ Map(Symbol("skiponparseerror") -> true), tail, usage)
       case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('out -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("out") -> value), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
       case "-savept" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('ptOut -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("ptOut") -> value), tail, usage)
         else { Usage.optionErrorReporter("-savept", usage); exit(1) }
-      case "-setup" :: tail => nextOption(options ++ Map('mode -> Modes.SETUP), tail, usage)
+      case "-setup" :: tail => nextOption(options ++ Map(Symbol("mode") -> Modes.SETUP), tail, usage)
       case "-convert" :: conversion :: kyx :: tail =>
         if (conversion.nonEmpty && !conversion.startsWith("-") && kyx.nonEmpty && !kyx.startsWith("-"))
-          nextOption(options ++ Map('mode -> Modes.CONVERT, 'conversion -> conversion, 'in -> kyx), tail, usage)
+          nextOption(options ++ Map(Symbol("mode") -> Modes.CONVERT, Symbol("conversion") -> conversion, Symbol("in") -> kyx), tail, usage)
         else { Usage.optionErrorReporter("-convert", usage); exit(1) }
       case "-tactic" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tactic -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("tactic") -> value), tail, usage)
         else { Usage.optionErrorReporter("-tactic", usage); exit(1) }
       case "-tacticName" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tacticName -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("tacticName") -> value), tail, usage)
         else { Usage.optionErrorReporter("-tacticName", usage); exit(1) }
       case "-tool" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tool -> value.toLowerCase), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("tool") -> value.toLowerCase), tail, usage)
         else { Usage.optionErrorReporter("-tool", usage); exit(1) }
-      case "-verbose" :: tail => nextOption(options ++ Map('verbose -> true), tail, usage)
-      case "-proofStatistics" :: value :: tail => nextOption(options ++ Map('proofStatisticsPrinter -> value), tail, usage)
+      case "-verbose" :: tail => nextOption(options ++ Map(Symbol("verbose") -> true), tail, usage)
+      case "-proofStatistics" :: value :: tail => nextOption(options ++ Map(Symbol("proofStatisticsPrinter") -> value), tail, usage)
       // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {
           if (new File(value).exists) {
             Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
-            nextOption(options ++ Map('mathkernel -> value), tail, usage)
+            nextOption(options ++ Map(Symbol("mathkernel") -> value), tail, usage)
           } else {
             println("[Error -mathkernel] Mathematica kernel file does not exist: " + value)
             exit(2)
@@ -200,7 +200,7 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) {
           if (new File(value).exists) {
             Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
-            nextOption(options ++ Map('jlink -> value), tail, usage)
+            nextOption(options ++ Map(Symbol("jlink") -> value), tail, usage)
           } else {
             println("[Error -jlink] Path to JLink native library does not exist: " + value)
             exit(2)
@@ -246,7 +246,7 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) {
           if (new File(value).exists) {
             Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false)
-            nextOption(options ++ Map('z3Path -> value), tail, usage)
+            nextOption(options ++ Map(Symbol("z3Path") -> value), tail, usage)
           } else {
             println("[Error -z3path] Z3 executable does not exist: " + value)
             exit(2)
@@ -261,7 +261,7 @@ object KeYmaeraX {
       case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(options, tail, usage)
       case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(options, tail, usage)
       case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('timeout -> value.toLong), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("timeout") -> value.toLong), tail, usage)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ => (options, args)
     }
@@ -305,15 +305,15 @@ object KeYmaeraX {
 
   /** Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.  */
   private def mathematicaConfig(options: OptionMap, usage: String): Map[String, String] = {
-    assert((options.contains('mathkernel) && options.contains('jlink)) || (!options.contains('mathkernel) && !options.contains('jlink)),
+    assert((options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) || (!options.contains(Symbol("mathkernel")) && !options.contains(Symbol("jlink"))),
       "\n[Error] Please always use command line option -mathkernel and -jlink together," +
         "and specify the Mathematica link paths with:\n" +
         " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage)
 
     val mathematicaConfig =
-      if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options('mathkernel).toString,
-        "libDir" -> options('jlink).toString, "tcpip" -> options.getOrElse('tcpip, "true").toString)
+      if (options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) Map("linkName" -> options(Symbol("mathkernel")).toString,
+        "libDir" -> options(Symbol("jlink")).toString, "tcpip" -> options.getOrElse(Symbol("tcpip"), "true").toString)
       else DefaultConfiguration.defaultMathematicaConfig
 
     val linkNamePath = mathematicaConfig.get("linkName") match {
@@ -387,8 +387,8 @@ object KeYmaeraX {
 
   /** Converts input files. */
   def convert(options: OptionMap, usage: String): Unit = {
-    require(options.contains('in) && options.contains('conversion), usage)
-    options('conversion) match {
+    require(options.contains(Symbol("in")) && options.contains(Symbol("conversion")), usage)
+    options(Symbol("conversion")) match {
       case Conversions.STRIPHINTS => stripHints(options, usage)
       case Conversions.KYX2SMT    => kyx2smt(options, usage)
       case Conversions.KYX2MAT    => kyx2mat(options, usage)
@@ -468,10 +468,10 @@ object KeYmaeraX {
 
   /** Converts the content of a file using the `converter` fileName => content. */
   private def convert(options: OptionMap, converter: String => String, usage: String): Unit = {
-    require(options.contains('in), usage)
-    val kyxFile = options('in).toString
+    require(options.contains(Symbol("in")), usage)
+    val kyxFile = options(Symbol("in")).toString
     val converted = converter(kyxFile)
-    options.get('out).map(_.toString) match {
+    options.get(Symbol("out")).map(_.toString) match {
       case Some(outFile) =>
         val pw = new PrintWriter(outFile)
         pw.write(converted)
