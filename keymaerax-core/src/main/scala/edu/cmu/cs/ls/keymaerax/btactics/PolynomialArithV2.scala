@@ -110,7 +110,6 @@ trait PolynomialRing {
     def sparse : Seq[(Term, Int)]
     val degree : Int
   }
-  def ofSparse(seq: Seq[(Term, Int)]) : PowerProduct
   def ofSparse(seq: (Term, Int)*) : PowerProduct
 
   // result.term = n
@@ -1601,12 +1600,11 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     assert(sparse.forall(_._2 > 0))
     val degree = sparse.map(_._2).sum
   }
-  def ofSparse(seq: Seq[(Term, Int)]) : SparsePowerProduct = {
+  def ofSparse(seq: (Term, Int)*) : SparsePowerProduct = {
     require(seq.forall(_._2 >= 0), "SparsePowerProduct: nonnegative exponents only")
     require(seq.map(_._1).distinct == seq.map(_._1), "SparsePowerProduct: variables must be unique")
     SparsePowerProduct(seq.filter(_._2 > 0).sortBy(_._1)(variableOrdering))
   }
-  def ofSparse(powers: (Term, Int)*) : SparsePowerProduct = ofSparse(powers.toIndexedSeq)
 
   /** trust that wellformedness (wf) properties of [[SparsePowerProduct]] are maintained */
   private def wfPowerProduct(seq: Seq[(Term, Int)]) = SparsePowerProduct(seq)

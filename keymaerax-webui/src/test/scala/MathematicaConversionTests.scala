@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 import com.wolfram.jlink.Expr
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -371,6 +372,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     KeYmaeraToMathematica(Number(Long.MinValue)) shouldBe new MExpr(BigInt(Long.MinValue).bigInteger)
     KeYmaeraToMathematica(Number(Number(Long.MaxValue).value + 1)) shouldBe new MExpr((BigInt(Long.MaxValue) + 1).bigInteger)
     KeYmaeraToMathematica(Number(Number(Long.MinValue).value - 1)) shouldBe new MExpr((BigInt(Long.MinValue) - 1).bigInteger)
-    KeYmaeraToMathematica(Number(Double.MaxValue)) shouldBe new MExpr(scala.BigDecimal(Double.MaxValue).toBigInt().bigInteger)
+    KeYmaeraToMathematica(Number(Double.MaxValue)) shouldBe new MExpr(scala.BigDecimal(Double.MaxValue).toBigInt.bigInteger)
   }
 }

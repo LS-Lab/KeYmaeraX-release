@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -500,7 +500,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   "IntegratorDiffSolution_" should "work as a _" in withMathematica { _ =>
-    val initialConds = conditionsToValues(extractInitialConditions(None)("x=x_0&v=v_0&a=a_0&t=t_0".asFormula)).mapValues[Variable](x => x.asInstanceOf[Variable])
+    val initialConds = conditionsToValues(extractInitialConditions(None)("x=x_0&v=v_0&a=a_0&t=t_0".asFormula))
+      .view.mapValues[Variable](x => x.asInstanceOf[Variable]).toMap
     val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
     val result = new IntegratorODESolverTool().odeSolve(system.ode, "t".asVariable, initialConds)
     println(result.get.asInstanceOf[And])

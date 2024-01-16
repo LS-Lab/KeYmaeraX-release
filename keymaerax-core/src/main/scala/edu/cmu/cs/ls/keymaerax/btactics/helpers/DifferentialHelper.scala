@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -452,7 +452,7 @@ object DifferentialHelper {
 
   def stripPowZero(t:Term) : Term = {
     t match {
-      case Power(v,n:Number) if n.value.isValidInt && n.value.intValue()== 0 => Number(1)
+      case Power(v, n: Number) if n.value.isValidInt && n.value.intValue == 0 => Number(1)
       case bop:BinaryCompositeTerm => bop.reapply(stripPowZero(bop.left),stripPowZero(bop.right))
       case uop:UnaryCompositeTerm => uop.reapply(stripPowZero(uop.child))
       case _ => t

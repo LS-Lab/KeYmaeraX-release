@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
  * Differential Dynamic Logic lexer for concrete KeYmaera X notation.
   *
@@ -88,7 +89,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
       }
     }
     output.append(Token(EOF, loc))
-    replaceAnything(output).to
+    replaceAnything(output).toList
   }
 
   /** Replace all instances of LPAREN,ANYTHING,RPAREN with LBANANA,RBANANA. */

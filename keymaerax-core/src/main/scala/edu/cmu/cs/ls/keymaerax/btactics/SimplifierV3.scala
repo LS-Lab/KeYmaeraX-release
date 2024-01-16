@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{InfiniteTacticLoopError, _}
@@ -847,12 +852,20 @@ object SimplifierV3 extends TacticProvider {
     val alpha =
       if (pos.isSucc) {
         prop(
-          { case (_: And, ap: AntePos) => List(AndLeft(ap)) case _ => List.empty },
-          { (_, _) => List.empty })(List.empty, List.empty)
+          (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+            case (_: And, ap: AntePos) => List(AndLeft(ap))
+            case _ => List.empty
+          },
+          (_: Formula, _: SeqPos) => List.empty,
+        )(List.empty, List.empty)
       } else {
         prop(
-          { case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
-          { (_, _) => List.empty })(List.empty, List.empty)
+          (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+            case (_: Or, sp: SuccPos) => List(OrRight(sp))
+            case _ => List.empty
+          },
+          (_: Formula, _: SeqPos) => List.empty,
+        )(List.empty, List.empty)
       }
 
     val moveContext = (pr: ProvableSig) => {

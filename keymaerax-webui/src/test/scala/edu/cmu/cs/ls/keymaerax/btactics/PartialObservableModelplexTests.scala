@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -55,9 +56,9 @@ class PartialObservableModelplexTests extends TacticTestBase {
     println(s"Sum (QE/synthesis duration) [s]: ${(qeDurationListener.duration + (partialQEEnd-synthEnd))/1000}/${(partialQEEnd-start)/1000}")
   }
 
-  private def deriveMonitor(entry: ParsedArchiveEntry,
+  private def deriveMonitor[K <: NamedSymbol](entry: ParsedArchiveEntry,
                             tactic: Option[BelleExpr],
-                            unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
+                            unobservable: ListMap[K, Option[Formula]],
                             tool: QETacticTool with SimplificationTool,
                             postVarFactory: Variable=>Variable = ModelPlex.NAMED_POST_VAR,
                             checkFOResult: ProvableSig=>Any = (_: ProvableSig) => _,

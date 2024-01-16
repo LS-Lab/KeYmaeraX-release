@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
@@ -1044,7 +1045,7 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
   def substGenerator[A](generator: Generator[A], substs: List[USubst]): Generator[A] = generator match {
     case c: ConfigurableGenerator[(Formula, Option[InvariantGenerator.ProofHint])] =>
       new ConfigurableGenerator(c.products ++ c.products.map(p =>
-        substs.foldRight[(Expression, scala.collection.Seq[(Formula, Option[InvariantGenerator.ProofHint])])](p)({ case (s, p) => s(p._1) -> p._2.map({ case (f: Formula, h) => s(f) -> h })}))).asInstanceOf[Generator[A]]
+        substs.foldRight[(Expression, Seq[(Formula, Option[InvariantGenerator.ProofHint])])](p)({ case (s, p) => s(p._1) -> p._2.map({ case (f: Formula, h) => s(f) -> h })}))).asInstanceOf[Generator[A]]
     case c: FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])] =>
       FixedGenerator(c.list ++ c.list.map(p =>
         substs.foldRight[(Formula, Option[InvariantGenerator.ProofHint])](p)({ case (s, p) => s(p._1) -> p._2}))).asInstanceOf[Generator[A]]

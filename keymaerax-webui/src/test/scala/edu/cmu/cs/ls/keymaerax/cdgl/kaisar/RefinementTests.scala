@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Test refinement engine for testing whether given proof proves given formula
   * @author Brandon Bohrer
@@ -9,7 +10,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => _, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import testHelper.KeYmaeraXTestTags.TodoTest

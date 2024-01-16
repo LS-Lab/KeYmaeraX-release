@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Forward natural deduction proof terms for CdGL. Proof variables for assumptions are represented with de Bruijn indices.
   * The conclusion of a proof term is an output of the proof checker, which often requires formula (and program) annotations
@@ -39,7 +40,7 @@ final case class Context(c: List[Formula]) {
   def contains(x: ProofVariable): Boolean = c.length > x
 
   /** returns IndexedSeq containing same elements */
-  def asIndexedSeq: immutable.IndexedSeq[Formula] = c.to[immutable.IndexedSeq]
+  def asIndexedSeq: immutable.IndexedSeq[Formula] = c.toIndexedSeq
 
   /** returns List containing same elements */
   def asList: List[Formula] = c

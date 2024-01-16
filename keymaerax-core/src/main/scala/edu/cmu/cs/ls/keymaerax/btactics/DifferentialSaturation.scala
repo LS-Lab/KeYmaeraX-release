@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -84,10 +89,10 @@ object DifferentialSaturation extends Logging {
           bop match {
             //First one is legit, the rest are horrible hacks to find instantiations when pQE gives ineqs instead of =
             case Equal(l:Variable,r) => List(Map(l->r))
-            case GreaterEqual(l:Variable,r:Number) if r.value.intValue() == 0 => List(Map(l -> Plus(r,Number(1))))
-            case Greater(l:Variable,r:Number) if r.value.intValue() == 0  => List(Map(l -> Plus(r,Number(1))))
-            case LessEqual(l:Variable,r:Number)  if r.value.intValue() == 0 => List(Map(l -> Minus(r,Number(1))))
-            case Less(l:Variable,r:Number)  if r.value.intValue() == 0 => List(Map(l -> Minus(r,Number(1))))
+            case GreaterEqual(l:Variable,r:Number) if r.value.intValue == 0 => List(Map(l -> Plus(r,Number(1))))
+            case Greater(l:Variable,r:Number) if r.value.intValue == 0  => List(Map(l -> Plus(r,Number(1))))
+            case LessEqual(l:Variable,r:Number)  if r.value.intValue == 0 => List(Map(l -> Minus(r,Number(1))))
+            case Less(l:Variable,r:Number)  if r.value.intValue == 0 => List(Map(l -> Minus(r,Number(1))))
             case _ => List(Map())
           }
         }
@@ -229,7 +234,7 @@ object DifferentialSaturation extends Logging {
     var fresh = 0
     var eqinvs = ListBuffer[(Term,Map[Variable,Term])]()
     var ineqinvs = ListBuffer[(Term,Map[Variable,Term])]()
-    var domain = dom.to[ListBuffer]
+    var domain = dom.to(ListBuffer)
     for (cs <- candSets) {
       logger.trace("Parametric invariants for " + cs)
       for (deg <- List.range(1,degLimit)) {

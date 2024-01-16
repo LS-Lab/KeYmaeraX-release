@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Differential Dynamic Logic parser for concrete KeYmaera X notation.
   * @author Andre Platzer
@@ -159,7 +160,7 @@ object ParserHelper {
   /** Checks that only supported Unicode characters are contained in `s`, reports the first such character as a parse exception. */
   def checkUnicode(s: String): String = {
     //@note allow any unicode in double-quoted strings
-    DOUBLE_QUOTES_STRING.replaceAllIn(s, "").lines.zipWithIndex.foreach({
+    DOUBLE_QUOTES_STRING.replaceAllIn(s, "").linesIterator.zipWithIndex.foreach({
       case (l, i) =>
         ASCII_CHARS.findAllMatchIn(l).map(m => m.matched -> m.start).toList.headOption match {
           case Some((u, j)) if !SUPPORTED_UNICODE.contains(u) =>

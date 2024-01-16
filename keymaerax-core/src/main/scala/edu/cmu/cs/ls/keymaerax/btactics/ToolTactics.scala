@@ -394,14 +394,14 @@ private object ToolTactics extends TacticProvider {
       val lmax = lm.values.map(_._2).foldLeft(0)(math.max)
       val rm = termDegs(r)
       val rmax = rm.values.map(_._2).foldLeft(0)(math.max)
-      val lmap = lm.mapValues(p => (p._1, p._2+rmax, p._3) )
-      val rmap = rm.mapValues(p => (p._1, p._2+lmax, p._3) ) //Updated max term degrees
+      val lmap = lm.view.mapValues(p => (p._1, p._2+rmax, p._3) ).toMap
+      val rmap = rm.view.mapValues(p => (p._1, p._2+lmax, p._3) ).toMap //Updated max term degrees
       merge(lmap,rmap, _+_, math.max, _+_) /* The 3rd one probably isn't correct for something like x*x*x */
     case Divide(l,r) => termDegs(Times(l,r))
     case Power(p,n:Number) =>
       val pm = termDegs(p)
       //Assume integer powers
-      pm.mapValues( (p:(Int,Int,Int)) => (p._1*n.value.toInt,p._2*n.value.toInt,p._3) )
+      pm.view.mapValues( (p:(Int,Int,Int)) => (p._1*n.value.toInt,p._2*n.value.toInt,p._3) ).toMap
     case FuncOf(_,tt) => termDegs(tt)
     case Pair(l,r) => merge(termDegs(l),termDegs(r), math.max, math.max, _+_)
     case _ => Map[Variable,(Int,Int,Int)]()

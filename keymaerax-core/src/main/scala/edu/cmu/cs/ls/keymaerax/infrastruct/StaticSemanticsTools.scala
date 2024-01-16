@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.SetLattice.bottom
@@ -171,7 +172,7 @@ object StaticSemanticsTools {
       }).distinct) ensures(r => r.distinct==r && r.intersect(d).isEmpty)
       (d ++ moreDeps ++ moreDeps.flatMap(y => transitiveChase(moreDeps,moreDeps ++ d)).distinct).distinct
     } ensures(r => r.distinct==r && d.forall(y=>r.contains(y)), "transitivize(" + proc + ", " + d + ")")
-    dep.iterator.map(sp => sp._1->transitiveChase(sp._2.to, sp._2.to).reverse).toMap
+    dep.iterator.map(sp => sp._1->transitiveChase(sp._2.toList, sp._2.toList).reverse).toMap
   }
 
 

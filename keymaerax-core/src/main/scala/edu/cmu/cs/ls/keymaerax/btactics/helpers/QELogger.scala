@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -139,7 +139,7 @@ object QELogger extends Logging {
 
     val c = new LogCollector()
     processLog(parseStr, c, filename)
-    c.entries.toList.groupBy(_._1).mapValues(_.map(p => (p._2,p._3)))
+    c.entries.toList.groupBy(_._1).view.mapValues(_.map(p => (p._2,p._3))).toMap
   }
 
   /** Process log one entry at a time. */

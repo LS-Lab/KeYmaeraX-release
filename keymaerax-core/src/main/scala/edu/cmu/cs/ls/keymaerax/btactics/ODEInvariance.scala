@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 
@@ -1831,21 +1836,21 @@ object ODEInvariance extends TacticProvider {
           (HashMap(),v,List())
       case Neg(t) =>
         val (m,tt,b) = coefficientOf(k,t)
-        (m.mapValues(t => Neg(t)), Neg(tt),b)
+        (m.view.mapValues(t => Neg(t)).toMap, Neg(tt),b)
       case Times(l,r) =>
         val (lm,lt,lb) = coefficientOf(k,l)
         val (rm,rt,rb) = coefficientOf(k,r)
         if(lm.isEmpty)
-          (rm.mapValues(t => Times(lt,t)), Times(lt,rt), lb++rb)
+          (rm.view.mapValues(t => Times(lt,t)).toMap, Times(lt,rt), lb++rb)
         else if (rm.isEmpty)
-          (lm.mapValues(t => Times(t,rt)), Times(lt,rt), lb++rb)
+          (lm.view.mapValues(t => Times(t,rt)).toMap, Times(lt,rt), lb++rb)
         else
           (HashMap(),Number(0), (lm.keys++rm.keys).toList++lb++rb)
       case Divide(l,r) =>
         val (lm,lt,lb) = coefficientOf(k,l)
         val (rm,rt,rb) = coefficientOf(k,r)
         if (rm.isEmpty)
-          (lm.mapValues(t => Divide(t,rt)), Divide(lt,rt), lb++rb)
+          (lm.view.mapValues(t => Divide(t,rt)).toMap, Divide(lt,rt), lb++rb)
         else
           (HashMap(),Number(0), (lm.keys++rm.keys).toList++lb++rb)
       case Plus(l,r) =>
@@ -1855,7 +1860,7 @@ object ODEInvariance extends TacticProvider {
       case Minus(l,r) =>
         val (lm,lt,lb) = coefficientOf(k,l)
         val (rm,rt,rb) = coefficientOf(k,r)
-        val rmneg = rm.mapValues(v => Neg(v))
+        val rmneg = rm.view.mapValues(v => Neg(v)).toMap
         //This is fine since lm,rm keys at most intersect once
         ((lm.toList++rmneg.toList).groupBy(_._1).map( ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus)),Minus(lt,rt),lb++rb)
       /* give up for the rest of the cases:
@@ -1871,7 +1876,7 @@ object ODEInvariance extends TacticProvider {
   def linFormODE(p:DifferentialProgram) : Option[(List[List[Term]],List[Term],List[BaseVariable])] = {
     // flattened ODE
     val flat = DependencyAnalysis.collapseODE(p)
-    val kv = flat.mapValues( t => coefficientOf(flat.keys.toList,t) )
+    val kv = flat.view.mapValues( t => coefficientOf(flat.keys.toList,t) ).toMap
 
     //Turn kv into x'=Ax+b form
     //Canonize variable order

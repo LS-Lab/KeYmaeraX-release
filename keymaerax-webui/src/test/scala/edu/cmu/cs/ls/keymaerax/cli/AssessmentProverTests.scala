@@ -695,7 +695,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val askProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskQuestion]))).toList
     val graders = askProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
-    forEvery(Table("Grader", graders:_*).drop(42)) {
+    forEvery(Table("Grader", graders.drop(42): _*)) {
       g => g.expected match {
         case TextArtifact(None) => g.check(TextArtifact(None)).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
         case TextArtifact(Some("")) => g.check(TextArtifact(None)).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent

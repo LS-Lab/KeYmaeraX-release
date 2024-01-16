@@ -516,7 +516,7 @@ object AssessmentProver {
           (have, expected) match {
             case (TextArtifact(Some(hs)), TextArtifact(Some(es))) =>
               val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
-              val extract = (s: String) => trim.findFirstMatchIn(s.lines.reduceOption(_+_).getOrElse("")).map(_.group("text")).getOrElse("")
+              val extract = (s: String) => trim.findFirstMatchIn(s.linesIterator.reduceOption(_+_).getOrElse("")).map(_.group("text")).getOrElse("")
               val hsTrimmed = extract(hs)
               val esTrimmed = extract(es)
               val minLength = args.getOrElse("minLength", "8").toInt
@@ -989,7 +989,7 @@ object AssessmentProver {
 
     if (realTerms.nonEmpty) {
       val combined = realTerms.map(_._2).reduceRight(And)
-      val lemmas = realTerms.map({ case (_, e) => polynomialEquality(e.left, e.right) }).map(byUS)
+      val lemmas = realTerms.map({ case (_, e) => polynomialEquality(e.left, e.right) }).map(byUS).toList
       prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R) | nil) * (realTerms.size - 1) & BranchTactic(lemmas))
     } else {
       //@note formulas without terms, such as true/false or [ctrl;]true

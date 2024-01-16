@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -111,7 +112,7 @@ object SmtLibReader {
     case Reals.NumeralLit(n) =>
       Number(BigDecimal(n))
     case Reals.DecimalLit(n) =>
-      if (n.isValidLong) Number(BigDecimal(n.longValue()))
+      if (n.isValidLong) Number(BigDecimal(n.longValue))
       else Number(n)
     case QualifiedIdentifier(Terms.Identifier(Terms.SSymbol(name), Nil), None) =>
       if (name.startsWith("-")) {

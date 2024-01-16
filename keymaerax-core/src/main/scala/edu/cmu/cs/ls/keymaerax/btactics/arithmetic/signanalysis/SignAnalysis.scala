@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -48,7 +48,7 @@ object SignAnalysis {
     }).toList
     val aggregate = formulaSigns.reduceLeftOption((acc,e) =>
       acc ++ e.map{ case (k,v) => k -> (acc.getOrElse(k, Map()) ++ v.map{ case (l,u) => l -> (u ++ acc.getOrElse(k, Map()).getOrElse(l, Set())) }) }).getOrElse(Map.empty)
-    aggregate.map(p => p._1 -> (if (p._2.size > 1 && p._2.contains(Sign.Unknown)) p._2.filterKeys(_ != Sign.Unknown) else p._2))
+    aggregate.map(p => p._1 -> (if (p._2.size > 1 && p._2.contains(Sign.Unknown)) p._2.view.filterKeys(_ != Sign.Unknown).toMap else p._2))
   } ensures(r => r.forall(p => p._2.keySet.size == 1 || !p._2.keySet.contains(Sign.Unknown))) // either unambiguous one of (+,-,?) or contradiction (+-)
 
   /** Aggregates sign bottom up in terms */

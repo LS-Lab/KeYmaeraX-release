@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -166,7 +167,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
           !instvars.contains(DifferentialSymbol(x.asInstanceOf[BaseVariable]))
         ).toList
         val renamings: immutable.Seq[(Variable, Variable)] = ownvars.map(x => (x.asInstanceOf[BaseVariable].asInstanceOf[Variable],
-          (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))))).to
+          (if (rand.nextBoolean() || allvars.isEmpty) x else allvars(rand.nextInt(allvars.length))))).toSeq
         val noncycrenamings = renamings.filter(sp => !renamings.exists(p => p._1 == sp._2))
         val ren = MultiRename(noncycrenamings)
         val renamedInst = ren(inst)
@@ -226,7 +227,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case p@Function(_,_,Bool,Bool,None) => PredicationalOf(p,DotFormula)->nextF(othervars,size,modals=true, dotTs=false,dotFs=true,diffs=false,funcs=replacedFuncs,duals=isGame)
       case ow => ow->ow
     })
-    USubst(repls.filter(pair=>pair._1!=pair._2).map(pair=>SubstitutionPair(pair._1,pair._2)).to)
+    USubst(repls.filter(pair=>pair._1!=pair._2).map(pair=>SubstitutionPair(pair._1,pair._2)).toSeq)
   }
 
 
@@ -308,7 +309,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     else
       Some((Variable(name + n, None, Real), n-1))
       //Some(("x" + (rand.alphanumeric take 5).fold("")((s:String,t:String)=>s+t), n-1))
-  }.to[IndexedSeq]
+  }.toIndexedSeq
 
   private def nextPos(n : Int) : List[Int] = {
     require(n >= 0)

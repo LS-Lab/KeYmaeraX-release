@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -67,7 +67,7 @@ object Sign extends Enumeration {
     case Times(l, r)  => times(sign(l), sign(r))
     case Divide(l, r) => divide(sign(l), sign(r))
     case Power(_, Divide(Number(n), Number(d))) if n==1 && d==2 => Pos0
-    case Power(l, Number(r))  => power(sign(l), r.intValue()) //@note only works for small exponents
+    case Power(l, Number(r))  => power(sign(l), r.intValue) //@note only works for small exponents
   })
 
   def pushDown(term: Term, parent: Set[Sign])(implicit atoms: Map[Term, Set[Sign]] = Map()): Map[Term, Set[Sign]] =

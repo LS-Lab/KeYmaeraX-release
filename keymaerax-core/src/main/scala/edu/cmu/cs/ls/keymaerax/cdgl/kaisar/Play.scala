@@ -72,13 +72,13 @@ class Environment[number <: Numeric[number, Ternary]] (val factory: NumberFactor
       case Neg(f) => - eval(f)
       case Divide(l, r) => eval(l) / eval(r)
       case Power(l, r: core.Number) if r.value.isValidInt =>
-        val n = r.value.intValue()
+        val n = r.value.intValue
         eval(l).pow(n, 1)
       // @TODO: Hack. For rational roots, convert rational to algebraic, compute root, convert back
       case Power(l, Divide(num: core.Number, denom: core.Number)) if num.value.isValidInt  && denom.value.isValidInt =>
         val v = eval(l)
-        val n = num.value.intValue()
-        val d = denom.value.intValue()
+        val n = num.value.intValue
+        val d = denom.value.intValue
         v.pow(n, d)
       case FuncOf(f, args) if f.interpreted =>
         (f.name, args) match {

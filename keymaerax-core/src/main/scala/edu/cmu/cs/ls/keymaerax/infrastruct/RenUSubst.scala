@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TactixLibrary}
 
-import scala.Predef.Pair
 import scala.collection.immutable
 import scala.collection.immutable._
 

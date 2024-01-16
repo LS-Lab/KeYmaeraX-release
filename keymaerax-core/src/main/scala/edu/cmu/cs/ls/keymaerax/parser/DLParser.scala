@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Differential Dynamic Logic parser for concrete KeYmaera X notation.
   * @author Andre Platzer, James Gallicchio
@@ -432,7 +433,7 @@ class DLParser extends Parser {
   def summand[_: P](doAmbigCuts: Boolean): P[Term] =
     // Lookahead is to avoid /* */ comments
     ((if (Parser.weakNeg) multiplicand(doAmbigCuts).map(t => Left(t)) else signed(multiplicand(doAmbigCuts))) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).map {
-      case (left, rest) => mulDiv(getEither(left), rest.to[Seq])
+      case (left, rest) => mulDiv(getEither(left), rest)
     }
 
   def multiplicand[_: P](doAmbigCuts: Boolean): P[Term] =
@@ -443,10 +444,10 @@ class DLParser extends Parser {
   def baseTerm[_: P](doAmbigCuts: Boolean): P[Term] =
     number(doAmbigCuts) |
       dot./ |
-      function(doAmbigCuts).flatMapX(diff) |
-      unitFunctional(doAmbigCuts).flatMapX(diff) |
+      function(doAmbigCuts).flatMapX[Term](diff) |
+      unitFunctional(doAmbigCuts).flatMapX[Term](diff) |
       variable |
-      termList(doAmbigCuts).flatMapX(diff) |
+      termList(doAmbigCuts).flatMapX[Term](diff) |
       "__________".!.map(_ => UnitFunctional("exerciseF_", AnyArg, Real))
 
   def function[_: P](doAmbigCuts: Boolean): P[FuncOf] = P(
@@ -494,7 +495,7 @@ class DLParser extends Parser {
   /** (|x1,x2,x3|) parses a space declaration */
   def space[_: P]: P[Space] = P(
     "(|" ~ variable.rep(sep=",") ~ "|)"
-  ).map(ts => if (ts.isEmpty) AnyArg else Except(ts.to))
+  ).map(ts => if (ts.isEmpty) AnyArg else Except(ts))
 
   //*****************
   // formula parser
@@ -634,7 +635,7 @@ class DLParser extends Parser {
     DLParserUtils.filterWithMsg(ident  ~~ "{|^@" ~/ variable.rep(sep=","./) ~ "|}" ~ ";")
       (_._2.isEmpty)("System symbols cannot have an index").
       map({ case (s,None,taboo) =>
-        SystemConst(s, if (taboo.isEmpty) AnyArg else Except(taboo.to))
+        SystemConst(s, if (taboo.isEmpty) AnyArg else Except(taboo))
       })
   )
 
@@ -717,7 +718,7 @@ class DLParser extends Parser {
 
   /** {|x1,x2,x3|} parses a space declaration */
   def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
-    map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
+    map({case Some((t,ts)) => Except(ts.+:(t)) case None => AnyArg})
 
   def diffProduct[_: P]: P[DifferentialProgram] = ( atomicDP ~ ("," ~/ atomicDP).rep ).
     map({case (p, ps) => (ps.+:(p)).reduceRight(DifferentialProduct.apply)})
@@ -731,9 +732,8 @@ class DLParser extends Parser {
 
   /** sequent ::= `aformula1 , aformula2 , ... , aformulan ==>  sformula1 , sformula2 , ... , sformulam`. */
   def sequent[_: P]: P[Sequent] = P( formula.rep(sep=","./) ~ "==>" ~ formula.rep(sep=","./)).
-    map({case (ante, succ) => Sequent(ante.to, succ.to)})
+    map({case (ante, succ) => Sequent(ante.toIndexedSeq, succ.toIndexedSeq)})
 
   /** sequentList ::= sequent `;;` sequent `;;` ... `;;` sequent. */
   def sequentList[_: P]: P[List[Sequent]] = P( sequent.rep(sep=";;"./ )).map(_.toList)
 }
-

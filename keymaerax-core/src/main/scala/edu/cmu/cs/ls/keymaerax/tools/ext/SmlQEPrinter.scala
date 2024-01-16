@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -46,9 +47,9 @@ class SmlQEPrinter(intPrinter: BigInt => String, realPrinter: BigDecimal => Stri
     case Imply(p, q)  => print(Or(Not(p), q))
     case Equiv(p, q)  => print(Or(And(p, q), And(Not(p), Not(q))))
     case Forall(x :: Nil, p) =>
-      s"AllQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v+1) }).toList :+ (x -> 0))_:_*))})"
+      s"AllQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v+1) }).toList :+ (x -> 0)):_*))})"
     case Exists(x :: Nil, p) =>
-      s"ExQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v+1) }).toList :+ (x -> 0))_:_*))})"
+      s"ExQ (${print(p)(Map((vIdxs.map({ case (k, v) => k -> (v+1) }).toList :+ (x -> 0)):_*))})"
   }
 
   /** Prints term `t`, encoding variables using DeBruijn-indices as supplied by `vIdx`. */
@@ -68,7 +69,7 @@ class SmlQEPrinter(intPrinter: BigInt => String, realPrinter: BigDecimal => Stri
   }
 
   /** Prints number `n`. */
-  def printNum(n: BigDecimal): String = n.toBigIntExact() match {
+  def printNum(n: BigDecimal): String = n.toBigIntExact match {
     case Some(i) => intPrinter(i).replaceAllLiterally("-","~")
     case None    => realPrinter(n).replaceAllLiterally("-","~")
   }

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -129,7 +134,7 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
       case p: DLBelleParser =>
         p.setDefTactics(tactics.map({ case (k, v) => k -> DefTactic(k, v) }))
         p(s)
-      case p@BelleParser => p.parseWithTacticDefs(s, tactics)
+      case BelleParser => BelleParser.parseWithTacticDefs(s, tactics)
     }
   ).toOption
 }
@@ -218,4 +223,3 @@ object TacticExtractionErrors {
     def apply(message: String) = new TacticExtractionError(message, None)
   }
 }
-

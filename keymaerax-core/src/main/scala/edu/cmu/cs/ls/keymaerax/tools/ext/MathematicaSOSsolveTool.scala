@@ -56,7 +56,7 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
 
   private def decodeLin(tt: Term) : (Int,Term,Term,Term) = tt match {
     case Pair(n:Number, Pair(a, Pair(b, Pair(c, Nothing)))) if n.value.isValidInt =>
-      (n.value.intValue(),a,b,c)
+      (n.value.intValue,a,b,c)
     case e =>
       throw new IllegalArgumentException("Unable to decode linear instruction: " + e)
   }
@@ -110,5 +110,3 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     }
   }
 }
-
-

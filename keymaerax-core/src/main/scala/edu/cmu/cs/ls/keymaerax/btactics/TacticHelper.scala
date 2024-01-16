@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -41,7 +42,7 @@ object TacticHelper {
           case PredOf(fn, _)          => max(fn, maxIdx)
           case PredicationalOf(fn, _) => max(fn, maxIdx)
           case p: UnitPredicational   => max(p, maxIdx)
-          case d@DotFormula           => max(d, maxIdx)
+          case DotFormula             => max(DotFormula, maxIdx)
           case _ => maxIdx
         }
         Left(None)

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 /**
@@ -71,7 +76,7 @@ object Region {
       if (i == 0) {
         (1, 1)
       } else {
-        val lines = s.substring(0, i).lines.toList
+        val lines = s.substring(0, i).linesIterator.toList
         (lines.length, lines.lastOption.map(_.length).getOrElse(0))
       }
     }

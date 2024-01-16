@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
@@ -15,7 +16,7 @@ import org.scalatest.Matchers
 
 import scala.collection.immutable.Range
 import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe.typeTag
+import scala.reflect.runtime.universe.{typeTag, MethodSymbolTag}
 
 /**
  * Tests code names of tactics and AxiomInfo for compatibility for TacticExtraction.

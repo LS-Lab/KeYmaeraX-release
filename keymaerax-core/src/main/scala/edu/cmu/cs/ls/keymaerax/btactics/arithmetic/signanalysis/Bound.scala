@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -52,7 +52,7 @@ object Bound extends Enumeration {
     case Minus(l, r)  => minus(bound(l), bound(r))
     case Times(l, r)  => times(bound(l), bound(r))
     case Divide(l, r) => divide(bound(l), bound(r))
-    case Power(l, Number(r))  => power(bound(l), r.intValue()) //@note only works for small exponents
+    case Power(l, Number(r))  => power(bound(l), r.intValue) //@note only works for small exponents
   })
 
   def pushDown(term: Term, bound: Map[Bound, Set[AntePos]])(implicit signs: Map[Term, Map[Sign.Sign, Set[AntePos]]] = Map()): Map[Term, Map[Bound, Set[AntePos]]] = term match {

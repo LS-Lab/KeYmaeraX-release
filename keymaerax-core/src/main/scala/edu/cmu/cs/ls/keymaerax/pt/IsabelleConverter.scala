@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.pt
 
 import java.io.{BufferedWriter, FileWriter, Writer}
@@ -1194,7 +1199,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
       case (DifferentialSymbol(BaseVariable(x,ind,_)),_) => IDiffVar(IDEnum(m.varMap((x,ind))))
       case (Number(n),_) =>
         if(n.isValidInt) {
-          IConst(n.intValue(),sm)
+          IConst(n.intValue,sm)
         } else {
           throw ConversionException("Can't convert non-integer literal: " + n)
         }
@@ -1698,4 +1703,3 @@ class SexpBuilder(sb:StringBuilder) extends SourceBuilder(sb) {
   }
 
 }
-

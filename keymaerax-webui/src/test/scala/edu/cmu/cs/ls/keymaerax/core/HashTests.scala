@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
@@ -39,20 +40,20 @@ class HashTests extends FlatSpec with Matchers {
   }
 
   it should "lookup in hash sets" in {
-    test((1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).to)
+    test((1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).toList)
   }
 
   private def test(data: List[Expression]): Unit = {
     val other: List[Expression] = (1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).
-      filter(e => !data.contains(e)).to
+      filter(e => !data.contains(e)).toList
     if (other.length != data.length) println("Probabilistic collisions: " + (data.length - other.length))
-    val set:HashSet[Expression] = data.to
+    val set:HashSet[Expression] = data.to(HashSet)
     test(data, other, set)
-    val set2:ListSet[Expression] = data.to
+    val set2:ListSet[Expression] = data.to(ListSet)
     test(data, other, set2)
-    val set3:mutable.HashSet[Expression] = data.to
+    val set3:mutable.HashSet[Expression] = data.to(mutable.HashSet)
     testM(data, other, set3)
-    val set4:mutable.LinkedHashSet[Expression] = data.to
+    val set4:mutable.LinkedHashSet[Expression] = data.to(mutable.LinkedHashSet)
     testM(data, other, set4)
   }
 
@@ -73,12 +74,12 @@ class HashTests extends FlatSpec with Matchers {
   }
 
   it should "lookup in hash maps" taggedAs(SlowTest) in {
-    testmap((1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).to)
+    testmap((1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).toList)
   }
 
   private def testmap(data: List[Expression]): Unit = {
     val other: List[Expression] = (1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).
-      filter(e => !data.contains(e)).to
+      filter(e => !data.contains(e)).toList
     if (other.length != data.length) println("Probabilistic collisions: " + (data.length - other.length))
     val map:Map[Expression,Int] = data.map(e=> (e,e.hashCode())).toMap
     testmap(data, other, map)

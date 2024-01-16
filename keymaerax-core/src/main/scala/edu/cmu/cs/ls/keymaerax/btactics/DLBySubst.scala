@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -80,7 +85,7 @@ private object DLBySubst extends TacticProvider {
     require(!pos.isAnte, "Abstraction only in succedent")
     sequent.at(pos) match {
       case (ctx, b@Box(prg, phi)) =>
-        val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+        val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.toSeq
         val diffies = vars.filter(v => v.isInstanceOf[DifferentialSymbol])
         if (diffies.nonEmpty) throw new IllegalArgumentException("abstractionb: found differential symbols " + diffies + " in " + b + "\nFirst handle those")
         val qPhi =
@@ -89,7 +94,7 @@ private object DLBySubst extends TacticProvider {
           //@todo code quality needs improved
           //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
             vars.filter(v => v.isInstanceOf[BaseVariable]).map(v => v.asInstanceOf[NamedSymbol]).
-              to[scala.collection.immutable.SortedSet].
+              to(scala.collection.immutable.SortedSet).
               foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
         cut(Imply(ctx(qPhi), ctx(b))) <(
@@ -167,11 +172,7 @@ private object DLBySubst extends TacticProvider {
       case Some(b@Box(prg, phi)) =>
         val vars: scala.collection.immutable.SortedSet[Variable] = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.
           //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
-          filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]).to[scala.collection.immutable.SortedSet](
-            //@note provide canBuildFrom and ordering because Scala implicit conversions won't compile
-            scala.collection.immutable.SortedSet.canBuildFrom(new Ordering[Variable] {
-              override def compare(x: Variable, y: Variable): Int = x.compare(y)
-            }))
+          filter(_.isInstanceOf[Variable]).to(scala.collection.immutable.SortedSet)
 
         val qPhi = if (vars.isEmpty) phi else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
 

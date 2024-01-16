@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -53,8 +54,8 @@ object InvariantGenerator extends Logging {
     // i.e. variables that the free variables of the postcondition depend on, that are also bound, but not yet free in the evolution domain constraint
     def relevantInvVars(x: Variable) = system match {
       //@note ODEs can be proved with diffcut chains, but loops need single shot attempt
-      case _: DifferentialProgram => deps.getOrElse(x,List.empty).intersect(bounds.to)
-      case _: Loop => (x +: deps.getOrElse(x,List.empty)).intersect(bounds.to)
+      case _: DifferentialProgram => deps.getOrElse(x,List.empty).intersect(bounds.toList)
+      case _: Loop => (x +: deps.getOrElse(x,List.empty)).intersect(bounds.toList)
     }
     lazy val missing = if (analyzeMissing) frees.flatMap(relevantInvVars).diff(knowledge) else frees.flatMap(relevantInvVars)
     //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
@@ -88,7 +89,7 @@ object InvariantGenerator extends Logging {
     }
 
     lazy val indOrder = DependencyAnalysis.inducedOrd(DependencyAnalysis.transClose(DependencyAnalysis.analyseModalVars(
-      system, DependencyAnalysis.varSetToBaseVarSet(StaticSemantics.vars(system).toSet), ignoreTest = false).mapValues(v => v._1)))
+      system, DependencyAnalysis.varSetToBaseVarSet(StaticSemantics.vars(system).toSet), ignoreTest = false).view.mapValues(v => v._1).toMap))
 
     lazy val vars = DependencyAnalysis.freeVars(sequent)
     lazy val order = vars.toList.sortWith((x, y) => {

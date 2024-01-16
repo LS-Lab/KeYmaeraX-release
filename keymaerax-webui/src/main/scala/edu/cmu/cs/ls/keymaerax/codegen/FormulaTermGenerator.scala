@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -78,11 +83,11 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
         case Number(n) =>
           if (n.isValidInt) {
             // index is integer
-            if (n.intValue() == 0) {
+            if (n.intValue == 0) {
               // index is 0, x^0 = 1
               //            assert(!base.equals(Number(0)), throw new CodeGenerationException("Conversion of 0^0 is not defined"))
               CNumber(1.0)
-            } else if (n.intValue() > 0 ) {
+            } else if (n.intValue > 0 ) {
               // index n is a positive integer, expand n times of *
               val ba: CTerm = compileTerm(base)
               (1 until n.intValue).foldLeft(ba)((b, _) => CTimes(ba, b))

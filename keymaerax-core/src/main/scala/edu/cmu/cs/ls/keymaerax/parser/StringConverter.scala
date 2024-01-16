@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleLabel, BelleTopLevelLabel}
@@ -21,15 +26,6 @@ class StringConverter(val s: String) {
   /** Converts to an expression. */
   def asExpr: Expression = asExpr(InterpretedSymbols.mathKyxDefs)
   def asExpr(defs: Declaration): Expression = elaborate(defs)(Parser(s))
-
-  /** Converts a `::` separated list of expressions. */
-  def asExprList[T <: Expression]: List[T] = asExprList(InterpretedSymbols.mathKyxDefs)
-  def asExprList[T <: Expression](defs: Declaration): List[T] = {
-    def convert(elements: Array[String]): List[T] = elements.map(new StringConverter(_).asExpr(defs).asInstanceOf[T]).toList
-    val elements = s.split("::")
-    if (elements.last.trim == "nil") convert(elements.dropRight(1))
-    else convert(elements)
-  }
 
   /** Converts to a term. */
   def asTerm: Term = asTerm(InterpretedSymbols.mathKyxDefs)

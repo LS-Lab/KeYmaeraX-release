@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -167,7 +172,7 @@ object DependencyAnalysis {
     }
 
     //Otherwise, transitively close over the set
-    val ds = odels.mapValues( v => (freeVars(v),signature(v)) )
+    val ds = odels.view.mapValues( v => (freeVars(v),signature(v)) ).toMap
 
     //Compute the transitive closure
     val (vars,funcs) = transitiveAnalysis(ds,s.union(fvdom),fvsig)
@@ -253,7 +258,7 @@ object DependencyAnalysis {
   //Find the SCCs of a graph defined on the As
   def scc[A](adjlist: Map[A,Set[A]]) : List[Set[A]] = {
     val stack = dfs(adjlist)
-    val trans = transpose(adjlist).filterKeys( p => adjlist.keySet.contains(p))
+    val trans = transpose(adjlist).view.filterKeys( p => adjlist.keySet.contains(p)).toMap
     stack.foldLeft((List[Set[A]](),Set[A]()))( (d,v) => {
 
       if(d._2.contains(v)){
@@ -280,7 +285,7 @@ object DependencyAnalysis {
   //Find the SCCs, then return a breadth-wise closure from least to most dependent in each SCC
   def bfsSCC[A](adjlist:Map[A,Set[A]]) : List[List[Set[A]]] = {
     val sccs = scc(adjlist)
-    val trans = transpose(adjlist).filterKeys( p => adjlist.keySet.contains(p))
+    val trans = transpose(adjlist).view.filterKeys( p => adjlist.keySet.contains(p)).toMap
     sccs.foldLeft(List[List[Set[A]]](),Set[A]()) ( (d,v) => {
       if(v.diff(d._2).isEmpty){
         d

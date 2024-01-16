@@ -655,9 +655,9 @@ class WolframScript extends MathematicaLink with Logging {
       case JsString(s) if s.startsWith("'") => new MExpr(s.substring(1, s.length-1))
       // symbols are "symbol"
       case JsString(s) => new MExpr(Expr.SYMBOL, s)
-      case JsNumber(n) if  n.isWhole() => new MExpr(n.toBigIntExact().getOrElse(
+      case JsNumber(n) if  n.isWhole => new MExpr(n.toBigIntExact.getOrElse(
         throw ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
-      case JsNumber(n) if !n.isWhole() => new MExpr(n.bigDecimal)
+      case JsNumber(n) if !n.isWhole => new MExpr(n.bigDecimal)
       case JsTrue => MathematicaOpSpec.ltrue.op
       case JsFalse => MathematicaOpSpec.lfalse.op
       case JsNull => new MExpr(Expr.SYMBOL, "null")

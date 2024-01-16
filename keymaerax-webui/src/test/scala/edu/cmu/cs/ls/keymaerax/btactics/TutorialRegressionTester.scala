@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
@@ -159,13 +160,14 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
     )
     skipEntries.foreach(e => println(s"QE tool mismatch: skipping ${e._2}"))
 
-    tutorialEntries.flatMap(e => e._7.filter(t => t._3 &&
+    val result = tutorialEntries.flatMap(e => e._7.filter(t => t._3 &&
       toolFilter(qeFinder.findAllMatchIn(t._2)) && toolFilter(qeOldFinder.findAllMatchIn(t._2))).map(t =>
         (e._1, e._2, e._3, e._4, e._5, e._6,
           if (replaceQE) (t._1, qeOldFinder.replaceAllIn(qeFinder.replaceAllIn(t._2, "QE"), "QE"), t._3)::Nil
           else t::Nil, e._8)
       )
     )
+    Table(tutorialEntries.heading, result: _*)
   }
 }
 

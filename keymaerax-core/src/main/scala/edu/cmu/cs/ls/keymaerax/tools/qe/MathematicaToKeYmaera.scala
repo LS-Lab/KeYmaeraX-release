@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 /**
   * @note Code Review: 2016-06-01
   */
@@ -10,6 +11,8 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaComputationFailedException, MathematicaComputationTimedOutException}
+
+import scala.reflect.ClassTag
 
 // favoring immutable Seqs
 import scala.collection.immutable._
@@ -111,27 +114,27 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   }
 
   /** Converts a binary expression. */
-  private def convertBinary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
+  private def convertBinary[T<:Expression:ClassTag](e: MExpr, op: (T,T) => T): T = {
     require(e.args.length == 2, "binary operator expects 2 arguments")
     convertNaryL(e, op)
   }
 
   /** Converts an n-ary expression (left-associative). */
-  private def convertNaryL[T<:Expression](e: MExpr, op: (T,T) => T): T = {
+  private def convertNaryL[T<:Expression:ClassTag](e: MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args.map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
     subexpressions.map(_.asInstanceOf[T]).reduce(op)
   }
 
   /** Converts an n-ary expression (right-associative). */
-  private def convertNaryR[T<:Expression](e: MExpr, op: (T,T) => T): T = {
+  private def convertNaryR[T<:Expression:ClassTag](e: MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args.map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
     subexpressions.map(_.asInstanceOf[T]).reduceRight(op)
   }
 
   /** Converts a comparison. */
-  private def convertComparison[S<:Term, T<:Formula](e: MExpr, op: (S,S) => T): T = {
+  private def convertComparison[S<:Term:ClassTag, T<:Formula](e: MExpr, op: (S,S) => T): T = {
     val subexpressions = e.args.map(convert)
     require(subexpressions.length == 2, "binary operator expects 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[S])
@@ -209,4 +212,3 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   /** Prints debug information. */
   private def mathInfo(e: MExpr): String = "args:\t" + e.args.map(_.toString).mkString(",") + "\ntoString:\t" + e
 }
-  

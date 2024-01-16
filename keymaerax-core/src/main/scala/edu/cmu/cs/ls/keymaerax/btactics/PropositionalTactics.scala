@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -760,27 +765,66 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
 
   /** Propositional reasoning for only disjunctions. */
   private val propOr = prop(
-    { case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
-    { case (_: Or, ap: AntePos) => List(OrLeft(ap))  case _ => List.empty })(List.empty, List.empty)
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: Or, sp: SuccPos) => List(OrRight(sp))
+      case _ => List.empty
+    },
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: Or, ap: AntePos) => List(OrLeft(ap))
+      case _ => List.empty
+    },
+  )(List.empty, List.empty)
 
   /** Propositional reasoning for only conjunctions. */
   private val propAnd = prop(
-    { case (_: And, ap: AntePos) => List(AndLeft(ap))  case _ => List.empty },
-    { case (_: And, sp: SuccPos) => List(AndRight(sp)) case _ => List.empty })(List.empty, List.empty)
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: And, ap: AntePos) => List(AndLeft(ap))
+      case _ => List.empty
+    },
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: And, sp: SuccPos) => List(AndRight(sp))
+      case _ => List.empty
+    },
+  )(List.empty, List.empty)
 
   /** Propositional reasoning for only conjunctions and disjunctions. */
   private val propAndOr = prop(
-    { case (_: And, ap: AntePos) => List(AndLeft(ap))  case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
-    { case (_: And, sp: SuccPos) => List(AndRight(sp)) case (_: Or, ap: AntePos) => List(OrLeft(ap))  case _ => List.empty })(List.empty, List.empty)
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: And, ap: AntePos) => List(AndLeft(ap))
+      case (_: Or, sp: SuccPos) => List(OrRight(sp))
+      case _ => List.empty
+    },
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: And, sp: SuccPos) => List(AndRight(sp))
+      case (_: Or, ap: AntePos) => List(OrLeft(ap))
+      case _ => List.empty
+    },
+  )(List.empty, List.empty)
 
   private val andOrAlpha = prop(
-    { case (_: And, ap: AntePos) => List(AndLeft(ap))  case (_: Or, sp: SuccPos) => List(OrRight(sp)) case _ => List.empty },
-    { case _ => List.empty })(List.empty, List.empty)
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: And, ap: AntePos) => List(AndLeft(ap))
+      case (_: Or, sp: SuccPos) => List(OrRight(sp))
+      case _ => List.empty
+    },
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case _ => List.empty
+    },
+  )(List.empty, List.empty)
 
   /** Propositional reasoning for only conjunctions and disjunctions, and applies alpha rules only when right-hand side equal to `p`. */
   private def propOrAnd(p: Formula) = PropositionalTactics.prop(
-    { case (_: Or, sp: SuccPos) => List(OrRight(sp)) case (And(_, pp), ap: AntePos) if pp == p => List(AndLeft(ap)) case _ => List.empty },
-    { case (_: Or, ap: AntePos) => List(OrLeft(ap)) case (And(_, pp), sp: SuccPos) if pp == p => List(AndRight(sp)) case _ => List.empty })(List.empty, List.empty)
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: Or, sp: SuccPos) => List(OrRight(sp))
+      case (And(_, pp), ap: AntePos) if pp == p => List(AndLeft(ap))
+      case _ => List.empty
+    },
+    (formula: Formula, seqPos: SeqPos) => (formula, seqPos) match {
+      case (_: Or, ap: AntePos) => List(OrLeft(ap))
+      case (And(_, pp), sp: SuccPos) if pp == p => List(AndRight(sp))
+      case _ => List.empty
+    },
+  )(List.empty, List.empty)
 
   /** Reassociates `fml` to default right-associativity.
    * @see [[FormulaTools.reassociate]]

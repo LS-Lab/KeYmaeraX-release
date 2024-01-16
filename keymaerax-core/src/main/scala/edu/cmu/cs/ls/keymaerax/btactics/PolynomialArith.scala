@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -500,7 +505,7 @@ object PolynomialArith extends Logging {
         val rn = groundNormalise(r).flatMap(ratToNum)
         (ln, rn) match {
           case (Some(Divide(n: Number, d: Number)), Some(p: Number)) =>
-            Some(Divide(Number(n.value.pow(p.value.intValue())), Number(d.value.pow(p.value.intValue()))))
+            Some(Divide(Number(n.value.pow(p.value.intValue)), Number(d.value.pow(p.value.intValue))))
           case _ => None
         }
       }
@@ -557,7 +562,7 @@ object PolynomialArith extends Logging {
 //      case Power(_:Variable,_:Number) =>
 //        val res = Times(Number(1),m)
 //        (res,prover(Equal(m,res),QE)) //temporary
-//      case Power(p,n:Number) if n.value.intValue() == 2 =>
+//      case Power(p,n:Number) if n.value.intValue == 2 =>
 //        val (res1,pr1) = normaliseMonomial(p)
 //        val (res2,pr2) = mulMono(res1,res1,skip_proofs)
 //        (res2,prover(Equal(m,res2),QE)) //temporary
@@ -618,7 +623,7 @@ object PolynomialArith extends Logging {
           & useAt(powNormalise)(SuccPosition(1,0::Nil))
           & by(pr2)))
       case Power(ln,n:Number) if n.value.isValidInt =>
-        val(rec1,pr1) = iterSquare(ln,n.value.intValue(),skip_proofs)
+        val(rec1,pr1) = iterSquare(ln,n.value.intValue,skip_proofs)
         val(res,pr2) = normalise(rec1,skip_proofs)
         (res,prover(Equal(l,res), useAt(pr1)(SuccPosition(1,0::Nil))
           & by(pr2)))

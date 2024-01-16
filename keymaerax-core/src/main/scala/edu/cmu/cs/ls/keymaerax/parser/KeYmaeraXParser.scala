@@ -14,7 +14,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.annotation.{switch, tailrec}
-import scala.collection.immutable.{Stack => _, _}
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.{func, statementSemicolon}

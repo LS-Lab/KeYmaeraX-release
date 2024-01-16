@@ -120,7 +120,7 @@ class DependencyAnalysisTests extends TacticTestBase {
   "DependencyAnalysis" should "correctly find SCCs" in withMathematica { qeTool =>
     val Some((_, pr, seq)) = parseStr("@Chilled water#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), Tw < Tl, Tl < Tlu(), a()<=Tw, l=1->v=1, v=0->l=0, l=0|l=1, v=1|v=0, v=1->Tw=a(), v=1, t=0\n  ==>  [{Tw'=-r()*(1-v)*(Tw-Tl),Tl'=-r()*(Tl-Tw)+1*h(),t'=1&(0<=t&t < e())&Tw=a()}]((1=1->v=1)&(v=0->1=0)&(1=0|1=1)&(v=1|v=0)&(v=1->Tw=a()))#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), l=1->v=1, v=0->l=0, l=0|l=1, v=1|v=0, v=1\n  ==>  (0<=t&t < e())&Tw=a()->(1=1->v=1)&(v=0->1=0)&(1=0|1=1)&(v=1|v=0)&(v=1->Tw=a())")
     val p = stripSeq(pr).get
-    val adjls = analyseModal(p, seq).mapValues(v => v._1)
+    val adjls = analyseModal(p, seq).view.mapValues(v => v._1).toMap
 
     scc(adjls) should contain only(Set("Tl".asVariable), Set("t".asVariable, "Tw".asVariable, "v".asVariable), Set("l".asVariable))
   }
@@ -131,8 +131,8 @@ class DependencyAnalysisTests extends TacticTestBase {
     val p1 = stripSeq(pr1).get
     val p2 = stripSeq(pr2).get
 
-    val adjls1 = analyseModal(p1, seq1).mapValues(v => v._1)
-    val adjls2 = analyseModal(p2, seq2).mapValues(v => v._1)
+    val adjls1 = analyseModal(p1, seq1).view.mapValues(v => v._1).toMap
+    val adjls2 = analyseModal(p2, seq2).view.mapValues(v => v._1).toMap
 
     val sccs1 = scc(adjls1)
     val sccs2 = scc(adjls2)
@@ -145,7 +145,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
     val p = "{A:=B; C:=D; {D'=E , E' = D}; E:=E+F;}".asProgram
     val seq = " ==> A+C+B+D+E+G() > 0".asSequent
-    val adjls = analyseModal(p, seq).mapValues(v => v._1)
+    val adjls = analyseModal(p, seq).view.mapValues(v => v._1).toMap
     val rtc = transClose(adjls)
     val vars = freeVars(seq)
 
@@ -204,7 +204,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     val timeLs = ListBuffer[(Double)]()
     for ((p, seq) <- problems) {
       val t = timeCall(_ => {
-        val adjls = transClose(analyseModal(p, seq, ignoreTest).mapValues(v => v._1))
+        val adjls = transClose(analyseModal(p, seq, ignoreTest).view.mapValues(v => v._1).toMap)
         proveBy(seq, heuQEPO(inducedOrd(adjls)))
       })
       timeLs += t
@@ -365,8 +365,8 @@ class DependencyAnalysisTests extends TacticTestBase {
 
     val p2 = stripImp(l2f).get
 
-    val pof = inducedOrd(transClose(analyseModalVars(p2, varSetToBaseVarSet(StaticSemantics.vars(p2).toSet), false).mapValues(v => v._1)))
-    val pot = inducedOrd(transClose(analyseModalVars(p2, varSetToBaseVarSet(StaticSemantics.vars(p2).toSet), true).mapValues(v => v._1)))
+    val pof = inducedOrd(transClose(analyseModalVars(p2, varSetToBaseVarSet(StaticSemantics.vars(p2).toSet), false).view.mapValues(v => v._1).toMap))
+    val pot = inducedOrd(transClose(analyseModalVars(p2, varSetToBaseVarSet(StaticSemantics.vars(p2).toSet), true).view.mapValues(v => v._1).toMap))
 
     val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lab2.txt")
 
@@ -399,8 +399,8 @@ class DependencyAnalysisTests extends TacticTestBase {
 
     val p3 = stripImp(l3f).get
 
-    val pof = inducedOrd(transClose(analyseModalVars(p3, varSetToBaseVarSet(StaticSemantics.vars(p3).toSet), false).mapValues(v => v._1)))
-    val pot = inducedOrd(transClose(analyseModalVars(p3, varSetToBaseVarSet(StaticSemantics.vars(p3).toSet), true).mapValues(v => v._1)))
+    val pof = inducedOrd(transClose(analyseModalVars(p3, varSetToBaseVarSet(StaticSemantics.vars(p3).toSet), false).view.mapValues(v => v._1).toMap))
+    val pot = inducedOrd(transClose(analyseModalVars(p3, varSetToBaseVarSet(StaticSemantics.vars(p3).toSet), true).view.mapValues(v => v._1).toMap))
 
     val ls = parseLog(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lab3.txt")
 

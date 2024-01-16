@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.pt
 
 import java.io.PrintWriter
@@ -507,32 +512,32 @@ class ProofTermCheckerTests extends TacticTestBase {
   it should "parse ints" in {
     val(pt.lib.Int.int_of_integer(n1), _) = int("(int_of_integer 123)",0)
     val(pt.lib.Int.int_of_integer(n2), _) = int("(int_of_integer -123)",0)
-    n1.intValue() shouldBe 123
-    n2.intValue() shouldBe -123
+    n1.intValue shouldBe 123
+    n2.intValue shouldBe -123
   }
 
   it should "parse rats" in {
     val(Frct((int_of_integer(den),int_of_integer(num))),_) = rat("(Frct ((int_of_integer 2) (int_of_integer 1)))",0)
-    den.intValue() shouldBe 2
-    num.intValue() shouldBe 1
+    den.intValue shouldBe 2
+    num.intValue shouldBe 1
   }
 
   it should "parse reals" in {
     val(Ratreal(Frct((int_of_integer(den),int_of_integer(num)))),_) = real("(Ratreal (Frct ((int_of_integer 2) (int_of_integer 1))))",0)
-    den.intValue() shouldBe 2
-    num.intValue() shouldBe 1
+    den.intValue shouldBe 2
+    num.intValue shouldBe 1
   }
 
   it should "parse terms" in {
     val (Const(Ratreal(Frct((int_of_integer(den1),int_of_integer(num1))))),_) = trm(mv)("(Const (Ratreal (Frct ((int_of_integer 2) (int_of_integer 1)))))", 0)
-    den1.intValue() shouldBe 2
-    num1.intValue() shouldBe 1
+    den1.intValue shouldBe 2
+    num1.intValue shouldBe 1
     val(Const(Ratreal(Frct((int_of_integer(den2),int_of_integer(num2))))),_) = trm(mv)("z", 0)
-    den2.intValue() shouldBe 0
-    num2.intValue() shouldBe 1
+    den2.intValue shouldBe 0
+    num2.intValue shouldBe 1
     val(Const(Ratreal(Frct((int_of_integer(den3),int_of_integer(num3))))),_) = trm(mv)("zst", 0)
-    den3.intValue() shouldBe 0
-    num3.intValue() shouldBe 1
+    den3.intValue shouldBe 0
+    num3.intValue shouldBe 1
     val(Var(i1()),_) = trm(mv)("(Var i1)",0)
     val(DiffVar(i1()),_) = trm(mv)("(DiffVar i1)",0)
     val(Function(Inr(i1()),emp),_) = trm(sum(mv,mv))("(Function (Inr i1) est)",0)

@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
 
 import spray.json._
@@ -66,7 +67,7 @@ object Tools {
           val obj = JsonParser(params).asJsObject()
           val initial = obj.fields("initial").asInstanceOf[JsString].value.asFormula
           val stateRelation = obj.fields("stateRelation").asInstanceOf[JsString].value.asFormula
-          val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue()
+          val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue
           obj.fields("stepDuration").asInstanceOf[JsString].value.asTerm match {
             case dt: edu.cmu.cs.ls.keymaerax.core.Number =>
               val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, dt)

@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -22,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
 import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.universe.{Assign => _, _}
 
 /**
   * Central Database of Derived Axioms and Derived Axiomatic Rules,

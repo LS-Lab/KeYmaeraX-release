@@ -451,9 +451,9 @@ object Provable {
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only valid formulas are sound axioms.
     */
-  val axioms: immutable.Map[String, Provable] = axiom.mapValues(axiom =>
+  val axioms: immutable.Map[String, Provable] = axiom.view.mapValues(axiom =>
     new Provable(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
-  )
+  ).toMap
 
   /** immutable list of Provables of locally sound axiomatic proof rules.
     * {{{
@@ -466,9 +466,9 @@ object Provable {
     * @note soundness-critical: only list locally sound rules.
     * @see [[Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstOne):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
     */
-  val rules: immutable.Map[String, Provable] = AxiomBase.loadAxiomaticRules.mapValues(rule =>
+  val rules: immutable.Map[String, Provable] = AxiomBase.loadAxiomaticRules.view.mapValues(rule =>
     new Provable(rule._2, rule._1)
-  )
+  ).toMap
 
   /**
     * Begin a new proof for the desired conclusion goal
@@ -817,7 +817,7 @@ object Provable {
     }) match {
       case conclusion :: subgoals =>
         //@note soundness-critical, guarded lightly by checksum
-        val reconstructed = oracle(conclusion, subgoals.to)
+        val reconstructed = oracle(conclusion, subgoals.toIndexedSeq)
         if (checksum(toExternalString(reconstructed)) != storedChecksum)
           throw new ProvableStorageException("checksum has been tampered with", storedProvable)
         else

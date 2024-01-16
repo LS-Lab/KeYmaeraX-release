@@ -156,7 +156,7 @@ object AnnotationCommon {
     import c.universe._
     val (idx, wereNamed, paramMap) = acc
     val (k, v, isNamed) = param match {
-      case na: AssignOrNamedArg => {
+      case na: NamedArg => {
         na.lhs match {
           case id: Ident => (id.name.decodedName.toString, na.rhs, true)
           case e => c.abort(c.enclosingPosition, "Expected argument name to be identifier, got: " + e)

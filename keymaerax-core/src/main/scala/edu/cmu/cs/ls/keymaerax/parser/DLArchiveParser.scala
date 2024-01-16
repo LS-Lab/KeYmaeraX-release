@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -148,7 +149,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
               tactics = tacs.map({ case (tn, (t, ts)) => (tn.getOrElse("<undefined>"), ts.trim, t) }).toList,
               annotations = annotations.toList,
               //@todo check that there are no contradictory facts in the meta and moremeta
-              info = (if (label.isDefined) Map("id" -> label.get) else Map.empty) ++ meta ++ moremeta
+              info = (if (label.isDefined) Map("id" -> label.get) else Map.empty[String, String]) ++ meta ++ moremeta
             ))
           Pass(result)
         }

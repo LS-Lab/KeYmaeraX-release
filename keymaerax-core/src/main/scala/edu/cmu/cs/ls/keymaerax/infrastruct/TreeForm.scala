@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -128,7 +133,8 @@ object TreeForm {
     // stats for an operator "op" under Operator("op", None) and the individual stats for each arity i under
     // Operator("op", Some(i))
     val counts = new mutable.HashMap[TermSymbol, Stat] {}
-    asTree.iterDepth({case (depth, Tree(sym, l)) =>
+    asTree.iterDepth((depth, tree) => {
+      val Tree(sym, l) = tree
       counts.find({case (sym2, _) => sym.equals(sym2)}) match {
         case None => counts.put(sym, new Stat(l, depthFactor(depth), sizeFactor(Tree(sym,l).size)))
         case Some((_, stat)) => counts.put(sym, stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size)))
@@ -206,7 +212,7 @@ object TreeForm {
   }
 
   def subtract[A](x: Multiset[A], y: Multiset[A]): Multiset[A] = {
-    x.flatMap[(A, Int), Multiset[A]]({case (t1, n1) =>
+    x.flatMap({case (t1, n1) =>
       y.find({case (t2, n2) => t1.equals(t2)}) match {
         case None => Set.empty
         case Some((t2, n2)) =>

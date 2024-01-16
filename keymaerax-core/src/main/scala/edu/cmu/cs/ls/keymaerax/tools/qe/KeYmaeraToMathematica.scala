@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 /**
   * @note Code Review: 2016-08-02
   */
@@ -82,7 +83,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
       case Power(l, r) => MathematicaOpSpec.power(convertTerm(l), convertTerm(r))
       case Number(n) =>
         //@todo test and (potentially) fix
-        n.toBigIntExact() match {
+        n.toBigIntExact match {
           case Some(i) => MathematicaOpSpec.bigInt(i)
           case None =>
             //@note negative scale means: unscaled*10^(-scale)

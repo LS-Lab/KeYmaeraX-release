@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package testHelper
 
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula, NamedSymbol}
@@ -20,7 +21,7 @@ object SequentFactory {
    * @return The new sequent.
    */
   def sequent(pref: Seq[NamedSymbol], ante: Seq[Formula], succ: Seq[Formula]) =
-    new Sequent(ante.to[scala.collection.immutable.IndexedSeq], succ.to[scala.collection.immutable.IndexedSeq])
+    Sequent(ante.toIndexedSeq, succ.toIndexedSeq)
 
   /**
    * Create a new sequent with only succedent f, but no specified prefixes or antecedents

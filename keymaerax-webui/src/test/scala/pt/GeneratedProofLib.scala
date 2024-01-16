@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package pt.lib
 
 //import pt.Scratch.myvars
@@ -131,8 +136,8 @@ object Enum {
 
   def enum_suma[A : enum, B : enum]: List[Sum_Type.sum[A, B]] =
     Lista.map[A, Sum_Type.sum[A, B]](((a: A) => Sum_Type.Inl[A, B](a)),
-      enum[A]) ++
-      Lista.map[B, Sum_Type.sum[A, B]](((a: B) => Sum_Type.Inr[B, A](a)), enum[B])
+      enum[A](implicitly)) ++
+      Lista.map[B, Sum_Type.sum[A, B]](((a: B) => Sum_Type.Inr[B, A](a)), enum[B](implicitly))
 
   def enum_all_unit(p: Unit => Boolean): Boolean = p(())
 
@@ -460,7 +465,7 @@ object Set {
     case (f, coset(xs)) =>
       seta[B](Lista.map[A, B](f, Lista.fold[A,
         List[A]](((a: A) => (b: List[A]) => Lista.remove1[A](a, b)), xs,
-        Enum.enum[A])))
+        Enum.enum[A](implicitly))))
     case (f, seta(xs)) => seta[B](Lista.map[A, B](f, xs))
   }
 
@@ -475,10 +480,10 @@ object Set {
   }
 
   def vimage[A : Enum.enum, B : HOL.equal](f: A => B, b: set[B]): set[A] =
-    seta[A](Lista.filter[A](((x: A) => member[B](f(x), b)), Enum.enum[A]))
+    seta[A](Lista.filter[A](((x: A) => member[B](f(x), b)), Enum.enum[A](implicitly)))
 
   def Collect[A : Enum.enum](p: A => Boolean): set[A] =
-    seta[A](Lista.filter[A](p, Enum.enum[A]))
+    seta[A](Lista.filter[A](p, Enum.enum[A](implicitly)))
 
   def bot_set[A]: set[A] = seta[A](Nil)
 
@@ -1001,10 +1006,10 @@ object Parser {
       ident match {
         case "Inl" =>
           val (lres, i5) = l(str,i4)
-          (Inl(lres),i5)
+          (Inl[T1,T2](lres),i5)
         case "Inr" =>
           val (rres, i5) = r(str,i4)
-          (Inr(rres),i5)
+          (Inr[T2,T1](rres),i5)
       }
     val i6 = eatChar(str,beforeParen,')')
     (res,i6)
@@ -1277,38 +1282,38 @@ object Parser {
       con match {
         case "Pvar" =>
           val (a, i4) = mv(str,i3)
-          (Pvar(a),i4)
+          (Pvar[myvars,F,P](a),i4)
         case "Assign" =>
           val (x, i4) = mv(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (t, i6) = trm(fid)(str,i5)
-          (Assign(x,t),i6)
+          (Assign[myvars,F,P](x,t),i6)
         case "DiffAssign" =>
           val (x, i4) = mv(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (t, i6) = trm(fid)(str,i5)
-          (DiffAssign(x,t),i6)
+          (DiffAssign[myvars,F,P](x,t),i6)
         case "Test" =>
           val (p, i4) = formula(fid,pid)(str,i3)
-          (Test(p), i4)
+          (Test[F,P,myvars](p), i4)
         case "EvolveODE" =>
           val (o, i4) = ode(fid)(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (p,i6) = formula(fid,pid)(str,i5)
-          (EvolveODE(o,p),i6)
+          (EvolveODE[F,myvars,P](o,p),i6)
         case "Choice" =>
           val (a, i4) = hp(fid,pid)(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (b, i6) = hp(fid,pid)(str,i5)
-          (Choice(a,b),i6)
+          (Choice[F,P,myvars](a,b),i6)
         case "Sequence" =>
           val (a, i4) = hp(fid,pid)(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (b, i6) = hp(fid,pid)(str,i5)
-          (Sequence(a,b),i6)
+          (Sequence[F,P,myvars](a,b),i6)
         case "Loop" =>
           val (a, i4) = hp(fid,pid)(str,i3)
-          (Loop(a),i4)
+          (Loop[F,P,myvars](a),i4)
       }
     val iEnd = eatChar(str,beforeParen,')')
     (res,iEnd)
