@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax
 
 object Version {
@@ -23,15 +28,16 @@ object Version {
   }
 
   def apply(s: String): VersionString = {
-    val versionFormat = """^(\d+)\.(\d+)(?:(?:(\w)(\d?)|\.(\d+))?)$""".r("major", "minor", "letter", "incr", "rev")
-    require(s.matches(versionFormat.regex), s"Unexpected version string $s")
-    // only 1 match
-    val m = versionFormat.findAllIn(s).matchData.toList.head
-    val major: Int = m.group("major").toInt
-    val minor: Int = m.group("minor").toInt
-    val letter: Option[Char] = m.group("letter") match { case null => None case "" => None case l if l.length == 1 => Some(l.charAt(0)) }
-    val incr: Option[Int]   = m.group("incr") match { case null => None case "" => None case i => Some(i.toInt) }
-    val rev: Int = m.group("rev") match { case null => -1 case "" => -1 case r => r.toInt }
+    val versionFormat = """^(?<major>\d+)\.(?<minor>\d+)((?<letter>\w)(?<incr>\d?)|\.(?<rev>\d+))?$""".r
+    val matchedOpt = versionFormat.findFirstMatchIn(s)
+    require(matchedOpt.isDefined, s"Unexpected version string $s")
+    val matched = matchedOpt.get
+
+    val major: Int = matched.group("major").toInt
+    val minor: Int = matched.group("minor").toInt
+    val letter: Option[Char] = Option(matched.group("letter")).map(s => s.charAt(0))
+    val incr: Option[Int] = Option(matched.group("incr")).map(s => s.toInt)
+    val rev: Int = Option(matched.group("rev")).map(s => s.toInt).getOrElse(-1)
 
     VersionString(major, minor, rev, letter, incr)
   }

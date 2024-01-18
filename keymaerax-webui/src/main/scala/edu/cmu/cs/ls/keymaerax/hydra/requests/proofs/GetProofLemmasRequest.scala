@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
@@ -16,7 +17,10 @@ import scala.collection.immutable.{IndexedSeq, List, Nil}
 class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     def collectLemmaNames(tactic: String): List[String] = {
-      """useLemma(?:At)?\("([^"]+)"""".r("lemmaName").findAllMatchIn(tactic).toList.map(m => m.group("lemmaName"))
+      """useLemma(At)?\("(?<lemmaName>[^"]+)"""".r
+        .findAllMatchIn(tactic)
+        .map(m => m.group("lemmaName"))
+        .toList
     }
 
     /** Recursively required lemmas in the order they ought to be proved. */

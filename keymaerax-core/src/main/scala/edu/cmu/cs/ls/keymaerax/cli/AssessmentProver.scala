@@ -515,8 +515,12 @@ object AssessmentProver {
         case Modes.EXPLANATION_CHECK =>
           (have, expected) match {
             case (TextArtifact(Some(hs)), TextArtifact(Some(es))) =>
-              val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
-              val extract = (s: String) => trim.findFirstMatchIn(s.linesIterator.reduceOption(_+_).getOrElse("")).map(_.group("text")).getOrElse("")
+              def extract(s: String) =
+                """(\s|~)*(?<text>.*)(\s*|~)*""".r
+                  .findFirstMatchIn(s.linesIterator.reduceOption(_ + _).getOrElse(""))
+                  .map(_.group("text"))
+                  .getOrElse("")
+
               val hsTrimmed = extract(hs)
               val esTrimmed = extract(es)
               val minLength = args.getOrElse("minLength", "8").toInt
@@ -733,9 +737,8 @@ object AssessmentProver {
       case AskGrader(mode, args, expected) =>
         val mergedExpected = expected //@todo ignored for now
 
-        val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
-        val ARG_INDEX = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-?\d+)""").r(ARG_PLACEHOLDER_GROUP)
-        val argIdxs = args.values.flatMap(v => { ARG_INDEX.findAllMatchIn(v).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList }).toList.sorted
+        val ARG_INDEX = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(?<argPlaceholder>-?\d+)""").r
+        val argIdxs = args.values.flatMap(v => { ARG_INDEX.findAllMatchIn(v).map(_.group("argPlaceholder").toInt).toList }).toList.sorted
         val newArgIdxs = argIdxs.map(i => (i, if (i<0) i+earlier.keys.size+1 else i+earlier.keys.size))
         val mergedArgs = args.map({ case (k, v) =>
           val rewrittenBackRefs = newArgIdxs.foldRight(v)({ case ((i, j), mv) => mv.replace(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + i, QuizExtractor.AskQuestion.ARG_PLACEHOLDER + j) })
@@ -1304,11 +1307,10 @@ object AssessmentProver {
     * Returns graders for prompts that have answers. */
   private def extractGraders(problem: Submission.Problem, prompts: List[(Submission.Prompt, Option[Artifact])]):
       List[(Submission.Prompt, Either[(Grader, Option[Artifact]), Throwable])] = {
-    val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
-    val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
+    val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(?<argPlaceholder>-\d+)""").r
     val mergedPrompts = prompts.zipWithIndex.map({
       case ((p@Submission.SinglePrompt(_, _, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
-        val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList
+        val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group("argPlaceholder").toInt).toList
         if (backRefs.nonEmpty) {
           val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
           val answers = answer.map(a => MultiArtifact(backRefs.flatMap(j => prompts(i + j)._2) :+ a))
@@ -1630,15 +1632,14 @@ object AssessmentProver {
       s.succ.distinct.sortWith((a, b) => ref.succ.indexOf(a) < ref.succ.indexOf(b)).reduceRightOption(Or).getOrElse(False))
   }
 
-  private val REPTAC_GROUP = "reptac"
-  private val TACTIC_REPETITION_EXTRACTOR = ("for " + Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + "i do(.*)endfor").r(REPTAC_GROUP)
+  private val TACTIC_REPETITION_EXTRACTOR = ("for " + Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + "i do(?<reptac>.*)endfor").r
 
   /** Expands occurrences of \%i in string `s` with arguments from argument list `args`. */
   @tailrec
   private def expand[T](s: String, args: List[String], parser: String=>T): T = {
     val repTacs = TACTIC_REPETITION_EXTRACTOR.findAllMatchIn(s).toList
     if (repTacs.nonEmpty) {
-      val unfolded = repTacs.map(_.group(REPTAC_GROUP)).map(t => {
+      val unfolded = repTacs.map(_.group("reptac")).map(t => {
         t -> (1 to args.size).map(i => t.replace(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "i", s"${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}$i")).mkString(";")
       })
       val replaced = unfolded.foldRight(s)({ case ((what, repl), s) => s.replace(s"for ${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}i do${what}endfor", repl) })

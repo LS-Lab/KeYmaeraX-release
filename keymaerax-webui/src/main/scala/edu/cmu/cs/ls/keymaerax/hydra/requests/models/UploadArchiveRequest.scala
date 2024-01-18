@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.models
 
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
@@ -37,8 +38,11 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
     } catch {
       //@todo adapt parse error positions (are relative to problem inside entry)
       case e: ParseException =>
-        val nameFinder = """(?:Theorem|Lemma|ArchiveEntry|Exercise)\s*"([^"]*)"""".r("name")
-        val entryName = nameFinder.findFirstMatchIn(archiveText).map(_.group("name")).getOrElse("<anonymous>")
+        val entryName = """(Theorem|Lemma|ArchiveEntry|Exercise)\s*"(?<name>[^"]*)"""".r
+          .findFirstMatchIn(archiveText)
+          .map(_.group("name"))
+          .getOrElse("<anonymous>")
+
         val entry = TutorialEntry(entryName, archiveText, None, None, None, List.empty)
         DatabasePopulator.importModel(db, userId, prove=false)(entry) match {
           case Left((_, id)) => ModelUploadResponse(Some(id.toString), Some(e.getMessage)) :: Nil

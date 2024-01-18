@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import spray.json.{JsArray, JsNull, JsObject, JsString}
 
 import scala.collection.immutable
+import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 
 class CounterExampleResponse(kind: String, assumptions: Option[Formula], fml: Formula = True, cex: Map[NamedSymbol, Expression] = Map()) extends Response {
@@ -76,23 +77,22 @@ class CounterExampleResponse(kind: String, assumptions: Option[Formula], fml: Fo
       val cexFml = UIKeYmaeraXPrettyPrinter.htmlEncode(Imply(assumptions, cexConclusion).prettyString)
 
       //@note look for variables at word boundary (do not match in the middle of other words, do not match between &;)
-      val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})(?![^&]*;)\\b".r("v")
+      val varNameRe = cex.keySet.map(v => Regex.quote(v.prettyString)).mkString("|") // matches a var name
+      val symMatcher = s"(?<var>$varNameRe)(?![^&]*;)\\b".r
       val cexFmlWithVals = symMatcher.replaceAllIn(cexFml, (m: Match) => {
-        val cexSym = UIKeYmaeraXPrettyPrinter.htmlEncode(m.group("v"))
-        if (s"${m.before}$cexSym".endsWith("false")) {
+        val cexSym = UIKeYmaeraXPrettyPrinter.htmlEncode(m.group("var"))
+        val replacement = if (s"${m.before}$cexSym".endsWith("false")) {
           cexSym
         } else {
           val cexVal = UIKeYmaeraXPrettyPrinter.htmlEncode(cex.find(_._1.prettyString == cexSym).get._2.prettyString)
           s"""<div class="k4-cex-fml"><ul><li>$cexVal</li></ul>$cexSym</div>"""
         }
+        Regex.quoteReplacement(replacement)
       })
 
       //@note look for (false & cexCmp & false) groups and replace with boldface danger spans
-      val cexMatcher = "false&and;(.*?)&and;false".r("fml")
-      cexMatcher.replaceAllIn(cexFmlWithVals, (m: Match) => {
-        val cexCmp = m.group("fml")
-        s"""<div class="k4-cex-highlight text-danger">$cexCmp</div>"""
-      })
+      "false&and;(?<fml>.*?)&and;false".r
+        .replaceAllIn(cexFmlWithVals, m => s"<div class=\"k4-cex-highlight text-danger\">${m.group("fml")}</div>")
     } else {
       replaceWithCexVals(fml, cex).prettyString
     }

@@ -152,8 +152,8 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
   /** Restricts the tutorialentries to the ones with tactics matching the filter `toolFilter`. */
   private def filterEntriesByTool(toolFilter: Iterator[Regex.Match] => Boolean, replaceQE: Boolean) = {
     // find all specific QE({`tool`}) and QE("tool") entries, but ignores the generic QE that works with any tool
-    val qeOldFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
-    val qeFinder = """(?:QE|useSolver)\("([^"]+)"\)""".r("toolName")
+    val qeOldFinder = """QE\(\{`(?<toolName>[^`]+)`\}\)""".r
+    val qeFinder = """(QE|useSolver)\("(?<toolName>[^"]+)"\)""".r
 
     val skipEntries = tutorialEntries.filter(e => e._7.nonEmpty && !e._7.exists(t => t._3 &&
       toolFilter(qeFinder.findAllMatchIn(t._2)) && toolFilter(qeOldFinder.findAllMatchIn(t._2)))

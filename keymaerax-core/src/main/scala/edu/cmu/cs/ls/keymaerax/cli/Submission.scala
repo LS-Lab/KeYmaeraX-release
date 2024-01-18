@@ -87,7 +87,7 @@ object Submission {
     }
 
     implicit val answerJsonFormat: JsonFormat[Submission.Answer] = new RootJsonFormat[Submission.Answer] {
-      private val argPlaceholder = "(?s)<%%(.*?)%%>".r("arg")
+      private val argPlaceholder = "(?s)<%%(?<arg>.*?)%%>".r
 
       override def write(answer: Answer): JsValue = {
         answer match {
@@ -185,9 +185,9 @@ object Submission {
             val solutionPrompt = fields(SOLUTION_PROMPT).asJsObject
             val solfinGrader = solutionPrompt.fields(COOKIES).convertTo[List[GraderCookie]].find(_.name == "\\algog")
             val rawSolPromptQuestion = solutionPrompt.fields(BODY_SRC) match { case JsString(s) => s}
-            val placeHolderRepl = "(?s)~+(.+?)~+".r("arg")
-            val solPromptQuestion = placeHolderRepl.replaceAllIn(rawSolPromptQuestion,
-              m => Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
+            val solPromptQuestion = "(?s)~+(?<arg>.+?)~+".r
+              .replaceAllIn(rawSolPromptQuestion, m =>
+                Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
             val answer = fields(USER_ANSWER) match {
               case a: JsObject => a.fields(TEXT) match {
                 case JsString(s) => argPlaceholder.replaceAllIn(s,

@@ -219,8 +219,8 @@ trait ProofTreeNode {
     else substituted
   }
 
-  private lazy val usMatcher = """(?<!by)US\("([^"]*)"\)""".r("subst")
-  private lazy val expandMatcher = """expand\s*"([^"]*)"""".r("name")
+  private lazy val usMatcher = """(?<!by)US\("(?<subst>[^"]*)"\)""".r
+  private lazy val expandMatcher = """expand\s*"(?<name>[^"]*)"""".r
 
   /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
   private def makerSubst(maker: Option[String]): List[SubstitutionPair] = maker.map(m => {

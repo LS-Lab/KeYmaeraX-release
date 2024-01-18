@@ -1142,8 +1142,8 @@ class AssessmentProverTests extends TacticTestBase {
     val (submission, expected) = createSubmission(problems, chapterLabel, rand, uniformAnswer.map(_._1))
     val (resultsString, msgLines) = runGrader(submission)
 
-    val parseFailed = """.*?\((\d+)\)\.\.\.PARSE ERROR""".r("id")
-    val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT)|(?:SKIPPED))""".r("id")
+    val parseFailed = """.*?\((?<id>\d+)\)\.\.\.PARSE ERROR""".r
+    val graded = """.*?\((?<id>\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT)|(?:SKIPPED))""".r
 
     def checkGradedLines(gradedLines: List[String], expectPass: Boolean) = {
       gradedLines.loneElement.split("""\.\.\.""")(1) should (

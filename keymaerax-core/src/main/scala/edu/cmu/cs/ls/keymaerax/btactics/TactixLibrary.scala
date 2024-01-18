@@ -1189,8 +1189,18 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
             if (tactic.contains("expandAllDefs")) {
               defs.substs
             } else {
-              val subst1 = """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
-              val expandedSymbols = """expand "([^"]+)"""".r("symbol").findAllMatchIn(tactic).map(_.group("symbol")).toList
+              val subst1 =
+                """US\("(?<subst>[^"]+)"\)""".r
+                  .findAllMatchIn(tactic)
+                  .map(_.group("subst").asSubstitutionPair)
+                  .toList
+
+              val expandedSymbols =
+                """expand "(?<symbol>[^"]+)"""".r
+                  .findAllMatchIn(tactic)
+                  .map(_.group("symbol"))
+                  .toList
+
               subst1 ++ defs.substs.filter({
                 case SubstitutionPair(FuncOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
                 case SubstitutionPair(PredOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
@@ -1199,7 +1209,10 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
               })
             }
           case (None, Some(tactic)) =>
-            """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
+            """US\("(?<subst>[^"]+)"\)""".r
+              .findAllMatchIn(tactic)
+              .map(_.group("subst").asSubstitutionPair)
+              .toList
           case (_, None) => Nil
         }
       case _ => Nil

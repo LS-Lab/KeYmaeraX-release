@@ -418,7 +418,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   /** Filters the archive entries that should be provable with the `tool`. */
   def toolArchiveEntries(entries: List[ParsedArchiveEntry], tool: Tool): List[ParsedArchiveEntry] = {
     // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
-    val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
+    val qeFinder = """QE\(\{`(?<toolName>[^`]+)`\}\)""".r
     entries.
       filter(e => e.tactics.nonEmpty &&
         qeFinder.findAllMatchIn(BellePrettyPrinter(e.tactics.head._3)).forall(p => p.group("toolName") == tool.name))

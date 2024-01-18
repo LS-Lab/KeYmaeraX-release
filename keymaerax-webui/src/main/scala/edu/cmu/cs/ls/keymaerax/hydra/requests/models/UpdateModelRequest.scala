@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.models
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.models.ModelUpdateResponse
@@ -31,8 +32,11 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
         }
       } catch {
         case e: ParseException =>
-          val nameFinder = """(?:Theorem|Lemma|ArchiveEntry|Exercise)\s*"([^"]*)"""".r("name")
-          val entryName = nameFinder.findFirstMatchIn(content).map(_.group("name")).getOrElse("<anonymous>")
+          val entryName = """(Theorem|Lemma|ArchiveEntry|Exercise)\s*"(?<name>[^"]*)"""".r
+            .findFirstMatchIn(content)
+            .map(_.group("name"))
+            .getOrElse("<anonymous>")
+
           db.updateModel(modelId.toInt, entryName, emptyToOption(modelInfo.title), emptyToOption(modelInfo.description),
             emptyToOption(content), modelInfo.tactic)
           ModelUpdateResponse(modelId, entryName, content, emptyToOption(modelInfo.title),
