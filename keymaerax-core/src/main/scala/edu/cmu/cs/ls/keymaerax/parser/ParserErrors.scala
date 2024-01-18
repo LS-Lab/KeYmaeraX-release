@@ -23,7 +23,7 @@ import scala.collection.immutable.StringOps
  */
 case class ParseException (msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/,
                            cause: Throwable = null, hint: String = "")
-  extends ProverException(loc.begin + " " + msg + "\nFound:    " + found + " at " + loc + "\nExpected: " + expect + (if (hint=="") "" else "\nHint: " + hint), cause) {
+  extends ProverException(s"${loc.begin} $msg\nFound:    $found at $loc\nExpected: $expect" + (if (hint=="") "" else "\nHint: " + hint), cause) {
   /**
     * Add the input context information to this exception, returning the resulting exception to be thrown.
     * @param input textual description of the input in which this prover exception occurred.
@@ -45,7 +45,7 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
           if (rem.nonEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
         }
     }
-    inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (Configuration(Configuration.Keys.DEBUG) == "true") "\ntokens: " + tokenStream.getOrElse("<unknown>") else "")).asInstanceOf[ParseException]
+    inContext(s"$loc\n$lineInfo\ninput:  \n$input" + (if (Configuration(Configuration.Keys.DEBUG) == "true") "\ntokens: " + tokenStream.getOrElse("<unknown>") else "")).asInstanceOf[ParseException]
   }
 
   /** Get more details on the error message in addition to [[getContext]]. */
@@ -120,7 +120,7 @@ object ParseException {
 
   /** Type parse error with mismatch in found type illtyped and expected type */
   def typeError(msg: String, illtyped: Expression, expectedType: String, loc: Location, hint: String = ""): ParseException =
-    typeException(msg, loc, illtyped + " " + illtyped.getClass.getSimpleName + " of sort " + illtyped.sort, expectedType, hint=hint)
+    typeException(msg, loc, s"$illtyped ${illtyped.getClass.getSimpleName} of sort ${illtyped.sort}", expectedType, hint=hint)
 
   def typeDeclGuessError(msg: String, declaredType: String, expected: String, loc: Location, hint: String = ""): ParseException =
     typeException(msg, loc, declaredType, expected, hint=hint)

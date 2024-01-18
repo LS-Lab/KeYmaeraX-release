@@ -274,7 +274,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         val result = positionTactic.apply(pos).computeResult(pr)
         BelleProvable(result, adjustLabels(result, lbl))
       } catch {
-        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(s"$positionTactic at $pos", pr.prettyString)
       }
     }
 
@@ -283,7 +283,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         val result = positionTactic.computeResult(pr)
         BelleProvable(result, adjustLabels(result, lbl))
       } catch {
-        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(s"$positionTactic at $posOne, $posTwo", pr.prettyString)
       }
     }
 

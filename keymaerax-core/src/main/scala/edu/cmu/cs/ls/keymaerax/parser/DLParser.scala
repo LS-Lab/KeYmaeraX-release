@@ -45,7 +45,7 @@ object DLParser extends DLParser {
     val tr: Parsed.TracedFailure = f.trace()
     val inputString = f.extra.input match {
       case IndexedParserInput(input) => input
-      case _ => tr.input + ""
+      case _ => tr.input.toString
     }
 
     def formatStack(input: ParserInput, stack: List[(String, Int)]) = {

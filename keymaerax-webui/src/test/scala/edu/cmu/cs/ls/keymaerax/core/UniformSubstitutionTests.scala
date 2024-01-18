@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -976,10 +976,10 @@ class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
 //      (sToT("x", "a"), "[{x:=x+1;}*; x:=x+1]1>0".asFormula) ::            // subst(x:=x+1): x (maybe) bound by {x:=x+1}*
         Nil
 
-    cases.foreach(c => withSafeClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
+    cases.foreach(c => withSafeClue(s"${c._1} on ${c._2}") { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
 
     cases.map(c => (rndExtensionOf(c._1), c._2)).
-      foreach(c => withSafeClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
+      foreach(c => withSafeClue(s"${c._1} on ${c._2}") { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
   }
 
   ignore /*"Uniform substitution of mustbe bound"*/ should "be same as input" in {

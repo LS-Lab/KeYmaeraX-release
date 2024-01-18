@@ -195,7 +195,7 @@ class SmlQETests extends TacticTestBase {
           val content = DefaultSMTConverter(converted).replace("_v_", "")
           val fn = new File(outDir, pwd.toURI.relativize(file.toURI).getPath)
           fn.getParentFile.mkdirs()
-          Files.write(Paths.get(fn.toURI), (printedInfos + content).getBytes(StandardCharsets.UTF_8))
+          Files.write(Paths.get(fn.toURI), (s"$printedInfos$content").getBytes(StandardCharsets.UTF_8))
         case _ :: Nil => fail("Skipping" + file.getName + " because Not(fml) expected")
         case fmls => fail("Skipping" + file.getName + " because " + fmls.size + " entries (expected 1)")
       }

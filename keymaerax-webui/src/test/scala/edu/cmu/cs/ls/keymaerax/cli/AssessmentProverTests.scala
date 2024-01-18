@@ -1455,7 +1455,7 @@ class AssessmentProverTests extends TacticTestBase {
         val result = grader.check(t)
         result match {
           case Left(l) =>
-            l shouldBe Symbol("proved") withClue (t + ": " + result.right.toOption.getOrElse("<unknown>"))
+            l shouldBe Symbol("proved") withClue s"$t: ${result.right.toOption.getOrElse("<unknown>")}"
             println("Successfully verified sol")
           case Right(msg) =>
             msg shouldBe "INSPECT" withClue t

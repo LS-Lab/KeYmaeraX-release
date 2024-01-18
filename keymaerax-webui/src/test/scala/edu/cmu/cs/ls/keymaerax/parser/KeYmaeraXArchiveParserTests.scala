@@ -36,8 +36,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         MatchResult(
           //compare without locations
           left.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)) == right.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)),
-          left + " was not " + right,
-          left + " was " + right
+          s"$left was not $right",
+          s"$left was $right",
         )
     }
 

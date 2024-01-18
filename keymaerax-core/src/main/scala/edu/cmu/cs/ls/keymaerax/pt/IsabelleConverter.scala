@@ -811,7 +811,7 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(">=' derive >="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-            logger.trace(reflFml+"\n\n\n"+equivReflSubst)
+            logger.trace(s"$reflFml\n\n\n$equivReflSubst")
             ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
 /*      case Sub(Sub(RuleApplication(StartProof(reflFml),"cut Right",_,_,_),
           ForwardNewConsequenceTerm(
@@ -821,14 +821,14 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("<=' derive <="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-            logger.trace(reflFml+"\n\n\n"+equivReflSubst)
+            logger.trace(s"$reflFml\n\n\n$equivReflSubst")
             ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
       case Sub(Sub(RuleApplication(StartProof(reflFml), _: CutRight, _),
       ForwardNewConsequenceTerm(
       ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("=' derive ="), _),
       UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
       UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-        logger.trace(reflFml+"\n\n\n"+equivReflSubst)
+        logger.trace(s"$reflFml\n\n\n$equivReflSubst")
         ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
       case _ =>
         val 2 = 1 + 1

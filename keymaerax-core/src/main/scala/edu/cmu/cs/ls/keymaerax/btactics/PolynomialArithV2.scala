@@ -1025,7 +1025,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
         )
         monomialOrdering.compare(x.powers, v.powers)  match {
         case 0 =>
-          val vx = (v.forgetPrv+x).getOrElse(throw new IllegalArgumentException(v.forgetPrv.powersTerm + " and " + x.powersTerm + " do not fit"))
+          val vx = (v.forgetPrv+x).getOrElse(throw new IllegalArgumentException(s"${v.forgetPrv.powersTerm} and ${x.powersTerm} do not fit"))
           val newRhs = Plus(Plus(left.rhs, vx.rhs), right.rhs)
           val newPrv = useDirectly(branch2Value, treeInst ++ Seq(("vx_", vx.rhs)), Seq(tree.prv, vx.prv))
           Stay(Branch2(left, vx, right, Some(newPrv)))

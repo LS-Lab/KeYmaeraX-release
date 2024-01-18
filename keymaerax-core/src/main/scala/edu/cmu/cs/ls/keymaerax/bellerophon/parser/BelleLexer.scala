@@ -183,7 +183,7 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
       lexPrefix match {
         case Some(Left(lexed)) => findNextToken(lexed._1, lexed._2)
         case Some(Right(lexed)) => lexed
-        case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + input +"\n` beginning with character `" + input(0) + "`=" + input(0).getNumericValue, loc).inInput(input)
+        case None => throw LexException(s"${loc.begin} Lexer does not recognize input at $loc in `\n$input\n` beginning with character `${input(0)}`=${input(0).getNumericValue}", loc).inInput(input)
       }
     }
   }

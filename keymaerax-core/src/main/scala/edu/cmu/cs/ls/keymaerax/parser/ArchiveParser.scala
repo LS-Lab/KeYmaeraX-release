@@ -580,7 +580,7 @@ object ArchiveParser extends ArchiveParser {
       val (name, (symbols, loc)) = inconsistentWithDecls.head
       throw ParseException("Definition " + name.prettyString +
         " uses " + symbols.map({ case (s, d) => s.fullString + " inconsistent with definition " +
-        s.prettyString + d.map(s => ":" + s.domain.map(_ + "->").getOrElse("") + s.codomain).getOrElse("") }), loc)
+        s.prettyString + d.map(s => ":" + s.domain.map(s => s"$s->").getOrElse("") + s.codomain).getOrElse("") }), loc)
     }
 
     // elaborate model and check
@@ -768,13 +768,13 @@ object ArchiveParser extends ArchiveParser {
       case f: Function =>
         val Signature(declaredDomain, declaredSort, _, _, loc: Location) = d.decls.get(Name(f.name,f.index)) match {
           case Some(decl) => decl
-          case None => throw ParseException.typeError(name + ": undefined function symbol", f, f.sort + "", UnknownLocation,
+          case None => throw ParseException.typeError(name + ": undefined function symbol", f, f.sort.toString, UnknownLocation,
             "Make sure to declare all variables in ProgramVariables and all symbols in Definitions block.")
         }
-        if (f.sort != declaredSort) throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + " function", f.sort + "", loc)
+        if (f.sort != declaredSort) throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", s"$declaredSort function", f.sort.toString, loc)
         else if (!declaredDomain.contains(f.domain)) {
           (f.domain, declaredDomain) match {
-            case (_, Some(r)) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", r + "", f.domain + "", loc)
+            case (_, Some(r)) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", r.toString, f.domain.toString, loc)
             case (_, None) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared as a variable of sort ${f.sort} but used as a function with arguments.", "no arguments", "function with arguments", loc)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
@@ -793,8 +793,12 @@ object ArchiveParser extends ArchiveParser {
               "undefined symbol " + x.prettyString, "Real " + x.prettyString, UnknownLocation,
               "Add \"Real " + x.prettyString + ";\" to the ProgramVariables block")
           }
-          if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.",
-            declaredSort + x.prettyString, x.sort + " " + x.prettyString, declLoc)
+          if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(
+            s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.",
+            s"$declaredSort${x.prettyString}",
+            s"${x.sort} ${x.prettyString}",
+            declLoc
+          )
           x.sort == declaredSort
         }
       case _: UnitPredicational => true //@note needs not be declared

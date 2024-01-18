@@ -1092,7 +1092,7 @@ object TactixLibrary extends TacticProvider with HilbertCalculus
           case (argDef, prDef) => prDef.forall(_.repl == argDef.repl)
         })
         if (diff.isEmpty) defs
-        else throw new IllFormedTacticApplicationException("Substitutions disagree: " + diff.map(d => d._1 + " vs. " + d._2.getOrElse("<undefined>")).mkString(",\n"))
+        else throw new IllFormedTacticApplicationException("Substitutions disagree: " + diff.map(d => s"${d._1} vs. ${d._2.getOrElse("<undefined>")}").mkString(",\n"))
       } else pr.defs.substs
     if (substPairs.nonEmpty) {
       // expand in reverse topological order to expand nested definitions outside-in

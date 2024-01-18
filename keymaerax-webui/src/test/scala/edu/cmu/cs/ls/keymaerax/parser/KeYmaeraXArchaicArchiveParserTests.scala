@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -33,8 +33,8 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         MatchResult(
           //compare without locations
           left.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)) == right.decls.map(v => v._1 -> v._2.copy(loc = UnknownLocation)),
-          left + " was not " + right,
-          left + " was " + right
+          s"$left was not $right",
+          s"$left was $right",
         )
     }
 

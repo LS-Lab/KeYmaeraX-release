@@ -81,7 +81,7 @@ class ContinuousInvariantTests extends TacticTestBase {
             val invariants = InvariantGenerator.pegasusInvariants(
               Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
 
-            println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
+            println("  generated: " + invariants.toList.map(i => s"${i._1}(${i._2})").mkString(", "))
 
             annotatedInvariants.products.get(ode) match {
               case Some(invs) =>
@@ -156,7 +156,7 @@ class ContinuousInvariantTests extends TacticTestBase {
             val Imply(assumptions, goal@Box(ODESystem(_, _), _)) = model
             val invariants = InvariantGenerator.pegasusInvariants(
               Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
-            println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
+            println("  generated: " + invariants.toList.map(i => s"${i._1}(${i._2})").mkString(", "))
             TactixInit.invSupplier = FixedGenerator(Nil)
             TactixInit.loopInvGenerator = FixedGenerator(Nil)
             TactixInit.differentialInvGenerator = FixedGenerator(invariants.toList)

@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.SetLattice.{allVars, bottom}
@@ -136,7 +137,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
     case f: Formula => apply(f)
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
-    case f: Function => throw new SubstitutionClashException(toString, "", e + "", "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
+    case f: Function => throw SubstitutionClashException(toString, "", e.toString, "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
   }
 
   /** apply this uniform substitution renaming everywhere in a term */

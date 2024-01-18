@@ -87,7 +87,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
-    case f: Function => throw SubstitutionClashException(toString, "", e + "", "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
+    case f: Function => throw SubstitutionClashException(toString, "", e.toString, "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
   }
 
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.

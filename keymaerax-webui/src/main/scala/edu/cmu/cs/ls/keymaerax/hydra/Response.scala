@@ -185,12 +185,12 @@ object Helpers {
   private def printObject(text: String, kind: String = "text"): JsValue = JsObject("text"->JsString(text), "kind" -> JsString(kind))
   private def print(text: String, fp: FormatProvider, kind: String = "text"): JsValue = printObject(fp.print(text), kind)
   private def print(q: PosInExpr, text: String, kind: String, fp: FormatProvider)(implicit top: Position): JsValue =
-    JsObject("id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
+    JsObject("id" -> JsString(top.toString + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
       "text"->JsString(fp.print(text)), "kind" -> JsString(kind))
   private def print(q: PosInExpr, kind: String, hasStep: Boolean, isEditable: Boolean, plainText: => String,
                     children: Seq[JsValue])(implicit top: Position): JsValue = {
     JsObject(
-      "id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
+      "id" -> JsString(top.toString + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
       "kind" -> JsString(kind),
       "plain" -> (if (isEditable || q.pos.isEmpty) JsString(plainText) else JsNull),
       "step" -> JsString(if (hasStep) "has-step" else "no-step"),

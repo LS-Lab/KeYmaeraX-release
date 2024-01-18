@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -35,9 +35,11 @@ object CustomAssertions {
           val clazz = manifest.runtimeClass.asInstanceOf[Class[E]]
           clazz.isAssignableFrom(e.getClass)
       },
-      if (pr.isLeft) pr + " is unexpectedly proved but shouldn't be"
-      else /* pr.isRight */ pr + " resulted in unexpected exception, not in " + manifest.runtimeClass,
-      pr + " is not proved, as expected"
+      pr match {
+        case Left(_) => s"$pr is unexpectedly proved but shouldn't be"
+        case Right(_) => s"$pr resulted in unexpected exception, not in ${manifest.runtimeClass}"
+      },
+      s"$pr is not proved, as expected"
     )
   }
 }

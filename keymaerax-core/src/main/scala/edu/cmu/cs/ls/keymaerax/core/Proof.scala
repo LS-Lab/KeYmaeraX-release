@@ -312,7 +312,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
         else
           new Provable(subst.applyAllTaboo(conclusion), subgoals.map(s => subst.applyAllTaboo(s)))
       }
-    } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
+    } catch { case exc: SubstitutionClashException => throw exc.inContext(s"$subst on\n$this") }
 
   /**
     * Apply a (possibly semantic) uniform renaming to a (locally sound!) Provable.
@@ -337,7 +337,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
   final def apply(ren: URename): Provable =
     try {
       new Provable(ren(conclusion), subgoals.map(s => ren(s)))
-    } catch { case exc: RenamingClashException => throw exc.inContext(ren + " on\n" + this) }
+    } catch { case exc: RenamingClashException => throw exc.inContext(s"$ren on\n$this") }
 
 
   // forward proofs (convenience)

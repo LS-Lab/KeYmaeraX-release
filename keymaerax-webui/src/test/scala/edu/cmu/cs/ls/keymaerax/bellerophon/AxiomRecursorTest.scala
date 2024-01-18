@@ -52,7 +52,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
     u.toCore(keyPart) shouldBe instance
 
     if (axiom.displayLevel != Symbol("internal")) {
-      println(axiom + "\ndisplayLevel=" + axiom.displayLevel)
+      println(s"$axiom\ndisplayLevel=${axiom.displayLevel}")
       // useAt(axiom) should result in all recursors being well-defined
       println("useAt(" + axiom.codeName + ")(1)")
       val pr = TactixLibrary.proveBy(instance, TactixLibrary.useAt(axiom)(1))

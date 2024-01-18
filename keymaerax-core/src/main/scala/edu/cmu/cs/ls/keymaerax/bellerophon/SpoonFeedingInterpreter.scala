@@ -372,7 +372,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           } catch {
             case e: Throwable => throw new IllFormedTacticApplicationException("Unable to start inner proof in let: " + e.getMessage, e)
           }
-          logger.debug(tactic + " considers\n" + in + "\nfor outer\n" + provable)
+          logger.debug(s"$tactic considers\n$in\nfor outer\n$provable")
           if (descend > 0) {
             val innerId = idProvider(in)
             innerProofId = Some(innerId)

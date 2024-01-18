@@ -258,7 +258,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
         case END_BLOCK => shift(st)
         case TACTIC_BLOCK => shift(st)
         case IDENT(key, None) if MetaInfoKey.KEYS.contains(key) => reduce(shift(st), 1, Bottom :+ MetaInfoKey(key), r)
-        case _ => throw ParseException.imbalancedErrorHere(tok + /*" from " + tok.loc +*/ " has no matching " + END_BLOCK.img+PERIOD.img, unmatched=tok, END_BLOCK.img+PERIOD.img, st,
+        case _ => throw ParseException.imbalancedErrorHere(s"$tok has no matching ${END_BLOCK.img+PERIOD.img}", unmatched=tok, END_BLOCK.img+PERIOD.img, st,
           hint="Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise)" +  " needs its own " + END_BLOCK.img+PERIOD.img + " delimiter.")
       }
       case r :+ Token(ARCHIVE_ENTRY_BEGIN(kind), startLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) :+ MetaInfo(info) :+ Definitions(defs, vars) :+

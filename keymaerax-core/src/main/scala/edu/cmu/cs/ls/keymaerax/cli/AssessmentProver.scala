@@ -1175,7 +1175,7 @@ object AssessmentProver {
 
     chapter.problems.foreach(problem =>
       problem.prompts.foreach({ prompt =>
-        val out = new PrintWriter(new BufferedWriter(new FileWriter(outDir + File.separator + (problem.number + prompt.number) + ".txt")))
+        val out = new PrintWriter(new BufferedWriter(new FileWriter(s"$outDir${File.separator}${problem.number}${prompt.number}.txt")))
         prompt.answers.foreach({
           case Submission.ChoiceAnswer(_, _, _, _, text, isSelected) => out.println(text + ":" + isSelected)
           case Submission.TextAnswer(_, _, _, _, answer, _) => out.println(answer)

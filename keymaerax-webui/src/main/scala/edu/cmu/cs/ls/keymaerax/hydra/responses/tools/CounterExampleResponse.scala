@@ -79,7 +79,7 @@ class CounterExampleResponse(kind: String, assumptions: Option[Formula], fml: Fo
       val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})(?![^&]*;)\\b".r("v")
       val cexFmlWithVals = symMatcher.replaceAllIn(cexFml, (m: Match) => {
         val cexSym = UIKeYmaeraXPrettyPrinter.htmlEncode(m.group("v"))
-        if ((m.before + cexSym).endsWith("false")) {
+        if (s"${m.before}$cexSym".endsWith("false")) {
           cexSym
         } else {
           val cexVal = UIKeYmaeraXPrettyPrinter.htmlEncode(cex.find(_._1.prettyString == cexSym).get._2.prettyString)
