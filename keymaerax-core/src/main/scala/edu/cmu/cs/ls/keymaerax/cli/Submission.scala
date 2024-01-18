@@ -132,8 +132,9 @@ object Submission {
                 BODY_SRC -> argPlaceholder.replaceAllIn(expected, " ").toJson,
                 SOLUTION_PROMPT -> JsObject(
                   NAME -> "solfinsol".toJson,
-                  BODY_SRC -> argPlaceholder.replaceAllIn(expected, m =>
-                    Regex.quoteReplacement("~~" + m.group("arg")) + "~~").toJson,
+                  BODY_SRC -> argPlaceholder
+                    .replaceAllIn(expected, m => Regex.quoteReplacement(s"~~${m.group("arg")}~~"))
+                    .toJson,
                   COOKIES -> JsArray(grader.map(_.toJson).toList:_*)
                 ),
                 USER_ANSWER -> JsObject(

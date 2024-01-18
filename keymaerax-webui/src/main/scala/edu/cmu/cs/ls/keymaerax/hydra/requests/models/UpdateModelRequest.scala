@@ -27,7 +27,7 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
             db.updateModel(modelId.toInt, e.name, e.info.get("Title"), e.info.get("Description"),
               emptyToOption(e.fileContent), e.tactics.headOption.map(_._2))
             ModelUpdateResponse(modelId, e.name, e.problemContent, e.info.get("Title"), e.info.get("Description"), None) :: Nil
-          case e => new ErrorResponse("Expected a single entry, but got " + e.size) :: Nil
+          case e => new ErrorResponse(s"Expected a single entry, but got ${e.size}") :: Nil
         }
       } catch {
         case e: ParseException =>
@@ -38,6 +38,6 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
           ModelUpdateResponse(modelId, entryName, content, emptyToOption(modelInfo.title),
             emptyToOption(modelInfo.description), Some(e.msg)) :: Nil
       }
-    } else new ErrorResponse("Unable to update model " + modelId + " because it has " + modelInfo.numAllProofSteps + " proof steps") :: Nil
+    } else new ErrorResponse(s"Unable to update model $modelId because it has ${modelInfo.numAllProofSteps} proof steps") :: Nil
   }
 }
