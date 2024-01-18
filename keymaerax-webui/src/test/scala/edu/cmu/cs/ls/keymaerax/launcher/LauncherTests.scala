@@ -184,7 +184,7 @@ class LauncherTests extends TacticTestBase {
     val (output, _, exitVal) = runKeYmaeraX("-tool", "Mathematica", "-prove", inputFileName, "-out", outputFileName)
     exitVal shouldBe 255 //@note -1 since unfinished entries
     // JDK 11 requires explicit StringOps due to Scala bug:  https://github.com/scala/bug/issues/11125
-    val proofStatOutputs = (output: StringOps).lines.toList.takeRight(4)
+    val proofStatOutputs = (output: StringOps).linesIterator.toList.takeRight(4)
     proofStatOutputs(0) should startWith ("PROVED")
     proofStatOutputs(1) should startWith ("UNFINISHED")
     proofStatOutputs(2) should startWith ("UNFINISHED (CEX)")
@@ -192,7 +192,7 @@ class LauncherTests extends TacticTestBase {
 
     val (outputZ3, _, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
     exitValZ3 shouldBe 254 // Z3 throws an exception on bouncing-ball-cex.kyx (failed)
-    val proofStatOutputsZ3 = (outputZ3: StringOps).lines.toList.takeRight(4)
+    val proofStatOutputsZ3 = (outputZ3: StringOps).linesIterator.toList.takeRight(4)
     proofStatOutputsZ3(0) should startWith ("PROVED")
     proofStatOutputsZ3(1) should startWith ("UNFINISHED")
     proofStatOutputsZ3(2) should startWith ("FAILED")
@@ -241,7 +241,7 @@ class LauncherTests extends TacticTestBase {
 
   it should "have usage information, formatted to 80 characters width" in {
     val usage = KeYmaeraX.usage
-    (usage: StringOps).lines.foreach(l => withClue(l) { l.length should be <= 80 })
+    (usage: StringOps).linesIterator.foreach(l => withClue(l) { l.length should be <= 80 })
   }
 
   it should "report a parsable model with exit value 0" in {

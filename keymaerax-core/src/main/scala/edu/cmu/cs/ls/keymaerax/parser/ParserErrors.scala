@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -34,7 +35,7 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
     val lineInfo = if (input == "") "<empty>" else loc match {
       case UnknownLocation => "<unknown>"
       case _ => assert(loc.line>0 && loc.column>0, "positive location")
-        val lines = (input: StringOps).lines.toList
+        val lines = (input: StringOps).linesIterator.toList
         if (loc.line > lines.size) "<past EOF> at line " + loc.line
         else {
           //assert(!lines.isEmpty, "nonempty number of lines:\n" + input)

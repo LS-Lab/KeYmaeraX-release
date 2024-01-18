@@ -57,7 +57,7 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
         case ((rtext, rloc), ((ttext, tloc), label)) =>
           val indented = indent + INDENT_INCREMENT + "\"" + label.prettyString + "\"" + COLON.img + NEWLINE +
             (ttext: StringOps).linesWithSeparators.map(INDENT_INCREMENT + _).mkString
-          val newLoc = shift(tloc, (rtext : StringOps).lines.length + 1, INDENT_INCREMENT.length)
+          val newLoc = shift(tloc, (rtext : StringOps).linesIterator.length + 1, INDENT_INCREMENT.length)
           (rtext + indented + COMMA.img + NEWLINE, rloc ++ newLoc)
       })
       // first line has 1 indent less because sequentialTactic will add it
@@ -94,7 +94,7 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
   private def sequentialTactic(ts1: (String, Map[Location, ProofTreeNode]),
                                ts2: (String, Map[Location, ProofTreeNode]),
                                indent: String, sep: String = SEQ_COMBINATOR.img): (String, Map[Location, ProofTreeNode]) = {
-    val (ts1t, ts2t) = if ((ts2._1: StringOps).lines.length <= 1) (ts1._1.trim, ts2._1.trim) else (ts1._1.trim, ts2._1.stripPrefix(indent))
+    val (ts1t, ts2t) = if ((ts2._1: StringOps).linesIterator.length <= 1) (ts1._1.trim, ts2._1.trim) else (ts1._1.trim, ts2._1.stripPrefix(indent))
     //@note ts2 location columns are already correct, but indent prefix is temporarily stripped, so add indent prefix back in but shift by 0 columns
     (ts1t, ts2t) match {
       case (EMPTY_TACTIC | EMPTY_BRANCHES, EMPTY_TACTIC | EMPTY_BRANCHES) => (EMPTY_TACTIC, Map.empty)
@@ -102,7 +102,7 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
       case (EMPTY_TACTIC | EMPTY_BRANCHES, _) => (indent + ts2t, shift(ts2._2, 0, 0))
       case _ =>
         (indent + ts1t + sep + NEWLINE + indent + ts2t,
-          shift(ts1._2, 0, indent.length) ++ shift(ts2._2, (ts1t: StringOps).lines.length, 0))
+          shift(ts1._2, 0, indent.length) ++ shift(ts2._2, (ts1t: StringOps).linesIterator.length, 0))
     }
   }
 
@@ -175,7 +175,7 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends LabelledTraceToTa
   /** @inheritdoc */
   override protected def makeLocNodeMap(maker: String, node: ProofTreeNode): Map[Location, ProofTreeNode] = {
     if (maker.nonEmpty) {
-      val makerLines = (maker: StringOps).lines.toList
+      val makerLines = (maker: StringOps).linesIterator.toList
       val makerRegion = Region(0, 0, makerLines.length - 1, makerLines.last.length)
       Map[Location, ProofTreeNode](makerRegion -> node)
     } else Map.empty

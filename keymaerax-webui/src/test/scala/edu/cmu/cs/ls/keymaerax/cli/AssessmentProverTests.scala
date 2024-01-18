@@ -1247,7 +1247,7 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.grade(options, msgsStream, resultsStream, "")
     val msgs = msgsStream.toString
     print(msgs)
-    val msgLines = (msgs: StringOps).lines.toList
+    val msgLines = (msgs: StringOps).linesIterator.toList
     (resultsStream.toString, msgLines)
   }
 

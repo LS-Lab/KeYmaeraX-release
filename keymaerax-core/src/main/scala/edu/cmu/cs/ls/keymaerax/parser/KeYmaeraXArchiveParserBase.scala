@@ -941,7 +941,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
   protected def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr)
 
   private def slice(text: String, loc: Location): String = {
-    val lines = (text: StringOps).lines.slice(loc.begin.line - 1, loc.end.line).toList
+    val lines = (text: StringOps).linesIterator.slice(loc.begin.line - 1, loc.end.line).toList
     if (loc.end.line > loc.begin.line) {
       val header = lines.head.drop(loc.begin.column - 1)
       val footer = lines.last.take(loc.end.column)

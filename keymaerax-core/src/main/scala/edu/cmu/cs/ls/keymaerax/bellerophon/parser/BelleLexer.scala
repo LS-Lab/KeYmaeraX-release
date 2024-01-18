@@ -86,8 +86,8 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     // update location if we encounter whitespace/comments.
     comment -> ((s: String, loc: Location, theComment: String) => {
       val comment = s.substring(0, theComment.length)
-      val lastLineCol = (comment: StringOps).lines.toList.last.length //column of last line.
-      val lineCount = (comment: StringOps).lines.length
+      val lastLineCol = (comment: StringOps).linesIterator.toList.last.length //column of last line.
+      val lineCount = (comment: StringOps).linesIterator.length
       Left((s.substring(theComment.length), loc match {
         case UnknownLocation       => UnknownLocation
         case Region(sl, _, el, ec) => Region(sl + lineCount - 1, lastLineCol, el, ec)

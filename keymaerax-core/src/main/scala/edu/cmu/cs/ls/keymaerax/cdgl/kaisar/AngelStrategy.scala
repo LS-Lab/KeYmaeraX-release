@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Executable representation for Angelic strategies.
   * Translations to Angelic strategies and to simplified Demon subset.
@@ -29,7 +30,7 @@ object IDCounter {
   var sourceFile: List[String] = Nil
   var fullSourceFile: Option[String] = None
 
-  def setSourceFile(str: String): Unit = { sourceFile = (str:StringOps).lines.toList; fullSourceFile = Some(str) }
+  def setSourceFile(str: String): Unit = { sourceFile = (str:StringOps).linesIterator.toList; fullSourceFile = Some(str) }
 
   // can use fullSourceFile if performance too slow
   def prettyIndex(int: Int): (Int, Int) = {
@@ -91,7 +92,7 @@ object IDCounter {
   }
 
   private def parseMap[T](f: String => T, mapString: String): Map[Int, T] = {
-    val lines = (mapString: StringOps).lines.toList
+    val lines = (mapString: StringOps).linesIterator.toList
     var theMap: Map[Int, T] = Map()
     lines.foreach {line =>
       val i = line.indexOf(MAP_SEPARATOR)
