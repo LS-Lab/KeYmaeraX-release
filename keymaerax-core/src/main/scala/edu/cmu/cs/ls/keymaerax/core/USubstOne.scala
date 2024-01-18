@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Uniform Substitution for KeYmaera X
   * @author Andre Platzer
@@ -279,6 +280,11 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         //@note optimizable checking v==w is redundant but avoids making substBoundVars soundness-critical
         if (v==w) (v, Loop(ra)) else {val (_,rb) = usubst(w, a); (w, Loop(rb))}
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
+
+      // `DifferentialProgram`s must be wrapped in an `ODESystem` when used as a `Program`
+      case dp: AtomicODE => throw MalformedProgramException(dp)
+      case dp: DifferentialProgramConst => throw MalformedProgramException(dp)
+      case dp: DifferentialProduct => throw MalformedProgramException(dp)
     }
   }
 
