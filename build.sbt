@@ -14,6 +14,9 @@ ThisBuild / scalacOptions ++= {
   // See `scalac -Wconf:help` for more details on how to write filters.
   // See also: https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
   val warnings = Seq(
+    // Never silence warnings in the core
+    "site=edu.cmu.cs.ls.keymaerax.core.*:w",
+
     // Silence all deprecation warnings originating from @deprecated annotations inside keymaerax itself
     "cat=deprecation&origin=edu.cmu.cs.ls.keymaerax.*:s",
 
