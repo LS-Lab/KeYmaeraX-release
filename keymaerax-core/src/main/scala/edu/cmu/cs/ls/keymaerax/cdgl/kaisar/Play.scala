@@ -137,7 +137,7 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
               case Some(x) => Some(x)
               case None => gotLoc
             }
-            println(id + "\n" + gotLoc + "\n" + asLoc + "\n" + locOpt)
+            println(s"$id\n$gotLoc\n$asLoc\n$locOpt")
             val mapped = locOpt.map({ case (l, c) => s"at line $l column $c" })
             val locStr = mapped match {
               case Some(it) => it

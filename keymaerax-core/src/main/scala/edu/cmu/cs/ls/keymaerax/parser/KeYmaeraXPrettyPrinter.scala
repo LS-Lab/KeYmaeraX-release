@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
   *
@@ -60,16 +61,34 @@ trait BasePrettyPrinter extends PrettyPrinter {
     )
 
   /** Pretty-print sequent to a string */
-  def apply(seq: Sequent): String =
-    (1 to seq.ante.length).map(i => -i + ":  " + apply(seq.ante(i - 1)) + "\t" + seq.ante(i - 1).getClass.getSimpleName).mkString("\n") +
-      "\n  ==>  \n" +
-      (1 to seq.succ.length).map(i => +i + ":  " + apply(seq.succ(i - 1)) + "\t" + seq.succ(i - 1).getClass.getSimpleName).mkString("\n")
+  def apply(seq: Sequent): String = {
+    val anteLines = seq.ante.zipWithIndex.map { case (formula, i) =>
+      s"${-(i + 1)}:  ${apply(formula)}\t${formula.getClass.getSimpleName}"
+    }
+    val succLines = seq.succ.zipWithIndex.map { case (formula, i) =>
+      s"${i + 1}:  ${apply(formula)}\t${formula.getClass.getSimpleName}"
+    }
+
+    anteLines
+      .concat(" ==>  " :: Nil)
+      .concat(succLines)
+      .mkString("\n")
+  }
 
   /** Pretty-print sequent to a string but without contract checking! */
-  private[keymaerax] def stringify(seq: Sequent): String =
-    (1 to seq.ante.length).map(i => -i + ":  " + stringify(seq.ante(i - 1)) + "\t" + seq.ante(i - 1).getClass.getSimpleName).mkString("\n") +
-      "\n  ==>  \n" +
-      (1 to seq.succ.length).map(i => +i + ":  " + stringify(seq.succ(i - 1)) + "\t" + seq.succ(i - 1).getClass.getSimpleName).mkString("\n")
+  private[keymaerax] def stringify(seq: Sequent): String = {
+    val anteLines = seq.ante.zipWithIndex.map { case (formula, i) =>
+      s"${-(i + 1)}:  ${stringify(formula)}\t${formula.getClass.getSimpleName}"
+    }
+    val succLines = seq.succ.zipWithIndex.map { case (formula, i) =>
+      s"${i + 1}:  ${stringify(formula)}\t${formula.getClass.getSimpleName}"
+    }
+
+    anteLines
+      .concat(" ==>  " :: Nil)
+      .concat(succLines)
+      .mkString("\n")
+  }
 
   /** Reparse the string print as the same kind as expr has */
   protected[keymaerax] def reparse(expr: Expression, print: String): Expression = expr.kind match {

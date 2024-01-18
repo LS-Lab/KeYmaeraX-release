@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.pt
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -26,7 +31,7 @@ object HOLConverter {
     ???
   }
 
-  def apply(s:String):String = '\"' + s + '\"'
+  def apply(s:String):String = s"\"$s\""
   //@todo not all constructs are needed yet
   def apply(p:Program):String = {
     p match {

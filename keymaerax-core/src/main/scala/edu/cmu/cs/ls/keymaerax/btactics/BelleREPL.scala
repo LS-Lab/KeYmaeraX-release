@@ -144,7 +144,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
     val iSteps:List[((Provable,String),Int)] = steps.zipWithIndex
     iSteps.foreach { case ((pr, e), i) =>
       val displayI = i + 1
-      Console.println(displayI + " " + e)
+      Console.println(s"$displayI $e")
       if(verbose)
         Console.println(pr.prettyString)
     }

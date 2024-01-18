@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.{Assign, AssignAny, AtomicODE, BinaryComposite, BinaryCompositeFormula, BinaryCompositeProgram, BinaryCompositeTerm, Box, ComparisonFormula, Compose, Diamond, Differential, DifferentialFormula, DifferentialProduct, DifferentialProgram, DifferentialProgramConst, DotFormula, Expression, False, Formula, FuncOf, Function, Modal, Neg, Nothing, Number, ODESystem, Pair, Power, PredOf, PredicationalOf, Program, ProgramConst, Quantified, Sequent, SystemConst, Term, Test, True, UnaryComposite, UnaryCompositeFormula, UnaryCompositeProgram, UnaryCompositeTerm, UnitPredicational}
@@ -131,17 +132,20 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   }
 
   def docOf(seq: Sequent) : Doc =
-    Doc.intercalate(Doc.line, (1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
+    Doc.intercalate(Doc.line, (1 to seq.ante.length).map(i => Doc.text(s"${-i}: ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
       Doc.line + Doc.text(" ==> ") + Doc.line +
-      Doc.intercalate(Doc.line, (1 to seq.succ.length).map(i => Doc.text(+i + ": ") + (Doc.line + docOf(seq.succ(i - 1))).nested(2)))
+      Doc.intercalate(Doc.line, (1 to seq.succ.length).map(i => Doc.text(s"$i: ") + (Doc.line + docOf(seq.succ(i - 1))).nested(2)))
 
   override def stringify(seq: Sequent): String = docOf(seq).render(margin)
 
   def docOf(prv: ProvableSig): Doc =
-    Doc.text("Conclusion:") + (Doc.line + docOf(prv.conclusion)).nested(2) +
-      Doc.line + Doc.text(prv.subgoals.length + " subgoals" + (if (prv.subgoals.isEmpty) "." else ":")) + Doc.line +
+    Doc.text("Conclusion:") +
+      (Doc.line + docOf(prv.conclusion)).nested(2) +
+      Doc.line +
+      Doc.text(s"${prv.subgoals.length} subgoals" + (if (prv.subgoals.isEmpty) "." else ":")) +
+      Doc.line +
       Doc.intercalate(Doc.line, prv.subgoals.zipWithIndex.map{case (seq, i) =>
-        Doc.text("Subgoal " + i + ": ") + (Doc.line + docOf(seq).nested(2))})
+        Doc.text(s"Subgoal $i: ") + (Doc.line + docOf(seq).nested(2))})
 
   def stringify(prv: ProvableSig): String = docOf(prv).render(margin)
 

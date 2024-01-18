@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 /**
   * Sequents and positioning.
@@ -206,10 +206,20 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   override def toString: String =
     ante.map(_.prettyString).mkString(", ") + (if (ante.isEmpty) "  ==>  " else "\n  ==>  ") + succ.map(_.prettyString).mkString(", ")
 
+
   /** Pretty-print sequent */
-  def prettyString: String = (if (ante.isEmpty) "" else "   ") +
-    (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n   ") +
-    (if (ante.isEmpty) "" else "\n") + "==> " +
-    (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n    ")
+  def prettyString: String = {
+    val anteLines = this.ante.zipWithIndex.map { case (formula, i) =>
+      val prefix = "   "
+      s"$prefix${-(i + 1)}:  ${formula.prettyString}\t${formula.getClass.getSimpleName}"
+    }
+
+    val succLines = this.succ.zipWithIndex.map({ case (formula, i) =>
+      val prefix = if (i == 0) "==> " else "    "
+      s"$prefix${i + 1}:  ${formula.prettyString}\t${formula.getClass.getSimpleName}"
+    })
+
+    anteLines.concat(succLines).mkString("\n")
+  }
 
 }

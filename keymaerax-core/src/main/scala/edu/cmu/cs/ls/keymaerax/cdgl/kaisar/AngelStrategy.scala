@@ -71,18 +71,17 @@ object IDCounter {
   val MAP_SEPARATOR: String = "|->"
   // For serializing / reloading idMap
   def idMapString: String = {
-    idMap.toList.sortBy({ case (k, v) => k }).map({ case (k, v) => k + MAP_SEPARATOR + StrategyPrinter(v) }).mkString("\n")
+    idMap.toList.sortBy({ case (k, v) => k }).map({ case (k, v) => s"$k$MAP_SEPARATOR${StrategyPrinter(v)}" }).mkString("\n")
   }
 
   // For serializing / reloading originMap
   def originMapString: String = {
-    originMap.toList.sortBy({case (k, v) => k}).map({case (k,v) => k + MAP_SEPARATOR + StrategyPrinter(v)}).mkString("\n")
+    originMap.toList.sortBy({case (k, v) => k}).map({case (k,v) => s"$k$MAP_SEPARATOR${StrategyPrinter(v)}"}).mkString("\n")
   }
 
   def sourceLocMapString: String = {
     sourceLocationMap.toList.sortBy({case (k, v) => k}).
-      map({case (k,(l,c)) =>
-        k + MAP_SEPARATOR + l + "," + c}).
+      map({case (k,(l,c)) => s"$k$MAP_SEPARATOR$l,$c"}).
       mkString("\n")
   }
 

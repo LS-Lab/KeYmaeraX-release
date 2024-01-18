@@ -1573,7 +1573,7 @@ object AssessmentProver {
   }
 
   private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
-    def problemTitle(p: Submission.Problem, i: Int): String = if (p.title.isEmpty) i.toString else i + " " + p.title
+    def problemTitle(p: Submission.Problem, i: Int): String = if (p.title.isEmpty) s"$i" else s"$i ${p.title}"
     val problemFields = grades.zipWithIndex.map({ case ((problem, _, _), i) => problemTitle(problem, i) -> JsNumber(problem.points) })
     val scoreFields = grades.zipWithIndex.map({ case ((problem, _, pg), i) => problemTitle(problem, i) -> JsNumber(pg.map(_._2).sum) })
     val promptScoreFields = grades.flatMap(_._3.map({ case (prompt, score) => prompt.id.toString -> JsNumber(score) }))

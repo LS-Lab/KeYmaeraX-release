@@ -63,7 +63,13 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
   }
   def addLines(numLines: Int): Location = Region(line + numLines, column, endLine + numLines, endColumn)
 
-  override def toString: String = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
+  override def toString: String = {
+    if (column == endColumn && line == endLine) {
+      s"$line:$column"
+    } else{
+      s"$line:$column to $endLine:$endColumn"
+    }
+  }
 }
 
 object Region {
@@ -95,5 +101,5 @@ case class SuffixRegion(line: Int, column: Int) extends Location {
   def end: Location = UnknownLocation
   def --(other: Location): Location = this
   def addLines(numLines: Int): Location = SuffixRegion(line + numLines, column)
-  override def toString: String = line + ":" + column + " to " + EOF
+  override def toString: String = s"$line:$column to $EOF"
 }

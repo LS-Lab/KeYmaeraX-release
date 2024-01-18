@@ -43,7 +43,7 @@ object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
       val restStart = ex.msg.indexOf("beginning with character")
       val msg =
         (if (omitStart < 0 || restStart < 0) ex.msg else ex.msg.substring(0, omitStart) + ex.msg.substring(restStart)).
-        replace(ex.loc.line + ":" + ex.loc.column, shiftedLoc.line + ":" + shiftedLoc.column)
+        replace(s"${ex.loc.line}:${ex.loc.column}", s"${shiftedLoc.line}:${shiftedLoc.column}")
       throw ParseException(msg, shiftedLoc, ex.found, ex.expect, ex.after, ex.state, ex.cause, ex.hint)
   }
 

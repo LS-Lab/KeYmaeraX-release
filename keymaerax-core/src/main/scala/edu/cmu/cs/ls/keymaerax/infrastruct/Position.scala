@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -172,8 +173,8 @@ sealed trait Position {
 
   override def toString: String = prettyString
   def prettyString: String = inExpr.pos match {
-    case Nil => top.getPos.toString
-    case _ => top.getPos + "." + inExpr.pos.mkString(".")
+    case Nil => s"${top.getPos}"
+    case _ => s"${top.getPos}.${inExpr.pos.mkString(".")}"
   }
 }
 
@@ -310,5 +311,3 @@ private case class SuccPositionImpl (top: SuccPos, inExpr: PosInExpr) extends Su
   //@note not TopLevel if HereP
   def navigate(instead : PosInExpr): SuccPosition = new SuccPositionImpl(top, instead)
 }
-
-

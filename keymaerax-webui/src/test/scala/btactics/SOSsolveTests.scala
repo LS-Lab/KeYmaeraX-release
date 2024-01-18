@@ -245,7 +245,7 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
         val ratFormTimer = Timer()
         val sosTimer = Timer()
         val witnessTimer = Timer()
-        println(i + "/" + lineCount + "(" + n + "): " + seq.toString.replace('\n', ' '))
+        println(s"$i/$lineCount($n): ${seq.toString.replace('\n', ' ')}")
         i = i + 1
         print("trying QE...")
         val qeTry = qeTimer.time {

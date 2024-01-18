@@ -141,7 +141,7 @@ object DebuggingTactics extends TacticProvider {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
         throw ex(message + "\nExpected 1 subgoal matching a condition but got " +
-          (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
+          (if (provable.subgoals.size != 1) s"${provable.subgoals.size} subgoals"
            else provable.subgoals.head.prettyString))
       }
       provable

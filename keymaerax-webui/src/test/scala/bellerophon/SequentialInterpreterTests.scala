@@ -992,7 +992,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(List(listener)))
     val result = proveBy(s, dI()(1))
-    println(recursiveCalls + " interpreter executeTactic calls for " + result.steps + " proof steps")
+    println(s"$recursiveCalls interpreter executeTactic calls for ${result.steps} proof steps")
   }
 
   it should "execute solve proof steps instead of wasting time traversing tactics" in withMathematica { _ =>
@@ -1007,6 +1007,6 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(List(listener)))
     val result = proveBy(s, solve(1))
-    println(recursiveCalls + " interpreter executeTactic calls for " + result.steps + " proof steps")
+    println(s"$recursiveCalls interpreter executeTactic calls for ${result.steps} proof steps")
   }
 }

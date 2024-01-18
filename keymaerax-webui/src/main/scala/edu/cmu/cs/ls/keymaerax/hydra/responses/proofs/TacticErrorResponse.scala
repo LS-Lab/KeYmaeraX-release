@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.proofs
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleUnexpectedProofStateError, CompoundCriticalException}
@@ -17,14 +18,14 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
       ))
     case ex: CompoundCriticalException =>
       val exceptions = flatten(ex)
-      val messages = exceptions.size + " tactic attempts failed:\n" + exceptions.zipWithIndex.map({
+      val messages = exceptions.zipWithIndex.map({
         case (x: BelleUnexpectedProofStateError, i) =>
-          (i+1) + ". " + x.getMessage +
-            ":\n" + x.proofState.subgoals.map(_.toString).mkString(",")
-        case (x, i) => (i+1) + ". " + x.getMessage
-      }).mkString("\n") + "\n"
+          s"${i + 1}. ${x.getMessage}:\n${x.proofState.subgoals.map(_.toString).mkString(",")}"
+        case (x, i) => s"${i + 1}. ${x.getMessage}"
+      })
+      val message = s"${exceptions.size} tactic attempts failed:\n${messages.mkString("\n")}\n"
       JsObject(super.getJson.asJsObject.fields.filter(_._1 != "textStatus") ++ Map(
-        "textStatus" -> JsString(messages),
+        "textStatus" -> JsString(message),
         "tacticMsg" -> JsString(tacticMsg)
       ))
     case _ =>
