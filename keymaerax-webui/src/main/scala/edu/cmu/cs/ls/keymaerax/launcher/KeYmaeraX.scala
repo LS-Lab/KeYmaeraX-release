@@ -197,7 +197,6 @@ object KeYmaeraX {
       case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
       case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
       // global options
-      case "-security" :: tail => activateSecurity(); nextOption(map, tail)
       case "-launch" :: tail => launched(); nextOption(map, tail)
       case "-timeout" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
@@ -445,40 +444,6 @@ object KeYmaeraX {
   def printOpenGoals(node: ProvableSig): Unit = node.subgoals.foreach(g => printNode(g))
 
   def printNode(node: Sequent): Unit = node.toString + "\n"
-
-  /** Implements the security policy for the KeYmaera X web server.
-    *
-    * Preferably we would heavily restrict uses of reflection (to prevent, for example, creating fake Provables),
-    * but we know of no way to do so except relying on extremely fragile methods such as crawling the call stack.
-    * The same goes for restricting read access to files.
-    *
-    * Instead we settle for preventing people from installing less-restrictive security managers and restricting
-    * all writes to be inside the .keymaerax directory. */
-  class KeYmaeraXSecurityManager extends SecurityManager {
-    override def checkPermission(perm: Permission): Unit = {
-      perm match {
-          //@todo should disallow writing reflection in .core.
-        case perm:ReflectPermission if "suppressAccessChecks"==perm.getName =>
-          throw new SecurityException("suppressing access checks during reflection is forbidden")
-        case _:ReflectPermission => ()
-        case _:RuntimePermission =>
-          if ("setSecurityManager".equals(perm.getName))
-            throw new SecurityException("Changing security manager is forbidden")
-        case _:FilePermission =>
-          val filePermission = perm.asInstanceOf[FilePermission]
-          val name = filePermission.getName
-          val actions = filePermission.getActions
-          if ((actions.contains("write") || actions.contains("delete"))
-            && !name.startsWith(Configuration.KEYMAERAX_HOME_PATH)) {
-            throw new SecurityException("KeYmaera X security manager forbids writing to files outside " + Configuration.KEYMAERAX_HOME_PATH)
-          }
-      }
-    }
-  }
-
-  private def activateSecurity(): Unit = {
-    System.setSecurityManager(new KeYmaeraXSecurityManager())
-  }
 
   private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
     "skip - ignore the current goal for now and skip to the next goal.\n" +

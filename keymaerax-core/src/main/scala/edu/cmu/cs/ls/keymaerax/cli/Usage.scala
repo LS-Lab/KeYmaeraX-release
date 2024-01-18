@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
@@ -89,7 +90,6 @@ object Usage {
       |  -strict   use strict mode with no flexibility in prover
       |  -debug    use debug mode with exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
-      |  -security use security manager imposing some runtime security restrictions
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
