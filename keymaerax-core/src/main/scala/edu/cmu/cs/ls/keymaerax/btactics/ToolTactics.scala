@@ -536,7 +536,7 @@ private object ToolTactics extends TacticProvider {
       }
 
       def satAndL: BuiltInTactic = anon { provable: ProvableSig =>
-        val andL = provable.subgoals.head.ante.zipWithIndex.filter(_._1.isInstanceOf[And]).reverseMap({ case (_, i) => AndLeft(AntePos(i)) })
+        val andL = provable.subgoals.head.ante.zipWithIndex.filter(_._1.isInstanceOf[And]).reverseIterator.map({ case (_, i) => AndLeft(AntePos(i)) })
         if (andL.isEmpty) provable
         else andL.foldLeft(provable)({ case (p, r) => p(r, 0) })(satAndL, 0)
       }
@@ -854,8 +854,8 @@ private object ToolTactics extends TacticProvider {
   /* Hides all predicates (QE cannot handle predicate symbols) */
   private def hidePredicates: BuiltInTactic = anon { (provable: ProvableSig) => ProofRuleTactics.onSoleSubgoal(provable,
     (sequent: Sequent) =>
-      (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
-        ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
+      (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseIterator.map({ case (fml, i) => hideL(AntePos(i), fml) })
+        ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL }).reverseIterator.map({ case (fml, i) => hideR(SuccPos(i), fml) })
         ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hidePredicates"
     )
@@ -864,8 +864,8 @@ private object ToolTactics extends TacticProvider {
   /* Hides all predicates (QE cannot handle predicate symbols) */
   private def hideQuantifiedFuncArgsFmls: BuiltInTactic = anon { (provable: ProvableSig) => ProofRuleTactics.onSoleSubgoal(provable,
     (sequent: Sequent) =>
-      (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
-        ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
+      (    sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseIterator.map({ case (fml, i) => hideL(AntePos(i), fml) })
+        ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL }).reverseIterator.map({ case (fml, i) => hideR(SuccPos(i), fml) })
         ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hideQuantifiedFuncArgsFml"
     )
@@ -874,8 +874,8 @@ private object ToolTactics extends TacticProvider {
   /** Hides all non-FOL formulas from the sequent. */
   def hideNonFOL: BuiltInTactic = anon { (provable: ProvableSig) => ProofRuleTactics.onSoleSubgoal(provable,
     (sequent: Sequent) =>
-      (    sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
-        ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
+      (    sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseIterator.map({ case (fml, i) => hideL(AntePos(i), fml) })
+        ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseIterator.map({ case (fml, i) => hideR(SuccPos(i), fml) })
         ).foldLeft(provable)({ (pr, r) => pr(r, 0) }),
     "hideNonFOL"
     )

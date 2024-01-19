@@ -81,11 +81,11 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Declared names and signatures as [[NamedSymbol]]. */
   lazy val asNamedSymbols: List[NamedSymbol] = {
-    Declaration.topSort(decls).reverseMap(decl => Declaration.asNamedSymbol(decl._1,
+    Declaration.topSort(decls).reverseIterator.map(decl => Declaration.asNamedSymbol(decl._1,
       decl._2.copy(interpretation = decl._2.interpretation match {
         case Left(f) => Left(elaborateToSystemConsts(f))
         case Right(e) => Right(e.map(elaborateToSystemConsts))
-      })))
+      }))).toList
   }
 
   /** Joins two declarations. */

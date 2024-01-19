@@ -198,7 +198,7 @@ private object EqualityTactics extends TacticProvider {
       case (Equal(v: Variable, t), _) => v != t
       case (Equal(fn@FuncOf(Function(_, _, _, _, None), _), t), _) => fn != t
       case _ => false
-    }).reverseMap({ case (_, pos) => Idioms.doIfFw(_.subgoals.head(pos.checkTop) match {
+    }).reverseIterator.map({ case (_, pos) => Idioms.doIfFw(_.subgoals.head(pos.checkTop) match {
           case Equal(l: Variable, r) => l != r
           case Equal(l: FuncOf, r) => l != r
           case _ => false // earlier rewriting may have rewritten LHS to non-trivial term, e.g., x=y+1, x=z+5 ~> z+5=y+1
@@ -351,7 +351,7 @@ private object EqualityTactics extends TacticProvider {
         case _ => None
       })
       //@note take only the first position, because minmax itself abbreviates before expanding and so expands other positions with it; then reverse-sort by "posInExpr" length to work inside out
-      positions.groupBy(_._1).map(_._2.head._2).toList.sortBy(_._1.inExpr.pos.length).reverseMap(_._2).foldLeft(provable)({ (pr, r) => pr(r, 0) })
+      positions.groupBy(_._1).map(_._2.head._2).toList.sortBy(_._1.inExpr.pos.length).reverseIterator.map(_._2).foldLeft(provable)({ (pr, r) => pr(r, 0) })
     case (ctx, abs@FuncOf(fn@InterpretedSymbols.absF, t)) =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshAbsIdx = TacticHelper.freshIndexInSequent(fn.name + "_", sequent)
@@ -494,7 +494,7 @@ private object EqualityTactics extends TacticProvider {
           case _ => None
         })
         //@note take only the first position, because minmax itself abbreviates before expanding and so expands other positions with it; then reverse-sort by "posInExpr" length to work inside out
-        positions.groupBy(_._1).map(_._2.head._2).toList.sortBy(_._1.inExpr.pos.length).reverseMap(_._2).foldLeft(provable)({ (pr, r) => pr(r, 0) })
+        positions.groupBy(_._1).map(_._2.head._2).toList.sortBy(_._1.inExpr.pos.length).reverseIterator.map(_._2).foldLeft(provable)({ (pr, r) => pr(r, 0) })
       case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), t: Pair))
           if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
         if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {

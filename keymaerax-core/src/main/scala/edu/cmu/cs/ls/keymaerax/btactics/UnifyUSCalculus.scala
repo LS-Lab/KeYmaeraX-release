@@ -851,7 +851,7 @@ trait UnifyUSCalculus {
                 val hide2Fw =
                   if (p.isSucc) (pr: ProvableSig) => pr(CoHide2(AntePos(sequent.ante.size), p.checkSucc.top), 0)
                   else (sequent.ante.indices.reverse.tail.map(i => HideLeft(AntePos(i))) ++
-                        sequent.succ.indices.reverseMap(i => HideRight(SuccPos(i)))
+                        sequent.succ.indices.reverseIterator.map(i => HideRight(SuccPos(i)))
                     ).foldLeft(_: ProvableSig)({ case (pr, rule) => pr(rule, 0)})
 
                 // uses specialized congruence tactic for DC, may not work with other conditional equivalences
