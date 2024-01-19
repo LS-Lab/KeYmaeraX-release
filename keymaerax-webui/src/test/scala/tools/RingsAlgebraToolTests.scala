@@ -82,8 +82,8 @@ class RingsAlgebraToolTests extends TacticTestBase  {
 
   it should "split high-order monomials and monomials containing unwanted terms" in {
     val R = new RingsLibrary("t,x,y,z,i,j".split(',').map(_.asTerm))
-    val vars = "x,y,z".split(',').map(s => R.ring.index(R.mapper(s.asNamedSymbol)))
-    val drop = "i,j".split(',').map(s => R.ring.index(R.mapper(s.asNamedSymbol)))
+    val vars = "x,y,z".split(',').toSeq.map(s => R.ring.index(R.mapper(s.asNamedSymbol)))
+    val drop = "i,j".split(',').toSeq.map(s => R.ring.index(R.mapper(s.asNamedSymbol)))
     val (p, r) = R.splitInternal(R.toRing("x*y + x*y*z + x*i + x".asTerm), 2, vars, drop)
     R.fromRing(p) shouldBe "x+x*y".asTerm
     R.fromRing(r) shouldBe "i*x+x*y*z".asTerm
@@ -98,11 +98,11 @@ class RingsAlgebraToolTests extends TacticTestBase  {
   it should "compute the Picard operation" in {
     val R = new RingsLibrary("t,x,y,z,i,j,r0(),r1(),r2()".split(',').map(_.asTerm))
     val ode = R.ODE("t".asVariable,
-      "x,y".split(",").map(_.asVariable),
-      "r0(),r1()".split(',').map(_.asTerm.asInstanceOf[FuncOf]),
-      "-y^2,x+y".split(',').map(_.asTerm))
-    val x0R = "2*r0()+0.5*r1(),r0()+0.1*r1()".split(',').map(_.asTerm).map(R.toRing)
-    val psR = "r0()*r1()*t + 2*r0(),r0()*t-r1()".split(',').map(t => R.toRing(t.asTerm))
+      "x,y".split(",").toSeq.map(_.asVariable),
+      "r0(),r1()".split(',').toSeq.map(_.asTerm.asInstanceOf[FuncOf]),
+      "-y^2,x+y".split(',').toSeq.map(_.asTerm))
+    val x0R = "2*r0()+0.5*r1(),r0()+0.1*r1()".split(',').toSeq.map(_.asTerm).map(R.toRing)
+    val psR = "r0()*r1()*t + 2*r0(),r0()*t-r1()".split(',').toSeq.map(t => R.toRing(t.asTerm))
     val (left, right) = ode.PicardOperation(x0R, psR, 3)
     left.lazyZip(right).map { case (a, b) => (R.fromRing(a), R.fromRing(b)) }.toList shouldBe
       ("1/2*r1()+2*r0()+(-t)*r1()^2".asTerm, "t^2*r0()*r1()+(-1)/3*t^3*r0()^2".asTerm) ::
@@ -112,10 +112,10 @@ class RingsAlgebraToolTests extends TacticTestBase  {
   it should "compute the Picard iteration" in {
     val R = new RingsLibrary("t,x,y,z,i,j,r0(),r1(),r2()".split(',').map(_.asTerm))
     val ode = R.ODE("t".asVariable,
-      "x,y".split(",").map(_.asVariable),
-      "r0(),r1()".split(',').map(_.asTerm.asInstanceOf[FuncOf]),
-      "-y^2,x+y".split(',').map(_.asTerm))
-    val x0R = "2*r0()+0.5*r1(),r0()+0.1*r1()".split(',').map(_.asTerm).map(R.toRing)
+      "x,y".split(",").toSeq.map(_.asVariable),
+      "r0(),r1()".split(',').toSeq.map(_.asTerm.asInstanceOf[FuncOf]),
+      "-y^2,x+y".split(',').toSeq.map(_.asTerm))
+    val x0R = "2*r0()+0.5*r1(),r0()+0.1*r1()".split(',').toSeq.map(_.asTerm).map(R.toRing)
     ode.PicardIteration(x0R, 4).map(R.fromRing).toList shouldBe
       "1/2*r1()+2*r0()+(-1)/100*t*r1()^2+(-1)/5*t*r0()*r1()+(-t)*r0()^2+(-3)/50*t^2*r1()^2+(-9)/10*t^2*r0()*r1()+(-3)*t^2*r0()^2".asTerm ::
         "1/10*r1()+r0()+3/5*t*r1()+3*t*r0()+3/10*t^2*r1()+3/2*t^2*r0()+(-1)/200*t^2*r1()^2+(-1)/10*t^2*r0()*r1()+1/10*t^3*r1()+(-1)/2*t^2*r0()^2+1/2*t^3*r0()".asTerm ::
