@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Set Lattices are lattice of finite or cofinite sets.
   * @author smitsch
@@ -12,8 +13,6 @@ package edu.cmu.cs.ls.keymaerax.core
 // require favoring immutable Seqs for soundness (probably)
 
 import scala.collection.immutable
-
-import scala.collection.GenTraversableOnce
 
 
 /**
@@ -41,11 +40,10 @@ sealed trait SetLattice[A] {
   // set operations
 
   /** this++other: Set union */
-  def ++(other: GenTraversableOnce[A]): SetLattice[A]
+  def ++(other: Iterable[A]): SetLattice[A]
   /** this--other: Set subtraction */
-  def --(other: GenTraversableOnce[A]): SetLattice[A]
+  def --(other: Iterable[A]): SetLattice[A]
   /** this intersect other: Set intersection */
-  // intersecting CoFiniteSet with never-ending other:GenTraversableOnce[a] stream would not work
   def intersect(other: immutable.Set[A]): SetLattice[A]
 
   // conversions and mappings
@@ -72,15 +70,15 @@ sealed trait SetLattice[A] {
 
   /** this++other: Set union. */
   def ++(other: SetLattice[A]): SetLattice[A] = { (this, other) match {
-    case (_, FiniteSet(os)) => this ++ os  // ++(GenTraversableOnce[A])
-    case (FiniteSet(ts), os: CoFiniteSet[A]) => os ++ ts   // commute to ++(GenTraversableOnce[A])
+    case (_, FiniteSet(os)) => this ++ os
+    case (FiniteSet(ts), os: CoFiniteSet[A]) => os ++ ts
     case (ts: CoFiniteSet[A], os:CoFiniteSet[A]) => CoFiniteSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)  // union of cosets is intersection of exceptions
   } } ensures(r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
 
   /** this--other: Set subtraction. */
   //@note the core only uses finite other here because mustBoundVars are finite
   def --(other: SetLattice[A]): SetLattice[A] = {(this, other) match {
-    case (_, FiniteSet(os)) => this -- os   // --(GenTraversableOnce[A])
+    case (_, FiniteSet(os)) => this -- os
     case (FiniteSet(ts), os: CoFiniteSet[A]) => FiniteSet(ts.intersect(os.excluded))  /* ts -- (all except os) == ts/\os, subtract everything but excluded, so retain excluded */
     case (ts: CoFiniteSet[A], os: CoFiniteSet[A]) => FiniteSet(os.excluded -- ts.excluded)      /* (all \ t) \ (all \ o) == o \ t, t was excluded and all except o were then removed */
   } } ensures(r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
@@ -159,8 +157,8 @@ private case class FiniteSet[A](set: immutable.Set[A]) extends SetLattice[A] {
 
   def +(elem: A): SetLattice[A] = FiniteSet(set + elem)
   def -(elem: A): SetLattice[A] = FiniteSet(set - elem)
-  def ++(other: GenTraversableOnce[A]): SetLattice[A] = FiniteSet(set ++ other)
-  def --(other: GenTraversableOnce[A]): SetLattice[A] = FiniteSet(set -- other)
+  def ++(other: Iterable[A]): SetLattice[A] = FiniteSet(set ++ other)
+  def --(other: Iterable[A]): SetLattice[A] = FiniteSet(set -- other)
   def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteSet(set.intersect(other))
 
   override def toString: String = set.toString()
@@ -191,10 +189,10 @@ private case class CoFiniteSet[A](excluded: immutable.Set[A], literally: immutab
 
   /* Coset excludes one element less now */
   def +(e: A): CoFiniteSet[A] = CoFiniteSet(excluded - e, literally + e)
-  def ++(other: GenTraversableOnce[A]): CoFiniteSet[A] = CoFiniteSet(excluded -- other, literally ++ other)
+  def ++(other: Iterable[A]): CoFiniteSet[A] = CoFiniteSet(excluded -- other, literally ++ other)
   /* top now excludes one more element */
   def -(e: A): CoFiniteSet[A] = CoFiniteSet(excluded + e, literally - e)
-  def --(other: GenTraversableOnce[A]): CoFiniteSet[A] = CoFiniteSet(excluded ++ other, literally -- other)
+  def --(other: Iterable[A]): CoFiniteSet[A] = CoFiniteSet(excluded ++ other, literally -- other)
   def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteSet(other -- excluded)   /* (all except ts) /\ os == os--ts */
 
   def toSetLattice[B >: A]: SetLattice[B] = CoFiniteSet(excluded.toSet, literally.toSet)

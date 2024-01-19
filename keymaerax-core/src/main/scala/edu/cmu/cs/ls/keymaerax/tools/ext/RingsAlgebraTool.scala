@@ -24,7 +24,7 @@ import scala.jdk.CollectionConverters._
   * A link to Rings library for its algebra tools
   */
 
-class RingsLibrary(terms: Traversable[Term]) {
+class RingsLibrary(terms: Iterable[Term]) {
 
   private def varprefix = "AVAR"
   private def funcprefix = "BFUNC"

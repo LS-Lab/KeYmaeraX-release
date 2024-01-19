@@ -1576,7 +1576,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def divideAndRemainder(other: Polynomial, pretty: Boolean = false) : (Polynomial, Polynomial, ProvableSig) = {
       val rep1 = PolynomialArithV2Helpers.rhsOf(representation)
       val rep2 = PolynomialArithV2Helpers.rhsOf(other.representation)
-      val ringsLibrary = new RingsLibrary(Traversable(rep1, rep2))
+      val ringsLibrary = new RingsLibrary(Iterable(rep1, rep2))
       val quotRem = ringsLibrary.ring.divideAndRemainder(ringsLibrary.toRing(rep1), ringsLibrary.toRing(rep2)).map { p =>
         val poly = ofTerm(ringsLibrary.fromRing(p))
         if (pretty) poly.prettyTerm else poly
