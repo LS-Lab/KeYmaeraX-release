@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
@@ -193,7 +194,7 @@ class InMemoryDB extends DBAbstraction {
 
   /** Allow retrieving executables in bulk to reduce the number of database queries. */
   def getExecutables(executableIds: List[Int]): List[ExecutablePOJO] = synchronized {
-    executables.filterKeys(executableIds.contains).values.toList.sortBy(_.executableId)
+    executables.view.filterKeys(executableIds.contains).values.toList.sortBy(_.executableId)
   }
 
   /** Use escape hatch in prover core to create a new Provable */
@@ -201,7 +202,7 @@ class InMemoryDB extends DBAbstraction {
     loadProvables(List(lemmaId)).head
   }
 
-  def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = provables.filterKeys(lemmaIds.contains).
+  def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = provables.view.filterKeys(lemmaIds.contains).
     map({ case (k, v) => ProvablePOJO(k, v)}).toList.sortBy(_.provableId)
 
   override def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName: String): Int = {

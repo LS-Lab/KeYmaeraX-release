@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.tools
 
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Number}
@@ -31,6 +32,6 @@ class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]], steps
     sim.foreach(state => state.foreach({
       case (n, v) => dataSeries.getOrElse(n, throw new IllegalStateException("Unexpected data series " + n)) += v
     }))
-    dataSeries.mapValues(_.toList).toList
+    dataSeries.view.mapValues(_.toList).toList
   }
 }

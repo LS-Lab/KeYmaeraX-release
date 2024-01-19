@@ -275,7 +275,7 @@ object KeYmaeraX {
 
   /** Combines tool configurations, favoring primary configuration over secondary configuration. */
   def combineConfigs(primary: OptionMap, secondary: OptionMap): OptionMap = {
-    primary ++ secondary.filterKeys(!primary.keySet.contains(_))
+    primary ++ secondary.view.filterKeys(!primary.keySet.contains(_))
   }
 
   /** Initializes Z3 from command line options. */

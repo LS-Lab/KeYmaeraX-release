@@ -67,7 +67,7 @@ class RingsAlgebraToolTests extends TacticTestBase  {
     val R = new RingsLibrary("t,x,y,z,i,j".split(',').map(_.asTerm))
     val t = "x*y*(x + z*x - 13)/4 + 4*z*z*(x + x^5)".asTerm
     val odemap = Map("x".asVariable -> "-y".asTerm, "y".asVariable -> "-x^2".asTerm, "z".asVariable -> "14*x*y*z".asTerm)
-    val ringsLieDerivative = R.lieDerivative(odemap.mapValues(R.toRing).get)(t)
+    val ringsLieDerivative = R.lieDerivative(odemap.view.mapValues(R.toRing).get)(t)
     val lieDerivative = DifferentialHelper.lieDerivative("{x'=-y,y'=-x^2,z'=14*x*y*z}".asDifferentialProgram, t)
     val res = proveBy(Equal(R.fromRing(ringsLieDerivative), lieDerivative), TactixLibrary.QE)
     res shouldBe Symbol("proved")

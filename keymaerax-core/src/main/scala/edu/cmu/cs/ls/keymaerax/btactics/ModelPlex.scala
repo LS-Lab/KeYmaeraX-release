@@ -1520,7 +1520,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
             }
             val direct = synonyms(of)
             val transitive1 = direct.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).flatMap(synonyms.getOrElse(_, Set()))
-            val transitive2 = direct.flatMap(s => synonyms.filterKeys(k => synonyms.getOrElse(k, Set()).contains(s)).keySet)
+            val transitive2 = direct.flatMap(s => synonyms.view.filterKeys(k => synonyms.getOrElse(k, Set()).contains(s)).keySet)
             (direct ++ transitive1 ++ transitive2) - of
           }
         }

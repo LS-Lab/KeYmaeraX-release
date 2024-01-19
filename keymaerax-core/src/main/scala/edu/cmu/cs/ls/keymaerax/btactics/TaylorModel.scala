@@ -402,7 +402,7 @@ object TaylorModelTactics extends Logging {
     private val initialNumbericCondition = (0 until dim).map{ i =>
       /** time-constant coefficients, i.e., at initial time. this is the same as [[initial_condition]],
         * but perhaps a bit more convenient to use here, because we directly get the exponents. */
-      val constantCoeffs = exactCoefficients(i).filterKeys(e => e(0) == 0)
+      val constantCoeffs = exactCoefficients(i).view.filterKeys(e => e(0) == 0)
       val diff = ringsLib.toHorner(
         ringsLib.toRing(
           Minus(
@@ -785,7 +785,7 @@ object TaylorModelTactics extends Logging {
 
       // Approximate values for coefficients
       def midpoint(ivl: (BigDecimal, BigDecimal)) : BigDecimal = (ivl._1 + ivl._2)/2
-      val approxCoeffs = exactCoefficients.map(_.mapValues(t => midpoint(IntervalArithmeticV2.eval_ivl(prec)(IntervalArithmeticV2.DecimalBounds())(subst0(t)))))
+      val approxCoeffs = exactCoefficients.map(_.view.mapValues(t => midpoint(IntervalArithmeticV2.eval_ivl(prec)(IntervalArithmeticV2.DecimalBounds())(subst0(t)))))
       val approxCoeffSubst = USubst(approxCoeffs.zipWithIndex.flatMap{ case (coeffs, i) =>
         coeffs.map{case (e, t) => SubstitutionPair(names.postCoeff(i, e), Number(t)) }
       })

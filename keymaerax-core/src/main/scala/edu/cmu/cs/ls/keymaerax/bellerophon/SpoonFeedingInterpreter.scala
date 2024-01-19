@@ -48,7 +48,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
       // create branch indexes for elements with same parent but keep order stable (groupBy destroys order)
       val grouped = openBranchesAfterExec.map(s => DbBranchPointer(s, 0, predStep, Nil)).zipWithIndex.groupBy(_._1.parent)
       val lhm = mutable.LinkedHashMap(grouped.toSeq.sortBy(_._2.head._2): _*)
-      lhm.mapValues(elems => elems.zipWithIndex.map({ case (e, i) => e._1.copy(branch = i) -> e._2 })).values.flatten.
+      lhm.view.mapValues(elems => elems.zipWithIndex.map({ case (e, i) => e._1.copy(branch = i) -> e._2 })).values.flatten.
         toList.sortBy(_._2).map(_._1)
     }
   override def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext =
