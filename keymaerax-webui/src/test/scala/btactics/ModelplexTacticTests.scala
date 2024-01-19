@@ -275,8 +275,8 @@ class ModelplexTacticTests extends TacticTestBase {
          |int main() { return 0; }
          |""".stripMargin
 
-    val cmd = CodeGenTestTools.compileC(codeFileContent)
-    val p = Runtime.getRuntime.exec(cmd)
+    val file = CodeGenTestTools.compileC(codeFileContent)
+    val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) { p.waitFor() shouldBe 0 }
   }
 

@@ -235,7 +235,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     if (System.getProperty("KILL_MATLAB") == "true") {
       var killExit = 0
       while (killExit == 0) {
-        val p = Runtime.getRuntime.exec("pkill -9 MATLAB")
+        val p = Runtime.getRuntime.exec(Array("pkill", "-9", "MATLAB"))
         p.waitFor()
         killExit = p.exitValue()
       }

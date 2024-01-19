@@ -87,8 +87,6 @@ class HashTests extends FlatSpec with Matchers {
     testmap(data, other, map2)
     val map3:HashMap[Expression,Int] = HashMap(data.map(e => e -> e.hashCode):_*)
     testmap(data, other, map3)
-    val map4:mutable.ListMap[Expression,Int] = mutable.ListMap(data.map(e => e -> e.hashCode):_*)
-    testmapM(data, other, map4)
     val map5:mutable.HashMap[Expression,Int] = mutable.HashMap(data.map(e => e -> e.hashCode):_*)
     testmapM(data, other, map5)
     val map6:mutable.LinkedHashMap[Expression,Int] = mutable.LinkedHashMap(data.map(e => e -> e.hashCode):_*)

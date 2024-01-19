@@ -696,8 +696,8 @@ class CCodeGeneratorTests extends TacticTestBase {
         |}
         |""".stripMargin
 
-    val cmd = CodeGenTestTools.compileC(code)
-    val p = Runtime.getRuntime.exec(cmd)
+    val file = CodeGenTestTools.compileC(code)
+    val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
       scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
@@ -736,8 +736,8 @@ class CCodeGeneratorTests extends TacticTestBase {
          |}
          |""".stripMargin
 
-    val cmd = CodeGenTestTools.compileC(code)
-    val p = Runtime.getRuntime.exec(cmd)
+    val file = CodeGenTestTools.compileC(code)
+    val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
       scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
@@ -991,8 +991,8 @@ class CCodeGeneratorTests extends TacticTestBase {
        |}
        |""".stripMargin
 
-    val cmd = CodeGenTestTools.compileC(mainCode)
-    val p = Runtime.getRuntime.exec(cmd)
+    val file = CodeGenTestTools.compileC(mainCode)
+    val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
       scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
@@ -1024,8 +1024,8 @@ class CCodeGeneratorTests extends TacticTestBase {
          |}
          |""".stripMargin
 
-    val cmd = CodeGenTestTools.compileC(mainCode, "-lmpfr -lgmp")
-    val p = Runtime.getRuntime.exec(cmd)
+    val file = CodeGenTestTools.compileC(mainCode, Seq("-lmpfr", "-lgmp"))
+    val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
       scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
@@ -1071,8 +1071,8 @@ class CCodeGeneratorTests extends TacticTestBase {
        |}
        |""".stripMargin
 
-    val cmd = CodeGenTestTools.compileC(code)
-    val p = Runtime.getRuntime.exec(cmd)
+    val file = CodeGenTestTools.compileC(code)
+    val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
       scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
@@ -1176,8 +1176,8 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   private def compileAndRun(code: String, expected: String) = {
-    val cmd = CodeGenTestTools.compileC(code)
-    val p = Runtime.getRuntime.exec(cmd)
+    val file = CodeGenTestTools.compileC(code)
+    val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
       scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe expected

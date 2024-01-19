@@ -212,7 +212,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     val invs = TactixLibrary.invGenerator("==> [{x'=3}]x>=0".asSequent, SuccPosition(1), Declaration(Map.empty))
     invs should contain theSameElementsInOrderAs expectedInvs
     //@note ODE will return with counterexample before even trying fastODE, so call fastODE directly
-    proveBy(s, (DifferentialTactics invokePrivate fastODE(() => invs.toIterator, skip))(1)).subgoals.
+    proveBy(s, (DifferentialTactics invokePrivate fastODE(() => invs.iterator, skip))(1)).subgoals.
       loneElement shouldBe "x_0=x ==> [{x'=3 & true&x>=x_0}]x>=0".asSequent
   }
 

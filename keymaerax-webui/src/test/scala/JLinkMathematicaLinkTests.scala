@@ -211,7 +211,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     println("Killing Mathematica...")
     val rt = Runtime.getRuntime
     if (System.getProperty("os.name").toLowerCase.indexOf("mac os x") > -1) {
-      rt.exec("pkill -9 MathKernel")
+      rt.exec(Array("pkill", "-9", "MathKernel"))
     } else {
       ???
     }
