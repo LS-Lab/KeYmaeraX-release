@@ -10,7 +10,7 @@ import java.nio.file.{Files, Paths}
 
 import org.apache.commons.configuration2.PropertiesConfiguration
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** The KeYmaera X configuration.
   * The purpose of this object is to have a central place for system configuration options of KeYmaera X.
