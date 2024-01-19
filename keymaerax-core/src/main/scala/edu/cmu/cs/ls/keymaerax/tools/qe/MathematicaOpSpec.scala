@@ -59,7 +59,7 @@ case class NaryMathOpSpec(op: Expr) extends MathematicaOpSpec {
 /** Quantifier Math operators. */
 case class QuantifiedMathOpSpec(op: Expr) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with quantified variables `vars` and formula `q`. */
-  def apply(vars: Array[Expr], q: Expr): Expr = makeExpr(op, Array[Expr](MathematicaOpSpec.list(vars:_*), q))
+  def apply(vars: Array[Expr], q: Expr): Expr = makeExpr(op, Array[Expr](MathematicaOpSpec.list(vars.toSeq:_*), q))
   /** @inheritdoc */
   override def applies(e: Expr): Boolean = e.head == op
 }

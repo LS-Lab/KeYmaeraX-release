@@ -75,7 +75,7 @@ class ARCHNonlinearBenchmark extends TacticTestBase {
       |(-1+x)^2+(1+y)^2 < 1/4->[{x'=1+x+x^2+x^3+2*y+2*x^2*y,y'=-y+2*x*y+x^2*y+2*x*y^2&true}](!y>=1)
       |(-1/3+x)^2+(-1/3+y)^2 < 1/16->[{x'=y,y'=-x+y*(1-x^2-y^2)&true}](!(x^2+y^2=0|x>=2|x<=-2))
       |2*(-1/3+x)^2+y^2 < 1/16->[{x'=x^2*y,y'=x^2-y^2&true}](!x<=-2)
-      |""".stripMargin.split("\n").filter(_ != "").map(Parser.parser.formulaParser)
+      |""".stripMargin.split("\n").toList.filter(_ != "").map(Parser.parser.formulaParser)
 
   private val todoBenchmarks =
     """-1/5000+(1/20+x)^2+(3/200+y)^2<=0->[{x'=-3*x^2/2-x^3/2-y,y'=3*x-y&true}](!49/100+x+x^2+y+y^2<=0)
@@ -96,6 +96,7 @@ class ARCHNonlinearBenchmark extends TacticTestBase {
       |-1<=x&x<=-0.5&1<=y&y<=1.5->[{x'=7/8+x-x^3/3-y,y'=2*(7/10+x-4*y/5)/25&true}](!(-2.5<=x&x<=-2&-2<=y&y<=-1.5))
       |""".stripMargin
       .split("\n")
+      .toList
       .filter(_ != "").map(Parser.parser.formulaParser)
 
 

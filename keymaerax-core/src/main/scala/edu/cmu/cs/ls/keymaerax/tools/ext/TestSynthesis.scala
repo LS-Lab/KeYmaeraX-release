@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex
@@ -57,7 +58,7 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
           k2m.convert(Left(k)),
           k2m.convert(Left(v))
         )
-      }).toArray:_*)
+      }).toSeq:_*)
     val cmd = MathematicaOpSpec.module(valsExpr, metricExpr)
     run(cmd) match {
       case (_, Left(t: Number)) => t
@@ -69,7 +70,7 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
   def getSafetyRange(fml: Formula): (Number, Number) = {
     val metricExpr = k2m.convert(Left(safetyMarginTerm(fml)))
     val symbols = StaticSemantics.symbols(fml)
-    val symbolsExpr = MathematicaOpSpec.list(symbols.map(s => k2m.convert(Right(s))).toArray:_*)
+    val symbolsExpr = MathematicaOpSpec.list(symbols.map(s => k2m.convert(Right(s))).toSeq:_*)
     // minimize for compliant test cases
     //@todo second argument would give values for "safest" test case
     val cmd = ExtMathematicaOpSpec.first(ExtMathematicaOpSpec.nmaximize(metricExpr, symbolsExpr))

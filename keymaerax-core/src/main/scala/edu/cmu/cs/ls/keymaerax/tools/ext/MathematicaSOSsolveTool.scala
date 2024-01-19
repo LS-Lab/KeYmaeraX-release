@@ -46,7 +46,7 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
   private val SOSSOLVE_NAMESPACE = "sossolve`"
 
   private val sossolvePath = SOSsolveInstaller.sossolveRelativeResourcePath
-  private val joinedPath = fileNameJoin(list(Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, sossolvePath).map(string):_*))
+  private val joinedPath = fileNameJoin(list(Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, sossolvePath).map(string).toSeq:_*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
   private val k2mU = new UncheckedBaseK2MConverter

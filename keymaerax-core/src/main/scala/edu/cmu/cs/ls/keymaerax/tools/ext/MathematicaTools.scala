@@ -728,7 +728,7 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
     })
     val pde = MathematicaOpSpec.equal(MathematicaOpSpec.plus(characteristics:_*), k2m(Number(0)))
     val input = ExtMathematicaOpSpec.dsolve(
-      pde, fall, MathematicaOpSpec.list(vars:_*), MathematicaOpSpec.rule(
+      pde, fall, MathematicaOpSpec.list(vars.toSeq:_*), MathematicaOpSpec.rule(
         ExtMathematicaOpSpec.generatedParameters.op,
         ExtMathematicaOpSpec.function(MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "C"))
       )
@@ -752,15 +752,18 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink) extends 
 
   private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
   private val pathsList = Configuration.sanitizedPathSegments(Configuration.KEYMAERAX_HOME_PATH, pegasusPath).map(string)
-  private val joinedPath = fileNameJoin(list(pathsList:_*))
+  private val joinedPath = fileNameJoin(list(pathsList.toSeq:_*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
   /** Wraps `cmd` with the path and exception handling (suppressing). */
-  private def createCommand(cmd: MExpr): MExpr = quiet(compoundExpression(
-    setPathsCmd,
-    needs(string(LYAPUNOV_NAMESPACE), fileNameJoin(list(pathsList :+ string("Primitives") :+ string("Lyapunov.m"):_*))),
-    cmd
-  ))
+  private def createCommand(cmd: MExpr): MExpr = {
+    val path = pathsList :+ string("Primitives") :+ string("Lyapunov.m")
+    quiet(compoundExpression(
+      setPathsCmd,
+      needs(string(LYAPUNOV_NAMESPACE), fileNameJoin(list(path.toSeq: _*))),
+      cmd
+    ))
+  }
 
   /** Converts the differential equation systems `sys`. */
   private def convertODEs(sys: List[ODESystem]): MExpr = {
@@ -1040,7 +1043,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         MathematicaOpSpec.symbol("kyx`step"),
         ExtMathematicaOpSpec.function(
           MathematicaOpSpec.module(
-            MathematicaOpSpec.list(stepModuleInit:_*),
+            MathematicaOpSpec.list(stepModuleInit.toSeq:_*),
             ExtMathematicaOpSpec.findInstance(
               basek2m(stateRelation),
               MathematicaOpSpec.list(stepPostVars.toList.sorted.map(basek2m):_*),
