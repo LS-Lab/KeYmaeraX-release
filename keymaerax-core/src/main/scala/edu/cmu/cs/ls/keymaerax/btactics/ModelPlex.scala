@@ -295,7 +295,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   private def proofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration) = new IOListener() {
     var invariant: Option[GenProduct] = None
     // initial condition and differential invariants per ODE
-    val diffInvariants: mutable.ListMap[DifferentialProgram, (Formula, Formula)] = mutable.ListMap()
+    var diffInvariants: ListMap[DifferentialProgram, (Formula, Formula)] = ListMap()
     var inDW = false
     var dWResult: Option[IndexedSeq[Sequent]] = None
     var odeLemmas: List[(String, Formula, BelleExpr)] = Nil
@@ -336,14 +336,14 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           }, t.pt.inputs.head.asInstanceOf[List[Formula]].head).get
           p.subgoals.head.sub(t.locator.toPosition(p).get) match {
             case Some(Box(ODESystem(ode, _), _)) if !diffInvariants.contains(ode) =>
-              diffInvariants(ode) = (
+              diffInvariants += (ode -> (
                 DifferentialHelper.extractInitialConditions(Some(ode))(p.subgoals.head.ante.reduceOption(And).getOrElse(True)).reduceRightOption(And).getOrElse(True),
-                di)
+                di))
             case Some(Box(ODESystem(ode, _), _)) if diffInvariants.contains(ode) =>
               if (StaticSemantics.freeVars(di).intersect(senseVars).toSet.nonEmpty) {
                 val (init, prevDi) = diffInvariants(ode)
                 val newDi = FormulaTools.conjuncts(di).diff(FormulaTools.conjuncts(prevDi))
-                if (newDi.nonEmpty) diffInvariants(ode) = (init, And(prevDi, newDi.reduceRight(And)))
+                if (newDi.nonEmpty) diffInvariants += (ode -> (init, And(prevDi, newDi.reduceRight(And))))
               }
           }
       }

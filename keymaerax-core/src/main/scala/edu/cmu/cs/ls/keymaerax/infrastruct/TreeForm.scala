@@ -132,7 +132,7 @@ object TreeForm {
     // arity and the aggregate stats for an operator across all arities. We provide this ability by storing the aggregate
     // stats for an operator "op" under Operator("op", None) and the individual stats for each arity i under
     // Operator("op", Some(i))
-    val counts = new mutable.HashMap[TermSymbol, Stat] {}
+    val counts = new mutable.HashMap[TermSymbol, Stat]()
     asTree.iterDepth((depth, tree) => {
       val Tree(sym, l) = tree
       counts.find({case (sym2, _) => sym.equals(sym2)}) match {

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.install
 
 import java.io.{File, FileOutputStream, InputStream, PrintWriter}
@@ -101,11 +102,15 @@ object Z3Installer extends Logging {
       if (!z3.exists) throw new Exception("Could not find Z3 in classpath jar bundle: " + System.getProperty("user.dir"))
       else {
         val z3AbsPath = z3.getAbsolutePath
-        val permissionCmd =
-          if (osName.contains("windows")) "icacls " + z3AbsPath + " /e /p Everyone:F"
-          else "chmod u+x " + z3AbsPath
+
+        val permissionCmd = if (osName.contains("windows")) {
+          Array("icacls", z3AbsPath, "/e", "/p", "Everyone:F")
+        } else {
+          Array("chmod", "u+x", z3AbsPath)
+        }
         Runtime.getRuntime.exec(permissionCmd)
-        return z3.getAbsolutePath
+
+        return z3AbsPath
       }
     }
     val z3Source = Channels.newChannel(resource)
@@ -122,11 +127,15 @@ object Z3Installer extends Logging {
     // Copy file to temporary directory
     z3Dest.getChannel.transferFrom(z3Source, 0, Long.MaxValue)
     val z3AbsPath = z3Temp.getAbsolutePath
-    val permissionCmd =
-      if (osName.contains("windows")) "icacls " + z3AbsPath + " /e /p Everyone:F"
-      else "chmod u+x " + z3AbsPath
+
+    val permissionCmd = if (osName.contains("windows")) {
+      Array("icacls", z3AbsPath, "/e", "/p", "Everyone:F")
+    } else {
+      Array("chmod", "u+x", z3AbsPath)
+    }
     //@todo Could change to only modify permissions of freshly extracted files not from others that happen to preexist. It's in KeYmaera's internal folders, though.
     Runtime.getRuntime.exec(permissionCmd)
+
     z3Source.close()
     z3Dest.close()
     assert(new File(z3AbsPath).exists())

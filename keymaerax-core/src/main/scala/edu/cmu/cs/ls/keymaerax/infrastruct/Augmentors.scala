@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -543,7 +544,7 @@ object Augmentors {
         case _: Term => Set.empty // include all term symbols
         case f: Formula =>
           // exclude universally/existentially quantified symbols
-          val quantifiedSymbols = scala.collection.mutable.Set.empty[Variable]
+          var quantifiedSymbols = Set.empty[Variable]
           ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
               case q: Quantified =>

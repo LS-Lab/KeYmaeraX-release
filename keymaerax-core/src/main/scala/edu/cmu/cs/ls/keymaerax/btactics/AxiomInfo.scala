@@ -14,9 +14,9 @@ import org.reflections.Reflections
 import org.reflections.scanners.Scanners
 
 import scala.annotation.tailrec
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.language.implicitConversions
 import scala.collection.mutable
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.reflect.runtime.{universe => ru}
 import scala.util.Try
 
@@ -179,7 +179,7 @@ object DerivationInfoRegistry extends Logging {
     // Search and initialize tactic providers (provide @Tactic-annotated methods)
     val reflections = new Reflections("edu.cmu.cs.ls.keymaerax.btactics")
     val tacticProviderTypes = reflections.get(Scanners.SubTypes.of(classOf[TacticProvider]).asClass())
-    val instances = tacticProviderTypes.map(_.getField("MODULE$").get(()).asInstanceOf[TacticProvider])
+    val instances = tacticProviderTypes.asScala.map(_.getField("MODULE$").get(()).asInstanceOf[TacticProvider])
     val objects = instances.map(_.getInfo)
     objects.foreach({case (cl, ct) => initClass(cl, ct)})
 
