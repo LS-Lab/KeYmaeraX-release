@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import scala.util.matching.Regex
@@ -172,17 +173,17 @@ private object IF extends OPERATOR("if")
 private object ELSE extends OPERATOR("else")
 private object SEMI    extends OPERATOR(";")
 private object CHOICE  extends OPERATOR("++") {
-  override def regexp: Regex = """\+\+|\u222A""".r
+  override def regexp: Regex = """\+\+|∪""".r
 }
 //@todo simplify lexer by using silly ^@ notation rather than ^d for now. @ for adversary isn't too bad to remember but doesn't look as good as ^d.
 private object DUAL    extends OPERATOR("^@") {
   override def regexp: Regex = """\^\@""".r
 }
-private object DCHOICE extends OPERATOR("\u2229") {
-  override def regexp: Regex = """\u2229""".r
+private object DCHOICE extends OPERATOR("∩") {
+  override def regexp: Regex = """∩""".r
 }
-private object DSTAR extends OPERATOR("\u00D7") {
-  override def regexp: Regex = """\u00D7""".r
+private object DSTAR extends OPERATOR("×") {
+  override def regexp: Regex = """×""".r
 }
 
 private object TILDE      extends OPERATOR("~")
