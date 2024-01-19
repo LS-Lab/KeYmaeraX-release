@@ -22,6 +22,7 @@ import org.scalatest.Inside.inside
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.LoneElement._
 import org.scalatest.EitherValues._
+import org.scalatest.OptionValues._
 import spray.json._
 
 import scala.annotation.tailrec
@@ -295,7 +296,7 @@ class AssessmentProverTests extends TacticTestBase {
   "Syntactic equality" should "return useful error messages" in withZ3 { _ =>
     // expected formula, answered with predicate
     AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>=0")).
-      check(ExpressionArtifact("p(x)")).right.value shouldBe "" //@note expect term p(x) to be elaborated to predicate p(x), so no hint about wrong answer kind expected
+      check(ExpressionArtifact("p(x)")).toOption.value shouldBe "" //@note expect term p(x) to be elaborated to predicate p(x), so no hint about wrong answer kind expected
   }
 
   it should "handle expected n/a" in withZ3 { _ =>
@@ -304,7 +305,7 @@ class AssessmentProverTests extends TacticTestBase {
     AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
       check(ExpressionArtifact("N/A")).left.value shouldBe Symbol("proved")
     AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
-      check(ExpressionArtifact("f(x)")).right.value shouldBe "Incorrect f(x)"
+      check(ExpressionArtifact("f(x)")).toOption.value shouldBe "Incorrect f(x)"
   }
 
   "Polynomial equality" should "prove simple term examples" in withZ3 { _ =>
@@ -409,7 +410,7 @@ class AssessmentProverTests extends TacticTestBase {
       check(ExpressionArtifact("-3")).left.value shouldBe Symbol("proved")
     // expected list of expressions, ok to answer with a list
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).
-      check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))).right.value shouldBe "" // wrong but syntactically ok
+      check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))).toOption.value shouldBe "" // wrong but syntactically ok
   }
 
   "Value equality" should "prove simple examples" in withZ3 { _ =>
@@ -550,7 +551,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "reply with expected answer type to wrong answer format" in {
     AskGrader(Some(AskGrader.Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>0")).
-      check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got Sequent:\n==> 1:  x>0\tGreater"
+      check(SequentArtifact("==> x>0".asSequent :: Nil)).toOption.value shouldBe "Expected a Formula but got Sequent:\n==> 1:  x>0\tGreater"
   }
 
   it should "give correct feedback on model conditions" in {
@@ -559,7 +560,7 @@ class AssessmentProverTests extends TacticTestBase {
       "postcondition" -> "x>0 & y>0"),
       ListExpressionArtifact(List("x>0".asFormula, "x>0 & y>0 & z>0".asFormula)))
       .check(ListExpressionArtifact(List("x>0".asFormula, "x>0 & y>0 & z>0".asFormula)))
-      .right.value shouldBe (AssessmentProver.Messages.OK)
+      .toOption.value shouldBe (AssessmentProver.Messages.OK)
   }
 
   "Program equivalence" should "prove simple examples" in withZ3 { _ =>
@@ -599,7 +600,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "not accept too short answers" in {
     AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Short"))).
-      right.value shouldBe "Please elaborate your explanation"
+      toOption.value shouldBe "Please elaborate your explanation"
   }
 
   it should "partially accept medium answers" in {
@@ -669,7 +670,7 @@ class AssessmentProverTests extends TacticTestBase {
     val anyChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion]))).toList
     val graders = anyChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(ChoiceArtifact(Nil)).right.value shouldBe AssessmentProver.Messages.BLANK
+      _.check(ChoiceArtifact(Nil)).toOption.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
 
@@ -678,7 +679,7 @@ class AssessmentProverTests extends TacticTestBase {
     val oneChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[OneChoiceQuestion]))).toList
     val graders = oneChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(ChoiceArtifact(Nil)).right.value shouldBe AssessmentProver.Messages.BLANK
+      _.check(ChoiceArtifact(Nil)).toOption.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
 
@@ -687,7 +688,7 @@ class AssessmentProverTests extends TacticTestBase {
     val asktfProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskTFQuestion]))).toList
     val graders = asktfProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(BoolArtifact(None)).right.value shouldBe AssessmentProver.Messages.BLANK
+      _.check(BoolArtifact(None)).toOption.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
 
@@ -699,21 +700,21 @@ class AssessmentProverTests extends TacticTestBase {
       g => g.expected match {
         case TextArtifact(None) => g.check(TextArtifact(None)).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
         case TextArtifact(Some("")) => g.check(TextArtifact(None)).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
-        case _ => g.check(TextArtifact(None)).right.value shouldBe AssessmentProver.Messages.BLANK
+        case _ => g.check(TextArtifact(None)).toOption.value shouldBe AssessmentProver.Messages.BLANK
       }
     }
     forEvery(Table("Grader", graders:_*)) {
       g => g.expected match {
         case TextArtifact(None) => g.check(TextArtifact(Some(""))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
         case TextArtifact(Some("")) => g.check(TextArtifact(Some(""))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
-        case _ => g.check(TextArtifact(Some(""))).right.value shouldBe AssessmentProver.Messages.BLANK
+        case _ => g.check(TextArtifact(Some(""))).toOption.value shouldBe AssessmentProver.Messages.BLANK
       }
     }
     forEvery(Table("Grader", graders:_*)) {
       g => g.expected match {
         case TextArtifact(None) => g.check(TextArtifact(Some("   \n  \t  "))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
         case TextArtifact(Some("")) => g.check(TextArtifact(Some("\n  \t\n"))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
-        case _ => g.check(TextArtifact(Some(""))).right.value shouldBe AssessmentProver.Messages.BLANK
+        case _ => g.check(TextArtifact(Some(""))).toOption.value shouldBe AssessmentProver.Messages.BLANK
       }
     }
   }
@@ -1455,7 +1456,7 @@ class AssessmentProverTests extends TacticTestBase {
         val result = grader.check(t)
         result match {
           case Left(l) =>
-            l shouldBe Symbol("proved") withClue s"$t: ${result.right.toOption.getOrElse("<unknown>")}"
+            l shouldBe Symbol("proved") withClue s"$t: ${result.toOption.getOrElse("<unknown>")}"
             println("Successfully verified sol")
           case Right(msg) =>
             msg shouldBe "INSPECT" withClue t

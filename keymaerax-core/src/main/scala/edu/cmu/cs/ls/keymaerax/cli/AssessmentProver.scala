@@ -653,7 +653,7 @@ object AssessmentProver {
                     run(() => prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(hs.toFormula, es.toFormula))), t))
                   })
                   if (lemmaResults.forall(_.isLeft)) {
-                    val lemmas = lemmaResults.map(_.left.get).map(byUS)
+                    val lemmas = lemmaResults.map(_.left.toOption.get).map(byUS)
                     run(() => prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR(Symbol("R"))) * (e.size - 1) & BranchTactic(lemmas)))
                   } else {
                     lemmaResults.find(_.isRight).get
@@ -693,7 +693,7 @@ object AssessmentProver {
     private def checkArtifactKind(have: Artifact, expected: Artifact): Either[Artifact, String] = (have, expected) match {
       case (_, AnyOfArtifact(artifacts)) =>
         val anyOfResults = artifacts.map(checkArtifactKind(have, _))
-        anyOfResults.find(r => r.isRight || r.left.get != have) match {
+        anyOfResults.find(r => r.isRight || r.left.toOption.get != have) match {
           case Some(result) => result
           case None => Left(have)
         }
@@ -1251,7 +1251,7 @@ object AssessmentProver {
       }
       )
       (problem, parsedAnswers.partition(_.isLeft) match {
-        case (as, pe) => (as.map(_.left.get), pe.map(_.right.get))
+        case (as, pe) => (as.map(_.left.toOption.get), pe.map(_.toOption.get))
       })
     })
 

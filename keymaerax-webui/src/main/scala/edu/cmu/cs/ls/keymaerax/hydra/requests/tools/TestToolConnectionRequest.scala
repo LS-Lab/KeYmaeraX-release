@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.tools
 
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider
@@ -26,9 +27,11 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
         new Thread(simpleQeTask).start()
         try {
           val result = simpleQeTask.get(1, TimeUnit.SECONDS)
-          if (result.isLeft && result.left.get == "true".asFormula) new GenericOKResponse :: Nil
-          else if (result.isLeft && result.left.get != "true".asFormula) new ErrorResponse("Testing connection failed: unexpected result " + result.left.get + " for test 2+3=5") :: Nil
-          else /* result.isRight */ new ErrorResponse("Testing connection failed", result.right.get) :: Nil
+          result match {
+            case Left(f) if f == "true".asFormula => new GenericOKResponse :: Nil
+            case Left(f) => new ErrorResponse(s"Testing connection failed: unexpected result $f for test 2+3=5") :: Nil
+            case Right(t) => new ErrorResponse("Testing connection failed", t) :: Nil
+          }
         } catch {
           case _: TimeoutException =>
             new ErrorResponse("Testing connection failed: tool is not responding. Please restart KeYmaera X.") :: Nil

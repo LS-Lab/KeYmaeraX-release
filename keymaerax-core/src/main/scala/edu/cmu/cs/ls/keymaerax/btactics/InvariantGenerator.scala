@@ -209,7 +209,7 @@ object InvariantGenerator extends Logging {
                 case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
               })
             } else {
-              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.toOption.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
           invs.toStream.distinct
         case _ => Seq().toStream

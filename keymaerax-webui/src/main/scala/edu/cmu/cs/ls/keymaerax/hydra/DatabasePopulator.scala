@@ -41,7 +41,7 @@ object DatabasePopulator extends Logging {
     val result = readKyx(url)
       .filterNot(e => exclude.exists(_.name == e.name))
       .map(DatabasePopulator.importModel(db, user, prove = false))
-    ImportResult(result.flatMap(_.left.toOption), result.flatMap(_.right.toOption))
+    ImportResult(result.flatMap(_.left.toOption), result.flatMap(_.toOption))
   }
 
   /** Reads a .kyx archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */

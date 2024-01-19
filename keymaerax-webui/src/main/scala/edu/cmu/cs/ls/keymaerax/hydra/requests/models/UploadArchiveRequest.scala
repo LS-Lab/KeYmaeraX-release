@@ -25,7 +25,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
 
       val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[(String, Int)]()))({ case ((failedImports, succeededImports), entry) =>
         val result = DatabasePopulator.importModel(db, userId, prove=false)(DatabasePopulator.toTutorialEntry(entry))
-        (failedImports ++ result.right.toSeq, succeededImports ++ result.left.toSeq)
+        (failedImports ++ result.toSeq, succeededImports ++ result.left.toSeq)
       })
       if (failedModels.isEmpty) {
         if (archiveEntries.size == 1) {

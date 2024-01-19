@@ -559,7 +559,7 @@ object BelleParser extends TacticParser with Logging {
       try {
         val t = ReflectiveExpressionBuilder(name, newArgs, g, defs)
         // backwards-compatibility with tactics that used definitions when they were auto-expanded immediately
-        if (TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY && expandAll && defs.decls.exists(d => d._2.interpretation.isRight && d._2.interpretation.right.get.isDefined)) {
+        if (TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY && expandAll && defs.decls.exists(d => d._2.interpretation.isRight && d._2.interpretation.toOption.get.isDefined)) {
           t.prettyString match {
             case "QE" | "smartQE" | "master" => TactixLibrary.expandAllDefs(defs.substs) & t
             case text =>
@@ -723,7 +723,7 @@ object BelleParser extends TacticParser with Logging {
     case OptionArg(ai) => parseArg(ai, undelim, loc)
     case ListArg(ai) =>
       val listElems = undelim.split("::").map(_.trim)
-      if (listElems.last == "nil") Left(listElems.dropRight(1).map(parseArg(ai, _, loc).left.get).toList)
+      if (listElems.last == "nil") Left(listElems.dropRight(1).map(parseArg(ai, _, loc).left.toOption.get).toList)
       else if (listElems.length == 1) parseArg(ai, listElems.head, loc) // allow single-element lists without ::nil notation
       else throw ParseException(s"Could not parse $undelim as a list when a list of ${ai.sort} was expected; lists must end in :: nil", loc)
   }

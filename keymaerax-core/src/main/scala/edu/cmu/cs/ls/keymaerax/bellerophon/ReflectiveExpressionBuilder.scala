@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -20,7 +25,7 @@ import DerivationInfoAugmentors._
 object ReflectiveExpressionBuilder extends Logging {
   def build(info: DerivationInfo, args: List[Either[Seq[Any], PositionLocator]],
             generator: Option[Generator.Generator[GenProduct]], defs: Declaration): BelleExpr = {
-    val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw ParseException("Filtered down to only right-inhabited elements... this exn should never be thrown.", UnknownLocation)))
+    val posArgs = args.flatMap(_.toOption)
     val withGenerator =
       if (info.needsGenerator) {
         generator match {

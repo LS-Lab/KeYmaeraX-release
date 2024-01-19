@@ -391,7 +391,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
     var next: Either[(String, Location, LexerMode), Option[(String, Token, Location)]] = Left(s, loc, mode)
     while (next.isLeft) {
-      val (cs, cloc, cmode) = next.left.get
+      val (cs, cloc, cmode) = next.left.toOption.get
       if (cs.isEmpty) next = Right(None)
       else {
         val lexPrefix = lexers.view.map({ case (r, lexer) => r.findPrefixOf(cs).map(lexer(cs, cloc, cmode, _)) }).find(_.isDefined).flatten
@@ -409,7 +409,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
         }
       }
     }
-    next.right.get
+    next.toOption.get
   }
 
   /**
