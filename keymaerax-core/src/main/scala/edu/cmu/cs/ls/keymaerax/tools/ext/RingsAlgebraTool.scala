@@ -318,7 +318,7 @@ class RingsLibrary(terms: Traversable[Term]) {
     private val tmVariablesI = Seq(timeI)++const0I
 
     def applyODE(xs: Seq[Ring]) = {
-      rhs.map(f_i => substitutes((state,xs).zipped.toMap.get)(f_i))
+      rhs.map(f_i => substitutes(state.lazyZip(xs).toMap.get)(f_i))
     }
 
     /** compute the Picard operator P(x)*/
@@ -329,7 +329,7 @@ class RingsLibrary(terms: Traversable[Term]) {
                        ) : (Seq[Ring], Seq[Ring]) =
     {
       val fps = applyODE(ps)
-      val pairs = (x0R,fps).zipped.map{case (x0R_i, fp) =>
+      val pairs = x0R.lazyZip(fps).map{case (x0R_i, fp) =>
         val int = integrate(timeI)(fp)
         val sum = x0R_i + int
         splitInternal(sum, order, tmVariablesI, consts_to_remainder)

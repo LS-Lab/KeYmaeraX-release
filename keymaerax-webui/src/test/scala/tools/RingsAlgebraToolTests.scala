@@ -103,7 +103,8 @@ class RingsAlgebraToolTests extends TacticTestBase  {
       "-y^2,x+y".split(',').map(_.asTerm))
     val x0R = "2*r0()+0.5*r1(),r0()+0.1*r1()".split(',').map(_.asTerm).map(R.toRing)
     val psR = "r0()*r1()*t + 2*r0(),r0()*t-r1()".split(',').map(t => R.toRing(t.asTerm))
-    ode.PicardOperation(x0R, psR, 3).zipped.map { case (a, b) => (R.fromRing(a), R.fromRing(b)) }.toList shouldBe
+    val (left, right) = ode.PicardOperation(x0R, psR, 3)
+    left.lazyZip(right).map { case (a, b) => (R.fromRing(a), R.fromRing(b)) }.toList shouldBe
       ("1/2*r1()+2*r0()+(-t)*r1()^2".asTerm, "t^2*r0()*r1()+(-1)/3*t^3*r0()^2".asTerm) ::
         ("1/10*r1()+r0()+(-t)*r1()+2*t*r0()+1/2*t^2*r0()".asTerm, "1/2*t^2*r0()*r1()".asTerm) :: Nil
   }

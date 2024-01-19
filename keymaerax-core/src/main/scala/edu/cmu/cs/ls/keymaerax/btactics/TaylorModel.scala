@@ -349,7 +349,7 @@ object TaylorModelTactics extends Logging {
 
     val initial_condition =
       And(Equal(time, time0),
-        (state, templateTmCompose(names, dim)).zipped.map { case (v, tm) => Equal(v, tm) }.reduceRight(And))
+        state.lazyZip(templateTmCompose(names, dim)).map { case (v, tm) => Equal(v, tm) }.reduceRight(And))
 
     private def lower_rembounds(t: Term)(td: Int => Term)(c: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
       LessEqual(Plus(minF(Number(0), Times(t, td(i))), c(i)), remainder(i))
@@ -378,7 +378,7 @@ object TaylorModelTactics extends Logging {
       * only uses those coefficients that are actually used
       * */
     def tmMonomial(coeff: Term, exponents: List[Int]) = {
-      val monomial = (localTime::right_vars, exponents).zipped.toList.
+      val monomial = (localTime::right_vars).lazyZip(exponents).
         filter{case (_, e) => e > 0}.
         map{ case (v, e) => if (e == 1) v else Power(v, Number(e))}
       if (monomial.isEmpty) coeff else Times(coeff, monomial.reduceLeft(Times))
@@ -422,7 +422,7 @@ object TaylorModelTactics extends Logging {
       case _ => None
     })
     // Horner(f (p + r) - p')
-    private val hornerFprPp = (fpr, pp).zipped.map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
+    private val hornerFprPp = fpr.lazyZip(pp).map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
     private [btactics] val innerNumbericCondition =
       hornerFprPp.zipWithIndex.map { case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i))) }.reduceRight(And)
     val numbericCondition =
@@ -431,7 +431,7 @@ object TaylorModelTactics extends Logging {
         FormulaTools.quantifyForall(localTime :: remainders,
           Imply(
             And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
-              (lower_rembounds(timestep)(tdL)(cL), upper_rembounds(timestep)(tdU)(cU)).zipped.map(And).reduceRight(And)),
+              lower_rembounds(timestep)(tdL)(cL).lazyZip(upper_rembounds(timestep)(tdU)(cU)).map(And).reduceRight(And)),
             innerNumbericCondition
           ))
       )
@@ -448,9 +448,9 @@ object TaylorModelTactics extends Logging {
       Exists(Seq(r), And(Equal(x, Plus(p, r)), And(LessEqual(l, r), LessEqual(r, u))))
     }
     private val post = {
-      (state, picard_iteration_approx).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+      state.lazyZip(picard_iteration_approx).zipWithIndex.map { case ((x, p), i) =>
         tmEnclosure(x, i, p, postIvlL(i), postIvlU(i))
-      }
+      }.toList
     }
 
     private def postIvlL(i: Int) = {
@@ -463,10 +463,10 @@ object TaylorModelTactics extends Logging {
 
     toc("post")
     private val postUnfolded = SubstitutionHelper.replaceFree(
-      (And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep))::(state, picard_iteration_approx).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+      (And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)) :: state.lazyZip(picard_iteration_approx).zipWithIndex.map { case ((x, p), i) =>
         val r = Minus(x, p)
         And(LessEqual(postIvlL(i), r), LessEqual(r, postIvlU(i)))
-      }).reduceRight(And))(localTime, Minus(time, time0))
+      }.toList).reduceRight(And))(localTime, Minus(time, time0))
     toc("postUnfolded")
 
     private def boxODETimeStep(post: Formula) =
@@ -737,7 +737,7 @@ object TaylorModelTactics extends Logging {
       for (k <- 0 until 40) {
         val remainders0 = remainders
         val remainders1 = numericPicard(prec, boundees, timebound, right_bounds, constant_errors)(remainders0)
-        subset = (remainders0, remainders1).zipped.forall{ case ((l0, u0), (l, u)) => l0 < l && u < u0 }
+        subset = remainders0.lazyZip(remainders1).forall{ case ((l0, u0), (l, u)) => l0 < l && u < u0 }
         val remainders2 = if (!subset) {
           // epsilon inflation -- values for eps and algorithm from Ingo Eble: "Ueber Taylor Modelle", PhD thesis 2007
           val eps1 = 1e-2

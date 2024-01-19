@@ -307,7 +307,7 @@ object SwitchedSystems extends TacticProvider {
         require( u1==u2 && u2==u3, "Mode variable mismatch: "+ u1 + " "+ u2+ " "+u3)
         require( modes1==modes2 && modes2==modes3, "Mode labels mismatch: "+ modes1 + " "+ modes2+ " "+modes3)
 
-        Controlled(initopt, (modes1,stripTimer(odes,topt),transitions).zipped.toList, u1)
+        Controlled(initopt, modes1.lazyZip(stripTimer(odes, topt)).lazyZip(transitions).toList, u1)
       }
       case _ =>
         throw new IllegalArgumentException("Unable to parse program for controlled switching " + p)
@@ -1169,7 +1169,7 @@ object SwitchedSystems extends TacticProvider {
     // Note: For stability, we actually can settle for lambda_p < 0
 
     // Construct the V_p e^(-lambda * T_p) terms
-    val lyapsE : List[Term] = (lyaps, lambdas, ss.maxDwell).zipped.map( (lyap,lambda,mD) =>
+    val lyapsE : List[Term] = lyaps.lazyZip(lambdas).lazyZip(ss.maxDwell).map( (lyap,lambda,mD) =>
       lambda match {
         case Greater(l, n : Number) if n.value==0 => lyap
         case LessEqual(l, n : Number) if n.value==0 =>
@@ -1179,7 +1179,7 @@ object SwitchedSystems extends TacticProvider {
     )
 
     //\\exists d_i ||x||<d_i -> V_p E < w_i
-    val delw : List[Formula] = (lyapsE,delis).zipped.map( (lyapE,deli) => {
+    val delw : List[Formula] = lyapsE.lazyZip(delis).map( (lyapE,deli) => {
       Exists(deli :: Nil,
         And(And(Greater(deli, Number(0)), Less(deli, eps)),
           cvars.foldRight(Imply(Less(normsq, Power(deli,Number(2))), Less(lyapE, w)): Formula)((v, f) => Forall(v :: Nil, f))
@@ -1223,12 +1223,12 @@ object SwitchedSystems extends TacticProvider {
     // Continuation
     val conttac = {
       val invLHS: List[Term] =
-        (lambdas, lyapsE).zipped.map((lambda, lyapE) =>
+        lambdas.lazyZip(lyapsE).map((lambda, lyapE) =>
           Times(lyapE, expExpand(Times(lambda.asInstanceOf[ComparisonFormula].left, ss.timer), expDepth)))
 
       val invLess = invLHS.map(e => Less(e,w))
 
-      val invBody = (invLess,lambdas,ss.maxDwell).zipped.map((less,lambda,mD) =>
+      val invBody = invLess.lazyZip(lambdas).lazyZip(ss.maxDwell).map((less,lambda,mD) =>
         lambda match {
           case Greater(l, n : Number) if n.value==0 => less
           case LessEqual(l, n : Number) if n.value==0 =>
@@ -1237,7 +1237,7 @@ object SwitchedSystems extends TacticProvider {
         }
       )
 
-      val invPre = (ss.modes, invBody).zipped.map((mode, body) =>
+      val invPre = ss.modes.lazyZip(invBody).map((mode, body) =>
         And(Equal(ss.u, mkMode(mode._1)), body)
       )
       val invMode =
@@ -1246,7 +1246,7 @@ object SwitchedSystems extends TacticProvider {
       val inv = And(invOr, And(GreaterEqual(ss.timer,Number(0)),Less(normsq, epssq)))
 
       val gen =
-        (ss.modes, invBody).zipped.map((mode, body) =>
+        ss.modes.lazyZip(invBody).map((mode, body) =>
           Imply(Equal(ss.u, mkMode(mode._1)), And(body,GreaterEqual(ss.timer,Number(0))))
         ).reduceRight(And)
 
@@ -1264,7 +1264,7 @@ object SwitchedSystems extends TacticProvider {
             composeb(1) & generalize(gen)(1) < (
               SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize &
                 OnAll(Idioms.?(QE & done)),
-              (invLess,wis).zipped.map( (less,wi) =>
+              invLess.lazyZip(wis).map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL(Symbol("Llast")) <(
                   implyR(1) & expandAllDefs(Nil) & id,
@@ -1465,7 +1465,7 @@ object SwitchedSystems extends TacticProvider {
     val kis =
       (0 to ss.odes.length-1).map(i => Variable(kName,Some(i))).toList
 
-    val derPair : List[(Formula,Formula)] = (ss.odes,lyaps,kis).zipped.map( (ode,lyap,ki) => {
+    val derPair : List[(Formula,Formula)] = ss.odes.lazyZip(lyaps).lazyZip(kis).map( (ode,lyap,ki) => {
       val ld = DifferentialHelper.simplifiedLieDerivative(ode.ode, lyap, ToolProvider.simplifierTool())
       val bod = Less(ld,ki )
       (Exists(ki :: Nil,
@@ -1549,7 +1549,7 @@ object SwitchedSystems extends TacticProvider {
             ).reduceRight((p1, p2) => orL(-1) <(p1,p2)),
           ArithmeticSimplification.hideFactsAbout(TVar::eps::uis) &
           implyRi & implyR(1) &
-          (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
+          kis.lazyZip(lyaps).lazyZip(derbods).map( (ki,lyap,bd) =>
             ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
               DifferentialTactics.diffUnpackEvolutionDomainInitially(Symbol("Rlast")) &
               cutR(And( Less(lyap,w), Imply(GreaterEqual(lyap,u),Less(lyap, Plus(w,Times(k,tVar))))))(Symbol("Rlast")) <(
@@ -1607,7 +1607,7 @@ object SwitchedSystems extends TacticProvider {
             composeb(1) & generalize(gen)(1) <(
               ArithmeticSimplification.hideFactsAbout(kis) & unfoldProgramNormalize & OnAll(QE),
 
-              (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
+              kis.lazyZip(lyaps).lazyZip(derbods).map( (ki,lyap,bd) =>
                   composeb(1) & testb(1) & implyL(Symbol("Llast")) <(
                   implyR(1) & expandAllDefs(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
@@ -1766,7 +1766,7 @@ object SwitchedSystems extends TacticProvider {
     // Note: For stability, we actually can settle for lambda_p < 0
 
     // Construct the V_p e^(-lambda * T_p) terms
-    val lyapsE : List[Term] = (lyaps, lambdas, ss.maxDwell).zipped.map( (lyap,lambda,mD) =>
+    val lyapsE : List[Term] = lyaps.lazyZip(lambdas).lazyZip(ss.maxDwell).map( (lyap,lambda,mD) =>
       lambda match {
         case Greater(l, n : Number) if n.value==0 => lyap
         case LessEqual(l, n : Number) if n.value==0 =>
@@ -1776,7 +1776,7 @@ object SwitchedSystems extends TacticProvider {
     )
 
     // The cut for each of the invariant's RHS
-    val wbod : List[Formula] = (lyapsE,wis).zipped.map( (lyapE,wi) => {
+    val wbod : List[Formula] = lyapsE.lazyZip(wis).map( (lyapE,wi) => {
       Exists(wi :: Nil,
         And(Greater(wi, Number(0)),
           cvars.foldRight(Imply(Less(normsq, delsq), Less(lyapE,wi)): Formula)((v, f) => Forall(v :: Nil, f))
@@ -1834,12 +1834,12 @@ object SwitchedSystems extends TacticProvider {
     // Continuation
     val conttac = {
       val invLHS: List[Term] =
-        (lambdas, lyapsE).zipped.map((lambda, lyapE) =>
+        lambdas.lazyZip(lyapsE).map((lambda, lyapE) =>
           Times(lyapE,Times(expExpand(Times(tVar,rate),expDepth),expExpand(Times(Minus(lambda.asInstanceOf[ComparisonFormula].left,rate), ss.timer), expDepth))))
 
       val invLess = invLHS.map(e => Less(e, w))
 
-      val invBody = (invLess, lambdas, ss.maxDwell).zipped.map((less, lambda, mD) =>
+      val invBody = invLess.lazyZip(lambdas).lazyZip(ss.maxDwell).map((less, lambda, mD) =>
         lambda match {
           case Greater(l, n: Number) if n.value == 0 => less
           case LessEqual(l, n: Number) if n.value == 0 =>
@@ -1848,7 +1848,7 @@ object SwitchedSystems extends TacticProvider {
         }
       )
 
-      val invPre = (ss.modes, invBody).zipped.map((mode, body) =>
+      val invPre = ss.modes.lazyZip(invBody).map((mode, body) =>
         And(Equal(ss.u, mkMode(mode._1)), body)
       )
       val invMode =
@@ -1858,7 +1858,7 @@ object SwitchedSystems extends TacticProvider {
       val inv = And(invOr, And(GreaterEqual(ss.timer, Number(0)), GreaterEqual(tVar, ss.timer)))
 
       val gen =
-        (ss.modes, invBody).zipped.map((mode, body) =>
+        ss.modes.lazyZip(invBody).map((mode, body) =>
           Imply(Equal(ss.u, mkMode(mode._1)), And(body,And(GreaterEqual(ss.timer, Number(0)), GreaterEqual(tVar, ss.timer))))
         ).reduceRight(And)
 
@@ -1885,7 +1885,7 @@ object SwitchedSystems extends TacticProvider {
             ArithmeticSimplification.hideFactsAbout(TVar::eps::uis) &
             composeb(1) & generalize(gen)(1) < (
               SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll( Idioms.?(QE & done)),
-              (invLess,wis).zipped.map( (less,wi) =>
+              invLess.lazyZip(wis).map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL(Symbol("Llast")) <(
                   implyR(1) & expandAllDefs(Nil) & id,

@@ -49,7 +49,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     val ua = if (lat == uat) ua1 else eval_ivl(prec)(bounds)(uat)._2
     val (lb, ub1) = eval_ivl(prec)(bounds)(lbt)
     val ub = if (lbt == ubt) ub1 else eval_ivl(prec)(bounds)(ubt)._2
-    val pairs = (List(la, la, ua, ua), List(lb, ub, lb, ub)).zipped
+    val pairs = List(la, la, ua, ua).lazyZip(List(lb, ub, lb, ub))
     val lowers = pairs map ((a, b) => f(a, b, downContext(prec)))
     val uppers = pairs map ((a, b) => f(a, b, upContext(prec)))
     (lowers.reduceLeft(_.min(_)), uppers.reduceLeft(_.max(_)))
@@ -860,7 +860,7 @@ object IntervalArithmeticV2 extends TacticProvider {
       apply(rule.apply(USubst(instantiation map (ab => SubstitutionPair(ab._1, ab._2)))), 0)
 
   private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap) : (BoundMap, BoundMap) =
-  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0) { (lue: (BoundMap, BoundMap), assmi) =>
+  assms.zipWithIndex.foldLeft(lowers0, uppers0) { (lue: (BoundMap, BoundMap), assmi) =>
     (lue, assmi) match {
       case ((lowers, uppers), (assm, i)) =>
         assm match {
@@ -965,19 +965,19 @@ object IntervalArithmeticV2 extends TacticProvider {
       fml match {
         case _: LessEqual =>
           proveCompBoth(qeTool,
-            leBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+            leBothSeq.apply(USubst(List(t_f, t_F, t_gg, t_g).lazyZip(List(f, F, gg, g)) map SubstitutionPair)),
             provable, F_prv, gg_prv)
         case _: Less =>
           proveCompBoth(qeTool,
-            ltBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+            ltBothSeq.apply(USubst(List(t_f, t_F, t_gg, t_g).lazyZip(List(f, F, gg, g)) map SubstitutionPair)),
             provable, F_prv, gg_prv)
         case _: GreaterEqual =>
           proveCompBoth(qeTool,
-            geBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+            geBothSeq.apply(USubst(List(t_f, t_ff, t_G, t_g).lazyZip(List(f, ff, G, g)) map SubstitutionPair)),
             provable, G_prv, ff_prv)
         case _: Greater =>
           proveCompBoth(qeTool,
-            gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+            gtBothSeq.apply(USubst(List(t_f, t_ff, t_G, t_g).lazyZip(List(f, ff, G, g)) map SubstitutionPair)),
             provable, G_prv, ff_prv)
       })
   }
@@ -1132,7 +1132,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     val qe = ToolProvider.qeTool().get
     val bnds = proveBounds(prec)(qe)(sequent.ante)(include_assms = true)(BoundMap(), BoundMap(), Map())(terms.toIndexedSeq)
     val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
-    (prvs, prvs.indices).zipped.foldLeft(provable) {
+    prvs.zipWithIndex.foldLeft(provable) {
       (result, prvi) => prvi match {
         case (prv: ProvableSig, i: Int) =>
         (0 until i).foldLeft(result.apply(Cut(prv.conclusion.succ(0)), 0).apply(HideRight(SuccPos(0)), 1)){

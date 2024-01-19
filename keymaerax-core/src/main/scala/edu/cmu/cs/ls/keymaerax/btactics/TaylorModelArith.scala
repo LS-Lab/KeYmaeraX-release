@@ -743,7 +743,7 @@ object TaylorModelArith {
       val boxTMEnclosure1 = instantiation(boxTMEnclosure)
       val numbericCondition1 = instantiation(numbericCondition)
 
-      val initialStateEqs = (x0, initialConditionFmls1.tail).zipped.map { case (x, Equal(y, t)) if x.elem == y =>
+      val initialStateEqs = x0.lazyZip(initialConditionFmls1.tail).map { case (x, Equal(y, t)) if x.elem == y =>
         val eq1 = x.dropEmptyInterval.getOrElse(throw new RuntimeException("intervals have been checked for emptiness"))
         val eq2 = weakenWith(x.context, x.poly.resetTerm.equate(ofTerm(t)).getOrElse(throw new RuntimeException("this equality should hold by construction: " +
           x.poly.resetTerm.term + " = " + ofTerm(t).term)))

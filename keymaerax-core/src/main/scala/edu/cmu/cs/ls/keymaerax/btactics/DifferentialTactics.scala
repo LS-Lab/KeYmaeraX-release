@@ -2211,7 +2211,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   case class ODESpecific(ode: DifferentialProgram, variant: String => String = _ + "_") {
     private val vars = DifferentialHelper.getPrimedVariables(ode)
     private val vvars = vars.zipWithIndex.map(vi => Variable(variant(vi._1.name), vi._1.index))
-    private val ode2 = (vars,vvars).zipped.foldLeft(ode)((a, b) => URename(b._1, b._2)(a))
+    private val ode2 = vars.lazyZip(vvars).foldLeft(ode)((a, b) => URename(b._1, b._2)(a))
 
     private def tuple_of_list(ts: List[Term]) : Term = ts match {
       case Nil => Nothing
