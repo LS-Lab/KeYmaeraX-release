@@ -89,10 +89,10 @@ object CodeGen {
       case None => StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
     }
 
-    val codegenStart = Platform.currentTime
+    val codegenStart = System.currentTimeMillis()
     //@todo input variables (nondeterministically assigned in original program)
     val output = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs))(inputFormula, theVars, Set(), outputFileName)
-    Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
+    Console.println("[codegen time " + (System.currentTimeMillis() - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName)
     pw.write(head)
     pw.write("/* @evidence: print of CGenerator of input */\n\n")

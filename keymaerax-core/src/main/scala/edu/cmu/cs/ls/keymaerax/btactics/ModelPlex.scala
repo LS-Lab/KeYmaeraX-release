@@ -81,9 +81,9 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       case _ => throw new IllegalArgumentException("Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model; both require a simplification tool")
     }
 
-    val proofStart = Platform.currentTime
+    val proofStart = System.currentTimeMillis()
     val result = TactixLibrary.proveBy(ProvableSig.startPlainProof(mxInputSequent), tactic)
-    val proofDuration = Platform.currentTime - proofStart
+    val proofDuration = System.currentTimeMillis() - proofStart
     logger.info("[proof time " + proofDuration + "ms]")
 
     assert(result.subgoals.size == 1 && result.subgoals.head.ante.isEmpty &&

@@ -64,9 +64,9 @@ object KeYmaeraXProofChecker {
     val proofStatistics = try {
       qeDurationListener.reset()
       rcfDurationListener.reset()
-      val proofStart: Long = Platform.currentTime
+      val proofStart: Long = System.currentTimeMillis()
       val witness = KeYmaeraXProofChecker(timeout, defs)(tactic)(inputSequent)
-      val proofDuration = Platform.currentTime - proofStart
+      val proofDuration = System.currentTimeMillis() - proofStart
       val qeDuration = qeDurationListener.duration
       val rcfDuration = rcfDurationListener.duration
       val proofSteps = witness.steps
