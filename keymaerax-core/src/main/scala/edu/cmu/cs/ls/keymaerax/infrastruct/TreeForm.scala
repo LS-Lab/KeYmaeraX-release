@@ -205,7 +205,7 @@ object TreeForm {
 
   def multiset[A](l : List[A]): Multiset[A] = {
     l.foldLeft(Set.empty[(A, Int)])({case (ms, t) =>
-      ms.find({case (t2, n) => t2.equals(t)}) match {
+      ms.find({case (t2, n) => t2 == t}) match {
         case None => ms.+((t, 1))
         case Some(old@(t2, n)) => ms.-(old).+((t2, n+1))
       }})
@@ -213,7 +213,7 @@ object TreeForm {
 
   def subtract[A](x: Multiset[A], y: Multiset[A]): Multiset[A] = {
     x.flatMap({case (t1, n1) =>
-      y.find({case (t2, n2) => t1.equals(t2)}) match {
+      y.find({case (t2, n2) => t1 == t2}) match {
         case None => Set.empty
         case Some((t2, n2)) =>
           if (n1 > n2) Set.empty.+((t1, n1-n2))
