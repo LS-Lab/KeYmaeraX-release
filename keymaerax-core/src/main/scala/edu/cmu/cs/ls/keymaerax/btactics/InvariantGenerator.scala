@@ -179,10 +179,10 @@ object InvariantGenerator extends Logging {
       } else postConjuncts ++ combined
     }
     defs.exhaustiveSubst(sequent).sub(pos) match {
-      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: defs.exhaustiveSubst(sequent).ante.toList).distinct.map(_ -> None).toStream.distinct
+      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: defs.exhaustiveSubst(sequent).ante.toList).distinct.map(_ -> None).to(LazyList).distinct
       case Some(Box(l: Loop, post))      =>
         val combined = combinedAssumptions(l, post).distinct
-        (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(_ -> None).toStream.distinct
+        (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(_ -> None).to(LazyList).distinct
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }}
@@ -211,10 +211,10 @@ object InvariantGenerator extends Logging {
             } else {
               pegasusInvs.filter(_.isLeft).flatMap(_.left.toOption.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
-          invs.toStream.distinct
-        case _ => Seq().toStream
+          invs.to(LazyList).distinct
+        case _ => Seq().to(LazyList)
       }
-    case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
+    case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().to(LazyList).distinct
     case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
     case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
   }
@@ -233,7 +233,7 @@ object InvariantGenerator extends Logging {
     }
     val evos = if (constraint==True) Nil else FormulaTools.conjuncts(constraint)
     val solutions = try {
-      ToolProvider.pdeTool().get.pdeSolve(ode).toStream.distinct
+      ToolProvider.pdeTool().get.pdeSolve(ode).to(LazyList).distinct
     } catch {
       case ex: ToolException => throw new BelleNoProgress("inverseCharacteristic generation unsuccessful", ex)
     }
@@ -261,7 +261,7 @@ object InvariantGenerator extends Logging {
     * to speed up computations.
     * @author Andre Platzer */
   def cached(generator: Generator[GenProduct]): Generator[GenProduct] = {
-    val cache: scala.collection.mutable.Map[Box, Stream[GenProduct]] = new scala.collection.mutable.LinkedHashMap()
+    val cache: scala.collection.mutable.Map[Box, LazyList[GenProduct]] = new scala.collection.mutable.LinkedHashMap()
     (sequent,pos,defs) => {
       val box = sequent.sub(pos) match {
         case Some(Box(ODESystem(ode, And(True, q)), pf)) => Box(ODESystem(ode, q), pf)

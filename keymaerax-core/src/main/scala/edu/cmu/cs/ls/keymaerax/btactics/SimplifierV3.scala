@@ -229,7 +229,7 @@ object SimplifierV3 extends TacticProvider {
       }
 
     //todo: Should this rewrite to saturation? Or is once enough?
-    val rw = taxs(rect,ctx).toStream.flatMap( pr => applyTermProvable(rect,ctx,pr)).headOption
+    val rw = taxs(rect,ctx).to(LazyList).flatMap( pr => applyTermProvable(rect,ctx,pr)).headOption
     rw match {
       case None => (rect,recpropt)
       case Some((tt,prem,pr)) =>
@@ -652,7 +652,7 @@ object SimplifierV3 extends TacticProvider {
     }
 
     //todo: Should this rewrite to saturation? Or is once enough?
-    val rw = faxs(recf,ctx).toStream.flatMap( pr => applyFormulaProvable(recf,ctx,pr)).headOption
+    val rw = faxs(recf,ctx).to(LazyList).flatMap( pr => applyFormulaProvable(recf,ctx,pr)).headOption
 
     rw match {
       case None => (recf,recpropt)

@@ -228,10 +228,10 @@ class TactixLibraryTests extends TacticTestBase {
 
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).map(_ -> None).toStream
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).map(_ -> None).to(LazyList)
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     //@note postcondition is invariant, loopPostMaster won't ask invariant generator
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find an invariant for curvebot" in withMathematica { _ =>
@@ -244,7 +244,7 @@ class TactixLibraryTests extends TacticTestBase {
                 #   }*
                 #  ] !(x=ox & y=oy)""".stripMargin('#').asFormula
     //@note postcondition is invariant
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find an invariant for curvebot with fns" in withMathematica { _ =>
@@ -257,7 +257,7 @@ class TactixLibraryTests extends TacticTestBase {
                 #   }*
                 #  ] !(x=ox() & y=oy())""".stripMargin('#').asFormula
     //@note postcondition is invariant
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "eventually run out of ideas" taggedAs SlowTest in withMathematica { _ =>
@@ -293,11 +293,11 @@ class TactixLibraryTests extends TacticTestBase {
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val proof = proveBy(fml,
-      implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)
+      implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" taggedAs TodoTest in withMathematica { _ =>
@@ -305,11 +305,11 @@ class TactixLibraryTests extends TacticTestBase {
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val proof = proveBy(fml,
-      implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).toStream)(1)
+      implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).to(LazyList))(1)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find by assignb an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -325,7 +325,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find by step an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -341,7 +341,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find by chase an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
@@ -357,7 +357,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).toStream)(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   "Normalize" should "prove simple formula" in {

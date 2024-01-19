@@ -1088,7 +1088,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        Stream[GenProduct]()
+        LazyList[GenProduct]()
     }
 
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
@@ -1216,7 +1216,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     def odeWithInvgen(sys: ODESystem, generator: Generator[GenProduct],
-                      onGeneratorError: Throwable => Stream[GenProduct]): DependentPositionTactic = fastODE(
+                      onGeneratorError: Throwable => LazyList[GenProduct]): DependentPositionTactic = fastODE(
       try {
         generator(seq, pos, defs).iterator
       } catch {
@@ -1264,7 +1264,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
                       b.prettyString + " but ODE automation was unable to prove it.", ex)
                   )(pos)
                   ,
-                  odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
+                  odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => LazyList[GenProduct]())(pos)
                 )(pos)
             )
         }

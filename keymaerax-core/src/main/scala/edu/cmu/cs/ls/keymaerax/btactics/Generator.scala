@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -22,12 +23,12 @@ object Generator {
     * @tparam A the type of results that are being generated.
     * @author Stefan Mitsch
     */
-  type Generator[A] = (Sequent, Position, Declaration) => Stream[A]
+  type Generator[A] = (Sequent, Position, Declaration) => LazyList[A]
 }
 
 /** Generator always providing a fixed list as output. */
 case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position, defs: Declaration): Stream[A] = list.toStream
+  def apply(s: Sequent, p: Position, defs: Declaration): LazyList[A] = list.to(LazyList)
 }
 
 object ConfigurableGenerator {
@@ -54,27 +55,27 @@ object ConfigurableGenerator {
   * @author Stefan Mitsch
   * */
 class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expression,Seq[A]]()) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position, defs: Declaration): Stream[A] = s.sub(p) match {
+  def apply(s: Sequent, p: Position, defs: Declaration): LazyList[A] = s.sub(p) match {
     case Some(Box(prg, _)) => findPrgProducts(prg)
     case Some(Diamond(prg, _)) => findPrgProducts(prg)
-    case Some(f) => products.getOrElse(f, Nil).distinct.toStream
-    case None => Nil.toStream
+    case Some(f) => products.getOrElse(f, Nil).distinct.to(LazyList)
+    case None => Nil.to(LazyList)
   }
 
   /** Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint. */
-  private def findPrgProducts(prg: Program): Stream[A] = prg match {
+  private def findPrgProducts(prg: Program): LazyList[A] = prg match {
     case sys@ODESystem(ode, _) =>
       val odeProducts = products.find({ case (ODESystem(key, _), _) => ode == key case _ => false })
       val extractedConditionalProducts = odeProducts.map(p => (
         p._1,
         p._2.map(extractConditionalDiffInv(DifferentialHelper.atomicOdes(p._1.asInstanceOf[ODESystem]), _)).
           filter(_.isDefined).flatten))
-      extractedConditionalProducts.getOrElse(() -> findConditionalDiffInv(sys))._2.distinct.toStream
+      extractedConditionalProducts.getOrElse(() -> findConditionalDiffInv(sys))._2.distinct.to(LazyList)
     case _ => products.get(prg) match {
-      case Some(products) => products.distinct.toStream
+      case Some(products) => products.distinct.to(LazyList)
       case None => products.find({ case (k, _) => Try(!UnificationMatch(k, prg).isEmpty).getOrElse(false) }) match {
-        case Some((_, products)) => products.distinct.toStream
-        case None => Nil.toStream
+        case Some((_, products)) => products.distinct.to(LazyList)
+        case None => Nil.to(LazyList)
       }
     }
   }
