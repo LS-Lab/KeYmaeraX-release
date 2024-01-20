@@ -4,6 +4,8 @@ target/
 
 # IntelliJ IDEA
 /.idea/*
+!/.idea/codeStyles/
+!/.idea/codeStyles/*
 !/.idea/copyright/
 !/.idea/copyright/*
 
