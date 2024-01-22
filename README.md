@@ -206,7 +206,7 @@ A comparison of KeYmaera X with its predecessor provers is described in:
 
 ## Copyright and Licenses
 
-Copyright (C) 2014-2023 Carnegie Mellon University, Karlsruhe Institute of Technology
+Copyright (C) 2014-2024 Carnegie Mellon University, Karlsruhe Institute of Technology
 
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer,
 Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell,
