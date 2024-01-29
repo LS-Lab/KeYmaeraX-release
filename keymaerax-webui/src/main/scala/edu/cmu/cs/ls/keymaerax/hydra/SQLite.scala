@@ -506,7 +506,7 @@ object SQLite {
         case Some((modelId, lemmaId)) =>
           if (lemmaId.isEmpty) {
             val (lemmaId, _) = initializeProofForModel(modelId.get, None)
-            q.update(modelId, Some(lemmaId))
+            run(q.update(modelId, Some(lemmaId)))
           }
 
           val stepCount = run(stepCountQuery(proofId).result)
