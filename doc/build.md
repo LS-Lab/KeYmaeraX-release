@@ -18,8 +18,17 @@ two different jar files can be created:
 - `keymaerax-core-<version>.jar` includes just a CLI.
 - `keymaerax-webui-<version>.jar` includes both a CLI and a web UI.
 
-First, copy the `default.properties` file to `local.properties`
-and edit `mathematica.jlink.path` to point to the `JLink.jar` from your Mathematica or Wolfram Engine installation.
+To build either or both of these files, follow the steps below.
+
+### Mathematica or Wolfram Engine
+
+KeYmaera X has optional support of Wolfram Mathematica or Wolfram Engine at runtime.
+However, during compilation, Mathematica's `JLink.jar` file is required.
+At this time, there is no support for compiling without this file.
+
+Copy the `default.properties` file to `local.properties`
+and edit `mathematica.jlink.path` to point to the `JLink.jar`
+from your Mathematica or Wolfram Engine installation.
 If you installed Mathematica at the
 [default path](https://reference.wolfram.com/language/tutorial/WolframSystemFileOrganization.html),
 the `JLink.jar` file is located at
@@ -27,6 +36,18 @@ the `JLink.jar` file is located at
 - `/usr/local/Wolfram/Mathematica/13.0/SystemFiles/Links/JLink/JLink.jar` on Linux
 - `/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/JLink.jar` on macOS
 - `C:\Program Files\Wolfram Research\Mathematica\13.0\SystemFiles\Links\Jlink\Jlink.jar` on Windows
+
+### Example projects
+
+If you want to include the example projects
+from the [KeYmaeraX-projects](https://github.com/LS-Lab/KeYmaeraX-projects) repo,
+clone it to `keymaerax-webui/src/main/resources/keymaerax-projects`:
+
+```shell
+$ git clone https://github.com/LS-Lab/KeYmaeraX-projects keymaerax-webui/src/main/resources/keymaerax-projects
+```
+
+### Build with sbt
 
 To create both jar files, run `sbt --mem 2048 assembly`.  
 To create just the core jar file, run `sbt --mem 2048 'project core' assembly`.  
