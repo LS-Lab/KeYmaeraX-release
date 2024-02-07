@@ -1,0 +1,34 @@
+# This action builds all keymaerax artifacts.
+#
+# See also:
+# https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
+name: Build
+on: [ push ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Checkout example projects
+        uses: actions/checkout@v4
+        with:
+          repository: LS-Lab/KeYmaeraX-projects
+          path: keymaerax-webui/src/main/resources/keymaerax-projects
+
+      - name: Set up java and sbt
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+
+      - name: Obtain JLink.jar
+        uses: ./.github/actions/obtain-jlink-jar
+
+      - name: Prepare local.properties
+        run: echo "mathematica.jlink.path=JLink.jar" > local.properties
+
+      - name: Build
+        run: sbt --mem 2048 assembly

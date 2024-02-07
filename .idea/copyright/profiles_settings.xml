@@ -3,5 +3,8 @@
     <LanguageOptions name="Properties">
       <option name="fileTypeOverride" value="1" />
     </LanguageOptions>
+    <LanguageOptions name="Shell Script">
+      <option name="fileTypeOverride" value="1" />
+    </LanguageOptions>
   </settings>
 </component>

@@ -1,0 +1,7 @@
+name: Obtain JLink.jar
+description: >
+  Obtain the JLink.jar file from the official Wolfram Engine docker image
+  and place it in the workspace root.
+runs:
+  using: docker
+  image: Dockerfile
