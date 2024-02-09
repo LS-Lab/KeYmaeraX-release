@@ -35,7 +35,6 @@ object NonSSLBoot extends App with Logging {
 
   //Some boilerplate code that I don't understand.
   implicit val system: ActorSystem = ActorSystem("hydraloader") //Not sure what the significance of this name is?
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   implicit val timeout: Timeout = Timeout(10 seconds) //@note this might need to be much higher.
   val config = ConfigFactory.load()
@@ -48,7 +47,7 @@ object NonSSLBoot extends App with Logging {
 
   //Do the KeYmaera X initialization GUI stuff...
   LoadingDialogFactory() //@note show if not already started through Main.scala
-  Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port) map {
+  Http().newServerAt(interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port).bindFlow(api) map {
     _ => {
       // Finally, print a message indicating that the server was started.
       LoadingDialogFactory().addToStatus(10, Some("Finished loading"))
