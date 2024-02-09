@@ -2,7 +2,7 @@ import java.io.{FileInputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
 
-ThisBuild / scalaVersion := "2.12.13"
+ThisBuild / scalaVersion := "2.12.18"
 // TODO Use this version number in keymaerax-core
 ThisBuild / version := "5.0.2"
 
@@ -116,12 +116,12 @@ lazy val webui = project
     libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2", // For SqliteTableGenerator
 
     // Akka
-    libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.1.8",
-    libraryDependencies += "com.typesafe.akka" %% "akka-http-xml" % "10.1.8",
-    libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.5.23",
-    libraryDependencies += "io.spray" %% "spray-json" % "1.3.4",
-    libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.8",
-    libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.5.23",
+    libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.5.3",
+    libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.5.3",
+    libraryDependencies += "com.typesafe.akka" %% "akka-http-xml" % "10.5.3",
+    libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.8.5",
+    libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.8.5",
+    libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
 
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full),

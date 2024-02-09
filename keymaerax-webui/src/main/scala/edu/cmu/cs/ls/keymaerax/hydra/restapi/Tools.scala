@@ -1,5 +1,5 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
@@ -97,7 +97,7 @@ object Tools {
 
   val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
     pathEnd {
-      get { parameters(('assumptions.as[String], 'fmlIndices.as[String])) { (assumptions: String, fmlIndices: String) =>
+      get { parameters('assumptions.as[String], 'fmlIndices.as[String]) { (assumptions: String, fmlIndices: String) =>
         val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions, fmlIndices)
         completeRequest(request, t)
       }}
