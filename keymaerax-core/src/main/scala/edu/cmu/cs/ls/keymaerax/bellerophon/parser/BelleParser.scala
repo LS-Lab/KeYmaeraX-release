@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.parser.{EOF => _, COLON => _, IDENT => _, COMMA => _, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}

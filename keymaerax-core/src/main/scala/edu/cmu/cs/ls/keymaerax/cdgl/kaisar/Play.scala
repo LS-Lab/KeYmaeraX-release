@@ -1,20 +1,17 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
   * Interpreter for strategies
   * @author Brandon Bohrer
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import java.math.RoundingMode
-
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.{, number, state}
 import edu.cmu.cs.ls.keymaerax.core
-import spire.math._
 import edu.cmu.cs.ls.keymaerax.core._
 
 /** Indicates that expression was not in the executable fragment */

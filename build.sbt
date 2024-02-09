@@ -39,6 +39,7 @@ ThisBuild / scalacOptions ++= {
   Seq(
     s"-Wconf:${warnings.mkString(",")}",
     "-Xmaxwarns", "1000",
+    "-Xsource:2.13",
   )
 }
 

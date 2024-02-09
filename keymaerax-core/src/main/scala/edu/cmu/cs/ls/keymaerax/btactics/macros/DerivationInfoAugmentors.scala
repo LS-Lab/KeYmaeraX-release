@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -30,7 +35,7 @@ object DerivationInfoAugmentors {
 
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
     def by(name: String, t: (Position, Sequent) => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
           t(pos, sequent)

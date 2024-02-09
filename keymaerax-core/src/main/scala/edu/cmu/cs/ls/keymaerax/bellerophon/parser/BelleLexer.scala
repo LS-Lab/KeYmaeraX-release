@@ -1,8 +1,13 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.BelleToken
-import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.parser.{EOF => _, IDENT => _, COMMA => _, COLON => _, _}
 import org.apache.commons.lang3.StringUtils
 
 import scala.annotation.tailrec

@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
   *
@@ -13,7 +14,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.annotation.{switch, tailrec}
-import scala.collection.immutable._
+import scala.collection.immutable.{Stack => _, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.{func, statementSemicolon}

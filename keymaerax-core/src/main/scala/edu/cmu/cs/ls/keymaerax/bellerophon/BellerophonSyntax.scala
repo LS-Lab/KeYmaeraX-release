@@ -801,7 +801,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   private def tryAllAfter(locator: Find, cause: => BelleThrowable): DependentTactic = new DependentTactic(name) {
     /** @inheritdoc */
     final override def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr = {
-      if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
+      if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic ${this.prettyString} is not applicable at ${locator.start.prettyString} since provable has no subgoals")
       if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
         @tailrec
         def toPos(locator: Find): Option[Either[Position, Position]] = {
@@ -831,7 +831,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           case _ => throw cause
         }
       } else if (cause == null) {
-        throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
+        throw new TacticInapplicableFailure(s"Dependent position tactic ${this.prettyString} is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
       } else throw cause
     }
 

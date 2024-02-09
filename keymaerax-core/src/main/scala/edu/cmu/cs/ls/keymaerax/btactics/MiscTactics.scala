@@ -79,7 +79,7 @@ object DebuggingTactics extends TacticProvider {
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      if (doPrint) logger.info("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
+      if (doPrint) this.logger.info("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
         + " at position " + pos + " of first subgoal,"
         + "\n\t entire provable: " + provable + " =====")
       provable
@@ -508,14 +508,14 @@ object TacticFactory {
 
     /** Creates a dependent position tactic without inspecting the formula at that position */
     def by(t: Position => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
-      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(this.name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = t(pos)
       }
     }
 
     /** Creates a dependent position tactic without inspecting the formula at that position */
     def byL(t: AntePosition => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
-      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(this.name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = {
           require(pos.isAnte, "Expects an antecedent position.")
           t(pos.checkAnte)
@@ -525,7 +525,7 @@ object TacticFactory {
 
     /** Creates a dependent position tactic without inspecting the formula at that position */
     def byR(t: SuccPosition => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
-      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(this.name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = {
           require(pos.isSucc, "Expects a succedent position.")
           t(pos.checkSucc)
@@ -535,7 +535,7 @@ object TacticFactory {
 
     /** Creates a dependent position tactic while inspecting the sequent/formula at that position */
     def by(t: (Position, Sequent) => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
           t(pos, sequent)
@@ -544,7 +544,7 @@ object TacticFactory {
     }
 
     def by(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
         override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
           t(pos, sequent, defs)
@@ -556,7 +556,7 @@ object TacticFactory {
 
     /** A position tactic with multiple inputs. */
     def byWithInputs(inputs: Seq[Any], t: (Position, Sequent) => BelleExpr): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
           t(pos, sequent)
@@ -565,7 +565,7 @@ object TacticFactory {
     }
 
     def byWithInputs(inputs: Seq[Any], t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
         override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
           t(pos, sequent, defs)
@@ -575,7 +575,7 @@ object TacticFactory {
 
     /** A position tactic with multiple inputs. */
     def byWithInputs(inputs: Seq[Any], t: Position => BelleExpr): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
           t(pos)
@@ -617,7 +617,7 @@ object TacticFactory {
       */
     def by(t: (ProvableSig, SuccPosition) => ProvableSig): BuiltInRightTactic = new BuiltInRightTactic(name) {
       @inline override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
-        requireOneSubgoal(provable, name)
+        requireOneSubgoal(provable, this.name)
         t(provable, pos)
       }
     }
@@ -633,7 +633,7 @@ object TacticFactory {
     def coreby(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = new CoreRightTactic(name) {
       /** @throws TacticInapplicableFailure if this tactic is not applicable at the indicated position `pos` in `provable` */
       @inline override def computeCoreResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
-        requireOneSubgoal(provable, name)
+        requireOneSubgoal(provable, this.name)
         t(provable, pos)
       }
     }
@@ -690,7 +690,7 @@ object TacticFactory {
     def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic =
       new BuiltInLeftTactic(name) {
         @inline override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-          requireOneSubgoal(provable, name)
+          requireOneSubgoal(provable, this.name)
           t(provable, pos.checkAnte)
         }
       }
@@ -708,7 +708,7 @@ object TacticFactory {
     def by(t: (ProvableSig, Position) => ProvableSig): BuiltInPositionTactic =
       new BuiltInPositionTactic(name) {
         @inline override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-          requireOneSubgoal(provable, name)
+          requireOneSubgoal(provable, this.name)
           t(provable, pos)
           }
       }
@@ -724,7 +724,7 @@ object TacticFactory {
     def coreby(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = new CoreLeftTactic(name) {
       /** @throws TacticInapplicableFailure if this tactic is not applicable at the indicated position `pos` in `provable` */
       @inline override def computeCoreResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-        requireOneSubgoal(provable, name)
+        requireOneSubgoal(provable, this.name)
         t(provable, pos)
       }
     }
@@ -736,7 +736,7 @@ object TacticFactory {
       */
     def by(t: (ProvableSig, Position, Position) => ProvableSig): BuiltInTwoPositionTactic = new BuiltInTwoPositionTactic(name) {
       @inline override def computeResult(provable: ProvableSig, pos1: Position, pos2: Position): ProvableSig = {
-        requireOneSubgoal(provable, name)
+        requireOneSubgoal(provable, this.name)
         t(provable, pos1, pos2)
       }
     }
