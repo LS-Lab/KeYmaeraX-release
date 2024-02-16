@@ -574,6 +574,18 @@ object Augmentors {
         (Pair(lDots, rDots), rNextIdx)
     }
 
+    /** Converts this `sort` into nested pairs of DotTerms. Returns the nested dots and unused dot indices. */
+    def toDots(idxs: List[Int]): (Term, List[Int]) = sort match {
+      case Real | Bool => idxs match {
+        case idx::q => (DotTerm(sort, Some(idx)), q)
+        case _ => throw new IllegalArgumentException("Not enough indices to convert the sort")
+      }
+      case Tuple(l,r) =>
+        val (lDots, lIdxs) = l.toDots(idxs)
+        val (rDots, rIdxs) = r.toDots(lIdxs)
+        (Pair(lDots, rDots), rIdxs)
+    }
+
     /** Converts this `sort` into a flat list of [[DotTerm]].  */
     def toFlatDots(idx: Int): (List[DotTerm], Int) = toDots(idx) match {
       case (d: DotTerm, i) => (d :: Nil, i)

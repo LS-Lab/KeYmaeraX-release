@@ -201,10 +201,10 @@ case class Declaration(decls: Map[Name, Signature]) {
     def dotArg(domain: Sort, args: Option[List[(Name, Sort)]]): Term = domain match {
       case Unit => Nothing
       case s: Tuple =>
-        assert(args.nonEmpty && args.get.size > 1 && args.get.head._1.index.nonEmpty)
-        val i = args.get.head._1.index.get
-        val dotTerm = s.toDots(i)._1
-        assert(Declaration.dotsOf(dotTerm).map(_.index) == args.get.map(_._1.index).toSet)
+        assert(args.nonEmpty && args.get.size > 1)
+        val idxs = args.get.map(_._1.index.get)
+        val dotTerm = s.toDots(idxs)._1
+        assert(Declaration.dotsOf(dotTerm).map(_.index.get) == idxs.toSet)
         dotTerm
       case Real =>
         assert(args.nonEmpty && args.get.size == 1)
@@ -294,7 +294,9 @@ object Declaration {
     case interpretation => signature.arguments match {
       case None => (name, signature)
       case Some((Name(Nothing.name, Nothing.index), Unit) :: Nil) => (name, signature)
+      case Some(argNames) if argNames.forall({ case (n, _) => n.name == DotTerm().name}) => (name, signature)
       case Some(argNames) =>
+        assert(argNames.forall({ case (n, _) => n.name != DotTerm().name}))
         val interpDots = interpretation match {
           case Right(Some(fn@FuncOf(Function(_, _, _, _, Some(i)), _))) => (StaticSemantics.symbols(fn) ++ StaticSemantics.symbols(i)).filter(_.isInstanceOf[DotTerm])
           case Right(Some(e)) => StaticSemantics.symbols(e).filter(_.isInstanceOf[DotTerm])
@@ -306,16 +308,13 @@ object Declaration {
           if (dots.nonEmpty) dots.maxBy(_.index).index.map(_ + 1).getOrElse(0)
           else 0
 
-        //Indices continuity of dotTerms used by [[dotArg]]
         val dotTerms = argNames.zipWithIndex.map({ case (v, i) => v -> DotTerm(v._2, Some(i + nextDotI(interpDots))) })
         val dottedArg = dotTerms.map({ case ((_, s), d) => (Name(d.name, d.index), s) })
         val dottedInterpretation = dotTerms.foldRight(interpretation)({ case (((Name(name, index), sort), dot), dotted) =>
-          // signature may contain DotTerms because of anonymous arguments
-          if (name != DotTerm().name) dotted match {
+          dotted match {
             case Left(f) => Left(f.replaceFree(Variable(name, index, sort), dot).replaceFree(Differential(Variable(name, index, sort)), Differential(dot)))
             case Right(e) => Right(e.map(_.replaceFree(Variable(name, index, sort), dot).replaceFree(Differential(Variable(name, index, sort)), Differential(dot))))
           }
-          else dotted
         })
         (name, signature.copy(arguments = Some(dottedArg), interpretation = dottedInterpretation))
     }
