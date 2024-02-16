@@ -24,8 +24,16 @@ jobs:
           java-version: 21
           cache: sbt
 
+      - name: Cache JLink.jar
+        id: cache-jlink-jar
+        uses: actions/cache@v4
+        with:
+          path: JLink.jar
+          key: jlink-jar-${{ hashFiles('.github/actions/obtain-jlink-jar/**') }}
+
       - name: Obtain JLink.jar
         uses: ./.github/actions/obtain-jlink-jar
+        if: ${{ steps.cache-jlink-jar.outputs.cache-hit != 'true' }}
 
       - name: Prepare local.properties
         run: echo "mathematica.jlink.path=JLink.jar" > local.properties
