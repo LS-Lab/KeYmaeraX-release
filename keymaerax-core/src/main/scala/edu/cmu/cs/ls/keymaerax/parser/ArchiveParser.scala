@@ -294,8 +294,10 @@ object Declaration {
     case interpretation => signature.arguments match {
       case None => (name, signature)
       case Some((Name(Nothing.name, Nothing.index), Unit) :: Nil) => (name, signature)
+      //If the signature is already written with anonymous arguments (i.e. dots), no elaboration is required
       case Some(argNames) if argNames.forall({ case (n, _) => n.name == DotTerm().name}) => (name, signature)
       case Some(argNames) =>
+        //Having a mix of anonymous and concrete arguments is not handled, and probably bad practice anyway
         assert(argNames.forall({ case (n, _) => n.name != DotTerm().name}))
         val interpDots = interpretation match {
           case Right(Some(fn@FuncOf(Function(_, _, _, _, Some(i)), _))) => (StaticSemantics.symbols(fn) ++ StaticSemantics.symbols(i)).filter(_.isInstanceOf[DotTerm])
