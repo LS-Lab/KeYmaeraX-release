@@ -204,6 +204,7 @@ case class Declaration(decls: Map[Name, Signature]) {
         assert(args.nonEmpty && args.get.size > 1)
         val idxs = args.get.map(_._1.index.get)
         val dotTerm = s.toDots(idxs)._1
+        assert(s.toDots(idxs)._2.isEmpty)
         assert(Declaration.dotsOf(dotTerm).map(_.index.get) == idxs.toSet)
         dotTerm
       case Real =>
