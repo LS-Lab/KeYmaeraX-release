@@ -13,6 +13,7 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.concurrent.{Signaler, TimeLimits}
 import org.scalatest.time._
 
@@ -24,6 +25,7 @@ import org.scalatest.time._
 class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester with TimeLimits {
   Configuration.setConfiguration(FileConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+  KeYmaeraXTool.init(Map())
   val randomTrials = 1000
   val randomComplexity = 20
   val tamperComplexity = 4

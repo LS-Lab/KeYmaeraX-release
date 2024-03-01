@@ -131,7 +131,8 @@ lazy val webui = project
     // Testing //
     /////////////
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test,
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.4" % Test,
+    libraryDependencies += "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" % Test,
     libraryDependencies += "org.scalamock" %% "scalamock" % "4.4.0" % Test,
     libraryDependencies += "org.pegdown" % "pegdown" % "1.6.0" % Test, // (For Html Scalatest reports)
 

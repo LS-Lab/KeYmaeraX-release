@@ -262,10 +262,10 @@ class TaylorModelTests extends TacticTestBase {
     }
   }
 
-  val vdp = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
 
   it should "prove a lemma about van der Pol" in withMathematica { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val vdp = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
       val tm = TaylorModel(vdp, 1).lemma
       tm shouldBe Symbol("proved")
     }
@@ -549,6 +549,7 @@ class TaylorModelTests extends TacticTestBase {
 
   it should "work with van der Pol" in withMathematica { _ =>
     val pp = new KeYmaeraXPrettierPrinter(100)
+    val vdp = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
     val tm = TaylorModel(vdp, 3)
     val tslemma = tm.timestepLemma
     tslemma shouldBe Symbol("proved")

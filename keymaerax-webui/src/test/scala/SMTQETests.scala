@@ -22,6 +22,8 @@ import testHelper.KeYmaeraXTestTags.TodoTest
  *   Stefan Mitsch
  */
 class SMTQETests extends TacticTestBase {
+  KeYmaeraXTool.init(Map())
+
   // ---------------------------
   // Simplify
   // ---------------------------

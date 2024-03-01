@@ -28,7 +28,7 @@ object Version {
   }
 
   def apply(s: String): VersionString = {
-    val versionFormat = """^(?<major>\d+)\.(?<minor>\d+)((?<letter>\w)(?<incr>\d?)|\.(?<rev>\d+))?$""".r
+    val versionFormat = """^(?<major>\d+)\.(?<minor>\d+)((?<letter>\w)(?<incr>\d)?|\.(?<rev>\d+))?$""".r
     val matchedOpt = versionFormat.findFirstMatchIn(s)
     require(matchedOpt.isDefined, s"Unexpected version string $s")
     val matched = matchedOpt.get
