@@ -227,6 +227,20 @@ object StaticSemantics {
       // @note FV(df)++FV(df)' are free. But only BV(df) are bound. E.g., (\forall x x>=y)' still only binds x, not x'.
       VCF(fv = SetLattice.extendToDifferentialSymbols(vdf.fv), bv = vdf.bv)
 
+    case Refinement(p, q) =>
+      val vp = StaticSemantics(p)
+      val vq = StaticSemantics(q)
+      val boundvars = vp.mbv.intersect(vq.mbv) // Must-bound variables are bound for the formula
+      val freevars = vp.fv ++ vq.fv ++ ((vp.bv ++ vq.bv) -- boundvars)
+      VCF(fv = freevars, bv = boundvars)
+
+    case ProgramEquivalence(p, q) =>
+      val vp = StaticSemantics(p)
+      val vq = StaticSemantics(q)
+      val boundvars = vp.mbv.intersect(vq.mbv) // Must-bound variables are bound for the formula
+      val freevars = vp.fv ++ vq.fv ++ ((vp.bv ++ vq.bv) -- boundvars)
+      VCF(fv = freevars, bv = boundvars)
+
     case True | False => VCF(fv = bottom, bv = bottom)
   }
 
@@ -363,6 +377,9 @@ object StaticSemantics {
     case Diamond(p, g) => signature(p) ++ signature(g)
 
     case DifferentialFormula(g) => signature(g)
+
+    case Refinement(p, q) => signature(p) ++ signature(q)
+    case ProgramEquivalence(p, q) => signature(p) ++ signature(q)
   }
 
   /**

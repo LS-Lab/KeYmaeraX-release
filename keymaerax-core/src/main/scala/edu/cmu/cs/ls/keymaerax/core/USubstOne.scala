@@ -320,6 +320,15 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
           case Some(subs) => subs.repl.asInstanceOf[Formula]
           case None => p
         }
+
+      case Refinement(p, q) =>
+        val (_, rp) = usubst(u, p)
+        val (_, rq) = usubst(u, q)
+        Refinement(rp, rq)
+      case ProgramEquivalence(p, q) =>
+        val (_, rp) = usubst(u, p)
+        val (_, rq) = usubst(u, q)
+        ProgramEquivalence(rp, rq)
     }
   }
 
