@@ -5,13 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.tools
 
-/**
- * Base trait tagging interfaces to tools.
- */
+/** Base trait tagging interfaces to tools. */
 trait ToolInterface
 
 /** Manages how a tool's operations work (e.g., timeouts). */
 trait ToolOperationManagement extends ToolInterface {
+
   /** Sets a maximum duration of this tool's operations (e.g., QE). */
   def setOperationTimeout(timeout: Int): Unit
 

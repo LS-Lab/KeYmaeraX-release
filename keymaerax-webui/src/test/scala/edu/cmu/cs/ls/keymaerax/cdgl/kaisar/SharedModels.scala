@@ -1,132 +1,141 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 /** Kaisar models/proofs which are used in multiple test suites, e.g. Kaisar and ProofPlex. */
 object SharedModels {
-  val essentialsSafeCar1D: String =
-    "?(xInit, vInit):(x:=0;v:=0); ?(acc, brk, tstep, separate):(A > 0 & B > 0 & T > 0 & x < d);" +
-    "!inv:(v^2/(2*B) <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
-    "{{switch {" +
-    "case accel: ((v + T*A)^2/(2*B) <= (d - (x + v*T + (A*T^2)/2))) =>" +
-    "  ?accval:(a := A);" +
+  val essentialsSafeCar1D
+      : String = "?(xInit, vInit):(x:=0;v:=0); ?(acc, brk, tstep, separate):(A > 0 & B > 0 & T > 0 & x < d);" +
+    "!inv:(v^2/(2*B) <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" + "{{switch {" +
+    "case accel: ((v + T*A)^2/(2*B) <= (d - (x + v*T + (A*T^2)/2))) =>" + "  ?accval:(a := A);" +
     "  !safeCtrl:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using accel acc accval inv brk tstep ... by auto;" +
-    "case brake: ((v + T*A)^2/(2*B)  + 1 >= (d - (x + v*T + (A*T^2)/2))) =>" +
-    "  ?accval:(a := -B);" +
+    "case brake: ((v + T*A)^2/(2*B)  + 1 >= (d - (x + v*T + (A*T^2)/2))) =>" + "  ?accval:(a := -B);" +
     "  ?fast:(v >= B*T);" +
     "  !safeCtrl:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using brake acc accval brk inv tstep fast ... by auto;" +
-    "}}" +
-    "t:= 0;" +
-    "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0);};" +
-    "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) " +
-    "using xSol vSol tSol safeCtrl accval inv dc acc brk tstep by auto;" +
-    "}*" +
-    "!safe:(x <= d & v >= 0) using inv brk  by auto;"
+    "}}" + "t:= 0;" + "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0);};" +
+    "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) " + "using xSol vSol tSol safeCtrl accval inv dc acc brk tstep by auto;" +
+    "}*" + "!safe:(x <= d & v >= 0) using inv brk  by auto;"
 
   // Language examples from Kaisar chapter of thesis. These are not meant to prove interesting theorems, but it's
   // important that the language presented in the thesis actually works in the implementation
 
-  val letEvalAtUse: String =
+  val letEvalAtUse: String = {
     """
       | x:=0;
       | let thing() = x;
       | x:=1;
       | !(thing() = 1);
       |""".stripMargin
+  }
 
-  val assertOnePos: String =
-  """?xValue:(x=1);
-    |!xPositive:(x > 0);
-    |""".stripMargin
+  val assertOnePos: String = {
+    """?xValue:(x=1);
+      |!xPositive:(x > 0);
+      |""".stripMargin
+  }
 
-  val assertBranchesNonzero: String =
+  val assertBranchesNonzero: String = {
     """{?xNeg:(x < 0); ++ ?xPos:(x > 0);}
       |!xNonzero:(x != 0);
       |""".stripMargin
+  }
 
-  val assertBranchesNonzeroProgram: String =
-    """{?(x<0); ++ ?(x>0);}{?(x != 0);}^@"""
+  val assertBranchesNonzeroProgram: String = """{?(x<0); ++ ?(x>0);}{?(x != 0);}^@"""
 
-  val switchLiterals: String =
+  val switchLiterals: String = {
     """switch {
       |  case xLow:(x <= 1) =>  !result:(x <= 2);
       |  case xHigh:(x >= 0) =>  !result:(x + 1 > 0);
       |}
       |""".stripMargin
-  val switchLiteralArg:String =
+  }
+
+  val switchLiteralArg: String = {
     """?bit:(x =  0 | x = 1);
       |switch (bit) {
       | case (x = 0) => !nonneg:(x >= 0);
       | case (x = 1) => !nonneg:(x >= 0);
       |}
       |""".stripMargin
+  }
 
-  val switchLiteralArgAlternate:String =
- """{?bit:(x = 0); ++ ?bit:(x = 1);}
-  |switch (bit) {
-  |  case (x = 0) => !nonneg:(x >= 0);
-  |  case (x = 1) => !nonneg:(x >= 0);
-  |}""".stripMargin
+  val switchLiteralArgAlternate: String = {
+    """{?bit:(x = 0); ++ ?bit:(x = 1);}
+      |switch (bit) {
+      |  case (x = 0) => !nonneg:(x >= 0);
+      |  case (x = 1) => !nonneg:(x >= 0);
+      |}""".stripMargin
+  }
 
+  val switchLiteralsProgram: String = "{{?(x <= 1); ?(x <= 2);} ++ {?(x >= 0);?(x + 1 > 0);}}^@"
 
-  val switchLiteralsProgram: String =
-    "{{?(x <= 1); ?(x <= 2);} ++ {?(x >= 0);?(x + 1 > 0);}}^@"
-
-  val noteAndSquare: String =
+  val noteAndSquare: String = {
     """let square(z) = z * z;
       |?left:(x < 0); ?right:(square(y) > 0);
       |note both = andI(left, right);
       |""".stripMargin
+  }
 
-  val noteAndFull: String =
+  val noteAndFull: String = {
     """?left:(x < 0);
       |?right:(y < 0);
       |note both = andI(left, right);
       |!sign:(x + y <= (x + y)^2);
       |""".stripMargin
+  }
 
-  val noteAndProgram: String =
-    """?(x<0);?(y<0);{?(x<0&y<0);}^@{?(x + y <= (x + y)^2);}^@"""
+  val noteAndProgram: String = """?(x<0);?(y<0);{?(x<0&y<0);}^@{?(x + y <= (x + y)^2);}^@"""
 
-  val squareNonneg: String =
+  val squareNonneg: String = {
     """let square(x) = x*x;
       |let nonneg(x) <-> x >= 0;
       |!allSquaresNonneg:(nonneg(square(y)));
       |""".stripMargin
+  }
 
-  val squareNonnegAlt: String =
+  val squareNonnegAlt: String = {
     """let squareX() = x*x;
       |let nonnegX() <-> squareX() >= 0;
       |!squareXNonneg:(nonnegX());
       |""".stripMargin
+  }
 
   /** Carefully check speed. Should use simple prop proof, not slow QE */
-  val propSkipsQE: String =
+  val propSkipsQE: String = {
     """?a:(x = 0 -> y=1);
       |?b:(x = 0 & ((z - x*w^2/(w^2+1))^42 >= 6));
       |!c:(y=1) using a b by prop;
       |""".stripMargin
+  }
 
-  val annotatedAssign: String =
+  val annotatedAssign: String = {
     """x := *;
       |y := x + 1;
       |?zFact:(z := y);
       |!compare:(z > x) using zFact ... by auto;
       |""".stripMargin
+  }
 
-  val annotatedAssignProgram: String =
+  val annotatedAssignProgram: String = {
     """x := *;
       |y := x + 1;
       |z := y;
       |{?(z>x);}^@
       |""".stripMargin
+  }
 
-  val annotatedAssignGame: String =
+  val annotatedAssignGame: String = {
     """x := *;
       |y := x + 1;
       |{z := *;}^@
       |{?(z>x);}^@
       |""".stripMargin
+  }
 
-  val demonicLoop: String =
+  val demonicLoop: String = {
     """?yZero:(y := 0);
       |?xZero:(x := 0);
       |!inv: (x >= 0);
@@ -135,10 +144,10 @@ object SharedModels {
       |}*
       |!geq:(x >= y) using inv yZero by auto;
       |""".stripMargin
-
+  }
 
   /* Program which demonicLoop refines */
-  val demonicLoopProgram: String =
+  val demonicLoopProgram: String = {
     """
       |y:=0;
       |x:=0;
@@ -148,8 +157,9 @@ object SharedModels {
       |}*
       |{?(x>=y);}^@
       |""".stripMargin
+  }
 
-  val demonicLoopConst: String =
+  val demonicLoopConst: String = {
     """?yZero:(y := 0);
       |?xZero:(x := 0);
       |?cPos:(c = 3);
@@ -159,9 +169,9 @@ object SharedModels {
       |}*
       |!geq:(x >= y) using inv yZero by auto;
       |""".stripMargin
+  }
 
-
-  val demonicLoopGhostly: String =
+  val demonicLoopGhostly: String = {
     """?yZero:(y := 0);
       |?xZero:(x := 0);
       |/++ !inv: (x >= 0); ++/
@@ -170,54 +180,62 @@ object SharedModels {
       |}*
       |/++ !geq:(x >= y) using inv yZero by auto; ++/
       |""".stripMargin
+  }
 
   /* Program which demonicLoop refines */
-  val demonicLoopGhostlyProgram: String =
+  val demonicLoopGhostlyProgram: String = {
     """
       |y:=0;
       |x:=0;
       |{ x:=x+1;
       |}*
       |""".stripMargin
+  }
 
-  val straightODE: String =
+  val straightODE: String = {
     """x:= 0; y := 2;
       |{x' = 2, y' = -1 & ?dom:(y >= 0)};
       |!xFinal:(x + y <= 4);
       |""".stripMargin
+  }
 
   //  using dc x y by auto
-  val assertODE: String =
+  val assertODE: String = {
     """x:= 0; y := 2;
       |{x' = 2, y' = -1 & ?dom:(y >= 0) & !xEq:(x =  2*(2 - y))};
       |!xFinal:(x >= 0) using xEq dom by auto;
       |""".stripMargin
+  }
 
-  val justxSolODE: String =
+  val justxSolODE: String = {
     """?xInit:(x:=0); y:=2;
       |{xSol: x' = 2, y' = 1 & ?dom:(y >= 0)};
       |!xFinal:(x >= 0) using xInit xSol by auto;
       |""".stripMargin
+  }
 
-  val inductODE: String =
+  val inductODE: String = {
     """x := 0; y := 1;
       |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction};
       |""".stripMargin
+  }
 
-  val solAgainODE: String =
+  val solAgainODE: String = {
     """?xInit:(x := 2); y := 0;
       |{y' = 1, xSol: x' = -2 & ?dom:(x >= 0) & !xSolAgain:(x = 2*(1 - y))};
       |!xHi:(x <= 2) using xInit xSol by auto;
       |!xLo:(x >= 0) using dom by auto;
       |""".stripMargin
+  }
 
-  val inductODEBC: String =
+  val inductODEBC: String = {
     """x := 0; y := 1;
       |!bc:(x^2 + y^2 = 1);
       |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction};
       |""".stripMargin
+  }
 
-  val durationODE: String =
+  val durationODE: String = {
     """?(T > 0); ?accel:(acc > 0);
       |x:= 0; v := 0; t := 0;
       |{t' = 1, x' = v, v' = acc
@@ -227,8 +245,9 @@ object SharedModels {
       |  & ?dur:(t := T)};
       |!finalV:(x = acc*(T^2)/2) using dur xSol by auto;
       |""".stripMargin
+  }
 
-  val ghostAssert: String =
+  val ghostAssert: String = {
     """?xSign: (x = 0 | x > 0);
       |/++
       |  !xZero: (x = 0 -> abs(x) = x);
@@ -236,8 +255,9 @@ object SharedModels {
       |++/
       |!absEq:(abs(x) = x)  using orE(xSign, xZero, xPos) by hypothesis;
       |""".stripMargin
+  }
 
-  val ghostAssign: String =
+  val ghostAssign: String = {
     """?xInit:(x > 0);
       |/++
       |    ?yInit:(y := x);
@@ -248,8 +268,9 @@ object SharedModels {
       |}*
       |!positive:(x > 0) using inv yInit xInit by auto;
       |""".stripMargin
+  }
 
-  val ghostODE: String =
+  val ghostODE: String = {
     """x := 1;
       |/++
       |  y := (1/x)^(1/2);
@@ -258,64 +279,72 @@ object SharedModels {
       |{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction};
       |!positive:(x > 0) using inv by auto;
       |""".stripMargin
+  }
 
   /** Program which the ghost ODE refines */
-  val ghostODEProgram: String =
-  "x := 1; {x' = -x}; {?(x > 0);}^@ "
+  val ghostODEProgram: String = "x := 1; {x' = -x}; {?(x > 0);}^@ "
 
-  val inverseGhostODE: String =
+  val inverseGhostODE: String = {
     """z := 0;
       |{/-- x' = y, y' = (-1) --/ ,  z'=1 & !zPos:(z >= 0) by solution}
       |""".stripMargin
+  }
 
-  val inverseGhostODECircle: String =
+  val inverseGhostODECircle: String = {
     """z := 0;
       |{/-- x' = y, y' = -x --/ ,  z'=1 & !zPos:(z >= 0) by solution}
       |""".stripMargin
+  }
 
   /** Program which the inverse ghost ODE refines */
-  val inverseGhostODEProgram: String =
+  val inverseGhostODEProgram: String = {
     """z := 0;
       |{x' = y, y' = (-1),  z'=1}
       |""".stripMargin
+  }
 
   // Correctly rejected
-  val ghostBothWays: String =
+  val ghostBothWays: String = {
     """x:=0;  y:=0; /++?foo:(z:=0);++/
       |{x' = 1, /-- y'=1 --/, /++ z'=1 ++/
       |& !inv:(x=y);};
       |!atEnd:(x=y);
       |""".stripMargin
+  }
 
-  val discreteInverseGhostInsideForward: String =
+  val discreteInverseGhostInsideForward: String = {
     """/++ /-- x:= 0; --/ ++/
       |
       |""".stripMargin
+  }
 
-  val discreteForwardGhostInsideInverse: String =
+  val discreteForwardGhostInsideInverse: String = {
     """/-- /++ x:= 0; ++/ --/
       |
       |""".stripMargin
+  }
 
-  val odeInverseGhostInsideForward: String =
+  val odeInverseGhostInsideForward: String = {
     """/++y:=0;++/
       |{x'=1, /++ /-- y'=0 --/ ++/};
       |
       |""".stripMargin
+  }
 
-  val odeForwardGhostInsideInverse: String =
+  val odeForwardGhostInsideInverse: String = {
     """{x'=1, /-- /++ y'=0 ++/ --/};
       |
       |""".stripMargin
+  }
 
-
-  val superfluousGhost: String =
+  val superfluousGhost: String = {
     """x:=0; /-- y := 25; z := -10; --/
       |{x' = 3}
       |!(x >= 0);
       |""".stripMargin
+  }
 
-  val labelInit: String =
+  val labelInit: String = {
     """init:
       |?(y = 0);
       |!bc:(y = 2*(x - x@init));
@@ -323,24 +352,28 @@ object SharedModels {
       |  !step:(y = 2*(x - x@init));
       |}*
       |""".stripMargin
+  }
 
-  val labelOld: String =
+  val labelOld: String = {
     """old:
       |{x' = 1 & !greater:(x >= x@old)}
       |""".stripMargin
+  }
 
-  val labelOldEq: String =
+  val labelOldEq: String = {
     """?xInit:(x:=0); y:=0; old:
       |{x' = 1, y' = -1 & !greater:(x+y = (x+y)@old) using xInit ... by auto};
-    |""".stripMargin
+      |""".stripMargin
+  }
 
-  //@TODO: Reveals terrible bug in solution expression that doesn't account for nonzero initial values?
-  val labelOldestEq: String =
+  // @TODO: Reveals terrible bug in solution expression that doesn't account for nonzero initial values?
+  val labelOldestEq: String = {
     """old:
       |{x' = 1, y' = -1 & !greater:(x+y = (x+y)@old)};
       |""".stripMargin
+  }
 
-  val unwindBlock: String =
+  val unwindBlock: String = {
     """x := 0;
       |init:
       |!(x < x@final);
@@ -348,24 +381,27 @@ object SharedModels {
       |x := x + 2;
       |final:
       |""".stripMargin
+  }
 
-  val intoChoice: String =
+  val intoChoice: String = {
     """x := 0;
       |y := x@mid;
       |init:
       |     { x := x + 3; mid: x := x * x;
       |++  x := 5;}
       |""".stripMargin
+  }
 
-  val outOfChoice: String =
+  val outOfChoice: String = {
     """{      y:= x@final; x := 2;
       | ++  x := 5;}
       |x := x + 1;
       |final:
       |""".stripMargin
+  }
 
   // @TODO: More obvious / better errors for match vs letfun
-  val printSolution: String =
+  val printSolution: String = {
     """?(B > 0);
       |let ST() = v / B;
       |!stopTime:(v@ode(ST()) = 0);
@@ -375,8 +411,9 @@ object SharedModels {
       |{t' = 1, x' = v, v' = -B  & ?(v >= 0)};
       |ode(t):
       |""".stripMargin
+  }
 
-  val basicReachAvoid: String =
+  val basicReachAvoid: String = {
     """?(eps > 0 &  x = 0 & T > 0);
       |while (x >= 0 & x + eps <= goal) {
       |  vel := (goal - (x + eps))/T;
@@ -387,10 +424,10 @@ object SharedModels {
       |  !live:(x >= 0 & x + eps <= goal) using time ... by auto;
       |}
       |""".stripMargin
-
+  }
 
   // Note: not supposed to work. Is for historical purposes to remember early design
-  val proposedReachAvoidFor: String =
+  val proposedReachAvoidFor: String = {
     """?(eps > 0 &  x = 0 & T > 0 & d > 0);
       |let J(pos) <-> (pos <= d);
       |!conv:(J(0));
@@ -405,9 +442,10 @@ object SharedModels {
       |}
       |!(d >= x & x >= d - eps) using guard conv by auto;
       |""".stripMargin
+  }
 
   // @TODO: Best way to handle refinement: allow ghost around /++ pos := 0 ++/ to give back existential statement in pos
-  val basicForNoConv: String =
+  val basicForNoConv: String = {
     """pragma option "time=true";
       |pragma option "trace=true";
       |pragma option "debugArith=true";
@@ -416,16 +454,18 @@ object SharedModels {
       |    sum := sum + 1;
       | }
       |""".stripMargin
+  }
 
-  val basicForNoConvProg: String =
+  val basicForNoConvProg: String = {
     """sum := 0;
       |pos := 0;
       |{{{sum := sum + 1;}^@ pos := pos + 1;}*}^@
       |{?(pos >= 10);}^@
       |""".stripMargin
+  }
 
   // gauss formula for triangle number
-  val basicForConv: String =
+  val basicForConv: String = {
     """
       | ?deltaLo:(delta > 0);
       | ?deltaHi:(delta < 1);
@@ -438,10 +478,10 @@ object SharedModels {
       | !done:(x >= 11 - delta) by guard(delta);
       | !total:(sum >= 50) using done sum x deltaHi by auto;
       |""".stripMargin
-
+  }
 
   // may be less popular but may be easier to implement / test
-  val revisedReachAvoidFor: String =
+  val revisedReachAvoidFor: String = {
     """pragma option "time=true";
       |pragma option "trace=true";
       |pragma option "debugArith=true";
@@ -463,8 +503,9 @@ object SharedModels {
       |!done:(pos >= d - (eps + x@init) - eps | x >= d - eps - eps) by guard;
       |!(x <= d & x + 2 * eps >= d) using done conv  by auto;
       |""".stripMargin
+  }
 
-  val brokenStoppingReachAvoidFor:String =
+  val brokenStoppingReachAvoidFor: String =
     """
       |pragma option "time=true";
       |pragma option "trace=true";
@@ -500,7 +541,7 @@ object SharedModels {
       |!(d >= 0 & d <= (V+1)*eps);
       |""".stripMargin
 
-  val pldiReachAvoidDisturbance:String =
+  val pldiReachAvoidDisturbance: String = {
     """
       |let inv(pos) <-> (d >= 0 & (d@init - d) >= pos);
       |let liveFactor() = 4;
@@ -522,28 +563,31 @@ object SharedModels {
       |!(d >= 0 & d <= (V+1)*eps);
       |
       |""".stripMargin
+  }
 
   // @TODO: Check SB() vs SB parenthesis... hmm...
   val forwardHypothetical: String = // in safe: .. & v >= 0
-    """let SB() = v^2/(2*B); let safe() <-> (SB() <= (d-x));
-      |?bnds:(T > 0 & A > 0 & B > 0); ?initSafe:(safe());
-      |{acc := *; ?env:(-B <= acc & acc <= A & (safe() & v >= 0)@ode(T));
-      | t:= 0; {t' = 1, x' = v, v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
-      |ode(t): !step:(safe()) using env bnds time vel ... by auto;
-      |}*
-      |""".stripMargin
+    {
+      """let SB() = v^2/(2*B); let safe() <-> (SB() <= (d-x));
+        |?bnds:(T > 0 & A > 0 & B > 0); ?initSafe:(safe());
+        |{acc := *; ?env:(-B <= acc & acc <= A & (safe() & v >= 0)@ode(T));
+        | t:= 0; {t' = 1, x' = v, v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
+        |ode(t): !step:(safe()) using env bnds time vel ... by auto;
+        |}*
+        |""".stripMargin
+    }
 
-  val forwardHypotheticalUnsolvable: String =
+  val forwardHypotheticalUnsolvable: String = {
     """
       |!good:((y=1)@ode(T,0,1));
       |t:=0;x:=1;y:=0;
       |{t'=1,x'=-y,y'=x & ?(t<=T)};
       |ode(t,x,y):
       |""".stripMargin
-
+  }
 
   // @TODO: use less assumptions because I was just guessing at the end
-  val sandboxExample: String =
+  val sandboxExample: String = {
     """let SB() = v^2/(2*B);
       |let safe() <-> SB() <= (d-x);
       |?bnds:(T > 0 & A > 0 & B > 0);
@@ -566,8 +610,9 @@ object SharedModels {
       |  !step:(safe()) using predictSafe bnds initSafe time vel ... by auto;
       |}*
       |""".stripMargin
+  }
 
-  val pldiModelSafeFull: String =
+  val pldiModelSafeFull: String = {
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
@@ -579,8 +624,9 @@ object SharedModels {
       | }*
       | !(d >= 0);
       |""".stripMargin
+  }
 
-  val pldiModelSafeFullProgram: String =
+  val pldiModelSafeFullProgram: String = {
     """?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
       |{{?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
@@ -589,9 +635,10 @@ object SharedModels {
       |}*
       |{?(d>=0);}^@
       |""".stripMargin
+  }
 
   // only needed for testing early versions of refinement checker
-  val pldiModelSafeSimple: String =
+  val pldiModelSafeSimple: String = {
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
@@ -603,8 +650,9 @@ object SharedModels {
       | }*
       | !(d >= 0);
       |""".stripMargin
+  }
 
-  val pldiModelSafeSimpleProgram: String =
+  val pldiModelSafeSimpleProgram: String = {
     """?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
       |{{?(d >= eps*V); v:=*; ?(0<=v & v<=V);}
@@ -613,8 +661,9 @@ object SharedModels {
       |}*
       |{?(d>=0);}^@
       |""".stripMargin
+  }
 
-  val pldiStreamlined: String =
+  val pldiStreamlined: String = {
     """
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
@@ -625,8 +674,9 @@ object SharedModels {
       | }*
       | !(d >= 0);
       |""".stripMargin
+  }
 
-  val pldiStreamlinedSandbox: String =
+  val pldiStreamlinedSandbox: String = {
     """
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
@@ -640,8 +690,9 @@ object SharedModels {
       | }*
       | !(d >= 0);
       |""".stripMargin
+  }
 
-  val pldiSandboxSafe: String =
+  val pldiSandboxSafe: String = {
     """
       |  let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
@@ -660,8 +711,9 @@ object SharedModels {
       |   !(inv());
       | }*
       |""".stripMargin
+  }
 
-  val pldiAngelicSandbox: String =
+  val pldiAngelicSandbox: String = {
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
@@ -677,8 +729,9 @@ object SharedModels {
       | }*
       | !(d >= 0);
       |""".stripMargin
+  }
 
-  val pldiTimedAngelicControl: String =
+  val pldiTimedAngelicControl: String = {
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
@@ -692,8 +745,9 @@ object SharedModels {
       | }
       | !(d >= 0);
       |""".stripMargin
+  }
 
-  val pldiReachAvoid: String =
+  val pldiReachAvoid: String = {
     """
       |let inv(pos) <-> (d >= 0 & (d@init - d) >= pos);
       |let liveFactor() = 4;
@@ -712,14 +766,15 @@ object SharedModels {
       |!(pos >= d@init - eps | d <= V*eps + eps) by guard(eps);
       |!(d >= 0 & d <= (V+1)*eps);
       |""".stripMargin
+  }
 
-
-
-  /** @TODO:Discuss whether we should just cheat and use classical arithmetic.
-    *       Original proof also should have been broken but it already contained a soundness issue: current reduction of abs/max is only
-    *       sound on left where we can maybe assume ability to case-analyze, but not on right where case analysis must be proved not assumed.
-    *       */
-  val ijrrStaticSafetyRough: String =
+  /**
+   * @TODO:Discuss
+   *   whether we should just cheat and use classical arithmetic. Original proof also should have been broken but it
+   *   already contained a soundness issue: current reduction of abs/max is only sound on left where we can maybe assume
+   *   ability to case-analyze, but not on right where case analysis must be proved not assumed.
+   */
+  val ijrrStaticSafetyRough: String = {
     """pragma option "time=true";
       |pragma option "trace=true";
       |pragma option "debugArith=true";
@@ -876,10 +931,10 @@ object SharedModels {
       |            !prog:(goal()) using far bnds  by auto;
       |        }
       |""".stripMargin
-
+  }
 
   /* @TODO: Remove need for stutters in branching */
-  val ijrrStaticSafetySimplified: String =
+  val ijrrStaticSafetySimplified: String = {
     """pragma option "time=true";
       |pragma option "trace=true";
       |pragma option "debugArith=true";
@@ -955,8 +1010,9 @@ object SharedModels {
       |}*
       |!(goal()) using safeDist bnds by auto;
       |""".stripMargin
+  }
 
-  val ijrrVelocityPassiveSafety: String =
+  val ijrrVelocityPassiveSafety: String = {
     """
       |let stopDist(v) = (0);
       |let accelComp(v) = (ep()*(v+V()));
@@ -1005,8 +1061,9 @@ object SharedModels {
       |    }*
       | !(v>0 -> dist(x,y,xo,yo) > 0);
       |""".stripMargin
+  }
 
-  val ijrrPassiveSafety: String =
+  val ijrrPassiveSafety: String = {
     """
       |let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
       |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V)));
@@ -1055,8 +1112,9 @@ object SharedModels {
       |    }*
       | !(dist(x,y,xo,yo) > 0);
       |""".stripMargin
+  }
 
-  val ijrrPassiveFriendlySafety: String =
+  val ijrrPassiveFriendlySafety: String = {
     """
       |let friendlyMargin(v) = (v^2/(2*bo()) + tau()*v);
       |let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
@@ -1116,9 +1174,9 @@ object SharedModels {
       | };
       | !(dist(x,y,xo,yo) > 0 & vo = 0);
       |""".stripMargin
+  }
 
-
-  val ijrrPassiveOrientationSafety: String =
+  val ijrrPassiveOrientationSafety: String = {
     """
       |let stopDist(v) = (v^2 / (2*b()));
       |let stopMargin(v) = stopDist(v) + V()*v/b();
@@ -1177,9 +1235,10 @@ object SharedModels {
       |    }*
       | !(v > 0 -> ((x - xo)^2 + (y - yo)^2 > 0 | (!isVisible(visDeg) & (abs(beta) < Gamma()))));
       |""".stripMargin
+  }
 
   // Theorem 5
-  val ijrrPassiveSafetyActualAcceleration: String =
+  val ijrrPassiveSafetyActualAcceleration: String = {
     """
       |let stopDist(v) = (v^2 / (2*b()));
       |let stopMargin(v) = stopDist(v) + V()*v/b();
@@ -1234,9 +1293,10 @@ object SharedModels {
       |    }*
       | !(v > 0 -> (dist(x,y,xo,yo) > 0));
       |""".stripMargin
+  }
 
   // Theorem 6
-  val ijrrPassiveSafetyLocationUncertainty: String =
+  val ijrrPassiveSafetyLocationUncertainty: String = {
     """
       |let stopDist(v) = (v^2 / (2*b())+ V()*v/b());
       |let stopMargin(v) = stopDist(v) ;
@@ -1304,8 +1364,9 @@ object SharedModels {
       |    }*
       |  !(v>0 -> dist(x,y,xo,yo) > 0);
       |""".stripMargin
+  }
 
-  val ijrrPassiveSafetyActuatorDisturbance: String =
+  val ijrrPassiveSafetyActuatorDisturbance: String = {
     """let stopDist(v) = (v^2 / (2*(b()*Da()))+ V()*v/(b()*Da()));
       |let accelComp(v) = ((A()/(b()*Da()) + 1) * (A()/2 * ep()^2 + ep()*(v+V())));
       |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
@@ -1363,8 +1424,9 @@ object SharedModels {
       |    }
       | !(v>0 -> dist(x,y,xo,yo) > 0);
       |""".stripMargin
+  }
 
-  val ijrrPassiveSafetyVelocityUncertainty: String =
+  val ijrrPassiveSafetyVelocityUncertainty: String = {
     """let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
       |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())));
       |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
@@ -1421,9 +1483,10 @@ object SharedModels {
       |    }*
       |    !(v>0 -> dist(x,y,xo,yo) > 0);
       |""".stripMargin
+  }
 
   // theorem 9
-  val ijrrPassiveAsync: String =
+  val ijrrPassiveAsync: String = {
     """
       |let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
       |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())));
@@ -1492,9 +1555,10 @@ object SharedModels {
       |    }*
       | !(v>0 -> dist(x,y,xo,yo) > 0);
       |""".stripMargin
+  }
 
   // thm 11
-  val ijrrReachWaypoint: String =
+  val ijrrReachWaypoint: String = {
     """
       |
       |	let waypointStartDist(xg) = ( xg-GDelta() );
@@ -1540,9 +1604,14 @@ object SharedModels {
       | }*
       | !(waypointStartDist(xg) < xr);
       |""".stripMargin
+  }
 
-  val ijrrModels: List[String] = List(ijrrStaticSafetySimplified, ijrrStaticSafetyRough /*, ijrrPassiveFriendlySafety, ijrrPassiveSafety, ijrrVelocityPassiveSafety*/)
-  val robixDynamicWindowPassive: String =
+  val ijrrModels: List[String] = List(
+    ijrrStaticSafetySimplified,
+    ijrrStaticSafetyRough, /*, ijrrPassiveFriendlySafety, ijrrPassiveSafety, ijrrVelocityPassiveSafety*/
+  )
+
+  val robixDynamicWindowPassive: String = {
     """let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
@@ -1566,9 +1635,10 @@ object SharedModels {
       |}*
       |!(goal());
       |""".stripMargin
+  }
 
   // @TODO: Basically has to be wrong. Check kyx artifact
-  val robixDynamicWindowFriendly: String =
+  val robixDynamicWindowFriendly: String = {
     """let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
@@ -1592,9 +1662,10 @@ object SharedModels {
       |}*
       |!(goal());
       |""".stripMargin
+  }
 
   // @TODO: Refine to actual magic, also rpobably quite wrong
-  val robixRefinedObstacle: String =
+  val robixRefinedObstacle: String = {
     """let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
@@ -1611,8 +1682,9 @@ object SharedModels {
       |}*
       |!(dist(prx, pry, pox, poy) > 0 & vo = 0);
       |""".stripMargin
+  }
 
-  val robixSensorUncertainty: String =
+  val robixSensorUncertainty: String = {
     """let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
@@ -1637,8 +1709,9 @@ object SharedModels {
       |}*
       |
       |""".stripMargin
+  }
 
-  val robixActuatorUncertainty: String =
+  val robixActuatorUncertainty: String = {
     """let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
@@ -1664,12 +1737,14 @@ object SharedModels {
       |}*
       |
       |""".stripMargin
+  }
 
-  val rssExamples: List[String] = List(/*robixRefinedObstacle,robixRefinedObstacle, robixDynamicWindowFriendly,
-    robixSensorUncertainty, robixRefinedObstacle, robixActuatorUncertainty*/)
+  val rssExamples: List[String] = List(
+    /*robixRefinedObstacle,robixRefinedObstacle, robixDynamicWindowFriendly,
+    robixSensorUncertainty, robixRefinedObstacle, robixActuatorUncertainty*/
+  )
 
-
-  val ralWaypointSafety: String =
+  val ralWaypointSafety: String = {
     """
       |let sq(x) = (x*x);
       |let onUpperHalfPlane(x, y) <-> (y > 0);
@@ -2165,6 +2240,7 @@ object SharedModels {
       |using inv const by auto;
       |
       |""".stripMargin
+  }
 
   val knownFeatureRequests: List[String] = List(labelOldEq)
   val knownBugs: List[String] = List(labelOldestEq)
@@ -2172,15 +2248,19 @@ object SharedModels {
     odeForwardGhostInsideInverse,
     odeInverseGhostInsideForward,
     discreteForwardGhostInsideInverse,
-    discreteInverseGhostInsideForward
+    discreteInverseGhostInsideForward,
   )
 
   val thesisExtra: List[String] = List(
     basicForConv,
     basicReachAvoid,
-    letEvalAtUse, demonicLoopConst,
-    forwardHypotheticalUnsolvable,switchLiteralArg,  switchLiterals
-    , inverseGhostODE,  superfluousGhost
+    letEvalAtUse,
+    demonicLoopConst,
+    forwardHypotheticalUnsolvable,
+    switchLiteralArg,
+    switchLiterals,
+    inverseGhostODE,
+    superfluousGhost,
   )
 
   val thesisExamples: List[String] = List(
@@ -2211,58 +2291,60 @@ object SharedModels {
     forwardHypothetical,
     printSolution,
     sandboxExample,
-    revisedReachAvoidFor)
-
+    revisedReachAvoidFor,
+  )
 
   val pldiExamples: List[String] = List(pldiModelSafeFull, pldiModelSafeSimple, pldiSandboxSafe)
 
-  val thesisCaseStudies: List[String] =
-    List(
-      pldiModelSafeFull,
-      pldiAngelicSandbox,
-      pldiTimedAngelicControl,
-      pldiReachAvoid,
-      pldiReachAvoidDisturbance,
-      ijrrStaticSafetySimplified,
-      ralWaypointSafety
-    )
+  val thesisCaseStudies: List[String] = List(
+    pldiModelSafeFull,
+    pldiAngelicSandbox,
+    pldiTimedAngelicControl,
+    pldiReachAvoid,
+    pldiReachAvoidDisturbance,
+    ijrrStaticSafetySimplified,
+    ralWaypointSafety,
+  )
 
   val allThesis = thesisExamples ++ thesisCaseStudies
-  //pldiExamples ++ rssExamples ++ ijrrModels
+  // pldiExamples ++ rssExamples ++ ijrrModels
   val allExamples: List[String] = pldiExamples ++ rssExamples ++ ijrrModels ++ thesisExamples
-
 
   // @TODO implement file format
   /**
-    * proof exampleProof = <proof> end
-    * game exampleGame = ....
-    *
-    * proves exampleProof ``[exampleGame](<formula>)''
-    **/
-
+   * {{{
+   * proof exampleProof = <proof> end game exampleGame = ....
+   *
+   * proves exampleProof ``[exampleGame](<formula>)''
+   * }}}
+   */
 
   // Counterexamples from thesis. Should fail to parse or fail to check
-  val cyclicLabel: String =
+  val cyclicLabel: String = {
     """x:= x@two; one:
       |x:= x@one; two:
       |""".stripMargin
+  }
 
-  val referenceOverChoice: String =
+  val referenceOverChoice: String = {
     """y:=x@theEnd;
-    |{x:= 1; ++ x := 2;}
-    |theEnd:""".stripMargin
+      |{x:= 1; ++ x := 2;}
+      |theEnd:""".stripMargin
+  }
 
-  val referenceOverStar: String =
+  val referenceOverStar: String = {
     """ x := y@theEnd;
       | y := *;
       | theEnd:
       |""".stripMargin
+  }
 
-  val referenceOverODE: String =
+  val referenceOverODE: String = {
     """x := y@theEnd;
       |y := 0;
       |{y' = 2 & y <= 5}
       |theEnd:""".stripMargin
+  }
 
   val thesisCounterexamples: List[String] = List(cyclicLabel, referenceOverChoice, referenceOverStar, referenceOverODE)
 }

@@ -1,12 +1,15 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 
 import edu.cmu.cs.ls.keymaerax.core.{Formula, StaticSemantics}
 
-/**
-  * Created by bbohrer on 4/24/16.
-  */
+/** Created by bbohrer on 4/24/16. */
 object Heuristics {
-  def QECost(fml:Formula):Double = {
+  def QECost(fml: Formula): Double = {
     val factor = 1.0
     val semantics = StaticSemantics(fml)
     val vars = (semantics.bv ++ semantics.fv).toSet

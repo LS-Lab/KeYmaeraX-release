@@ -16,7 +16,8 @@ class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String])
     "key" -> JsString("userId"),
     "value" -> JsString(user.userName.replace("/", "%2F").replace(":", "%3A")),
     "userAuthLevel" -> JsNumber(user.level),
-    "askUseDefaultUser" -> (if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("false")) JsFalse else JsTrue),
-    "type" -> JsString("LoginResponse")
+    "askUseDefaultUser" ->
+      (if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("false")) JsFalse else JsTrue),
+    "type" -> JsString("LoginResponse"),
   )
 }

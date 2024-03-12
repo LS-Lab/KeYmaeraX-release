@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.proofs
 
 import edu.cmu.cs.ls.keymaerax.btactics.AxIndex
@@ -21,13 +22,15 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
           val key = AxIndex.axiomIndex(i)._1
           JsString(key.pos.mkString("."))
         },
-        "displayInfo" -> (i.display match {
-          case AxiomDisplayInfo(_, f) => JsString(f)
-          case _ => JsNull
-        }),
-        "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(i))
+        "displayInfo" ->
+          (i.display match {
+            case AxiomDisplayInfo(_, f) => JsString(f)
+            case _ => JsNull
+          }),
+        "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(i),
+      )
     }
     val json = infos.map(i => Try(getInfoJson(i)).toOption).filter(_.isDefined).map(_.get)
-    JsObject("lemmas" -> JsArray(json:_*))
+    JsObject("lemmas" -> JsArray(json: _*))
   }
 }

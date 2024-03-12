@@ -1,33 +1,49 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
-/** A snapshot associates subscripts to variable names. Because indices are used in SSA to distinguish the values of one
-  * variable at different points in time or different points in the code, a snapshot suffices as an abstraction for
-  * different "times" (technically, locations) in a proof.
-  *
-  * @author Brandon Bohrer
-  * @see [[edu.cmu.cs.ls.keymaerax.cdgl.kaisar.SSAPass]]
-  */
+ * A snapshot associates subscripts to variable names. Because indices are used in SSA to distinguish the values of one
+ * variable at different points in time or different points in the code, a snapshot suffices as an abstraction for
+ * different "times" (technically, locations) in a proof.
+ *
+ * @author
+ *   Brandon Bohrer
+ * @see
+ *   [[edu.cmu.cs.ls.keymaerax.cdgl.kaisar.SSAPass]]
+ */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, Subscript}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 
-case class Snapshot (private val m: Map[String, Subscript])  {
+case class Snapshot(private val m: Map[String, Subscript]) {
+
   /** Entry (x -> None) means we saw base variable "x", whereas no "x" entry means we never saw any version of "x". */
   val asMap: Map[String, Subscript] = m
+
   /** Collapse Some(None) to None */
-  private def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
-  /** Add an element x to the map, and override any previous index of x. In contrast, the public interface for
-    *  [[Snapshot]] should take the maximum index rather than forgetting the old index for x. */
+  private def opt[T](x: Option[Option[T]]): Option[T] = x match {
+    case None => None
+    case Some(None) => None
+    case Some(Some(x)) => Some(x)
+  }
+
+  /**
+   * Add an element x to the map, and override any previous index of x. In contrast, the public interface for
+   * [[Snapshot]] should take the maximum index rather than forgetting the old index for x.
+   */
   private def +(x: (String, Subscript)): Snapshot = Snapshot(m.+(x))
 
   /** Look up "x" but distinguish the "never saw x" case (None) vs "only saw x with no index" case (Some(None)) */
   def getOpt(s: String): Option[Subscript] = m.get(s)
-  /** Look up "x" and don't distinguish the "never saw x" case. This can be more convenient, and is adequate so long as
-    * we wish for SSA numbering to start at x_0 rather than x. */
+
+  /**
+   * Look up "x" and don't distinguish the "never saw x" case. This can be more convenient, and is adequate so long as
+   * we wish for SSA numbering to start at x_0 rather than x.
+   */
   def get(s: String): Subscript = opt(getOpt(s))
   def contains(s: String): Boolean = getOpt(s).isDefined
 
@@ -64,15 +80,20 @@ case class Snapshot (private val m: Map[String, Subscript])  {
     Snapshot(freshSet.toMap)
   }
 
-  /** Add a set of bound variables to a snapshot. This (or increment) should be called wherever variables are assigned.
-    * If the variables have been bound before, their subscripts are increased according to SSA. */
+  /**
+   * Add a set of bound variables to a snapshot. This (or increment) should be called wherever variables are assigned.
+   * If the variables have been bound before, their subscripts are increased according to SSA.
+   */
   def addSet(vars: Set[Variable]): Snapshot = {
     val allVars: Set[String] = keySet.++(vars.map(_.name))
-    allVars.foldLeft[Snapshot](Snapshot.empty){case (snap, v) =>
+    allVars.foldLeft[Snapshot](Snapshot.empty) { case (snap, v) =>
       // keep elements which were only in keySet but not vars
       if (!vars.contains(Variable(v))) (snap.+(v -> get(v)))
       else {
-        val idx = opt(getOpt(v)) match {case None => Some(0) case Some(i) => Some(i+1)}
+        val idx = opt(getOpt(v)) match {
+          case None => Some(0)
+          case Some(i) => Some(i + 1)
+        }
         snap.+(v -> idx)
       }
     }
@@ -93,17 +114,21 @@ case class Snapshot (private val m: Map[String, Subscript])  {
     }
   }
 
-  /** Add a variable to a snapshot. This (or addSet) should be called wherever a single variable is assigned.
-    * If [[x]] is already in the snapshot, its subscript is incremented.
-    * @return the variable with its new index and the updated snapshot. */
+  /**
+   * Add a variable to a snapshot. This (or addSet) should be called wherever a single variable is assigned. If [[x]] is
+   * already in the snapshot, its subscript is incremented.
+   * @return
+   *   the variable with its new index and the updated snapshot.
+   */
   def increment(x: Variable): (Variable, Snapshot) = {
     x match {
-      case BaseVariable(name, Some(_), sort) => throw new Exception("SSA pass expected no subscripted variables in input")
+      case BaseVariable(name, Some(_), sort) =>
+        throw new Exception("SSA pass expected no subscripted variables in input")
       case BaseVariable(name, None, sort) =>
         val index: Option[Int] = getOpt(name) match {
           case None => Some(0)
           case Some(None) => Some(0)
-          case Some(Some(i)) => Some(i+1)
+          case Some(Some(i)) => Some(i + 1)
         }
         val snap = this.+(name -> index)
         (BaseVariable(name, index, sort), snap)
@@ -116,7 +141,10 @@ case class Snapshot (private val m: Map[String, Subscript])  {
   /** @return whether every key has same or higher subscript in other snapshot */
   def <=(other: Snapshot): Boolean = {
     if (!m.keySet.subsetOf(other.keySet)) return false
-    m.forall({case (x, None) => true case (x, Some(i)) => other.get(x).exists(i <= _)})
+    m.forall({
+      case (x, None) => true
+      case (x, Some(i)) => other.get(x).exists(i <= _)
+    })
   }
 }
 
@@ -132,7 +160,7 @@ object Snapshot {
         s match {
           case fr: For => snap = snap.revisit(fr.metX); fr
           case fr: ForProgress => snap = snap.revisit(fr.forth.metX); fr
-          case mod: Modify => mod.mods.foreach({case (x, f) => snap = snap.revisit(x)}); mod
+          case mod: Modify => mod.mods.foreach({ case (x, f) => snap = snap.revisit(x) }); mod
           case s => s
         }
       }
@@ -151,8 +179,7 @@ object Snapshot {
         }
       }
     }
-  ProofTraversal.traverse(Context.empty, Context.empty, c.s, tf)
-  snap
+    ProofTraversal.traverse(Context.empty, Context.empty, c.s, tf)
+    snap
   }
 }
-

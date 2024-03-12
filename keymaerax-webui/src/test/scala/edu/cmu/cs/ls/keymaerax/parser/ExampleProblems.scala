@@ -16,21 +16,19 @@ import org.scalatest.OptionValues._
 import scala.collection.immutable.Map
 import scala.collection.mutable.ListBuffer
 
-/**
- * @author Nathan Fulton
- */
+/** @author Nathan Fulton */
 class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
     ))
   }
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
   "parser line messages" should "be properly offset" in {
-    val f =
+    val f = {
       """ArchiveEntry "Test"
         |ProgramVariables
         |   Real x, y, z;
@@ -42,17 +40,19 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |   {x := 2x; y := 2y;}
         |   ](x*y >= 0)
         |End. End.""".stripMargin
+    }
 
-    val ex = the [ParseException] thrownBy ArchiveParser.parser(f)
-    ex.found should (be ("x") or be ("\"x; y := 2y\""))
-    ex.expect should (be ("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term")
-      or be ("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
+    val ex = the[ParseException] thrownBy ArchiveParser.parser(f)
+    ex.found should (be("x") or be("\"x; y := 2y\""))
+    ex.expect should
+      (be("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term") or
+        be("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
     ex.loc.begin.line shouldBe 9
     ex.loc.begin.column shouldBe 11
   }
 
   it should "be properly offset in another example" in {
-    val f =
+    val f = {
       """ ArchiveEntry "Test"
         | ProgramVariables
         |
@@ -75,17 +75,19 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         | (x*y >= 0)
         |
         |End. End.""".stripMargin
+    }
 
-    val ex = the [ParseException] thrownBy ArchiveParser.parseAsFormula(f)
-    ex.found should (be ("x") or be ("\"x; y := 2y\""))
-    ex.expect should (be ("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term")
-      or be ("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
+    val ex = the[ParseException] thrownBy ArchiveParser.parseAsFormula(f)
+    ex.found should (be("x") or be("\"x; y := 2y\""))
+    ex.expect should
+      (be("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term") or
+        be("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
     ex.loc.begin.line shouldBe 16
     ex.loc.begin.column shouldBe 11
   }
 
   it should "work from file input" in {
-    val f =
+    val f = {
       """ArchiveEntry "Test"
         |ProgramVariables
         |   Real x, y, z;
@@ -100,18 +102,19 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |End.
         |End.
         |""".stripMargin
+    }
 
-    val ex = the [ParseException] thrownBy ArchiveParser.parseAsFormula(f)
-    ex.found should (be ("x") or be ("\"x; y := 2y\""))
-    ex.expect should (
-      be ("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term")
-        or be ("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
+    val ex = the[ParseException] thrownBy ArchiveParser.parseAsFormula(f)
+    ex.found should (be("x") or be("\"x; y := 2y\""))
+    ex.expect should
+      (be("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term") or
+        be("""([0-9] | "." | "^" | "*" | "/" | "+" | "-" | ";")"""))
     ex.loc.begin.line shouldBe 10
     ex.loc.begin.column shouldBe 11
   }
 
   "The Parser" should "parse a simple file" in {
-    val theProblem =
+    val theProblem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -129,7 +132,8 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  ] x > 0
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val result = ArchiveParser.parser(theProblem)
     result should have size 1
@@ -138,24 +142,25 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
 
   it should "parse x>0 -> \\exists d [{x'=d}]x>0" in {
     val problem = "x>0 -> \\exists d [{x'=d}]x>0"
-    val declProblem =
+    val declProblem = {
       s"""
-        |ArchiveEntry "Test"
-        |ProgramVariables
-        |  Real x;
-        |End.
-        |
-        |Problem
-        |  $problem
-        |End.
-        |End.
-      """.stripMargin
+         |ArchiveEntry "Test"
+         |ProgramVariables
+         |  Real x;
+         |End.
+         |
+         |Problem
+         |  $problem
+         |End.
+         |End.
+         |""".stripMargin
+    }
 
     ArchiveParser.parser(declProblem).head.model shouldBe Parser(problem)
   }
 
   "Interpretation parser" should "parse simple function declarations" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -166,22 +171,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f()>3
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(Some(interpretation)), _) =>
-      domain.value shouldBe Unit
-      sort shouldBe Real
-      argNames shouldBe Some(Nil)
-      interpretation shouldBe Number(5)
+    entry.defs.decls(Name("f", None)) match {
+      case Signature(domain, sort, argNames, Right(Some(interpretation)), _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Real
+        argNames shouldBe Some(Nil)
+        interpretation shouldBe Number(5)
     }
     entry.model shouldBe Parser("f()>3")
   }
 
   it should "parse function declarations with one parameter" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -192,22 +199,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f(4)>3
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Real
-      sort shouldBe Real
-      argNames shouldBe Some((Name("x", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(Number(5), Times(Variable("x"), Variable("x")))
+    entry.defs.decls(Name("f", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Real
+        sort shouldBe Real
+        argNames shouldBe Some((Name("x", None), Real) :: Nil)
+        interpretation.value shouldBe Plus(Number(5), Times(Variable("x"), Variable("x")))
     }
     entry.model shouldBe Parser("f(4)>3")
   }
 
   it should "parse n-ary function declarations" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -218,22 +227,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f(2,3,4)>3
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Tuple(Real, Tuple(Real, Real))
-      sort shouldBe Real
-      argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
+    entry.defs.decls(Name("f", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Tuple(Real, Tuple(Real, Real))
+        sort shouldBe Real
+        argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
+        interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
     entry.model shouldBe Parser.parser("f(2,3,4)>3")
   }
 
   it should "detect undeclared arguments" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -244,14 +255,15 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f(2,3,4)>3
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
-    val thrown = the [ParseException] thrownBy ArchiveParser.parseProblem(problem)
-    thrown.getMessage should include ("Definition f uses undefined symbol(s) u")
+    val thrown = the[ParseException] thrownBy ArchiveParser.parseProblem(problem)
+    thrown.getMessage should include("Definition f uses undefined symbol(s) u")
   }
 
   it should "replace names with the appropriate dots" in {
-    val problem =
+    val problem = {
       """ArchiveEntry "Test"
         |Definitions
         |  Real f(Real x, Real y, Real z) = x + y*z;
@@ -261,22 +273,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f(2,3,4)>3
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Tuple(Real, Tuple(Real, Real))
-      sort shouldBe Real
-      argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
+    entry.defs.decls(Name("f", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Tuple(Real, Tuple(Real, Real))
+        sort shouldBe Real
+        argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
+        interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
     entry.model shouldBe Parser.parser("f(2,3,4)>3")
   }
 
   it should "not confuse arguments of same name across definitions" in {
-    val problem =
+    val problem = {
       """ArchiveEntry "Test"
         |Definitions
         |  Real f(Real x, Real y, Real z) = x+y*z;
@@ -287,30 +301,35 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f(1,2,3)>0 -> g(3,1,2)>0
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 2
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Tuple(Real, Tuple(Real, Real))
-      sort shouldBe Real
-      argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
+    entry.defs.decls(Name("f", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Tuple(Real, Tuple(Real, Real))
+        sort shouldBe Real
+        argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
+        interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
     entry.defs.decls should contain key Name("g", None)
-    entry.defs.decls(Name("g", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Tuple(Real, Tuple(Real,Real))
-      sort shouldBe Real
-      argNames shouldBe Some((Name("a", None), Real) :: (Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
-      interpretation.value shouldBe FuncOf(Function("f", None, Tuple(Real, Tuple(Real, Real)), Real),
-        Pair(Variable("x"), Pair(Variable("y"), Variable("a"))))
+    entry.defs.decls(Name("g", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Tuple(Real, Tuple(Real, Real))
+        sort shouldBe Real
+        argNames shouldBe Some((Name("a", None), Real) :: (Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
+        interpretation.value shouldBe FuncOf(
+          Function("f", None, Tuple(Real, Tuple(Real, Real)), Real),
+          Pair(Variable("x"), Pair(Variable("y"), Variable("a"))),
+        )
     }
     entry.model shouldBe Parser("f(1,2,3)>0 -> g(3,1,2)>0")
   }
 
   it should "correctly dottify in the presence of unused arguments" in {
-    val problem =
+    val problem = {
       """ArchiveEntry "Test"
         |Definitions
         |  Real f(Real x, Real y) = y+3;
@@ -320,22 +339,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f(1,2)>0
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Tuple(Real, Real)
-      sort shouldBe Real
-      argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(Variable("y"), Number(3))
+    entry.defs.decls(Name("f", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Tuple(Real, Real)
+        sort shouldBe Real
+        argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
+        interpretation.value shouldBe Plus(Variable("y"), Number(3))
     }
     entry.model shouldBe Parser("f(1,2)>0")
   }
 
   it should "replace argument name of unary function with non-indexed dot (for backwards compatibility)" in {
-    val problem =
+    val problem = {
       """ArchiveEntry "Test"
         |Definitions
         |  Real f(Real x) = x + 2;
@@ -345,22 +366,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  f(2)>3
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Real
-      sort shouldBe Real
-      argNames shouldBe Some((Name("x", None), Real) :: Nil)
-      interpretation.value shouldBe Plus(Variable("x"), Number(2))
+    entry.defs.decls(Name("f", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Real
+        sort shouldBe Real
+        argNames shouldBe Some((Name("x", None), Real) :: Nil)
+        interpretation.value shouldBe Plus(Variable("x"), Number(2))
     }
     entry.model shouldBe Parser("f(2)>3")
   }
 
   it should "parse program definitions" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -376,21 +399,23 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  y<=5 -> [a;]x<=5
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Unit
-      sort shouldBe Trafo
-      argNames shouldBe Symbol("empty")
-      interpretation.value shouldBe "x:=*; ?x<=5; ++ x:=y;".asProgram
+    entry.defs.decls(Name("a", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Trafo
+        argNames shouldBe Symbol("empty")
+        interpretation.value shouldBe "x:=*; ?x<=5; ++ x:=y;".asProgram
     }
     entry.model shouldBe "y<=5 -> [a{|^@|};]x<=5".asFormula
   }
 
   it should "parse functions and predicates in program definitions" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -408,21 +433,23 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  y<=5 -> [a;]x<=5
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Unit
-      sort shouldBe Trafo
-      argNames shouldBe Symbol("empty")
-      interpretation.value shouldBe "x:=*; ?p(x,5); ++ x:=f(y);".asProgram
+    entry.defs.decls(Name("a", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Trafo
+        argNames shouldBe Symbol("empty")
+        interpretation.value shouldBe "x:=*; ?p(x,5); ++ x:=f(y);".asProgram
     }
     entry.model shouldBe "y<=5 -> [a{|^@|};]x<=5".asFormula
   }
 
   it should "parse annotations" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -439,23 +466,26 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  [a;]x>=1
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val annotations = ListBuffer.empty[(Program, Formula)]
     Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Unit
-      sort shouldBe Trafo
-      argNames shouldBe Symbol("empty")
-      interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
+    entry.defs.decls(Name("a", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Trafo
+        argNames shouldBe Symbol("empty")
+        interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
-    entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Unit
-      sort shouldBe Trafo
-      argNames shouldBe Symbol("empty")
-      interpretation.value shouldBe "x:=x+2;".asProgram
+    entry.defs.decls(Name("loopBody", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Trafo
+        argNames shouldBe Symbol("empty")
+        interpretation.value shouldBe "x:=x+2;".asProgram
     }
     entry.annotations should contain theSameElementsInOrderAs List(("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula))
     annotations should contain theSameElementsInOrderAs entry.annotations
@@ -463,7 +493,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   }
 
   it should "be allowed to ignore later definitions when elaborating annotations" in {
-    val problem =
+    val problem = {
       """
         |ArchiveEntry "Test"
         |Definitions
@@ -480,23 +510,26 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
         |  [a;]x>=1
         |End.
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
     val annotations = ListBuffer.empty[(Program, Formula)]
     Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
-    entry.defs.decls(Name("a", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Unit
-      sort shouldBe Trafo
-      argNames shouldBe Symbol("empty")
-      interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
+    entry.defs.decls(Name("a", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Trafo
+        argNames shouldBe Symbol("empty")
+        interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
-    entry.defs.decls(Name("loopBody", None)) match { case Signature(domain, sort, argNames, Right(interpretation), _) =>
-      domain.value shouldBe Unit
-      sort shouldBe Trafo
-      argNames shouldBe Symbol("empty")
-      interpretation.value shouldBe "x:=x+2;".asProgram
+    entry.defs.decls(Name("loopBody", None)) match {
+      case Signature(domain, sort, argNames, Right(interpretation), _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Trafo
+        argNames shouldBe Symbol("empty")
+        interpretation.value shouldBe "x:=x+2;".asProgram
     }
     entry.annotations should contain theSameElementsInOrderAs List(("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula))
     annotations should contain theSameElementsInOrderAs entry.annotations

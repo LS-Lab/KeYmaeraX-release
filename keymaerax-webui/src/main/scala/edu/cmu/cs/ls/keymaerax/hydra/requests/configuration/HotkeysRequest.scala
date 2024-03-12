@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -21,15 +22,10 @@ class HotkeysRequest extends LocalhostOnlyRequest {
       try {
         f.createNewFile()
         Files.write(f.toPath, s.mkString.getBytes(StandardCharsets.UTF_8))
-      } finally {
-        s.close
-      }
+      } finally { s.close }
     }
     val hotkeys = Source.fromFile(f)
-    try {
-      List(JSResponse(hotkeys.mkString))
-    } finally {
-      hotkeys.close
-    }
+    try { List(JSResponse(hotkeys.mkString)) }
+    finally { hotkeys.close }
   }
 }

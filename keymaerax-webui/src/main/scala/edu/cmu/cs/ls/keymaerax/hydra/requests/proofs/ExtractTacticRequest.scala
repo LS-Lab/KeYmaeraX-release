@@ -1,15 +1,26 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.GetTacticResponse
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, LabelledTraceToTacticConverter, ProofPOJO, Response, UserProofRequest, VerboseTraceToTacticConverter, WriteRequest}
+import edu.cmu.cs.ls.keymaerax.hydra.{
+  DBAbstraction,
+  DbProofTree,
+  LabelledTraceToTacticConverter,
+  ProofPOJO,
+  Response,
+  UserProofRequest,
+  VerboseTraceToTacticConverter,
+  WriteRequest,
+}
 
 import scala.collection.immutable.{List, Nil}
 
-class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String, verbose: Boolean) extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
+class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String, verbose: Boolean)
+    extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofIdStr)
     val (tactic, locInfoSrc) = tree.tacticString(
@@ -17,10 +28,19 @@ class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String
       else new LabelledTraceToTacticConverter(tree.info.defs(db))
     )
     // remember tactic string
-    val locInfo = locInfoSrc.map({ case (k,v) => (k,v.id.toString) })
-    val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
-      tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
-      Some(GetTacticResponse(tactic, locInfo).getJson.compactPrint))
+    val locInfo = locInfoSrc.map({ case (k, v) => (k, v.id.toString) })
+    val newInfo = ProofPOJO(
+      tree.info.proofId,
+      tree.info.modelId,
+      tree.info.name,
+      tree.info.description,
+      tree.info.date,
+      tree.info.stepCount,
+      tree.info.closed,
+      tree.info.provableId,
+      tree.info.temporary,
+      Some(GetTacticResponse(tactic, locInfo).getJson.compactPrint),
+    )
     db.updateProofInfo(newInfo)
     GetTacticResponse(tactic, locInfo) :: Nil
   }

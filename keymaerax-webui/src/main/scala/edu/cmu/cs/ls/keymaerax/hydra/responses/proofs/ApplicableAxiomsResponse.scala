@@ -1,13 +1,27 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.proofs
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, Fixed, PositionLocator}
 import edu.cmu.cs.ls.keymaerax.btactics.AxIndex
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{ArgInfo, AxiomDisplayInfo, AxiomInfo, DerivationInfo, FormulaArg, InputAxiomDisplayInfo, ListArg, ProvableInfo, RuleDisplayInfo, SequentDisplay, SimpleDisplayInfo, TacticDisplayInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+  ArgInfo,
+  AxiomDisplayInfo,
+  AxiomInfo,
+  DerivationInfo,
+  FormulaArg,
+  InputAxiomDisplayInfo,
+  ListArg,
+  ProvableInfo,
+  RuleDisplayInfo,
+  SequentDisplay,
+  SimpleDisplayInfo,
+  TacticDisplayInfo,
+}
 import edu.cmu.cs.ls.keymaerax.core.Expression
 import edu.cmu.cs.ls.keymaerax.hydra.{RequestHelper, Response}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
@@ -15,35 +29,26 @@ import spray.json.{JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsV
 
 import scala.util.Try
 
-case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Option[DerivationInfo])],
-                                    suggestedInput: Map[ArgInfo, Expression], topLevel: Boolean,
-                                    suggestedPosition: Option[PositionLocator] = None) extends Response {
+case class ApplicableAxiomsResponse(
+    derivationInfos: List[(DerivationInfo, Option[DerivationInfo])],
+    suggestedInput: Map[ArgInfo, Expression],
+    topLevel: Boolean,
+    suggestedPosition: Option[PositionLocator] = None,
+) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
     (suggestedInput.get(input), input) match {
       case (Some(e), FormulaArg(name, _)) =>
-        JsObject (
-          "type" -> JsString(input.sort),
-          "param" -> JsString(name),
-          "value" -> JsString(e.prettyString)
-        )
-      case (_, ListArg(ai)) => //@todo suggested input for Formula*
-        JsObject(
-          "type" -> JsString(input.sort),
-          "elementType" -> JsString(ai.sort),
-          "param" -> JsString(ai.name)
-        )
-      case _ =>
-        JsObject (
-          "type" -> JsString(input.sort),
-          "param" -> JsString(input.name)
-        )
+        JsObject("type" -> JsString(input.sort), "param" -> JsString(name), "value" -> JsString(e.prettyString))
+      case (_, ListArg(ai)) => // @todo suggested input for Formula*
+        JsObject("type" -> JsString(input.sort), "elementType" -> JsString(ai.sort), "param" -> JsString(ai.name))
+      case _ => JsObject("type" -> JsString(input.sort), "param" -> JsString(input.name))
     }
   }
 
   def inputsJson(info: List[ArgInfo]): JsArray = {
     info match {
       case Nil => JsArray()
-      case inputs => JsArray(inputs.map(inputJson):_*)
+      case inputs => JsArray(inputs.map(inputJson): _*)
     }
   }
 
@@ -54,30 +59,31 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   }
 
   def axiomJson(info: DerivationInfo): JsObject = {
-    val formulaText =
-      (info, info.display) match {
-        case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
-        case (_, InputAxiomDisplayInfo(_, formulaDisplay, _)) => formulaDisplay
-        case (info: AxiomInfo, _) => info.formula.prettyString
-      }
+    val formulaText = (info, info.display) match {
+      case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
+      case (_, InputAxiomDisplayInfo(_, formulaDisplay, _)) => formulaDisplay
+      case (info: AxiomInfo, _) => info.formula.prettyString
+    }
     JsObject(
       "type" -> JsString("axiom"),
       "formula" -> JsString(formulaText),
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
       "longName" -> JsString(info.longDisplayName),
-      "defaultKeyPos" -> (info match {
-        case pi: ProvableInfo =>
-          val key = AxIndex.axiomIndex(pi)._1
-          JsString(key.pos.mkString("."))
-        case _ => JsString("0")
-      }),
-      "displayInfoParts" -> (info match {
-        case pi: ProvableInfo => RequestHelper.jsonDisplayInfoComponents(pi)
-        case _ => JsNull
-      }),
+      "defaultKeyPos" ->
+        (info match {
+          case pi: ProvableInfo =>
+            val key = AxIndex.axiomIndex(pi)._1
+            JsString(key.pos.mkString("."))
+          case _ => JsString("0")
+        }),
+      "displayInfoParts" ->
+        (info match {
+          case pi: ProvableInfo => RequestHelper.jsonDisplayInfoComponents(pi)
+          case _ => JsNull
+        }),
       "input" -> inputsJson(info.inputs),
-      "help" -> helpJson(info.codeName)
+      "help" -> helpJson(info.codeName),
     )
   }
 
@@ -86,22 +92,27 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "type" -> JsString("tactic"),
       "expansible" -> JsBoolean(info.revealInternalSteps),
       "input" -> inputsJson(info.inputs),
-      "help" -> helpJson(info.codeName)
+      "help" -> helpJson(info.codeName),
     )
   }
 
-  def sequentJson(sequent:SequentDisplay): JsValue = {
-    val json = JsObject (
-      "ante" -> JsArray(sequent.ante.map(JsString(_)):_*),
-      "succ" -> JsArray(sequent.succ.map(JsString(_)):_*),
-      "isClosed" -> JsBoolean(sequent.isClosed)
+  def sequentJson(sequent: SequentDisplay): JsValue = {
+    val json = JsObject(
+      "ante" -> JsArray(sequent.ante.map(JsString(_)): _*),
+      "succ" -> JsArray(sequent.succ.map(JsString(_)): _*),
+      "isClosed" -> JsBoolean(sequent.isClosed),
     )
     json
   }
 
-  def ruleJson(info: DerivationInfo, conclusion: SequentDisplay, premises: List[SequentDisplay], inputGenerator: Option[String]): JsObject = {
+  def ruleJson(
+      info: DerivationInfo,
+      conclusion: SequentDisplay,
+      premises: List[SequentDisplay],
+      inputGenerator: Option[String],
+  ): JsObject = {
     val conclusionJson = sequentJson(conclusion)
-    val premisesJson = JsArray(premises.map(sequentJson):_*)
+    val premisesJson = JsArray(premises.map(sequentJson): _*)
     JsObject(
       "type" -> JsString("sequentrule"),
       "expansible" -> JsBoolean(info.revealInternalSteps),
@@ -109,7 +120,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "premise" -> premisesJson,
       "input" -> inputsJson(info.inputs),
       "inputGenerator" -> inputGenerator.map(JsString(_)).getOrElse(JsNull),
-      "help" -> helpJson(info.codeName)
+      "help" -> helpJson(info.codeName),
     )
   }
 
@@ -117,16 +128,20 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
     val derivation = derivationInfo match {
       case info: AxiomInfo => axiomJson(info)
       case info: DerivationInfo => (info, info.display) match {
-        case (_, _: SimpleDisplayInfo) => tacticJson(info)
-        case (pi: DerivationInfo, _: AxiomDisplayInfo) => axiomJson(pi)
-        case (pi: DerivationInfo, _: InputAxiomDisplayInfo) => axiomJson(pi) //@todo usually those have tactics with RuleDisplayInfo
-        case (_, RuleDisplayInfo(_, conclusion, premises, inputGenerator)) => ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
-        case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem, inputGenerator)) =>
-          if (topLevel) ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
-          else ruleJson(info, ctxConc, ctxPrem, if (inputGenerator.isEmpty) None else Some(inputGenerator))
-        case (_, _: AxiomDisplayInfo | _: InputAxiomDisplayInfo) =>
-          throw new IllegalArgumentException(s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo")
-      }
+          case (_, _: SimpleDisplayInfo) => tacticJson(info)
+          case (pi: DerivationInfo, _: AxiomDisplayInfo) => axiomJson(pi)
+          case (pi: DerivationInfo, _: InputAxiomDisplayInfo) =>
+            axiomJson(pi) // @todo usually those have tactics with RuleDisplayInfo
+          case (_, RuleDisplayInfo(_, conclusion, premises, inputGenerator)) =>
+            ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
+          case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem, inputGenerator)) =>
+            if (topLevel)
+              ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
+            else ruleJson(info, ctxConc, ctxPrem, if (inputGenerator.isEmpty) None else Some(inputGenerator))
+          case (_, _: AxiomDisplayInfo | _: InputAxiomDisplayInfo) => throw new IllegalArgumentException(
+              s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo"
+            )
+        }
     }
     JsObject(
       "id" -> new JsString(derivationInfo.codeName),
@@ -136,7 +151,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "longName" -> new JsString(derivationInfo.longDisplayName),
       "displayLevel" -> new JsString(derivationInfo.displayLevel.name),
       "numPositionArgs" -> new JsNumber(derivationInfo.numPositionArgs),
-      "derivation" -> derivation
+      "derivation" -> derivation,
     )
   }
 
@@ -148,19 +163,15 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   }
 
   def derivationJson(info: (DerivationInfo, Option[DerivationInfo])): JsObject = info._2 match {
-    case Some(comfort) =>
-      JsObject(
+    case Some(comfort) => JsObject(
         "standardDerivation" -> derivationJson(info._1),
         "comfortDerivation" -> derivationJson(comfort),
-        "positionSuggestion" -> posJson(suggestedPosition)
+        "positionSuggestion" -> posJson(suggestedPosition),
       )
     case None =>
-      JsObject(
-        "standardDerivation" -> derivationJson(info._1),
-        "positionSuggestion" -> posJson(suggestedPosition)
-      )
+      JsObject("standardDerivation" -> derivationJson(info._1), "positionSuggestion" -> posJson(suggestedPosition))
   }
 
-  def getJson: JsValue = JsArray(
-    derivationInfos.map(i => Try(derivationJson(i)).toOption).filter(_.isDefined).map(_.get):_*)
+  def getJson: JsValue =
+    JsArray(derivationInfos.map(i => Try(derivationJson(i)).toOption).filter(_.isDefined).map(_.get): _*)
 }

@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 //package edu.cmu.cs.ls.keymaera.hydra
 //
 //import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraParser, KeYmaeraPrettyPrinter}
@@ -13,17 +14,17 @@
 ///**
 // * Pretty-prints each subexpression, storing a unique identifier based upon the
 // * positions in the sequent. The server is notified of all newly created identifiers.
-// * 
+// *
 // * Note: pretty-printing something to JSON with this printer has the side-effect
-// * of sending a declaration to the server indicating the presence of a new 
+// * of sending a declaration to the server indicating the presence of a new
 // * expression, sequent or node.
 // */
-//object KeYmaeraClientPrinter {    
+//object KeYmaeraClientPrinter {
 //  def printPos(p: PosInExpr): Any = p.pos.mkString("")
-//  
-//  def getSequent(sessionName : String, uid : String, sequent : Sequent) = { 
+//
+//  def getSequent(sessionName : String, uid : String, sequent : Sequent) = {
 //    KeYmaeraClient.sendSequent(sessionName, uid, sequent);
-//    
+//
 //    JsObject("uid"  -> JsString(uid),
 //    		 "pref" -> getExprList(sessionName, sequent.pref, uid + "p", 0),
 //    		 "ante" -> getExprList(sessionName, sequent.ante, uid + "a", 0),
@@ -36,10 +37,10 @@
 //      val expr = l.lift(index).get
 //      val uid = uidPrefix + (uidOffset+index).toString()
 //      result = result ++ List(exprToJson(sessionName, uid, expr))
-//    }  
+//    }
 //    JsArray(result)
 //  }
-//  
+//
 //  def exprToJson(sessionName : String, uid : String, e : Expr) : JsValue = {
 //    KeYmaeraClient.sendExpression(sessionName, uid, e);
 //    import edu.cmu.cs.ls.keymaerax.parser.HTMLSymbols._;
@@ -99,7 +100,7 @@
 //              case _ => ???
 //            }))
 //      }
-//      
+//
 //      case e : Ternary => {
 //        JsObject(
 //            "uid" -> JsString(uid),
@@ -173,7 +174,7 @@
 //        }
 //        case e : UnaryGame => ???
 //        case e : UnaryProgram => e match {
-//          case e : Loop => JsObject( 
+//          case e : Loop => JsObject(
 //              "uid" -> JsString(uid),
 //              "child" -> exprToJson(sessionName, uid+"c", e.child),
 //              "post_symbol" -> JsString(KSTAR)
@@ -181,7 +182,7 @@
 //        }
 //        case _ => ???
 //      }
-//      
+//
 //      case e : NamedSymbol => {JsObject(
 //          "uid" -> JsString(uid),
 //          "str" -> JsString(e.prettyString+(e.index match { case Some(j) => "_" + j case _ => "" }))
@@ -192,7 +193,7 @@
 //      case _ => JsString("unimmplemented: unary and quantifiers." + e.prettyString + e.getClass().getName())
 //    }
 //  }
-//  
+//
 //  def getNSList(sessionName:String,uid:String,variables:Seq[NamedSymbol]) = {
 //    var retVal : List[JsValue] = List()
 //    var count = 0;
@@ -216,8 +217,8 @@
 //object KeYmaeraClient {
 //  //For now, we just tightly couple to the server running in this jvm.
 ////  val server = "localhost"
-////  val port = 8080 
-//  
+////  val port = 8080
+//
 //
 //  /**
 //   * @return the sequent containing the expression or sequent with id ``uid"
@@ -235,7 +236,7 @@
 //	    else if(uid.contains("p")) {
 //	      val parts = uid.split("p")
 //	      if(parts.size > 2) throw new Exception("bad uid")
-//	      parts.head        
+//	      parts.head
 //	    }
 //	    else if(uid.contains("s")) {
 //	      val parts = uid.split("s")
@@ -246,13 +247,13 @@
 //	      throw new Exception("bad uid")
 //	    }
 //      }
-//      this.getSequent(sessionName, sequentUid)      
+//      this.getSequent(sessionName, sequentUid)
 //    }
 //    else {
 //      throw new Exception("Formula not found.")
 //    }
 //  }
-//  
+//
 //  def serviceRequest(sessionName : String, request : Request) = {
 //    val updates = request.getResultingUpdates()
 //    for(update <- updates) {
@@ -260,15 +261,15 @@
 //    }
 //    updates
 //  }
-//  
+//
 //  def hasSequent(sessionName : String, uid : String) = {
 //    ServerState.sequents.containsKey((sessionName, uid))
 //  }
-//  
+//
 //  def getSequent(sessionName : String, uid : String) = {
 //    ServerState.getSequent(sessionName, uid)
 //  }
-//  
+//
 //  def hasExpression(sessionName:String, uid:String) = {
 //    ServerState.expressions.containsKey((sessionName, uid))
 //  }
@@ -278,7 +279,7 @@
 //  def sendSequent(sessionName : String, uid : String, s:Sequent) = {
 //    ServerState.addSequent(sessionName,uid,s)
 //  }
-//  
+//
 //  def sendExpression(sessionName : String, uid : String, e:Expr) = {
 //    ServerState.addExpression(sessionName, uid, e)
 //  }

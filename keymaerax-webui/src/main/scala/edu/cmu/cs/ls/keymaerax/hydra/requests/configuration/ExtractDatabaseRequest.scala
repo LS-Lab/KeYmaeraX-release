@@ -1,11 +1,19 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.hydra.{ConfigurationPOJO, ErrorResponse, HyDRAServerConfig, LocalhostOnlyRequest, RegisteredOnlyRequest, Response}
+import edu.cmu.cs.ls.keymaerax.hydra.{
+  ConfigurationPOJO,
+  ErrorResponse,
+  HyDRAServerConfig,
+  LocalhostOnlyRequest,
+  RegisteredOnlyRequest,
+  Response,
+}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ExtractDatabaseResponse
 
@@ -16,7 +24,8 @@ import scala.collection.immutable.{List, Map, Nil}
 
 class ExtractDatabaseRequest() extends LocalhostOnlyRequest with RegisteredOnlyRequest {
   override def resultingResponses(): List[Response] = {
-    if (HyDRAServerConfig.isHosted) new ErrorResponse("Cannot extract the database on a hosted instance of KeYmaera X") :: Nil
+    if (HyDRAServerConfig.isHosted)
+      new ErrorResponse("Cannot extract the database on a hosted instance of KeYmaera X") :: Nil
     else {
       val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
       productionDatabase.syncDatabase()
@@ -29,12 +38,10 @@ class ExtractDatabaseRequest() extends LocalhostOnlyRequest with RegisteredOnlyR
 
       val src = new File(dbPath)
       val dest = new File(extractionPath)
-      new FileOutputStream(dest).getChannel.transferFrom(
-        new FileInputStream(src).getChannel, 0, Long.MaxValue)
+      new FileOutputStream(dest).getChannel.transferFrom(new FileInputStream(src).getChannel, 0, Long.MaxValue)
 
-
-      //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
-      //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
+      // @todo Maybe instead do this in the production database and then have a catch all that undoes it.
+      // That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
       val extractedDatabase = new SQLiteDB(extractionPath)
       extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
       extractedDatabase.syncDatabase()

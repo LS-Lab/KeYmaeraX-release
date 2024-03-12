@@ -1,15 +1,24 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.users
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.hydra.{BooleanResponse, DBAbstraction, ErrorResponse, LocalhostOnlyRequest, Response, WriteRequest}
+import edu.cmu.cs.ls.keymaerax.hydra.{
+  BooleanResponse,
+  DBAbstraction,
+  ErrorResponse,
+  LocalhostOnlyRequest,
+  Response,
+  WriteRequest,
+}
 
 import scala.collection.immutable.{List, Nil}
 
-class SetDefaultUserRequest(db: DBAbstraction, userId: String, password: String, useDefault: Boolean) extends LocalhostOnlyRequest with WriteRequest {
+class SetDefaultUserRequest(db: DBAbstraction, userId: String, password: String, useDefault: Boolean)
+    extends LocalhostOnlyRequest with WriteRequest {
   override def resultingResponses(): List[Response] = {
     if (useDefault) {
       if (db.checkPassword(userId, password)) {

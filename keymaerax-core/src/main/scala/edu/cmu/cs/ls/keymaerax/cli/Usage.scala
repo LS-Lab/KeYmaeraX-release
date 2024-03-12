@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
 
 /** Provides usages information. */
 object Usage {
+
   /** Prints help messages for command line options. */
   def optionErrorReporter(option: String, usage: String): Unit = {
     val noValueMessage = "[Error] No value specified for " + option + " option. "
@@ -16,27 +17,43 @@ object Usage {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage)
       case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage)
-      case "-convert" => println(noValueMessage + "Please use: -convert [stripHints|verboseTactics|verbatimTactics] FILENAME.kyx\n\n" + usage)
-      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage)
+      case "-convert" => println(
+          noValueMessage + "Please use: -convert [stripHints|verboseTactics|verbatimTactics] FILENAME.kyx\n\n" + usage
+        )
+      case "-out" =>
+        println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage)
       case "-conjecture" => println(noValueMessage + "Please use: -conjecture FILENAME.kyx\n\n" + usage)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage)
-      case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage)
-      case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage)
-      case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage)
+      case "-tactic" => println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage)
+      case "-mathkernel" => println(
+          noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 +
+            "_FILE\n\n" + usage
+        )
+      case "-jlink" => println(
+          noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +
+            DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage
+        )
       case "-jlinktcpip" => println(noValueMessage + "Please use: -jlinktcpip [true|false]\n\n" + usage)
       case "-jlinkinterface" => println(noValueMessage + "Please use: -jlinkinterface [string|expr]\n\n" + usage)
       case "-parallelqe" => println(noValueMessage + "Please use: -parallelqe [true|false]\n\n" + usage)
       case "-qemethod" => println(noValueMessage + "Please use: -qemethod [Reduce|Resolve]\n\n" + usage)
       case "-z3path" => println(noValueMessage + "Please use: -z3path PATH_TO_z3_FILE\n\n" + usage)
       case "-tool" => println(noValueMessage + "Please use: -tool mathematica|wolframengine|z3\n\n" + usage)
-      case "-grade" => println(noValueMessage + "Please use: -grade FILENAME.json [-exportanswers [-out DIR]] [-skiponparseerror]\n\n" + usage)
-      case "-proofStatisticsPrinter" => println(noValueMessage + "Please use: -proofStatisticsPrinter [default|arch-nln|arch-hstp]\n\n" + usage)
-      case _ =>  println("[Error] Unknown option " + option + "\n\n" + usage)
+      case "-grade" => println(
+          noValueMessage + "Please use: -grade FILENAME.json [-exportanswers [-out DIR]] [-skiponparseerror]\n\n" +
+            usage
+        )
+      case "-proofStatisticsPrinter" =>
+        println(noValueMessage + "Please use: -proofStatisticsPrinter [default|arch-nln|arch-hstp]\n\n" + usage)
+      case _ => println("[Error] Unknown option " + option + "\n\n" + usage)
     }
   }
 
-  /** Usage -help information.
-    * @note Formatted to 80 characters terminal width. */
+  /**
+   * Usage -help information.
+   * @note
+   *   Formatted to 80 characters terminal width.
+   */
   private val usage: String =
     """Usage: java -jar keymaerax.jar
       |  -ui [web server options] |
@@ -98,6 +115,7 @@ object Usage {
 
   /** Command-line interface usage. */
   val cliUsage: String = usage.linesWithSeparators.filter(_ != "  -ui [web server options] |\n").mkString
+
   /** Full usage. */
   val fullUsage: String = usage
 }

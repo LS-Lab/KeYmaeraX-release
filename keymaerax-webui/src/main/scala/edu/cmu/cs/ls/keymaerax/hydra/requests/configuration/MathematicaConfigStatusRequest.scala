@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -15,11 +16,18 @@ class MathematicaConfigStatusRequest(db: DBAbstraction) extends Request with Rea
   override def resultingResponses(): List[Response] = {
     ToolProvider.tool("mathematica") match {
       case Some(_) =>
-        new ToolConfigStatusResponse("mathematica",
+        new ToolConfigStatusResponse(
+          "mathematica",
           Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-            Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
-            ToolProvider.tool("mathematica").isDefined) :: Nil
-      case None => new ToolConfigErrorResponse("mathematica", "Mathematica could not be started; please double-check the configured paths and make sure you have a valid license (if you use a license server, make sure it is reachable). Temporarily using " + ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.") :: Nil
+            Configuration
+              .contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) && ToolProvider.tool("mathematica").isDefined,
+        ) :: Nil
+      case None =>
+        new ToolConfigErrorResponse(
+          "mathematica",
+          "Mathematica could not be started; please double-check the configured paths and make sure you have a valid license (if you use a license server, make sure it is reachable). Temporarily using " +
+            ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.",
+        ) :: Nil
     }
   }
 }

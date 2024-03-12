@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.PrintWriter
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{OptionMap, exit}
+import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{exit, OptionMap}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator, CodeGenerator}
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, Imply, StaticSemantics, True}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -20,14 +20,19 @@ import scala.reflect.io.File
 
 /** Code generator command-line interface. */
 object CodeGen {
-  /** Code generator.
-    * @param options Options to steer the code generator:
-    *                - 'in (mandatory) input archive file, can be of the form file.kyx#entry
-    *                - 'out (optional) output file (default: 'in.c)
-    *                - 'vars (optional)
-    *                - 'interval (optional) Whether to use interval arithmetic or floating point arithmetic (default: interval)
-    *                - 'quantitative (optional) Whether to generate a quantitative or boolean monitor (default: true)
-    * @param usage Usage information to print on wrong usage. */
+
+  /**
+   * Code generator.
+   * @param options
+   *   Options to steer the code generator:
+   *   - 'in (mandatory) input archive file, can be of the form file.kyx#entry
+   *   - 'out (optional) output file (default: 'in.c)
+   *   - 'vars (optional)
+   *   - 'interval (optional) Whether to use interval arithmetic or floating point arithmetic (default: interval)
+   *   - 'quantitative (optional) Whether to generate a quantitative or boolean monitor (default: true)
+   * @param usage
+   *   Usage information to print on wrong usage.
+   */
   def codegen(options: OptionMap, usage: String): Unit = {
     require(options.contains(Symbol("in")), usage)
 
@@ -61,20 +66,31 @@ object CodeGen {
     println("Generated\n  " + written.mkString("\n  "))
   }
 
-  def codegen(entry: ParsedArchiveEntry, interval: Boolean, outputFileName: String, head: String,
-              vars: Option[Set[BaseVariable]]): Unit = {
+  def codegen(
+      entry: ParsedArchiveEntry,
+      interval: Boolean,
+      outputFileName: String,
+      head: String,
+      vars: Option[Set[BaseVariable]],
+  ): Unit = {
     if (interval) {
-      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System.err.println("Cannot yet augment compiled code with interval arithmetic to guard against floating-point roundoff errors\n(use -nointerval instead)")
+      // @todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
+      System
+        .err
+        .println(
+          "Cannot yet augment compiled code with interval arithmetic to guard against floating-point roundoff errors\n(use -nointerval instead)"
+        )
 
       println("Interval arithmetic: unfinished")
       System.err.println("Interval arithmetic: unfinished")
-      //@todo wipe out output file PrintWriter above has already emptied the output file
-      //@todo pw.close()
+      // @todo wipe out output file PrintWriter above has already emptied the output file
+      // @todo pw.close()
       exit(-1)
       // TODO what to do when proof cannot be checked?
     } else {
-      println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
+      println(
+        "Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)"
+      )
     }
 
     val inputFormula = entry.model.asInstanceOf[Formula]
@@ -83,15 +99,21 @@ object CodeGen {
       exit(-1)
     }
 
-    //@note codegen in C format only regardless of file extension
+    // @note codegen in C format only regardless of file extension
     val theVars = vars match {
       case Some(v) => v
-      case None => StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+      case None => StaticSemantics
+          .vars(inputFormula)
+          .symbols
+          .filter(_.isInstanceOf[BaseVariable])
+          .map(_.asInstanceOf[BaseVariable])
     }
 
     val codegenStart = System.currentTimeMillis()
-    //@todo input variables (nondeterministically assigned in original program)
-    val output = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs))(inputFormula, theVars, Set(), outputFileName)
+    // @todo input variables (nondeterministically assigned in original program)
+    val output = (
+      new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs)
+    )(inputFormula, theVars, Set(), outputFileName)
     Console.println("[codegen time " + (System.currentTimeMillis() - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName)
     pw.write(head)
@@ -100,8 +122,12 @@ object CodeGen {
     pw.close()
   }
 
-  def codegenQuantitative(entry: ParsedArchiveEntry, outputFileName: String, head: String,
-                          vars: Option[Set[BaseVariable]]): Unit = {
+  def codegenQuantitative(
+      entry: ParsedArchiveEntry,
+      outputFileName: String,
+      head: String,
+      vars: Option[Set[BaseVariable]],
+  ): Unit = {
     val monitorFml = entry.model.asInstanceOf[Formula]
 
     if (!monitorFml.isFOL) {
@@ -111,17 +137,27 @@ object CodeGen {
 
     val monitorStateVars = vars match {
       case Some(v) => v
-      case None => StaticSemantics.vars(entry.model).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+      case None =>
+        StaticSemantics.vars(entry.model).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
     }
 
     val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
     val reassociation = TactixLibrary.proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop)
-    assert(reassociation.isProved, "Reassociated formula incorrectly: failed to prove\n" + reassociation.conclusion.prettyString)
-    val monitorProgProof = TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2)
-    assert(monitorProgProof.subgoals.size == 1, "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString)
+    assert(
+      reassociation.isProved,
+      "Reassociated formula incorrectly: failed to prove\n" + reassociation.conclusion.prettyString,
+    )
+    val monitorProgProof = TactixLibrary
+      .proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2)
+    assert(
+      monitorProgProof.subgoals.size == 1,
+      "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString,
+    )
     val Imply(True, monitorProg) = monitorProgProof.subgoals.head.toFormula
     val inputs = CodeGenerator.getInputs(monitorProg)
-    val monitorCode = (new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs))(monitorProg, monitorStateVars, inputs, "Monitor")
+    val monitorCode = (
+      new CGenerator(new CMonitorGenerator(Symbol("resist"), entry.defs), True, entry.defs)
+    )(monitorProg, monitorStateVars, inputs, "Monitor")
 
     val pw = new PrintWriter(outputFileName)
     pw.write(head)

@@ -13,22 +13,33 @@ import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
 
 /**
  * Interpreted functions / defined functions substitution tests.
- * @author Andre Platzer
+ * @author
+ *   Andre Platzer
  */
 @AdvocatusTest
 class InterpretedFunctionTest extends TacticTestBase {
   import TactixLibrary._
 
-  "Interpreted / defined functions" should "not substitute abs" taggedAs(SummaryTest) in withMathematica { qeTool =>
+  "Interpreted / defined functions" should "not substitute abs" taggedAs (SummaryTest) in withMathematica { qeTool =>
     val wrong = "f(-1)=1".asFormula
     val intbase = "abs(-1)=1".asFormula
     val pr = proveBy(intbase, QE)
     pr shouldBe Symbol("proved")
-    //@todo Either SubstitutionClashException or a result that isn't proved or isn't of the form wrong
-    val pr2 = pr(USubst(SubstitutionPair(FuncOf(Function("abs",None,Real,Real,None),DotTerm()), FuncOf(Function("f",None,Real,Real),DotTerm())) :: Nil))
+    // @todo Either SubstitutionClashException or a result that isn't proved or isn't of the form wrong
+    val pr2 = pr(USubst(
+      SubstitutionPair(
+        FuncOf(Function("abs", None, Real, Real, None), DotTerm()),
+        FuncOf(Function("f", None, Real, Real), DotTerm()),
+      ) :: Nil
+    ))
     pr2.conclusion shouldBe pr.conclusion
     pr2 shouldBe Symbol("proved")
-    a [CoreException] shouldBe thrownBy (pr(USubst(SubstitutionPair(FuncOf(InterpretedSymbols.absF,DotTerm()), FuncOf(Function("f",None,Real,Real),DotTerm())) :: Nil)))
+    a[CoreException] shouldBe thrownBy(pr(USubst(
+      SubstitutionPair(
+        FuncOf(InterpretedSymbols.absF, DotTerm()),
+        FuncOf(Function("f", None, Real, Real), DotTerm()),
+      ) :: Nil
+    )))
   }
 
   it should "not prove false 0=1 via substitution of abs" in withMathematica { qeTool =>
@@ -36,11 +47,12 @@ class InterpretedFunctionTest extends TacticTestBase {
     val intbase = "abs(-1)=1".asFormula
     val pr = proveBy(intbase, QE)
     pr shouldBe Symbol("proved")
-    //@todo Either SubstitutionClashException or a result that isn't proved or isn't of the form wrong
-    val pr2 = pr(USubst(SubstitutionPair(FuncOf(Function("abs",None,Real,Real,None),DotTerm()), Number(0)) :: Nil))
+    // @todo Either SubstitutionClashException or a result that isn't proved or isn't of the form wrong
+    val pr2 = pr(USubst(SubstitutionPair(FuncOf(Function("abs", None, Real, Real, None), DotTerm()), Number(0)) :: Nil))
     pr2.conclusion shouldBe pr.conclusion
-    a [CoreException] shouldBe thrownBy(pr(USubst(SubstitutionPair(FuncOf(InterpretedSymbols.absF,DotTerm()), Number(0)) :: Nil)))
+    a[CoreException] shouldBe
+      thrownBy(pr(USubst(SubstitutionPair(FuncOf(InterpretedSymbols.absF, DotTerm()), Number(0)) :: Nil)))
   }
 
-  //@todo similarly for min, max
+  // @todo similarly for min, max
 }

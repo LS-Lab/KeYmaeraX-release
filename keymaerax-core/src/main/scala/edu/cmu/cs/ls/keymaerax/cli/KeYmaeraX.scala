@@ -10,9 +10,26 @@ import java.util.concurrent.TimeUnit
 import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{
+  FixedGenerator,
+  MathematicaToolProvider,
+  MultiToolProvider,
+  NoneToolProvider,
+  TactixInit,
+  ToolProvider,
+  WolframEngineToolProvider,
+  WolframScriptToolProvider,
+  Z3ToolProvider,
+}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, StaticSemantics}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, Name, ParsedArchiveEntry, PrettierPrintFormatProvider}
+import edu.cmu.cs.ls.keymaerax.parser.{
+  ArchiveParser,
+  Declaration,
+  KeYmaeraXArchivePrinter,
+  Name,
+  ParsedArchiveEntry,
+  PrettierPrintFormatProvider,
+}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.ext.SmtLibReader
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
@@ -59,20 +76,18 @@ object KeYmaeraX {
   }
 
   def main(args: Array[String]): Unit = {
-    //@note 'commandLine is passed in to preserve evidence of what generated the output.
+    // @note 'commandLine is passed in to preserve evidence of what generated the output.
     Configuration.setConfiguration(FileConfiguration)
-    val (options, unprocessedArgs) = nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList, Usage.cliUsage)
+    val (options, unprocessedArgs) =
+      nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
-    try {
-      runCommand(options, Usage.cliUsage)
-    } finally {
-      shutdownProver()
-    }
+    try { runCommand(options, Usage.cliUsage) }
+    finally { shutdownProver() }
   }
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
   def runCommand(options: OptionMap, usage: String): Unit = {
-    //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scala -modelplex -codegen
+    // @todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scala -modelplex -codegen
     options.get(Symbol("mode")) match {
       case Some(Modes.GRADE) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
@@ -100,11 +115,15 @@ object KeYmaeraX {
 
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
     ))
 
-    //@note just in case the user shuts down the prover from the command line
-    Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
+    // @note just in case the user shuts down the prover from the command line
+    Runtime
+      .getRuntime
+      .addShutdownHook(new Thread() {
+        override def run(): Unit = { shutdownProver() }
+      })
   }
 
   /** Initializes the backend solvers. */
@@ -125,13 +144,13 @@ object KeYmaeraX {
     ToolProvider.setProvider(new NoneToolProvider())
     TactixInit.invSupplier = FixedGenerator(Nil)
     KeYmaeraXTool.shutdown()
-    //@note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
+    // @note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
   }
 
   /** Exit gracefully */
   def exit(status: Int): Nothing = { shutdownProver(); sys.exit(status) }
 
-  /** Fills `options` from `args`, printing `usage` on error.  */
+  /** Fills `options` from `args`, printing `usage` on error. */
   @tailrec
   def nextOption(options: OptionMap, args: List[String], usage: String): (OptionMap, List[String]) = {
     args match {
@@ -140,23 +159,26 @@ object KeYmaeraX {
       case "-license" :: _ => println(License.license); exit(1)
       // actions and their options
       case "-bparse" :: value :: _ =>
-        initializeProver(options, usage) //@note parsing a tactic requires prover (AxiomInfo)
+        initializeProver(options, usage) // @note parsing a tactic requires prover (AxiomInfo)
         if (parseBelleTactic(value)) exit(0) else exit(-1)
       case "-conjecture" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("conjecture") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-"))
+          nextOption(options ++ Map(Symbol("conjecture") -> value), tail, usage)
         else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
       case "-parse" :: value :: _ =>
-        //@note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
+        // @note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
         initializeProver(options, usage)
         if (parseProblemFile(value)) exit(0) else exit(-1)
       case "-parserClass" :: value :: tail =>
         Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
         nextOption(options, tail, usage)
       case "-prove" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("mode") -> Modes.PROVE, Symbol("in") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-"))
+          nextOption(options ++ Map(Symbol("mode") -> Modes.PROVE, Symbol("in") -> value), tail, usage)
         else { Usage.optionErrorReporter("-prove", usage); exit(1) }
       case "-grade" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("mode") -> Modes.GRADE, Symbol("in") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-"))
+          nextOption(options ++ Map(Symbol("mode") -> Modes.GRADE, Symbol("in") -> value), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
       case "-exportanswers" :: tail => nextOption(options ++ Map(Symbol("exportanswers") -> true), tail, usage)
       case "-skiponparseerror" :: tail => nextOption(options ++ Map(Symbol("skiponparseerror") -> true), tail, usage)
@@ -168,20 +190,26 @@ object KeYmaeraX {
         else { Usage.optionErrorReporter("-savept", usage); exit(1) }
       case "-setup" :: tail => nextOption(options ++ Map(Symbol("mode") -> Modes.SETUP), tail, usage)
       case "-convert" :: conversion :: kyx :: tail =>
-        if (conversion.nonEmpty && !conversion.startsWith("-") && kyx.nonEmpty && !kyx.startsWith("-"))
-          nextOption(options ++ Map(Symbol("mode") -> Modes.CONVERT, Symbol("conversion") -> conversion, Symbol("in") -> kyx), tail, usage)
+        if (conversion.nonEmpty && !conversion.startsWith("-") && kyx.nonEmpty && !kyx.startsWith("-")) nextOption(
+          options ++ Map(Symbol("mode") -> Modes.CONVERT, Symbol("conversion") -> conversion, Symbol("in") -> kyx),
+          tail,
+          usage,
+        )
         else { Usage.optionErrorReporter("-convert", usage); exit(1) }
       case "-tactic" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("tactic") -> value), tail, usage)
         else { Usage.optionErrorReporter("-tactic", usage); exit(1) }
       case "-tacticName" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("tacticName") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-"))
+          nextOption(options ++ Map(Symbol("tacticName") -> value), tail, usage)
         else { Usage.optionErrorReporter("-tacticName", usage); exit(1) }
       case "-tool" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("tool") -> value.toLowerCase), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-"))
+          nextOption(options ++ Map(Symbol("tool") -> value.toLowerCase), tail, usage)
         else { Usage.optionErrorReporter("-tool", usage); exit(1) }
       case "-verbose" :: tail => nextOption(options ++ Map(Symbol("verbose") -> true), tail, usage)
-      case "-proofStatistics" :: value :: tail => nextOption(options ++ Map(Symbol("proofStatisticsPrinter") -> value), tail, usage)
+      case "-proofStatistics" :: value :: tail =>
+        nextOption(options ++ Map(Symbol("proofStatisticsPrinter") -> value), tail, usage)
       // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {
@@ -256,12 +284,17 @@ object KeYmaeraX {
           exit(1)
         }
       // global options
-      case "-lax" :: tail => Configuration.set(Configuration.Keys.LAX, "true", saveToFile = false); nextOption(options, tail, usage)
-      case "-strict" :: tail => Configuration.set(Configuration.Keys.LAX, "false", saveToFile = false); nextOption(options, tail, usage)
-      case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(options, tail, usage)
-      case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(options, tail, usage)
+      case "-lax" :: tail =>
+        Configuration.set(Configuration.Keys.LAX, "true", saveToFile = false); nextOption(options, tail, usage)
+      case "-strict" :: tail =>
+        Configuration.set(Configuration.Keys.LAX, "false", saveToFile = false); nextOption(options, tail, usage)
+      case "-debug" :: tail =>
+        Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(options, tail, usage)
+      case "-nodebug" :: tail =>
+        Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(options, tail, usage)
       case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("timeout") -> value.toLong), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-"))
+          nextOption(options ++ Map(Symbol("timeout") -> value.toLong), tail, usage)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ => (options, args)
     }
@@ -269,8 +302,9 @@ object KeYmaeraX {
 
   /** Reads configuration from keymaerax.conf. */
   def configFromFile(defaultTool: String): OptionMap = {
-    ToolConfiguration.config(Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool)).
-      map({ case (k,v) => Symbol(k) -> v })
+    ToolConfiguration
+      .config(Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool))
+      .map({ case (k, v) => Symbol(k) -> v })
   }
 
   /** Combines tool configurations, favoring primary configuration over secondary configuration. */
@@ -281,39 +315,59 @@ object KeYmaeraX {
   /** Initializes Z3 from command line options. */
   private def initZ3(options: OptionMap): Unit = {
     ToolProvider.setProvider(Z3ToolProvider())
-    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Z3; please check the configured path")
+    if (!ToolProvider.isInitialized)
+      throw new ProverSetupException("Failed to initialize Z3; please check the configured path")
   }
 
   /** Initializes Mathematica from command line options, if present; else from default config */
   private def initMathematica(options: OptionMap, usage: String): Unit = {
-    ToolProvider.setProvider(MultiToolProvider(MathematicaToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
-    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Mathematica; the license may be expired")
+    ToolProvider.setProvider(MultiToolProvider(
+      MathematicaToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
+    ))
+    if (!ToolProvider.isInitialized)
+      throw new ProverSetupException("Failed to initialize Mathematica; the license may be expired")
   }
 
   /** Initializes Wolfram Engine from command line options. */
   private def initWolframEngine(options: OptionMap, usage: String): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-    ToolProvider.setProvider(MultiToolProvider(WolframEngineToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
-    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Wolfram Engine; the license may be expired (try starting Wolfram Engine from the command line to renew the license)")
+    ToolProvider.setProvider(MultiToolProvider(
+      WolframEngineToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
+    ))
+    if (!ToolProvider.isInitialized) throw new ProverSetupException(
+      "Failed to initialize Wolfram Engine; the license may be expired (try starting Wolfram Engine from the command line to renew the license)"
+    )
   }
 
   /** Initializes Wolfram Script from command line options. */
   private def initWolframScript(options: OptionMap, usage: String): Unit = {
-    ToolProvider.setProvider(MultiToolProvider(WolframScriptToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
-    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Wolfram Script; the license may be expired (try starting Wolfram Script from the command line to renew the license)")
+    ToolProvider.setProvider(MultiToolProvider(
+      WolframScriptToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
+    ))
+    if (!ToolProvider.isInitialized) throw new ProverSetupException(
+      "Failed to initialize Wolfram Script; the license may be expired (try starting Wolfram Script from the command line to renew the license)"
+    )
   }
 
-  /** Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.  */
+  /**
+   * Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.
+   */
   private def mathematicaConfig(options: OptionMap, usage: String): Map[String, String] = {
-    assert((options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) || (!options.contains(Symbol("mathkernel")) && !options.contains(Symbol("jlink"))),
+    assert(
+      (options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) ||
+        (!options.contains(Symbol("mathkernel")) && !options.contains(Symbol("jlink"))),
       "\n[Error] Please always use command line option -mathkernel and -jlink together," +
-        "and specify the Mathematica link paths with:\n" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage)
+        "and specify the Mathematica link paths with:\n" + " -mathkernel PATH_TO_" +
+        DefaultConfiguration.defaultMathLinkName._1 + "_FILE" + " -jlink PATH_TO_DIRECTORY_CONTAINS_" +
+        DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage,
+    )
 
     val mathematicaConfig =
-      if (options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) Map("linkName" -> options(Symbol("mathkernel")).toString,
-        "libDir" -> options(Symbol("jlink")).toString, "tcpip" -> options.getOrElse(Symbol("tcpip"), "true").toString)
+      if (options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) Map(
+        "linkName" -> options(Symbol("mathkernel")).toString,
+        "libDir" -> options(Symbol("jlink")).toString,
+        "tcpip" -> options.getOrElse(Symbol("tcpip"), "true").toString,
+      )
       else DefaultConfiguration.defaultMathematicaConfig
 
     val linkNamePath = mathematicaConfig.get("linkName") match {
@@ -324,26 +378,43 @@ object KeYmaeraX {
       case Some(path) => path
       case _ => ""
     }
-    assert(linkNamePath!="" && libDirPath!="",
-      "\n[Error] The paths to MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " and jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " are not specified! " +
-        "(On your system, they could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} +
-        " and " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
-        "Please specify the paths to " + DefaultConfiguration.defaultMathLinkName._1 + " and " + DefaultConfiguration.defaultMathLinkName._2 + " with command line option:" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-    assert(linkNamePath.endsWith(DefaultConfiguration.defaultMathLinkName._1) && new java.io.File(linkNamePath).exists(),
-      "\n[Error] Cannot find MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " in path: " + linkNamePath+ "! " +
-        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} + ")\n" +
-        "Please specify the correct path that points to " + DefaultConfiguration.defaultMathLinkName._1 + " file with command line option:" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-    assert(new java.io.File(libDirPath + File.separator + DefaultConfiguration.defaultMathLinkName._2).exists(),
-      "\n[Error] Cannot find jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " in path " + libDirPath+ "! " +
-        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
-        "Please specify the correct path that points to the directory contains " + DefaultConfiguration.defaultMathLinkName._2 + " file with command line option:" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
+    assert(
+      linkNamePath != "" && libDirPath != "",
+      "\n[Error] The paths to MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 +
+        " and jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " are not specified! " +
+        "(On your system, they could look like: " + {
+          if (DefaultConfiguration.defaultMathLinkPath._1 != "") DefaultConfiguration.defaultMathLinkPath._1
+          else DefaultConfiguration.exemplaryMathLinkPath._1
+        } + " and " + {
+          if (DefaultConfiguration.defaultMathLinkPath._2 != "") DefaultConfiguration.defaultMathLinkPath._2
+          else DefaultConfiguration.exemplaryMathLinkPath._2
+        } + ")\n" + "Please specify the paths to " + DefaultConfiguration.defaultMathLinkName._1 + " and " +
+        DefaultConfiguration.defaultMathLinkName._2 + " with command line option:" + " -mathkernel PATH_TO_" +
+        DefaultConfiguration.defaultMathLinkName._1 + "_FILE" + " -jlink PATH_TO_DIRECTORY_CONTAINS_" +
+        DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
+        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage,
+    )
+    assert(
+      linkNamePath.endsWith(DefaultConfiguration.defaultMathLinkName._1) && new java.io.File(linkNamePath).exists(),
+      "\n[Error] Cannot find MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " in path: " +
+        linkNamePath + "! " + "(On your system, it could look like: " + {
+          if (DefaultConfiguration.defaultMathLinkPath._1 != "") DefaultConfiguration.defaultMathLinkPath._1
+          else DefaultConfiguration.exemplaryMathLinkPath._1
+        } + ")\n" + "Please specify the correct path that points to " + DefaultConfiguration.defaultMathLinkName._1 +
+        " file with command line option:" + " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 +
+        "_FILE\n" + "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage,
+    )
+    assert(
+      new java.io.File(libDirPath + File.separator + DefaultConfiguration.defaultMathLinkName._2).exists(),
+      "\n[Error] Cannot find jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " in path " +
+        libDirPath + "! " + "(On your system, it could look like: " + {
+          if (DefaultConfiguration.defaultMathLinkPath._2 != "") DefaultConfiguration.defaultMathLinkPath._2
+          else DefaultConfiguration.exemplaryMathLinkPath._2
+        } + ")\n" + "Please specify the correct path that points to the directory contains " +
+        DefaultConfiguration.defaultMathLinkName._2 + " file with command line option:" +
+        " -jlink PATH_TO_DIRECTORY_CONTAINS_" + DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
+        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage,
+    )
 
     mathematicaConfig
   }
@@ -352,15 +423,17 @@ object KeYmaeraX {
   private def parseProblemFile(fileName: String): Boolean = {
     println("Parsing " + fileName + "...")
     try {
-      ArchiveParser.parseFromFile(fileName).foreach(e => {
-        println(e.name)
-        println(PrettyPrinter(e.model))
-        println("Parsed file successfully")
-      })
+      ArchiveParser
+        .parseFromFile(fileName)
+        .foreach(e => {
+          println(e.name)
+          println(PrettyPrinter(e.model))
+          println("Parsed file successfully")
+        })
       true
     } catch {
       case e: Throwable =>
-        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
+        if (Configuration(Configuration.Keys.DEBUG) == "true") e.printStackTrace()
         println(e.getMessage)
         println(e.getCause)
         println("Failed to parse file")
@@ -376,13 +449,11 @@ object KeYmaeraX {
       true
     } catch {
       case e: Throwable =>
-        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
+        if (Configuration(Configuration.Keys.DEBUG) == "true") e.printStackTrace()
         println(e)
         println("Failed to parse file")
         false
-    } finally {
-      source.close()
-    }
+    } finally { source.close() }
   }
 
   /** Converts input files. */
@@ -390,10 +461,10 @@ object KeYmaeraX {
     require(options.contains(Symbol("in")) && options.contains(Symbol("conversion")), usage)
     options(Symbol("conversion")) match {
       case Conversions.STRIPHINTS => stripHints(options, usage)
-      case Conversions.KYX2SMT    => kyx2smt(options, usage)
-      case Conversions.KYX2MAT    => kyx2mat(options, usage)
-      case Conversions.SMT2KYX    => smt2kyx(options, usage)
-      case Conversions.SMT2MAT    => smt2mat(options, usage)
+      case Conversions.KYX2SMT => kyx2smt(options, usage)
+      case Conversions.KYX2MAT => kyx2mat(options, usage)
+      case Conversions.SMT2KYX => smt2kyx(options, usage)
+      case Conversions.SMT2MAT => smt2mat(options, usage)
       case _ => Usage.optionErrorReporter("-convert", usage); exit(1)
     }
   }
@@ -403,17 +474,25 @@ object KeYmaeraX {
     val converter = (kyxFile: String) => {
       val archiveContent = ArchiveParser.parseFromFile(kyxFile)
 
-      //@note remove all tactics, e.model does not contain annotations anyway
-      //@note fully expand model and remove all definitions too, those might be used as proof hints
+      // @note remove all tactics, e.model does not contain annotations anyway
+      // @note fully expand model and remove all definitions too, those might be used as proof hints
       def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = {
         val expandedModel = e.defs.exhaustiveSubst(e.model)
         val expandedModelNames = StaticSemantics.symbols(expandedModel)
-        e.copy(model = expandedModel,
-          defs = Declaration(e.defs.decls.flatMap({
-            case (name@Name(n, i), sig) =>
-              if (expandedModelNames.exists(ns => ns.name == n && ns.index == i)) Some(name, sig.copy(interpretation = Right(None)))
-              else None
-          })), tactics = Nil, annotations = Nil)
+        e.copy(
+          model = expandedModel,
+          defs = Declaration(
+            e.defs
+              .decls
+              .flatMap({ case (name @ Name(n, i), sig) =>
+                if (expandedModelNames.exists(ns => ns.name == n && ns.index == i))
+                  Some(name, sig.copy(interpretation = Right(None)))
+                else None
+              })
+          ),
+          tactics = Nil,
+          annotations = Nil,
+        )
       }
 
       val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
@@ -427,12 +506,14 @@ object KeYmaeraX {
   private def kyx2smt(options: OptionMap, usage: String): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
-      archiveContent.map(_.model match {
-        case fml: Formula =>
-          val (decls, expr) = DefaultSMTConverter.generateSMT(fml)
-          decls + expr
-        case e => throw new IllegalArgumentException("Expected a formula, but got " + e)
-      }).mkString("\n")
+      archiveContent
+        .map(_.model match {
+          case fml: Formula =>
+            val (decls, expr) = DefaultSMTConverter.generateSMT(fml)
+            decls + expr
+          case e => throw new IllegalArgumentException("Expected a formula, but got " + e)
+        })
+        .mkString("\n")
     }
     convert(options, converter, usage)
   }
@@ -441,19 +522,20 @@ object KeYmaeraX {
   private def kyx2mat(options: OptionMap, usage: String): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
-      archiveContent.map(_.model match {
-        case fml: Formula => KeYmaeraToMathematica(fml)
-        case e => throw new IllegalArgumentException("Expected a formula, but got " + e)
-      }).mkString("\n")
+      archiveContent
+        .map(_.model match {
+          case fml: Formula => KeYmaeraToMathematica(fml)
+          case e => throw new IllegalArgumentException("Expected a formula, but got " + e)
+        })
+        .mkString("\n")
     }
     convert(options, converter, usage)
   }
 
   /** Converts SMT-Lib format to KeYmaera X. */
   private def smt2kyx(options: OptionMap, usage: String): Unit = {
-    val converter = (fileName: String) => {
-      SmtLibReader.read(new FileReader(fileName))._1.map(_.prettyString).mkString("\n")
-    }
+    val converter =
+      (fileName: String) => { SmtLibReader.read(new FileReader(fileName))._1.map(_.prettyString).mkString("\n") }
     convert(options, converter, usage)
   }
 
@@ -476,8 +558,7 @@ object KeYmaeraX {
         val pw = new PrintWriter(outFile)
         pw.write(converted)
         pw.close()
-      case None =>
-        println(converted)
+      case None => println(converted)
     }
   }
 

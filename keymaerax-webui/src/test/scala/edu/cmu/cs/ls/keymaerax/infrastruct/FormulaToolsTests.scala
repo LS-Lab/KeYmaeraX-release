@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
@@ -22,12 +27,16 @@ class FormulaToolsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "rewrite reasonably fast" in {
     val n = 10000
-    val fml = (0 until n).map(i => PredOf(Function("p", Some(i), Unit, Bool), Nothing)).reduceLeft[Formula]({ case (b, f) => And(b, f) })
-    val expected = (0 until n).map(i => PredOf(Function("p", Some(i), Unit, Bool), Nothing)).reduceRight[Formula]({ case (b, f) => And(b, f) })
+    val fml = (0 until n)
+      .map(i => PredOf(Function("p", Some(i), Unit, Bool), Nothing))
+      .reduceLeft[Formula]({ case (b, f) => And(b, f) })
+    val expected = (0 until n)
+      .map(i => PredOf(Function("p", Some(i), Unit, Bool), Nothing))
+      .reduceRight[Formula]({ case (b, f) => And(b, f) })
     val tic = System.currentTimeMillis()
     reassociate(fml) shouldBe expected
     val toc = System.currentTimeMillis()
-    println("Reassociated in " + (toc-tic) + "ms")
+    println("Reassociated in " + (toc - tic) + "ms")
   }
 
   "DNF" should "rewrite a simple example" in {

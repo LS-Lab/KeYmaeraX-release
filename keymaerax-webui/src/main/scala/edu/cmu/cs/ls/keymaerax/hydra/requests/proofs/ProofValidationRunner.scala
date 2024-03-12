@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -13,11 +14,13 @@ import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 
 import scala.collection.mutable
 
-/** Global server state for proof validation requests.
- * For now, scheduling immediately dispatches a new thread where the validation occurs. In the future, we may want
- * to rate-limit validation requests. The easiest way to do that is to create a thread pool with a max size. */
+/**
+ * Global server state for proof validation requests. For now, scheduling immediately dispatches a new thread where the
+ * validation occurs. In the future, we may want to rate-limit validation requests. The easiest way to do that is to
+ * create a thread pool with a max size.
+ */
 object ProofValidationRunner extends Logging {
-  private val results : mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
+  private val results: mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
 
   case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId $taskId does not exist.")
 
@@ -39,12 +42,12 @@ object ProofValidationRunner extends Logging {
 
         try {
           BelleInterpreter(proof, BelleProvable.plain(provable)) match {
-            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
-            case _                                 => results update (taskId, (model, proof, Some(false)))
+            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true)))
+            case _ => results update (taskId, (model, proof, Some(false)))
           }
         } catch {
-          //Catch everything and indicate a failed proof attempt.
-          case e : Throwable => results update (taskId, (model, proof, Some(false)))
+          // Catch everything and indicate a failed proof attempt.
+          case e: Throwable => results update (taskId, (model, proof, Some(false)))
         }
 
         logger.trace(s"Done executing validation check for $taskId")

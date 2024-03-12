@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import com.wolfram.jlink.Expr
@@ -11,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.ExprFactory.makeExpr
 
 /** Mathematica operator notation. */
 trait MathematicaOpSpec {
+
   /** The operator symbol */
   def op: Expr
 
@@ -21,45 +23,54 @@ trait MathematicaOpSpec {
 /** Creates [[Expr]] objects. */
 object ExprFactory {
   def makeExpr(head: Expr, args: Array[Expr]): Expr = {
-    //@note uses reflection to bridge JLink API differences that do not occur in Bytecode (type erasure)
+    // @note uses reflection to bridge JLink API differences that do not occur in Bytecode (type erasure)
     classOf[Expr].getDeclaredConstructor(classOf[Expr], classOf[Array[Expr]]).newInstance(head, args)
   }
 }
 
 /** Math literals. */
 case class LiteralMathOpSpec(op: Expr) extends MathematicaOpSpec {
+
   /** @inheritdoc */
   override def applies(e: Expr): Boolean = e == op
 }
 
 /** Unary Math operators. */
 case class UnaryMathOpSpec(op: Expr) extends MathematicaOpSpec {
+
   /** Creates a Mathematica expression with argument `e`. */
   def apply(e: Expr): Expr = makeExpr(op, Array[Expr](e))
+
   /** @inheritdoc */
   override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** Binary Math operators. */
 case class BinaryMathOpSpec(op: Expr) extends MathematicaOpSpec {
+
   /** Creates a Mathematica expression with argument `e`. */
   def apply(l: Expr, r: Expr): Expr = makeExpr(op, Array[Expr](l, r))
+
   /** @inheritdoc */
   override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** Nary Math operators. */
 case class NaryMathOpSpec(op: Expr) extends MathematicaOpSpec {
+
   /** Creates a Mathematica expression with argument `e`. */
   def apply(args: Expr*): Expr = makeExpr(op, args.toArray)
+
   /** @inheritdoc */
   override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** Quantifier Math operators. */
 case class QuantifiedMathOpSpec(op: Expr) extends MathematicaOpSpec {
+
   /** Creates a Mathematica expression with quantified variables `vars` and formula `q`. */
-  def apply(vars: Array[Expr], q: Expr): Expr = makeExpr(op, Array[Expr](MathematicaOpSpec.list(vars.toSeq:_*), q))
+  def apply(vars: Array[Expr], q: Expr): Expr = makeExpr(op, Array[Expr](MathematicaOpSpec.list(vars.toSeq: _*), q))
+
   /** @inheritdoc */
   override def applies(e: Expr): Boolean = e.head == op
 }
@@ -71,8 +82,10 @@ case class NameMathOpSpec(k2m: (NamedSymbol, Array[Expr]) => Expr, applies: Expr
 
 /** Interpreted functions. */
 case class InterpretedMathOpSpec(op: Expr) extends MathematicaOpSpec {
+
   /** Creates a Mathematica expression with head `op` and arguments `args`. */
   def apply(args: Array[Expr]): Expr = makeExpr(op, args)
+
   /** @inheritdoc */
   override def applies(e: Expr): Boolean = e.head == op
 }
@@ -80,7 +93,7 @@ case class InterpretedMathOpSpec(op: Expr) extends MathematicaOpSpec {
 /** Mathematica operator specifications with conversions. */
 object MathematicaOpSpec {
 
-  //<editor-fold desc="Basic data structures">
+  // <editor-fold desc="Basic data structures">
 
   /** Creates a Mathematica symbol `s`. */
   def symbol(s: String): Expr = new Expr(Expr.SYMBOL, s)
@@ -111,9 +124,9 @@ object MathematicaOpSpec {
   /** Mathematica compound expression `;`. */
   def compoundExpr(f: Expr*): Expr = MathematicaOpSpec(symbol("CompoundExpression"))(f)
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Terms">
+  // <editor-fold desc="Terms">
 
   def neg: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Minus"))
 
@@ -132,14 +145,18 @@ object MathematicaOpSpec {
   // implicit function application name[args]
   def func: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {
-      require(args.length <= 2, "Functions expected to have at most 2 arguments (nothing, single argument, or converted pair)")
+      require(
+        args.length <= 2,
+        "Functions expected to have at most 2 arguments (nothing, single argument, or converted pair)",
+      )
       makeExpr(MathematicaNameConversion.toMathematica(name), args)
     },
-    e => MathematicaNameConversion.isConvertibleName(e.head) && e.args().length <= 2
+    e => MathematicaNameConversion.isConvertibleName(e.head) && e.args().length <= 2,
   )
   // explicit function application Apply[name, args]
   def mapply: NaryMathOpSpec = new NaryMathOpSpec(symbol("Apply")) {
-    override def applies(e: Expr): Boolean = super.applies(e) && MathematicaNameConversion.isConvertibleName(e.args.head)
+    override def applies(e: Expr): Boolean = super.applies(e) &&
+      MathematicaNameConversion.isConvertibleName(e.args.head)
   }
 
   def interpretedSymbols: List[(MathematicaOpSpec, Function)] = List(
@@ -151,7 +168,7 @@ object MathematicaOpSpec {
     InterpretedMathOpSpec(symbol("Cos")) -> InterpretedSymbols.cosF,
     InterpretedMathOpSpec(symbol("Tan")) -> InterpretedSymbols.tanF,
     LiteralMathOpSpec(symbol("E")) -> InterpretedSymbols.E,
-    LiteralMathOpSpec(symbol("Pi")) -> InterpretedSymbols.PI
+    LiteralMathOpSpec(symbol("Pi")) -> InterpretedSymbols.PI,
   )
 
   def variable: NameMathOpSpec = NameMathOpSpec(
@@ -159,17 +176,17 @@ object MathematicaOpSpec {
       require(args.isEmpty, "Unexpected arguments")
       MathematicaNameConversion.toMathematica(name)
     },
-    MathematicaNameConversion.isConvertibleName
+    MathematicaNameConversion.isConvertibleName,
   )
 
   def pair: BinaryMathOpSpec = new BinaryMathOpSpec(Expr.SYM_LIST) {
-    //@note inherited apply gets pairs as lists of length 2 each
+    // @note inherited apply gets pairs as lists of length 2 each
     override def applies(e: Expr): Boolean = e.listQ && e.args().length == 2
   }
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Comparison formulas">
+  // <editor-fold desc="Comparison formulas">
 
   def equal: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Equal"))
 
@@ -187,9 +204,9 @@ object MathematicaOpSpec {
 
   def lessEqual: BinaryMathOpSpec = BinaryMathOpSpec(symbol("LessEqual"))
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Formulas">
+  // <editor-fold desc="Formulas">
 
   def ltrue: LiteralMathOpSpec = LiteralMathOpSpec(Expr.SYM_TRUE)
 
@@ -211,9 +228,9 @@ object MathematicaOpSpec {
 
   def exists: QuantifiedMathOpSpec = QuantifiedMathOpSpec(symbol("Exists"))
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Arithmetic">
+  // <editor-fold desc="Arithmetic">
 
   def rule: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Rule"))
 
@@ -223,17 +240,17 @@ object MathematicaOpSpec {
 
   def reals: LiteralMathOpSpec = LiteralMathOpSpec(symbol("Reals"))
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Modules">
+  // <editor-fold desc="Modules">
 
   def module: NaryMathOpSpec = NaryMathOpSpec(symbol("Module"))
 
   def set: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Set"))
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Execution">
+  // <editor-fold desc="Execution">
   def waitNext: UnaryMathOpSpec = UnaryMathOpSpec(symbol("WaitNext"))
 
   def parallelSubmit: UnaryMathOpSpec = UnaryMathOpSpec(symbol("ParallelSubmit"))
@@ -241,9 +258,9 @@ object MathematicaOpSpec {
   def abortKernels: NaryMathOpSpec = NaryMathOpSpec(symbol("AbortKernels"))
 
   def closeKernels: NaryMathOpSpec = NaryMathOpSpec(symbol("CloseKernels"))
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Diagnostics">
+  // <editor-fold desc="Diagnostics">
 
   def aborted: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Aborted"))
 
@@ -265,14 +282,11 @@ object MathematicaOpSpec {
 
   // Anonymous override of apply(l, r) to allow
   // backwards-compatible use as a binary operator
-  def timeConstrained: BinaryMathOpSpec =
-    new BinaryMathOpSpec(symbol("TimeConstrained")) {
-      override def apply(l: Expr, r: Expr): Expr = {
-        makeExpr(op, Array[Expr](l, r, timedOut.op))
-      }
-    }
+  def timeConstrained: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("TimeConstrained")) {
+    override def apply(l: Expr, r: Expr): Expr = { makeExpr(op, Array[Expr](l, r, timedOut.op)) }
+  }
 
   def memoryConstrained: BinaryMathOpSpec = BinaryMathOpSpec(symbol("MemoryConstrained"))
 
-  //</editor-fold>
+  // </editor-fold>
 }

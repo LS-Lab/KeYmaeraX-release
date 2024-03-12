@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.proofs
 
 import edu.cmu.cs.ls.keymaerax.hydra.{ProofPOJO, Response}
@@ -17,7 +18,11 @@ case class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Respo
     "modelId" -> JsString(proof.modelId.toString),
     "stepCount" -> JsNumber(proof.stepCount),
     "status" -> JsBoolean(proof.closed),
-    "tactic" -> (proof.tactic match { case None => JsNull case Some(t) => JsString(t) }),
-    "loadStatus" -> JsString(loadStatus)
+    "tactic" ->
+      (proof.tactic match {
+        case None => JsNull
+        case Some(t) => JsString(t)
+      }),
+    "loadStatus" -> JsString(loadStatus),
   )
 }

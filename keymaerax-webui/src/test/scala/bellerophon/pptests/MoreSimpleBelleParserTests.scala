@@ -15,11 +15,13 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
 
 /**
-  * These are probably unnecessary now that SimpleBelleParserTests is  around, but they are very fast so additional
-  * coverage can't hurt.
-  * @author Nathan Fulton
-  */
+ * These are probably unnecessary now that SimpleBelleParserTests is around, but they are very fast so additional
+ * coverage can't hurt.
+ * @author
+ *   Nathan Fulton
+ */
 class MoreSimpleBelleParserTests extends TacticTestBase {
+
   /** The parsing function to use for these test cases. */
   private lazy val parser: TacticParser = ArchiveParser.tacticParser
 
@@ -32,9 +34,15 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "parse nil; <(nil, nil, nil)" in withTactics {
     val result = parser("nil; <(nil, nil, nil)").asInstanceOf[SeqTactic]
-    val expected = SeqTactic(TactixLibrary.nil, BranchTactic(Seq(TactixLibrary.nil, TactixLibrary.nil, TactixLibrary.nil))).asInstanceOf[SeqTactic]
+    val expected =
+      SeqTactic(TactixLibrary.nil, BranchTactic(Seq(TactixLibrary.nil, TactixLibrary.nil, TactixLibrary.nil)))
+        .asInstanceOf[SeqTactic]
     result.seq.head shouldBe expected.seq.head
-    result.seq.last.asInstanceOf[BranchTactic].children
+    result
+      .seq
+      .last
+      .asInstanceOf[BranchTactic]
+      .children
       .zip(expected.seq.last.asInstanceOf[BranchTactic].children)
       .map(x => x._1 shouldBe x._2)
   }
@@ -43,9 +51,8 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     inside(parser("""loop("[{x' = v, v' = -b}]x <= m", 1)""")) {
       case t: AppliedDependentPositionTacticWithAppliedInput =>
         t.name shouldBe "loop"
-        inside (t.pt) {
-          case dpt: DependentPositionWithAppliedInputTactic =>
-            dpt.inputs shouldBe List("[{x' = v, v' = -b}]x <= m".asFormula)
+        inside(t.pt) { case dpt: DependentPositionWithAppliedInputTactic =>
+          dpt.inputs shouldBe List("[{x' = v, v' = -b}]x <= m".asFormula)
         }
         t.locator shouldBe Fixed(1)
     }
@@ -53,15 +60,11 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse partials and built-ins" in withTactics {
-    inside(parser("partial(implyR(1))")) {
-      case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1)
-    }
+    inside(parser("partial(implyR(1))")) { case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1) }
   }
 
   it should "parse post-fix partials and built-ins" in withTactics {
-    inside(parser("implyR(1) partial")) {
-      case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1)
-    }
+    inside(parser("implyR(1) partial")) { case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1) }
   }
 
   it should "parse either" in withTactics {
@@ -77,18 +80,17 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse positional tactics" in withTactics {
-    inside(parser("implyR(1)")) {
-      case t@AppliedPositionTactic(pt, loc) =>
-        loc shouldBe Fixed(1)
-        pt shouldBe TactixLibrary.implyR
-        t shouldBe TactixLibrary.implyR(1)
+    inside(parser("implyR(1)")) { case t @ AppliedPositionTactic(pt, loc) =>
+      loc shouldBe Fixed(1)
+      pt shouldBe TactixLibrary.implyR
+      t shouldBe TactixLibrary.implyR(1)
     }
   }
 
   it should "parse formula tactics" in withTactics {
     val t = parser("""loop("v >= 0",1)""").asInstanceOf[AppliedDependentPositionTactic]
-    t should have (Symbol("name") ("loop"))
-    t.pt should have (Symbol("inputs") (List("v>=0".asFormula)))
+    t should have(Symbol("name")("loop"))
+    t.pt should have(Symbol("inputs")(List("v>=0".asFormula)))
   }
 
   it should "parse j(x) as a term or a formula depending on ArgInfo." in withTactics {
@@ -99,22 +101,25 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   it should "parse exact matching search" in withTactics {
     parser("""implyR('R=="x>0->x>=0")""") shouldBe TactixLibrary.implyR(Symbol("R"), "x>0->x>=0".asFormula)
     parser("""andL('L=="x>0&x>=0")""") shouldBe TactixLibrary.andL(Symbol("L"), "x>0&x>=0".asFormula)
-    parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0::Nil), exact=true, BuiltinSymbols.all))
+    parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe
+      TactixLibrary
+        .abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0 :: Nil), exact = true, BuiltinSymbols.all))
   }
 
   it should "parse unifiable matching search" in withTactics {
     parser("""implyR('R~="x>0->x>=0")""") shouldBe TactixLibrary.implyR(Symbol("Rlike"), "x>0->x>=0".asFormula)
     parser("""andL('L~="x>0&x>=0")""") shouldBe TactixLibrary.andL(Symbol("Llike"), "x>0&x>=0".asFormula)
-    parser("""absExp('L~="#abs(x)#=3")""") shouldBe TactixLibrary.abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0::Nil), exact=false, BuiltinSymbols.all))
+    parser("""absExp('L~="#abs(x)#=3")""") shouldBe
+      TactixLibrary
+        .abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0 :: Nil), exact = false, BuiltinSymbols.all))
   }
 
   it should "parse fancy dG" in withTactics {
-    parser("""dG("y' = 0",1)""") should (
-      be (TactixLibrary.dG("y'=0".asDifferentialProgram, None)(1)) or
-      be (TactixLibrary.dG("y'=0".asFormula, None)(1)))
-    parser("""dG("y' = 0", "1=1",1)""") should (
-      be (TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)) or
-      be (TactixLibrary.dG("y'=0".asFormula, Some("1=1".asFormula))(1)))
+    parser("""dG("y' = 0",1)""") should
+      (be(TactixLibrary.dG("y'=0".asDifferentialProgram, None)(1)) or be(TactixLibrary.dG("y'=0".asFormula, None)(1)))
+    parser("""dG("y' = 0", "1=1",1)""") should
+      (be(TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)) or
+        be(TactixLibrary.dG("y'=0".asFormula, Some("1=1".asFormula))(1)))
   }
 
   it should "parse multiple nested arguments" in withTactics {
@@ -128,28 +133,33 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   "Using" should "parse" in withTactics {
-    parser(""" QE using "x>=0::x>0::nil" """) shouldBe Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.QE)
-    parser(""" ODE(1) using "x>=0::x>0::nil" """) shouldBe Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.ODE(1))
+    parser(""" QE using "x>=0::x>0::nil" """) shouldBe
+      Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.QE)
+    parser(""" ODE(1) using "x>=0::x>0::nil" """) shouldBe
+      Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.ODE(1))
     parser(""" ODE(1) using "nil" """) shouldBe Using(Nil, TactixLibrary.ODE(1))
     parser(""" unfold using "x>=0 | x<=0"; doall(QE using "x>=0::x>0::nil") """) shouldBe
       Using("x>=0 | x<=0".asFormula :: Nil, TactixLibrary.unfoldProgramNormalize) &
-        OnAll(Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.QE))
-    the [ParseException] thrownBy parser(""" unfold using "x>0::y>0" """) should
+      OnAll(Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.QE))
+    the[ParseException] thrownBy parser(""" unfold using "x>0::y>0" """) should
       (have message
         """1:15 Formula list in using "x>0::y>0" must end in :: nil
           |Found:    "x>0::y>0" at 1:15 to 1:24
-          |Expected: "x>0::y>0::nil"""".stripMargin
-        or have message
+          |Expected: "x>0::y>0::nil"""".stripMargin or have message
         """1:24 Error parsing argList at 1:16
           |Found:    "\" " at 1:24
           |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | "::")
-          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | "::")""".stripMargin)
+          |Hint: Try ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | [ \t\r\n] | " <- " | "←" | "<->" | "↔" | "::")"""
+          .stripMargin)
   }
 
   it should "bind strong" in withTactics {
-    parser(""" implyR(1); id using "x>=0" """) shouldBe TactixLibrary.implyR(1) & Using("x>=0".asFormula :: Nil, TactixLibrary.id)
-    parser(""" (implyR(1); id) using "x>=0" """) shouldBe Using("x>=0".asFormula :: Nil, TactixLibrary.implyR(1) & TactixLibrary.id)
-    parser(""" implyR(1) | id using "x>=0" """) shouldBe TactixLibrary.implyR(1) | Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+    parser(""" implyR(1); id using "x>=0" """) shouldBe
+      TactixLibrary.implyR(1) & Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+    parser(""" (implyR(1); id) using "x>=0" """) shouldBe
+      Using("x>=0".asFormula :: Nil, TactixLibrary.implyR(1) & TactixLibrary.id)
+    parser(""" implyR(1) | id using "x>=0" """) shouldBe
+      TactixLibrary.implyR(1) | Using("x>=0".asFormula :: Nil, TactixLibrary.id)
   }
 
   it should "parse empty lists" in withTactics {
@@ -158,9 +168,12 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "pretty print binding strong" in withTactics {
-    BellePrettyPrinter(parser(""" implyR(1); id using "x>=0" """)).trim shouldBe """ implyR(1) ; id using "x>=0" """.trim
-    BellePrettyPrinter(parser(""" (implyR(1); id) using "x>=0::y>=0::nil" """)).trim shouldBe """ (implyR(1) ; id) using "x>=0 :: y>=0 :: nil" """.trim
-    BellePrettyPrinter(parser(""" (implyR(1) | implyR(2)); id using "x>=0" """)).trim shouldBe """ (implyR(1) | implyR(2)) ; id using "x>=0" """.trim
+    BellePrettyPrinter(parser(""" implyR(1); id using "x>=0" """)).trim shouldBe
+      """ implyR(1) ; id using "x>=0" """.trim
+    BellePrettyPrinter(parser(""" (implyR(1); id) using "x>=0::y>=0::nil" """)).trim shouldBe
+      """ (implyR(1) ; id) using "x>=0 :: y>=0 :: nil" """.trim
+    BellePrettyPrinter(parser(""" (implyR(1) | implyR(2)); id using "x>=0" """)).trim shouldBe
+      """ (implyR(1) | implyR(2)) ; id using "x>=0" """.trim
   }
 
   "Propositional Examples" should "close p() -> p()" in withTactics {

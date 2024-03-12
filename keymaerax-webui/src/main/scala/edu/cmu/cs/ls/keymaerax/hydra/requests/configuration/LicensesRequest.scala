@@ -18,12 +18,11 @@ class LicensesRequest() extends Request with ReadRequest {
     val lines = (Source.fromInputStream(reader).mkString: StringOps).linesIterator.toList
     val header = lines.head
     val licenseStartPos = header.indexOf("License")
-    val licenses = lines.tail.tail.map(l => l.splitAt(licenseStartPos)).map({ case (tool, license) =>
-      JsObject(
-        "tool" -> JsString(tool.trim),
-        "license" -> JsString(license.trim)
-      )
-    })
+    val licenses = lines
+      .tail
+      .tail
+      .map(l => l.splitAt(licenseStartPos))
+      .map({ case (tool, license) => JsObject("tool" -> JsString(tool.trim), "license" -> JsString(license.trim)) })
     new PlainResponse("licenses" -> JsArray(licenses: _*)) :: Nil
   }
 }

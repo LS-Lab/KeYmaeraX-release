@@ -18,20 +18,20 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * Tests the DL parser.
- * @author James Gallicchio
+ * @author
+ *   James Gallicchio
  */
 class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
-    ArchiveParser.setParser(new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
-      ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))))
+    ArchiveParser.setParser(new DLArchiveParser(
+      new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))
+    ))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
   }
 
-  override def afterEach(): Unit = {
-    DLParser.setAnnotationListener((_, _) => {})
-  }
+  override def afterEach(): Unit = { DLParser.setAnnotationListener((_, _) => {}) }
 
   "DLParser" should "parse multiple invariants" in {
     val annotations = ListBuffer.empty[(Program, Formula)]
@@ -50,12 +50,10 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     DLParser("(x>=0)") shouldBe DLParser("x>=0")
   }
 
-  it should "parse formula constants" in {
-    DLParser("x & y") shouldBe DLParser("x() & y()")
-  }
+  it should "parse formula constants" in { DLParser("x & y") shouldBe DLParser("x() & y()") }
 
   it should "not parse number prime" in {
-    the [ParseException] thrownBy DLParser.termParser("4'") should have message
+    the[ParseException] thrownBy DLParser.termParser("4'") should have message
       """1:2 Error parsing fullTerm at 1:1
         |Found:    "'" at 1:2
         |Expected: ([0-9] | "." | "^" | "*" | "/" | "+" | "-" | end-of-input)
@@ -74,7 +72,8 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     DLParser("(- 1)") shouldBe Neg(Number(1))
     DLParser("(-1)*10") shouldBe Times(Number(-1), Number(10))
     DLParser("-1*10") shouldBe (if (Parser.numNeg) Times(Number(-1), Number(10)) else Neg(Times(Number(1), Number(10))))
-    DLParser("-1*x") shouldBe (if (Parser.numNeg) Times(Number(-1), Variable("x")) else Neg(Times(Number(1), Variable("x"))))
+    DLParser("-1*x") shouldBe
+      (if (Parser.numNeg) Times(Number(-1), Variable("x")) else Neg(Times(Number(1), Variable("x"))))
   }
 
   it should "parse sums" in {
@@ -82,7 +81,9 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
   }
 
   it should "parse divisions with negations correctly" in {
-    DLParser("2/-3*4") shouldBe (if (Parser.numNeg) Times(Divide(Number(2), Number(-3)), Number(4)) else Times(Divide(Number(2), Neg(Number(3))), Number(4)))
+    DLParser("2/-3*4") shouldBe
+      (if (Parser.numNeg) Times(Divide(Number(2), Number(-3)), Number(4))
+       else Times(Divide(Number(2), Neg(Number(3))), Number(4)))
     DLParser("2/-x*y") shouldBe Times(Divide(Number(2), Neg(Variable("x"))), Variable("y"))
   }
 
@@ -107,10 +108,14 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
       DLParser("x*-y*z") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Variable("z"))))
       DLParser("x*(-y)*z") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Variable("z"))
       // nested
-      DLParser("x*-y*-z*2") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Neg(Times(Variable("z"), Number(2))))))
-      DLParser("x*(-y)*(-z)*2") shouldBe Times(Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Variable("z"))), Number(2))
-      DLParser("x*(-y)*-z*2") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Times(Variable("z"), Number(2))))
-      DLParser("x*-y*(-z)*2") shouldBe Times(Variable("x"), Neg(Times(Times(Variable("y"), Neg(Variable("z"))), Number(2))))
+      DLParser("x*-y*-z*2") shouldBe
+        Times(Variable("x"), Neg(Times(Variable("y"), Neg(Times(Variable("z"), Number(2))))))
+      DLParser("x*(-y)*(-z)*2") shouldBe
+        Times(Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Variable("z"))), Number(2))
+      DLParser("x*(-y)*-z*2") shouldBe
+        Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Times(Variable("z"), Number(2))))
+      DLParser("x*-y*(-z)*2") shouldBe
+        Times(Variable("x"), Neg(Times(Times(Variable("y"), Neg(Variable("z"))), Number(2))))
     } else {
       DLParser("-x*y") shouldBe DLParser("(-x)*y")
       DLParser("-x*y*z") shouldBe DLParser("(-x)*y")
@@ -124,7 +129,8 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
     DLParser("(4)'") shouldBe Differential(Number(4))
     DLParser("(0)'") shouldBe Differential(Number(0))
     DLParser("(0)'+0") shouldBe Plus(Differential(Number(0)), Number(0))
-    DLParser("[x:=(4)';]x>=(4)'") shouldBe Box(Assign(Variable("x"), Differential(Number(4))), GreaterEqual(Variable("x"), Differential(Number(4))))
+    DLParser("[x:=(4)';]x>=(4)'") shouldBe
+      Box(Assign(Variable("x"), Differential(Number(4))), GreaterEqual(Variable("x"), Differential(Number(4))))
   }
 
   it should "parse differential symbols" in {
@@ -133,17 +139,18 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
   }
 
   it should "parse predicationals" in {
-    DLParser.formulaParser("P{z'=1}") shouldBe PredicationalOf(Function("P", None, Bool, Bool), Equal(DifferentialSymbol(Variable("z")), Number(1)))
+    DLParser.formulaParser("P{z'=1}") shouldBe
+      PredicationalOf(Function("P", None, Bool, Bool), Equal(DifferentialSymbol(Variable("z")), Number(1)))
     DLParser("P{z'=1}") shouldBe DLParser.formulaParser("P{z'=1}")
   }
 
   it should "not parse p->q<-r" in {
-    the [ParseException] thrownBy DLParser("p()->q()<-r()") should pointAt (1, 9)
-    the [ParseException] thrownBy DLParser("(p()->q())<-r()") should pointAt (1, 11)
+    the[ParseException] thrownBy DLParser("p()->q()<-r()") should pointAt(1, 9)
+    the[ParseException] thrownBy DLParser("(p()->q())<-r()") should pointAt(1, 11)
 
     DLParser("(p()->q()) <- r()") shouldBe Imply(
       PredOf(Function("r", None, Unit, Bool), Nothing),
-      Imply(PredOf(Function("p", None, Unit, Bool), Nothing), PredOf(Function("q", None, Unit, Bool), Nothing))
+      Imply(PredOf(Function("p", None, Unit, Bool), Nothing), PredOf(Function("q", None, Unit, Bool), Nothing)),
     )
   }
 
@@ -154,25 +161,23 @@ class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with 
   }
 
   it should "parse when function name and arguments are separated by whitespace " in {
-    //@note DLParser does not know interpreted symbols unless explicit interpretation is listed
-    DLParser("min (x,y)") shouldBe FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(Variable("x"), Variable("y")))
-    DLParser("min\n(x,y)") shouldBe FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(Variable("x"), Variable("y")))
+    // @note DLParser does not know interpreted symbols unless explicit interpretation is listed
+    DLParser("min (x,y)") shouldBe
+      FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(Variable("x"), Variable("y")))
+    DLParser("min\n(x,y)") shouldBe
+      FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(Variable("x"), Variable("y")))
   }
 
   it should "not parse x//y" in {
-    the [ParseException] thrownBy DLParser("x//y") should have message
+    the[ParseException] thrownBy DLParser("x//y") should have message
       """1:3 Error parsing term at 1:1
         |Found:    "/y" at 1:3
         |Expected: (number | dot | function | unitFunctional | variable | termList | "__________" | "-")
         |Hint: Try ("(" | [0-9] | "." | "•" | [a-zA-Z] | "__________" | "-")""".stripMargin
   }
 
-  it should "parse dual game symbol notation" in {
-    DLParser("game;^@;") shouldBe Dual(ProgramConst("game"))
-  }
+  it should "parse dual game symbol notation" in { DLParser("game;^@;") shouldBe Dual(ProgramConst("game")) }
 
-  it should "parse simple dual game symbol notation" in {
-    DLParser("game^@;") shouldBe Dual(ProgramConst("game"))
-  }
+  it should "parse simple dual game symbol notation" in { DLParser("game^@;") shouldBe Dual(ProgramConst("game")) }
 
 }

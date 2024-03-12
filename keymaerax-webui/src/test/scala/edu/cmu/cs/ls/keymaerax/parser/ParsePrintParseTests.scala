@@ -17,10 +17,10 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 
 import scala.collection.immutable.Map
 
-
 /**
  * Created by smitsch on 1/8/15.
- * @author Stefan Mitsch
+ * @author
+ *   Stefan Mitsch
  */
 class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   private val randomTrials = 20
@@ -31,7 +31,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
     ))
   }
 
@@ -43,7 +43,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "[{x'=y & x>0}]x>0",
       "[{x'=y, y'=z & x>0}]x>0",
       "[{x'=y, y'=z & x>0}]x>0",
-      "[{x'=y, y'=z, z'=3 & z>1 & z>2}]x>0")
+      "[{x'=y, y'=z, z'=3 & z>1 & z>2}]x>0",
+    )
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
@@ -72,7 +73,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "[x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;]x>0",
       "[{x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;};x:=40;]x>0",
       "[x:=0;{x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;};x:=40;]x>0",
-      "[{x:=1; ++ x:=2;}++x:=3;]x>0")
+      "[{x:=1; ++ x:=2;}++x:=3;]x>0",
+    )
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
@@ -81,9 +83,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   it should "print and parse sequences with superfluous parentheses" in {
-    val exprs = Table(
-      "[{x:=1;x:=2;};x:=3;]x>0",
-      "[{{x:=1;x:=2;};x:=3;} {{x:=4;};x:=5;}]x>0")
+    val exprs = Table("[{x:=1;x:=2;};x:=3;]x>0", "[{{x:=1;x:=2;};x:=3;} {{x:=4;};x:=5;}]x>0")
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
@@ -92,16 +92,9 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   it should "not print and parse a formula with if then else as variable names." ignore {
-    val exprs = Table(
-      "if = then",
-      "then = else",
-      "if = else",
-      "else = then",
-      "then = if")
+    val exprs = Table("if = then", "then = else", "if = else", "else = then", "then = if")
 
-    forEvery(exprs) { e =>
-      a [ParseException] should be thrownBy Parser(e)
-    }
+    forEvery(exprs) { e => a[ParseException] should be thrownBy Parser(e) }
   }
 
   it should "print and parse if-then-else" in {
@@ -112,7 +105,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
       "if (acc <= 0) { acc := 0;} else {if (SB < A) {acc := SB;} else {acc := A;}}",
       "<{if (x = 0) {x := 1; y := 0;} else {y := 3; a := a + 5; ?(x = x);}}>x != y",
       "<if (x = 0) {x := 1; y := 0;} else {y := 3;} a := a + 5; ?(x = x);>x != y",
-      "x = 0 -> [if (x = 0){ x := 1; y := 0; }else {y := 3;} a := a + 5; ?(x = x);]x > y")
+      "x = 0 -> [if (x = 0){ x := 1; y := 0; }else {y := 3;} a := a + 5; ?(x = x);]x > y",
+    )
 
     forEvery(exprs) { e =>
       val expected = Parser(e)
@@ -130,21 +124,17 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   "Parsing pretty-printer output" should "be the same as the original expression (random)" in {
     for (_ <- 1 to randomTrials) {
-		  val expected = rand.nextFormulaEpisode().nextFormula(randomComplexity)
+      val expected = rand.nextFormulaEpisode().nextFormula(randomComplexity)
       // asFormula runs the parser, but declares the variables occurring in the formula
       CorePrettyPrinter(expected).asFormula shouldBe expected
     }
   }
 
   "Prettier printer" should "print spaces to disambiguate negation from negative number" in {
-    new KeYmaeraXPrettierPrinter(50)("-(1*10)<=20".asFormula) shouldBe (
-      if (Parser.numNeg) "-(1 * 10) <= 20"
-      else "-1 * 10 <= 20"
-    )
-    new KeYmaeraXPrettierPrinter(50)("(-1)*10<=20".asFormula) shouldBe (
-      if (Parser.numNeg) "-1 * 10 <= 20"
-      else "(-1) * 10 <= 20"
-    )
+    new KeYmaeraXPrettierPrinter(50)("-(1*10)<=20".asFormula) shouldBe
+      (if (Parser.numNeg) "-(1 * 10) <= 20" else "-1 * 10 <= 20")
+    new KeYmaeraXPrettierPrinter(50)("(-1)*10<=20".asFormula) shouldBe
+      (if (Parser.numNeg) "-1 * 10 <= 20" else "(-1) * 10 <= 20")
     new KeYmaeraXPrettierPrinter(50)("-x<=20".asFormula) shouldBe "-x <= 20"
   }
 }

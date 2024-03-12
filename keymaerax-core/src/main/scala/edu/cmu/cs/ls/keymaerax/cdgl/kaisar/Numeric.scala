@@ -1,21 +1,24 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
-/**
-  * Numeric types for strategy evaluation
-  * @author Brandon Bohrer
-  */
+ * Numeric types for strategy evaluation
+ * @author
+ *   Brandon Bohrer
+ */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import java.math.RoundingMode
 
 /** Trait for different arithmetic representations supported for system execution */
-trait Numeric[T, Truth] { this: T =>
-  def +(rhs : T) : T
-  def -(rhs : T) : T
-  def *(rhs : T) : T
-  def /(rhs : T) : T
+trait Numeric[T, Truth] {
+  this: T =>
+  def +(rhs: T): T
+  def -(rhs: T): T
+  def *(rhs: T): T
+  def /(rhs: T): T
   def pow(num: Int, denom: Int): T
   def max(rhs: T): T
   def min(rhs: T): T
@@ -45,11 +48,12 @@ object RatIntFactory extends NumberFactory[Ternary, RatIntNum] {
   override val number: (Rational => RatIntNum) = (rat => RatIntNum(rat, rat))
 }
 
-case class TernaryNumber[number <: Numeric[number, Boolean]](num: number) extends Numeric[TernaryNumber[number], Ternary] {
-  override def +(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num + rhs.num)
-  override def -(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num - rhs.num)
-  override def *(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num * rhs.num)
-  override def /(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num / rhs.num)
+case class TernaryNumber[number <: Numeric[number, Boolean]](num: number)
+    extends Numeric[TernaryNumber[number], Ternary] {
+  override def +(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num + rhs.num)
+  override def -(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num - rhs.num)
+  override def *(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num * rhs.num)
+  override def /(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num / rhs.num)
   override def pow(n: Int, denom: Int): TernaryNumber[number] = TernaryNumber(num.pow(n, denom))
   override def max(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num.max(rhs.num))
   override def min(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num.min(rhs.num))
@@ -65,31 +69,33 @@ case class TernaryNumber[number <: Numeric[number, Boolean]](num: number) extend
   override def intApprox: Int = num.intApprox
 }
 
-case class UnknowingFactory[N <: Numeric[N, Boolean]](val factory: NumberFactory[Boolean, N]) extends NumberFactory[Ternary, TernaryNumber[N]] {
+case class UnknowingFactory[N <: Numeric[N, Boolean]](val factory: NumberFactory[Boolean, N])
+    extends NumberFactory[Ternary, TernaryNumber[N]] {
   override type T = TernaryNumber[N]
   override val number: (Rational => T) = (rat => TernaryNumber(factory.number(rat)))
 }
 
 sealed trait Ternary {
-  def unary_! : Ternary = this match {case KnownTrue() => KnownFalse() case KnownFalse() => KnownTrue() case Unknown() => Unknown ()}
-  def ||(other: Ternary): Ternary =
-    (this, other) match {
-      case (KnownTrue(), _) | (_, KnownTrue()) => KnownTrue()
-      case (Unknown(), _) | (_, Unknown()) => Unknown()
-      case _ => KnownFalse()
-    }
-  def &&(other: Ternary): Ternary =
-    (this, other) match {
-      case (KnownFalse(), _) | (_, KnownFalse()) => KnownFalse()
-      case (Unknown(), _) | (_, Unknown()) => Unknown()
-      case _ => KnownTrue()
-    }
-  def iff(other: Ternary): Ternary =
-    (this, other, this == other) match {
-      case (_, _, true) => KnownTrue()
-      case (KnownTrue(), KnownFalse(), _) | (KnownFalse(), KnownTrue(), _) => KnownFalse()
-      case _ => Unknown()
-    }
+  def unary_! : Ternary = this match {
+    case KnownTrue() => KnownFalse()
+    case KnownFalse() => KnownTrue()
+    case Unknown() => Unknown()
+  }
+  def ||(other: Ternary): Ternary = (this, other) match {
+    case (KnownTrue(), _) | (_, KnownTrue()) => KnownTrue()
+    case (Unknown(), _) | (_, Unknown()) => Unknown()
+    case _ => KnownFalse()
+  }
+  def &&(other: Ternary): Ternary = (this, other) match {
+    case (KnownFalse(), _) | (_, KnownFalse()) => KnownFalse()
+    case (Unknown(), _) | (_, Unknown()) => Unknown()
+    case _ => KnownTrue()
+  }
+  def iff(other: Ternary): Ternary = (this, other, this == other) match {
+    case (_, _, true) => KnownTrue()
+    case (KnownTrue(), KnownFalse(), _) | (KnownFalse(), KnownTrue(), _) => KnownFalse()
+    case _ => Unknown()
+  }
 }
 case class KnownTrue() extends Ternary
 case class KnownFalse() extends Ternary
@@ -106,10 +112,10 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
     if (denom == 1) RatNum(n.pow(num))
     else if (denom == 0) throw NoValueException(msg = "Division by zero")
     else {
-      //val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
+      // val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
       val x = n.ratPow(num, denom)
-      //val alg = n.toAlgebraic.nroot(denom).pow(numAbs)
-      val frac = x //if(pos) x else 1 / x
+      // val alg = n.toAlgebraic.nroot(denom).pow(numAbs)
+      val frac = x // if(pos) x else 1 / x
       RatNum(Rational(frac.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.DOWN)))
     }
   }
@@ -129,10 +135,10 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
 
 /** Interval of rational numbers. */
 case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternary] {
-  override def +(rhs: RatIntNum): RatIntNum = RatIntNum(l + rhs.l,  u + rhs.u)
+  override def +(rhs: RatIntNum): RatIntNum = RatIntNum(l + rhs.l, u + rhs.u)
   override def -(rhs: RatIntNum): RatIntNum = RatIntNum(l - rhs.u, u - rhs.l)
   override def *(rhs: RatIntNum): RatIntNum = {
-    val (p1, p2, p3, p4) = (l*rhs.l, u*rhs.l, l*rhs.u, u*rhs.u)
+    val (p1, p2, p3, p4) = (l * rhs.l, u * rhs.l, l * rhs.u, u * rhs.u)
     val lo = p1.min(p2).min(p3).min(p4)
     val hi = p1.max(p2).max(p3).max(p4)
     RatIntNum(lo, hi)
@@ -140,20 +146,19 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   override def /(rhs: RatIntNum): RatIntNum = {
     // Division by zero
     val (lo, hi) =
-      if(rhs.l <= Rational(0,1) && Rational(0,1) <= rhs.u)
-        throw NoValueException(msg = "Division by zero")
-      else if (Rational(0,1) <= rhs.l) { // top half
-        if (l <= Rational(0,1) && Rational(0,1) <= u) { // top-center
-          ((Rational(0,1)).min(l / rhs.l), (Rational(0,1)).max(u / rhs.l))
-        } else if (u < Rational(0,1)) { // top-left
+      if (rhs.l <= Rational(0, 1) && Rational(0, 1) <= rhs.u) throw NoValueException(msg = "Division by zero")
+      else if (Rational(0, 1) <= rhs.l) { // top half
+        if (l <= Rational(0, 1) && Rational(0, 1) <= u) { // top-center
+          ((Rational(0, 1)).min(l / rhs.l), (Rational(0, 1)).max(u / rhs.l))
+        } else if (u < Rational(0, 1)) { // top-left
           (l / rhs.l, u / rhs.u)
         } else { // top-right
           (l / rhs.u, u / rhs.l)
         }
       } else { // bottom half
-        if (l <= Rational(0,1) && Rational(0,1) <= u) { // bottom-center
-          ((u / rhs.u).min(Rational(0,1)), (l / rhs.u).max(Rational(0,1)))
-        } else if (u < Rational(0,1)) { // bottom-left
+        if (l <= Rational(0, 1) && Rational(0, 1) <= u) { // bottom-center
+          ((u / rhs.u).min(Rational(0, 1)), (l / rhs.u).max(Rational(0, 1)))
+        } else if (u < Rational(0, 1)) { // bottom-left
           (u / rhs.l, l / rhs.u)
         } else { // bottom-right
           (u / rhs.u, l / rhs.l)
@@ -166,7 +171,7 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     if (k == 0) RatIntNum(Rational(1), Rational(1))
     else {
       val (pos, abs) = if (k > 0) (true, k) else (false, -k)
-      def mults(i: Int): RatIntNum = if(i == 1) this else this * mults(i - 1)
+      def mults(i: Int): RatIntNum = if (i == 1) this else this * mults(i - 1)
       val mag = mults(abs)
       if (pos) mag else -mag
     }
@@ -179,10 +184,13 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     else {
       val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
       val algL = l.ratPow(numAbs, denom)
-      val algU = u.ratPow(numAbs,denom)
-      val (fracL, fracU) = if(pos) (algL, algU) else (Rational(1) / algL, Rational(1) / algU)
+      val algU = u.ratPow(numAbs, denom)
+      val (fracL, fracU) = if (pos) (algL, algU) else (Rational(1) / algL, Rational(1) / algU)
       val (lo, hi) = if (fracL <= fracU) (fracL, fracU) else (fracU, fracL)
-      RatIntNum(Rational(lo.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.DOWN)), Rational(hi.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.UP)))
+      RatIntNum(
+        Rational(lo.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.DOWN)),
+        Rational(hi.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.UP)),
+      )
     }
   }
   override def max(rhs: RatIntNum): RatIntNum = RatIntNum(l.max(rhs.l), u.max(rhs.u))
@@ -190,26 +198,14 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   override def abs: RatIntNum = {
     val aL = l.abs
     val aU = u.abs
-    val lo = if(l <= Rational(0,1) && u >= Rational(0,1)) Rational(0, 1) else aL.min(aU)
+    val lo = if (l <= Rational(0, 1) && u >= Rational(0, 1)) Rational(0, 1) else aL.min(aU)
     val hi = aL.max(aU)
     RatIntNum(lo, hi)
   }
-  override def <(rhs: RatIntNum): Ternary =
-    if (u < rhs.l) KnownTrue()
-    else if (l >= rhs.u) KnownFalse()
-    else Unknown()
-  override def <=(rhs: RatIntNum): Ternary =
-    if (u <= rhs.l) KnownTrue()
-    else if (l > rhs.u) KnownFalse()
-    else Unknown()
-  override def >(rhs: RatIntNum): Ternary =
-    if (rhs.u < l) KnownTrue()
-    else if (rhs.l >= u) KnownFalse()
-    else Unknown()
-  override def >=(rhs: RatIntNum): Ternary =
-    if (rhs.u <= l) KnownTrue()
-    else if (rhs.l > u) KnownFalse()
-    else Unknown()
+  override def <(rhs: RatIntNum): Ternary = if (u < rhs.l) KnownTrue() else if (l >= rhs.u) KnownFalse() else Unknown()
+  override def <=(rhs: RatIntNum): Ternary = if (u <= rhs.l) KnownTrue() else if (l > rhs.u) KnownFalse() else Unknown()
+  override def >(rhs: RatIntNum): Ternary = if (rhs.u < l) KnownTrue() else if (rhs.l >= u) KnownFalse() else Unknown()
+  override def >=(rhs: RatIntNum): Ternary = if (rhs.u <= l) KnownTrue() else if (rhs.l > u) KnownFalse() else Unknown()
   override def eq(rhs: RatIntNum): Ternary =
     if (l == u && rhs.l == rhs.u && l == rhs.l) KnownTrue()
     else if ((l <= rhs.l && rhs.l <= u) || (l <= rhs.u && rhs.u <= u)) Unknown()
@@ -221,4 +217,3 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   override def unary_- : RatIntNum = RatIntNum(-u, -l)
   override def intApprox: Int = (l.toInt + u.toInt) / 2
 }
-

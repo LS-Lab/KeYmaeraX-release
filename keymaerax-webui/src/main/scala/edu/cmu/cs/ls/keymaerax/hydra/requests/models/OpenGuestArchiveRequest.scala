@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.models
 
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DatabasePopulator, HtmlResponse, ReadRequest, Request, Response}
@@ -20,10 +21,10 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
       if (!userExists) db.createUser(userId, pwd, "3")
 
       val models = db.getModelList(userId)
-      DatabasePopulator.importKya(db, userId, uri, prove=false, models)
+      DatabasePopulator.importKya(db, userId, uri, prove = false, models)
 
-      //@todo template engine, e.g., twirl, or at least figure out how to parse from a string
-      val html =
+      // @todo template engine, e.g., twirl, or at least figure out how to parse from a string
+      val html = {
         <html lang="en" ng-app="loginApp" ng-controller="ServerInfoCtrl">
           <head>
             <meta charset="utf-8"/>
@@ -61,7 +62,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
             <div ng-controller="LoginCtrl" ng-init={"login('" + sanitizedUserId + "','" + pwd + "',true);"}></div>
           </body>
         </html>
-
+      }
       HtmlResponse(html) :: Nil
     } catch {
       // Return a user-friendly message, since there's no user interface running yet to render a JSON error response
@@ -71,7 +72,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
           ex.printStackTrace(new PrintWriter(sw))
           sw.toString
         }
-        val html =
+        val html = {
           <html lang="en" ng-app="loginApp" ng-controller="ServerInfoCtrl">
             <head>
               <meta charset="utf-8"/>
@@ -88,13 +89,19 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
             <body>
               <h1>Error browsing archive</h1>
               <p>Please double-check the archive path/name</p>
-              <p>Archive location: {archiveName}</p>
-              <p>Archive remote location: {uri}</p>
+              <p>Archive location:
+                {archiveName}
+              </p>
+              <p>Archive remote location:
+                {uri}
+              </p>
               <h3>Error details</h3>
-              <p>{stacktrace}</p>
+              <p>
+                {stacktrace}
+              </p>
             </body>
           </html>
-
+        }
         HtmlResponse(html) :: Nil
     }
   }

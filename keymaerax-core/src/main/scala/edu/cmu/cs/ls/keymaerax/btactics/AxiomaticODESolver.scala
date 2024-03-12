@@ -21,14 +21,16 @@ import scala.annotation.tailrec
 import scala.collection.immutable._
 
 /**
-  * An Axiomatic ODE solver.
-  * Current limitations:
-  * - No support for explicit-form diamond ODEs/box ODEs in context: <{x'=0*x+1}>P, ![{x'=0*x+1}]P
-  *
-  * @see Page 25 in http://arxiv.org/abs/1503.01981 for a high-level sketch.
-  * @author Nathan Fulton
-  * @author Stefan Mitsch
-  */
+ * An Axiomatic ODE solver. Current limitations:
+ *   - No support for explicit-form diamond ODEs/box ODEs in context: `<{x'=0*x+1}>P, ![{x'=0*x+1}]P`
+ *
+ * @see
+ *   Page 25 in http://arxiv.org/abs/1503.01981 for a high-level sketch.
+ * @author
+ *   Nathan Fulton
+ * @author
+ *   Stefan Mitsch
+ */
 object AxiomaticODESolver {
   private val ODE_DEBUGGER = false
 
@@ -444,11 +446,11 @@ object AxiomaticODESolver {
 
   //region Setup time variable
 
-  /** Rewrites [{c}]p to [{c, t'=1}]p.
+  /** Rewrites `[{c}]p` to `[{c, t'=1}]p`.
     * The positional argument should point to the location of c, NOT the location of the box.
     * This tactic should work at any top-level position and also in any context.
     *
-    * @note If we want an initial value for time (kyxtime:=0) then this is the place to add that functionality.
+    * @note If we want an initial value for time (`kyxtime:=0`) then this is the place to add that functionality.
     */
   val addTimeVar: DependentPositionTactic = TacticFactory.anon ((pos: Position, s:Sequent) => {
     s.sub(pos ++ PosInExpr(0::Nil)) match {
@@ -543,7 +545,7 @@ object AxiomaticODESolver {
 
   /**
     *
-    * @param v A variable occuring in the odes program.
+    * @param v A variable occurring in the odes program.
     * @param system An ode system.
     * @return true if the program does not already contain an = constraint (a.k.a. sol'n) for v in the evolution domain.
     */

@@ -10,9 +10,10 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
-  * Tests for DGauto tactic.
-  * @author Nathan Fulton
-  */
+ * Tests for DGauto tactic.
+ * @author
+ *   Nathan Fulton
+ */
 class AutoDGTests extends TacticTestBase {
   "autoDG" should "prove x>0 -> [{x'=-x}]x>0" in withMathematica { _ =>
     proveBy("x>0 ==> [{x'=-x}]x>0".asSequent, DifferentialTactics.DGauto(1)) shouldBe Symbol("proved")
@@ -55,7 +56,8 @@ class AutoDGTests extends TacticTestBase {
   }
 
   it should "prove  x=0 -> [{x'=c*x^2+d*x^5+e*x^20}]x=0" in withMathematica { _ =>
-    proveBy("x=0 ==> [{x'=c*x^2+d*x^5+e*x^20}]x=0".asSequent, DifferentialTactics.dgDbxAuto(1)) shouldBe Symbol("proved")
+    proveBy("x=0 ==> [{x'=c*x^2+d*x^5+e*x^20}]x=0".asSequent, DifferentialTactics.dgDbxAuto(1)) shouldBe
+      Symbol("proved")
   }
 
   it should "prove x=0 -> [{x'=c*x+d*x^2+e*x^3}]x=0" in withMathematica { _ =>
@@ -70,20 +72,23 @@ class AutoDGTests extends TacticTestBase {
   "canonical x=0 & n>0 -> [{x'=c*x^n}]x=0" should "prove by custom tactic" in withMathematica { _ =>
     import TactixLibrary.{dG, boxAnd, dI, QE}
     val t = dG("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, Some("x*y^2=0&y>0".asFormula))(1) &
-      boxAnd(1, 0::Nil) & DifferentialTactics.diffInd()(1, 0::0::Nil) &
-      dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0::1::Nil) &
-      dI()(1, 0::1::0::Nil) & QE
+      boxAnd(1, 0 :: Nil) & DifferentialTactics.diffInd()(1, 0 :: 0 :: Nil) &
+      dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0 :: 1 :: Nil) &
+      dI()(1, 0 :: 1 :: 0 :: Nil) & QE
     proveBy("x=0 & n>0 ==> [{x'=c*x^n}]x=0".asSequent, t) shouldBe Symbol("proved")
   }
 
-  //region helper methods
+  // region helper methods
 
   "TacticHelper.transformMonomial" should "work" in withTactics {
-    TacticHelper.transformMonomials("2*x^2 + 3*x^3".asTerm, {
-      case Times(coeff, Power(v,exp)) => Times(coeff, Power(v, Minus(exp, Number(1))))
-      case t => t
-    }) shouldBe "2*x^(2-1) + 3*x^(3-1)".asTerm
+    TacticHelper.transformMonomials(
+      "2*x^2 + 3*x^3".asTerm,
+      {
+        case Times(coeff, Power(v, exp)) => Times(coeff, Power(v, Minus(exp, Number(1))))
+        case t => t
+      },
+    ) shouldBe "2*x^(2-1) + 3*x^(3-1)".asTerm
   }
 
-  //endregion
+  // endregion
 }

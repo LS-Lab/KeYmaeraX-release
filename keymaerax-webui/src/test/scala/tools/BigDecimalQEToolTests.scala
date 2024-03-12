@@ -14,18 +14,21 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import org.scalatest.LoneElement._
 
-/** Tests for trustworthy BigDecimal computations
-  * @author Fabian Immler
-  */
-class BigDecimalQEToolTests extends TacticTestBase  {
+/**
+ * Tests for trustworthy BigDecimal computations
+ * @author
+ *   Fabian Immler
+ */
+class BigDecimalQEToolTests extends TacticTestBase {
 
   val numbers =
     ("-2,-1,0,1,2,3,10,730963476657,1180918287134404971234765536279227090481580443894," +
-    "-0.2,0.3,0.000000000000000000000000000000000000000000000000000000000000000000001," +
-    "0.730967787376657," +
-    "16543749471661998771.6510510573789608," +
-    "-51890712899135751252332814755814641.118091828713440497765536090481580443894," +
-    "629649.30412662647769980700759557641946737912396204471525278051877116806").split(',').map(i => Number(BigDecimal(i)))
+      "-0.2,0.3,0.000000000000000000000000000000000000000000000000000000000000000000001," + "0.730967787376657," +
+      "16543749471661998771.6510510573789608," +
+      "-51890712899135751252332814755814641.118091828713440497765536090481580443894," +
+      "629649.30412662647769980700759557641946737912396204471525278051877116806")
+      .split(',')
+      .map(i => Number(BigDecimal(i)))
 
   def checkEval(mathematica: Mathematica, t: Term, mayFail: Boolean) = {
     try {
@@ -35,14 +38,11 @@ class BigDecimalQEToolTests extends TacticTestBase  {
       res shouldBe Symbol("proved")
       res.conclusion.ante shouldBe Symbol("empty")
       res.conclusion.succ.loneElement shouldBe Equiv(fml, True)
-    } catch {
-      case iae: IllegalArgumentException =>
-        if (!mayFail) throw iae
-    }
+    } catch { case iae: IllegalArgumentException => if (!mayFail) throw iae }
   }
 
   "unary operations" should "agree with QE" in withMathematica { mathematica =>
-    for ( n <- numbers ) {
+    for (n <- numbers) {
       checkEval(mathematica, Neg(n), false)
       checkEval(mathematica, Differential(n), true)
       withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
@@ -53,7 +53,7 @@ class BigDecimalQEToolTests extends TacticTestBase  {
   }
 
   "binary operations" should "agree with QE" in withMathematica { mathematica =>
-    for ( n <- numbers ; m <- numbers) {
+    for (n <- numbers; m <- numbers) {
       checkEval(mathematica, Plus(n, m), false)
       checkEval(mathematica, Minus(n, m), false)
       checkEval(mathematica, Times(n, m), false)
@@ -73,16 +73,12 @@ class BigDecimalQEToolTests extends TacticTestBase  {
       val res = mathematica.qe(fml).fact
       res shouldBe Symbol("proved")
       res.conclusion.ante shouldBe Symbol("empty")
-      res.conclusion.succ.loneElement shouldBe
-        Equiv(fml, b)
-    } catch {
-      case iae: IllegalArgumentException =>
-        if (!mayFail) throw iae
-    }
+      res.conclusion.succ.loneElement shouldBe Equiv(fml, b)
+    } catch { case iae: IllegalArgumentException => if (!mayFail) throw iae }
   }
 
   "comparisons" should "agree with QE" in withMathematica { mathematica =>
-    for ( n <- numbers ; m <- numbers) {
+    for (n <- numbers; m <- numbers) {
       checkEval(mathematica, Less(n, m), false)
       checkEval(mathematica, LessEqual(n, m), false)
       checkEval(mathematica, Equal(n, m), false)
@@ -104,15 +100,15 @@ class BigDecimalQEToolTests extends TacticTestBase  {
   }
 
   "division" should "fail for nonterminating decimal expansion of exact result" in withMathematica { mathematica =>
-    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/3".asTerm, false)
-    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "4/3".asTerm, false)
-    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "15/7".asTerm, false)
-    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/0.03".asTerm, false)
-    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/0".asTerm, false)
+    a[IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/3".asTerm, false)
+    a[IllegalArgumentException] should be thrownBy checkEval(mathematica, "4/3".asTerm, false)
+    a[IllegalArgumentException] should be thrownBy checkEval(mathematica, "15/7".asTerm, false)
+    a[IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/0.03".asTerm, false)
+    a[IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/0".asTerm, false)
   }
 
   "boolean combinations" should "agree with QE" in withMathematica { mathematica =>
-    for ( b <- True::False::Nil ; c <- True::False::Nil) {
+    for (b <- True :: False :: Nil; c <- True :: False :: Nil) {
       checkEval(mathematica, And(b, c), false)
       checkEval(mathematica, Or(b, c), false)
       checkEval(mathematica, Imply(b, c), false)

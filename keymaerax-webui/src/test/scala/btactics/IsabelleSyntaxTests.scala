@@ -9,24 +9,24 @@ import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
-/**
-  * Created by yongkiat on 9/8/16.
-  */
-class IsabelleSyntaxTests extends TacticTestBase  {
+/** Created by yongkiat on 9/8/16. */
+class IsabelleSyntaxTests extends TacticTestBase {
 
   "isabelle syntax" should "re-write formulas into accepted subset" in withMathematica { _ =>
     val fml = "a+b <= c -> !(c>b) | a > 0 & a+5 >= 0 <-> (c = 0 -> b >= 5 & c <= 5)".asFormula
-    val (f,pf) = normalise(fml)
+    val (f, pf) = normalise(fml)
     pf shouldBe Symbol("proved")
-    //@note x!=0 would be accepted by Isabelle syntax, but semi-algebraic normaliser rewrites to x-0>0|0-x>0
-    f shouldBe "(a+b-c>0|b-c>=0|a>0&a+5>=0)&((c-0>0|0-c>0)|b-5>=0&5-c>=0)|(c-(a+b)>=0&c-b>0&(0-a>=0|0-(a+5)>0))&c=0&(5-b>0|c-5>0)".asFormula
+    // @note x!=0 would be accepted by Isabelle syntax, but semi-algebraic normaliser rewrites to x-0>0|0-x>0
+    f shouldBe
+      "(a+b-c>0|b-c>=0|a>0&a+5>=0)&((c-0>0|0-c>0)|b-5>=0&5-c>=0)|(c-(a+b)>=0&c-b>0&(0-a>=0|0-(a+5)>0))&c=0&(5-b>0|c-5>0)"
+        .asFormula
   }
 
   it should "re-write terms into accepted subset" in withMathematica { _ =>
     val fml = "a-(a+b) <= a*(b-c-d)^2 & (a-b-c)!=0 | (b-(c-d))=0".asFormula
-    val (f,pf) = normalise(fml)
+    val (f, pf) = normalise(fml)
     pf shouldBe Symbol("proved")
-    //@note x!=0 would be accepted by Isabelle syntax, but semi-algebraic normaliser rewrites to x-0>0|0-x>0
+    // @note x!=0 would be accepted by Isabelle syntax, but semi-algebraic normaliser rewrites to x-0>0|0-x>0
     f shouldBe "a*(b-c-d)^2-(a-(a+b))>=0&(a-b-c-0>0|0-(a-b-c)>0)|b-(c-d)=0".asFormula
   }
 
@@ -59,33 +59,39 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val fml = "x^2<=xopost()^2 & (a+b)^2 <= c^2 | (a+b)^2 <= (c+d)^2".asFormula
     val (prog, pff) = isarSyntax(fml)
     println(pff)
-    //println(prettyProg(prog))
+    // println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
   it should "derive ETCS essentials" in withMathematica { _ =>
-    val uf = "m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=-b| m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=A".asFormula
+    val uf =
+      "m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=-b| m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=A"
+        .asFormula
     val (prog, pff) = isarSyntax(uf)
     println(pff)
-    //println(prettyProg(prog))
+    // println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
   it should "derive ETCS safety lemma" in withMathematica { _ =>
-    val uf = "((dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&(((((vpost()=v&empost()=em)&dopost()=d)&zpost()=z)&tpost()=t)&mopost()=m)&apost()=a|((((((((vdespost()=vdes&vpost()=v)&empost()=1)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&(((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&(((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)".asFormula
-    val (f,pf) = normalise(uf)
-    val (prog,pff) = deriveFormulaProof(f)
-    //println(prettyProg(prog))
+    val uf =
+      "((dpost()>=0&d^2-dpost()^2<=2*b*(mpost()-m)&vdespost()>=0)&(((((vpost()=v&empost()=em)&dopost()=d)&zpost()=z)&tpost()=t)&mopost()=m)&apost()=a|((((((((vdespost()=vdes&vpost()=v)&empost()=1)&dopost()=do)&zpost()=z)&tpost()=t)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=a)|v<=vdes&(apost()>=-b&apost()<=A)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&(((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)|v>=vdes&(apost() < 0&apost()>=-b)&((m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&((((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)&apost()=-b|!(m-z<=(v^2-d^2)/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|em=1)&(v>=0&0<=ep)&(((((((vdespost()=vdes&vpost()=v)&empost()=em)&dopost()=do)&zpost()=z)&tpost()=0)&mopost()=mo)&mpost()=m)&dpost()=d)"
+        .asFormula
+    val (f, pf) = normalise(uf)
+    val (prog, pff) = deriveFormulaProof(f)
+    // println(prettyProg(prog))
     println(pff)
     pf shouldBe Symbol("proved")
     pff shouldBe Symbol("proved")
   }
 
   it should "stopsign control monitor" in withMathematica { _ =>
-    val uf = "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=A)&tpost()=0|v=0&0<=ep&((xpost()=x&vpost()=0)&apost()=0)&tpost()=0|(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=-b)&tpost()=0".asFormula
+    val uf =
+      "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=A)&tpost()=0|v=0&0<=ep&((xpost()=x&vpost()=0)&apost()=0)&tpost()=0|(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=-b)&tpost()=0"
+        .asFormula
     val (prog, pff) = isarSyntax(uf)
     println(pff)
-    //println(prettyProg(prog))
+    // println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
@@ -98,16 +104,20 @@ class IsabelleSyntaxTests extends TacticTestBase  {
   }
 
   it should "stopsign model monitor" in withMathematica { _ =>
-    val uf = "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((ep=0&0=tpost())&((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&x=xpost())&v>0)|(A=apost()&A>0)&((v=0&vpost()=0)&xpost()=x|(v=vpost()&xpost()=x)&v>0))|ep>0&(((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&xpost()=tpost()*v+x)&v>0))&((ep=tpost()|0=tpost())|0 < tpost()&tpost() < ep)|(A=apost()&A>0)&(((v=0&vpost()=A*tpost())&xpost()=1/2*A*(-1*tpost())^2+x|(vpost()=A*tpost()+v&xpost()=1/2*A*(-1*tpost())^2+tpost()*v+x)&v>0)&(ep=tpost()|0 < tpost()&tpost() < ep)|0=tpost()&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0))))|v=0&(((0<=tpost()&ep>=tpost())&xpost()=x)&0=vpost())&apost()=0|((ep=0&0=tpost())&apost()+b=0)&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0)|(ep>0&apost()+b=0)&(((v=b*tpost()+vpost()&b*(-1*tpost())^2+2*(-1*tpost()*v+-1*x+xpost())=0)&v>0)&((ep=tpost()&b<=ep^-1*v|0=tpost())|(tpost() < ep&0 < tpost())&b*tpost()<=v)|((0=tpost()&v=0)&vpost()=0)&2*xpost()=2*x)".asFormula
+    val uf =
+      "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((ep=0&0=tpost())&((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&x=xpost())&v>0)|(A=apost()&A>0)&((v=0&vpost()=0)&xpost()=x|(v=vpost()&xpost()=x)&v>0))|ep>0&(((A=0&apost()=0)&((v=0&vpost()=0)&x=xpost()|(v=vpost()&xpost()=tpost()*v+x)&v>0))&((ep=tpost()|0=tpost())|0 < tpost()&tpost() < ep)|(A=apost()&A>0)&(((v=0&vpost()=A*tpost())&xpost()=1/2*A*(-1*tpost())^2+x|(vpost()=A*tpost()+v&xpost()=1/2*A*(-1*tpost())^2+tpost()*v+x)&v>0)&(ep=tpost()|0 < tpost()&tpost() < ep)|0=tpost()&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0))))|v=0&(((0<=tpost()&ep>=tpost())&xpost()=x)&0=vpost())&apost()=0|((ep=0&0=tpost())&apost()+b=0)&((v=0&vpost()=0)&xpost()=x|(vpost()=v&xpost()=x)&v>0)|(ep>0&apost()+b=0)&(((v=b*tpost()+vpost()&b*(-1*tpost())^2+2*(-1*tpost()*v+-1*x+xpost())=0)&v>0)&((ep=tpost()&b<=ep^-1*v|0=tpost())|(tpost() < ep&0 < tpost())&b*tpost()<=v)|((0=tpost()&v=0)&vpost()=0)&2*xpost()=2*x)"
+        .asFormula
     val (f, pf) = normalise(uf)
     val (prog, pff) = deriveFormulaProof(f)
-    //println(prettyProg(prog))
+    // println(prettyProg(prog))
     pf shouldBe Symbol("proved")
     pff shouldBe Symbol("proved")
   }
 
   it should "stopsign with direct v control model monitor" in withMathematica { _ =>
-    val uf = "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x|((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0".asFormula
+    val uf =
+      "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x|((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0"
+        .asFormula
     val (prog, pff) = isarSyntax(uf)
     println(pff)
     println(prettyProg(prog))
@@ -115,7 +125,9 @@ class IsabelleSyntaxTests extends TacticTestBase  {
   }
 
   it should "stopsign with direct v control model monitor with disturbance" in withMathematica { _ =>
-    val uf = "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&((0<=tpost()&ep>=tpost())&-1*tpost()*(cpost()+dpost()+v)+xpost()=x)&v=vpost()|((((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0)&dpost()=0)&cpost()=0".asFormula
+    val uf =
+      "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&((0<=tpost()&ep>=tpost())&-1*tpost()*(cpost()+dpost()+v)+xpost()=x)&v=vpost()|((((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0)&dpost()=0)&cpost()=0"
+        .asFormula
     val (prog, pff) = isarSyntax(uf)
     println(pff)
     println(prettyProg(prog))

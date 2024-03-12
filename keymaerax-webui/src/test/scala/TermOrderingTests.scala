@@ -1,22 +1,25 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 import edu.cmu.cs.ls.keymaerax.infrastruct.TreeForm._
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
- * Tests for algorithms that compare terms according to different measures of complexity.
- * Created by bbohrer on 10/28/15.
+ * Tests for algorithms that compare terms according to different measures of complexity. Created by bbohrer on
+ * 10/28/15.
  */
 class TermOrderingTests extends FlatSpec with Matchers {
   def O(s: String): TermSymbol = Operator(s, None)
 
   val testPreference = List("+", "-", "*", "/", "^")
-  val testSymbols = testPreference.map({case x => Operator(x, None)})
+  val testSymbols = testPreference.map({ case x => Operator(x, None) })
   val testWeighting = List((O("^"), 16), (O("/"), 8), (O("*"), 4), (O("-"), 2), (O("+"), 1))
 
   object TestSymbolOrdering extends Ordering[TermSymbol] {
-    private def compareOps(x: String, y: String): Int = {
-      testPreference.indexOf(x).compare(testPreference.indexOf(y))
-    }
+    private def compareOps(x: String, y: String): Int = { testPreference.indexOf(x).compare(testPreference.indexOf(y)) }
 
     def compare(sym1: TermSymbol, sym2: TermSymbol): Int = {
       (sym1, sym2) match {

@@ -13,7 +13,8 @@ import scala.tools.nsc.reporters.StoreReporter
 
 /**
  * Compiles tactic files written in Scala.
- * @see [[https://github.com/Rogach/miltamm/blob/master/src/main/scala/BuildCompiler.scala#L8]]
+ * @see
+ *   [[https://github.com/Rogach/miltamm/blob/master/src/main/scala/BuildCompiler.scala#L8]]
  */
 class ScalaTacticCompiler {
   def compile(source: String): Iterable[Class[_]] = {
@@ -32,19 +33,27 @@ class ScalaTacticCompiler {
     new compiler.Run().compileSources(sources)
 
     if (reporter.hasErrors) {
-      throw new CompilationFailedException(source,
-        reporter.infos.map(info => CompileError(info.pos.line, info.pos.column, info.pos.lineContent, info.msg)).toList.sortBy(_.line))
+      throw new CompilationFailedException(
+        source,
+        reporter
+          .infos
+          .map(info => CompileError(info.pos.line, info.pos.column, info.pos.lineContent, info.msg))
+          .toList
+          .sortBy(_.line),
+      )
     }
 
     // Loading new compiled classes
-    val classLoader =  new AbstractFileClassLoader(directory, this.getClass.getClassLoader)
+    val classLoader = new AbstractFileClassLoader(directory, this.getClass.getClassLoader)
 
     /*! When classes are loading inner classes are being skipped. */
     for (classFile <- directory; if !classFile.name.contains('$')) yield {
 
       /*! Each file name is being constructed from a path in the virtual directory. */
       val path = classFile.path
-      val fullQualifiedName = path.substring(path.indexOf(File.separatorChar)+1, path.lastIndexOf('.')).replace(File.separator,".")
+      val fullQualifiedName = path
+        .substring(path.indexOf(File.separatorChar) + 1, path.lastIndexOf('.'))
+        .replace(File.separator, ".")
 
       /*! Loaded classes are collecting into a returning collection with `yield`. */
       classLoader.loadClass(fullQualifiedName)
@@ -52,17 +61,26 @@ class ScalaTacticCompiler {
   }
 }
 
-/** Compilation exception with error positions with messages of what went wrong during compilation.
- */
-class CompilationFailedException(val programme: String,
-                                 val messages: Iterable[CompileError])
-  extends Exception("\n" + messages.map(m => "line %d: %s \n    %s\n    %s" format (m.line - 3, m.message, m.lineContent, " " * (m.column - 1) + "^")).mkString("\n"))
+/** Compilation exception with error positions with messages of what went wrong during compilation. */
+class CompilationFailedException(val programme: String, val messages: Iterable[CompileError])
+    extends Exception(
+      "\n" +
+        messages
+          .map(m =>
+            "line %d: %s \n    %s\n    %s" format (m.line - 3, m.message, m.lineContent, " " * (m.column - 1) + "^")
+          )
+          .mkString("\n")
+    )
 
 /**
  * Single compile error.
- * @param line Line number, at which error took place.
- * @param column offset from line start.
- * @param lineContent Contents of source line.
- * @param message Error message.
+ * @param line
+ *   Line number, at which error took place.
+ * @param column
+ *   offset from line start.
+ * @param lineContent
+ *   Contents of source line.
+ * @param message
+ *   Error message.
  */
 case class CompileError(line: Int, column: Int, lineContent: String, message: String)

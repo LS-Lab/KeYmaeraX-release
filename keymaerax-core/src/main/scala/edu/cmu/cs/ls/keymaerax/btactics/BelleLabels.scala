@@ -1,25 +1,47 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleCommitTxLabel, BelleLabel, BelleLabelTx, BelleRollbackTxLabel, BelleStartTxLabel, BelleSubLabel, BelleTopLevelLabel}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{
+  BelleCommitTxLabel,
+  BelleLabel,
+  BelleLabelTx,
+  BelleRollbackTxLabel,
+  BelleStartTxLabel,
+  BelleSubLabel,
+  BelleTopLevelLabel,
+}
 
 /**
-  * Default labels used by the KeYmaera X tactics.
-  * Other labels can be used by the user, but this list of labels makes it easier to match.
-  * @author aplatzer
-  */
+ * Default labels used by the KeYmaera X tactics. Other labels can be used by the user, but this list of labels makes it
+ * easier to match.
+ * @author
+ *   aplatzer
+ */
 object BelleLabels {
+
   /** Starts a label transaction */
   val startTx: BelleLabel = BelleStartTxLabel
-  /** Rollback a label transaction started with [[startTx]]; rollback should be followed immediately by a label.
-    * {{{label(startTx) & doStuffThatCreatesLabels & label(rollbackTx) & label(useCase)}}} */
+
+  /**
+   * Rollback a label transaction started with [[startTx]]; rollback should be followed immediately by a label.
+   * {{{
+   * label(startTx) & doStuffThatCreatesLabels & label(rollbackTx) & label(useCase)
+   * }}}
+   */
   val rollbackTx: BelleLabel = BelleRollbackTxLabel
-  /** Commit a label transaction started with [[startTx]].
-    * {{{label(startTx) & doStuffThatCreatesLabels & label(commitTx)}}} */
+
+  /**
+   * Commit a label transaction started with [[startTx]].
+   * {{{
+   * label(startTx) & doStuffThatCreatesLabels & label(commitTx)
+   * }}}
+   */
   val commitTx: BelleLabel = BelleCommitTxLabel
+
   /** Shorthand for rollback, insert label, commit. */
   def replaceTxWith(l: BelleLabel): BelleLabel = BelleLabelTx(BelleSubLabel(rollbackTx, l.label), None)
 

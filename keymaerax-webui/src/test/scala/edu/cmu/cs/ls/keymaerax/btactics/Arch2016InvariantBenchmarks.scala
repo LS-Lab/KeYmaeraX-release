@@ -10,13 +10,12 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SlowTest}
 
 /**
-  * These are all translated by hand from the supplementary material of
-  * "Benchmarks for Non-linear Continuous System Safety Verification"
-  * http://verivital.com/hyst/benchmark-nonlinear/
-  * @author Nathan Fulton
-  */
-@SlowTest
-@IgnoreInBuildTest // test runs forever, queues up and ruins all builds
+ * These are all translated by hand from the supplementary material of "Benchmarks for Non-linear Continuous System
+ * Safety Verification" http://verivital.com/hyst/benchmark-nonlinear/
+ * @author
+ *   Nathan Fulton
+ */
+@SlowTest @IgnoreInBuildTest // test runs forever, queues up and ruins all builds
 class Arch2016InvariantBenchmarks extends TacticTestBase {
   "ahmadi_parrilo_kristic" should "prove by ODE" in withMathematica { _ =>
     val system = "x'=-x+x*y, y'=-y, t'=1".asDifferentialProgram
@@ -27,7 +26,7 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val f = Imply(initially, Box(ODESystem(system, timeHorizon), Not(forbidden)))
     val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
 
-    proveBy(f,t) shouldBe Symbol("proved")
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   "alongi_nelson_ex_4_1_9_page_143" should "prove by ODE" in withMathematica { _ =>
@@ -39,21 +38,19 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val f = Imply(initially, Box(ODESystem(system, constraint), Not(forbidden)))
     val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
 
-    proveBy(f,t) shouldBe Symbol("proved")
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   "keymaera_nonlinear_diffcut" should "prove by ODE" in withMathematica { _ =>
     val system = "x'=(-3+x)^4+y^5, y'=y^2, t'=1".asDifferentialProgram
     val timeHorizon = "t<=9".asFormula
     val initially = "x^3 >= -1 & y^5 >= 0 & t=0".asFormula
-    val forbidden = "1 + x < 0 | y < 0".asFormula //`+x >= 0 & y>0
+    val forbidden = "1 + x < 0 | y < 0".asFormula // `+x >= 0 & y>0
 
     val f = Imply(initially, Box(ODESystem(system, timeHorizon), Not(forbidden)))
     val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
 
-
-    proveBy(f,t) shouldBe Symbol("proved")
+    proveBy(f, t) shouldBe Symbol("proved")
   }
-
 
 }

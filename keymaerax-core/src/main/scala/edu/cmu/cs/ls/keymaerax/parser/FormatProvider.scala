@@ -1,19 +1,23 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.Expression
 
 trait FormatProvider {
-  /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
+
+  /**
+   * Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format
+   * string past `check`.
+   */
   def printWS(check: String = ""): String
+
   /** Prints whitespace prefix and formats `next` according to the format string. */
   def print(next: String): String
 }
-
 
 /** Stateful format provider to read off whitespace and line breaks from a pretty-printed string. */
 abstract class PrettyPrintFormatProvider(format: String, wsPrinter: String => String) extends FormatProvider {
@@ -29,15 +33,18 @@ abstract class PrettyPrintFormatProvider(format: String, wsPrinter: String => St
         processedFormat = processedFormat.substring(m.end)
         m.matched
       case None => SPACES.findPrefixMatchOf(processedFormat) match {
-        case Some(m) =>
-          processedFormat = processedFormat.substring(m.end)
-          m.matched
-        case None => ""
-      }
+          case Some(m) =>
+            processedFormat = processedFormat.substring(m.end)
+            m.matched
+          case None => ""
+        }
     }
   }
 
-  /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
+  /**
+   * Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format
+   * string past `check`.
+   */
   def printWS(check: String = ""): String = {
     val result = wsPrinter(advanceWS())
     assert(processedFormat.startsWith(check), s"'$processedFormat' did not start with '$check'")
@@ -47,7 +54,8 @@ abstract class PrettyPrintFormatProvider(format: String, wsPrinter: String => St
 
   /** Prints whitespace prefix and formats `next` according to the format string. */
   def print(next: String): String = {
-    wsPrinter(advanceWS()) + next.map(c => printWS(if (c != ' ') c.toString else "") + c).reduceOption(_ + _).getOrElse("")
+    wsPrinter(advanceWS()) +
+      next.map(c => printWS(if (c != ' ') c.toString else "") + c).reduceOption(_ + _).getOrElse("")
   }
 }
 

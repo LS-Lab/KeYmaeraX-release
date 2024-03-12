@@ -7,8 +7,8 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io._
 import javax.swing.JOptionPane
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker, Version, core}
-import edu.cmu.cs.ls.keymaerax.core.{Ensures, assertion}
+import edu.cmu.cs.ls.keymaerax.{core, Configuration, FileConfiguration, UpdateChecker, Version}
+import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -16,27 +16,31 @@ import spray.json.DefaultJsonProtocol._
 import scala.collection.immutable.List
 
 /**
-  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]],
-  * the aXiomatic Tactical Theorem Prover for Hybrid Systems and Hybrid Games.
-  *
-  * Usage:
-  * {{{
-  *  java -jar keymaerax.jar
-  *  java -Xss20M -jar keymaerax.jar -launch
-  * }}}
-  * @todo move functionality directly into KeYmaeraX.scala?
-  * @author Nathan Fulton
-  * @author Stefan Mitsch
-  * @since 4/17/15
-  * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
-  */
+ * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]], the
+ * aXiomatic Tactical Theorem Prover for Hybrid Systems and Hybrid Games.
+ *
+ * Usage:
+ * {{{
+ *  java -jar keymaerax.jar
+ *  java -Xss20M -jar keymaerax.jar -launch
+ * }}}
+ * @todo
+ *   move functionality directly into KeYmaeraX.scala?
+ * @author
+ *   Nathan Fulton
+ * @author
+ *   Stefan Mitsch
+ * @since 4/17/15
+ * @see
+ *   [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
+ */
 object Main {
   import core.VERSION
 
   /** This flag is set to true iff this process does nothing but re-launch */
   var IS_RELAUNCH_PROCESS = false
 
-  //@todo set via -log command line option
+  // @todo set via -log command line option
   private val logFile = false
 
   /** Command line flag to launch the prover in this JVM (if not set, spawns another JVM). */
@@ -67,16 +71,23 @@ object Main {
 
       val javaVersionCompatibility = javaVersion
       if (javaVersionCompatibility._1.contains(false)) {
-          exitWith("KeYmaera X requires at least Java Virtual Machine version 1.8.0_111. It was started with " + javaVersionCompatibility._2 + ". Please install compatible Java and restart KeYmaera X.")
+        exitWith(
+          "KeYmaera X requires at least Java Virtual Machine version 1.8.0_111. It was started with " +
+            javaVersionCompatibility._2 + ". Please install compatible Java and restart KeYmaera X."
+        )
       } else {
         if (javaVersionCompatibility._1.isEmpty) {
           println("WARNING: Unexpected Java Version not known to be compatible: " + javaVersionCompatibility._2)
         }
         var assertsEnabled = false
-        assertion({assertsEnabled = true; assertsEnabled}) // intentional lazy side-effect of setting assertsEnabled to true if -ea
+        assertion({
+          assertsEnabled = true; assertsEnabled
+        }) // intentional lazy side-effect of setting assertsEnabled to true if -ea
         // now assertsEnabled is set to the correct value (true if -ea, false if -da)
-        val cmd = (java :: "-Xss20M" :: (if (assertsEnabled) "-ea" else "-da") :: "-jar" :: keymaeraxjar :: LAUNCH_FLAG :: Nil) ++ args ++
-          (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) UI_FLAG :: Nil else Nil)
+        val cmd =
+          (java :: "-Xss20M" :: (if (assertsEnabled) "-ea" else "-da") :: "-jar" :: keymaeraxjar :: LAUNCH_FLAG ::
+            Nil) ++ args ++
+            (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) UI_FLAG :: Nil else Nil)
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
@@ -91,13 +102,11 @@ object Main {
 
       assert(args.contains(LAUNCH_FLAG))
       startServer(args.filter(_ != LAUNCH_FLAG))
-      //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
-    } else {
-      KeYmaeraX.main(args)
-    }
+      // @todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
+    } else { KeYmaeraX.main(args) }
   }
 
-  def startServer(args: Array[String]) : Unit = {
+  def startServer(args: Array[String]): Unit = {
     LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
@@ -113,21 +122,27 @@ object Main {
 
     if (!cacheDirectory.exists()) {
       if (!cacheDirectory.mkdirs()) {
-        throw new Exception(s"Could not create the directory ${cacheDirectory.getAbsolutePath}. Please check your file system permissions.")
+        throw new Exception(
+          s"Could not create the directory ${cacheDirectory.getAbsolutePath}. Please check your file system permissions."
+        )
       }
     }
 
     if (!cacheVersionFile.exists()) {
-      if (!cacheVersionFile.createNewFile())
-        throw new Exception(s"Could not create the file ${cacheVersionFile.getAbsolutePath}. Please check your file system permissions.")
+      if (!cacheVersionFile.createNewFile()) throw new Exception(
+        s"Could not create the file ${cacheVersionFile.getAbsolutePath}. Please check your file system permissions."
+      )
       clearCache(new File(cacheLocation))
     } else {
       val source = scala.io.Source.fromFile(cacheVersionFile)
       val cacheVersion = source.mkString.replace("\n", "")
-      source.reader().close() //Ensure that the associated reader is closed so that we can delete the file if need to.
+      source.reader().close() // Ensure that the associated reader is closed so that we can delete the file if need to.
       try {
         if (Version(cacheVersion) != Version(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
-          assert(cacheVersionFile.delete(), s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath }")
+          assert(
+            cacheVersionFile.delete(),
+            s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath}",
+          )
           clearCache(cacheDirectory)
         }
       } catch {
@@ -146,7 +161,9 @@ object Main {
       if (!deleteDirectory(dir)) throw new Exception(s"Could not delete cache directory ${dir.getAbsolutePath}")
     }
     assert(!dir.exists(), s"Cache directory ${dir.getAbsolutePath} should not exist after being deleted.")
-    if (!dir.mkdirs()) throw new Exception(s"Could not reinitialize cache because cache directory ${dir.getAbsolutePath} could not be created.")
+    if (!dir.mkdirs()) throw new Exception(
+      s"Could not reinitialize cache because cache directory ${dir.getAbsolutePath} could not be created."
+    )
 
     val versionFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
     if (!versionFile.exists()) {
@@ -172,21 +189,22 @@ object Main {
       result
     } else {
       val recSuccess = f.listFiles().forall(deleteDirectory)
-      if (recSuccess) f.delete()
-      else false
+      if (recSuccess) f.delete() else false
     }
-  } ensures(r => !r || !f.exists())
+  } ensures (r => !r || !f.exists())
 
-  /** Kills the current process and shows an error message if the current database is deprecated.
-    * @todo similar behavior for the cache
-    */
+  /**
+   * Kills the current process and shows an error message if the current database is deprecated.
+   * @todo
+   *   similar behavior for the cache
+   */
   private def exitIfDeprecated(): Unit = {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
     launcherLog("Database version: " + databaseVersion)
     cleanupGuestData()
     LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
     if (UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
-      //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
+      // @todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
       val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$databaseVersion-*"
       launcherLog("Backing up database to " + backupPath)
       val defaultName = new File(Configuration.path(Configuration.Keys.DB_PATH)).getName
@@ -199,7 +217,9 @@ object Main {
           JOptionPane.showMessageDialog(null, message)
           sys.exit(-1)
         } else {
-          launcherLog("Successful database upgrade to version: " + SQLite.ProdDB.getConfiguration("version").config("version"))
+          launcherLog(
+            "Successful database upgrade to version: " + SQLite.ProdDB.getConfiguration("version").config("version")
+          )
         }
       } catch {
         case e: Throwable =>
@@ -213,7 +233,8 @@ object Main {
   }
 
   /** Error message printed when the database upgrade fails. */
-  private def upgradeFailedMessage(defaultName: String, backupPath: String): String = s"""
+  private def upgradeFailedMessage(defaultName: String, backupPath: String): String = {
+    s"""
        |Your KeYmaera X database is not compatible with this version of KeYmaera X.
        |Automated upgrade failed and changes have been rolled back.
        |Additionally, a backup copy of your current database was placed at
@@ -235,6 +256,7 @@ object Main {
        |6. Import the models and proofs from the .kyx file of step 3, using the Web UI
        |   model list page's upload functionality: "Select file" and then press "Upload"
        |   """.stripMargin
+  }
 
   /** Stores a backup of the database, identifies the backup with `currentVersion` and the current system time. */
   private def backupDatabase(currentVersion: String): Unit = {
@@ -243,7 +265,9 @@ object Main {
     new FileOutputStream(dest).getChannel.transferFrom(new FileInputStream(src).getChannel, 0, Long.MaxValue)
   }
 
-  /** Runs the upgrade script located at `scriptUrl`. Statements (separated by ;) in the script are run in batch mode. */
+  /**
+   * Runs the upgrade script located at `scriptUrl`. Statements (separated by ;) in the script are run in batch mode.
+   */
   private def runUpgradeScript(scriptUrl: String): Unit = {
     val script = io.Source.fromInputStream(getClass.getResourceAsStream(scriptUrl)).mkString
     val statements = script.split(";")
@@ -256,9 +280,8 @@ object Main {
       statements.foreach(stmt.addBatch)
       stmt.executeBatch()
       conn.commit()
-    } catch {
-      case e: Throwable => conn.rollback(); throw e
-    } finally {
+    } catch { case e: Throwable => conn.rollback(); throw e }
+    finally {
       conn.close()
       session.close()
     }
@@ -271,9 +294,9 @@ object Main {
     val scripts = upgradeScripts.parseJson.asJsObject.fields("autoUpgrades").asInstanceOf[JsArray]
     val currentScripts = scripts.elements.filter(_.asJsObject.fields("upgradeFrom").convertTo[String] == currentVersion)
     if (currentScripts.nonEmpty) {
-      currentScripts.map(_.asJsObject.fields("scripts").asInstanceOf[JsArray]).foreach(script =>
-        script.elements.foreach(s => runUpgradeScript(s.asJsObject.fields("url").convertTo[String]))
-      )
+      currentScripts
+        .map(_.asJsObject.fields("scripts").asInstanceOf[JsArray])
+        .foreach(script => script.elements.foreach(s => runUpgradeScript(s.asJsObject.fields("url").convertTo[String])))
     }
     SQLite.ProdDB.getConfiguration("version").config("version")
   }
@@ -295,14 +318,16 @@ object Main {
           launcherDebug("Reading guest source " + url)
           val content = DatabasePopulator.readKyx(url)
           launcherDebug("Comparing cached and source content")
-          models.flatMap(m => content.find(_.name == m.name) match {
-            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model == m.keyFile => None
-            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model != m.keyFile => Some(m)
-            case _ => /*@note model was deleted/renamed in original file, so delete*/ Some(m)
-          })
+          models.flatMap(m =>
+            content.find(_.name == m.name) match {
+              case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model == m.keyFile => None
+              case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model != m.keyFile => Some(m)
+              case _ => /*@note model was deleted/renamed in original file, so delete*/ Some(m)
+            }
+          )
         } else List()
       } catch {
-        case _: Throwable => List() //@note original file inaccessible, so keep temporary model
+        case _: Throwable => List() // @note original file inaccessible, so keep temporary model
       }
     })
   }
@@ -325,9 +350,8 @@ object Main {
         val stmt = conn.createStatement()
         deleteModelsStatements.foreach(stmt.addBatch)
         stmt.executeBatch()
-      } catch {
-        case e: Throwable => launcherLog("Error cleaning up guest data"); throw e
-      } finally {
+      } catch { case e: Throwable => launcherLog("Error cleaning up guest data"); throw e }
+      finally {
         conn.close()
         session.close()
       }
@@ -340,9 +364,7 @@ object Main {
     try {
       proc.exitValue()
       false
-    } catch {
-      case _: Exception => true
-    }
+    } catch { case _: Exception => true }
   }
 
   /** Runs the command `cmd` in a new process. */
@@ -353,7 +375,7 @@ object Main {
     var pollOnStd = false
     try {
       if (logFile) {
-        //@todo not sure if it's really helpful to have separate error and output log. pb.redirectErrorStream(true)
+        // @todo not sure if it's really helpful to have separate error and output log. pb.redirectErrorStream(true)
         val errorLog = File.createTempFile("keymaerax-error-stream", ".txt")
         val outputLog = File.createTempFile("keymaerax-output-stream", ".txt")
         pb.redirectError(errorLog)
@@ -361,21 +383,23 @@ object Main {
         pb.redirectOutput(outputLog)
         System.err.println("Outputs will be logged at " + outputLog.getPath)
       } else {
-        //@todo dump to console AND to logfile would be best
+        // @todo dump to console AND to logfile would be best
         pb.inheritIO()
       }
     } catch {
-      //@note JDK<1.7
+      // @note JDK<1.7
       case _: NoSuchMethodError => pollOnStd = true
     }
     val proc = pb.start()
 
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit = {
-        if (!IS_RELAUNCH_PROCESS) KeYmaeraXLock.deleteLock()
-        proc.destroy()
-      }
-    })
+    Runtime
+      .getRuntime
+      .addShutdownHook(new Thread() {
+        override def run(): Unit = {
+          if (!IS_RELAUNCH_PROCESS) KeYmaeraXLock.deleteLock()
+          proc.destroy()
+        }
+      })
 
     if (pollOnStd) {
       val errReaderThread = new Thread() {
@@ -418,13 +442,11 @@ object Main {
 
   /** Gracefully exit with an error message displayed to the user. */
   private def exitWith(err: String): Nothing = {
-    val message = "ERROR in loader :: See http://keymaeraX.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
+    val message =
+      "ERROR in loader :: See http://keymaeraX.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
     launcherLog(message)
-    try {
-      if (!java.awt.GraphicsEnvironment.isHeadless) {
-        JOptionPane.showMessageDialog(null, message)
-      }
-    } catch {
+    try { if (!java.awt.GraphicsEnvironment.isHeadless) { JOptionPane.showMessageDialog(null, message) } }
+    catch {
       case _: java.awt.HeadlessException =>
       case _: java.lang.ClassNotFoundException =>
       case _: java.lang.NoSuchMethodError =>
@@ -437,55 +459,58 @@ object Main {
   lazy val javaLocation: String = {
     val javaHome = System.getProperty("java.home") + "/bin"
     val matchingFiles = new java.io.File(javaHome).listFiles(new FileFilter {
-      override def accept(pathname: File): Boolean = pathname.canExecute && (pathname.getName.equals("java") || pathname.getName.equals("java.exe"))
+      override def accept(pathname: File): Boolean = pathname.canExecute &&
+        (pathname.getName.equals("java") || pathname.getName.equals("java.exe"))
     })
 
-    if (matchingFiles.length == 1) {
-      matchingFiles.head.getAbsolutePath
-    } else {
-      exitWith("Could not find a Java executable in " + javaHome)
-    }
+    if (matchingFiles.length == 1) { matchingFiles.head.getAbsolutePath }
+    else { exitWith("Could not find a Java executable in " + javaHome) }
   }
 
   /**
-   * Assumes that the JAR was run from its containing directory (e.g., as happens when double-clicking).
-   * If this assumption is violated, the launcher will fail.
-   * @return The location of the .JAR file that's currently running.
+   * Assumes that the JAR was run from its containing directory (e.g., as happens when double-clicking). If this
+   * assumption is violated, the launcher will fail.
+   * @return
+   *   The location of the .JAR file that's currently running.
    */
   lazy val jarLocation: String = {
     new File(Main.getClass.getProtectionDomain.getCodeSource.getLocation.toURI.getPath).toString
   }
 
   /**
-    * Identify whether the running Java Version is compatible with KeYmaera X.
-    * @return - Some(true) if compatible, along with the version string
-    *         - Some(false) if not compatible, along with the version string
-    *         - None if compatibility unknown, along with the best guess of a version string
-    */
-  private def javaVersion: (Option[Boolean],String) = {
-    val javaVersion: String = try {
-      System.getProperty("java.version")
-    } catch {
-      case e: IllegalArgumentException => println("Java does not reveal its version: " + e); return (None, "<unknown>")
-      case e: NullPointerException     => println("Java does not reveal its version: " + e); return (None, "<unknown>")
-      case e: SecurityException => println("Java does not reveal its version because a SecurityManager interfered: " + e); return (None, "<unknown>")
-    }
+   * Identify whether the running Java Version is compatible with KeYmaera X.
+   * @return
+   *   \- Some(true) if compatible, along with the version string
+   *   - Some(false) if not compatible, along with the version string
+   *   - None if compatibility unknown, along with the best guess of a version string
+   */
+  private def javaVersion: (Option[Boolean], String) = {
+    val javaVersion: String =
+      try { System.getProperty("java.version") }
+      catch {
+        case e: IllegalArgumentException =>
+          println("Java does not reveal its version: " + e); return (None, "<unknown>")
+        case e: NullPointerException => println("Java does not reveal its version: " + e); return (None, "<unknown>")
+        case e: SecurityException =>
+          println("Java does not reveal its version because a SecurityManager interfered: " + e);
+          return (None, "<unknown>")
+      }
     try {
       val javaMajorMinor :: legacyUpdateVersion :: Nil =
-        if (javaVersion.contains("_")) javaVersion.split("_").toList
-        else javaVersion :: "-1" :: Nil
+        if (javaVersion.contains("_")) javaVersion.split("_").toList else javaVersion :: "-1" :: Nil
       val _ :: javaMajor :: javaMinor :: updateVersion :: Nil = {
         val majorMinor: List[String] = javaMajorMinor.split("\\.").toList
         if (majorMinor.length == 1) "1" +: majorMinor :+ "0" :+ legacyUpdateVersion
         else if (majorMinor.length == 2) majorMinor :+ "0" :+ legacyUpdateVersion
-        else if (Integer.parseInt(majorMinor.head) >= 9) "1" +: majorMinor //@note Java 9 onwards are of the shape 9.0.2
+        else if (Integer.parseInt(majorMinor.head) >= 9) "1" +:
+          majorMinor // @note Java 9 onwards are of the shape 9.0.2
         else majorMinor.take(3) :+ legacyUpdateVersion
       }
-      if (Integer.parseInt(javaMajor) < 8 || (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)) {
-        (Some(false), javaVersion)
-      } else {
-        (Some(true), javaVersion)
-      }
+      if (
+        Integer.parseInt(javaMajor) < 8 ||
+        (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)
+      ) { (Some(false), javaVersion) }
+      else { (Some(true), javaVersion) }
     } catch {
       case _: MatchError => (None, javaVersion)
       case _: NumberFormatException => (None, javaVersion)
@@ -504,24 +529,32 @@ object Main {
     println(prefix + s)
   }
 
-  /** A robust locking mechanism for ensures that there's only ever one instance of KeYmaera X running.
-    * Also displays GUI messages when the lock cannot be obtained so that confused users don't have to wonder why KeYmaera X won't start.
-    *
-    * @todo decide if java.nio lock files are a better solution. Definitely keep port-based stale checking, though
-    * @author Nathan Fulton */
+  /**
+   * A robust locking mechanism for ensures that there's only ever one instance of KeYmaera X running. Also displays GUI
+   * messages when the lock cannot be obtained so that confused users don't have to wonder why KeYmaera X won't start.
+   *
+   * @todo
+   *   decide if java.nio lock files are a better solution. Definitely keep port-based stale checking, though
+   * @author
+   *   Nathan Fulton
+   */
   private object KeYmaeraXLock {
+
     /** Set to true when a lock is obtained. Determines if the lock file is deleted on shutdown. */
     private var lockObtained = false
 
-    /** Obtains a lock if the lock file does not exist and the desired port is not bound.
-      * Otherwise, shows a relevant error message on GUI and STDOUT then exits with error code. */
+    /**
+     * Obtains a lock if the lock file does not exist and the desired port is not bound. Otherwise, shows a relevant
+     * error message on GUI and STDOUT then exits with error code.
+     */
     def obtainLockOrExit(): Unit = {
       require(!lockObtained, "ERROR: obtainLockOrExit was run more than once!")
 
       val bound = portIsBound()
 
       if (lockFile.exists() && bound) {
-        val msg = "ERROR: There is already an instance of KeYmaera X running on this machine. Open your browser to http://127.0.0.1:8090"
+        val msg =
+          "ERROR: There is already an instance of KeYmaera X running on this machine. Open your browser to http://127.0.0.1:8090"
         launcherLog(msg)
         JOptionPane.showMessageDialog(null, msg)
         SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
@@ -529,21 +562,24 @@ object Main {
         sys.exit(-1)
       } else if (lockFile.exists() && !bound) {
         if (!lockIsNewborn) {
-          //lock file exists, but there's no new instance of KeYmaera X and the port isn't bound. Proceed, but show message to the user just in case.
-          val msg = "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all\ninstances of KeYmaera X from your system's task manager."
+          // lock file exists, but there's no new instance of KeYmaera X and the port isn't bound. Proceed, but show message to the user just in case.
+          val msg =
+            "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all\ninstances of KeYmaera X from your system's task manager."
           forceDeleteLock()
           launcherLog(msg)
-          if (!java.awt.GraphicsEnvironment.isHeadless)
-            JOptionPane.showMessageDialog(null, msg)
+          if (!java.awt.GraphicsEnvironment.isHeadless) JOptionPane.showMessageDialog(null, msg)
         } else {
-          //lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
-          launcherLog(s"ERROR: Another instance of KeYmaera X just obtained a lock.\nIf the problem persists, kill all running versions of KeYmaera X and delete the following file if it exists:\n  ${lockFile.getAbsolutePath}")
+          // lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
+          launcherLog(
+            s"ERROR: Another instance of KeYmaera X just obtained a lock.\nIf the problem persists, kill all running versions of KeYmaera X and delete the following file if it exists:\n  ${lockFile.getAbsolutePath}"
+          )
           lockObtained = false
           SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
           sys.exit(-1)
         }
       } else if (!lockFile.exists() && bound) {
-        val msg = s"WARNING: The KeYmaera X lock file does not exist.\nHowever, some service is running on the KeYmaera X port (${keymaeraxPort()}).\nPerhaps you're running another service on this port?\nExiting."
+        val msg =
+          s"WARNING: The KeYmaera X lock file does not exist.\nHowever, some service is running on the KeYmaera X port (${keymaeraxPort()}).\nPerhaps you're running another service on this port?\nExiting."
         launcherLog(msg)
         JOptionPane.showMessageDialog(null, msg)
         lockObtained = false
@@ -551,26 +587,30 @@ object Main {
         sys.exit(-1)
       }
 
-      //This file is later destroyed in the shutdown hook.
+      // This file is later destroyed in the shutdown hook.
       launcherDebug("Obtaining lock.")
       obtainLock()
-    } ensures(_ => lockObtained && lockFile.exists())
+    } ensures (_ => lockObtained && lockFile.exists())
 
     /** Obtains a KeYmaera X startup lock by creating a lock file that is automatically deleted on exit. */
     def obtainLock(): Unit = {
       require(!lockFile.exists(), "Cannot obtain a lock if the lock file exists.")
       lockObtained = true
-      assert(lockFile.createNewFile(), "could not obtain lock file even though we just checked that the file does not exist.")
+      assert(
+        lockFile.createNewFile(),
+        "could not obtain lock file even though we just checked that the file does not exist.",
+      )
       lockFile.deleteOnExit()
-    } ensures(_ => lockObtained && lockFile.exists())
+    } ensures (_ => lockObtained && lockFile.exists())
 
     /** Deletes the lock file regardless of whether this is the process that created the lock file. */
-    private def forceDeleteLock(): Boolean = {
-      lockFile.delete()
-    } ensures(!lockFile.exists())
+    private def forceDeleteLock(): Boolean = { lockFile.delete() } ensures (!lockFile.exists())
 
-    /** Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
-      * @note not strictly necessary as lont as File.deleteOnExit works properly. */
+    /**
+     * Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
+     * @note
+     *   not strictly necessary as lont as File.deleteOnExit works properly.
+     */
     def deleteLock(): Unit = {
       if (lockObtained) lockFile.delete()
       else launcherLog("refusing to delete lock because this process's most recent attempt to obtain a lock failed.")
@@ -585,21 +625,26 @@ object Main {
       current - lastModified < threshold
     }
 
-    /** Location of the KeYmaera X lock file. Choose a non-. file so that students can find it easily if they need to delete it. */
+    /**
+     * Location of the KeYmaera X lock file. Choose a non-. file so that students can find it easily if they need to
+     * delete it.
+     */
     private def lockFile: java.io.File =
       new java.io.File(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lockfile")
 
     /** Returns the assigned port from the database, or the default port if the database or config key DNE. */
     private def keymaeraxPort(): String = Configuration(Configuration.Keys.PORT)
 
-    /** Returns true iff the port is bound.
-      * @note The port is a canary for determining whether there's an instance of KeYmaera X currently running.
-      *       Running two instances can result in weird behavior, even during initialization. Merely checking
-      *       and failing when we try to bind to the port for real is insufficient, because we need to run some
-      *       initialization code before attempting to bind. That's why we perform this check instead of just catching
-      *       exceptions when the actual binding fails. */
+    /**
+     * Returns true iff the port is bound.
+     * @note
+     *   The port is a canary for determining whether there's an instance of KeYmaera X currently running. Running two
+     *   instances can result in weird behavior, even during initialization. Merely checking and failing when we try to
+     *   bind to the port for real is insufficient, because we need to run some initialization code before attempting to
+     *   bind. That's why we perform this check instead of just catching exceptions when the actual binding fails.
+     */
     private def portIsBound(): Boolean = {
-      //Check if this port is bound by trying to bind to it and catching the SocketException.
+      // Check if this port is bound by trying to bind to it and catching the SocketException.
       try {
         new java.net.ServerSocket(Integer.parseInt(keymaeraxPort())).close()
         false
@@ -609,7 +654,7 @@ object Main {
           true
         case t: Throwable =>
           t.printStackTrace()
-          true //Probably other things could happen here as well, but we'll catch all errors and assume something's fishy.
+          true // Probably other things could happen here as well, but we'll catch all errors and assume something's fishy.
       }
     }
   }

@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -12,22 +13,19 @@ import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.collection.immutable.{List, Nil}
 
-class ConfigureMathematicaRequest(toolName: String,
-                                  linkName: String,
-                                  jlinkLibFileName: String,
-                                  jlinkTcpip: String)
-  extends LocalhostOnlyRequest with WriteRequest {
+class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFileName: String, jlinkTcpip: String)
+    extends LocalhostOnlyRequest with WriteRequest {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
   }
 
-  private def isJLinkLibFileCorrect(jlinkFile: java.io.File, jlinkLibDir : java.io.File): Boolean = {
+  private def isJLinkLibFileCorrect(jlinkFile: java.io.File, jlinkLibDir: java.io.File): Boolean = {
     (jlinkFile.getName == "libJLinkNativeLibrary.jnilib" || jlinkFile.getName == "JLinkNativeLibrary.dll" ||
       jlinkFile.getName == "libJLinkNativeLibrary.so") && jlinkLibDir.exists() && jlinkLibDir.isDirectory
   }
 
   override def resultingResponses(): List[Response] = {
-    //check to make sure the indicated files exist and point to the correct files.
+    // check to make sure the indicated files exist and point to the correct files.
     val linkNameFile = new java.io.File(linkName)
     val jlinkLibFile = new java.io.File(jlinkLibFileName)
     val jlinkLibDir: java.io.File = jlinkLibFile.getParentFile
@@ -51,13 +49,16 @@ class ConfigureMathematicaRequest(toolName: String,
     if (!linkNameExists || !jlinkLibFileExists) {
       new ConfigureMathematicaResponse(
         if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
-        if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
+        if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "",
+        false,
+      ) :: Nil
     } else {
       ToolProvider.shutdown()
       Configuration.set(Configuration.Keys.QE_TOOL, toolName)
       // prefer TCPIP=false if no specific port/machine is configured
       val tcpip = jlinkTcpip match {
-        case "true" | "false" => "false" // not user-configurable with this request (but configurable with Advanced options, which then takes precedence)
+        case "true" | "false" =>
+          "false" // not user-configurable with this request (but configurable with Advanced options, which then takes precedence)
         case x => x
       }
       val provider = toolName match {

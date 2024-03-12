@@ -19,20 +19,23 @@ import scala.collection.immutable.ListMap
 
 /**
  * Tests the C++ ModelPlex code generator.
- * @author Ran Ji
- * @author Stefan Mitsch
+ * @author
+ *   Ran Ji
+ * @author
+ *   Stefan Mitsch
  */
 @edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 class CCodeGeneratorTests extends TacticTestBase {
 
-  //@todo Unify Python and C code generator, fix all test cases
+  // @todo Unify Python and C code generator, fix all test cases
 
   private var generator: CGenerator = _
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
-    generator = new CGenerator(new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty)), True, Declaration(Map.empty))
+    generator =
+      new CGenerator(new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty)), True, Declaration(Map.empty))
   }
 
   override def afterEach(): Unit = {
@@ -45,21 +48,30 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   private def checkInitDef(initOk: String) =
     s"""verdict checkInit(const state* const init, const parameters* const params) {
-      |  bool initOk = $initOk;
-      |  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
-      |  return result;
-      |}""".stripMargin
+       |  bool initOk = $initOk;
+       |  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
+       |  return result;
+       |}""".stripMargin
 
   /** Wraps the monitor expression in the monitor boilerplate code. */
-  private def expectedMonitor(compiledMonitorExpr: String,
-                              paramDecl: String = "", stateDecl: String = "", inputDecl: String = "",
-                              definitions: String = checkInitDef("1.0L"), kind: String = "boolean"): String = {
+  private def expectedMonitor(
+      compiledMonitorExpr: String,
+      paramDecl: String = "",
+      stateDecl: String = "",
+      inputDecl: String = "",
+      definitions: String = checkInitDef("1.0L"),
+      kind: String = "boolean",
+  ): String = {
     val (safetyDistBody, monitorSatisfiedBody) = kind match {
-      case "boolean" => (s"verdict result = { .id=($compiledMonitorExpr ? 1 : -1), .val=($compiledMonitorExpr ? 1.0L : -1.0L) }; return result", "boundaryDist(pre,curr,params).val >= 0.0L")
+      case "boolean" => (
+          s"verdict result = { .id=($compiledMonitorExpr ? 1 : -1), .val=($compiledMonitorExpr ? 1.0L : -1.0L) }; return result",
+          "boundaryDist(pre,curr,params).val >= 0.0L",
+        )
       case "program" => (compiledMonitorExpr, "boundaryDist(pre,curr,params).val >= 0.0L")
       case "metric" => (
-        "return " + compiledMonitorExpr.substring(0, compiledMonitorExpr.indexOf(" >")),
-        "boundaryDist(pre,curr,params).val" + compiledMonitorExpr.substring(compiledMonitorExpr.indexOf(" >")))
+          "return " + compiledMonitorExpr.substring(0, compiledMonitorExpr.indexOf(" >")),
+          "boundaryDist(pre,curr,params).val" + compiledMonitorExpr.substring(compiledMonitorExpr.indexOf(" >")),
+        )
     }
 
     def structBody(body: String) = if (body.isEmpty) "" else "{\n  " + body + "\n} "
@@ -111,194 +123,218 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "numbers" should "compile floating point" in {
     val monitor = generator("2+1.5>3.25".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("(2.0L)+(1.5L) > 3.25L")) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should
+      equal(expectedMonitor("(2.0L)+(1.5L) > 3.25L"))(after being whiteSpaceRemoved)
   }
 
   it should "compile large number" in {
     val monitor = generator("9223372036854775807>1".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("9223372036854775807.0L > 1.0L")) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should
+      equal(expectedMonitor("9223372036854775807.0L > 1.0L"))(after being whiteSpaceRemoved)
   }
 
   it should "throw exception for too large number" in {
-    a [CodeGenerationException] should be thrownBy generator("92233720368547758079>1".asFormula)
+    a[CodeGenerationException] should be thrownBy generator("92233720368547758079>1".asFormula)
   }
 
   it should "compile to MPFR" in {
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val monitor = generator("2+1.5>3.25".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor(
+    monitor._1 + "\n\n" + monitor._2 should equal(expectedMonitor(
       /*"mpfr_cmp(_t_3, _t_0) < 0"*/ "mpfr_get_ld(_t_0, MPFR_RNDD) > mpfr_get_ld(_t_3, MPFR_RNDD)",
-      "", "", "",
+      "",
+      "",
+      "",
       s"""${checkInitDef("1.0L")}
-        |mpfr_t _t_0 /* (2.0L)+(1.5L) */,
-        |  _t_1 /* 2.0L */,
-        |  _t_2 /* 1.5L */,
-        |  _t_3 /* 3.25L */;
-        |
-        |void mpfrInit() {
-        |  mpfr_init2(_t_0, 200);
-        |  mpfr_init2(_t_1, 200);
-        |  mpfr_init2(_t_2, 200);
-        |  mpfr_init2(_t_3, 200);
-        |}
-        |
-        |void mpfrCompute(state pre, state curr, parameters const* const params) {
-        |  mpfr_set_ld(_t_1, 2L, MPFR_RNDD);
-        |  mpfr_set_ld(_t_2, 1.5L, MPFR_RNDD);
-        |  mpfr_set_ld(_t_3, 3.25L, MPFR_RNDD);
-        |  mpfr_add(_t_0, _t_1, _t_2, MPFR_RNDD);
-        |}""".stripMargin)) (after being whiteSpaceRemoved)
+         |mpfr_t _t_0 /* (2.0L)+(1.5L) */,
+         |  _t_1 /* 2.0L */,
+         |  _t_2 /* 1.5L */,
+         |  _t_3 /* 3.25L */;
+         |
+         |void mpfrInit() {
+         |  mpfr_init2(_t_0, 200);
+         |  mpfr_init2(_t_1, 200);
+         |  mpfr_init2(_t_2, 200);
+         |  mpfr_init2(_t_3, 200);
+         |}
+         |
+         |void mpfrCompute(state pre, state curr, parameters const* const params) {
+         |  mpfr_set_ld(_t_1, 2L, MPFR_RNDD);
+         |  mpfr_set_ld(_t_2, 1.5L, MPFR_RNDD);
+         |  mpfr_set_ld(_t_3, 3.25L, MPFR_RNDD);
+         |  mpfr_add(_t_0, _t_1, _t_2, MPFR_RNDD);
+         |}""".stripMargin,
+    ))(after being whiteSpaceRemoved)
   }
 
   "variables" should "compile with index" in {
-    val paramDecls =
-      """long double y_1;
-        |  long double z;""".stripMargin
+    val paramDecls = """long double y_1;
+                       |  long double z;""".stripMargin
     val stateDecls = "long double x;"
     val monitor = generator("x*z-y_1>1".asFormula, Set(Variable("x")))
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("((pre.x)*(params->z))-(params->y_1) > 1.0L", paramDecls, stateDecls)) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should equal(
+      expectedMonitor("((pre.x)*(params->z))-(params->y_1) > 1.0L", paramDecls, stateDecls)
+    )(after being whiteSpaceRemoved)
   }
 
   it should "compile with index to MPFR" in {
-    val paramDecls =
-      """long double y_1;
-        |  long double z;""".stripMargin
+    val paramDecls = """long double y_1;
+                       |  long double z;""".stripMargin
     val stateDecls = "long double x;"
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val monitor = generator("x*z-y_1>1".asFormula, Set(Variable("x")))
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor(
-      /*"mpfr_cmp(_t_5, _t_0) < 0"*/ "mpfr_get_ld(_t_0, MPFR_RNDD) > mpfr_get_ld(_t_5, MPFR_RNDD)", paramDecls, stateDecls, "",
+    monitor._1 + "\n\n" + monitor._2 should equal(expectedMonitor(
+      /*"mpfr_cmp(_t_5, _t_0) < 0"*/ "mpfr_get_ld(_t_0, MPFR_RNDD) > mpfr_get_ld(_t_5, MPFR_RNDD)",
+      paramDecls,
+      stateDecls,
+      "",
       s"""${checkInitDef("1.0L")}
-        |mpfr_t _t_0 /* ((pre.x)*(params->z))-(params->y_1) */,
-        |  _t_1 /* (pre.x)*(params->z) */,
-        |  _t_5 /* 1.0L */,
-        |  params_y_1 /* params->y_1 */,
-        |  params_z /* params->z */,
-        |  pre_x /* pre.x */;
-        |
-        |void mpfrInit() {
-        |  mpfr_init2(_t_0, 200);
-        |  mpfr_init2(_t_1, 200);
-        |  mpfr_init2(_t_5, 200);
-        |  mpfr_init2(params_y_1, 200);
-        |  mpfr_init2(params_z, 200);
-        |  mpfr_init2(pre_x, 200);
-        |}
-        |
-        |void mpfrCompute(state pre, state curr, parameters const* const params) {
-        |  mpfr_set_ld(_t_5, 1L, MPFR_RNDD);
-        |  mpfr_set_ld(params_y_1, params->y_1, MPFR_RNDD);
-        |  mpfr_set_ld(params_z, params->z, MPFR_RNDD);
-        |  mpfr_set_ld(pre_x, pre.x, MPFR_RNDD);
-        |  mpfr_mul(_t_1, pre_x, params_z, MPFR_RNDD);
-        |  mpfr_sub(_t_0, _t_1, params_y_1, MPFR_RNDD);
-        |}""".stripMargin)) (after being whiteSpaceRemoved)
+         |mpfr_t _t_0 /* ((pre.x)*(params->z))-(params->y_1) */,
+         |  _t_1 /* (pre.x)*(params->z) */,
+         |  _t_5 /* 1.0L */,
+         |  params_y_1 /* params->y_1 */,
+         |  params_z /* params->z */,
+         |  pre_x /* pre.x */;
+         |
+         |void mpfrInit() {
+         |  mpfr_init2(_t_0, 200);
+         |  mpfr_init2(_t_1, 200);
+         |  mpfr_init2(_t_5, 200);
+         |  mpfr_init2(params_y_1, 200);
+         |  mpfr_init2(params_z, 200);
+         |  mpfr_init2(pre_x, 200);
+         |}
+         |
+         |void mpfrCompute(state pre, state curr, parameters const* const params) {
+         |  mpfr_set_ld(_t_5, 1L, MPFR_RNDD);
+         |  mpfr_set_ld(params_y_1, params->y_1, MPFR_RNDD);
+         |  mpfr_set_ld(params_z, params->z, MPFR_RNDD);
+         |  mpfr_set_ld(pre_x, pre.x, MPFR_RNDD);
+         |  mpfr_mul(_t_1, pre_x, params_z, MPFR_RNDD);
+         |  mpfr_sub(_t_0, _t_1, params_y_1, MPFR_RNDD);
+         |}""".stripMargin,
+    ))(after being whiteSpaceRemoved)
   }
 
   "nullary functions" should "compile to parameters" in {
     val monitor = generator("x()>1".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("params->x > 1.0L", "long double x;")) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should
+      equal(expectedMonitor("params->x > 1.0L", "long double x;"))(after being whiteSpaceRemoved)
   }
 
   "terms" should "compile plain" in {
     val monitor = generator("x+3*y > 1".asFormula, Set(Variable("x")))
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("(pre.x)+((3.0L)*(params->y)) > 1.0L", "long double y;", "long double x;")) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should equal(
+      expectedMonitor("(pre.x)+((3.0L)*(params->y)) > 1.0L", "long double y;", "long double x;")
+    )(after being whiteSpaceRemoved)
   }
 
   it should "compile with log" in {
     CPrettyPrinter.printer = new CExpressionLogPrettyPrinter()
     val monitor = generator("x+3*y > 1".asFormula, Set(Variable("x")))
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor(
-        """eval(gt(plus(variable(pre.x, "pre.x"), times(number(3), variable(params->y, "params->y"))), number(1)))""",
-        "long double y;", "long double x;", definitions=checkInitDef("eval(true())"))) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should equal(expectedMonitor(
+      """eval(gt(plus(variable(pre.x, "pre.x"), times(number(3), variable(params->y, "params->y"))), number(1)))""",
+      "long double y;",
+      "long double x;",
+      definitions = checkInitDef("eval(true())"),
+    ))(after being whiteSpaceRemoved)
   }
 
   "power" should "compile int exp" in {
     val monitor = generator("x^3>1".asFormula)
-    monitor._1 + "\n\n" + monitor._2  should equal (expectedMonitor("(params->x)*((params->x)*(params->x)) > 1.0L", "long double x;")) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should equal(
+      expectedMonitor("(params->x)*((params->x)*(params->x)) > 1.0L", "long double x;")
+    )(after being whiteSpaceRemoved)
   }
 
   it should "compile exp=1" in {
     val monitor = generator("x^1>1".asFormula)
-    monitor._1 + "\n\n" + monitor._2  should equal (expectedMonitor("params->x > 1.0L", "long double x;")) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should
+      equal(expectedMonitor("params->x > 1.0L", "long double x;"))(after being whiteSpaceRemoved)
   }
 
   it should "compile neg int exp" in {
-    val paramDecls =
-      """long double x;
-        |  long double y;""".stripMargin
+    val paramDecls = """long double x;
+                       |  long double y;""".stripMargin
     val monitor = generator("(x+y)^-3>1".asFormula)
-    monitor._1 + "\n\n" + monitor._2  should equal (expectedMonitor(
-      "(1.0L)/(((params->x)+(params->y))*(((params->x)+(params->y))*((params->x)+(params->y)))) > 1.0L", paramDecls)) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should equal(expectedMonitor(
+      "(1.0L)/(((params->x)+(params->y))*(((params->x)+(params->y))*((params->x)+(params->y)))) > 1.0L",
+      paramDecls,
+    ))(after being whiteSpaceRemoved)
   }
 
   it should "compile any exp" in {
-    val paramDecls =
-      """long double x;
-        |  long double y;""".stripMargin
+    val paramDecls = """long double x;
+                       |  long double y;""".stripMargin
     val monitor = generator("x^y>1".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("pow(params->x,params->y) > 1.0L", paramDecls)) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should
+      equal(expectedMonitor("pow(params->x,params->y) > 1.0L", paramDecls))(after being whiteSpaceRemoved)
   }
 
   "abs" should "compile" in {
-    val paramDecls =
-      """long double x;
-        |  long double y;""".stripMargin
+    val paramDecls = """long double x;
+                       |  long double y;""".stripMargin
     val monitor = generator("abs(x-y)>0".asFormula)
-    monitor._1 + "\n\n" + monitor._2  should equal (expectedMonitor("fabsl((params->x)-(params->y)) > 0.0L", paramDecls)) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should
+      equal(expectedMonitor("fabsl((params->x)-(params->y)) > 0.0L", paramDecls))(after being whiteSpaceRemoved)
   }
 
   "min" should "compile" in {
-    val paramDecls =
-      """long double x;
-        |  long double y;""".stripMargin
+    val paramDecls = """long double x;
+                       |  long double y;""".stripMargin
     val monitor = generator("min(x,y)<=x".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("-(fminl(params->x, params->y)) >= -(params->x)", paramDecls, kind = "metric")) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should equal(
+      expectedMonitor("-(fminl(params->x, params->y)) >= -(params->x)", paramDecls, kind = "metric")
+    )(after being whiteSpaceRemoved)
   }
 
   "max" should "compile" in {
-    val paramDecls =
-      """long double x;
-        |  long double y;""".stripMargin
+    val paramDecls = """long double x;
+                       |  long double y;""".stripMargin
     val monitor = generator("max(x,y)>=x".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor("fmaxl(params->x, params->y) >= params->x", paramDecls)) (after being whiteSpaceRemoved)
+    monitor._1 + "\n\n" + monitor._2 should
+      equal(expectedMonitor("fmaxl(params->x, params->y) >= params->x", paramDecls))(after being whiteSpaceRemoved)
   }
 
   "A program with tests" should "compile" in withMathematica { _ =>
-    val paramDecls =
-      """long double x;
-        |  long double y;""".stripMargin
+    val paramDecls = """long double x;
+                       |  long double y;""".stripMargin
     val monitor = generator("<?x>=y;>true".asFormula)
-    monitor._1 + "\n\n" + monitor._2 should equal (expectedMonitor(
+    monitor._1 + "\n\n" + monitor._2 should equal(expectedMonitor(
       """if (params->x >= params->y) {
         |verdict result = { .id=1, .val=(params->x)-(params->y) }; return result;
         |} else {
         |verdict result = { .id=-1, .val=((-1.0L))+((params->x)-(params->y)) }; return result;
-        |}""".stripMargin, paramDecls,
-      kind = "program")) (after being whiteSpaceRemoved)
+        |}""".stripMargin,
+      paramDecls,
+      kind = "program",
+    ))(after being whiteSpaceRemoved)
   }
 
   "C generator" should "compile function with 2 parameters" ignore {
-    generator("f(x,y)>g(y,z)".asFormula) should be("/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
-      "#include <math.h>\n#include <stdbool.h>\n\n" +
-      "/* function declaration */\nlong double f(long double, long double);\nlong double g(long double, long double);\nlong double x();\nlong double y();\nlong double z();\n\n" +
-      "/* monitor */\nbool monitor () {\n  return (f(x(), y()))>(g(y(), z()));\n}\n\n")
+    generator("f(x,y)>g(y,z)".asFormula) should be(
+      "/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
+        "#include <math.h>\n#include <stdbool.h>\n\n" +
+        "/* function declaration */\nlong double f(long double, long double);\nlong double g(long double, long double);\nlong double x();\nlong double y();\nlong double z();\n\n" +
+        "/* monitor */\nbool monitor () {\n  return (f(x(), y()))>(g(y(), z()));\n}\n\n"
+    )
   }
 
   it should "compile function with more parameters" ignore {
-    generator("f(x,y,z)>0".asFormula) should be("/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
-      "#include <math.h>\n#include <stdbool.h>\n\n" +
-      "/* function declaration */\nlong double f(long double, long double, long double);\nlong double x();\nlong double y();\nlong double z();\n\n" +
-      "/* monitor */\nbool monitor () {\n  return (f(x(), y(), z()))>((0.0L));\n}\n\n")
+    generator("f(x,y,z)>0".asFormula) should be(
+      "/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
+        "#include <math.h>\n#include <stdbool.h>\n\n" +
+        "/* function declaration */\nlong double f(long double, long double, long double);\nlong double x();\nlong double y();\nlong double z();\n\n" +
+        "/* monitor */\nbool monitor () {\n  return (f(x(), y(), z()))>((0.0L));\n}\n\n"
+    )
   }
-
 
   // hacms case studies
 
   "robix" should "generate C code for passivesafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety.kym")
     val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
-    val paramDecls =
+    val paramDecls = {
       """long double A;
         |  long double B;
         |  long double V;
@@ -306,7 +342,8 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double v;
         |  long double x;
         |  long double y;""".stripMargin
-    val stateDecls =
+    }
+    val stateDecls = {
       """long double a;
         |  long double dxo;
         |  long double dyo;
@@ -315,17 +352,31 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double w;
         |  long double xo;
         |  long double yo;""".stripMargin
-    val genCode = generator(monitorExp, Set(Variable("a"),Variable("w"),Variable("r"),Variable("xo"),Variable("yo"),
-      Variable("dxo"),Variable("dyo"),Variable("t")))
-    genCode._1 + "\n\n" + genCode._2 should equal (expectedMonitor(
-      "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && (((curr.a == -(params->B)) && ((curr.w == pre.w) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.w == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == params->v) && (((((!((params->x)-(curr.xo_0) >= 0.0L)) || ((params->x)-(curr.xo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.xo_0) <= 0.0L)) || ((curr.xo_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.yo_0) >= 0.0L)) || ((params->y)-(curr.yo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.yo_0) <= 0.0L)) || ((curr.yo_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))))) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.r == curr.r_0) && ((curr.xo == curr.xo_0) && ((curr.yo == curr.yo_0) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))))))))))",
-      paramDecls, stateDecls)) (after being whiteSpaceRemoved)
     }
+    val genCode = generator(
+      monitorExp,
+      Set(
+        Variable("a"),
+        Variable("w"),
+        Variable("r"),
+        Variable("xo"),
+        Variable("yo"),
+        Variable("dxo"),
+        Variable("dyo"),
+        Variable("t"),
+      ),
+    )
+    genCode._1 + "\n\n" + genCode._2 should equal(expectedMonitor(
+      "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && (((curr.a == -(params->B)) && ((curr.w == pre.w) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.w == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == params->v) && (((((!((params->x)-(curr.xo_0) >= 0.0L)) || ((params->x)-(curr.xo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.xo_0) <= 0.0L)) || ((curr.xo_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.yo_0) >= 0.0L)) || ((params->y)-(curr.yo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.yo_0) <= 0.0L)) || ((curr.yo_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))))) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.r == curr.r_0) && ((curr.xo == curr.xo_0) && ((curr.yo == curr.yo_0) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))))))))))",
+      paramDecls,
+      stateDecls,
+    ))(after being whiteSpaceRemoved)
+  }
 
   it should "generate C code for passivesafety_renamed" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety_renamed.kym")
     val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
-    val paramDecls =
+    val paramDecls = {
       """long double A;
         |  long double B;
         |  long double Vo;
@@ -333,7 +384,8 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double v;
         |  long double x;
         |  long double y;""".stripMargin
-    val stateDecls =
+    }
+    val stateDecls = {
       """long double a;
         |  long double dxo;
         |  long double dyo;
@@ -342,26 +394,52 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double t;
         |  long double xo;
         |  long double yo;""".stripMargin
-    val genCode = generator(monitorExp, Set(Variable("a"),Variable("om"),Variable("r"),Variable("xo"),Variable("yo"),
-      Variable("dxo"),Variable("dyo"),Variable("t")))
-    genCode._1 + "\n\n" + genCode._2 should equal (
-      expectedMonitor(
-        "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->Vo)*(params->Vo)) && (((curr.a == -(params->B)) && ((curr.om == pre.om) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.om == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && (((curr.om_0)*(curr.r_0) == params->v) && (((((!((params->x)-(curr.xo_0) >= 0.0L)) || ((params->x)-(curr.xo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->x)-(curr.xo_0) <= 0.0L)) || ((curr.xo_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo)))))))) || (((!((params->y)-(curr.yo_0) >= 0.0L)) || ((params->y)-(curr.yo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->y)-(curr.yo_0) <= 0.0L)) || ((curr.yo_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))))) && ((curr.a == curr.a_0) && ((curr.om == curr.om_0) && ((curr.r == curr.r_0) && ((curr.xo == curr.xo_0) && ((curr.yo == curr.yo_0) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))))))))))",
-        paramDecls, stateDecls)) (after being whiteSpaceRemoved)
+    }
+    val genCode = generator(
+      monitorExp,
+      Set(
+        Variable("a"),
+        Variable("om"),
+        Variable("r"),
+        Variable("xo"),
+        Variable("yo"),
+        Variable("dxo"),
+        Variable("dyo"),
+        Variable("t"),
+      ),
+    )
+    genCode._1 + "\n\n" + genCode._2 should equal(expectedMonitor(
+      "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->Vo)*(params->Vo)) && (((curr.a == -(params->B)) && ((curr.om == pre.om) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.om == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && (((curr.om_0)*(curr.r_0) == params->v) && (((((!((params->x)-(curr.xo_0) >= 0.0L)) || ((params->x)-(curr.xo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->x)-(curr.xo_0) <= 0.0L)) || ((curr.xo_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo)))))))) || (((!((params->y)-(curr.yo_0) >= 0.0L)) || ((params->y)-(curr.yo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->y)-(curr.yo_0) <= 0.0L)) || ((curr.yo_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))))) && ((curr.a == curr.a_0) && ((curr.om == curr.om_0) && ((curr.r == curr.r_0) && ((curr.xo == curr.xo_0) && ((curr.yo == curr.yo_0) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))))))))))",
+      paramDecls,
+      stateDecls,
+    ))(after being whiteSpaceRemoved)
   }
 
   it should "generate C code for passivesafetyabs" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
     val monitorExp = ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model
-    val vars =
-      Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
-        Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
-    val paramDecls =
+    val vars = Set(
+      Variable("a"),
+      Variable("dx"),
+      Variable("dy"),
+      Variable("r"),
+      Variable("v"),
+      Variable("w"),
+      Variable("x"),
+      Variable("y"),
+      Variable("xo"),
+      Variable("yo"),
+      Variable("dxo"),
+      Variable("dyo"),
+      Variable("t"),
+    )
+    val paramDecls = {
       """long double A;
         |  long double B;
         |  long double V;
         |  long double ep;""".stripMargin
-    val stateDecls =
+    }
+    val stateDecls = {
       """long double a;
         |  long double dx;
         |  long double dxo;
@@ -375,25 +453,41 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double xo;
         |  long double y;
         |  long double yo;""".stripMargin
+    }
     val genCode = generator(monitorExp, vars)
-    genCode._1 + "\n\n" + genCode._2 should equal (
-      expectedMonitor(
-        "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && ((((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == pre.w)) && (curr.a == -(params->B))) && (curr.r == pre.r)) && (curr.t == 0.0L))) || (((pre.v == 0.0L) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == 0.0L)) && (curr.a == 0.0L)) && (curr.r == pre.r)) && (curr.t == 0.0L)))) || (((-(params->B) <= curr.a_0) && (curr.a_0 <= params->A)) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == pre.v) && (((fabsl((pre.x)-(curr.xo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V)))))) || (fabsl((pre.y)-(curr.yo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == curr.xo_0) && (curr.yo == curr.yo_0)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == curr.w_0)) && (curr.a == curr.a_0)) && (curr.r == curr.r_0)) && (curr.t == 0.0L)))))))))",
-        paramDecls, stateDecls)) (after being whiteSpaceRemoved)
+    genCode._1 + "\n\n" + genCode._2 should equal(expectedMonitor(
+      "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && ((((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == pre.w)) && (curr.a == -(params->B))) && (curr.r == pre.r)) && (curr.t == 0.0L))) || (((pre.v == 0.0L) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == 0.0L)) && (curr.a == 0.0L)) && (curr.r == pre.r)) && (curr.t == 0.0L)))) || (((-(params->B) <= curr.a_0) && (curr.a_0 <= params->A)) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == pre.v) && (((fabsl((pre.x)-(curr.xo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V)))))) || (fabsl((pre.y)-(curr.yo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == curr.xo_0) && (curr.yo == curr.yo_0)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == curr.w_0)) && (curr.a == curr.a_0)) && (curr.r == curr.r_0)) && (curr.t == 0.0L)))))))))",
+      paramDecls,
+      stateDecls,
+    ))(after being whiteSpaceRemoved)
   }
 
   it should "generate metric C code for passivesafetyabs" in withMathematica { _ =>
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = ModelPlex.toMetric(ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model.asInstanceOf[Formula])
-    val vars =
-      Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
-        Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
-    val paramDecls =
+    val monitorExp = ModelPlex
+      .toMetric(ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model.asInstanceOf[Formula])
+    val vars = Set(
+      Variable("a"),
+      Variable("dx"),
+      Variable("dy"),
+      Variable("r"),
+      Variable("v"),
+      Variable("w"),
+      Variable("x"),
+      Variable("y"),
+      Variable("xo"),
+      Variable("yo"),
+      Variable("dxo"),
+      Variable("dyo"),
+      Variable("t"),
+    )
+    val paramDecls = {
       """long double A;
         |  long double B;
         |  long double V;
         |  long double ep;""".stripMargin
-    val stateDecls =
+    }
+    val stateDecls = {
       """long double a;
         |  long double dx;
         |  long double dxo;
@@ -407,11 +501,14 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double xo;
         |  long double y;
         |  long double yo;""".stripMargin
+    }
     val genCode = generator(monitorExp, vars)
-    genCode._1 + "\n\n" + genCode._2 should equal (
-      expectedMonitor(
-        "-(fmaxl((((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl(-(params->ep), -(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, -(curr.t)))), fminl(fmaxl(fmaxl(pre.v, -(pre.v)), fmaxl(-(params->ep), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, -(curr.w))), fmaxl(curr.a, -(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, -(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a_0), (curr.a_0)-(params->A)), fmaxl(fminl(-(curr.r_0), curr.r_0), fmaxl(fmaxl(((curr.w_0)*(curr.r_0))-(pre.v), (pre.v)-((curr.w_0)*(curr.r_0))), fmaxl(fminl((((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)-(curr.xo_0))), (((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)-(curr.yo_0)))), fmaxl(fmaxl(-(params->ep), -(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo_0), (curr.xo_0)-(curr.xo)), fmaxl((curr.yo)-(curr.yo_0), (curr.yo_0)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w_0), (curr.w_0)-(curr.w))), fmaxl((curr.a)-(curr.a_0), (curr.a_0)-(curr.a))), fmaxl((curr.r)-(curr.r_0), (curr.r_0)-(curr.r))), fmaxl(curr.t, -(curr.t)))))))))))) > -(0.0L)",
-        paramDecls, stateDecls, kind = "metric")) (after being whiteSpaceRemoved)
+    genCode._1 + "\n\n" + genCode._2 should equal(expectedMonitor(
+      "-(fmaxl((((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl(-(params->ep), -(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, -(curr.t)))), fminl(fmaxl(fmaxl(pre.v, -(pre.v)), fmaxl(-(params->ep), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, -(curr.w))), fmaxl(curr.a, -(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, -(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a_0), (curr.a_0)-(params->A)), fmaxl(fminl(-(curr.r_0), curr.r_0), fmaxl(fmaxl(((curr.w_0)*(curr.r_0))-(pre.v), (pre.v)-((curr.w_0)*(curr.r_0))), fmaxl(fminl((((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)-(curr.xo_0))), (((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)-(curr.yo_0)))), fmaxl(fmaxl(-(params->ep), -(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo_0), (curr.xo_0)-(curr.xo)), fmaxl((curr.yo)-(curr.yo_0), (curr.yo_0)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w_0), (curr.w_0)-(curr.w))), fmaxl((curr.a)-(curr.a_0), (curr.a_0)-(curr.a))), fmaxl((curr.r)-(curr.r_0), (curr.r_0)-(curr.r))), fmaxl(curr.t, -(curr.t)))))))))))) > -(0.0L)",
+      paramDecls,
+      stateDecls,
+      kind = "metric",
+    ))(after being whiteSpaceRemoved)
   }
 
   it should "generate C code for passivesafetyabs with KeYmaeraX command line interface" taggedAs IgnoreInBuildTest in {
@@ -421,19 +518,24 @@ class CCodeGeneratorTests extends TacticTestBase {
     val inputFileName = "./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.kym"
     val outputFileName = File.createTempFile("passivesafetyabs", ".c").getAbsolutePath
 
-    KeYmaeraX.main(Array("-codegen", inputFileName, "-vars", "a,w,r,xo,yo,dxo,dyo", "-nointerval", "-out", outputFileName))
+    KeYmaeraX
+      .main(Array("-codegen", inputFileName, "-vars", "a,w,r,xo,yo,dxo,dyo", "-nointerval", "-out", outputFileName))
 
-    val expectedCCode = scala.io.Source.fromFile("./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.c").mkString
+    val expectedCCode = scala
+      .io
+      .Source
+      .fromFile("./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.c")
+      .mkString
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     println(actualFileContent)
 
-    actualFileContent should include (expectedCCode)
+    actualFileContent should include(expectedCCode)
   }
 
   it should "generate C code for passiveorientationsafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.kym")
     val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
-    val paramDecls =
+    val paramDecls = {
       """long double A;
         |  long double V;
         |  long double alpha;
@@ -442,7 +544,8 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double v;
         |  long double x;
         |  long double y;""".stripMargin
-    val stateDecls =
+    }
+    val stateDecls = {
       """long double a;
         |  long double dx;
         |  long double dy;
@@ -455,246 +558,306 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double t;
         |  long double talpha;
         |  long double w;""".stripMargin
-    val genCode = generator(monitorExp,
-      Set(Variable("a"), Variable("w"), Variable("dx"), Variable("dy"), Variable("r"), Variable("t"), Variable("ox"),
-           Variable("oy"), Variable("odx"), Variable("ody"), Variable("isVisible"),
-           Variable("talpha")))
-    genCode._1 + "\n\n" + genCode._2 should equal (
-      expectedMonitor(
-        "(((curr.odx_0)*(curr.odx_0))+((curr.ody_0)*(curr.ody_0)) <= (params->V)*(params->V)) && ((((curr.w_0)*(pre.r) == params->v) && ((curr.a == -(params->b)) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha))))))))))))) || (((params->v == 0.0L) && (((curr.w_0)*(pre.r) == params->v) && ((curr.a == 0.0L) && ((curr.w == curr.w_0) && ((curr.dx == -(pre.dx)) && ((curr.dy == -(pre.dy)) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha)))))))))))))) || ((-(params->b) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && ((((params->v)+((curr.a_0)*(params->ep)) < 0.0L) && (((curr.isVisible_0 < 0.0L) || ((((!((params->x)-(curr.ox_0) >= 0.0L)) || ((params->x)-(curr.ox_0) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0)))))) && ((!((params->x)-(curr.ox_0) <= 0.0L)) || ((curr.ox_0)-(params->x) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0))))))) || (((!((params->y)-(curr.oy_0) >= 0.0L)) || ((params->y)-(curr.oy_0) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0)))))) && ((!((params->y)-(curr.oy_0) <= 0.0L)) || ((curr.oy_0)-(params->y) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0))))))))) && (((!(curr.r_0 >= 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)) < (params->alpha)*(curr.r_0))) && (((!(curr.r_0 < 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)) < -((params->alpha)*(curr.r_0)))) && (((curr.w_0)*(curr.r_0) == params->v) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r_0) && ((curr.t == 0.0L) && ((curr.ox == curr.ox_0) && ((curr.oy == curr.oy_0) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == curr.isVisible_0) && (curr.talpha == 0.0L))))))))))))))))) || (((params->v)+((curr.a_0)*(params->ep)) >= 0.0L) && (((curr.isVisible_0 < 0.0L) || ((((!((params->x)-(curr.ox_0) >= 0.0L)) || ((params->x)-(curr.ox_0) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.ox_0) <= 0.0L)) || ((curr.ox_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.oy_0) >= 0.0L)) || ((params->y)-(curr.oy_0) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.oy_0) <= 0.0L)) || ((curr.oy_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))))) && (((!(curr.r_0 >= 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < (params->alpha)*(curr.r_0))) && (((!(curr.r_0 < 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < -((params->alpha)*(curr.r_0)))) && (((curr.w_0)*(curr.r_0) == params->v) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r_0) && ((curr.t == 0.0L) && ((curr.ox == curr.ox_0) && ((curr.oy == curr.oy_0) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == curr.isVisible_0) && (curr.talpha == 0.0L)))))))))))))))))))))))",
-        paramDecls, stateDecls)) (after being whiteSpaceRemoved)
+    }
+    val genCode = generator(
+      monitorExp,
+      Set(
+        Variable("a"),
+        Variable("w"),
+        Variable("dx"),
+        Variable("dy"),
+        Variable("r"),
+        Variable("t"),
+        Variable("ox"),
+        Variable("oy"),
+        Variable("odx"),
+        Variable("ody"),
+        Variable("isVisible"),
+        Variable("talpha"),
+      ),
+    )
+    genCode._1 + "\n\n" + genCode._2 should equal(expectedMonitor(
+      "(((curr.odx_0)*(curr.odx_0))+((curr.ody_0)*(curr.ody_0)) <= (params->V)*(params->V)) && ((((curr.w_0)*(pre.r) == params->v) && ((curr.a == -(params->b)) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha))))))))))))) || (((params->v == 0.0L) && (((curr.w_0)*(pre.r) == params->v) && ((curr.a == 0.0L) && ((curr.w == curr.w_0) && ((curr.dx == -(pre.dx)) && ((curr.dy == -(pre.dy)) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha)))))))))))))) || ((-(params->b) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && ((((params->v)+((curr.a_0)*(params->ep)) < 0.0L) && (((curr.isVisible_0 < 0.0L) || ((((!((params->x)-(curr.ox_0) >= 0.0L)) || ((params->x)-(curr.ox_0) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0)))))) && ((!((params->x)-(curr.ox_0) <= 0.0L)) || ((curr.ox_0)-(params->x) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0))))))) || (((!((params->y)-(curr.oy_0) >= 0.0L)) || ((params->y)-(curr.oy_0) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0)))))) && ((!((params->y)-(curr.oy_0) <= 0.0L)) || ((curr.oy_0)-(params->y) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0))))))))) && (((!(curr.r_0 >= 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)) < (params->alpha)*(curr.r_0))) && (((!(curr.r_0 < 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)) < -((params->alpha)*(curr.r_0)))) && (((curr.w_0)*(curr.r_0) == params->v) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r_0) && ((curr.t == 0.0L) && ((curr.ox == curr.ox_0) && ((curr.oy == curr.oy_0) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == curr.isVisible_0) && (curr.talpha == 0.0L))))))))))))))))) || (((params->v)+((curr.a_0)*(params->ep)) >= 0.0L) && (((curr.isVisible_0 < 0.0L) || ((((!((params->x)-(curr.ox_0) >= 0.0L)) || ((params->x)-(curr.ox_0) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.ox_0) <= 0.0L)) || ((curr.ox_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.oy_0) >= 0.0L)) || ((params->y)-(curr.oy_0) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.oy_0) <= 0.0L)) || ((curr.oy_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))))) && (((!(curr.r_0 >= 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < (params->alpha)*(curr.r_0))) && (((!(curr.r_0 < 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < -((params->alpha)*(curr.r_0)))) && (((curr.w_0)*(curr.r_0) == params->v) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r_0) && ((curr.t == 0.0L) && ((curr.ox == curr.ox_0) && ((curr.oy == curr.oy_0) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == curr.isVisible_0) && (curr.talpha == 0.0L)))))))))))))))))))))))",
+      paramDecls,
+      stateDecls,
+    ))(after being whiteSpaceRemoved)
   }
 
   "Quadcopter" should "FEATURE_REQUEST: generate C code for hybridquadrotor" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.kym")
     val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
-    val paramDecls =
+    val paramDecls = {
       """long double h;
         |  long double kd;
         |  long double kp;
         |  long double sqrkp;
         |  long double v;
         |  long double y;""".stripMargin
+    }
     val code = generator(monitorExp, Set(Variable("href")))
     println(code)
     code._1 + "\n\n" + code._2 shouldBe expectedMonitor(
       "(params->h >= curr.href_0) && ((curr.href_0 > 0.0L) && ((((((params->kp < 0.0L) && ((params->v == 0.0L) && (curr.href_0 >= params->h))) || (((params->kp < 0.0L) && ((params->v > 0.0L) && (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && ((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v)))))) || (((params->kp < 0.0L) && ((params->v < 0.0L) && (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L)))) || (((params->kp > 0.0L) && ((params->v == 0.0L) && (curr.href_0 == params->h))) || (((params->kp > 0.0L) && ((params->v > 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && (((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L))) || ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && (((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L))) || ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L))) || (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && ((params->kd > (2.0L)*(params->sqrkp)) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L) && ((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))))))))))) || ((params->kp > 0.0L) && ((params->v < 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && ((params->kd > (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))))) || ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((params->kd >= (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))))) || ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((params->kd > (2.0L)*(params->sqrkp)) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L) && ((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v)))))) || (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) >= 0.0L) && ((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L)))))))))))))) && ((((params->y)*(params->y) == ((params->kd)*(params->kd))-((4.0L)*(params->kp))) && (params->y >= 0.0L)) && ((((params->sqrkp)*(params->sqrkp) == params->kp) && (params->sqrkp >= 0.0L)) && ((((((((params->h)*(params->h))*((params->kp)*(params->kp)))-((((2.0L)*(params->h))*(curr.href_0))*((params->kp)*(params->kp))))+(((curr.href_0)*(curr.href_0))*((params->kp)*(params->kp))))+((((params->h)*(params->kd))*(params->kp))*(params->v)))-((((curr.href_0)*(params->kd))*(params->kp))*(params->v)))+((params->kp)*((params->v)*(params->v))) != 0.0L)))) || ((((params->kp < 0.0L) && ((params->v == 0.0L) && (((params->h)*(params->y) <= (params->h)*(params->kd)) || (((params->h)*((params->kd)+(params->y)) <= 0.0L) || (params->h > curr.href_0))))) || (((params->kp < 0.0L) && ((params->v < 0.0L) && (((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v))) || ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L) || ((((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v)) != (((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y))))))) || (((params->kp < 0.0L) && ((params->v > 0.0L) && (((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v))) || ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L) || ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) != ((2.0L)*(curr.href_0))*(params->kp)))))) || (((params->kp > 0.0L) && ((params->v == 0.0L) && (((params->h != curr.href_0) && (((params->kd >= (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) >= (params->h)*(params->kd))) || (((params->h)*((params->kd)+(params->y)) >= 0.0L) && ((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L)))) || (((params->kd == (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) >= (params->h)*(params->kd))) || (((params->kd < (2.0L)*(params->sqrkp)) && ((params->kd)+((2.0L)*(params->sqrkp)) > 0.0L)) || ((params->h > curr.href_0) || (((params->kd > (2.0L)*(params->sqrkp)) && ((params->h)*((params->kd)+(params->y)) <= 0.0L)) || (((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L) && ((params->h)*(params->y) <= (params->h)*(params->kd)))))))))) || (((params->kp > 0.0L) && ((params->v < 0.0L) && ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) != (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))) || (params->kd <= (2.0L)*(params->sqrkp)))) || ((params->kd < (2.0L)*(params->sqrkp)) || (((params->kd > (2.0L)*(params->sqrkp)) && ((((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) < (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) < ((2.0L)*(curr.href_0))*(params->kp))) || (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) > (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) || ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) > ((2.0L)*(curr.href_0))*(params->kp))))) || (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L))) || ((((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))) && (params->kd <= (2.0L)*(params->sqrkp))) || ((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L))))))) || ((params->kp > 0.0L) && ((params->v > 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) != ((2.0L)*(curr.href_0))*(params->kp)) && (((params->kd)+((2.0L)*(params->sqrkp)) >= 0.0L) || (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) >= 0.0L))) || ((params->kd >= (2.0L)*(params->sqrkp)) || ((((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L) && (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) < (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) || (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) < ((2.0L)*(curr.href_0))*(params->kp)) || (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) > (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) > ((2.0L)*(curr.href_0))*(params->kp))))))) || (((params->kd)+((2.0L)*(params->sqrkp)) > 0.0L) || ((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v)))))))))))))) && (((params->y)*(params->y) == ((params->kd)*(params->kd))-((4.0L)*(params->kp))) && ((params->y >= 0.0L) && (((params->sqrkp)*(params->sqrkp) == params->kp) && ((params->sqrkp >= 0.0L) && ((((((((params->h)*(params->h))*((params->kp)*(params->kp)))-((((2.0L)*(params->h))*(curr.href_0))*((params->kp)*(params->kp))))+(((curr.href_0)*(curr.href_0))*((params->kp)*(params->kp))))+((((params->h)*(params->kd))*(params->kp))*(params->v)))-((((curr.href_0)*(params->kd))*(params->kp))*(params->v)))+((params->kp)*((params->v)*(params->v))) == 0.0L))))))) && (curr.href == curr.href_0)))",
-      paramDecls, "long double href;")
-    //@todo fix
-    CodeGenTestTools.compileC(CodeGenTestTools.augmentMonitorMain(code._1 + "\n\n" + code._2, hasParams=true, hasInputs=false))
+      paramDecls,
+      "long double href;",
+    )
+    // @todo fix
+    CodeGenTestTools
+      .compileC(CodeGenTestTools.augmentMonitorMain(code._1 + "\n\n" + code._2, hasParams = true, hasInputs = false))
   }
 
-  "Waypoint navigation" should "generate metric C code" in withTactics { withMathematica { tool =>
-    val entry = ArchiveParser.getEntry("RAL19/Theorem 1: Safety", io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString, parseTactics=false).head
+  "Waypoint navigation" should "generate metric C code" in withTactics {
+    withMathematica { tool =>
+      val entry = ArchiveParser
+        .getEntry(
+          "RAL19/Theorem 1: Safety",
+          io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
+          parseTactics = false,
+        )
+        .head
 
-    //@todo export non-expanded monitor with definitions, see Python exporter
+      // @todo export non-expanded monitor with definitions, see Python exporter
 
-    val stateVars = List("xg","yg","v","a","t","vl","vh","k").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(entry.expandedModel.asInstanceOf[Formula], stateVars, ListMap.empty)
-    val tactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
-    val result = proveBy(modelplexInput, tactic)
-    val monitorFml = result.subgoals.head.succ.head
-    val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-    proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
+      val stateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k").map(_.asVariable.asInstanceOf[BaseVariable])
+      val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
+        .createMonitorSpecificationConjecture(entry.expandedModel.asInstanceOf[Formula], stateVars, ListMap.empty)
+      val tactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+        ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+      val result = proveBy(modelplexInput, tactic)
+      val monitorFml = result.subgoals.head.succ.head
+      val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
+      proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
 
-    val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
+      val testProg =
+        proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
 
-    // CPrettyPrinter.printer = new CMpfrPrettyPrinter()
-    val inputs = CodeGenerator.getInputs(testProg)
-    val monitorCode = generator(testProg, stateVars.toSet, inputs, "Monitor")
+      // CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+      val inputs = CodeGenerator.getInputs(testProg)
+      val monitorCode = generator(testProg, stateVars.toSet, inputs, "Monitor")
 
-    //val controlCode = (new CGenerator(new CMpfrControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
-    //val controlCode = (new CGenerator(new CControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
-    //val controlCode = (new CGenerator(new CDetControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
-    monitorCode._1 + monitorCode._2 should equal (
-      """/**************************
-        | * Monitor.c
-        | * Generated by KeYmaera X
-        | **************************/
-        |
-        |#include <math.h>
-        |#include <stdbool.h>
-        |
-        |/** Model parameters */
-        |typedef struct parameters {
-        |  long double A;
-        |  long double B;
-        |  long double T;
-        |  long double eps;
-        |} parameters;
-        |
-        |/** State (control choices, environment measurements etc.) */
-        |typedef struct state {
-        |  long double a;
-        |  long double k;
-        |  long double t;
-        |  long double v;
-        |  long double vh;
-        |  long double vl;
-        |  long double xg;
-        |  long double yg;
-        |} state;
-        |
-        |/** Values for resolving non-deterministic assignments in control code */
-        |typedef struct input input;
-        |
-        |/** Monitor verdict: `id` identifies the violated monitor sub-condition, `val` the safety margin (<0 violated, >=0 satisfied). */
-        |typedef struct verdict { int id; long double val; } verdict;
-        |
-        |verdict checkInit(const state* const init, const parameters* const params) {
-        |  bool initOk = 1.0L;
-        |  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
-        |  return result;
-        |}
-        |
-        |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
-        |verdict boundaryDist(state pre, state curr, const parameters* const params) {
-        |  if (curr.yg > 0.0L) {
-        |if ((fabsl(curr.k))*(params->eps) <= 100.0L) {
-        |if ((((curr.k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L) < ((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))) {
-        |if (((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)) < (((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)) {
-        |if (0.0L <= curr.vl) {
-        |if (curr.vl < curr.vh) {
-        |if ((params->A)*(params->T) <= (10.0L)*((curr.vh)-(curr.vl))) {
-        |if ((params->B)*(params->T) <= (10.0L)*((curr.vh)-(curr.vl))) {
-        |if (-(params->B) <= curr.a) {
-        |if (curr.a <= params->A) {
-        |if (((10.0L)*(pre.v))+((curr.a)*(params->T)) >= 0.0L) {
-        |if (((pre.v <= curr.vh) && (((10.0L)*(pre.v))+((curr.a)*(params->T)) <= (10.0L)*(curr.vh))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))) <= ((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))) <= ((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))) {
-        |if (((curr.vl <= pre.v) && (((10.0L)*(pre.v))+((curr.a)*(params->T)) >= (10.0L)*(curr.vl))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))) <= ((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))) <= ((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))) {
-        |if (pre.v >= 0.0L) {
-        |if (0.0L <= params->T) {
-        |if (curr.v == pre.v) {
-        |if (curr.t == 0.0L) {
-        |verdict result = { .id=1, .val=(1.0L)/(((1.0L)/(curr.yg))+(((((((((((((((1.0L)/((100.0L)-((fabsl(curr.k))*(params->eps))))+((1.0L)/((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))-((((curr.k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L)))))+((1.0L)/(((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))))+((1.0L)/(curr.vl)))+((1.0L)/((curr.vh)-(curr.vl))))+((1.0L)/(((10.0L)*((curr.vh)-(curr.vl)))-((params->A)*(params->T)))))+((1.0L)/(((10.0L)*((curr.vh)-(curr.vl)))-((params->B)*(params->T)))))+((1.0L)/((curr.a)-(-(params->B)))))+((1.0L)/((params->A)-(curr.a))))+((1.0L)/(((10.0L)*(pre.v))+((curr.a)*(params->T)))))+((1.0L)/(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L))))))))+((1.0L)/(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L))))))))+((1.0L)/(pre.v)))+((1.0L)/(params->T)))) }; return result;
-        |} else {
-        |verdict result = { .id=-1, .val=((-1.0L))+(-(fmaxl(curr.t, -(curr.t)))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-2, .val=((-1.0L))+(-(fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v)))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-3, .val=((-1.0L))+(params->T) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-4, .val=((-1.0L))+(pre.v) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-5, .val=((-1.0L))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-6, .val=((-1.0L))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-7, .val=((-1.0L))+(((10.0L)*(pre.v))+((curr.a)*(params->T))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-8, .val=((-1.0L))+((params->A)-(curr.a)) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-9, .val=((-1.0L))+((curr.a)-(-(params->B))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-10, .val=((-1.0L))+(((10.0L)*((curr.vh)-(curr.vl)))-((params->B)*(params->T))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-11, .val=((-1.0L))+(((10.0L)*((curr.vh)-(curr.vl)))-((params->A)*(params->T))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-12, .val=((-1.0L))+((curr.vh)-(curr.vl)) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-13, .val=((-1.0L))+(curr.vl) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-14, .val=((-1.0L))+(((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-15, .val=((-1.0L))+((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))-((((curr.k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-16, .val=((-1.0L))+((100.0L)-((fabsl(curr.k))*(params->eps))) }; return result;
-        |}
-        |} else {
-        |verdict result = { .id=-17, .val=((-1.0L))+(curr.yg) }; return result;
-        |};
-        |}
-        |
-        |/* Evaluates monitor condition in prior and current state */
-        |bool monitorSatisfied(state pre, state curr, const parameters* const params) {
-        |  return boundaryDist(pre,curr,params).val >= 0.0L;
-        |}
-        |
-        |/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
-        |state monitoredCtrl(state curr, const parameters* const params, const input* const in,
-        |                    state (*ctrl)(state,const parameters* const,const input* const),
-        |                    state (*fallback)(state,const parameters* const,const input* const)) {
-        |  state pre = curr;
-        |  state post = (*ctrl)(pre,params,in);
-        |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
-        |  else return post;
-        |}""".stripMargin) (after being whiteSpaceRemoved)
+      // val controlCode = (new CGenerator(new CMpfrControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
+      // val controlCode = (new CGenerator(new CControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
+      // val controlCode = (new CGenerator(new CDetControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
+      monitorCode._1 + monitorCode._2 should equal(
+        """/**************************
+          | * Monitor.c
+          | * Generated by KeYmaera X
+          | **************************/
+          |
+          |#include <math.h>
+          |#include <stdbool.h>
+          |
+          |/** Model parameters */
+          |typedef struct parameters {
+          |  long double A;
+          |  long double B;
+          |  long double T;
+          |  long double eps;
+          |} parameters;
+          |
+          |/** State (control choices, environment measurements etc.) */
+          |typedef struct state {
+          |  long double a;
+          |  long double k;
+          |  long double t;
+          |  long double v;
+          |  long double vh;
+          |  long double vl;
+          |  long double xg;
+          |  long double yg;
+          |} state;
+          |
+          |/** Values for resolving non-deterministic assignments in control code */
+          |typedef struct input input;
+          |
+          |/** Monitor verdict: `id` identifies the violated monitor sub-condition, `val` the safety margin (<0 violated, >=0 satisfied). */
+          |typedef struct verdict { int id; long double val; } verdict;
+          |
+          |verdict checkInit(const state* const init, const parameters* const params) {
+          |  bool initOk = 1.0L;
+          |  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
+          |  return result;
+          |}
+          |
+          |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
+          |verdict boundaryDist(state pre, state curr, const parameters* const params) {
+          |  if (curr.yg > 0.0L) {
+          |if ((fabsl(curr.k))*(params->eps) <= 100.0L) {
+          |if ((((curr.k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L) < ((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))) {
+          |if (((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)) < (((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)) {
+          |if (0.0L <= curr.vl) {
+          |if (curr.vl < curr.vh) {
+          |if ((params->A)*(params->T) <= (10.0L)*((curr.vh)-(curr.vl))) {
+          |if ((params->B)*(params->T) <= (10.0L)*((curr.vh)-(curr.vl))) {
+          |if (-(params->B) <= curr.a) {
+          |if (curr.a <= params->A) {
+          |if (((10.0L)*(pre.v))+((curr.a)*(params->T)) >= 0.0L) {
+          |if (((pre.v <= curr.vh) && (((10.0L)*(pre.v))+((curr.a)*(params->T)) <= (10.0L)*(curr.vh))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))) <= ((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))) <= ((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))) {
+          |if (((curr.vl <= pre.v) && (((10.0L)*(pre.v))+((curr.a)*(params->T)) >= (10.0L)*(curr.vl))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))) <= ((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))) <= ((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))) {
+          |if (pre.v >= 0.0L) {
+          |if (0.0L <= params->T) {
+          |if (curr.v == pre.v) {
+          |if (curr.t == 0.0L) {
+          |verdict result = { .id=1, .val=(1.0L)/(((1.0L)/(curr.yg))+(((((((((((((((1.0L)/((100.0L)-((fabsl(curr.k))*(params->eps))))+((1.0L)/((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))-((((curr.k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L)))))+((1.0L)/(((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))))+((1.0L)/(curr.vl)))+((1.0L)/((curr.vh)-(curr.vl))))+((1.0L)/(((10.0L)*((curr.vh)-(curr.vl)))-((params->A)*(params->T)))))+((1.0L)/(((10.0L)*((curr.vh)-(curr.vl)))-((params->B)*(params->T)))))+((1.0L)/((curr.a)-(-(params->B)))))+((1.0L)/((params->A)-(curr.a))))+((1.0L)/(((10.0L)*(pre.v))+((curr.a)*(params->T)))))+((1.0L)/(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L))))))))+((1.0L)/(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L))))))))+((1.0L)/(pre.v)))+((1.0L)/(params->T)))) }; return result;
+          |} else {
+          |verdict result = { .id=-1, .val=((-1.0L))+(-(fmaxl(curr.t, -(curr.t)))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-2, .val=((-1.0L))+(-(fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v)))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-3, .val=((-1.0L))+(params->T) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-4, .val=((-1.0L))+(pre.v) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-5, .val=((-1.0L))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))))-(((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-6, .val=((-1.0L))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))))-(((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-7, .val=((-1.0L))+(((10.0L)*(pre.v))+((curr.a)*(params->T))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-8, .val=((-1.0L))+((params->A)-(curr.a)) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-9, .val=((-1.0L))+((curr.a)-(-(params->B))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-10, .val=((-1.0L))+(((10.0L)*((curr.vh)-(curr.vl)))-((params->B)*(params->T))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-11, .val=((-1.0L))+(((10.0L)*((curr.vh)-(curr.vl)))-((params->A)*(params->T))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-12, .val=((-1.0L))+((curr.vh)-(curr.vl)) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-13, .val=((-1.0L))+(curr.vl) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-14, .val=((-1.0L))+(((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-15, .val=((-1.0L))+((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))-((((curr.k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-16, .val=((-1.0L))+((100.0L)-((fabsl(curr.k))*(params->eps))) }; return result;
+          |}
+          |} else {
+          |verdict result = { .id=-17, .val=((-1.0L))+(curr.yg) }; return result;
+          |};
+          |}
+          |
+          |/* Evaluates monitor condition in prior and current state */
+          |bool monitorSatisfied(state pre, state curr, const parameters* const params) {
+          |  return boundaryDist(pre,curr,params).val >= 0.0L;
+          |}
+          |
+          |/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
+          |state monitoredCtrl(state curr, const parameters* const params, const input* const in,
+          |                    state (*ctrl)(state,const parameters* const,const input* const),
+          |                    state (*fallback)(state,const parameters* const,const input* const)) {
+          |  state pre = curr;
+          |  state post = (*ctrl)(pre,params,in);
+          |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
+          |  else return post;
+          |}""".stripMargin
+      )(after being whiteSpaceRemoved)
+    }
+
+    it should "FEATURE_REQUEST: approximate robix liveness" taggedAs TodoTest in withMathematica { tool =>
+      // @todo Tactic DV
+      val entry = ArchiveParser
+        .getEntry(
+          "RAL19/Robot preserves loop invariant",
+          io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
+        )
+        .head
+      val tactic = entry.tactics.head._3
+
+      val approx = ModelPlex.createNonlinearModelApprox(entry.name, tactic, entry.defs)(entry.expandedModel)
+
+      approx._1 shouldBe
+        "T()>0&eps()>0&A()>0&B()>0&v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10))->[{{{xg:=*;yg:=*;vl:=*;vh:=*;k:=*;a:=*;?xg>=0&k>=0|xg<=0&k<=0;?yg>0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl);?(-B()<=a&a<=A())&10*v+a*T()>=0&(v<=vh&10*v+a*T()<=10*vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10))&(vl<=v&10*v+a*T()>=10*vl|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(yg-10*eps())*(100*100)*(10*10));}t:=0;}{t_0:=t;v_0:=v;xg_0:=xg;yg_0:=yg;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));{t:=*;v:=*;xg:=*;yg:=*;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));}*](v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)))"
+          .asFormula
+
+      // modelplex
+      val stateVars = List("xg", "yg", "v", "a", "t", "vl", "vh", "k", "t_0", "xg_0", "v_0", "yg_0")
+        .map(_.asVariable.asInstanceOf[BaseVariable])
+      val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex
+        .createMonitorSpecificationConjecture(approx._1, stateVars, ListMap.empty)
+
+      val mxtactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+        ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+
+      val result = proveBy(modelplexInput, mxtactic)
+      val Sequent(IndexedSeq(), IndexedSeq(monitorFml)) = result.subgoals.loneElement
+      val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
+      println("Monitor formula " + monitorFml.prettyString + "\nPretty " + reassociatedMonitorFml.prettyString)
+      proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
+
+      val testProg =
+        proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head
+      println("Test prog " + testProg.prettyString)
+
+      val inputs = CodeGenerator.getInputs(testProg)
+      val monitorCode = generator(testProg, stateVars.toSet, inputs, "Monitor")
+      println(monitorCode)
+    }
   }
-
-  it should "FEATURE_REQUEST: approximate robix liveness" taggedAs TodoTest in withMathematica { tool =>
-    //@todo Tactic DV
-    val entry = ArchiveParser.getEntry("RAL19/Robot preserves loop invariant", io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString).head
-    val tactic = entry.tactics.head._3
-
-    val approx = ModelPlex.createNonlinearModelApprox(entry.name, tactic, entry.defs)(entry.expandedModel)
-
-    approx._1 shouldBe "T()>0&eps()>0&A()>0&B()>0&v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10))->[{{{xg:=*;yg:=*;vl:=*;vh:=*;k:=*;a:=*;?xg>=0&k>=0|xg<=0&k<=0;?yg>0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl);?(-B()<=a&a<=A())&10*v+a*T()>=0&(v<=vh&10*v+a*T()<=10*vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10))&(vl<=v&10*v+a*T()>=10*vl|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(yg-10*eps())*(100*100)*(10*10));}t:=0;}{t_0:=t;v_0:=v;xg_0:=xg;yg_0:=yg;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));{t:=*;v:=*;xg:=*;yg:=*;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));}*](v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)))".asFormula
-
-    // modelplex
-    val stateVars = List("xg","yg","v","a","t","vl","vh","k","t_0","xg_0","v_0","yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars, ListMap.empty)
-
-    val mxtactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
-
-    val result = proveBy(modelplexInput, mxtactic)
-    val Sequent(IndexedSeq(), IndexedSeq(monitorFml)) = result.subgoals.loneElement
-    val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-    println("Monitor formula " + monitorFml.prettyString + "\nPretty " + reassociatedMonitorFml.prettyString)
-    proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe Symbol("proved")
-
-    val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
-    println("Test prog " + testProg.prettyString)
-
-    val inputs = CodeGenerator.getInputs(testProg)
-    val monitorCode = generator(testProg, stateVars.toSet, inputs, "Monitor")
-    println(monitorCode)
-  }}
 
   "Compiled controller monitor" should "FEATURE_REQUEST: evaluate boolean correctly" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
     val monitorExp = ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model
-    val vars = List("a","dx","dy","r","v","w","x","y","xo","yo","dxo","dyo","t","a_0","dxo_0","dyo_0","r_0","w_0",
-      "xo_0","yo_0").map(_.asVariable.asInstanceOf[BaseVariable]).toSet
+    val vars = List(
+      "a",
+      "dx",
+      "dy",
+      "r",
+      "v",
+      "w",
+      "x",
+      "y",
+      "xo",
+      "yo",
+      "dxo",
+      "dyo",
+      "t",
+      "a_0",
+      "dxo_0",
+      "dyo_0",
+      "r_0",
+      "w_0",
+      "xo_0",
+      "yo_0",
+    ).map(_.asVariable.asInstanceOf[BaseVariable]).toSet
     val genCode = generator(monitorExp, vars)
     val monitorCode = genCode._1 + "\n\n" + genCode._2
 
     // robot and obstacle drive straight towards each other
-    //@todo fix
+    // @todo fix
     val code =
       s"""
-        |#include <stdio.h>
-        |$monitorCode
-        |
-        |state ctrl(state curr, const parameters* const params, const input* const in) { printf("Controller chooses A\\n"); curr.a = params->A; return curr; }
-        |state fallback(state curr, const parameters* const params, const input* const in) { printf("Fallback returns -B\\n"); curr.a = -params->B; return curr; }
-        |
-        |int main() {
-        |  state current = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=1.0, .w=1.0, .x=0.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0, .t=0.0, .a_0=0.0, .dxo_0=1.0, .dyo_0=0.0, .r_0=1.0, .w_0=1.0, .xo_0=10.0, .yo_0=0.0 };
-        |  parameters params = { .A=1.0, .B=2.0, .V=1.0, .ep=0.05 };
-        |  printf("Returned a=%1.1Lf\\n", monitoredCtrl(current, &params, (const input* const)0, &ctrl, &fallback).a);
-        |  /* jump robot ahead and speed up, now unsafe */
-        |  state next = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=4.0, .w=4.0, .x=9.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0, .a_0=0.0, .dxo_0=1.0, .dyo_0=0.0, .r_0=1.0, .w_0=4.0, .xo_0=10.0, .yo_0=0.0 };
-        |  printf("Returned a=%1.1Lf", monitoredCtrl(next, &params, (const input* const)0, &ctrl, &fallback).a);
-        |  return 0;
-        |}
-        |""".stripMargin
+         |#include <stdio.h>
+         |$monitorCode
+         |
+         |state ctrl(state curr, const parameters* const params, const input* const in) { printf("Controller chooses A\\n"); curr.a = params->A; return curr; }
+         |state fallback(state curr, const parameters* const params, const input* const in) { printf("Fallback returns -B\\n"); curr.a = -params->B; return curr; }
+         |
+         |int main() {
+         |  state current = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=1.0, .w=1.0, .x=0.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0, .t=0.0, .a_0=0.0, .dxo_0=1.0, .dyo_0=0.0, .r_0=1.0, .w_0=1.0, .xo_0=10.0, .yo_0=0.0 };
+         |  parameters params = { .A=1.0, .B=2.0, .V=1.0, .ep=0.05 };
+         |  printf("Returned a=%1.1Lf\\n", monitoredCtrl(current, &params, (const input* const)0, &ctrl, &fallback).a);
+         |  /* jump robot ahead and speed up, now unsafe */
+         |  state next = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=4.0, .w=4.0, .x=9.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0, .a_0=0.0, .dxo_0=1.0, .dyo_0=0.0, .r_0=1.0, .w_0=4.0, .xo_0=10.0, .yo_0=0.0 };
+         |  printf("Returned a=%1.1Lf", monitoredCtrl(next, &params, (const input* const)0, &ctrl, &fallback).a);
+         |  return 0;
+         |}
+         |""".stripMargin
 
     val file = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(Array(file))
@@ -706,13 +869,25 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   it should "evaluate metric correctly" ignore withMathematica { _ =>
-    //@todo mixed open/closed can evaluate to false at the boundary (e.g., x<=5 | x>6 turns into min(x-5,6-x)<0 == false for x=5)
+    // @todo mixed open/closed can evaluate to false at the boundary (e.g., x<=5 | x>6 turns into min(x-5,6-x)<0 == false for x=5)
     //      which is especially problematic when monitor contains equalities, e.g., x=5 | x>6
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
     val monitorExp = ModelPlex.toMetric(io.Source.fromInputStream(inputFile).mkString.asFormula)
-    val vars =
-      Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
-        Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
+    val vars = Set(
+      Variable("a"),
+      Variable("dx"),
+      Variable("dy"),
+      Variable("r"),
+      Variable("v"),
+      Variable("w"),
+      Variable("x"),
+      Variable("y"),
+      Variable("xo"),
+      Variable("yo"),
+      Variable("dxo"),
+      Variable("dyo"),
+      Variable("t"),
+    )
     val monitorCode = generator(monitorExp, vars)
 
     // robot and obstacle drive straight towards each other
@@ -749,7 +924,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val ctrlPrg = "x:=2;".asProgram
     val cPrg = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
         |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = 2.0L; prg.success = 1;
         |  return prg.state;
@@ -761,22 +937,24 @@ class CCodeGeneratorTests extends TacticTestBase {
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val cPrg = new CMpfrControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-                       |  struct { state state; int success; } prg = { .state=curr, .success=0 };
-                       |  mpfr_t _t_0 /* 2.0L */;
-                       |  mpfr_init2(_t_0, 200);
-                       |  mpfr_set_ld(_t_0, 2L, MPFR_RNDD);
-                       |  prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
-                       |  prg.success = 1;
-                       |  return prg.state;
-                       |}""".stripMargin
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+        |  mpfr_t _t_0 /* 2.0L */;
+        |  mpfr_init2(_t_0, 200);
+        |  mpfr_set_ld(_t_0, 2L, MPFR_RNDD);
+        |  prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+        |  prg.success = 1;
+        |  return prg.state;
+        |}""".stripMargin
   }
 
   it should "translate nested choices" in {
     val ctrlPrg = "x:=2;++x:=3;{x:=4;++x:=5;}".asProgram
     val cPrg = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
         |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  {
         |    state reset = prg.state;
@@ -811,57 +989,59 @@ class CCodeGeneratorTests extends TacticTestBase {
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val cPrg = new CMpfrControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-                       |  struct { state state; int success; } prg = { .state=curr, .success=0 };
-                       |  {
-                       |    state reset = prg.state;
-                       |    mpfr_t _t_0 /* 2.0L */;
-                       |    mpfr_init2(_t_0, 200);
-                       |    mpfr_set_ld(_t_0, 2L, MPFR_RNDD);
-                       |    prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
-                       |    prg.success = 1;
-                       |    if (!prg.success) prg.state = reset;
-                       |  }
-                       |  if (!prg.success) {
-                       |    state reset = prg.state;
-                       |    {
-                       |      mpfr_t _t_0 /* 3.0L */;
-                       |      mpfr_init2(_t_0, 200);
-                       |      mpfr_set_ld(_t_0, 3L, MPFR_RNDD);
-                       |      prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
-                       |      prg.success = 1;
-                       |    }
-                       |    if (prg.success) {
-                       |      {
-                       |        state reset = prg.state;
-                       |        mpfr_t _t_0 /* 4.0L */;
-                       |        mpfr_init2(_t_0, 200);
-                       |        mpfr_set_ld(_t_0, 4L, MPFR_RNDD);
-                       |        prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
-                       |        prg.success = 1;
-                       |        if (!prg.success) prg.state = reset;
-                       |      }
-                       |      if (!prg.success) {
-                       |        state reset = prg.state;
-                       |        mpfr_t _t_0 /* 5.0L */;
-                       |        mpfr_init2(_t_0, 200);
-                       |        mpfr_set_ld(_t_0, 5L, MPFR_RNDD);
-                       |        prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
-                       |        prg.success = 1;
-                       |        if (!prg.success) prg.state = reset;
-                       |      }
-                       |    }
-                       |    if (!prg.success) prg.state = reset;
-                       |  }
-                       |  return prg.state;
-                       |}""".stripMargin
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+        |  {
+        |    state reset = prg.state;
+        |    mpfr_t _t_0 /* 2.0L */;
+        |    mpfr_init2(_t_0, 200);
+        |    mpfr_set_ld(_t_0, 2L, MPFR_RNDD);
+        |    prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+        |    prg.success = 1;
+        |    if (!prg.success) prg.state = reset;
+        |  }
+        |  if (!prg.success) {
+        |    state reset = prg.state;
+        |    {
+        |      mpfr_t _t_0 /* 3.0L */;
+        |      mpfr_init2(_t_0, 200);
+        |      mpfr_set_ld(_t_0, 3L, MPFR_RNDD);
+        |      prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+        |      prg.success = 1;
+        |    }
+        |    if (prg.success) {
+        |      {
+        |        state reset = prg.state;
+        |        mpfr_t _t_0 /* 4.0L */;
+        |        mpfr_init2(_t_0, 200);
+        |        mpfr_set_ld(_t_0, 4L, MPFR_RNDD);
+        |        prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+        |        prg.success = 1;
+        |        if (!prg.success) prg.state = reset;
+        |      }
+        |      if (!prg.success) {
+        |        state reset = prg.state;
+        |        mpfr_t _t_0 /* 5.0L */;
+        |        mpfr_init2(_t_0, 200);
+        |        mpfr_set_ld(_t_0, 5L, MPFR_RNDD);
+        |        prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+        |        prg.success = 1;
+        |        if (!prg.success) prg.state = reset;
+        |      }
+        |    }
+        |    if (!prg.success) prg.state = reset;
+        |  }
+        |  return prg.state;
+        |}""".stripMargin
   }
 
   it should "translate a nondeterministic assignment into an input lookup" in {
     val ctrlPrg = "x:=*;".asProgram
     val cPrg = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
         |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = in->x; prg.success = 1;
         |  return prg.state;
@@ -872,7 +1052,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val ctrlPrg = "x:=*;?x<=5; ++ x:=7;".asProgram
     val cPrg = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
         |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  {
         |    state reset = prg.state;
@@ -898,42 +1079,44 @@ class CCodeGeneratorTests extends TacticTestBase {
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val cPrg = new CMpfrControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-                       |  struct { state state; int success; } prg = { .state=curr, .success=0 };
-                       |  {
-                       |    state reset = prg.state;
-                       |    {
-                       |      prg.state.x = in->x; prg.success = 1;
-                       |    }
-                       |    if (prg.success) {
-                       |      mpfr_t _t_1 /* 5.0L */,
-                       |  prg_state_x /* prg.state.x */;
-                       |      mpfr_init2(_t_1, 200);
-                       |  mpfr_init2(prg_state_x, 200);
-                       |      mpfr_set_ld(_t_1, 5L, MPFR_RNDD);
-                       |  mpfr_set_ld(prg_state_x, prg.state.x, MPFR_RNDD);
-                       |      prg.success = mpfr_get_ld(prg_state_x, MPFR_RNDD) <= mpfr_get_ld(_t_1, MPFR_RNDD);
-                       |    }
-                       |    if (!prg.success) prg.state = reset;
-                       |  }
-                       |  if (!prg.success) {
-                       |    state reset = prg.state;
-                       |    mpfr_t _t_0 /* 7.0L */;
-                       |    mpfr_init2(_t_0, 200);
-                       |    mpfr_set_ld(_t_0, 7L, MPFR_RNDD);
-                       |    prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
-                       |    prg.success = 1;
-                       |    if (!prg.success) prg.state = reset;
-                       |  }
-                       |  return prg.state;
-                       |}""".stripMargin
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+        |  {
+        |    state reset = prg.state;
+        |    {
+        |      prg.state.x = in->x; prg.success = 1;
+        |    }
+        |    if (prg.success) {
+        |      mpfr_t _t_1 /* 5.0L */,
+        |  prg_state_x /* prg.state.x */;
+        |      mpfr_init2(_t_1, 200);
+        |  mpfr_init2(prg_state_x, 200);
+        |      mpfr_set_ld(_t_1, 5L, MPFR_RNDD);
+        |  mpfr_set_ld(prg_state_x, prg.state.x, MPFR_RNDD);
+        |      prg.success = mpfr_get_ld(prg_state_x, MPFR_RNDD) <= mpfr_get_ld(_t_1, MPFR_RNDD);
+        |    }
+        |    if (!prg.success) prg.state = reset;
+        |  }
+        |  if (!prg.success) {
+        |    state reset = prg.state;
+        |    mpfr_t _t_0 /* 7.0L */;
+        |    mpfr_init2(_t_0, 200);
+        |    mpfr_set_ld(_t_0, 7L, MPFR_RNDD);
+        |    prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+        |    prg.success = 1;
+        |    if (!prg.success) prg.state = reset;
+        |  }
+        |  return prg.state;
+        |}""".stripMargin
   }
 
   it should "look up parameters" in {
     val ctrlPrg = "x:=A;".asProgram
     val cPrg = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg, Set(Variable("x")))
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
         |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = params->A; prg.success = 1;
         |  return prg.state;
@@ -944,7 +1127,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val ctrlPrg = "x:=A();".asProgram
     val cPrg = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg, Set(Variable("x")))
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
         |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = params->A; prg.success = 1;
         |  return prg.state;
@@ -955,7 +1139,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val ctrlPrg = "{x:=2;{x'=4}}*".asProgram
     val cPrg = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg)
     cPrg._1 shouldBe ""
-    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+    cPrg._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
         |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  while (!prg.success) {
         |    {
@@ -971,48 +1156,17 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "compile and run a controller" in {
     val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
-    val code = (new CGenerator(new CControllerGenerator(Declaration(Map.empty)), True, Declaration(Map.empty)))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
+    val code = (
+      new CGenerator(new CControllerGenerator(Declaration(Map.empty)), True, Declaration(Map.empty))
+    )(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
 
-    val mainCode =
-      s"""
-       |#include <stdio.h>
-       |${code._1}
-       |${code._2}
-       |
-       |int main() {
-       |  state current = { .x=0.0 };
-       |  parameters params = { .A=1.0 };
-       |  input in = { .x=0.5 };
-       |  printf("Returned x=%1.1Lf\\n", ctrlStep(current, &params, &in).x);
-       |  /* change input */
-       |  input nextIn = { .x=2.0 };
-       |  printf("Returned x=%1.1Lf", ctrlStep(current, &params, &nextIn).x);
-       |  return 0;
-       |}
-       |""".stripMargin
-
-    val file = CodeGenTestTools.compileC(mainCode)
-    val p = Runtime.getRuntime.exec(Array(file))
-    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
-      p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
-        "Returned x=0.5\nReturned x=7.0"
-    }
-  }
-
-  it should "compile and run a controller with MPFR" taggedAs IgnoreInBuildTest in {
-    val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
-    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
-    val code = (new CGenerator(new CMpfrControllerGenerator(Declaration(Map.empty)), True, Declaration(Map.empty)))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
-
-    val mainCode =
+    val mainCode = {
       s"""
          |#include <stdio.h>
-         |#include <mpfr.h>
          |${code._1}
          |${code._2}
          |
-       |int main() {
+         |int main() {
          |  state current = { .x=0.0 };
          |  parameters params = { .A=1.0 };
          |  input in = { .x=0.5 };
@@ -1023,13 +1177,48 @@ class CCodeGeneratorTests extends TacticTestBase {
          |  return 0;
          |}
          |""".stripMargin
+    }
+
+    val file = CodeGenTestTools.compileC(mainCode)
+    val p = Runtime.getRuntime.exec(Array(file))
+    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+      p.waitFor() shouldBe 0
+      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe "Returned x=0.5\nReturned x=7.0"
+    }
+  }
+
+  it should "compile and run a controller with MPFR" taggedAs IgnoreInBuildTest in {
+    val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
+    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+    val code = (
+      new CGenerator(new CMpfrControllerGenerator(Declaration(Map.empty)), True, Declaration(Map.empty))
+    )(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
+
+    val mainCode = {
+      s"""
+         |#include <stdio.h>
+         |#include <mpfr.h>
+         |${code._1}
+         |${code._2}
+         |
+         |int main() {
+         |  state current = { .x=0.0 };
+         |  parameters params = { .A=1.0 };
+         |  input in = { .x=0.5 };
+         |  printf("Returned x=%1.1Lf\\n", ctrlStep(current, &params, &in).x);
+         |  /* change input */
+         |  input nextIn = { .x=2.0 };
+         |  printf("Returned x=%1.1Lf", ctrlStep(current, &params, &nextIn).x);
+         |  return 0;
+         |}
+         |""".stripMargin
+    }
 
     val file = CodeGenTestTools.compileC(mainCode, Seq("-lmpfr", "-lgmp"))
     val p = Runtime.getRuntime.exec(Array(file))
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
-        "Returned x=0.5\nReturned x=7.0"
+      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe "Returned x=0.5\nReturned x=7.0"
     }
   }
 
@@ -1041,35 +1230,35 @@ class CCodeGeneratorTests extends TacticTestBase {
     val params = Set[NamedSymbol](Variable("A"))
     val inputs = Set(Variable("x"))
 
-    val declarations =
-      CGenerator.printParameterDeclaration(params) + "\n" +
-      CGenerator.printStateDeclaration(stateVars) + "\n" +
-      CGenerator.printInputDeclaration(inputs) + "\n" +
+    val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
+      CGenerator.printStateDeclaration(stateVars) + "\n" + CGenerator.printInputDeclaration(inputs) + "\n" +
       CGenerator.printVerdictDeclaration()
     val fallbackCode = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg, stateVars)._2
     val monitorCode = new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty))(monitor, stateVars)._1
 
-    val code = s"""
-       |#include <stdio.h>
-       |${CGenerator.INCLUDE_STATEMENTS}
-       |$declarations
-       |$fallbackCode
-       |$monitorCode
-       |
-       |state ctrl(state curr, const parameters* const params, const input* const in) { printf("Choosing 2*%1.1Lf", curr.x); curr.x = 2*curr.x; return curr; }
-       |
-       |int main() {
-       |  state current = { .x=0.2 };
-       |  parameters params = { .A=1.0 };
-       |  long double inputSequence[5] = { 3.0, 3.0, 3.0, 1.0, 0.5 };
-       |  for (int i=0; i<5; ++i) {
-       |    input in = { .x=inputSequence[i] };
-       |    current = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
-       |    printf(", result x=%1.1Lf\\n", current.x);
-       |  }
-       |  return 0;
-       |}
-       |""".stripMargin
+    val code = {
+      s"""
+         |#include <stdio.h>
+         |${CGenerator.INCLUDE_STATEMENTS}
+         |$declarations
+         |$fallbackCode
+         |$monitorCode
+         |
+         |state ctrl(state curr, const parameters* const params, const input* const in) { printf("Choosing 2*%1.1Lf", curr.x); curr.x = 2*curr.x; return curr; }
+         |
+         |int main() {
+         |  state current = { .x=0.2 };
+         |  parameters params = { .A=1.0 };
+         |  long double inputSequence[5] = { 3.0, 3.0, 3.0, 1.0, 0.5 };
+         |  for (int i=0; i<5; ++i) {
+         |    input in = { .x=inputSequence[i] };
+         |    current = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
+         |    printf(", result x=%1.1Lf\\n", current.x);
+         |  }
+         |  return 0;
+         |}
+         |""".stripMargin
+    }
 
     val file = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(Array(file))
@@ -1092,31 +1281,31 @@ class CCodeGeneratorTests extends TacticTestBase {
     val stateVars = Set(Variable("x"))
     val params = Set[NamedSymbol](Variable("A"))
 
-    val declarations =
-      CGenerator.printParameterDeclaration(params) + "\n" +
-        CGenerator.printStateDeclaration(stateVars) + "\n" +
-        CGenerator.printInputDeclaration(Set()) + "\n" +
-        CGenerator.printVerdictDeclaration()
+    val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
+      CGenerator.printStateDeclaration(stateVars) + "\n" + CGenerator.printInputDeclaration(Set()) + "\n" +
+      CGenerator.printVerdictDeclaration()
     val fallbackCode = new CControllerGenerator(Declaration(Map.empty))(ctrlPrg, stateVars)._2
     val monitorCode = new CMonitorGenerator(Symbol("resist"), Declaration(Map.empty))(monitor, stateVars)._1
 
-    val code = s"""
-      |#include <stdio.h>
-      |${CGenerator.INCLUDE_STATEMENTS}
-      |$declarations
-      |$fallbackCode
-      |$monitorCode
-      |
-      |state ctrl(state curr, const parameters* const params, const input* const in) { printf("Choosing 2"); curr.x = 2.0L; return curr; }
-      |
-      |int main() {
-      |  state current = { .x=0.2 };
-      |  parameters params = { .A=1.0 };
-      |  current = monitoredCtrl(current, &params, 0, &ctrl, &ctrlStep);
-      |  printf(", result x=%1.1Lf\\n", current.x);
-      |  return 0;
-      |}
-      |""".stripMargin
+    val code = {
+      s"""
+         |#include <stdio.h>
+         |${CGenerator.INCLUDE_STATEMENTS}
+         |$declarations
+         |$fallbackCode
+         |$monitorCode
+         |
+         |state ctrl(state curr, const parameters* const params, const input* const in) { printf("Choosing 2"); curr.x = 2.0L; return curr; }
+         |
+         |int main() {
+         |  state current = { .x=0.2 };
+         |  parameters params = { .A=1.0 };
+         |  current = monitoredCtrl(current, &params, 0, &ctrl, &ctrlStep);
+         |  printf(", result x=%1.1Lf\\n", current.x);
+         |  return 0;
+         |}
+         |""".stripMargin
+    }
 
     compileAndRun(code, "Choosing 2, result x=1.0\n")
   }
@@ -1126,10 +1315,8 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     val stateVars = Set(Variable("x"), Variable("y"))
 
-    val declarations =
-      CGenerator.printParameterDeclaration(Set()) + "\n" +
-      CGenerator.printStateDeclaration(stateVars) + "\n" +
-      CGenerator.printInputDeclaration(Set(Variable("y")))
+    val declarations = CGenerator.printParameterDeclaration(Set()) + "\n" +
+      CGenerator.printStateDeclaration(stateVars) + "\n" + CGenerator.printInputDeclaration(Set(Variable("y")))
     val ctrlCode = new CDetControllerGenerator(Declaration(Map.empty))(ctrlPrg, stateVars)._2
 
     ctrlCode shouldBe
@@ -1143,21 +1330,23 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  return curr;
         |}""".stripMargin
 
-    def code(y: String) = s"""
-      |#include <stdio.h>
-      |${CGenerator.INCLUDE_STATEMENTS}
-      |$declarations
-      |$ctrlCode
-      |
-      |
-      |int main() {
-      |  state current = { .x=0.2L };
-      |  input in = { .y=$y };
-      |  current = ctrlStep(current, 0, &in);
-      |  printf("Result x=%1.1Lf\\n", current.x);
-      |  return 0;
-      |}
-      |""".stripMargin
+    def code(y: String) = {
+      s"""
+         |#include <stdio.h>
+         |${CGenerator.INCLUDE_STATEMENTS}
+         |$declarations
+         |$ctrlCode
+         |
+         |
+         |int main() {
+         |  state current = { .x=0.2L };
+         |  input in = { .y=$y };
+         |  current = ctrlStep(current, 0, &in);
+         |  printf("Result x=%1.1Lf\\n", current.x);
+         |  return 0;
+         |}
+         |""".stripMargin
+    }
 
     compileAndRun(code("1.0L"), "Result x=2.0\n")
     compileAndRun(code("5.0L"), "Result x=3.0\n")

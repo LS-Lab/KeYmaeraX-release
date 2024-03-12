@@ -16,13 +16,13 @@ object Version {
     def compareTo(that: VersionString): Int = {
       if (major != that.major) major.compareTo(that.major)
       else if (minor != that.minor) minor.compareTo(that.minor)
-      else if (rev != that.rev) rev.compareTo(that.rev) //@note undefined rev == -1, 4.0.1 > 4.0.0 > 4.0 (.-1)
-      else if (letter.isEmpty && that.letter.isDefined) 1 //4.0 > 4.0b
+      else if (rev != that.rev) rev.compareTo(that.rev) // @note undefined rev == -1, 4.0.1 > 4.0.0 > 4.0 (.-1)
+      else if (letter.isEmpty && that.letter.isDefined) 1 // 4.0 > 4.0b
       else if (letter.isDefined && that.letter.isEmpty) -1
       else if (letter != that.letter) letter.get.compareTo(that.letter.get)
-      else if (incr.isEmpty && that.incr.isDefined) 1 //4.0a > 4.0a1
+      else if (incr.isEmpty && that.incr.isDefined) 1 // 4.0a > 4.0a1
       else if (incr.isDefined && that.incr.isEmpty) -1
-      else if (incr != that.incr) incr.get.compareTo(that.incr.get) //4.0b2 > 4.0b1
+      else if (incr != that.incr) incr.get.compareTo(that.incr.get) // 4.0b2 > 4.0b1
       else 0
     }
   }

@@ -4,21 +4,21 @@
  */
 
 /**
-  * Forward natural deduction proof terms for CdGL. Proof variables for assumptions are represented with de Bruijn indices.
-  * The conclusion of a proof term is an output of the proof checker, which often requires formula (and program) annotations
-  * in proof terms. To promote lexical scope, binding connectives rename in the context rather than weakening.
-  * Variables used for renaming are optional arguments to proof terms, which can be inferred if not given explicitly.
-  * In typical natural-deduction style, premisses mention as few connectives as possible
-  * @note Soundness-critical
-  * @author Brandon Bohrer
-  */
+ * Forward natural deduction proof terms for CdGL. Proof variables for assumptions are represented with de Bruijn
+ * indices. The conclusion of a proof term is an output of the proof checker, which often requires formula (and program)
+ * annotations in proof terms. To promote lexical scope, binding connectives rename in the context rather than
+ * weakening. Variables used for renaming are optional arguments to proof terms, which can be inferred if not given
+ * explicitly. In typical natural-deduction style, premisses mention as few connectives as possible
+ * @note
+ *   Soundness-critical
+ * @author
+ *   Brandon Bohrer
+ */
 package edu.cmu.cs.ls.keymaerax.cdgl
 
 import edu.cmu.cs.ls.keymaerax.cdgl.Proof._
 import edu.cmu.cs.ls.keymaerax.core._
 import scala.collection.immutable
-
-
 
 object Proof {
   // de Bruijn indices
@@ -26,13 +26,14 @@ object Proof {
 }
 
 /**
-  * A context is a conjunction of assumption formulas. Variable references proceed from the head of the list and binding
-  * rules introduce assumptions at the head, i.e., assumption 0 is the first element and the most recently added.
-  * @param c List of assumptions
-  */
+ * A context is a conjunction of assumption formulas. Variable references proceed from the head of the list and binding
+ * rules introduce assumptions at the head, i.e., assumption 0 is the first element and the most recently added.
+ * @param c
+ *   List of assumptions
+ */
 final case class Context(c: List[Formula]) {
   override def toString: String = {
-    val s = c.map(_.prettyString).foldRight("")((s,acc) => s + "," + acc)
+    val s = c.map(_.prettyString).foldRight("")((s, acc) => s + "," + acc)
     s
   }
 
@@ -49,9 +50,7 @@ final case class Context(c: List[Formula]) {
   def asSequent: Sequent = Sequent(this.asIndexedSeq, immutable.IndexedSeq())
 
   /** returns Sequent with same assumptions and given succedent */
-  def entails(f: Formula): Sequent = {
-    Sequent(c.toIndexedSeq, immutable.IndexedSeq(f))
-  }
+  def entails(f: Formula): Sequent = { Sequent(c.toIndexedSeq, immutable.IndexedSeq(f)) }
 
   /** Apply single renaming to all assumptions */
   def rename(what: Variable, repl: Variable): Context = {
@@ -60,29 +59,28 @@ final case class Context(c: List[Formula]) {
 
   /** Apply all renamings to all assumptions */
   def renames(whats: List[Variable], repls: List[Variable]): Context = {
-    whats.zip(repls).foldLeft[Context](this)({case (acc, (x, y)) => acc.rename(x, y)})
+    whats.zip(repls).foldLeft[Context](this)({ case (acc, (x, y)) => acc.rename(x, y) })
   }
 
   /** Add assumption P to context */
-  def extend(P: Formula): Context = {
-    Context(P :: c)
-  }
+  def extend(P: Formula): Context = { Context(P :: c) }
 
   /** All variables which appear free in some assumption */
-  def freevars: SetLattice[Variable] =
-    c.map(StaticSemantics(_).fv).foldLeft[SetLattice[Variable]](SetLattice.bottom)({case (acc, fv) => fv ++ acc })
+  def freevars: SetLattice[Variable] = c
+    .map(StaticSemantics(_).fv)
+    .foldLeft[SetLattice[Variable]](SetLattice.bottom)({ case (acc, fv) => fv ++ acc })
 
   /** Retrieve assumption formula for given variable index */
   def apply(p: ProofVariable): Formula = c(p)
 }
 
 object Context {
+
   /** Returns true iff context contains no assumptions */
   def empty: Context = Context(List())
+
   /** Context corresponding to antecedent of sequent */
-  def ofSequent(seq: Sequent): Context = {
-    Context(seq.ante.toList)
-  }
+  def ofSequent(seq: Sequent): Context = { Context(seq.ante.toList) }
 
 }
 
@@ -91,15 +89,21 @@ final case class Judgement(ante: Context, succ: Formula) {}
 
 /** An effectively-well-found convergence metric used for Angelic loop convergence reasoning <*> */
 sealed trait Metric {
+
   /** Witness of admissibility */
   def witness: Proof
 
   /** @param fact Result of checking witness. */
   def setFact(fact: Formula): Unit
 
-  /** @param boundTaboo bound variables of loop body
-    * @param freeTaboo Free variables of context, variant, and postcondition
-    * @return true if metric is admissible */
+  /**
+   * @param boundTaboo
+   *   bound variables of loop body
+   * @param freeTaboo
+   *   Free variables of context, variant, and postcondition
+   * @return
+   *   true if metric is admissible
+   */
   def isAdmissible(boundTaboo: Set[Variable], freeTaboo: Set[Variable]): Boolean
 
   /** Formula which holds when the metric has converged */
@@ -115,31 +119,30 @@ sealed trait Metric {
   def ghost: Formula
 }
 
-/** Constant metric requires real scalar term [[t]] to decrease by at least positive constant [[n]] each iteration, and
-  * stores previous metric value in [[theGhost]].
-  * Termination condition [[isZero]] is inequational because [[t]] is permitted to become negative */
+/**
+ * Constant metric requires real scalar term [[t]] to decrease by at least positive constant [[n]] each iteration, and
+ * stores previous metric value in [[theGhost]]. Termination condition [[isZero]] is inequational because [[t]] is
+ * permitted to become negative
+ */
 case class ConstantMetric(t: Term, theGhost: Variable, child: Proof) extends Metric {
   var n: Option[Term] = None
   def witness: Proof = child
-  def setFact(fact: Formula): Unit =
-    fact match {
-      case Greater(theN, nz : Number) =>
-        if(nz.value != 0)
-          throw ProofException("Metric witness conclusion must have shape k>0")
-        n = Some(theN)
-      case p => throw ProofException("Metric witness conclusion must have shape k>0")
-    }
-  def isAdmissible(boundTaboo: Set[Variable], freeTaboo: Set[Variable]): Boolean =
-    StaticSemantics(n.get).intersect(boundTaboo).isEmpty && !freeTaboo.contains(theGhost)
+  def setFact(fact: Formula): Unit = fact match {
+    case Greater(theN, nz: Number) =>
+      if (nz.value != 0) throw ProofException("Metric witness conclusion must have shape k>0")
+      n = Some(theN)
+    case p => throw ProofException("Metric witness conclusion must have shape k>0")
+  }
+  def isAdmissible(boundTaboo: Set[Variable], freeTaboo: Set[Variable]): Boolean = StaticSemantics(n.get)
+    .intersect(boundTaboo)
+    .isEmpty && !freeTaboo.contains(theGhost)
   def nonZero: Formula = Greater(t, Number(0))
   def isZero: Formula = LessEqual(t, Number(0))
   def decreased: Formula = GreaterEqual(theGhost, Plus(t, n.get))
   def ghost: Formula = Equal(theGhost, t)
 }
 
-/**
-  * CdGL forward proof terms
-  */
+/** CdGL forward proof terms */
 sealed trait Proof {}
 
 /*                 *
@@ -170,7 +173,7 @@ case class DTestER(child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- <x: =f_x^y in p. M> : <x: =f>P
  */
-case class DAssignI(e: Assign, child: Proof, y: Option[Variable]=None) extends Proof {}
+case class DAssignI(e: Assign, child: Proof, y: Option[Variable] = None) extends Proof {}
 
 /* G |- M: <x: =f>p(x)
  * ----------------------------------------------
@@ -182,7 +185,7 @@ case class DAssignE(child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- <x : * f_x^y in p. M> : <x: =*>P
  */
-case class DRandomI(e: Assign, child: Proof, y: Option[Variable]=None) extends Proof {}
+case class DRandomI(e: Assign, child: Proof, y: Option[Variable] = None) extends Proof {}
 
 /* G |- M: <x: =f>p(x)   G_x^y, p(x) |- N: Q
  * ----------------------------------------------
@@ -237,7 +240,7 @@ case class DGo(child: Proof) extends Proof {}
  * G |- for_{met, metz}(A;mv.B;C): <a*>Q
  */
 // etric: Term, metz: Term, mx: BaseVariable
-case class DRepeatI(m:Metric, init: Proof, step: Proof, post: Proof) extends Proof {}
+case class DRepeatI(m: Metric, init: Proof, step: Proof, post: Proof) extends Proof {}
 
 /* G |- A: <a*>P   x: P |- B: Q   x: <a>Q |- C: Q
  * ----------------------------------------------
@@ -261,7 +264,16 @@ case class DDualE(child: Proof) extends Proof {}
  * ----------------------------------------------  sol solves x'=f&Q on [0, dur], s and t fresh
  * G |- DS[x'=f&Q, ys, sol, dur, s](M, N): <x'=f&Q>P
  */
-case class DSolve(ode: ODESystem, post: Formula, durPos: Proof, dc: Proof, child: Proof, s: Variable=Variable("s"), t: Variable=Variable("t"), ys: Option[List[Variable]]=None) extends Proof {}
+case class DSolve(
+    ode: ODESystem,
+    post: Formula,
+    durPos: Proof,
+    dc: Proof,
+    child: Proof,
+    s: Variable = Variable("s"),
+    t: Variable = Variable("t"),
+    ys: Option[List[Variable]] = None,
+) extends Proof {}
 
 /* G, t=0 |- A: d>=0 & f >= -dv
  * G, t=0 |- B: <x'=f, t'=1&Q>t>=d
@@ -270,7 +282,14 @@ case class DSolve(ode: ODESystem, post: Formula, durPos: Proof, dc: Proof, child
  * ---------------------------------------------- d, v constant, t, ys fresh
  * G |- DV[f, g, d, eps, v](A, B, C, D): <x'=f&Q>P
  */
-case class DV(const: Proof, dur: Proof, rate: Proof, post: Proof, t: Variable=Variable("t"), ys: Option[List[Variable]]=None) extends Proof {}
+case class DV(
+    const: Proof,
+    dur: Proof,
+    rate: Proof,
+    post: Proof,
+    t: Variable = Variable("t"),
+    ys: Option[List[Variable]] = None,
+) extends Proof {}
 
 /* G, x: P |- M: Q
  * ----------------------------------------------
@@ -342,7 +361,8 @@ case class BChoiceER(child: Proof) extends Proof {}
  * ---------------------------------------------------------
  * G |- (A rep[ys] x: J. B in C): [a*]Q
  */
-case class BRepeatI(pre: Proof, step: Proof, post: Proof, a: Program, ys: Option[List[Variable]] = None) extends Proof {}
+case class BRepeatI(pre: Proof, step: Proof, post: Proof, a: Program, ys: Option[List[Variable]] = None)
+    extends Proof {}
 
 /* G |- M: [a*]P
  * ----------------------------------------------
@@ -372,8 +392,14 @@ case class BDualE(child: Proof) extends Proof {}
  * --------------------------------------------------------------------  sol solves x'=f&Q on [0, dur], s and t fresh
  * G |- BS[x'=f&Q, ys, sol, t, s](M, N): [x'=f&Q]P
  */
-case class BSolve(ode: ODESystem, post: Formula, child: Proof, s: Variable=Variable("s"), t: Variable=Variable("t"), ys: Option[List[Variable]] = None) extends Proof {}
-
+case class BSolve(
+    ode: ODESystem,
+    post: Formula,
+    child: Proof,
+    s: Variable = Variable("s"),
+    t: Variable = Variable("t"),
+    ys: Option[List[Variable]] = None,
+) extends Proof {}
 
 /* G_xs^ys, x: Q |- M: P
  * ----------------------------------------------
@@ -399,8 +425,6 @@ case class DI(ode: ODESystem, pre: Proof, step: Proof, ys: Option[List[Variable]
  */
 case class DG(init: Assign, rhs: Plus, child: Proof) extends Proof {}
 
-
-
 /* G_x^y |- M: P
  * ----------------------------------------------
  * G |- (fn x^y => M): (\forall x, P)
@@ -412,7 +436,6 @@ case class ForallI(x: Variable, child: Proof, y: Option[Variable] = None) extend
  * G |- (M f): p(f)
  */
 case class ForallE(child: Proof, f: Term) extends Proof {}
-
 
 /* G_x^y, p: (x=f_x^y) |- M: P
  * ----------------------------------------------
@@ -515,7 +538,6 @@ case class FalseE(child: Proof, fml: Formula) extends Proof {}
  * G, x: P |- x: P
  */
 case class Hyp(p: ProofVariable) extends Proof {}
-
 
 /* G |- M: [a]J   G_xs^ys, x: J |- N: Q
  * ----------------------------------------------

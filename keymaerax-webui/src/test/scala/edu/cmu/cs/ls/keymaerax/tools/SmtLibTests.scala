@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.SmtLibReader
 import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
 
 class SmtLibTests extends TacticTestBase {
+
   /** Prefixes from [[DefaultSMTConverter]]. */
   private val VAR_PREFIX = "_v_"
   private val FUNC_PREFIX = "_f_"
@@ -23,26 +24,30 @@ class SmtLibTests extends TacticTestBase {
     def trip(t: Formula): Formula = { roundTrip(t) shouldBe Not(t); t }
     def roundTrip(t: Formula): Formula = {
       def convertVar(v: Variable): Variable = v match {
-        case bv: BaseVariable => bv.copy(name = bv.name.
-          replace(SmtLibReader.USCORE, "_").
-          replace(VAR_PREFIX, ""))
+        case bv: BaseVariable => bv.copy(name = bv.name.replace(SmtLibReader.USCORE, "_").replace(VAR_PREFIX, ""))
       }
 
-      def convertFml(f: Formula): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-        override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
-          case Exists(vs, p) => Right(Exists(vs.map(convertVar), convertFml(p)))
-          case Forall(vs, p) => Right(Forall(vs.map(convertVar), convertFml(p)))
-          case _ => Left(None)
-        }
-        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] =  e match {
-          case v: BaseVariable => Right(convertVar(v))
-          case FuncOf(fn, args) =>
-            Right(FuncOf(fn.copy(name = fn.name.
-              replace(SmtLibReader.USCORE, "_").
-              replace(FUNC_PREFIX, "")), args))
-          case _ => Left(None)
-        }
-      }, f).get
+      def convertFml(f: Formula): Formula = ExpressionTraversal
+        .traverse(
+          new ExpressionTraversalFunction() {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] =
+              e match {
+                case Exists(vs, p) => Right(Exists(vs.map(convertVar), convertFml(p)))
+                case Forall(vs, p) => Right(Forall(vs.map(convertVar), convertFml(p)))
+                case _ => Left(None)
+              }
+            override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] =
+              e match {
+                case v: BaseVariable => Right(convertVar(v))
+                case FuncOf(fn, args) => Right(
+                    FuncOf(fn.copy(name = fn.name.replace(SmtLibReader.USCORE, "_").replace(FUNC_PREFIX, "")), args)
+                  )
+                case _ => Left(None)
+              }
+          },
+          f,
+        )
+        .get
 
       convertFml(SmtLibReader.readAssert(DefaultSMTConverter(t))._1)
     }

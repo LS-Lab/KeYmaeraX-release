@@ -21,11 +21,15 @@ import scala.collection.immutable.List
 import scala.reflect.runtime.universe
 
 /**
-  * Tactic to prove system safety from isolated component and compatibility proofs.
-  *
-  * @see Andreas Müller, . [[https://doi.org/10.1007/s10009-018-0502-9 Tactical contract composition for hybrid system component verification]]. STTT, Special issue for selected papers from FASE'17, 2018.
-  * @author Stefan Mitsch     
-  */
+ * Tactic to prove system safety from isolated component and compatibility proofs.
+ *
+ * @see
+ *   Andreas Müller,
+ *   [[https://doi.org/10.1007/s10009-018-0502-9 Tactical contract composition for hybrid system component verification]].
+ *   STTT, Special issue for selected papers from FASE'17, 2018.
+ * @author
+ *   Stefan Mitsch
+ */
 object ComponentSystem extends TacticProvider {
   /** @inheritdoc */
   override def getInfo: (Class[_], universe.Type) = (ComponentSystem.getClass, universe.typeOf[ComponentSystem.type])

@@ -1,17 +1,24 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, MathematicaOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{
+  BinaryMathOpSpec,
+  LiteralMathOpSpec,
+  MathematicaOpSpec,
+  NaryMathOpSpec,
+  UnaryMathOpSpec,
+}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.{int, symbol}
 
 /** Extended Mathematica operator specifications for non-soundness critical tools. */
 object ExtMathematicaOpSpec {
 
-  //<editor-fold desc="Literals">
+  // <editor-fold desc="Literals">
 
   def generatedParameters: LiteralMathOpSpec = LiteralMathOpSpec(symbol("GeneratedParameters"))
 
@@ -29,9 +36,9 @@ object ExtMathematicaOpSpec {
 
   def infinity: Expr = applyFunc(symbol("DirectedInfinity"))(MathematicaOpSpec.int(1))
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Basic datastructures and operations">
+  // <editor-fold desc="Basic datastructures and operations">
 
   def function: NaryMathOpSpec = NaryMathOpSpec(symbol("Function"))
 
@@ -71,9 +78,9 @@ object ExtMathematicaOpSpec {
 
   def length: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Length"))
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Arithmetic">
+  // <editor-fold desc="Arithmetic">
 
   def findInstance: NaryMathOpSpec = NaryMathOpSpec(symbol("FindInstance"))
 
@@ -95,9 +102,9 @@ object ExtMathematicaOpSpec {
 
   def nmaximize: BinaryMathOpSpec = BinaryMathOpSpec(symbol("NMaximize"))
 
-  //</editor-fold>
+  // </editor-fold>
 
-  //<editor-fold desc="Differential equation operations">
+  // <editor-fold desc="Differential equation operations">
 
   def derivative: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Derivative"))
 
@@ -109,6 +116,6 @@ object ExtMathematicaOpSpec {
 
   def d: BinaryMathOpSpec = BinaryMathOpSpec(symbol("D"))
 
-  //</editor-fold>
+  // </editor-fold>
 
 }

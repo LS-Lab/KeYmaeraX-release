@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.UIIndex
@@ -14,13 +15,12 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import scala.collection.immutable.{List, Map, Nil}
 
 class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position)
-  extends UserProofRequest(db, userId, proofId) with ReadRequest {
+    extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId).flatMap(_.goal) match {
       case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
-      case Some(goal) =>
-        goal.sub(pos) match {
+      case Some(goal) => goal.sub(pos) match {
           case Some(fml: Formula) =>
             val substs = session(proofId) match {
               case ps: ProofSession => ps.defs.substs

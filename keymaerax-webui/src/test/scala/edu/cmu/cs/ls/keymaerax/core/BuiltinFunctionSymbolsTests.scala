@@ -9,15 +9,13 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
-/**
-  * @author Nathan Fulton
-  */
+/** @author Nathan Fulton */
 @UsualTest
 class BuiltinFunctionSymbolsTests extends TacticTestBase {
-  "max" should "be an interpreted function symbol for QE" in  withMathematica { _ =>
+  "max" should "be an interpreted function symbol for QE" in withMathematica { _ =>
     val f = "max(1, 2) = 2".asFormula
     val t = TactixLibrary.QE
-    proveBy(f,t) shouldBe Symbol("proved")
+    proveBy(f, t) shouldBe Symbol("proved")
   }
 
   it should "work in counter-example generation" in withMathematica { tool =>

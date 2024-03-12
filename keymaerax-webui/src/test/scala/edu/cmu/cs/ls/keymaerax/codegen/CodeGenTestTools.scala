@@ -11,14 +11,16 @@ import org.scalatest.Matchers._
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Tools for testing code generation.
-  * @author Stefan Mitsch
-  */
+ * Tools for testing code generation.
+ * @author
+ *   Stefan Mitsch
+ */
 object CodeGenTestTools {
 
   /** Augments ModelPlex monitor `code` with a sample main method calling the monitor (for compilation purposes). */
   def augmentMonitorMain(code: String, hasParams: Boolean, hasInputs: Boolean): String = {
-    val (defineParams, paramsArg) = if (hasParams) ("parameters params = { 0 };", "&params") else ("", "(const parameters* const)0")
+    val (defineParams, paramsArg) =
+      if (hasParams) ("parameters params = { 0 };", "&params") else ("", "(const parameters* const)0")
     val (defineInputs, inputsArg) = if (hasInputs) ("input in = { 0 };", "&in") else ("", "(const input* const)0")
 
     s"""$code
@@ -47,8 +49,13 @@ object CodeGenTestTools {
     val compiledFile = file.getAbsolutePath.stripSuffix(".c") + ".o"
     val cmd = ListBuffer[String](
       "gcc",
-      "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter", "-Wno-missing-field-initializers",
-      "-std=c99", "-pedantic",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wno-unused-parameter",
+      "-Wno-missing-field-initializers",
+      "-std=c99",
+      "-pedantic",
     )
     cmd.addAll(flags)
     cmd.addAll(Seq(file.getAbsolutePath, "-o", compiledFile))

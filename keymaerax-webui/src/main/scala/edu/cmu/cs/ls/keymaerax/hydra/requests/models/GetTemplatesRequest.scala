@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.models
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.models.GetTemplatesResponse
@@ -13,7 +14,9 @@ import scala.collection.immutable.{List, Nil}
 class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val templates = List(
-      TemplatePOJO("Plain", "Plain dL formula",
+      TemplatePOJO(
+        "Plain",
+        "Plain dL formula",
         """ArchiveEntry "New Entry"
           |
           |Problem
@@ -21,10 +24,11 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
           |End.
           |End.""".stripMargin,
         Some(new Region(3, 2, 3, 31)),
-        None
+        None,
       ),
       TemplatePOJO(
-        "Structured", "Archive with definitions",
+        "Structured",
+        "Archive with definitions",
         """ArchiveEntry "New Entry"
           |
           |Definitions
@@ -81,8 +85,8 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
           |*/
           |End.""".stripMargin,
         Some(new Region(33, 2, 33, 35)),
-        None
-      )
+        None,
+      ),
     )
 
     db.getUser(userId) match {

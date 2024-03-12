@@ -14,14 +14,11 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import scala.collection.immutable._
 import scala.language.implicitConversions
 
-@CheckinTest
-@SummaryTest
+@CheckinTest @SummaryTest
 class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
 
-  override def beforeAll(): Unit = {
-    Configuration.setConfiguration(FileConfiguration)
-  }
-  
+  override def beforeAll(): Unit = { Configuration.setConfiguration(FileConfiguration) }
+
   private val p = PredOf(Function("p", None, Unit, Bool), Nothing)
   private val q = PredOf(Function("q", None, Unit, Bool), Nothing)
 
@@ -32,69 +29,77 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   private val y = Variable("y", None, Real)
   private val z = Variable("z", None, Real)
 
-
   "Core (Data Strutures)" should "accept explicit differential equations" in {
-    AtomicODE(DifferentialSymbol(x), Number(5)) should be (AtomicODE(DifferentialSymbol(x), Number(5)))
+    AtomicODE(DifferentialSymbol(x), Number(5)) should be(AtomicODE(DifferentialSymbol(x), Number(5)))
   }
 
   it should "require explicit-form differential equation" in {
-    an[CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), DifferentialSymbol(x))}
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), DifferentialSymbol(x)) }
   }
 
   it should "require explicit-form differential equations" in {
-    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), DifferentialSymbol(x))}
-    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), DifferentialSymbol(y))}
-    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Differential(x))}
-    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Differential(y))}
-    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Differential(Plus(x, y)))}
-    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Plus(x, Differential(Plus(x, y))))}
-    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z))))}
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), DifferentialSymbol(x)) }
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), DifferentialSymbol(y)) }
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), Differential(x)) }
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), Differential(y)) }
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), Differential(Plus(x, y))) }
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), Plus(x, Differential(Plus(x, y)))) }
+    an[CoreException] should be thrownBy { AtomicODE(DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z)))) }
   }
 
   it should "reject duplicate differential equations" in {
-    an [CoreException] should be thrownBy {DifferentialProduct(AtomicODE(DifferentialSymbol(x), Number(7)), AtomicODE(DifferentialSymbol(Variable("x")), Number(2)))}
-    an [CoreException] should be thrownBy {DifferentialProduct(AtomicODE(DifferentialSymbol(x), Number(7)), AtomicODE(DifferentialSymbol(Variable("x")), Number(7)))}
+    an[CoreException] should be thrownBy {
+      DifferentialProduct(
+        AtomicODE(DifferentialSymbol(x), Number(7)),
+        AtomicODE(DifferentialSymbol(Variable("x")), Number(2)),
+      )
+    }
+    an[CoreException] should be thrownBy {
+      DifferentialProduct(
+        AtomicODE(DifferentialSymbol(x), Number(7)),
+        AtomicODE(DifferentialSymbol(Variable("x")), Number(7)),
+      )
+    }
   }
 
-  //@todo add core SeqPos tests
+  // @todo add core SeqPos tests
 
   "Tactic (Positions)" should "have HereP == new PosInExpr(Nil)" in {
-    HereP should be (new PosInExpr(Nil))
-    HereP should be (new PosInExpr(List()))
+    HereP should be(new PosInExpr(Nil))
+    HereP should be(new PosInExpr(List()))
   }
 
   "Tactic (Positions)" should "have PosInExpr equality based on lists" in {
-    new PosInExpr(List(1,0,4,4,1)) shouldBe new PosInExpr(List(1,0,4,4,1))
-    new PosInExpr(List(1,0,4,4,1)) should not be new PosInExpr(List(1,0,4,1))
-    new PosInExpr(List(1,0,4,4,1)) should not be new PosInExpr(List(1,0,4,1,4))
+    new PosInExpr(List(1, 0, 4, 4, 1)) shouldBe new PosInExpr(List(1, 0, 4, 4, 1))
+    new PosInExpr(List(1, 0, 4, 4, 1)) should not be new PosInExpr(List(1, 0, 4, 1))
+    new PosInExpr(List(1, 0, 4, 4, 1)) should not be new PosInExpr(List(1, 0, 4, 1, 4))
     new PosInExpr(List(0)) should not be new PosInExpr(List(0, 0, 0, 0, 0))
     new PosInExpr(List(0)) should not be HereP
   }
 
   "Core (Expressions)" should "yield equality" in {
-    DifferentialFormula(Equal(Variable("x", None, Real), Number(0))) should be (DifferentialFormula(Equal(Variable("x", None, Real), Number(0))))
-    Power(Variable("x", None, Real), Number(2)) should be (Power(Variable("x", None, Real), Number(2)))
+    DifferentialFormula(Equal(Variable("x", None, Real), Number(0))) should
+      be(DifferentialFormula(Equal(Variable("x", None, Real), Number(0))))
+    Power(Variable("x", None, Real), Number(2)) should be(Power(Variable("x", None, Real), Number(2)))
   }
 
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]): Unit = {
-    println("\tCheck " + rule) //@TODO turn into "should" output?
+    println("\tCheck " + rule) // @TODO turn into "should" output?
     val pn = ProvableSig.startPlainProof(in)
     val resList = pn.apply(rule, 0).subgoals
     println("\tResult\t" + resList)
     println("\tExpected\t" + out)
     if (resList != out) println("Unexpected")
-    resList.length should be (out.length)
+    resList.length should be(out.length)
     val res = resList
-    for((s,t) <- res zip out) {
-      s.ante.length should be (t.ante.length)
-      for((f,g) <- s.ante zip t.ante)
-        f should be (g)
-      
-      s.succ.length should be (t.succ.length)
-      for((f,g) <- s.succ zip t.succ)
-        f should be (g)
+    for ((s, t) <- res zip out) {
+      s.ante.length should be(t.ante.length)
+      for ((f, g) <- s.ante zip t.ante) f should be(g)
+
+      s.succ.length should be(t.succ.length)
+      for ((f, g) <- s.succ zip t.succ) f should be(g)
     }
   }
 
@@ -116,7 +121,7 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     testRule(AndLeft(aPos), seq(And(p, q), Nil), seq(p ++ q, Nil))
     testRule(OrRight(sPos), seq(Nil, Or(p, q)), seq(Nil, p ++ q))
     testRule(OrLeft(aPos), seq(Or(p, q), Nil), seq(p, Nil) ++ seq(q, Nil))
-    //@TODO The following two tests fail since Equivs have been currently changed to a single formula
+    // @TODO The following two tests fail since Equivs have been currently changed to a single formula
     testRule(EquivRight(sPos), seq(Nil, Equiv(p, q)), seq(p, q) ++ seq(q, p))
     testRule(EquivLeft(aPos), seq(Equiv(p, q), Nil), seq(And(p, q), Nil) ++ seq(And(Not(p), Not(q)), Nil))
   }
@@ -124,69 +129,69 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   it should "complain about being applied to formulas of the wrong shape" in {
     var sPos = SeqPos(1).asInstanceOf[SuccPos]
     var aPos = SeqPos(-1).asInstanceOf[AntePos]
-    val s = Sequent(IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
+    val s = Sequent(IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p, Not(p))), q), Not(q), p))
 
-    an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(NotRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(NotLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(OrLeft(aPos), s)
     // an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
     // an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
-    an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
-    an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
+    an[MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(EquivRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+    an[InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an[InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
 
     sPos = SeqPos(2).asInstanceOf[SuccPos]
     aPos = SeqPos(-2).asInstanceOf[AntePos]
-    //an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
-    //an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
-    an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
-    an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
+    // an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(NotLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(OrLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(AndRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(AndLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
+    // an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(EquivRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+    an[InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an[InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
 
     sPos = SeqPos(3).asInstanceOf[SuccPos]
     aPos = SeqPos(-3).asInstanceOf[AntePos]
-    an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
-    an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
-    an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
-    an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
-    an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
+    an[MatchError] should be thrownBy testRule(NotRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(NotLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(OrLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(AndRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(AndLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an[MatchError] should be thrownBy testRule(EquivRight(sPos), s)
+    an[MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+    an[InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an[InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
   }
 
   it should "complain about being applied to non-existent positions" in {
-    val s = Sequent(IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
+    val s = Sequent(IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p, Not(p))), q), Not(q), p))
 
     val sPos = SeqPos(5).asInstanceOf[SuccPos]
     val aPos = SeqPos(-5).asInstanceOf[AntePos]
-    an [IndexOutOfBoundsException] should be thrownBy testRule(NotRight(sPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(NotLeft(aPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(OrRight(sPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(OrLeft(aPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(AndRight(sPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(AndLeft(aPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(ImplyRight(sPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(ImplyLeft(aPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(EquivRight(sPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(EquivLeft(aPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(CloseTrue(sPos), s)
-    an [IndexOutOfBoundsException] should be thrownBy testRule(CloseFalse(aPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(NotRight(sPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(NotLeft(aPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(OrRight(sPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(OrLeft(aPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(AndRight(sPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(AndLeft(aPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(ImplyRight(sPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(EquivRight(sPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(EquivLeft(aPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an[IndexOutOfBoundsException] should be thrownBy testRule(CloseFalse(aPos), s)
   }
 
   "ensures" should "either throw an exception or not evaluate condition and message" in {
@@ -225,8 +230,7 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
 
       fun4() shouldBe 0
       cnd4 shouldBe false
-    }
-    catch {
+    } catch {
       // assertions are enabled (java -ea)
       case e: AssertionError =>
         println("Assertions Enabled")

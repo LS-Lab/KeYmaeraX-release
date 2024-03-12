@@ -1,7 +1,7 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -15,17 +15,18 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, PrivateMethodTester
 import scala.collection.immutable.Map
 
 /**
- * Tests for ContEvolve -> NFContEvolve refactoring.
- * Created by nfulton on 1/2/15.
- * @author Nathan Fulton
- * @author Stefan Mitsch
+ * Tests for ContEvolve -> NFContEvolve refactoring. Created by nfulton on 1/2/15.
+ * @author
+ *   Nathan Fulton
+ * @author
+ *   Stefan Mitsch
  */
 class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
     ))
   }
 
@@ -40,37 +41,36 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
 
   it should "not confuse a portion of the diffeq with the evolution domain constraint" in {
     "{x'=y, y'=x & true}".asProgram shouldBe
-      ODESystem(DifferentialProduct(
-        AtomicODE(DifferentialSymbol(x), y),
-        AtomicODE(DifferentialSymbol(y), x)), True)
+      ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), y), AtomicODE(DifferentialSymbol(y), x)), True)
   }
 
   it should "parse into normal form when parsing a formula" in {
     "[{x'=1 & x>0}]z>=0".asFormula match {
       case Box(ODESystem(ev, _), _) => ev match {
-        case _: AtomicODE => /* ok */
-        case _ => fail()
-      }
+          case _: AtomicODE => /* ok */
+          case _ => fail()
+        }
       case _ => fail("failed to parse to correct thing")
     }
   }
 
   it should "not confuse a portion of the diffeq system with the evolution domain constraint" in {
-    "{x'=x, y'=y}".asProgram shouldBe ODESystem(DifferentialProduct(
-          AtomicODE(DifferentialSymbol(x), x),
-          AtomicODE(DifferentialSymbol(y), y)), True)
+    "{x'=x, y'=y}".asProgram shouldBe
+      ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), x), AtomicODE(DifferentialSymbol(y), y)), True)
   }
 
   it should "parse an evolution domain constraint given last into the correct position" in {
-    "{x'=y, y'=x & y>0}".asProgram shouldBe ODESystem(DifferentialProduct(
-          AtomicODE(DifferentialSymbol(x), y),
-          AtomicODE(DifferentialSymbol(y), x)), Greater(y, zero))
+    "{x'=y, y'=x & y>0}".asProgram shouldBe ODESystem(
+      DifferentialProduct(AtomicODE(DifferentialSymbol(x), y), AtomicODE(DifferentialSymbol(y), x)),
+      Greater(y, zero),
+    )
   }
 
   it should "parse a conjunction of evolution domain constraints given last into the correct position" in {
-    "{x'=y, y'=x & y>0 & x<0}".asProgram shouldBe ODESystem(DifferentialProduct(
-          AtomicODE(DifferentialSymbol(x), y),
-          AtomicODE(DifferentialSymbol(y), x)), And(Greater(y, zero), Less(x, zero)))
+    "{x'=y, y'=x & y>0 & x<0}".asProgram shouldBe ODESystem(
+      DifferentialProduct(AtomicODE(DifferentialSymbol(x), y), AtomicODE(DifferentialSymbol(y), x)),
+      And(Greater(y, zero), Less(x, zero)),
+    )
   }
 
   it should "parse a single equation with a constraint as an evolution, not an AND-formula." in {
@@ -79,20 +79,25 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
 
   // TODO not yet supported by parser
   ignore should "collect scattered evolution domain constraints into one evolution domain constraint" in {
-    "{x'=y & x>5, y'=x & y>0 & x<0}".asProgram shouldBe
-      ODESystem(DifferentialProduct(
-        AtomicODE(DifferentialSymbol(x), y),
-        AtomicODE(DifferentialSymbol(y), x)), And(Greater(x, Number(5)), And(Greater(y, zero), Less(x, zero))))
+    "{x'=y & x>5, y'=x & y>0 & x<0}".asProgram shouldBe ODESystem(
+      DifferentialProduct(AtomicODE(DifferentialSymbol(x), y), AtomicODE(DifferentialSymbol(y), x)),
+      And(Greater(x, Number(5)), And(Greater(y, zero), Less(x, zero))),
+    )
   }
 
   // TODO not yet supported by parser
   ignore should "parse and associate multiple ODEs correctly" in {
     "x'=y & x>5, z'=5, y'=x & y>0 & x<0;".asProgram
-      ODESystem(DifferentialProduct(
+    ODESystem(
+      DifferentialProduct(
         AtomicODE(DifferentialSymbol(x), y),
         DifferentialProduct(
           AtomicODE(DifferentialSymbol(Variable("z", None, Real)), Number(5)),
-          AtomicODE(DifferentialSymbol(y), x))), And(Greater(x, Number(5)), And(Greater(y, zero), Less(x, zero))))
+          AtomicODE(DifferentialSymbol(y), x),
+        ),
+      ),
+      And(Greater(x, Number(5)), And(Greater(y, zero), Less(x, zero))),
+    )
   }
 
   it should "parse DifferentialProgramConstants" in {
@@ -110,7 +115,7 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
 //    }
   }
 
-  ignore should "not parse ProgramConstants in a system with NFContEvolve" in { //Not sure, but I think this is OK now.
+  ignore should "not parse ProgramConstants in a system with NFContEvolve" in { // Not sure, but I think this is OK now.
 //    the [Exception] thrownBy new KeYmaeraParser().ProofFileParser.
 //      runParser("Variables. P a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.") should have message
 //      "Failed to parse Lemmas & Axioms at (line: 1, column:60): `'' expected but `;' found"

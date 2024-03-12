@@ -19,11 +19,9 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
     ToolProvider.tool(toolId) match {
       case Some(t: QETool) =>
         val simpleQeTask = new FutureTask[Either[Formula, Throwable]](() =>
-          try {
-            Left(t.quantifierElimination("1+2=3".asFormula))
-          } catch {
-            case e: Throwable => Right(e)
-          })
+          try { Left(t.quantifierElimination("1+2=3".asFormula)) }
+          catch { case e: Throwable => Right(e) }
+        )
         new Thread(simpleQeTask).start()
         try {
           val result = simpleQeTask.get(1, TimeUnit.SECONDS)
@@ -36,8 +34,11 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
           case _: TimeoutException =>
             new ErrorResponse("Testing connection failed: tool is not responding. Please restart KeYmaera X.") :: Nil
         }
-      case Some(t: Tool) => new ErrorResponse(s"Testing connection failed: do not know how to test '${t.getClass}' tool") :: Nil
-      case _ => new ErrorResponse(s"Testing connection failed: unknown tool '$toolId'. Please check the tool configuration.") :: Nil
+      case Some(t: Tool) =>
+        new ErrorResponse(s"Testing connection failed: do not know how to test '${t.getClass}' tool") :: Nil
+      case _ =>
+        new ErrorResponse(s"Testing connection failed: unknown tool '$toolId'. Please check the tool configuration.") ::
+          Nil
     }
 
   }

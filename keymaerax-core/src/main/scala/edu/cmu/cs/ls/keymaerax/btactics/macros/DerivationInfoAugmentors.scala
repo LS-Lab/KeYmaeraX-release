@@ -15,10 +15,9 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import scala.language.implicitConversions
 
 object DerivationInfoAugmentors {
+
   /** Locally embed single string names into SimpleDisplayInfo. */
-  implicit def displayInfo(name: String): SimpleDisplayInfo = {
-    SimpleDisplayInfo(name, name)
-  }
+  implicit def displayInfo(name: String): SimpleDisplayInfo = { SimpleDisplayInfo(name, name) }
 
   /** Locally embed pair string names into SimpleDisplayInfo distinguishing UI name from plain ASCII name. */
   implicit def displayInfo(pair: (String, String)): SimpleDisplayInfo = SimpleDisplayInfo(pair._1, pair._2)
@@ -34,19 +33,20 @@ object DerivationInfoAugmentors {
   }
 
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
-    def by(name: String, t: (Position, Sequent) => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = {
-          require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
-          t(pos, sequent)
+    def by(name: String, t: (Position, Sequent) => BelleExpr): DependentPositionTactic =
+      new DependentPositionTactic(name) {
+        override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(this.name) {
+          override def computeExpr(sequent: Sequent): BelleExpr = {
+            require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+            t(pos, sequent)
+          }
         }
       }
-    }
 
     def belleExpr: Any = di match {
       // useAt will just ask a ProvableInfo for its provable
-      case pi: ProvableInfo =>  HilbertCalculus.useAt(pi)
-      case ti: TacticInfo => ti.theExpr (())
+      case pi: ProvableInfo => HilbertCalculus.useAt(pi)
+      case ti: TacticInfo => ti.theExpr(())
     }
 
   }
@@ -58,9 +58,19 @@ object DerivationInfoAugmentors {
         case si: StorableInfo => si.storedName
         case _ => throw new IllegalArgumentException(s"Axiom or rule $name is not storable")
       }
-      require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.\n" +
-        "Follow configuration instructions after restarting KeYmaera X with\n  java -jar keymaerax.jar")
-      derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
+      require(
+        derivedAxiomDB.contains(lemmaName),
+        "Lemma " + lemmaName + " should already exist in the derived axioms database.\n" +
+          "Follow configuration instructions after restarting KeYmaera X with\n  java -jar keymaerax.jar",
+      )
+      derivedAxiomDB
+        .get(lemmaName)
+        .getOrElse(
+          throw new IllegalArgumentException(
+            "Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already"
+          )
+        )
+        .fact
     }
 
     // Compute provable corresponding to ProvableInfo if necessary, and cache the provable.
@@ -73,8 +83,8 @@ object DerivationInfoAugmentors {
             case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
             case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName)
             case dari: DerivedRuleInfo => derivedAxiomOrRule(dari.canonicalName)
-              //TODO: maybe replace DiffAxiomInfo stuff?
-              /*case diffai: DifferentialAxiomInfo => ElidingProvable(Provable.implicitFuncAxiom(
+            // TODO: maybe replace DiffAxiomInfo stuff?
+            /*case diffai: DifferentialAxiomInfo => ElidingProvable(Provable.implicitFuncAxiom(
               diffai.funcOf.asInstanceOf[FuncOf].func,
               diffai.diff.asInstanceOf[Term]))*/
           }
@@ -90,8 +100,7 @@ object DerivationInfoAugmentors {
         case None =>
           val formula = pi match {
             case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
-            case _: CoreAxiomInfo =>
-              ProvableSig.axiom.get(pi.canonicalName) match {
+            case _: CoreAxiomInfo => ProvableSig.axiom.get(pi.canonicalName) match {
                 case Some(fml) => fml
                 case None => throw AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
               }

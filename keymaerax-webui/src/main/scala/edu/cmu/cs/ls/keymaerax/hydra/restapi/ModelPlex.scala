@@ -18,30 +18,67 @@ import scala.language.postfixOps
 
 object ModelPlex {
 
-  val modelplex: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment / Segment / Segment) { (modelId, artifact, monitorKind, monitorShape, conditionKind) => pathEnd {
-    get {
-      parameters(Symbol("vars").as[String] ?) { vars => {
-        val theVars: List[String] = vars match {
-          case Some(v) => v.parseJson match {
-            case a: JsArray => a.elements.map({ case JsString(s) => s}).toList
+  val modelplex: SessionToken => Route = (t: SessionToken) =>
+    userPrefix { userId =>
+      pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment / Segment / Segment) {
+        (modelId, artifact, monitorKind, monitorShape, conditionKind) =>
+          pathEnd {
+            get {
+              parameters(Symbol("vars").as[String] ?) { vars =>
+                {
+                  val theVars: List[String] = vars match {
+                    case Some(v) =>
+                      v.parseJson match { case a: JsArray => a.elements.map({ case JsString(s) => s }).toList }
+                    case None => List.empty
+                  }
+                  val r = new ModelPlexRequest(
+                    database,
+                    userId,
+                    modelId,
+                    artifact,
+                    monitorKind,
+                    monitorShape,
+                    conditionKind,
+                    theVars,
+                  )
+                  completeRequest(r, t)
+                }
+              }
+            }
           }
-          case None => List.empty
-        }
-        val r = new ModelPlexRequest(database, userId, modelId, artifact, monitorKind, monitorShape, conditionKind, theVars)
-        completeRequest(r, t)
-      }}}
-  }}}
+      }
+    }
 
-  val testSynthesis: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "testcase" / "generate" / Segment / Segment / Segment ) { (modelId, monitorKind, amount, timeout) => pathEnd {
-    get {
-      parameters(Symbol("kinds").as[String] ?) { kinds => {
-        val theKinds: Map[String,Boolean] = kinds match {
-          case Some(v) => v.parseJson.asJsObject.fields.map({case (k, JsBoolean(v)) => k -> v})
-        }
-        val to = timeout match { case "0" => None case s => Some(Integer.parseInt(s)) }
-        val r = new TestSynthesisRequest(database, userId, modelId, monitorKind, theKinds, Integer.parseInt(amount), to)
-        completeRequest(r, t)
-      }}}
-  }}}
+  val testSynthesis: SessionToken => Route = (t: SessionToken) =>
+    userPrefix { userId =>
+      pathPrefix("model" / Segment / "testcase" / "generate" / Segment / Segment / Segment) {
+        (modelId, monitorKind, amount, timeout) =>
+          pathEnd {
+            get {
+              parameters(Symbol("kinds").as[String] ?) { kinds =>
+                {
+                  val theKinds: Map[String, Boolean] = kinds match {
+                    case Some(v) => v.parseJson.asJsObject.fields.map({ case (k, JsBoolean(v)) => k -> v })
+                  }
+                  val to = timeout match {
+                    case "0" => None
+                    case s => Some(Integer.parseInt(s))
+                  }
+                  val r = new TestSynthesisRequest(
+                    database,
+                    userId,
+                    modelId,
+                    monitorKind,
+                    theKinds,
+                    Integer.parseInt(amount),
+                    to,
+                  )
+                  completeRequest(r, t)
+                }
+              }
+            }
+          }
+      }
+    }
 
 }

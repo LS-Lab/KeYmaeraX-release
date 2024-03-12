@@ -19,7 +19,8 @@ import scala.collection.immutable.Map
 
 /**
  * Random Provable constructions
- * @author Andre Platzer
+ * @author
+ *   Andre Platzer
  */
 class RandomProvableTest extends FlatSpec with Matchers {
   Configuration.setConfiguration(FileConfiguration)
@@ -28,24 +29,25 @@ class RandomProvableTest extends FlatSpec with Matchers {
   val randomComplexity = 12
   val rand = new RandomFormula()
 
-  "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs(SummaryTest) in {test(10,4)}
-  it should "be proved and prolongued trivially (usual)" taggedAs(UsualTest) in {test(100,8)}
-  it should "be proved and prolongued trivially (slow)" taggedAs(SlowTest) in {test(randomTrials,randomComplexity)}
+  "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs (SummaryTest) in { test(10, 4) }
+  it should "be proved and prolongued trivially (usual)" taggedAs (UsualTest) in { test(100, 8) }
+  it should "be proved and prolongued trivially (slow)" taggedAs (SlowTest) in { test(randomTrials, randomComplexity) }
 
-  private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
+  private def test(randomTrials: Int = randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
       val e = rand.nextProvable(randomComplexity)
       e shouldBe Symbol("proved")
       // prolong with conclusion identity is a no-op
       e(ProvableSig.startPlainProof(e.conclusion)) shouldBe e
       // use a fact that isn't proved and then continue above with a sub is a no-op
-      ProvableSig.startPlainProof(e.conclusion).sub(0)(ProvableSig.startPlainProof(e.conclusion)) shouldBe ProvableSig.startPlainProof(e.conclusion)
+      ProvableSig.startPlainProof(e.conclusion).sub(0)(ProvableSig.startPlainProof(e.conclusion)) shouldBe
+        ProvableSig.startPlainProof(e.conclusion)
 //      val sub = rand.rand.nextInt(e.subgoals.length)
 //      e(e.sub(sub), sub) shouldBe e
     }
 
 //  "Dual-free" ignore should "work on random formulas if no dual operators occur" in {
-    //@todo use boxTrue instead of DualFree
+  // @todo use boxTrue instead of DualFree
 //    val dual = try {
 //      Dual(Test(False))
 //      false

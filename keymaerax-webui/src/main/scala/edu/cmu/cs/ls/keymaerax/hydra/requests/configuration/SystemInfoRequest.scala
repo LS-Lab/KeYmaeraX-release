@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.SystemInfoResponse
@@ -17,6 +18,7 @@ class SystemInfoRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Rea
       System.getProperty("java.home"),
       System.getProperty("java.vendor"),
       System.getProperty("java.version"),
-      System.getProperty("sun.arch.data.model")) :: Nil
+      System.getProperty("sun.arch.data.model"),
+    ) :: Nil
   }
 }

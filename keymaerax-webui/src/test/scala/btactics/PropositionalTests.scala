@@ -20,21 +20,25 @@ import org.scalatest.LoneElement._
 
 /**
  * Tests Propositional Calculus.
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics]]
+ * @see
+ *   [[edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics]]
  */
-@SummaryTest
-@UsualTest
+@SummaryTest @UsualTest
 class PropositionalTests extends TacticTestBase {
 
   "Modus ponens" should "should work in a simple example" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "x>0 -> y>0".asFormula), IndexedSeq()),
-      modusPonens(AntePos(0), AntePos(1)))
+    val result = proveBy(
+      Sequent(IndexedSeq("x>0".asFormula, "x>0 -> y>0".asFormula), IndexedSeq()),
+      modusPonens(AntePos(0), AntePos(1)),
+    )
     result.subgoals.loneElement shouldBe "x>0, y>0 ==> ".asSequent
   }
 
   it should "should work when assumption is behind conjunction in antecedent" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("x>0 -> y>0".asFormula, "x>0".asFormula), IndexedSeq()),
-      modusPonens(AntePos(1), AntePos(0)))
+    val result = proveBy(
+      Sequent(IndexedSeq("x>0 -> y>0".asFormula, "x>0".asFormula), IndexedSeq()),
+      modusPonens(AntePos(1), AntePos(0)),
+    )
     result.subgoals.loneElement shouldBe "y>0, x>0 ==> ".asSequent
   }
 
@@ -49,29 +53,37 @@ class PropositionalTests extends TacticTestBase {
   }
 
   "equivRewriting" should "rewrite simple equivalence" in withTactics {
-    proveBy("p(x) <-> q(x) ==> p(x)".asSequent, equivRewriting(-1, 1)).subgoals.loneElement shouldBe "p(x) <-> q(x) ==> q(x)".asSequent
-    proveBy("p(x) <-> q(x), p(x) ==> ".asSequent, equivRewriting(-1, -2)).subgoals.loneElement shouldBe "p(x) <-> q(x), q(x) ==> ".asSequent
+    proveBy("p(x) <-> q(x) ==> p(x)".asSequent, equivRewriting(-1, 1)).subgoals.loneElement shouldBe
+      "p(x) <-> q(x) ==> q(x)".asSequent
+    proveBy("p(x) <-> q(x), p(x) ==> ".asSequent, equivRewriting(-1, -2)).subgoals.loneElement shouldBe
+      "p(x) <-> q(x), q(x) ==> ".asSequent
   }
 
   it should "rewrite with renaming" in withTactics {
-    proveBy("\\forall x (p(x) <-> q(x)) ==> p(y)".asSequent, equivRewriting(-1, 1)).subgoals.loneElement shouldBe "\\forall x (p(x) <-> q(x)) ==> q(y)".asSequent
-    proveBy("\\forall x (p(x) <-> q(x)), p(y) ==> ".asSequent, equivRewriting(-1, -2)).subgoals.loneElement shouldBe "\\forall x (p(x) <-> q(x)), q(y) ==> ".asSequent
+    proveBy("\\forall x (p(x) <-> q(x)) ==> p(y)".asSequent, equivRewriting(-1, 1)).subgoals.loneElement shouldBe
+      "\\forall x (p(x) <-> q(x)) ==> q(y)".asSequent
+    proveBy("\\forall x (p(x) <-> q(x)), p(y) ==> ".asSequent, equivRewriting(-1, -2)).subgoals.loneElement shouldBe
+      "\\forall x (p(x) <-> q(x)), q(y) ==> ".asSequent
   }
 
   it should "rewrite in context" in withTactics {
-    proveBy("Q()<->R() ==> !Q()".asSequent, equivRewriting(AntePosition(1), SuccPosition(1, List(0)))).subgoals.
-      loneElement shouldBe "Q()<->R() ==> !R()".asSequent
+    proveBy("Q()<->R() ==> !Q()".asSequent, equivRewriting(AntePosition(1), SuccPosition(1, List(0))))
+      .subgoals
+      .loneElement shouldBe "Q()<->R() ==> !R()".asSequent
   }
 
   it should "rewrite in equivalence" in withTactics {
-    proveBy("Q()<->R() ==> Q()<->R()".asSequent, equivRewriting(AntePosition(1), SuccPosition(1, List(0)))).subgoals.
-      loneElement shouldBe "Q()<->R() ==> R()<->R()".asSequent
+    proveBy("Q()<->R() ==> Q()<->R()".asSequent, equivRewriting(AntePosition(1), SuccPosition(1, List(0))))
+      .subgoals
+      .loneElement shouldBe "Q()<->R() ==> R()<->R()".asSequent
   }
 
   "toSingleFormula" should "collapse a sequent into a single formula" in withTactics {
-    proveBy("a=1, b=2, c=3 ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> a=1&b=2&c=3 -> x=1|y=2".asSequent
+    proveBy("a=1, b=2, c=3 ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe
+      "==> a=1&b=2&c=3 -> x=1|y=2".asSequent
     proveBy(" ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> true -> x=1|y=2".asSequent
-    proveBy("a=1, b=2, c=3 ==> ".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> a=1&b=2&c=3 -> false".asSequent
+    proveBy("a=1, b=2, c=3 ==> ".asSequent, toSingleFormula).subgoals.loneElement shouldBe
+      "==> a=1&b=2&c=3 -> false".asSequent
   }
 
   "implyRi" should "introduce implication from antecedent and succedent" in withTactics {
@@ -80,8 +92,10 @@ class PropositionalTests extends TacticTestBase {
   }
 
   it should "work as two-position tactic" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("a=2".asFormula, "x>0".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula)),
-      implyRi()(AntePos(1), SuccPos(0)))
+    val result = proveBy(
+      Sequent(IndexedSeq("a=2".asFormula, "x>0".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula)),
+      implyRi()(AntePos(1), SuccPos(0)),
+    )
     result.subgoals.loneElement shouldBe "a=2 ==> x>0 -> y>0, b=3".asSequent
   }
 
@@ -91,8 +105,10 @@ class PropositionalTests extends TacticTestBase {
   }
 
   it should "work as two-position tactic" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("a=2".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula)),
-      orRi(keepLeft=false)(SuccPos(1), SuccPos(0)))
+    val result = proveBy(
+      Sequent(IndexedSeq("a=2".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula)),
+      orRi(keepLeft = false)(SuccPos(1), SuccPos(0)),
+    )
     result.subgoals.loneElement shouldBe "a=2 ==> x>0, b=3 | y>0".asSequent
   }
 
@@ -102,13 +118,16 @@ class PropositionalTests extends TacticTestBase {
   }
 
   it should "work as two-position tactic" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula), IndexedSeq("a=2".asFormula)),
-      andLi(keepLeft=false)(AntePosition.base0(1), AntePosition.base0(0)))
+    val result = proveBy(
+      Sequent(IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula), IndexedSeq("a=2".asFormula)),
+      andLi(keepLeft = false)(AntePosition.base0(1), AntePosition.base0(0)),
+    )
     result.subgoals.loneElement shouldBe "x>0, b=3 & y>0 ==> a=2".asSequent
   }
 
   it should "keep left conjunct if asked" in withTactics {
-    val result = proveBy("y>0, b=3, x>0 ==> a=2".asSequent, andLi(keepLeft=true)(AntePosition.base0(1), AntePosition.base0(0)))
+    val result =
+      proveBy("y>0, b=3, x>0 ==> a=2".asSequent, andLi(keepLeft = true)(AntePosition.base0(1), AntePosition.base0(0)))
     result.subgoals.loneElement shouldBe "b=3, x>0, b=3 & y>0 ==> a=2".asSequent
   }
 
@@ -192,20 +211,19 @@ class PropositionalTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("!x>1".asFormula), IndexedSeq()), t)
     check match {
       case Some(c) => c(result)
-      case None =>
-        result.subgoals.loneElement shouldBe "==> x>1".asSequent
+      case None => result.subgoals.loneElement shouldBe "==> x>1".asSequent
     }
   }
 
   "Alpha rule" should "handle implication in succedent" in withTactics { succImplication(alphaRule) }
-  it should "handle disjunction in succedent" in withTactics {succDisjunction(alphaRule) }
-  it should "handle negation in succedent" in withTactics {succNegation(alphaRule) }
-  it should "handle conjunction in antecedent" in withTactics {anteConjunction(alphaRule) }
-  it should "handle negation in antecedent" in withTactics {anteNegation(alphaRule) }
+  it should "handle disjunction in succedent" in withTactics { succDisjunction(alphaRule) }
+  it should "handle negation in succedent" in withTactics { succNegation(alphaRule) }
+  it should "handle conjunction in antecedent" in withTactics { anteConjunction(alphaRule) }
+  it should "handle negation in antecedent" in withTactics { anteNegation(alphaRule) }
 
-  "Beta rule" should "handle implication in antecedent" in withTactics {anteImplication(betaRule) }
-  it should "handle disjunction in antecedent" in withTactics {anteDisjunction(betaRule) }
-  it should "handle conjunction in succedent" in withTactics {succConjunction(betaRule) }
+  "Beta rule" should "handle implication in antecedent" in withTactics { anteImplication(betaRule) }
+  it should "handle disjunction in antecedent" in withTactics { anteDisjunction(betaRule) }
+  it should "handle conjunction in succedent" in withTactics { succConjunction(betaRule) }
   it should "handle equivalence in antecedent" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), betaRule)
     result.subgoals should have size 2
@@ -229,7 +247,9 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals(1) shouldBe "==> x>1, y>1".asSequent
   }
   it should "handle equivalence in succedent" in withTactics { succEquivalence(prop) }
-  it should "handle nested branching" in withTactics { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, prop) shouldBe Symbol("proved") }
+  it should "handle nested branching" in withTactics {
+    proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, prop) shouldBe Symbol("proved")
+  }
   it should "handle more nested branching" in withTactics {
     val result = proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, prop)
     result.subgoals.loneElement shouldBe "L_()=LL_(), A_() ==> L_()+R_()=LL_()+R_()".asSequent
@@ -250,122 +270,181 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals(1) shouldBe "==> y>1, x>1".asSequent
   }
   it should "handle equivalence in succedent" in withTactics { succEquivalence(PropositionalTactics.prop) }
-  it should "handle nested branching" in withTactics { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, PropositionalTactics.prop) shouldBe Symbol("proved") }
+  it should "handle nested branching" in withTactics {
+    proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, PropositionalTactics.prop) shouldBe Symbol("proved")
+  }
   it should "handle more nested branching" in withTactics {
-    val result = proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, PropositionalTactics.prop)
+    val result =
+      proveBy("(A_() -> (L_() = LL_())) -> (A_() -> L_()+R_() = LL_()+R_())".asFormula, PropositionalTactics.prop)
     result.subgoals.loneElement shouldBe "L_()=LL_(), A_() ==> L_()+R_()=LL_()+R_()".asSequent
   }
 
   "Normalize" should "handle implication in succedent" in withTactics { succImplication(normalize) }
   it should "handle disjunction in succedent" in withTactics { succDisjunction(normalize) }
-  it should "not FOL negate in succedent" in withTactics { succNegation(normalize, Some(_.subgoals.loneElement shouldBe "==> !y>1".asSequent)) }
+  it should "not FOL negate in succedent" in withTactics {
+    succNegation(normalize, Some(_.subgoals.loneElement shouldBe "==> !y>1".asSequent))
+  }
   it should "handle conjunction in antecedent" in withTactics { anteConjunction(normalize) }
-  it should "not FOL negate in antecedent" in withTactics { anteNegation(normalize, Some(_.subgoals.loneElement shouldBe "!x>1 ==> ".asSequent)) }
-  it should "not split FOL implication in antecedent" in withQE { _ => anteImplication(normalize, Some(_.subgoals.loneElement shouldBe "x>1 -> y>1 ==> ".asSequent)) }
-  it should "not split FOL disjunction in antecedent" in withTactics { anteDisjunction(normalize, Some(_.subgoals.loneElement shouldBe "x>1 | y>1 ==> ".asSequent)) }
-  it should "not split FOL conjunction in succedent" in withTactics { succConjunction(normalize, Some(_.subgoals.loneElement shouldBe "==> x>1 & y>1".asSequent)) }
+  it should "not FOL negate in antecedent" in withTactics {
+    anteNegation(normalize, Some(_.subgoals.loneElement shouldBe "!x>1 ==> ".asSequent))
+  }
+  it should "not split FOL implication in antecedent" in withQE { _ =>
+    anteImplication(normalize, Some(_.subgoals.loneElement shouldBe "x>1 -> y>1 ==> ".asSequent))
+  }
+  it should "not split FOL disjunction in antecedent" in withTactics {
+    anteDisjunction(normalize, Some(_.subgoals.loneElement shouldBe "x>1 | y>1 ==> ".asSequent))
+  }
+  it should "not split FOL conjunction in succedent" in withTactics {
+    succConjunction(normalize, Some(_.subgoals.loneElement shouldBe "==> x>1 & y>1".asSequent))
+  }
   it should "not split FOL equivalence in antecedent" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), normalize)
     result.subgoals.loneElement shouldBe "x>1 <-> y>1 ==> ".asSequent
   }
-  it should "not split FOL equivalence in succedent" in withTactics { succEquivalence(normalize, Some(_.subgoals.loneElement shouldBe "==> x>1 <-> y>1".asSequent)) }
+  it should "not split FOL equivalence in succedent" in withTactics {
+    succEquivalence(normalize, Some(_.subgoals.loneElement shouldBe "==> x>1 <-> y>1".asSequent))
+  }
 
   private def checkFalse(subgoals: Int)(p: ProvableSig): Unit = {
     p.subgoals should have size subgoals
     p.subgoals.foreach(_ shouldBe " ==> false".asSequent)
   }
 
-  "Auto" should "handle implication in succedent" in withMathematica { _ => succImplication(master(), Some(checkFalse(1))) }
+  "Auto" should "handle implication in succedent" in withMathematica { _ =>
+    succImplication(master(), Some(checkFalse(1)))
+  }
   it should "handle disjunction in succedent" in withMathematica { _ => succDisjunction(master(), Some(checkFalse(1))) }
   it should "handle negation in succedent" in withMathematica { _ => succNegation(master(), Some(checkFalse(1))) }
-  it should "handle conjunction in antecedent" in withMathematica { _ => anteConjunction(master(), Some(checkFalse(1))) }
+  it should "handle conjunction in antecedent" in withMathematica { _ =>
+    anteConjunction(master(), Some(checkFalse(1)))
+  }
   it should "handle negation in antecedent" in withMathematica { _ => anteNegation(master(), Some(checkFalse(1))) }
-  it should "not split FOL implication in antecedent" in withMathematica { _ => anteImplication(master(), Some(checkFalse(1))) }
-  it should "not split FOL disjunction in antecedent" in withMathematica { _ => anteDisjunction(master(), Some(checkFalse(1))) }
-  it should "not split FOL conjunction in succedent" in withMathematica { _ => succConjunction(master(), Some(checkFalse(1))) }
+  it should "not split FOL implication in antecedent" in withMathematica { _ =>
+    anteImplication(master(), Some(checkFalse(1)))
+  }
+  it should "not split FOL disjunction in antecedent" in withMathematica { _ =>
+    anteDisjunction(master(), Some(checkFalse(1)))
+  }
+  it should "not split FOL conjunction in succedent" in withMathematica { _ =>
+    succConjunction(master(), Some(checkFalse(1)))
+  }
   it should "not split FOL equivalence in antecedent" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), master())
     checkFalse(1)(result)
   }
-  it should "not split FOL equivalence in succedent" in withMathematica { _ => succEquivalence(master(), Some(checkFalse(1))) }
+  it should "not split FOL equivalence in succedent" in withMathematica { _ =>
+    succEquivalence(master(), Some(checkFalse(1)))
+  }
 
   "Propositional CMon" should "unpeel single negation" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("!x>0".asFormula), IndexedSeq("!y>0".asFormula)),
-      propCMon(PosInExpr(0::Nil)))
+    val result =
+      proveBy(Sequent(IndexedSeq("!x>0".asFormula), IndexedSeq("!y>0".asFormula)), propCMon(PosInExpr(0 :: Nil)))
     result.subgoals.loneElement shouldBe "y>0 ==> x>0".asSequent
   }
 
   it should "unpeel single conjunction" in withTactics {
     {
-      val result = proveBy(Sequent(IndexedSeq("y>0 & x>0".asFormula), IndexedSeq("z>0 & x>0".asFormula)),
-        propCMon(PosInExpr(0 :: Nil)))
+      val result = proveBy(
+        Sequent(IndexedSeq("y>0 & x>0".asFormula), IndexedSeq("z>0 & x>0".asFormula)),
+        propCMon(PosInExpr(0 :: Nil)),
+      )
       result.subgoals.loneElement shouldBe "y>0 ==> z>0".asSequent
     }
     {
-      val result = proveBy(Sequent(IndexedSeq("x>0 & y>0".asFormula), IndexedSeq("x>0 & z>0".asFormula)),
-        propCMon(PosInExpr(1 :: Nil)))
+      val result = proveBy(
+        Sequent(IndexedSeq("x>0 & y>0".asFormula), IndexedSeq("x>0 & z>0".asFormula)),
+        propCMon(PosInExpr(1 :: Nil)),
+      )
       result.subgoals.loneElement shouldBe "y>0 ==> z>0".asSequent
     }
   }
 
   it should "unpeel single disjunction" in withTactics {
     {
-      val result = proveBy(Sequent(IndexedSeq("y>0 | x>0".asFormula), IndexedSeq("z>0 | x>0".asFormula)),
-        propCMon(PosInExpr(0 :: Nil)))
+      val result = proveBy(
+        Sequent(IndexedSeq("y>0 | x>0".asFormula), IndexedSeq("z>0 | x>0".asFormula)),
+        propCMon(PosInExpr(0 :: Nil)),
+      )
       result.subgoals.loneElement shouldBe "y>0 ==> z>0".asSequent
     }
     {
-      val result = proveBy(Sequent(IndexedSeq("x>0 | y>0".asFormula), IndexedSeq("x>0 | z>0".asFormula)),
-        propCMon(PosInExpr(1 :: Nil)))
+      val result = proveBy(
+        Sequent(IndexedSeq("x>0 | y>0".asFormula), IndexedSeq("x>0 | z>0".asFormula)),
+        propCMon(PosInExpr(1 :: Nil)),
+      )
       result.subgoals.loneElement shouldBe "y>0 ==> z>0".asSequent
     }
   }
 
   it should "unpeel single implication" in withTactics {
     {
-      val result = proveBy(Sequent(IndexedSeq("y>0 -> x>0".asFormula), IndexedSeq("z>0 -> x>0".asFormula)),
-        propCMon(PosInExpr(0 :: Nil)))
+      val result = proveBy(
+        Sequent(IndexedSeq("y>0 -> x>0".asFormula), IndexedSeq("z>0 -> x>0".asFormula)),
+        propCMon(PosInExpr(0 :: Nil)),
+      )
       result.subgoals.loneElement shouldBe "z>0 ==> y>0".asSequent
     }
     {
-      val result = proveBy(Sequent(IndexedSeq("x>0 -> y>0".asFormula), IndexedSeq("x>0 -> z>0".asFormula)),
-        propCMon(PosInExpr(1 :: Nil)))
+      val result = proveBy(
+        Sequent(IndexedSeq("x>0 -> y>0".asFormula), IndexedSeq("x>0 -> z>0".asFormula)),
+        propCMon(PosInExpr(1 :: Nil)),
+      )
       result.subgoals.loneElement shouldBe "y>0 ==> z>0".asSequent
     }
   }
 
   it should "unpeel single box" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("[x:=2;]x>1".asFormula), IndexedSeq("[x:=2;]x>0".asFormula)),
-      propCMon(PosInExpr(1 :: Nil)))
+    val result = proveBy(
+      Sequent(IndexedSeq("[x:=2;]x>1".asFormula), IndexedSeq("[x:=2;]x>0".asFormula)),
+      propCMon(PosInExpr(1 :: Nil)),
+    )
     result.subgoals.loneElement shouldBe "x>1 ==> x>0".asSequent
   }
 
   it should "unpeel single universal quantifier" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("\\forall x x>1".asFormula), IndexedSeq("\\forall x x>0".asFormula)),
-      propCMon(PosInExpr(0 :: Nil)))
+    val result = proveBy(
+      Sequent(IndexedSeq("\\forall x x>1".asFormula), IndexedSeq("\\forall x x>0".asFormula)),
+      propCMon(PosInExpr(0 :: Nil)),
+    )
     result.subgoals.loneElement shouldBe "x>1 ==> x>0".asSequent
   }
 
   it should "unpeel single existential quantifier" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("\\exists x x>1".asFormula), IndexedSeq("\\exists x x>0".asFormula)),
-      propCMon(PosInExpr(0 :: Nil)))
+    val result = proveBy(
+      Sequent(IndexedSeq("\\exists x x>1".asFormula), IndexedSeq("\\exists x x>0".asFormula)),
+      propCMon(PosInExpr(0 :: Nil)),
+    )
     result.subgoals.loneElement shouldBe "x>1 ==> x>0".asSequent
   }
 
   it should "unpeel complicated context" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
-      propCMon(PosInExpr(0::1::1::0::0::Nil)))
+    val result = proveBy(
+      Sequent(
+        IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula),
+        IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula),
+      ),
+      propCMon(PosInExpr(0 :: 1 :: 1 :: 0 :: 0 :: Nil)),
+    )
     result.subgoals.loneElement shouldBe "x>1 ==> x>0".asSequent
   }
 
   it should "report when trying to unpeel too far" in withTactics {
-    the [IllegalArgumentException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
-      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1.1.0.0.1.1, but got \\exists x (a=2->b>1&!\\forall x x>0)\n  ==>  \\exists x (a=2->b>1&!\\forall x x>1)\n(.0.1.1.0.0.1.1 points to non-existing position in sequent)"
+    the[IllegalArgumentException] thrownBy proveBy(
+      Sequent(
+        IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula),
+        IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula),
+      ),
+      propCMon(PosInExpr(0 :: 1 :: 1 :: 0 :: 0 :: 1 :: 1 :: Nil)),
+    ) should have message
+      "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1.1.0.0.1.1, but got \\exists x (a=2->b>1&!\\forall x x>0)\n  ==>  \\exists x (a=2->b>1&!\\forall x x>1)\n(.0.1.1.0.0.1.1 points to non-existing position in sequent)"
   }
 
   it should "report when contexts don't match" in withTactics {
-    the [IllegalArgumentException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=3 -> z>=3)".asFormula), IndexedSeq("\\exists x (a=2 -> z>=1)".asFormula)),
-      propCMon(PosInExpr(0::1::Nil))) should have message "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1, but got \\exists x (a=3->z>=3)\n  ==>  \\exists x (a=2->z>=1)\n\\exists x (a=3->⎵) != \\exists x (a=2->⎵)"
+    the[IllegalArgumentException] thrownBy proveBy(
+      Sequent(IndexedSeq("\\exists x (a=3 -> z>=3)".asFormula), IndexedSeq("\\exists x (a=2 -> z>=1)".asFormula)),
+      propCMon(PosInExpr(0 :: 1 :: Nil)),
+    ) should have message
+      "requirement failed: Propositional CMon requires single antecedent and single succedent formula with matching context to .0.1, but got \\exists x (a=3->z>=3)\n  ==>  \\exists x (a=2->z>=1)\n\\exists x (a=3->⎵) != \\exists x (a=2->⎵)"
   }
 
   "Negation normal" should "produce a proof" in withTactics {
@@ -483,7 +562,9 @@ class PropositionalTests extends TacticTestBase {
   it should "produce a proof (5)" in withTactics {
     val fml = "(x=0 & y=1 | x=1 & !y=3) <-> (!z<4 & a+b!=5)".asFormula
     val (dnf, proof) = PropositionalTactics.disjunctiveNormalForm(fml)
-    dnf shouldBe "x=0&y=1&z>=4&a+b!=5|x=1&y!=3&z>=4&a+b!=5|x!=0&x!=1&z < 4|x!=0&x!=1&a+b=5|x!=0&y=3&z < 4|x!=0&y=3&a+b=5|y!=1&x!=1&z < 4|y!=1&x!=1&a+b=5|y!=1&y=3&z < 4|y!=1&y=3&a+b=5".asFormula
+    dnf shouldBe
+      "x=0&y=1&z>=4&a+b!=5|x=1&y!=3&z>=4&a+b!=5|x!=0&x!=1&z < 4|x!=0&x!=1&a+b=5|x!=0&y=3&z < 4|x!=0&y=3&a+b=5|y!=1&x!=1&z < 4|y!=1&x!=1&a+b=5|y!=1&y=3&z < 4|y!=1&y=3&a+b=5"
+        .asFormula
     proof shouldBe Symbol("proved")
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Equiv(fml, dnf)))
   }

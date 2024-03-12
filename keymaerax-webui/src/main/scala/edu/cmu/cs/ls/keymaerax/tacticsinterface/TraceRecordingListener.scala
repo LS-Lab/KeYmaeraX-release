@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tacticsinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -11,23 +12,24 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
 import scala.collection.mutable.ListBuffer
 
-/**
-  * Created by bbohrer on 11/20/15.
-  */
+/** Created by bbohrer on 11/20/15. */
 
 /**
-  * When registered to a BelleInterpreter, listens to all inferences and records them in the database `db`.
-  * @param ruleName A display name merely for UI purposes
-  */
-class TraceRecordingListener(db: DBAbstraction,
-                             proofId: Int,
-                             initialSibling: Option[Int],
-                             globalProvable: ProvableSig,
-                             branch: Int,
-                             recursive: Boolean,
-                             ruleName: String,
-                             constructGlobalProvable: Boolean) extends IOListener {
-  class TraceNode (isFirstNode: Boolean) {
+ * When registered to a BelleInterpreter, listens to all inferences and records them in the database `db`.
+ * @param ruleName
+ *   A display name merely for UI purposes
+ */
+class TraceRecordingListener(
+    db: DBAbstraction,
+    proofId: Int,
+    initialSibling: Option[Int],
+    globalProvable: ProvableSig,
+    branch: Int,
+    recursive: Boolean,
+    ruleName: String,
+    constructGlobalProvable: Boolean,
+) extends IOListener {
+  class TraceNode(isFirstNode: Boolean) {
     var id: Option[Int] = None
     var parent: TraceNode = null
     var sibling: Option[Int] = None
@@ -48,25 +50,34 @@ class TraceRecordingListener(db: DBAbstraction,
     var localProvableId: Option[Int] = None
     var executableId: Option[Int] = None
 
-    def getLocalProvableId:Option[Int] = {
-      if (local != null && localProvableId.isEmpty)
-        localProvableId = Some(db.createProvable(local))
+    def getLocalProvableId: Option[Int] = {
+      if (local != null && localProvableId.isEmpty) localProvableId = Some(db.createProvable(local))
       localProvableId
     }
 
-    def getExecutableId:Int = {
-      if (executable != null && executableId.isEmpty)
-        executableId = Some(db.addBelleExpr(executable))
+    def getExecutableId: Int = {
+      if (executable != null && executableId.isEmpty) executableId = Some(db.addBelleExpr(executable))
       executableId.get
     }
 
     def asPOJO: ExecutionStepPOJO = {
-      //val parentStep = if (parent == null) None else parent.stepId
-      ExecutionStepPOJO(stepId, proofId, sibling, branchOrder,
-        status, getExecutableId, None, None,
-        getLocalProvableId, userExe, ruleName, branchLabel,
+      // val parentStep = if (parent == null) None else parent.stepId
+      ExecutionStepPOJO(
+        stepId,
+        proofId,
+        sibling,
+        branchOrder,
+        status,
+        getExecutableId,
+        None,
+        None,
+        getLocalProvableId,
+        userExe,
+        ruleName,
+        branchLabel,
         if (local != null) local.subgoals.size else -1,
-        if (local != null) local.subgoals.size else -1)
+        if (local != null) local.subgoals.size else -1,
+      )
     }
   }
 
@@ -88,9 +99,7 @@ class TraceRecordingListener(db: DBAbstraction,
       if (parent != null) {
         parent.status = ExecutionStepStatus.DependsOnChildren
         parent.reverseChildren = node :: parent.reverseChildren
-        if (recursive) {
-          db.updateExecutionStep(parent.stepId.get, parent.asPOJO)
-        }
+        if (recursive) { db.updateExecutionStep(parent.stepId.get, parent.asPOJO) }
       }
       if (parent == null || recursive) {
         // delete recorded steps that would become unwanted siblings of the current step
@@ -115,11 +124,10 @@ class TraceRecordingListener(db: DBAbstraction,
       assert(node.executable.eq(expr), "Popping unexpected expression " + expr + ", end of trace is " + node.executable)
       node = node.parent
       youngestSibling = current.id
-      current.status =
-        result match {
-          case Left(_) => ExecutionStepStatus.Finished
-          case Right(_) => ExecutionStepStatus.Error
-        }
+      current.status = result match {
+        case Left(_) => ExecutionStepStatus.Finished
+        case Right(_) => ExecutionStepStatus.Error
+      }
       if (node == null) {
         result match {
           // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
@@ -130,32 +138,47 @@ class TraceRecordingListener(db: DBAbstraction,
             current.branchLabel = labels.map(BelleLabel.toPrettyString)
             db.updateExecutionStep(current.stepId.get, current.asPOJO)
             if (db.getPlainOpenSteps(proofId).isEmpty) {
-              //@note proof might be done
+              // @note proof might be done
               val p = db.getProofInfo(proofId)
-              val provedProof = ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount,
-                closed = true, p.provableId, p.temporary, p.tactic)
+              val provedProof = ProofPOJO(
+                p.proofId,
+                p.modelId,
+                p.name,
+                p.description,
+                p.date,
+                p.stepCount,
+                closed = true,
+                p.provableId,
+                p.temporary,
+                p.tactic,
+              )
               db.updateProofInfo(provedProof)
             }
-          case _ =>
-            db.updateExecutionStep(current.stepId.get, current.asPOJO)
+          case _ => db.updateExecutionStep(current.stepId.get, current.asPOJO)
         }
       }
     }
   }
 
-  /** Called by HyDRA before killing the interpreter's thread. Updates the database to reflect that the computation
-    * was interrupted. There are two race conditions to worry about here:
-    * (1) kill() can race with a call to begin/end that was in progress when kill() started. This is resolved with
-    * a mutex (synchronized{} blocks)
-    * (2) An in-progress computation can race with a kill signal (sent externally after kill() is called). This is
-    * resolved by setting a flag during kill() which turns future operations into a no-op. */
+  /**
+   * Called by HyDRA before killing the interpreter's thread. Updates the database to reflect that the computation was
+   * interrupted. There are two race conditions to worry about here:
+   *   1. kill() can race with a call to begin/end that was in progress when kill() started. This is resolved with a
+   *      mutex (synchronized{} blocks)
+   *   1. An in-progress computation can race with a kill signal (sent externally after kill() is called). This is
+   *      resolved by setting a flag during kill() which turns future operations into a no-op.
+   */
   def kill(): Unit = {
     synchronized {
       isDead = true
       nodesWritten.foreach(node =>
-        node.stepId.foreach(id => {
-          node.status = ExecutionStepStatus.Aborted
-          db.updateExecutionStep(id, node.asPOJO)}))
+        node
+          .stepId
+          .foreach(id => {
+            node.status = ExecutionStepStatus.Aborted
+            db.updateExecutionStep(id, node.asPOJO)
+          })
+      )
     }
   }
 }

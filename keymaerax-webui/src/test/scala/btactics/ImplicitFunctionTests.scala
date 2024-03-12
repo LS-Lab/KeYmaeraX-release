@@ -10,7 +10,15 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{BuiltinSymbols, DLArchiveParser, InterpretedSymbols, KeYmaeraXArchivePrinter, KeYmaeraXPrettyPrinter, Parser, PrettierPrintFormatProvider}
+import edu.cmu.cs.ls.keymaerax.parser.{
+  BuiltinSymbols,
+  DLArchiveParser,
+  InterpretedSymbols,
+  KeYmaeraXArchivePrinter,
+  KeYmaeraXPrettyPrinter,
+  Parser,
+  PrettierPrintFormatProvider,
+}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
@@ -22,72 +30,72 @@ import scala.language.postfixOps
 
 /**
  * Tests for implicit function definitions & the involved substitutions.
- * @author James Gallicchio
+ * @author
+ *   James Gallicchio
  */
 class ImplicitFunctionTests extends TacticTestBase {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
-  private val parser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
+  private val parser = new DLArchiveParser(
+    new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
+  )
 
-  private def parse (input: String) = parser.parse(input).loneElement
+  private def parse(input: String) = parser.parse(input).loneElement
 
   private def renBuiltin(builtin: Function, repl: String): Function = {
-    val renBuiltinExp = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case BaseVariable(vn, vi, _) =>
-          if (vn == builtin.name && vi == builtin.index) Right(BaseVariable(repl, builtin.index))
-          else Left(None)
-        case _ => Left(None)
-      }
-    }, builtin.interp.get)
-    builtin.copy(name=repl, interp=renBuiltinExp)
+    val renBuiltinExp = ExpressionTraversal.traverse(
+      new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+          case BaseVariable(vn, vi, _) =>
+            if (vn == builtin.name && vi == builtin.index) Right(BaseVariable(repl, builtin.index)) else Left(None)
+          case _ => Left(None)
+        }
+      },
+      builtin.interp.get,
+    )
+    builtin.copy(name = repl, interp = renBuiltinExp)
   }
 
   "DLArchiveParser" should "parse built-in interpreted functions correctly" in {
-    val input =
-      """ArchiveEntry "entry1"
-        | Definitions import kyx.math.abs; End.
-        | Problem abs(-1) = 1 End.
-        |End.
-        |""".stripMargin
+    val input = """ArchiveEntry "entry1"
+                  | Definitions import kyx.math.abs; End.
+                  | Problem abs(-1) = 1 End.
+                  |End.
+                  |""".stripMargin
     val prog = parse(input)
 
-    prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))),Number(1))
+    prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
   }
 
   it should "parse inline function interps correctly" in {
-    val input =
-      """ArchiveEntry "entry1"
-        | Definitions Real myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(Real x); End.
-        | Problem myAbs(-1) = 1 End.
-        |End.
-        |""".stripMargin
+    val input = """ArchiveEntry "entry1"
+                  | Definitions Real myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(Real x); End.
+                  | Problem myAbs(-1) = 1 End.
+                  |End.
+                  |""".stripMargin
     val prog = parse(input)
 
-    prog.model shouldBe Equal(FuncOf(renBuiltin(InterpretedSymbols.absF, "myAbs"),
-      Neg(Number(1))),Number(1))
+    prog.model shouldBe Equal(FuncOf(renBuiltin(InterpretedSymbols.absF, "myAbs"), Neg(Number(1))), Number(1))
   }
 
   it should "parse implicit ODE definitions correctly" in {
-    val input =
-      """ArchiveEntry "entry1"
-        | Definitions
-        |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
-        | End.
-        | Problem myExp(0) = 1 End.
-        |End.
-        |""".stripMargin
+    val input = """ArchiveEntry "entry1"
+                  | Definitions
+                  |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
+                  | End.
+                  | Problem myExp(0) = 1 End.
+                  |End.
+                  |""".stripMargin
     val prog = parse(input)
 
     prog.expandedModel shouldBe Equal(FuncOf(renBuiltin(InterpretedSymbols.expF, "myExp"), Number(0)), Number(1))
   }
 
   "Archive printer" should "print interpretations" in {
-    val input =
-      """ArchiveEntry "entry1"
-        | Definitions Real myAbs<<(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)>>(Real x); End.
-        | Problem myAbs(-1) = 1 End.
-        |End.
-        |""".stripMargin
+    val input = """ArchiveEntry "entry1"
+                  | Definitions Real myAbs<<(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)>>(Real x); End.
+                  | Problem myAbs(-1) = 1 End.
+                  |End.
+                  |""".stripMargin
     val prog = parse(input)
 
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
@@ -99,14 +107,13 @@ class ImplicitFunctionTests extends TacticTestBase {
   }
 
   it should "print from implicitly defined interpretation" in {
-    val input =
-      """ArchiveEntry "entry1"
-        | Definitions
-        |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
-        | End.
-        | Problem myExp(0) = 1 End.
-        |End.
-        |""".stripMargin
+    val input = """ArchiveEntry "entry1"
+                  | Definitions
+                  |  implicit Real myExp(Real t) = {{t:=0;myExp:=1;}; {t'=1,myExp'=myExp}};
+                  | End.
+                  | Problem myExp(0) = 1 End.
+                  |End.
+                  |""".stripMargin
     val prog = parse(input)
 
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
@@ -117,46 +124,58 @@ class ImplicitFunctionTests extends TacticTestBase {
     prog2.model shouldBe prog.model
   }
 
-  "differential defs" should "prove exp differential axiom" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    import InterpretedSymbols.expF
+  "differential defs" should "prove exp differential axiom" in
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      withMathematica { _ =>
+        import InterpretedSymbols.expF
 
-    val diffAx = ImplicitAx.deriveDiffAxiom(List(expF)).head
+        val diffAx = ImplicitAx.deriveDiffAxiom(List(expF)).head
 
-    val prob = Equal(Differential(FuncOf(expF,"x".asVariable)),
-                      Times(FuncOf(expF,"x".asVariable),Differential("x".asVariable)))
+        val prob = Equal(
+          Differential(FuncOf(expF, "x".asVariable)),
+          Times(FuncOf(expF, "x".asVariable), Differential("x".asVariable)),
+        )
 
-    proveBy(prob, byUS(diffAx)) shouldBe Symbol("proved")
-  }}
+        proveBy(prob, byUS(diffAx)) shouldBe Symbol("proved")
+      }
+    }
 
-  it should "prove exp always positive in dL" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    val problem = Greater(FuncOf(InterpretedSymbols.expF,"x".asVariable), Number(0))
-    proveBy(problem, QE) shouldBe Symbol("proved")
-  }}
+  it should "prove exp always positive in dL" in
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      withMathematica { _ =>
+        val problem = Greater(FuncOf(InterpretedSymbols.expF, "x".asVariable), Number(0))
+        proveBy(problem, QE) shouldBe Symbol("proved")
+      }
+    }
 
   it should "prove sin differential axiom" in withMathematica { _ =>
-    import InterpretedSymbols.{sinF,cosF}
-    val prob = Equal(Differential(FuncOf(sinF,"x".asVariable)),
-      Times(FuncOf(cosF,"x".asVariable),Differential("x".asVariable)))
+    import InterpretedSymbols.{sinF, cosF}
+    val prob = Equal(
+      Differential(FuncOf(sinF, "x".asVariable)),
+      Times(FuncOf(cosF, "x".asVariable), Differential("x".asVariable)),
+    )
     proveBy(prob, byUS(ImplicitAx.deriveDiffAxiom(List(sinF, cosF)).head)) shouldBe Symbol("proved")
   }
 
-  "kyx2mathematica" should "convert special implicit functions to Mathematica" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    import InterpretedSymbols.expF
+  "kyx2mathematica" should "convert special implicit functions to Mathematica" in
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      withMathematica { _ =>
+        import InterpretedSymbols.expF
 
-    println(Parser.parser.getClass.getSimpleName)
+        println(Parser.parser.getClass.getSimpleName)
 
-    val pr = proveBy(Equal(
-      Times(FuncOf(expF,Number(-1)),FuncOf(expF,Number(1))),
-      Number(1)), QE)
+        val pr = proveBy(Equal(Times(FuncOf(expF, Number(-1)), FuncOf(expF, Number(1))), Number(1)), QE)
 
-    pr shouldBe Symbol("proved")
-  }}
+        pr shouldBe Symbol("proved")
+      }
+    }
 
-  "QE" should "not abbreviate interpreted functions known to Mathematica" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    proveBy("exp(x)>0".asFormula, QE) shouldBe Symbol("proved")
-  }}
+  "QE" should "not abbreviate interpreted functions known to Mathematica" in
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      withMathematica { _ => proveBy("exp(x)>0".asFormula, QE) shouldBe Symbol("proved") }
+    }
 
-  //TODO: substitute uninterpreted for interpreted functions in these tests
+  // TODO: substitute uninterpreted for interpreted functions in these tests
   "examples" should "FEATURE_REQUEST: work under assignments and nesting" taggedAs TodoTest in withMathematica { _ =>
     val fml = "x =1 -> [x := exp(exp(x)); x:=1; ++ x:= exp(x); ] x > 0".asFormula
     val pr = proveBy(fml, skip)
@@ -173,22 +192,27 @@ class ImplicitFunctionTests extends TacticTestBase {
     pr shouldBe Symbol("proved")
   }
 
-  it should "work with DI (1)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    proveBy("x =1 ==> [{x' = exp(x)}] x > 0".asSequent, dI()(1)) shouldBe Symbol("proved")
-  }}
+  it should "work with DI (1)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+    withMathematica { _ => proveBy("x =1 ==> [{x' = exp(x)}] x > 0".asSequent, dI()(1)) shouldBe Symbol("proved") }
+  }
 
-  it should "work with DI (2)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    val s = "x>=0&y>=0&z>=0 ==> [{x' = exp(y), y' = exp(z), z'=1}] x+y+z>=0".asSequent
-    proveBy(s, dI()(1)) shouldBe Symbol("proved")
-  }}
+  it should "work with DI (2)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+    withMathematica { _ =>
+      val s = "x>=0&y>=0&z>=0 ==> [{x' = exp(y), y' = exp(z), z'=1}] x+y+z>=0".asSequent
+      proveBy(s, dI()(1)) shouldBe Symbol("proved")
+    }
+  }
 
-  it should "work with DI (3)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { withMathematica { _ =>
-    val s = "x=5 ==> [{x' = sin(x) + 1}] x>=0".asSequent
-    proveBy(s, dI()(1)) shouldBe Symbol("proved")
-  }}
+  it should "work with DI (3)" in withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+    withMathematica { _ =>
+      val s = "x=5 ==> [{x' = sin(x) + 1}] x>=0".asSequent
+      proveBy(s, dI()(1)) shouldBe Symbol("proved")
+    }
+  }
 
   it should "FEATURE_REQUEST: model a pendulum" taggedAs TodoTest in withMathematica { _ =>
-    val fml = "a > 0 & b > 0 & x1 = 1 & x2 = 1 -> [{x1' = x2, x2'= -a*sin(x1) - b*x2}] a*(1-cos(x1))+1/2*x2^2 <= 1/2".asFormula
+    val fml =
+      "a > 0 & b > 0 & x1 = 1 & x2 = 1 -> [{x1' = x2, x2'= -a*sin(x1) - b*x2}] a*(1-cos(x1))+1/2*x2^2 <= 1/2".asFormula
     val pr = proveBy(fml, skip)
     // end goal: prove something like this or more
 

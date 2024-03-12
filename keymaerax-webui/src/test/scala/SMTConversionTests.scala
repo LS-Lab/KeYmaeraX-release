@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -13,7 +14,8 @@ import scala.collection.immutable.Map
 
 /**
  * Created by ran on 3/23/15.
- * @author Ran Ji
+ * @author
+ *   Ran Ji
  */
 class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
@@ -21,13 +23,11 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
     ))
   }
 
-  override def afterAll(): Unit = {
-    KeYmaeraXTool.shutdown()
-  }
+  override def afterAll(): Unit = { KeYmaeraXTool.shutdown() }
 
   private lazy val converter = DefaultSMTConverter
 
@@ -40,15 +40,16 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "convert legal big negative numbers" in {
-    converter("-9223372036854775807 < 1".asFormula) shouldBe "(assert (not (< (- 9223372036854775807) 1)))\n(check-sat)\n"
+    converter("-9223372036854775807 < 1".asFormula) shouldBe
+      "(assert (not (< (- 9223372036854775807) 1)))\n(check-sat)\n"
   }
 
   it should "throw exception in converting illegal big positive numbers" in {
-    a [ConversionException] should be thrownBy converter("9223372036854775808 > 1".asFormula)
+    a[ConversionException] should be thrownBy converter("9223372036854775808 > 1".asFormula)
   }
 
   it should "throw exception in converting illegal big negative numbers" in {
-    a [ConversionException] should be thrownBy converter("-9223372036854775808 < 1".asFormula)
+    a[ConversionException] should be thrownBy converter("-9223372036854775808 < 1".asFormula)
   }
 
   "Variables" should "convert numbers" in {
@@ -124,11 +125,13 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "convert index 0" in {
-    converter("(x+y-z)^(1-1) = 1".asFormula) shouldBe "(declare-fun _v_x () Real)\n(declare-fun _v_y () Real)\n(declare-fun _v_z () Real)\n(assert (not (= (^ (- (+ _v_x _v_y) _v_z) (- 1 1)) 1)))\n(check-sat)\n"
+    converter("(x+y-z)^(1-1) = 1".asFormula) shouldBe
+      "(declare-fun _v_x () Real)\n(declare-fun _v_y () Real)\n(declare-fun _v_z () Real)\n(assert (not (= (^ (- (+ _v_x _v_y) _v_z) (- 1 1)) 1)))\n(check-sat)\n"
   }
 
   it should "convert base 0" in {
-    converter("(0+0)^(x+y-1) = 1".asFormula) shouldBe "(declare-fun _v_x () Real)\n(declare-fun _v_y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ _v_x _v_y) 1)) 1)))\n(check-sat)\n"
+    converter("(0+0)^(x+y-1) = 1".asFormula) shouldBe
+      "(declare-fun _v_x () Real)\n(declare-fun _v_y () Real)\n(assert (not (= (^ (+ 0 0) (- (+ _v_x _v_y) 1)) 1)))\n(check-sat)\n"
   }
 
   it should "convert fractions" in {
@@ -164,7 +167,10 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "convert bouncing ball" in {
-    converter("c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & kxtime_1=0 & h_2=h & v_2=v & kxtime_4=kxtime_1 & v_3=-1*kxtime_5*g+v_2 & h_3=1/2*(-1*kxtime_5^2*g+2*h_2+2*kxtime_5*v_2) & h_3>=0 & kxtime_5>=kxtime_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)".asFormula) shouldBe
+    converter(
+      "c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & kxtime_1=0 & h_2=h & v_2=v & kxtime_4=kxtime_1 & v_3=-1*kxtime_5*g+v_2 & h_3=1/2*(-1*kxtime_5^2*g+2*h_2+2*kxtime_5*v_2) & h_3>=0 & kxtime_5>=kxtime_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)"
+        .asFormula
+    ) shouldBe
       """(declare-fun _v_H () Real)
         |(declare-fun _v_c () Real)
         |(declare-fun _v_g () Real)
@@ -184,7 +190,10 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "convert bouncing ball constfun" in {
-    converter("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & kxtime_4()=kxtime_1 & v_3=-1*kxtime_5*g()+v_2() & h_3=1/2*(-1*kxtime_5^2*g()+2*h_2()+2*kxtime_5*v_2()) & h_3>=0 & kxtime_5>=kxtime_4() & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g()*(H-h_3)".asFormula) shouldBe
+    converter(
+      "c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & kxtime_4()=kxtime_1 & v_3=-1*kxtime_5*g()+v_2() & h_3=1/2*(-1*kxtime_5^2*g()+2*h_2()+2*kxtime_5*v_2()) & h_3>=0 & kxtime_5>=kxtime_4() & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g()*(H-h_3)"
+        .asFormula
+    ) shouldBe
       """(declare-fun _v_H () Real)
         |(declare-fun _v_c () Real)
         |(declare-fun _f_g () Real)

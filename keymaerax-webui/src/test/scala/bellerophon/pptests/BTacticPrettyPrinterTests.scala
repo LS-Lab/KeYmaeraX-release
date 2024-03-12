@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
@@ -10,12 +15,13 @@ import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
 import scala.language.postfixOps
 
-
 /**
-  * Tests BelleExpr pretty printing, for expected string representation plus roundtrip identity with parser.
-  * @author Nathan Fulton
-  * @author Stefan Mitsch
-  */
+ * Tests BelleExpr pretty printing, for expected string representation plus roundtrip identity with parser.
+ * @author
+ *   Nathan Fulton
+ * @author
+ *   Stefan Mitsch
+ */
 @UsualTest
 class BTacticPrettyPrinterTests extends TacticTestBase {
   private val parser = BelleParser
@@ -27,9 +33,9 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
     parser(printed) shouldBe parsed
   }
 
-  //@note this test case points out something that's kind-of a problem with our current setup -- print(parse(x)) != x even if parse(print(x)) = x.
-  //In order to get the actually correct behavior we would need DerivedAxiomInfo to be a bidirectional map and then we would need to always prefer that map's
-  //names over the actual tactic that was created at the end of the day.
+  // @note this test case points out something that's kind-of a problem with our current setup -- print(parse(x)) != x even if parse(print(x)) = x.
+  // In order to get the actually correct behavior we would need DerivedAxiomInfo to be a bidirectional map and then we would need to always prefer that map's
+  // names over the actual tactic that was created at the end of the day.
   "built-in printer" should "print a built-in expr" in withTactics { roundTrip("nil") }
 
   it should "print e(1)" in withTactics { roundTrip("andR(1)") }
@@ -79,7 +85,8 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   "useLemmaAt" should "print key correctly" in withTactics {
     BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", None)(1)) shouldBe "useLemmaAt(\"the lemma\", 1)"
     roundTrip("useLemmaAt(\"the lemma\", 1)")
-    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1::Nil)))(1)) shouldBe "useLemmaAt(\"the lemma\", \".1\", 1)"
+    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1 :: Nil)))(1)) shouldBe
+      "useLemmaAt(\"the lemma\", \".1\", 1)"
     roundTrip("useLemmaAt(\"the lemma\", \".1\", 1)")
   }
 

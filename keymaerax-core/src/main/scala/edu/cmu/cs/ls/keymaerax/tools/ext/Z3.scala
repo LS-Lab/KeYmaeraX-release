@@ -1,7 +1,8 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -13,13 +14,16 @@ import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool, ToolExecutionEx
 import scala.collection.immutable.Map
 
 /**
-  * Z3 quantifier elimination tool for tactics.
-  *
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Z3ToolProvider]] to obtain instances of Z3 that are properly initialized
-  *      and installed/updated.
-  * @author Stefan Mitsch
-  */
+ * Z3 quantifier elimination tool for tactics.
+ *
+ * @see
+ *   [[edu.cmu.cs.ls.keymaerax.btactics.Z3ToolProvider]] to obtain instances of Z3 that are properly initialized and
+ *   installed/updated.
+ * @author
+ *   Stefan Mitsch
+ */
 final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolOperationManagement {
+
   /** @inheritdoc */
   override val name: String = "Z3"
 
@@ -30,7 +34,7 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   private var z3: Z3Solver = _
 
   /** @inheritdoc */
-  override def init(config: Map[String,String]): Unit = {
+  override def init(config: Map[String, String]): Unit = {
     z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter)
     z3qe.init(config)
   }
@@ -72,27 +76,22 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   }
 
   /** @inheritdoc */
-  override def simplify(expr: Formula, assumptions: List[Formula]): Formula = simplify(expr, assumptions,
-    parser = (s: String) => SmtLibReader.readFml(s)
-  )
+  override def simplify(expr: Formula, assumptions: List[Formula]): Formula =
+    simplify(expr, assumptions, parser = (s: String) => SmtLibReader.readFml(s))
 
   /** @inheritdoc */
-  override def simplify(expr: Term, assumptions: List[Formula]): Term = simplify(expr, assumptions,
-    parser = (s: String) => SmtLibReader.readTerm(s)
-  )
+  override def simplify(expr: Term, assumptions: List[Formula]): Term =
+    simplify(expr, assumptions, parser = (s: String) => SmtLibReader.readTerm(s))
 
   /** Simplifies expression `expr` accounting for `assumptions`, parses the result using `parser`. */
-  private def simplify[T<:Expression](expr: T, assumptions: List[Formula], parser: String=>T): T = {
+  private def simplify[T <: Expression](expr: T, assumptions: List[Formula], parser: String => T): T = {
     val (varDec, smt) = DefaultSMTConverter.generateSMT(expr)
     val smtCode = varDec + "(simplify " + smt + ")"
     val z3Output = z3.runZ3Smt(smtCode, "z3simplify", getOperationTimeout)
     if (z3Output.contains("!")) expr
     else {
-      try {
-        parser(z3Output)
-      } catch {
-        case _: ConversionException => expr
-      }
+      try { parser(z3Output) }
+      catch { case _: ConversionException => expr }
     }
   }
 

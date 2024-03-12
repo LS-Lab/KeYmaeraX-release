@@ -1,21 +1,22 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
-/**
-  * @note Code Review 2016-08-16
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+/** @note Code Review 2016-08-16 */
 package edu.cmu.cs.ls.keymaerax.lemma
 
 /**
  * Returns lemma database instances. Prefer using this factory over instantiating lemma databases directly.
  *
- * @example {{{
+ * @example
+ *   {{{
  *   val lemmaDB = LemmaDBFactory.lemmaDB
- * }}}
+ *   }}}
  *
  * Created by smitsch on 9/1/15.
- * @author Stefan Mitsch
+ * @author
+ *   Stefan Mitsch
  */
 object LemmaDBFactory {
 
@@ -26,8 +27,6 @@ object LemmaDBFactory {
   def lemmaDB: LemmaDB = lemmaDBInstance
 
   /** Sets the lemma DB to be returned by [[lemmaDB]] */
-  def setLemmaDB(lemmaDB: LemmaDB): Unit = {
-    lemmaDBInstance = lemmaDB
-  }
+  def setLemmaDB(lemmaDB: LemmaDB): Unit = { lemmaDBInstance = lemmaDB }
 
 }

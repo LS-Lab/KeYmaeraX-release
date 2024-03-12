@@ -1,10 +1,14 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
  * Tests of the Bellerophon framework, including its two interpreters and the type checker.
  *
  * Tests of specific tactics implemented in Bellerophon should be defined in separate packages.
  *
- * @author Nathan Fulton
+ * @author
+ *   Nathan Fulton
  */
-package object bellerophon {
-
-}
+package object bellerophon {}

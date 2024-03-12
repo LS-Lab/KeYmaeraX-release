@@ -1,9 +1,10 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -11,8 +12,9 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
  * Created by nfulton on 2/23/15.
-  *
-  * @author Nathan Fulton
+ *
+ * @author
+ *   Nathan Fulton
  */
 class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
@@ -26,10 +28,7 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
-  override def afterEach(): Unit = {
-    PrettyPrinter.setPrinter(e => e.getClass.getName)
-  }
-
+  override def afterEach(): Unit = { PrettyPrinter.setPrinter(e => e.getClass.getName) }
 
   "Add" should "print/parse correctly -- left" in {
     val t = Plus(one, Plus(two, three))
@@ -50,8 +49,6 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val t = Minus(Minus(two, three), one)
     t.prettyString.asTerm.asInstanceOf[Minus].left shouldBe Minus(two, three)
   }
-
-
 
   "*" should "print/parse correctly -- left" in {
     val t = Times(one, Times(two, three))
@@ -85,7 +82,7 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "1-1+x" should "print/parse correctly" in {
     val t = "1-1+x".asTerm
-    t.prettyString.asTerm.asInstanceOf[Plus].left shouldBe Minus(one,one)
+    t.prettyString.asTerm.asInstanceOf[Plus].left shouldBe Minus(one, one)
   }
 
   it should "print/parse correctly -- right" in {
@@ -95,7 +92,7 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   it should "print/parse left assoc correctly" in {
     val add = Divide(Divide(one, two), three)
-    add.right should be (three)
+    add.right should be(three)
     add.prettyString.asTerm.asInstanceOf[Divide].right shouldBe three
   }
 
@@ -107,15 +104,15 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
   }
 
   "Power" should "give useful location information" in {
-    val ex = the [ParseException] thrownBy "((f(||)^(c()))'".asTerm
-    ex.getMessage should (include ("1:1 Imbalanced parenthesis") or include ("1:16 Error parsing termList at 1:1"))
-    ex.getMessage should (include ("Found:    ( at 1:1") or include ("Found:    \"\" at 1:16"))
+    val ex = the[ParseException] thrownBy "((f(||)^(c()))'".asTerm
+    ex.getMessage should (include("1:1 Imbalanced parenthesis") or include("1:16 Error parsing termList at 1:1"))
+    ex.getMessage should (include("Found:    ( at 1:1") or include("Found:    \"\" at 1:16"))
   }
 
   "Abs" should "parse" in {
     "abs(x)".asTerm shouldBe FuncOf(InterpretedSymbols.absF, Variable("x"))
     "abs_0".asTerm shouldBe Variable("abs", Some(0))
-    "abs_0()".asTerm shouldBe FuncOf(Function("abs", Some(0), Unit, Real, interp=None), Nothing)
+    "abs_0()".asTerm shouldBe FuncOf(Function("abs", Some(0), Unit, Real, interp = None), Nothing)
   }
 
   ///

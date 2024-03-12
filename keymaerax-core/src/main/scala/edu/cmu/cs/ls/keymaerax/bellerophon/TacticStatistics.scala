@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
@@ -9,12 +10,13 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import scala.io.Source
 
 /**
-  * Computes tactic statistics (e.g., size).
-  *
-  * @author Stefan Mitsch
-  * Created by smitsch on 5/24/17.
-  */
+ * Computes tactic statistics (e.g., size).
+ *
+ * @author
+ *   Stefan Mitsch
+ */
 object TacticStatistics {
+
   /** Returns the size of a tactic (its atomic subtactics, +1 for operators *, *n, <, let, doall). */
   def size(t: BelleExpr): Int = t match {
     case SeqTactic(s) => s.map(size).sum

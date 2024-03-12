@@ -19,12 +19,15 @@ import org.scalatest.LoneElement._
 import scala.io.Source
 
 /**
-  * ETCS test cases.
-  * Essentials of European Train Control System (ETCS).
-  * @see "Andre Platzer, Jan-David Quesel. European Train Control System: A case study in formal verification. ICFEM, 2009"
-  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
-  * @author Stefan Mitsch
-  */
+ * ETCS test cases. Essentials of European Train Control System (ETCS).
+ * @see
+ *   "Andre Platzer, Jan-David Quesel. European Train Control System: A case study in formal verification. ICFEM, 2009"
+ * @see
+ *   "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages
+ *   143-189, 2008."
+ * @author
+ *   Stefan Mitsch
+ */
 @SlowTest
 class Etcs extends TacticTestBase {
 
@@ -34,13 +37,15 @@ class Etcs extends TacticTestBase {
   }
 
   it should "prove RBC characterisation with master" in withMathematica { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-characterisation.kyx"))
+    val s = parseToSequent(
+      getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-characterisation.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove RBC corollary with tactic" ignore withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rbc-controllability-corollary.kyx"))
-    //@todo write tactic
+    // @todo write tactic
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
@@ -51,13 +56,21 @@ class Etcs extends TacticTestBase {
 
   "ETCS reactivity" should "prove lemma with tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyt")).mkString)
+    val tactic = BelleParser(
+      io.Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyt"))
+        .mkString
+    )
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "prove full lemma with tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma-full.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma-full.kyt")).mkString)
+    val tactic = BelleParser(
+      io.Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma-full.kyt"))
+        .mkString
+    )
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
@@ -67,7 +80,8 @@ class Etcs extends TacticTestBase {
   }
 
   "Rephrased ETCS models" should "prove controllability lemma with master" in withMathematica { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/controllability-lemma.kyx"))
+    val s =
+      parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/controllability-lemma.kyx"))
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
@@ -78,64 +92,114 @@ class Etcs extends TacticTestBase {
 
   it should "prove essentials with tactic from file" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyt")).mkString)
+    val tactic = BelleParser(
+      io.Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyt"))
+        .mkString
+    )
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "find SB condition in essentials" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyt")).mkString)
+    val s =
+      parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyx"))
+    val tactic = BelleParser(
+      io.Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyt"))
+        .mkString
+    )
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "v_0^2<=2*b()*(m()-z_0), b()>0, t>=0, A()>=0, v_0+A()*t>=0, t<=ep(), m()-z_0>=SB ==> (v_0+A()*t)^2<=2*b()*(m()-(z_0+v_0*t+A()/2*t^2))".asSequent
+    result.subgoals.loneElement shouldBe
+      "v_0^2<=2*b()*(m()-z_0), b()>0, t>=0, A()>=0, v_0+A()*t>=0, t<=ep(), m()-z_0>=SB ==> (v_0+A()*t)^2<=2*b()*(m()-(z_0+v_0*t+A()/2*t^2))"
+        .asSequent
   }
 
   it should "prove rbc controllability characterization with master" in withMathematica { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-characterisation.kyx"))
+    val s = parseToSequent(
+      getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-characterisation.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove rbc controllability corollary with tactic" in withMathematica { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyt")).mkString)
+    val s = parseToSequent(
+      getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyx")
+    )
+    val tactic = BelleParser(
+      io.Source
+        .fromInputStream(getClass.getResourceAsStream(
+          "/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyt"
+        ))
+        .mkString
+    )
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "prove rbc controllability lemma with master" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-lemma.kyx"))
+    val s =
+      parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-lemma.kyx"))
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove reactivity lemma with tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma.kyt")).mkString)
+    val tactic = BelleParser(
+      io.Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma.kyt"))
+        .mkString
+    )
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "prove full reactivity lemma with tactic" in withMathematica { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyt")).mkString)
+    val s =
+      parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyx"))
+    val tactic = BelleParser(
+      io.Source
+        .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyt"))
+        .mkString
+    )
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
 
   it should "prove safety lemma with master" in withMathematica { _ =>
-    //@todo gets stuck with Z3
+    // @todo gets stuck with Z3
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma.kyx"))
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove safety with piecewise constant actuation disturbance" in withMathematica { _ =>
-    //@todo gets stuck with Z3
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-disturbed-simplified-piecewise.kyx"))
+    // @todo gets stuck with Z3
+    val s = parseToSequent(
+      getClass
+        .getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-disturbed-simplified-piecewise.kyx")
+    )
     proveBy(s, master()) shouldBe Symbol("proved")
   }
 
   it should "prove safety with detailed brake model" in withQE { _ =>
-    val entry = ArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx")).mkString).head
+    val entry = ArchiveParser
+      .parse(
+        Source
+          .fromInputStream(
+            getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx")
+          )
+          .mkString
+      )
+      .head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.loneElement._3) shouldBe Symbol("proved")
   }
 
   it should "prove safety with detailed brake model, no air resistance" in withQE { _ =>
-    val entry = ArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-brakingnoair.kyx")).mkString).head
+    val entry = ArchiveParser
+      .parse(
+        Source
+          .fromInputStream(
+            getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-brakingnoair.kyx")
+          )
+          .mkString
+      )
+      .head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.loneElement._3) shouldBe Symbol("proved")
   }
 

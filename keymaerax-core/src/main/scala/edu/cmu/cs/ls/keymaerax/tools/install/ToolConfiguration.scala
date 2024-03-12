@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.tools.install
 
 import java.io.File
@@ -12,32 +17,48 @@ import scala.util.Try
 
 /**
  * Tool configuration from config file/default configuration.
-  *
-  * @author Stefan Mitsch
+ *
+ * @author
+ *   Stefan Mitsch
  */
 object ToolConfiguration {
+
   /** Configuration suggestions. */
-  case class ConfigSuggestion(version: String, kernelPath: String, kernelName: String, jlinkPath: String, jlinkName: String)
+  case class ConfigSuggestion(
+      version: String,
+      kernelPath: String,
+      kernelName: String,
+      jlinkPath: String,
+      jlinkName: String,
+  )
 
   /** Returns the Mathematica configuration. */
   def mathematicaConfig(preferred: Map[String, String]): Map[String, String] = {
     def tcpip: String = {
-      Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).
-        map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("false")
+      Configuration
+        .getString(Configuration.Keys.MATH_LINK_TCPIP)
+        .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
+        .getOrElse("false")
     }
 
     if (preferred.contains("mathkernel") && preferred.contains("jlink")) {
-      Map("mathkernel" -> preferred("mathkernel"), "linkName" -> preferred("mathkernel"),
-        "jlink" -> preferred("jlink"), "libDir" -> preferred("jlink"), "tcpip" -> preferred.getOrElse("tcpip", tcpip))
+      Map(
+        "mathkernel" -> preferred("mathkernel"),
+        "linkName" -> preferred("mathkernel"),
+        "jlink" -> preferred("jlink"),
+        "libDir" -> preferred("jlink"),
+        "tcpip" -> preferred.getOrElse("tcpip", tcpip),
+      )
     } else {
       Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
         case Some(l) => Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
-          //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-          case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-          case None =>
-            val libDir = DefaultConfiguration.defaultMathLinkPath._2
-            Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-        }
+            // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+            case Some(libDir) =>
+              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+            case None =>
+              val libDir = DefaultConfiguration.defaultMathLinkPath._2
+              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+          }
         case None => DefaultConfiguration.defaultMathematicaConfig
 
       }
@@ -47,22 +68,30 @@ object ToolConfiguration {
   /** Returns the Wolfram Engine configuration. */
   def wolframEngineConfig(preferred: Map[String, String] = Map.empty): Map[String, String] = {
     def tcpip: String = {
-      Configuration.getString(Configuration.Keys.WOLFRAMENGINE_TCPIP).
-        map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("true")
+      Configuration
+        .getString(Configuration.Keys.WOLFRAMENGINE_TCPIP)
+        .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
+        .getOrElse("true")
     }
 
     if (preferred.contains("mathkernel") && preferred.contains("jlink")) {
-      Map("mathkernel" -> preferred("mathkernel"), "linkName" -> preferred("mathkernel"),
-        "jlink" -> preferred("jlink"), "libDir" -> preferred("jlink"), "tcpip" -> preferred.getOrElse("tcpip", tcpip))
+      Map(
+        "mathkernel" -> preferred("mathkernel"),
+        "linkName" -> preferred("mathkernel"),
+        "jlink" -> preferred("jlink"),
+        "libDir" -> preferred("jlink"),
+        "tcpip" -> preferred.getOrElse("tcpip", tcpip),
+      )
     } else {
       Configuration.getString(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
         case Some(l) => Configuration.getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
-          //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-          case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-          case None =>
-            val libDir = DefaultConfiguration.defaultWolframEnginePath._2
-            Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-        }
+            // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+            case Some(libDir) =>
+              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+            case None =>
+              val libDir = DefaultConfiguration.defaultWolframEnginePath._2
+              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+          }
         case None => DefaultConfiguration.defaultWolframEngineConfig
       }
     }
@@ -85,6 +114,7 @@ object ToolConfiguration {
 
   /** Returns suggestions for Mathematica configuration. */
   def mathematicaSuggestion(): List[ConfigSuggestion] = parseSuggestions("/config/potentialMathematicaPaths.json")
+
   /** Returns suggestions for Wolfram Engine configuration */
   def wolframEngineSuggestion(): List[ConfigSuggestion] = parseSuggestions("/config/potentialWolframEnginePaths.json")
 
@@ -106,19 +136,28 @@ object ToolConfiguration {
     val os = System.getProperty("os.name")
     val osKey = osKeyOf(os.toLowerCase)
     val jvmBits = System.getProperty("sun.arch.data.model")
-    val osPathGuesses = source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
-      case Some(opg) => opg.asJsObject.getFields("paths").head.convertTo[List[JsObject]]
-      case None => throw new IllegalStateException("No default configuration for Unknown OS")
-    }
+    val osPathGuesses =
+      source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
+        case Some(opg) => opg.asJsObject.getFields("paths").head.convertTo[List[JsObject]]
+        case None => throw new IllegalStateException("No default configuration for Unknown OS")
+      }
 
-    osPathGuesses.map(osPath =>
-      (osPath.getFields("version").head.convertTo[String],
-        osPath.getFields("kernelPath").head.convertTo[List[String]],
-        osPath.getFields("kernelName").head.convertTo[String],
-        osPath.getFields("jlinkPath").head.convertTo[List[String]].map(p => p +
-          (if (jvmBits == "64") "-" + jvmBits else "") + File.separator),
-        osPath.getFields("jlinkName").head.convertTo[String])).flatMap({
-      case (p1, p2, p3, p4, p5) => p2.zipWithIndex.map({ case (p, i) => ConfigSuggestion(p1, p, p3, p4(i), p5) })
-    })
+    osPathGuesses
+      .map(osPath =>
+        (
+          osPath.getFields("version").head.convertTo[String],
+          osPath.getFields("kernelPath").head.convertTo[List[String]],
+          osPath.getFields("kernelName").head.convertTo[String],
+          osPath
+            .getFields("jlinkPath")
+            .head
+            .convertTo[List[String]]
+            .map(p => p + (if (jvmBits == "64") "-" + jvmBits else "") + File.separator),
+          osPath.getFields("jlinkName").head.convertTo[String],
+        )
+      )
+      .flatMap({ case (p1, p2, p3, p4, p5) =>
+        p2.zipWithIndex.map({ case (p, i) => ConfigSuggestion(p1, p, p3, p4(i), p5) })
+      })
   }
 }

@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.proofs
 
 import edu.cmu.cs.ls.keymaerax.hydra.Response
@@ -13,6 +14,6 @@ case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String,
     "nodeId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
     "type" -> JsString("runbelleterm"),
-    "info" -> JsString(info)
+    "info" -> JsString(info),
   )
 }

@@ -1,7 +1,8 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent, USubst}
@@ -17,8 +18,7 @@ object ProvableHelper {
     if (s.subsDefsInput.isEmpty) p
     else {
       val substituted = p(s)
-      if (substituted != p) exhaustiveSubst(substituted, s)
-      else substituted
+      if (substituted != p) exhaustiveSubst(substituted, s) else substituted
     }
   }
 
@@ -28,8 +28,7 @@ object ProvableHelper {
     if (s.subsDefsInput.isEmpty) seq
     else {
       val substituted = s(seq)
-      if (substituted != seq) exhaustiveSubst(substituted, s)
-      else substituted
+      if (substituted != seq) exhaustiveSubst(substituted, s) else substituted
     }
   }
 

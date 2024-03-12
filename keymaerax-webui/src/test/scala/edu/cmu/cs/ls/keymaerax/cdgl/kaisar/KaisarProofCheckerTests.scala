@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import fastparse.Parsed.{Failure, Success}
@@ -14,12 +19,11 @@ class KaisarProofCheckerTests extends TacticTestBase {
   val ep = ExpressionParser
   val pp = ProofParser
   val kp = KaisarKeywordParser
-  
-  def p[T](s: String, parser: P[_] => P[T]): T =
-    parse(s, parser) match {
-      case x: Success[T] => x.value
-      case x: Failure => throw new Exception(x.trace().toString)
-    }
+
+  def p[T](s: String, parser: P[_] => P[T]): T = parse(s, parser) match {
+    case x: Success[T] => x.value
+    case x: Failure => throw new Exception(x.trace().toString)
+  }
 
   "Proof checker" should "check assignments" in {
     val pfStr = "x:=1; ++ x:=2; ++ x:=3;"
@@ -50,7 +54,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "reject invalid auto step" in withMathematica { _ =>
-    val pfStr  = "!falsehood:(1 <= 0) by auto;"
+    val pfStr = "!falsehood:(1 <= 0) by auto;"
     val pf = p(pfStr, pp.assert(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
@@ -69,14 +73,18 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "support paramaterized switch" in withMathematica { _ =>
-    val pfStr = "?eitherOr: (x >= 1 | x < 0 | x = 1); switch (eitherOr) { case xOne:(x >= 1) => !x: (true) by auto; case xNeg:(x < 0) => !x:(true) by auto; case x =1 => !x: (true) by auto;}"
+    val pfStr =
+      "?eitherOr: (x >= 1 | x < 0 | x = 1); switch (eitherOr) { case xOne:(x >= 1) => !x: (true) by auto; case xNeg:(x < 0) => !x:(true) by auto; case x =1 => !x: (true) by auto;}"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe "[?(x>=1|x<0|x=1);{{?(x>=1); {?(true);}^@}^@ ++ {?(x<0); {?(true);}^@}^@ ++{?(x=1); {?(true);}^@}^@}^@]true".asFormula
+    ff shouldBe
+      "[?(x>=1|x<0|x=1);{{?(x>=1); {?(true);}^@}^@ ++ {?(x<0); {?(true);}^@}^@ ++{?(x=1); {?(true);}^@}^@}^@]true"
+        .asFormula
   }
 
   it should "reject mismatched case" in withMathematica { _ =>
-    val pfStr = "?eitherOr: (x >= 1 | x < 0); switch (eitherOr) { case xOne:(x >= 1) => !x:(true) by auto; case xNeg:(x < 0) => !x: (true) by auto; case x=1 => !x: (true) by auto;}"
+    val pfStr =
+      "?eitherOr: (x >= 1 | x < 0); switch (eitherOr) { case xOne:(x >= 1) => !x:(true) by auto; case xNeg:(x < 0) => !x: (true) by auto; case x=1 => !x: (true) by auto;}"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
@@ -107,7 +115,8 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "allow ghost proof variable escaping scope" in withMathematica { _ =>
-    val pfStr = "?xVal:(x:=1); /++ ?yVal:(y:= 2); !p:(x + y = 3) using andI(xVal, yVal) by auto; !q:(x > 0) using andI(p, yVal) by auto; ++/ !p:(x + 1 > 0) using q by auto;"
+    val pfStr =
+      "?xVal:(x:=1); /++ ?yVal:(y:= 2); !p:(x + y = 3) using andI(xVal, yVal) by auto; !q:(x > 0) using andI(p, yVal) by auto; ++/ !p:(x + 1 > 0) using q by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=1;{?(x+1>0);}^@]true".asFormula
@@ -130,8 +139,8 @@ class KaisarProofCheckerTests extends TacticTestBase {
   it should "ban diffghost with no body" in withMathematica { _ =>
     val pfStr = "/++ x' = y ++/;"
     val pf = SSAPass(p(pfStr, pp.statement(_)))
-    the [ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should
-      have message "Ghost variable x_1 needs to be assigned right before differential ghost x_1'"
+    the[ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should have message
+      "Ghost variable x_1 needs to be assigned right before differential ghost x_1'"
   }
 
   it should "prove inverse diffghost" in withMathematica { _ =>
@@ -151,21 +160,22 @@ class KaisarProofCheckerTests extends TacticTestBase {
   it should "catch invalid dc-assign: not bound" in withMathematica { _ =>
     val pfStr = "x' = y & ?(t := T);"
     val pf = SSAPass(p(pfStr, pp.statement(_)))
-    the [ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should
-      have message "ODE has duration T_0 but could not prove T_0 >= 0. To fix this, assert T >= 0 immediately before ODE"
+    the[ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should have message
+      "ODE has duration T_0 but could not prove T_0 >= 0. To fix this, assert T >= 0 immediately before ODE"
   }
 
   it should "catch invalid dc-assign 2: not initialized" in withMathematica { _ =>
     val pfStr = "t' = 1, x' = y & ?(t := T);"
     val pf = SSAPass(p(pfStr, pp.statement(_)))
-    the [ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should
-      have message "ODE has duration T_0 but could not prove T_0 >= 0. To fix this, assert T >= 0 immediately before ODE"
+    the[ProofCheckException] thrownBy ProofChecker(Context.empty, pf) should have message
+      "ODE has duration T_0 but could not prove T_0 >= 0. To fix this, assert T >= 0 immediately before ODE"
   }
 
   it should "catch invalid ODE variable names in non-SSA file" in withMathematica { _ =>
-    val pfStr = "t:= 0; ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit xRange by solution;};"
+    val pfStr =
+      "t:= 0; ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit xRange by solution;};"
     val pf = p(pfStr, pp.statement(_))
-    the [ODEAdmissibilityException] thrownBy ProofChecker(Context.empty, pf) should
-      have message "Differential equation proof must be in SSA form, else variables (Set(t, x)) escape scope"
+    the[ODEAdmissibilityException] thrownBy ProofChecker(Context.empty, pf) should have message
+      "Differential equation proof must be in SSA form, else variables (Set(t, x)) escape scope"
   }
 }

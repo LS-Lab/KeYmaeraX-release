@@ -1,7 +1,7 @@
-/**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
 
 package edu.cmu.cs.ls.keymaerax
 
@@ -52,14 +52,18 @@ case class MapConfiguration(config: mutable.Map[String, String]) extends Configu
 
   /** @inheritdoc */
   override def getBigDecimal(key: String): Option[BigDecimal] = config.get(key).map(BigDecimal.apply)
+
   /** @inheritdoc */
   override def getList(key: String): List[String] = getString(key).map(_.split(",").toList).getOrElse(Nil)
+
   /** @inheritdoc */
   override def getMap(key: String): Map[String, String] = {
-    getList(key).map(entry => {
-      val k :: v :: Nil = entry.split("->").toList
-      k.trim -> v.trim.stripPrefix("->").trim
-    }).toMap
+    getList(key)
+      .map(entry => {
+        val k :: v :: Nil = entry.split("->").toList
+        k.trim -> v.trim.stripPrefix("->").trim
+      })
+      .toMap
   }
 
   /** @inheritdoc */

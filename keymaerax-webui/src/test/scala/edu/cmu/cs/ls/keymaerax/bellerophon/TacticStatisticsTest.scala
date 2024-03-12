@@ -12,11 +12,11 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import scala.collection.immutable.StringOps
 
 /**
-  * Tests tactic statistics.
-  * @author Stefan Mitsch
-  */
-@SummaryTest
-@UsualTest
+ * Tests tactic statistics.
+ * @author
+ *   Stefan Mitsch
+ */
+@SummaryTest @UsualTest
 class TacticStatisticsTest extends TacticTestBase {
 
   "Tactic statistics" should "count an atomic step as 1" in withTactics {

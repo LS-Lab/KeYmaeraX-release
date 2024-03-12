@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.requests.users
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.users.LoginResponse
@@ -14,12 +15,12 @@ class LoginRequest(db: DBAbstraction, userId: String, password: String) extends 
     val check = db.checkPassword(userId, password)
     db.getUser(userId) match {
       case Some(user) =>
-        val sessionToken =
-          if (check) Some(SessionManager.add(user))
-          else None
+        val sessionToken = if (check) Some(SessionManager.add(user)) else None
         new LoginResponse(check, user, sessionToken) :: Nil
-      case None => new ErrorResponse("Unable to login user " + userId
-        + ". Please double-check user name and password, or register a new user.") :: Nil
+      case None =>
+        new ErrorResponse(
+          "Unable to login user " + userId + ". Please double-check user name and password, or register a new user."
+        ) :: Nil
     }
   }
 }

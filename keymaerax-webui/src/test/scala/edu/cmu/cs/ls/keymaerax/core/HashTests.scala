@@ -16,16 +16,18 @@ import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests hash code and some collection expectations such as lookup and adds and removes.
-  *
-  * @todo more exhaustive tests
- * @author Andre Platzer
+ *
+ * @todo
+ *   more exhaustive tests
+ * @author
+ *   Andre Platzer
  */
 @CheckinTest
 class HashTests extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 1000
   val randomComplexity = 25
-  val collectionSize = 2*randomTrials
+  val collectionSize = 2 * randomTrials
   val rand = new RandomFormula()
   val cp = new RandomReapplyTests
 
@@ -40,27 +42,29 @@ class HashTests extends FlatSpec with Matchers {
   }
 
   it should "lookup in hash sets" in {
-    test((1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).toList)
+    test((1 to collectionSize).map(i => rand.nextExpression(randomComplexity)).toList)
   }
 
   private def test(data: List[Expression]): Unit = {
-    val other: List[Expression] = (1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).
-      filter(e => !data.contains(e)).toList
+    val other: List[Expression] = (1 to collectionSize)
+      .map(i => rand.nextExpression(randomComplexity))
+      .filter(e => !data.contains(e))
+      .toList
     if (other.length != data.length) println("Probabilistic collisions: " + (data.length - other.length))
-    val set:HashSet[Expression] = data.to(HashSet)
+    val set: HashSet[Expression] = data.to(HashSet)
     test(data, other, set)
-    val set2:ListSet[Expression] = data.to(ListSet)
+    val set2: ListSet[Expression] = data.to(ListSet)
     test(data, other, set2)
-    val set3:mutable.HashSet[Expression] = data.to(mutable.HashSet)
+    val set3: mutable.HashSet[Expression] = data.to(mutable.HashSet)
     testM(data, other, set3)
-    val set4:mutable.LinkedHashSet[Expression] = data.to(mutable.LinkedHashSet)
+    val set4: mutable.LinkedHashSet[Expression] = data.to(mutable.LinkedHashSet)
     testM(data, other, set4)
   }
 
   private def test(data: List[Expression], other: List[Expression], storage: Set[Expression]): Unit = {
     for (e <- data) storage.contains(e) shouldBe true
     for (e <- other) storage.contains(e) shouldBe false
-    val extra = storage++other
+    val extra = storage ++ other
     for (e <- data) extra.contains(e) shouldBe true
     for (e <- other) extra.contains(e) shouldBe true
   }
@@ -73,27 +77,29 @@ class HashTests extends FlatSpec with Matchers {
     for (e <- other) storage.contains(e) shouldBe true
   }
 
-  it should "lookup in hash maps" taggedAs(SlowTest) in {
-    testmap((1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).toList)
+  it should "lookup in hash maps" taggedAs (SlowTest) in {
+    testmap((1 to collectionSize).map(i => rand.nextExpression(randomComplexity)).toList)
   }
 
   private def testmap(data: List[Expression]): Unit = {
-    val other: List[Expression] = (1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).
-      filter(e => !data.contains(e)).toList
+    val other: List[Expression] = (1 to collectionSize)
+      .map(i => rand.nextExpression(randomComplexity))
+      .filter(e => !data.contains(e))
+      .toList
     if (other.length != data.length) println("Probabilistic collisions: " + (data.length - other.length))
-    val map:Map[Expression,Int] = data.map(e=> (e,e.hashCode())).toMap
+    val map: Map[Expression, Int] = data.map(e => (e, e.hashCode())).toMap
     testmap(data, other, map)
-    val map2:ListMap[Expression,Int] = ListMap(data.map(e => e -> e.hashCode):_*)
+    val map2: ListMap[Expression, Int] = ListMap(data.map(e => e -> e.hashCode): _*)
     testmap(data, other, map2)
-    val map3:HashMap[Expression,Int] = HashMap(data.map(e => e -> e.hashCode):_*)
+    val map3: HashMap[Expression, Int] = HashMap(data.map(e => e -> e.hashCode): _*)
     testmap(data, other, map3)
-    val map5:mutable.HashMap[Expression,Int] = mutable.HashMap(data.map(e => e -> e.hashCode):_*)
+    val map5: mutable.HashMap[Expression, Int] = mutable.HashMap(data.map(e => e -> e.hashCode): _*)
     testmapM(data, other, map5)
-    val map6:mutable.LinkedHashMap[Expression,Int] = mutable.LinkedHashMap(data.map(e => e -> e.hashCode):_*)
+    val map6: mutable.LinkedHashMap[Expression, Int] = mutable.LinkedHashMap(data.map(e => e -> e.hashCode): _*)
     testmapM(data, other, map6)
   }
 
-  private def testmap(data: List[Expression], other: List[Expression], storage: Map[Expression,Int]): Unit = {
+  private def testmap(data: List[Expression], other: List[Expression], storage: Map[Expression, Int]): Unit = {
     for (e <- data) {
       storage.contains(e) shouldBe true
       storage.get(e) shouldBe Some(e.hashCode())
@@ -102,7 +108,7 @@ class HashTests extends FlatSpec with Matchers {
       storage.contains(e) shouldBe false
       storage.get(e) shouldBe None
     }
-    val extra = storage ++ other.map(e=> (e,-e.hashCode())).toMap
+    val extra = storage ++ other.map(e => (e, -e.hashCode())).toMap
     for (e <- data) {
       extra.contains(e) shouldBe true
       extra.get(e) shouldBe Some(e.hashCode())
@@ -113,7 +119,7 @@ class HashTests extends FlatSpec with Matchers {
     }
   }
 
-  private def testmapM(data: List[Expression], other: List[Expression], storage: mutable.Map[Expression,Int]): Unit = {
+  private def testmapM(data: List[Expression], other: List[Expression], storage: mutable.Map[Expression, Int]): Unit = {
     for (e <- data) {
       storage.contains(e) shouldBe true
       storage.get(e) shouldBe Some(e.hashCode())
@@ -122,7 +128,7 @@ class HashTests extends FlatSpec with Matchers {
       storage.contains(e) shouldBe false
       storage.get(e) shouldBe None
     }
-    storage ++= other.map(e=> (e,-e.hashCode())).toMap
+    storage ++= other.map(e => (e, -e.hashCode())).toMap
     for (e <- data) {
       storage.contains(e) shouldBe true
       storage.get(e) shouldBe Some(e.hashCode())

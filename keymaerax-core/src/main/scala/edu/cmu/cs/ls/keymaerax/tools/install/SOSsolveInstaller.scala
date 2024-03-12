@@ -10,16 +10,17 @@ import java.nio.channels.Channels
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
-/**
-  * Installs SOSsolve in the KeYmaera X directory, imitating [[PegasusInstaller]]
-  */
+/** Installs SOSsolve in the KeYmaera X directory, imitating [[PegasusInstaller]] */
 object SOSsolveInstaller extends Logging {
 
   /** The path to the installed SOSsolve. */
   val sossolveRelativeResourcePath: String = {
     val absolutePath = copyToDisk()
     val relativePath = Configuration.SOSsolve.relativePath
-    assert(absolutePath == Configuration.sanitizedPath(Configuration.KEYMAERAX_HOME_PATH, relativePath), "Unexpected absolute/relative path")
+    assert(
+      absolutePath == Configuration.sanitizedPath(Configuration.KEYMAERAX_HOME_PATH, relativePath),
+      "Unexpected absolute/relative path",
+    )
     File.separator + relativePath
   }
 
@@ -30,10 +31,7 @@ object SOSsolveInstaller extends Logging {
     if (!new File(sossolveDir).exists) new File(sossolveDir).mkdirs
 
     val sossolveResourcePath = "/SOSsolve/"
-    val sossolveResourceNames =
-        "sossolve.wl" ::
-        "NDConvexHull.wl" ::
-        Nil
+    val sossolveResourceNames = "sossolve.wl" :: "NDConvexHull.wl" :: Nil
 
     sossolveResourceNames.foreach(n => {
       val sossolveDestPath = sossolveDir + File.separator + n

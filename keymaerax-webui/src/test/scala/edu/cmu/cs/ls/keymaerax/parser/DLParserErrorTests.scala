@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Cancellable, LazySequentialInterpreter, ReflectiveExpressionBuilder}
@@ -15,7 +16,8 @@ import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 
-class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
+class DLParserErrorTests
+    extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
@@ -23,12 +25,12 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     ToolProvider.init()
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
     ))
     Parser.setParser(DLParser)
-    ArchiveParser.setParser(
-      new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
-    )
+    ArchiveParser.setParser(new DLArchiveParser(
+      new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
+    ))
   }
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
@@ -39,7 +41,7 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   "dL parser" should "report expected term on rhs" in {
     val input = "(( (( f_() )) + #"
-    val ex = the [ParseException] thrownBy Parser.parser.termParser(input)
+    val ex = the[ParseException] thrownBy Parser.parser.termParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
     ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
@@ -47,26 +49,28 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   it should "report expected term on rhs FROM FORMULA" in {
     val input = "(( (( f_() )) + #"
-    val ex = the [ParseException] thrownBy Parser.parser.formulaParser(input)
+    val ex = the[ParseException] thrownBy Parser.parser.formulaParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
     ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
   }
 
   "dL archive parser" should "report missing problem" in {
-    val input =
+    val input = {
       """
         |ArchiveEntry "fo"
         |End.
-      """.stripMargin
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+        |""".stripMargin
+    }
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.expect shouldBe "(metaInfoKey | Pass | \"Problem\")"
     e.found shouldBe "\"End.\""
-    e.hint shouldBe "Try (\"Description\" | \"Title\" | \"Link\" | \"Author\" | \"See\" | \"Illustration\" | \"Citation\" | \"ProgramVariables\" | \"Definitions\" | \"Problem\")"
+    e.hint shouldBe
+      "Try (\"Description\" | \"Title\" | \"Link\" | \"Author\" | \"See\" | \"Illustration\" | \"Citation\" | \"ProgramVariables\" | \"Definitions\" | \"Problem\")"
   }
 
   it should "report wrong sort" in {
-    val input =
+    val input = {
       """
         |ArchiveEntry "foo"
         |Definitions
@@ -76,19 +80,21 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
         |  H > 0
         |End.
         |End.
-      """.stripMargin
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+        |""".stripMargin
+    }
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.hint should include("Real")
   }
 
   it should "FEATURE_REQUEST: bad start of entry" taggedAs TodoTest in {
-    val input =
+    val input = {
       """BadEntry
         |End.
-      """.stripMargin
+        |""".stripMargin
+    }
 
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    //@todo shared definitions not yet part of the error message, should be similar to below
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
+    // @todo shared definitions not yet part of the error message, should be similar to below
     e.expect shouldBe "(sharedDefinitions | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
     e.found shouldBe "\"BadEntry\""
     e.hint shouldBe "Try (\"SharedDefinitions\" | \"ArchiveEntry\" | \"Lemma\" | \"Theorem\" | \"Exercise\")"
@@ -96,81 +102,90 @@ class DLParserErrorTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   // TODO is this still a required feature?
   it should "mismatched start and end label" in {
-    val input =
+    val input = {
       """ArchiveEntry asdf:"05: Short Bouncing Ball: single hop"
         |Problem
         |5=5
         |End.
         |End asd.
-      """.stripMargin
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+        |""".stripMargin
+    }
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.expect shouldBe "end label: Some(asd) is optional but should be the same as the start label: Some(asdf)"
     e.found shouldBe "\"\""
     e.hint shouldBe "Try end label: Some(asd) is optional but should be the same as the start label: Some(asdf)"
   }
 
   it should "FEATURE_REQUEST: domain missing" taggedAs TodoTest in {
-    val input =
+    val input = {
       """ArchiveEntry "foo"
         |Problem
         |[{x'=x&x}]x>=0
         |End.
         |End.
-      """.stripMargin
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    //@todo at the moment detected in semantic analysis; would need to collect variables while parsing to tell formula parser to not parse x as predicate x()
+        |""".stripMargin
+    }
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
+    // @todo at the moment detected in semantic analysis; would need to collect variables while parsing to tell formula parser to not parse x as predicate x()
     e.expect shouldBe """("_" | "{" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | comparator)"""
     e.found shouldBe "\"}]x>=0\""
-    e.hint shouldBe """Try ([a-zA-Z0-9] | "_" | "{" | "(" | "(|" | "<<" | "'" | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<" | comparator)"""
+    e.hint shouldBe
+      """Try ([a-zA-Z0-9] | "_" | "{" | "(" | "(|" | "<<" | "'" | "^" | "*" | "/" | "+" | "-" | "=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<" | comparator)"""
   }
 
   it should "domain missing 2" in {
-    val input =
+    val input = {
       """ArchiveEntry "foo"
         |Problem
         |[{x'=x&}]x>=0
         |End.
         |End.
-      """.stripMargin
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
-    e.expect shouldBe """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")"""
+        |""".stripMargin
+    }
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
+    e.expect shouldBe
+      """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")"""
     e.found shouldBe "\"}]x>=0\""
     // todo: maybe provide verbose suggestions here somehow??
-    e.hint shouldBe """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")"""
+    e.hint shouldBe
+      """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")"""
   }
 
   it should "give correct error location for disallowed identifier" in {
-    val input =
+    val input = {
       """ArchiveEntry "foo"
         |Problem
         |5 < 5+ax__
         |End.
         |End.
-      """.stripMargin
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+        |""".stripMargin
+    }
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.expect shouldBe """(number | dot | function | unitFunctional | variable | termList | "__________" | "-")"""
     e.found shouldBe "\"ax__\""
     e.hint shouldBe """Try ("(" | [0-9] | "." | "•" | "__________" | "-")"""
   }
 
   it should "give correct error location for invalid formula extension" in {
-    val input =
+    val input = {
       """ArchiveEntry "foo"
         |Problem
         |x=5+a<5
         |End.
         |End.
-      """.stripMargin
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+        |""".stripMargin
+    }
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.msg shouldBe "Error parsing problem at 2:1"
-    e.expect shouldBe """([a-zA-Z0-9] | "_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | "End.")"""
+    e.expect shouldBe
+      """([a-zA-Z0-9] | "_" | "<<" | termList | space | "'" | "^" | "*" | "/" | "+" | "-" | "&" | "∧" | "|" | "∨" | "->" | "→" | " <- " | "←" | "<->" | "↔" | "End.")"""
     e.found shouldBe "\"<5\""
     e.hint should include("End")
   }
 
   it should "report too many End tokens" in {
     val input = """ArchiveEntry "Test" Problem 1>=0 End. End. End."""
-    val e = the [ParseException] thrownBy ArchiveParser.parse(input)
+    val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.found should include("End")
   }
 

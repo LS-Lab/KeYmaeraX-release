@@ -1,10 +1,9 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
-/**
-  * @note Code Review 2016-08-16
-  */
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+/** @note Code Review 2016-08-16 */
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.Logging
@@ -13,13 +12,13 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import scala.collection.mutable
 
 /**
-  * Extends an arbitrary LemmaDB with caching functionality
-  * to reduce the cost of repeated accesses to the same Lemma
-  * within a given KeYmaeraX session.
-  *
-  * Created by bbohrer on 8/3/16.
-  */
+ * Extends an arbitrary LemmaDB with caching functionality to reduce the cost of repeated accesses to the same Lemma
+ * within a given KeYmaeraX session.
+ *
+ * Created by bbohrer on 8/3/16.
+ */
 class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
+
   /** The lemma cache, updated lazily on access of a lemma. */
   private val cachedLemmas: mutable.Map[LemmaID, Lemma] = mutable.Map()
 
@@ -32,7 +31,7 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
   /** @inheritdoc */
   final override def get(lemmaIDs: List[LemmaID]): Option[List[Lemma]] = {
     /* Get as many lemmas as possible from the cache */
-    val (cached, uncached) = lemmaIDs.zipWithIndex.partition{case (x,_) => cachedLemmas.contains(x)}
+    val (cached, uncached) = lemmaIDs.zipWithIndex.partition { case (x, _) => cachedLemmas.contains(x) }
     val fromCache = cached.map({ case (x, i) => (cachedLemmas(x), i) })
     val (uncachedIDs, uncachedIdxs) = uncached.unzip
     /* Use a single get() call for performance when getting uncached lemmas */
@@ -52,10 +51,10 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
 
   /** @inheritdoc */
   final override def add(lemma: Lemma): LemmaID = {
-    //@note strip definitions to keep cache and database consistent, since Lemma.toString always prints without definitions
+    // @note strip definitions to keep cache and database consistent, since Lemma.toString always prints without definitions
     val stored = lemma.copy(fact = lemma.fact.reapply(Declaration(Map.empty)))
     val id = db.add(stored)
-    cachedLemmas += ((id,stored))
+    cachedLemmas += ((id, stored))
     id
   }
 

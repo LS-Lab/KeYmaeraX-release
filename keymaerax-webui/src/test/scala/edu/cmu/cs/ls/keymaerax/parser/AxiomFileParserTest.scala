@@ -14,9 +14,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, PrivateMethodTester
 
 import scala.collection.immutable.Map
 
-/**
-  * @author Nathan Fulton
- */
+/** @author Nathan Fulton */
 @CheckinTest
 class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
 
@@ -26,7 +24,7 @@ class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTeste
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
     ))
   }
 
@@ -37,7 +35,7 @@ class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTeste
     val axioms = KeYmaeraXAxiomParser(axiomFile)
     axioms.size shouldNot be <= 0
     // check for a sample
-    axioms should contain ("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
+    axioms should contain("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
   }
 
   "DLAxiomParser" should "parse the axiom file" in {
@@ -47,7 +45,7 @@ class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTeste
     val axioms = DLAxiomParser(axiomFile)
     axioms.size shouldNot be <= 0
     // check for a sample
-    axioms should contain ("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
+    axioms should contain("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
   }
 
   "Both parsers" should "agree on the outcome" in {

@@ -1,7 +1,8 @@
-/**
- * Copyright (c) Carnegie Mellon University.
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.hydra.responses.modelplex
 
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
@@ -17,17 +18,16 @@ abstract class ModelPlexResponse(model: ModelPOJO, code: String) extends Respons
       "modelid" -> JsString(model.modelId.toString),
       "modelname" -> JsString(model.name),
       "code" -> JsString(code),
-      "source" -> JsString(prettierPrint(ArchiveParser(model.keyFile).head.expandedModel))
+      "source" -> JsString(prettierPrint(ArchiveParser(model.keyFile).head.expandedModel)),
     )
   }
 }
 
 class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression)
-  extends ModelPlexResponse(model, PrettierPrintFormatProvider(artifact, 80).print(artifact.prettyString)) {
-}
+    extends ModelPlexResponse(model, PrettierPrintFormatProvider(artifact, 80).print(artifact.prettyString)) {}
 
 class ModelPlexMonitorResponse(model: ModelPOJO, artifact: Expression, proofArchive: String)
-  extends ModelPlexArtifactResponse(model, artifact) {
+    extends ModelPlexArtifactResponse(model, artifact) {
   override def getJson: JsValue = {
     val artifact = super.getJson.asJsObject
     artifact.copy(artifact.fields + ("proof" -> JsString(proofArchive)))
@@ -35,13 +35,11 @@ class ModelPlexMonitorResponse(model: ModelPOJO, artifact: Expression, proofArch
 }
 
 class ModelPlexSandboxResponse(model: ModelPOJO, conjecture: Formula, artifact: Expression)
-  extends ModelPlexArtifactResponse(model, artifact) {
+    extends ModelPlexArtifactResponse(model, artifact) {
   override def getJson: JsValue = {
     val artifact = super.getJson.asJsObject
     artifact.copy(artifact.fields + ("conjecture" -> JsString(prettierPrint(conjecture))))
   }
 }
 
-class ModelPlexCCodeResponse(model: ModelPOJO, code: String) extends ModelPlexResponse(model, code) {
-
-}
+class ModelPlexCCodeResponse(model: ModelPOJO, code: String) extends ModelPlexResponse(model, code) {}

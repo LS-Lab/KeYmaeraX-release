@@ -1,11 +1,13 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
 /**
-  * Copyright (c) Carnegie Mellon University.
-  * See LICENSE.txt for the conditions of this license.
-  */
-/**
-  * Proof data structures for Kaisar
-  * @author Brandon Bohrer
-  */
+ * Proof data structures for Kaisar
+ * @author
+ *   Brandon Bohrer
+ */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import KaisarProof._
@@ -41,42 +43,52 @@ object KaisarProof {
     def prettyString: String = label + (if (args.isEmpty) "" else "(" + args.mkString(",") + ")")
   }
 
-
-  abstract class LocatedException (val msg: String = "", val cause: Throwable = null) extends Exception (msg, cause) {
+  abstract class LocatedException(val msg: String = "", val cause: Throwable = null) extends Exception(msg, cause) {
     def location: Option[Int]
   }
 
-  class NodeException (override val msg: String = "", override val cause: Throwable = null) extends LocatedException (msg, cause) {
+  class NodeException(override val msg: String = "", override val cause: Throwable = null)
+      extends LocatedException(msg, cause) {
     val node: ASTNode = Triv()
     def location: Option[Int] = node.location
     override def toString: String =
-      if (cause == null) {
-        s"NodeException($msg)"
-      } else {
-        s"NodeException($msg), cause ${cause}"
-      }
+      if (cause == null) { s"NodeException($msg)" }
+      else { s"NodeException($msg), cause ${cause}" }
   }
-  case class ProofCheckException(override val msg: String, override val cause: Throwable = null, override val node: ASTNode = Triv()) extends NodeException (msg, cause) {
+  case class ProofCheckException(
+      override val msg: String,
+      override val cause: Throwable = null,
+      override val node: ASTNode = Triv(),
+  ) extends NodeException(msg, cause) {
     override def toString: String = msg
   }
 
   // Failures in proof transformation passes (as opposed to proof checking)
   case class TransformationException(override val msg: String, override val node: ASTNode = Triv())
-    extends NodeException(msg)
+      extends NodeException(msg)
   // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
   case class ElaborationException(override val msg: String, override val node: ASTNode = Triv())
-    extends NodeException(msg)
+      extends NodeException(msg)
   case class ODEAdmissibilityException(vars: Set[Variable], override val node: ASTNode = Triv())
-    extends NodeException(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
-  case class KaisarParseException(override val msg: String = "", trace: Option[TracedFailure] = None, override val location: Option[Int],  source: String)
-    extends LocatedException (if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get)) {
+      extends NodeException(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
+  case class KaisarParseException(
+      override val msg: String = "",
+      trace: Option[TracedFailure] = None,
+      override val location: Option[Int],
+      source: String,
+  ) extends LocatedException(
+        if (trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get)
+      ) {
     override def toString: String = {
-      val msgMsg = trace.map (tr => {
-        val expectation = KaisarProgramParser.expectation(tr)
-        // note: if statement may not be strictly necessary, written this way to match fastparse code as closely as possible
-        val input = if (tr.label == "") tr.failure.extra.input else tr.input
-        "Found " + Failure.formatTrailing(input, tr.index) + " at position " + tr.failure.extra.input.prettyIndex(tr.index) + s"(${tr.index})" + "\nExpected " + expectation
-      }).getOrElse("")
+      val msgMsg = trace
+        .map(tr => {
+          val expectation = KaisarProgramParser.expectation(tr)
+          // note: if statement may not be strictly necessary, written this way to match fastparse code as closely as possible
+          val input = if (tr.label == "") tr.failure.extra.input else tr.input
+          "Found " + Failure.formatTrailing(input, tr.index) + " at position " +
+            tr.failure.extra.input.prettyIndex(tr.index) + s"(${tr.index})" + "\nExpected " + expectation
+        })
+        .getOrElse("")
       s"Parse error: $msgMsg"
     }
   }
@@ -105,8 +117,10 @@ object KaisarProof {
   // Pattern match a located term  f@L
   def getAt(t: Term, node: ASTNode = Triv()): Option[(Term, LabelRef)] = {
     t match {
-      case FuncOf(Function("at", _index, _domain, _sort, interp @ None), Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
-        Some(e, LabelRef(label, tupleToTerms(args, node)))
+      case FuncOf(
+            Function("at", _index, _domain, _sort, interp @ None),
+            Pair(e, FuncOf(Function(label, _, _, _, _), args)),
+          ) => Some(e, LabelRef(label, tupleToTerms(args, node)))
       case _ => None
     }
   }
@@ -114,9 +128,11 @@ object KaisarProof {
   def getAt(t: Formula, node: ASTNode): Option[(Formula, LabelRef)] = {
     t match {
       // predicationals always uninterpreted
-        // TODO: ???^
-      case PredicationalOf(Function("at", _index, _domain, _sort, interp @ None), And(e, PredOf(Function(label, _, _, _, _), args))) =>
-        Some(e, LabelRef(label, tupleToTerms(args, node)))
+      // TODO: ???^
+      case PredicationalOf(
+            Function("at", _index, _domain, _sort, interp @ None),
+            And(e, PredOf(Function(label, _, _, _, _), args)),
+          ) => Some(e, LabelRef(label, tupleToTerms(args, node)))
       case _ => None
     }
   }
@@ -138,11 +154,10 @@ object KaisarProof {
 
   // This is usually not what you want. Totally forgets @ exists, rather than expanding @.
   def forgetAt(e: Term): Term = ExpressionTraversal.traverse(forgetTF, e).getOrElse(e)
-  def forgetAt(e: Formula): Formula  =
-    ExpressionTraversal.traverse(forgetTF, e) match {
-      case Some(z) => z
-      case None => e
-    }
+  def forgetAt(e: Formula): Formula = ExpressionTraversal.traverse(forgetTF, e) match {
+    case Some(z) => z
+    case None => e
+  }
 
   // Pattern match a stabilized term stable(f)
   def getStable(t: Term): Option[Term] = {
@@ -161,8 +176,10 @@ object KaisarProof {
   // patttern "*" or "_". This is elaborated before proofchecking
   val wild: FuncOf = FuncOf(Function("wild", domain = Unit, sort = Unit, interp = None), Nothing)
 
-  /** [[askLaterT]] is strictly used in the internal representation. If a term cannot be elaborated until a later
-    * proof-checking pass, then symbol [[askLaterT]] is used to represent a dummy term */
+  /**
+   * [[askLaterT]] is strictly used in the internal representation. If a term cannot be elaborated until a later
+   * proof-checking pass, then symbol [[askLaterT]] is used to represent a dummy term
+   */
   val askLaterTF: Function = Function("askLater", domain = Unit, sort = Real, interp = None)
   val askLaterPF: Function = Function("askLater", domain = Unit, sort = Bool, interp = None)
   val askLaterT: FuncOf = FuncOf(askLaterTF, Nothing)
@@ -176,7 +193,7 @@ object KaisarProof {
   // [[Block]] constructor.
   def flatten(ss: Statements): Statements = {
     ss match {
-      case Block(ss) :: sss  => flatten(ss ++ sss)
+      case Block(ss) :: sss => flatten(ss ++ sss)
       case Triv() :: ss => flatten(ss)
       case s :: ss => s :: flatten(ss)
       case Nil => Nil
@@ -216,13 +233,12 @@ sealed trait ASTNode {
   // Location in source file of connective which generated AST node.
   // Populated by parser and used to reconstruct error messages.
   var location: Option[Int] = None
-  def setLocation(loc: Int): Unit = { location = Some(loc)}
+  def setLocation(loc: Int): Unit = { location = Some(loc) }
 }
 object ASTNode {
-  def locate[T <: ASTNode](x:T, other: ASTNode): T = {
-    val theLocation: Option[Int] = if(x.location.isDefined) x.location else other.location
-    if (theLocation.isDefined)
-      x.setLocation(theLocation.get)
+  def locate[T <: ASTNode](x: T, other: ASTNode): T = {
+    val theLocation: Option[Int] = if (x.location.isDefined) x.location else other.location
+    if (theLocation.isDefined) x.setLocation(theLocation.get)
     x
   }
 }
@@ -301,14 +317,14 @@ sealed trait AsgnPat extends ASTNode {
   def boundFacts: Set[Variable] = {
     this match {
       case VarPat(x, Some(p)) => Set(p)
-      case TuplePat(pats) => pats.map(_.boundFacts).reduce((l,r) => l.++(r))
+      case TuplePat(pats) => pats.map(_.boundFacts).reduce((l, r) => l.++(r))
       case _ => Set()
     }
   }
   def boundVars: Set[Variable] = {
     this match {
       case VarPat(x, p) => Set(x)
-      case TuplePat(pats) => pats.map(_.boundVars).reduce((l,r) => l.++(r))
+      case TuplePat(pats) => pats.map(_.boundVars).reduce((l, r) => l.++(r))
       case _ => Set()
     }
   }
@@ -335,24 +351,28 @@ case class Assert(pat: IdentPat, f: Formula, m: Method) extends Statement
 // when [[mod==None]] the assignment is nondeterministic
 case class Modify(ids: List[Ident], mods: List[(Variable, Option[Term])]) extends Statement {
   val mod = this
-  if(ids.length > 1 && ids.length != mods.length)
-    throw new NodeException("Modify statement should have one fact name for each assignment or one fact name for the entire block") {
-      override val node: ASTNode = mod
-    }
+  if (ids.length > 1 && ids.length != mods.length) throw new NodeException(
+    "Modify statement should have one fact name for each assignment or one fact name for the entire block"
+  ) {
+    override val node: ASTNode = mod
+  }
 
   def boundVars: Set[Variable] = mods.map(_._1).toSet
-  def freeVars: Set[Variable] = mods.map({case (x, f) => StaticSemantics(f.getOrElse(Nothing)).toSet}).reduce(_ ++ _)
+  def freeVars: Set[Variable] = mods.map({ case (x, f) => StaticSemantics(f.getOrElse(Nothing)).toSet }).reduce(_ ++ _)
 
-  def asgns: List[(Option[Ident], Variable, Option[Term])] =
-    ids match {
-      case Nil => mods.map({case (x, f) => (None, x, f)})
-      case id :: Nil => mods.map({case (x, f) => (Some(id), x, f)})
-      case _ => zip3(ids.map(Some(_)), mods.map(_._1), mods.map(_._2), this)
-    }
+  def asgns: List[(Option[Ident], Variable, Option[Term])] = ids match {
+    case Nil => mods.map({ case (x, f) => (None, x, f) })
+    case id :: Nil => mods.map({ case (x, f) => (Some(id), x, f) })
+    case _ => zip3(ids.map(Some(_)), mods.map(_._1), mods.map(_._2), this)
+  }
 }
 object Modify {
   def apply(dm: DomModify): Modify = {
-    val ids = dm.id match {case Nothing => Nil case x: Variable => List(x) case _ => throw ProofCheckException("DomModify has unexpected identifier: " + dm.id)}
+    val ids = dm.id match {
+      case Nothing => Nil
+      case x: Variable => List(x)
+      case _ => throw ProofCheckException("DomModify has unexpected identifier: " + dm.id)
+    }
     Modify(ids, (dm.x, Some(dm.f)) :: Nil)
   }
   def apply(lst: List[(Option[Ident], Variable, Option[Term])]): Modify = {
@@ -376,8 +396,11 @@ case class Note(x: Ident, proof: ProofTerm, var annotation: Option[Formula] = No
 case class LetSym(f: Ident, args: List[Ident], e: Expression) extends Statement {
   val isFunction: Boolean = e.isInstanceOf[Term]
   val isPredicate: Boolean = !isFunction
-  val returnSort: Sort = if(isFunction) Real else Bool
-  private def nsort (sorts: List[Sort]): Sort = sorts match {case Nil => Unit case _ => sorts.reduceRight[Sort](Tuple)}
+  val returnSort: Sort = if (isFunction) Real else Bool
+  private def nsort(sorts: List[Sort]): Sort = sorts match {
+    case Nil => Unit
+    case _ => sorts.reduceRight[Sort](Tuple)
+  }
   val asFunction: Function = Function(f.name, domain = nsort(args.map(_ => Real)), sort = returnSort)
 }
 // Unifies expression [[e]] with pattern [[pat]], binding free term and formula variables of [[pat]]
@@ -407,20 +430,25 @@ case class BoxChoice(left: Statement, right: Statement) extends Statement
  */
 
 sealed trait Metric {
+
   /** Optional formula which must be proved for soundness in order for metric to be well-founded */
   def sideCondition: Option[Formula] = None
+
   /** Whether loop makes its progress by increasing value */
   def isIncreasing: Boolean
+
   /** Amount which metric increases each iteration. Positive for increasing loop, negative for decreasing loop */
   def delta: Term
+
   /** Value at which metric terminates */
   def bound: Term
+
   /** Formula which holds once the loop has terminated, in term of the changing loop index variable */
 }
 
 object Metric {
   def weakNegation(guard: Formula, delta: Term): Formula = {
-    guard  match {
+    guard match {
       case And(l, r) => Or(weakNegation(l, delta), weakNegation(r, delta))
       case Or(l, r) => And(weakNegation(l, delta), weakNegation(r, delta))
       case Less(l, r) => Greater(l, Minus(r, delta))
@@ -429,8 +457,13 @@ object Metric {
       case GreaterEqual(l, r) => LessEqual(l, Plus(r, delta))
     }
   }
-  /** @return A termination bound and flag indicating whether loop increases vs decreases
-    * @throws MatchError If this conjunct is not a loop bound  */
+
+  /**
+   * @return
+   *   A termination bound and flag indicating whether loop increases vs decreases
+   * @throws MatchError
+   *   If this conjunct is not a loop bound
+   */
   private def conjunctBound(mvar: Variable): PartialFunction[Formula, (Term, Boolean)] = {
     case (Greater(x, lim)) if x == mvar => ((lim, false))
     case (GreaterEqual(x, lim)) if x == mvar => ((lim, false))
@@ -438,47 +471,72 @@ object Metric {
     case (LessEqual(lim, x)) if x == mvar => ((lim, false))
     case (Greater(lim, x)) if x == mvar => ((lim, true))
     case (GreaterEqual(lim, x)) if x == mvar => ((lim, true))
-    case (Less(x, lim))  if x == mvar => ((lim, true))
+    case (Less(x, lim)) if x == mvar => ((lim, true))
     case (LessEqual(x, lim)) if x == mvar => ((lim, true))
   }
 
-  /** @param guard can be a conjunction of guard conditions, only one has to be the bound
-    * @return termination bound and flag to indicate whether loop index increases or decreases. None if guard is not found. */
+  /**
+   * @param guard
+   *   can be a conjunction of guard conditions, only one has to be the bound
+   * @return
+   *   termination bound and flag to indicate whether loop index increases or decreases. None if guard is not found.
+   */
   def guardBound(mvar: Variable, guard: Formula): Option[(Term, Boolean)] = {
     val cnjs = FormulaTools.conjuncts(guard)
     cnjs.collectFirst(conjunctBound(mvar))
   }
 
   /**
-    *
-    * @param mvar loop index variable
-    * @param increment term which increments/decrements index variable at each iteration
-    * @param guard guard formula of loop termination condition
-    * @param taboos variables bound during loop body which are taboo in loop init, increment
-    * @return Loop termination metric if well-founded
-    * @throws ProofCheckException if termination metric ill-founded
-    */
+   * @param mvar
+   *   loop index variable
+   * @param increment
+   *   term which increments/decrements index variable at each iteration
+   * @param guard
+   *   guard formula of loop termination condition
+   * @param taboos
+   *   variables bound during loop body which are taboo in loop init, increment
+   * @return
+   *   Loop termination metric if well-founded
+   * @throws ProofCheckException
+   *   if termination metric ill-founded
+   */
   def apply(mvar: Variable, increment: Term, guard: Formula, taboos: Set[Variable]): Metric = {
     (increment, guardBound(mvar, guard)) match {
-      case (_, None) => throw ProofCheckException("Could not construct metric, guard " + guard + " did not mention index variable or did not indicate loop bound")
+      case (_, None) => throw ProofCheckException(
+          "Could not construct metric, guard " + guard +
+            " did not mention index variable or did not indicate loop bound"
+        )
       case (Plus(y, ny: Number), Some((bnd: Number, true))) if ny.value != 0 && y == mvar => LiteralMetric(ny, bnd)
-      case (Minus(y, ny: Number), Some((bnd: Number, false))) if ny.value != 0 && y == mvar => LiteralMetric(Number(-ny.value), bnd)
-      case (Plus(y, ny: Number), Some((bnd: Number, _))) => throw ProofCheckException("Could not construct metric, direction of guard condition and increment statement disagree")
-      case (Minus(y, ny: Number), Some((bnd: Number, _))) => throw ProofCheckException("Could not construct metric, direction of guard condition and increment statement disagree")
-      case (Plus(y, ey), Some((bnd, dir))) if StaticSemantics(ey).intersect(taboos).isEmpty => // constant throughout loop
+      case (Minus(y, ny: Number), Some((bnd: Number, false))) if ny.value != 0 && y == mvar =>
+        LiteralMetric(Number(-ny.value), bnd)
+      case (Plus(y, ny: Number), Some((bnd: Number, _))) => throw ProofCheckException(
+          "Could not construct metric, direction of guard condition and increment statement disagree"
+        )
+      case (Minus(y, ny: Number), Some((bnd: Number, _))) => throw ProofCheckException(
+          "Could not construct metric, direction of guard condition and increment statement disagree"
+        )
+      case (Plus(y, ey), Some((bnd, dir)))
+          if StaticSemantics(ey).intersect(taboos).isEmpty => // constant throughout loop
         ProvablyConstantMetric(ey, bnd, dir, taboos)
-      case _ => throw ProofCheckException("For loop only supports loops which increment by provably constant value metric := metric + c; non-literal increments must be positive")
+      case _ => throw ProofCheckException(
+          "For loop only supports loops which increment by provably constant value metric := metric + c; non-literal increments must be positive"
+        )
     }
   }
 }
 
 // @TODO: [low priority] Allow lexicographic metrics or other fancy metrics
 case class LiteralMetric(override val delta: Number, override val bound: Number) extends Metric {
-  if (delta.value == 0 ) throw ProofCheckException("Ill-founded metric with increment of 0")
+  if (delta.value == 0) throw ProofCheckException("Ill-founded metric with increment of 0")
   override def isIncreasing: Boolean = delta.value > 0
 }
 
-case class ProvablyConstantMetric(override val delta: Term, override val bound: Term, override val isIncreasing: Boolean, taboos: Set[Variable]) extends Metric {
+case class ProvablyConstantMetric(
+    override val delta: Term,
+    override val bound: Term,
+    override val isIncreasing: Boolean,
+    taboos: Set[Variable],
+) extends Metric {
   if (!StaticSemantics(delta).intersect(taboos).isEmpty)
     throw ProofCheckException(s"Termination metric increment $delta not guaranteed to be constant")
   if (!StaticSemantics(bound).intersect(taboos).isEmpty)
@@ -493,7 +551,15 @@ case class ProvablyConstantMetric(override val delta: Term, override val bound: 
 //   !(foo >= bar) by guard(delta);  else can try to infer with ... by guard;.
 //   guardEpsilon is None initially
 // and should not be changed once set to Some(delta)
-case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement, var guardDelta:Option[Term] = None) extends Statement
+case class For(
+    metX: Ident,
+    met0: Term,
+    metIncr: Term,
+    conv: Option[Assert],
+    guard: Assume,
+    body: Statement,
+    var guardDelta: Option[Term] = None,
+) extends Statement
 // @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
@@ -510,12 +576,11 @@ case class InverseGhost(s: Statement) extends Statement
 // Proof of differential equation, either angelic or demonic.
 case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   // get predecessor of SSA variable. If there is no subscript, assume it's not an SSA variable so doesn't need pred.
-  private def initOf(x: BaseVariable): BaseVariable =
-    x match {
-      case BaseVariable(x, None, s) => BaseVariable(x, None, s)
-      case BaseVariable(x, Some(0), s) => BaseVariable(x, None, s)
-      case BaseVariable(x, Some(i), s) => BaseVariable(x, Some(i-1), s)
-    }
+  private def initOf(x: BaseVariable): BaseVariable = x match {
+    case BaseVariable(x, None, s) => BaseVariable(x, None, s)
+    case BaseVariable(x, Some(0), s) => BaseVariable(x, None, s)
+    case BaseVariable(x, Some(i), s) => BaseVariable(x, Some(i - 1), s)
+  }
 
   def solutionsFrom(xys: Map[Variable, Term], forProof: Boolean): Option[List[(Variable, Term)]] = {
     if (timeVar.isEmpty) None
@@ -523,12 +588,14 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
       val ode = getODESystem(forProof)
       try {
         val result = Integrator(xys.toMap, timeVar.get, ode)
-        val resultAlist = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
+        val resultAlist = result.map({
+          case Equal(x: Variable, f) => (x, f)
+          case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this)
+        })
         val resultMap = resultAlist.toMap
         val theTimeVar: Variable =
-          if (result.size < xys.size) {
-            xys.filter({ case (x, f) => !resultMap.contains(x) }).head._1
-          } else timeVar.get
+          if (result.size < xys.size) { xys.filter({ case (x, f) => !resultMap.contains(x) }).head._1 }
+          else timeVar.get
         val (timeX, timeF) = duration match {
           case Some((x, f)) => (x -> f)
           case None => (theTimeVar -> theTimeVar)
@@ -544,11 +611,14 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   // Real [[solutions]] function assumes ODE is already in SSA form. Sometimes we need to check
   // "whether solutions exist" before SSA pass, so use silly initial values so that the integrator can run.
   private lazy val dummySolutions: Option[List[(Variable, Term)]] = {
-    val dummyXys: Set[(Variable, Term)] =
-      StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> Number(0)))
-    try {
-      solutionsFrom(dummyXys.toMap, false)
-    } catch { case (m: MatchError) => None }
+    val dummyXys: Set[(Variable, Term)] = StaticSemantics(asODESystem)
+      .bv
+      .toSet
+      .filter(_.isInstanceOf[BaseVariable])
+      .map(_.asInstanceOf[BaseVariable])
+      .map(x => (x -> Number(0)))
+    try { solutionsFrom(dummyXys.toMap, false) }
+    catch { case (m: MatchError) => None }
   }
 
   def hasDummySolution: Boolean = dummySolutions.isDefined
@@ -557,7 +627,10 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   private def getSolutions(forProof: Boolean = false): Option[List[(Variable, Term)]] = {
     val ode = getODESystem(forProof)
     val bvs = StaticSemantics(ode).bv.toSet
-    val xys: Set[(Variable, Term)] = bvs.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
+    val xys: Set[(Variable, Term)] = bvs
+      .filter(_.isInstanceOf[BaseVariable])
+      .map(_.asInstanceOf[BaseVariable])
+      .map(x => (x -> initOf(x)))
     try {
       val sols = solutionsFrom(xys.toMap, forProof)
       sols
@@ -569,23 +642,22 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   lazy val proofSolutions = getSolutions(forProof = true)
 
   /** Get best avaiable solutions: true solutions if SSA has been performed, else dummy solutions */
-  lazy val  bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
+  lazy val bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
 
   // Note we may want a default variable like "t" if timeVar is none, but freshness checks need a context, not just the ODE.
   private lazy val inferredTimeVar: Option[Variable] = {
     duration match {
       case Some((x, f)) => Some(x)
       case None => ds.clocks.toList match {
-        case v :: Nil => Some(v)
-        case _ => None
-      }
+          case v :: Nil => Some(v)
+          case _ => None
+        }
     }
   }
 
   var explicitTimeVar: Option[Variable] = None
-  def timeVar: Option[Variable] = if(explicitTimeVar.isDefined) explicitTimeVar else inferredTimeVar
+  def timeVar: Option[Variable] = if (explicitTimeVar.isDefined) explicitTimeVar else inferredTimeVar
   def overrideTimeVar(v: Variable): Unit = (explicitTimeVar = Some(v))
-
 
   private def getODESystem(forProof: Boolean = false): ODESystem = {
     ODESystem(ds.asDifferentialProgram(modifier, forProof), dc.asFormula(isAngelic, forProof).getOrElse(True))
@@ -593,30 +665,30 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
 
   lazy val asODESystem: ODESystem = getODESystem(false)
 
-    lazy val isAngelic: Boolean = modifier.isDefined
-  lazy val modifier: Option[DomModify] = {
-    dc.modifier
-  }
+  lazy val isAngelic: Boolean = modifier.isDefined
+  lazy val modifier: Option[DomModify] = { dc.modifier }
 
   lazy val duration: Option[(Variable, Term)] = {
-    modifier.flatMap({case DomModify(id, x, f) => Some(x, f) case _ => None})
+    modifier.flatMap({
+      case DomModify(id, x, f) => Some(x, f)
+      case _ => None
+    })
   }
 
   lazy val conclusion: Formula = {
     val odeSystem = asODESystem
     val odeBV = StaticSemantics(odeSystem).bv
     modifier.foreach(dm =>
-      if(!odeBV.contains(dm.x))
-        throw ProofCheckException("ODE duration variable must be bound in ODE", node = this))
+      if (!odeBV.contains(dm.x)) throw ProofCheckException("ODE duration variable must be bound in ODE", node = this)
+    )
     val hp = modifier.map(dm => Compose(odeSystem, Test(dm.asEquals))).getOrElse(odeSystem)
-    if (modifier.nonEmpty) {
-      Box(Dual(hp), True)
-    } else {
-      Box(hp, True)
-    }
+    if (modifier.nonEmpty) { Box(Dual(hp), True) }
+    else { Box(hp, True) }
   }
 }
-object ProveODE { val defaultTimeVariable: Variable = Variable("t")}
+object ProveODE {
+  val defaultTimeVariable: Variable = Variable("t")
+}
 
 // Statements which "just" attach metadata to their underlying nodes and don't change computational meaning
 sealed trait MetaNode extends Statement {
@@ -632,16 +704,18 @@ case class PrintGoal(printable: Printable) extends MetaNode {
   override val children: List[Statement] = Nil
 }
 
-/** Note this is not for comments parsed from source files since the parser strips out comments. This is used
-  * for the insertion of machine-generated comments in machine-generated Kaisar files
-  *  */
+/**
+ * Note this is not for comments parsed from source files since the parser strips out comments. This is used for the
+ * insertion of machine-generated comments in machine-generated Kaisar files
+ */
 case class Comment(str: String) extends MetaNode {
   override val children: List[Statement] = Nil
 }
 
-
-/** Used for features which are not fundamentally part of the language, but more convenience features of the implementation.
-  * Used for setting options including those useful for debugging or profiling  */
+/**
+ * Used for features which are not fundamentally part of the language, but more convenience features of the
+ * implementation. Used for setting options including those useful for debugging or profiling
+ */
 case class Pragma(ps: PragmaSpec) extends MetaNode {
   override val children: List[Statement] = Nil
 }
@@ -658,17 +732,15 @@ case class Phi(asgns: Statement) extends MetaNode {
   private def toMap(s: Statement, reverse: Boolean): Map[Variable, Variable] = {
     s match {
       case Block(ss) => ss.map(toMap(_, reverse)).foldLeft[Map[Variable, Variable]](Map())(_ ++ _)
-      case mod: Modify =>
-          mod.mods.foldLeft[Map[Variable, Variable]](Map())({
-            case (acc, (x, Some(f: Variable))) =>
-              if (reverse)
-                acc.+(f -> x)
-              else
-                acc.+(x -> f)})
+      case mod: Modify => mod
+          .mods
+          .foldLeft[Map[Variable, Variable]](Map())({ case (acc, (x, Some(f: Variable))) =>
+            if (reverse) acc.+(f -> x) else acc.+(x -> f)
+          })
     }
   }
-  def forwardMap:Map[Variable, Variable] = toMap(asgns, reverse = false)
-  def reverseMap:Map[Variable, Variable] = toMap(asgns, reverse = true)
+  def forwardMap: Map[Variable, Variable] = toMap(asgns, reverse = false)
+  def reverseMap: Map[Variable, Variable] = toMap(asgns, reverse = true)
 }
 
 // This is a meta node because it's only used in contexts while checking the interior of a loop.
@@ -698,15 +770,26 @@ case class BoxChoiceProgress(bc: BoxChoice, onBranch: Int, progress: Statement) 
   override val children: List[Statement] = List(progress)
 }
 
-
-/** Note: assertions are a list because it matters what order assertions are proved in. Order does not matter for the others. */
-final case class DomCollection(assumptions: Set[DomAssume], assertions: List[DomAssert],  weakens: Set[DomainStatement], modifiers: Set[DomModify]) {
+/**
+ * Note: assertions are a list because it matters what order assertions are proved in. Order does not matter for the
+ * others.
+ */
+final case class DomCollection(
+    assumptions: Set[DomAssume],
+    assertions: List[DomAssert],
+    weakens: Set[DomainStatement],
+    modifiers: Set[DomModify],
+) {
   def constraints: Context = {
-    val assume = assumptions.foldLeft(Context.empty)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f))})
-    assertions.foldLeft(assume)({case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
+    val assume = assumptions.foldLeft(Context.empty)({ case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) })
+    assertions.foldLeft(assume)({ case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m)) })
   }
 }
-final case class DiffCollection(atoms: Set[AtomicODEStatement], ghosts: Set[AtomicODEStatement], inverseGhosts: Set[AtomicODEStatement])
+final case class DiffCollection(
+    atoms: Set[AtomicODEStatement],
+    ghosts: Set[AtomicODEStatement],
+    inverseGhosts: Set[AtomicODEStatement],
+)
 
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
 sealed trait DiffStatement extends ASTNode {
@@ -716,7 +799,10 @@ sealed trait DiffStatement extends ASTNode {
         (mod, dp.e) match {
           case (Some(DomModify(id, durvar, _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
           case (Some(DomModify(id, durvar, _)), rhs) if (dp.xp.x == durvar) =>
-            throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs", node = this)
+            throw ProofCheckException(
+              s"ODE duration variable/clock $durvar must change at rate 1, got $rhs",
+              node = this,
+            )
           case _ => ()
         }
         Some(dp)
@@ -741,7 +827,8 @@ sealed trait DiffStatement extends ASTNode {
   }
   lazy val clocks: Set[Variable] = {
     this match {
-      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), rhs: Number), _solIdent) if rhs.value.toInt == 1 => Set(x)
+      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), rhs: Number), _solIdent) if rhs.value.toInt == 1 =>
+        Set(x)
       case _: AtomicODEStatement => Set()
       case DiffProductStatement(l, r) => l.clocks ++ r.clocks
       // since it's common to ghost in clock variables, we probably want this.
@@ -753,7 +840,7 @@ sealed trait DiffStatement extends ASTNode {
   def atoms: Set[AtomicODEStatement] = collect.atoms
   def allAtoms: Set[AtomicODEStatement] = collect.atoms ++ collect.ghosts ++ collect.inverseGhosts
 
-  /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]]*/
+  /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]] */
   def doCollect(kc: Context): DiffCollection = {
     this match {
       case st: AtomicODEStatement => DiffCollection(Set(st), Set(), Set())
@@ -762,18 +849,18 @@ sealed trait DiffStatement extends ASTNode {
         val DiffCollection(a2, b2, c2) = r.doCollect(kc)
         DiffCollection(a1.++(a2), b1.++(b2), c1.++(c2))
       case DiffGhostStatement(ds) =>
-        if(kc.isInverseGhost) throw ProofCheckException("Forward ODE ghost not allowed inside inverse ghost")
+        if (kc.isInverseGhost) throw ProofCheckException("Forward ODE ghost not allowed inside inverse ghost")
         val DiffCollection(a, b, c) = ds.doCollect(kc.withGhost)
         DiffCollection(Set(), a.++(b).++(c), Set())
       case InverseDiffGhostStatement(ds) =>
-        if(kc.isGhost) throw ProofCheckException("Inverse ODE ghost not allowed inside forward ghost")
+        if (kc.isGhost) throw ProofCheckException("Inverse ODE ghost not allowed inside forward ghost")
         val DiffCollection(a, b, c) = ds.doCollect(kc.withInverseGhost)
         DiffCollection(Set(), Set(), a.++(b).++(c))
     }
   }
 
-  /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]]*/
-  lazy val collect: DiffCollection = { doCollect(Context.empty)}
+  /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]] */
+  lazy val collect: DiffCollection = { doCollect(Context.empty) }
 }
 
 // Specifies a single ODE being proved
@@ -796,8 +883,7 @@ sealed trait DomainStatement extends ASTNode {
       case DomModify(id, x, f) => None
       case DomWeak(dc) if forProof => None
       case DomWeak(dc) => dc.asFormula(isAngelic, forProof)
-      case DomAnd(l, r) =>
-        (l.asFormula(isAngelic), r.asFormula(isAngelic)) match {
+      case DomAnd(l, r) => (l.asFormula(isAngelic), r.asFormula(isAngelic)) match {
           case (Some(l), Some(r)) => Some(And(l, r))
           case (None, r) => r
           case (l, None) => l
@@ -817,9 +903,9 @@ sealed trait DomainStatement extends ASTNode {
   def modifier: Option[DomModify] = {
     this match {
       case dm: DomModify => Some(dm)
-      case DomAnd(l, r) =>
-        (l.modifier, r.modifier) match {
-          case (Some(x), Some(y)) => throw ProofCheckException("ODE should only have one duration statement", node = this)
+      case DomAnd(l, r) => (l.modifier, r.modifier) match {
+          case (Some(x), Some(y)) =>
+            throw ProofCheckException("ODE should only have one duration statement", node = this)
           case (None, r) => r
           case (l, None) => l
         }
@@ -851,8 +937,7 @@ object DomainStatement {
     case _: Triv => None
     case Block(ss) =>
       val dss = ss.map(ofStatement).filter(_.isDefined).map(_.get)
-      if (dss.isEmpty) None
-      else Some(dss.reduceRight(DomAnd))
+      if (dss.isEmpty) None else Some(dss.reduceRight(DomAnd))
     case Assume(x, f) => Some(DomAssume(x, f))
     case Assert(x, f, m) => Some(DomAssert(x, f, m))
   }
@@ -877,17 +962,15 @@ sealed trait DomainFact extends DomainStatement {
 // x is an identifier pattern in assume and assert
 // Introduces assumption in domain, i.e., a domain formula which appears in the conclusion and can be accessed
 // by differential weakening
-case class DomAssume(x: IdentPat, f:Formula) extends DomainFact
+case class DomAssume(x: IdentPat, f: Formula) extends DomainFact
 // Differential assertion which is proved with differential cut and then possibly used in proof
-case class DomAssert(x: IdentPat, f:Formula, child: Method) extends DomainFact
+case class DomAssert(x: IdentPat, f: Formula, child: Method) extends DomainFact
 // Distinct from "differential weakening" rule, meaning a domain constraint which is in the conclusion but not the
 // proof, which is weakened before continuing proof
 case class DomWeak(dc: DomainStatement) extends DomainStatement
 // Assignment to a variable. Only allowable use is to specify the duration of an angelic solution
 case class DomModify(id: IdentPat, x: Variable, f: Term) extends DomainStatement {
-  lazy val asEquals: Equal = {
-    Equal(x, f)
-  }
+  lazy val asEquals: Equal = { Equal(x, f) }
 }
 // Conjunction of domain constraints with proofs for each conjunct
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement

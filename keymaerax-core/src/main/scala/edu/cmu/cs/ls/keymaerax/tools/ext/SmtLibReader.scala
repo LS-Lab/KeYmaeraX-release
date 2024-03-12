@@ -37,11 +37,11 @@ object SmtLibReader {
 
   /** Reads an expression using `convert` to turn it into the desired kind. */
   private def readExpr[T <: Expression](s: String, convert: Terms.Term => T): T = {
-      val r = new StringReader(s)
-      val lexer = new smtlib.lexer.Lexer(r)
-      val parser = new smtlib.parser.Parser(lexer)
-      val term = parser.parseTerm
-      convert(term)
+    val r = new StringReader(s)
+    val lexer = new smtlib.lexer.Lexer(r)
+    val parser = new smtlib.parser.Parser(lexer)
+    val term = parser.parseTerm
+    convert(term)
   }
 
   /** Reads expressions occurring in `(assert ...)` statements in the input provided by reader `r`. */
@@ -55,24 +55,25 @@ object SmtLibReader {
       cmd = parser.parseCommand
     }
     val infos = scala.collection.mutable.Map.empty[String, String]
-    cmds.foreach( {
+    cmds.foreach({
       case SetInfo(Attribute(SKeyword(k), Some(SSymbol(v)))) => infos(k) = v
       case SetLogic(logic) => infos("logic") = Logic.asString(logic)
       case _ => // ignore
     })
 
-    val definedFuns = cmds.filter(_.isInstanceOf[DefineFun]).map({
-      case DefineFun(FunDef(SSymbol(name), _, _, body)) => name -> convertFormula(body)(Map.empty)
-      case _ => ???
-    }).toMap
+    val definedFuns = cmds
+      .filter(_.isInstanceOf[DefineFun])
+      .map({
+        case DefineFun(FunDef(SSymbol(name), _, _, body)) => name -> convertFormula(body)(Map.empty)
+        case _ => ???
+      })
+      .toMap
 
     (cmds.filter(_.isInstanceOf[Assert]).map({ case Assert(t) => convertFormula(t)(definedFuns) }).toList, infos.toMap)
   }
 
   /** Sanitizes names by replacing `_`with [[USCORE]]. */
-  private def sanitize(name: String): String = {
-    name.replace("_", USCORE)
-  }
+  private def sanitize(name: String): String = { name.replace("_", USCORE) }
 
   /** Converts a formula. */
   def convertFormula(t: Terms.Term)(implicit defs: Map[String, Expression]): Formula = t match {
@@ -98,52 +99,60 @@ object SmtLibReader {
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol(op), Nil), None), terms) =>
       assert(terms.nonEmpty, "Unary/n-ary and expects at least 1 argument")
       val converted = terms.map(convertFormula)
-      converted.reduceRightOption(op match {
-        case "and" => And
-        case "or" => Or
-      }).getOrElse(converted.head)
-    case Terms.Exists(sv, svs, t) => (sv +: svs).foldLeft(convertFormula(t))({ case (f, v) => Exists(convertVar(v)::Nil, f) })
-    case Terms.Forall(sv, svs, t) => (sv +: svs).foldLeft(convertFormula(t))({ case (f, v) => Forall(convertVar(v)::Nil, f) })
+      converted
+        .reduceRightOption(op match {
+          case "and" => And
+          case "or" => Or
+        })
+        .getOrElse(converted.head)
+    case Terms.Exists(sv, svs, t) =>
+      (sv +: svs).foldLeft(convertFormula(t))({ case (f, v) => Exists(convertVar(v) :: Nil, f) })
+    case Terms.Forall(sv, svs, t) =>
+      (sv +: svs).foldLeft(convertFormula(t))({ case (f, v) => Forall(convertVar(v) :: Nil, f) })
     case QualifiedIdentifier(Identifier(SSymbol(name), Nil), _) => defs(name).asInstanceOf[Formula]
   }
 
   /** Converts a term. */
   def convertTerm(t: Terms.Term)(implicit defs: Map[String, Expression]): Term = t match {
-    case Reals.NumeralLit(n) =>
-      Number(BigDecimal(n))
-    case Reals.DecimalLit(n) =>
-      if (n.isValidLong) Number(BigDecimal(n.longValue))
-      else Number(n)
+    case Reals.NumeralLit(n) => Number(BigDecimal(n))
+    case Reals.DecimalLit(n) => if (n.isValidLong) Number(BigDecimal(n.longValue)) else Number(n)
     case QualifiedIdentifier(Terms.Identifier(Terms.SSymbol(name), Nil), None) =>
       if (name.startsWith("-")) {
         // workaround for parser bug
         Neg(Number(BigDecimal(name.stripPrefix("-").trim)))
-      } else try {
-        DefaultSMTConverter.nameFromIdentifier(name) match {
-          case v: Variable => v //@note also differential symbols
-          case f: Function => FuncOf(f, Nothing)
+      } else
+        try {
+          DefaultSMTConverter.nameFromIdentifier(name) match {
+            case v: Variable => v // @note also differential symbols
+            case f: Function => FuncOf(f, Nothing)
+          }
+        } catch {
+          case _: ConversionException =>
+            // @todo functions vs. variables in non-KeYmaera X generated SMT-Lib input
+            Variable(sanitize(name))
         }
-      } catch {
-        case _: ConversionException =>
-          //@todo functions vs. variables in non-KeYmaera X generated SMT-Lib input
-          Variable(sanitize(name))
-      }
-    case Reals.Neg(c)    => Neg(convertTerm(c))
+    case Reals.Neg(c) => Neg(convertTerm(c))
     case Reals.Add(l, r) => Plus(convertTerm(l), convertTerm(r))
     case Reals.Sub(l, r) => Minus(convertTerm(l), convertTerm(r))
     case Reals.Mul(l, r) => Times(convertTerm(l), convertTerm(r))
     case Reals.Div(l, r) => Divide(convertTerm(l), convertTerm(r))
     // pow
-    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("^"), Nil), None), s :: t :: Nil) => Power(convertTerm(s), convertTerm(t))
+    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("^"), Nil), None), s :: t :: Nil) =>
+      Power(convertTerm(s), convertTerm(t))
     // interpreted functions
-    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("absolute"), Nil), None), s :: Nil)     => FuncOf(InterpretedSymbols.absF, convertTerm(s))
-    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("minimum"), Nil), None), s :: t :: Nil) => FuncOf(InterpretedSymbols.minF, Pair(convertTerm(s), convertTerm(t)))
-    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("maximum"), Nil), None), s :: t :: Nil) => FuncOf(InterpretedSymbols.maxF, Pair(convertTerm(s), convertTerm(t)))
+    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("absolute"), Nil), None), s :: Nil) =>
+      FuncOf(InterpretedSymbols.absF, convertTerm(s))
+    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("minimum"), Nil), None), s :: t :: Nil) =>
+      FuncOf(InterpretedSymbols.minF, Pair(convertTerm(s), convertTerm(t)))
+    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("maximum"), Nil), None), s :: t :: Nil) =>
+      FuncOf(InterpretedSymbols.maxF, Pair(convertTerm(s), convertTerm(t)))
     // nary operators
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("*"), Nil), None), t :: Nil) => convertTerm(t)
-    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("*"), Nil), None), terms) => terms.map(convertTerm).reduce(Times)
+    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("*"), Nil), None), terms) =>
+      terms.map(convertTerm).reduce(Times)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("+"), Nil), None), t :: Nil) => convertTerm(t)
-    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("+"), Nil), None), terms) => terms.map(convertTerm).reduce(Plus)
+    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("+"), Nil), None), terms) =>
+      terms.map(convertTerm).reduce(Plus)
     case QualifiedIdentifier(Identifier(SSymbol(name), Nil), _) => defs(name).asInstanceOf[Term]
   }
 

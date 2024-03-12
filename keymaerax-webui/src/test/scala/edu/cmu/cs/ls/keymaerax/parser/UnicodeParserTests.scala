@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Carnegie Mellon University.
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
@@ -9,10 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
-
-/**
-  * @author Nathan Fulton
-  */
+/** @author Nathan Fulton */
 @CheckinTest
 class UnicodeParserTests extends TacticTestBase {
 
@@ -30,13 +27,9 @@ class UnicodeParserTests extends TacticTestBase {
     "[x:=2; ∩ x:=3;]x>=1".asFormula shouldBe "[{x:=2;^@ ++ x:=3;^@}^@]x>=1".asFormula
   }
 
-  it should "parse repetition" in {
-    "[{x:=x+1;}×]x>=1".asFormula shouldBe "[{{x:=x+1;^@}*}^@]x>=1".asFormula
-  }
+  it should "parse repetition" in { "[{x:=x+1;}×]x>=1".asFormula shouldBe "[{{x:=x+1;^@}*}^@]x>=1".asFormula }
 
-  it should "parse unequal" in {
-    "1 ≠ 2".asFormula shouldBe "1 != 2".asFormula
-  }
+  it should "parse unequal" in { "1 ≠ 2".asFormula shouldBe "1 != 2".asFormula }
 
   "Tactic parser" should "parse when unicode is used as a tactic argument" in withTactics {
     """cut("g > 0 ∧ 1 ≥ c ∧ c ≥ 0")""".asTactic shouldBe """cut("g>0 & 1>=c & c>=0")""".asTactic

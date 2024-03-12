@@ -8,13 +8,12 @@ import edu.cmu.cs.ls.keymaerax.codegen.CPrettyPrinter.{CURR, PARAMS, PRE}
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Sort}
 
 /**
-  * C expressions.
-  *
-  * @author Stefan Mitsch
-  */
-trait CExpression {
-
-}
+ * C expressions.
+ *
+ * @author
+ *   Stefan Mitsch
+ */
+trait CExpression {}
 
 trait CTerm extends CExpression {}
 trait CFormula extends CExpression {}
@@ -71,8 +70,7 @@ case class CErrorMargin(id: Int, v: CTerm, msg: String) extends CMargin {
   override def and(other: CMargin): CMargin = other match {
     case CErrorMargin(oid, ov, omsg) =>
       CErrorMargin(id, CPlus(v, ov), "Failed: " + id + " and " + oid + "\n" + msg + "\nand\n" + omsg)
-    case _ =>
-      throw new IllegalArgumentException("Error margins can only be combined with other error margins")
+    case _ => throw new IllegalArgumentException("Error margins can only be combined with other error margins")
   }
   override def or(other: CMargin): CMargin = other match {
     case _: CErrorMargin => this and other // false or false <-> false & false (retain both error messages)
@@ -113,8 +111,9 @@ case class CDisjunctiveSafetyMargin(l: CProgram, r: CProgram) extends CMargin {
   }
 }
 case class CMeasureZeroMargin(v: CExpression) extends CMargin {
-  override def and(other: CMargin): CMargin = other //@note measure zero safety margin would "pin" combined conjunction to 0
-  override def or(other: CMargin): CMargin = other //@note measure zero safety margin always dominated by other margins
+  override def and(other: CMargin): CMargin =
+    other // @note measure zero safety margin would "pin" combined conjunction to 0
+  override def or(other: CMargin): CMargin = other // @note measure zero safety margin always dominated by other margins
 }
 case class CIfThenElse(f: CFormula, ifP: CMargin, elseP: CMargin) extends CMargin {
   override def and(other: CMargin): CMargin = other match {
@@ -125,7 +124,6 @@ case class CIfThenElse(f: CFormula, ifP: CMargin, elseP: CMargin) extends CMargi
 }
 
 object CNoop extends CProgram
-
 
 /** Prints C expressions. */
 object CPrettyPrinter extends CodePrettyPrinter {
@@ -151,8 +149,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
   /** Ensure to print literals as long double literals to avoid truncation. */
   private def longDoubleLiteral(n: BigDecimal): String = {
     val string = n.underlying().toString
-    if (string.contains(".")) string + "L"
-    else string + ".0L"
+    if (string.contains(".")) string + "L" else string + ".0L"
   }
 
   def printDefinitions(e: CExpression): String = e match {
@@ -186,15 +183,14 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
   private def uniqueName(fml: CExpression): String = {
     val hashcode = fml.hashCode()
-    if (hashcode < 0) hashcode.toString.replace("-", "_")
-    else hashcode.toString
+    if (hashcode < 0) hashcode.toString.replace("-", "_") else hashcode.toString
   }
 
-  //@todo print only necessary parentheses
+  // @todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
     case CNothing => "???"
-    case CNumber(n) if n>=0 => longDoubleLiteral(n)
-    case CNumber(n) if n<0 => "(" + longDoubleLiteral(n) + ")"
+    case CNumber(n) if n >= 0 => longDoubleLiteral(n)
+    case CNumber(n) if n < 0 => "(" + longDoubleLiteral(n) + ")"
     case CVariable(n) => n
     case CUnaryFunction(n, CNothing) => n + "(" + PARAMS + ")"
     case CUnaryFunction(n, arg) => n + "(" + PARAMS + "," + print(arg) + ")"
@@ -205,13 +201,11 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CTimes(l, r) => "(" + print(l) + ")*(" + print(r) + ")"
     case CDivide(l, r) => "(" + print(l) + ")/(" + print(r) + ")"
     case CPower(l, r) => "pow(" + print(l) + "," + print(r) + ")"
-    /** Convert interpreted functions to corresponding C functions.
-      *
-      * C 99 standard:
-      *   double fabs()
-      *   float fabsf()
-      *   long double fabsl()
-      */
+    /**
+     * Convert interpreted functions to corresponding C functions.
+     *
+     * C 99 standard: double fabs() float fabsf() long double fabsl()
+     */
     case CMin(l, r) => "fminl(" + print(l) + ", " + print(r) + ")"
     case CMax(l, r) => "fmaxl(" + print(l) + ", " + print(r) + ")"
     case CAbs(c) => "fabsl(" + print(c) + ")"
@@ -234,16 +228,18 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CFalse => "-1.0L"
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
-    case CSafetyMargin(e: CExpression) =>
-      "verdict result = { .id=1, .val=" + print(e) + " }; return result;"
+    case CSafetyMargin(e: CExpression) => "verdict result = { .id=1, .val=" + print(e) + " }; return result;"
     case CErrorMargin(id: Int, retVal: CExpression, msg: String) =>
-      if (printDebugOut) s"""printf("Failed %d=%s\\n", $id, "$msg"); verdict result = { .id=$id, .val=${print(retVal)} }; return result;"""
+      if (printDebugOut) s"""printf("Failed %d=%s\\n", $id, "$msg"); verdict result = { .id=$id, .val=${print(
+          retVal
+        )} }; return result;"""
       else s"verdict result = { .id=$id, .val=${print(retVal)} }; return result;"
     case CDisjunctiveSafetyMargin(l, r) =>
       val lid = uniqueName(l)
       val rid = uniqueName(r)
       val print =
-        if (printDebugOut) s"""printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft$lid", leftDist, "OrRight$rid", rightDist);"""
+        if (printDebugOut)
+          s"""printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft$lid", leftDist, "OrRight$rid", rightDist);"""
         else ""
       s"""verdict leftDist = OrLeft$lid($PRE,$CURR,$PARAMS);
          |verdict rightDist = OrRight$rid($PRE,$CURR,$PARAMS);
@@ -255,14 +251,15 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
       val lid = uniqueName(l)
       val rid = uniqueName(r)
       val print =
-        if (printDebugOut) s"""printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft$lid", leftDist, "AndRight$rid", rightDist);"""
+        if (printDebugOut)
+          s"""printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft$lid", leftDist, "AndRight$rid", rightDist);"""
         else ""
       s"""verdict leftDist = AndLeft$lid($PRE,$CURR,$PARAMS);
-       |verdict rightDist = AndRight$rid($PRE,$CURR,$PARAMS);
-       |$print
-       |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
-       |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
-       |return result;""".stripMargin
+         |verdict rightDist = AndRight$rid($PRE,$CURR,$PARAMS);
+         |$print
+         |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
+         |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
+         |return result;""".stripMargin
   }
 
 }
@@ -270,9 +267,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 /** Prints C expressions that keep track of the reason for their value. */
 class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
 
-  override def apply(e: CExpression): (String, String) = {
-    ("", "eval(" + print(e) + ")")
-  }
+  override def apply(e: CExpression): (String, String) = { ("", "eval(" + print(e) + ")") }
 
   def printOperators: String = {
     """typedef struct expr {
@@ -432,7 +427,7 @@ class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
     """.stripMargin
   }
 
-  //@todo print only necessary parentheses
+  // @todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
     case CNumber(n) => "number(" + n.underlying().toString + ")"
     case CVariable(n) => "variable(" + n + ", \"" + n + "\")"
@@ -444,13 +439,11 @@ class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
     case CTimes(l, r) => "times(" + print(l) + ", " + print(r) + ")"
     case CDivide(l, r) => "divide(" + print(l) + ", " + print(r) + ")"
     case CPower(l, r) => "power(" + print(l) + ", " + print(r) + ")"
-    /** Convert interpreted functions to corresponding C functions.
-      *
-      * C 99 standard:
-      *   double fabs()
-      *   float fabsf()
-      *   long double fabsl()
-      */
+    /**
+     * Convert interpreted functions to corresponding C functions.
+     *
+     * C 99 standard: double fabs() float fabsf() long double fabsl()
+     */
     case CMin(l, r) => "kmin(" + print(l) + ", " + print(r) + ")"
     case CMax(l, r) => "kmax(" + print(l) + ", " + print(r) + ")"
     case CAbs(c) => "kabs(" + print(c) + ")"
@@ -472,13 +465,13 @@ class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
 
 }
 
-/** Prints C expressions that keep track of the reason for their value. NOT interval arithmetic, intervals are for
-  * comparisons and formulas. Logs original formula and does unverified metric conversion to measure safety. */
+/**
+ * Prints C expressions that keep track of the reason for their value. NOT interval arithmetic, intervals are for
+ * comparisons and formulas. Logs original formula and does unverified metric conversion to measure safety.
+ */
 class CExpressionIntervalLaTeXLogPrettyPrinter extends (CExpression => String) {
 
-  override def apply(e: CExpression): String = {
-    "eval(" + print(e) + ")"
-  }
+  override def apply(e: CExpression): String = { "eval(" + print(e) + ")" }
 
   def printOperators: String = {
     """typedef struct expr {
@@ -647,7 +640,7 @@ class CExpressionIntervalLaTeXLogPrettyPrinter extends (CExpression => String) {
     """.stripMargin
   }
 
-  //@todo print only necessary parentheses
+  // @todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
     case CNumber(n) => "number(" + n.underlying().toString + ")"
     case CVariable(n) => "variable(" + n + ", \"" + n + "\")"
@@ -659,13 +652,11 @@ class CExpressionIntervalLaTeXLogPrettyPrinter extends (CExpression => String) {
     case CTimes(l, r) => "times(" + print(l) + ", " + print(r) + ")"
     case CDivide(l, r) => "divide(" + print(l) + ", " + print(r) + ")"
     case CPower(l, r) => "power(" + print(l) + ", " + print(r) + ")"
-    /** Convert interpreted functions to corresponding C functions.
-      *
-      * C 99 standard:
-      *   double fabs()
-      *   float fabsf()
-      *   long double fabsl()
-      */
+    /**
+     * Convert interpreted functions to corresponding C functions.
+     *
+     * C 99 standard: double fabs() float fabsf() long double fabsl()
+     */
     case CMin(l, r) => "kmin(" + print(l) + ", " + print(r) + ")"
     case CMax(l, r) => "kmax(" + print(l) + ", " + print(r) + ")"
     case CAbs(c) => "kabs(" + print(c) + ")"
@@ -684,25 +675,46 @@ class CExpressionIntervalLaTeXLogPrettyPrinter extends (CExpression => String) {
 }
 
 /** Pretty prints expressions with the GNU MPFR library operators. */
-class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD") extends (CExpression => (String, String)) {
+class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD")
+    extends (CExpression => (String, String)) {
 
   private val mpfrVars: scala.collection.mutable.Map[CTerm, String] = scala.collection.mutable.Map.empty
-  private val topExpressions: scala.collection.mutable.ListBuffer[CExpression] = scala.collection.mutable.ListBuffer.empty
+  private val topExpressions: scala.collection.mutable.ListBuffer[CExpression] =
+    scala.collection.mutable.ListBuffer.empty
 
   private def printMpfr(): String = {
     val arithmetic = topExpressions.map(printMpfrArithmetic).filter(_.nonEmpty).mkString("\n")
-    val mpfrInit =
-      mpfrVars.toList.sortBy(_._2).map(e => e._2 + s" /* ${new CExpressionPlainPrettyPrinter(printDebugOut=false)(e._1)._2} */").mkString("mpfr_t ", ",\n  ", ";\n\n") +
-        mpfrVars.values.toList.sorted.map("mpfr_init2(" + _ + ", " + precision + ")").mkString("void mpfrInit() {\n  ", ";\n  ", ";\n}\n")
+    val mpfrInit = mpfrVars
+      .toList
+      .sortBy(_._2)
+      .map(e => e._2 + s" /* ${new CExpressionPlainPrettyPrinter(printDebugOut = false)(e._1)._2} */")
+      .mkString("mpfr_t ", ",\n  ", ";\n\n") +
+      mpfrVars
+        .values
+        .toList
+        .sorted
+        .map("mpfr_init2(" + _ + ", " + precision + ")")
+        .mkString("void mpfrInit() {\n  ", ";\n  ", ";\n}\n")
     val mpfrCompute = {
-      val (mpfrVarsLiterals, mpfrTerms) = mpfrVars.toList.partition(_._1 match { case _: CVariable => true case _: CNumber => true case _ => false })
-      mpfrVarsLiterals.sortBy(_._2).map({
-        case (n: CVariable, _) => "mpfr_set_ld(" + mpfrVars(n) + ", " + n.name + ", " + roundingMode + ");"
-        case (n: CNumber, _) => longDoubleLiteral(n)
-      }).filter(_.nonEmpty).mkString(
-        "void mpfrCompute(state pre, state curr, parameters const* const params) {\n  ",
-        "\n  ",
-        "\n  " + arithmetic.trim().replace("\n", "\n  ") + "\n}")
+      val (mpfrVarsLiterals, mpfrTerms) = mpfrVars
+        .toList
+        .partition(_._1 match {
+          case _: CVariable => true
+          case _: CNumber => true
+          case _ => false
+        })
+      mpfrVarsLiterals
+        .sortBy(_._2)
+        .map({
+          case (n: CVariable, _) => "mpfr_set_ld(" + mpfrVars(n) + ", " + n.name + ", " + roundingMode + ");"
+          case (n: CNumber, _) => longDoubleLiteral(n)
+        })
+        .filter(_.nonEmpty)
+        .mkString(
+          "void mpfrCompute(state pre, state curr, parameters const* const params) {\n  ",
+          "\n  ",
+          "\n  " + arithmetic.trim().replace("\n", "\n  ") + "\n}",
+        )
     }
     mpfrInit + "\n" + mpfrCompute
   }
@@ -747,25 +759,26 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
   private def createMpfrVar(e: CTerm) = {
     if (!mpfrVars.contains(e)) {
       e match {
-        case v@CVariable(n) =>
-          mpfrVars.put(v, n.
-            replace("params->", "params_").
-            replace("pre.", "pre_").
-            replace("curr.", "curr_").
-            replace("prg.state.", "prg_state_"))
+        case v @ CVariable(n) =>
+          mpfrVars.put(
+            v,
+            n.replace("params->", "params_")
+              .replace("pre.", "pre_")
+              .replace("curr.", "curr_")
+              .replace("prg.state.", "prg_state_"),
+          )
           mpfrVars(v)
         case t: CTerm if !mpfrVars.contains(t) =>
           mpfrVars.put(t, "_t_" + mpfrVars.size)
           mpfrVars(t)
-        case _ => //@note formula comparisons and conjunctions can be computed inline
+        case _ => // @note formula comparisons and conjunctions can be computed inline
       }
     }
   }
 
   private def uniqueName(fml: CExpression): String = {
     val hashcode = fml.hashCode()
-    if (hashcode < 0) hashcode.toString.replace("-", "_")
-    else hashcode.toString
+    if (hashcode < 0) hashcode.toString.replace("-", "_") else hashcode.toString
   }
 
   private def longDoubleLiteral(n: CNumber): String = {
@@ -778,7 +791,8 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
   }
 
   private def binaryTermOp(op: String, t: CTerm, l: CTerm, r: CTerm): String = {
-    printMpfrArithmetic(l) + printMpfrArithmetic(r) + "mpfr_" + op + "(" + mpfrVars(t) + ", " + mpfrVars(l) + ", " + mpfrVars(r) + ", " + roundingMode + ");\n"
+    printMpfrArithmetic(l) + printMpfrArithmetic(r) + "mpfr_" + op + "(" + mpfrVars(t) + ", " + mpfrVars(l) + ", " +
+      mpfrVars(r) + ", " + roundingMode + ");\n"
   }
 
   private def createMpfrVars(e: CExpression): Unit = e match {
@@ -791,15 +805,15 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case CSafetyMargin(r) => createMpfrVars(r)
     case CErrorMargin(_, r, _) => createMpfrVars(r)
 
-    case t@CNeg(c) => createMpfrVar(t); createMpfrVars(c)
-    case t@CPlus(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
-    case t@CMinus(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
-    case t@CTimes(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
-    case t@CDivide(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
-    case t@CPower(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
-    case t@CMin(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
-    case t@CMax(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
-    case t@CAbs(c) => createMpfrVar(t); createMpfrVars(c)
+    case t @ CNeg(c) => createMpfrVar(t); createMpfrVars(c)
+    case t @ CPlus(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
+    case t @ CMinus(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
+    case t @ CTimes(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
+    case t @ CDivide(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
+    case t @ CPower(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
+    case t @ CMin(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
+    case t @ CMax(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
+    case t @ CAbs(c) => createMpfrVar(t); createMpfrVars(c)
 
     case CLess(l, r) => createMpfrVars(l); createMpfrVars(r)
     case CLessEqual(l, r) => createMpfrVars(l); createMpfrVars(r)
@@ -812,23 +826,23 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case CAnd(l, r) => createMpfrVars(l); createMpfrVars(r)
     case COr(l, r) => createMpfrVars(l); createMpfrVars(r)
 
-    case _ => ??? //createMpfrVar(e)
+    case _ => ??? // createMpfrVar(e)
   }
 
   private def printMpfrArithmetic(e: CExpression): String = e match {
-    case n: CVariable => "" //@note computed once in the initialization code
-    case n: CNumber => "" //@note computed once in the initialization code
-    case CUnaryFunction(n, arg) => ??? //n + "(" + print(arg) + ")"
-    case CPair(l, r) => ??? //print(l) + "," + print(r)
-    case t@CNeg(c) => unaryTermOp("neg", t, c)
-    case t@CPlus(l, r) => binaryTermOp("add", t, l, r)
-    case t@CMinus(l, r) => binaryTermOp("sub", t, l, r)
-    case t@CTimes(l, r) => binaryTermOp("mul", t, l, r)
-    case t@CDivide(l, r) => binaryTermOp("div", t, l, r)
-    case t@CPower(l, r) => binaryTermOp("pow", t, l, r)
-    case t@CMin(l, r) => binaryTermOp("min", t, l, r)
-    case t@CMax(l, r) => binaryTermOp("max", t, l, r)
-    case t@CAbs(c) => unaryTermOp("abs", t, c)
+    case n: CVariable => "" // @note computed once in the initialization code
+    case n: CNumber => "" // @note computed once in the initialization code
+    case CUnaryFunction(n, arg) => ??? // n + "(" + print(arg) + ")"
+    case CPair(l, r) => ??? // print(l) + "," + print(r)
+    case t @ CNeg(c) => unaryTermOp("neg", t, c)
+    case t @ CPlus(l, r) => binaryTermOp("add", t, l, r)
+    case t @ CMinus(l, r) => binaryTermOp("sub", t, l, r)
+    case t @ CTimes(l, r) => binaryTermOp("mul", t, l, r)
+    case t @ CDivide(l, r) => binaryTermOp("div", t, l, r)
+    case t @ CPower(l, r) => binaryTermOp("pow", t, l, r)
+    case t @ CMin(l, r) => binaryTermOp("min", t, l, r)
+    case t @ CMax(l, r) => binaryTermOp("max", t, l, r)
+    case t @ CAbs(c) => unaryTermOp("abs", t, c)
 
     case CLess(l, r) => printMpfrArithmetic(l) + printMpfrArithmetic(r)
     case CLessEqual(l, r) => printMpfrArithmetic(l) + printMpfrArithmetic(r)
@@ -844,12 +858,13 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case CFalse => ""
 
     case CDisjunctiveSafetyMargin(l, r) => printMpfrArithmetic(l) + printMpfrArithmetic(r)
-    case CIfThenElse(cond, ifP, elseP) => printMpfrArithmetic(cond) + printMpfrArithmetic(ifP) + printMpfrArithmetic(elseP)
+    case CIfThenElse(cond, ifP, elseP) => printMpfrArithmetic(cond) + printMpfrArithmetic(ifP) +
+        printMpfrArithmetic(elseP)
     case CSafetyMargin(r) => printMpfrArithmetic(r)
     case CErrorMargin(_, r, _) => printMpfrArithmetic(r)
   }
 
-  //@todo print only necessary parentheses
+  // @todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
 //    case CLess(l, r) => "mpfr_cmp(" + mpfrVars(l) + ", " + mpfrVars(r) + ") < 0"
 //    case CLessEqual(l, r) => "mpfr_cmp(" + mpfrVars(l) + ", " + mpfrVars(r) + ") <= 0"
@@ -858,11 +873,12 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
 //    case CGreater(l, r) => "mpfr_cmp(" + mpfrVars(r) + ", " + mpfrVars(l) + ") < 0"
 //    case CNotEqual(l, r) => "mpfr_cmp(" + mpfrVars(l) + ", " + mpfrVars(r) + ") != 0"
 
-    //@note double comparisons, since we convert MPFR results of controller to rounded-down doubles
+    // @note double comparisons, since we convert MPFR results of controller to rounded-down doubles
     case CLess(l, r) => s"mpfr_get_ld(${mpfrVars(l)}, $roundingMode) < mpfr_get_ld(${mpfrVars(r)}, $roundingMode)"
     case CLessEqual(l, r) => s"mpfr_get_ld(${mpfrVars(l)}, $roundingMode) <= mpfr_get_ld(${mpfrVars(r)}, $roundingMode)"
     case CEqual(l, r) => s"mpfr_get_ld(${mpfrVars(l)}, $roundingMode) == mpfr_get_ld(${mpfrVars(r)}, $roundingMode)"
-    case CGreaterEqual(l, r) => s"mpfr_get_ld(${mpfrVars(l)}, $roundingMode) >= mpfr_get_ld(${mpfrVars(r)}, $roundingMode)"
+    case CGreaterEqual(l, r) =>
+      s"mpfr_get_ld(${mpfrVars(l)}, $roundingMode) >= mpfr_get_ld(${mpfrVars(r)}, $roundingMode)"
     case CGreater(l, r) => s"mpfr_get_ld(${mpfrVars(l)}, $roundingMode) > mpfr_get_ld(${mpfrVars(r)}, $roundingMode)"
     case CNotEqual(l, r) => s"mpfr_get_ld(${mpfrVars(l)}, $roundingMode) != mpfr_get_ld(${mpfrVars(r)}, $roundingMode)"
 
@@ -875,21 +891,26 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
     case CSafetyMargin(e: CTerm) => s"return mpfr_get_ld(${mpfrVars(e)}, $roundingMode);"
-    case CErrorMargin(_, retVal: CFormula, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
+    case CErrorMargin(_, retVal: CFormula, msg: String) =>
+      s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
     case CErrorMargin(_, retVal: CTerm, msg: String) =>
       s"""printf("Failed %s\\n", "$msg"); return mpfr_get_ld(${mpfrVars(retVal)}, $roundingMode);"""
     case CDisjunctiveSafetyMargin(l, r) =>
       s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
          |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
-         |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
+         |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(
+          r
+        )}", rightDist);
          |return fmaxl(leftDist, rightDist);""".stripMargin
     case CConjunctiveSafetyMargin(l, r) =>
       s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
          |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
-         |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
+         |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(
+          r
+        )}", rightDist);
          |return fminl(leftDist, rightDist);""".stripMargin
     case t: CTerm =>
-      s"mpfr_get_ld(${mpfrVars(t)}, $roundingMode);" //@note terms cannot be evaluated inline -> are computed in the definitions block
+      s"mpfr_get_ld(${mpfrVars(t)}, $roundingMode);" // @note terms cannot be evaluated inline -> are computed in the definitions block
   }
 
 }

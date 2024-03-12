@@ -8,20 +8,28 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import scala.util.matching.Regex
 
 /**
-  * Bellerophon labels for proof branches.
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.label()]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Idioms.<()]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.BelleLabels]]
-  */
+ * Bellerophon labels for proof branches.
+ * @see
+ *   [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.label()]]
+ * @see
+ *   [[edu.cmu.cs.ls.keymaerax.btactics.Idioms.<()]]
+ * @see
+ *   [[edu.cmu.cs.ls.keymaerax.btactics.BelleLabels]]
+ */
 trait BelleLabel {
+
   /** The label. */
   val label: String
+
   /** The label pretty string. */
   def prettyString: String
+
   /** All sublabels from root label to leave label. */
   def components: List[BelleLabel]
+
   /** Appends a label to the end of this label. */
   def append(l: BelleLabel): BelleLabel
+
   /** Returns true if `l` is a suffix of this label (ignoring top- vs.sub-label differences), false otherwise. */
   def endsWith(l: BelleLabel): Boolean = components.map(_.label).endsWith(l.components.map(_.label))
 }
@@ -33,20 +41,29 @@ object BelleLabel {
 
   /** Converts a string to a label. */
   def fromString(s: String): List[BelleLabel] = {
-    s.split(Regex.quote(LABEL_SEPARATOR)).map(topLabel => {
-      val labels = topLabel.split(Regex.quote(LABEL_DELIMITER))
-      val parent = BelleTopLevelLabel(labels.head)
-      labels.tail.foldLeft[BelleLabel](parent)({ case (p, label) => BelleSubLabel(p, label) })
-    }).toList
+    s.split(Regex.quote(LABEL_SEPARATOR))
+      .map(topLabel => {
+        val labels = topLabel.split(Regex.quote(LABEL_DELIMITER))
+        val parent = BelleTopLevelLabel(labels.head)
+        labels.tail.foldLeft[BelleLabel](parent)({ case (p, label) => BelleSubLabel(p, label) })
+      })
+      .toList
   }
 
   /** Converts a label to a string. */
   def toPrettyString(labels: List[BelleLabel]): String = labels.map(_.prettyString).mkString(LABEL_SEPARATOR)
 }
+
 /** A top-level label for a BelleProvable */
 case class BelleTopLevelLabel(label: String) extends BelleLabel {
-  require(!label.contains(BelleLabel.LABEL_DELIMITER), s"Label should not contain the sublabel delimiter ${BelleLabel.LABEL_DELIMITER}")
-  require(!label.contains(BelleLabel.LABEL_SEPARATOR), s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}")
+  require(
+    !label.contains(BelleLabel.LABEL_DELIMITER),
+    s"Label should not contain the sublabel delimiter ${BelleLabel.LABEL_DELIMITER}",
+  )
+  require(
+    !label.contains(BelleLabel.LABEL_SEPARATOR),
+    s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}",
+  )
   override def prettyString: String = label
   override def components: List[BelleLabel] = this :: Nil
   override def append(l: BelleLabel): BelleLabel = l match {
@@ -55,6 +72,7 @@ case class BelleTopLevelLabel(label: String) extends BelleLabel {
     case BelleStartTxLabel | BelleRollbackTxLabel => BelleLabelTx(this, None)
   }
 }
+
 /** Label transaction with rollback point `r` and collected labels `c` since rollback point. */
 case class BelleLabelTx(r: BelleLabel, c: Option[BelleLabel], label: String = "") extends BelleLabel {
   override def prettyString: String = r.prettyString
@@ -65,13 +83,16 @@ case class BelleLabelTx(r: BelleLabel, c: Option[BelleLabel], label: String = ""
     case BelleStartTxLabel => BelleLabelTx(this, None)
     case BelleRollbackTxLabel => BelleLabelTx(r, None)
     case BelleCommitTxLabel => r match {
-      case BelleStartTxLabel => c.getOrElse(throw new IllegalArgumentException("Unable to commit empty label transaction"))
-      case _ => c.map(r.append).getOrElse(r)
-    }
+        case BelleStartTxLabel =>
+          c.getOrElse(throw new IllegalArgumentException("Unable to commit empty label transaction"))
+        case _ => c.map(r.append).getOrElse(r)
+      }
     // shorthand for label(rollback) & label(l) & label(commit)
-    case BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, l), None, _) => copy(c = Some(BelleTopLevelLabel(l))).append(BelleCommitTxLabel)
+    case BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, l), None, _) =>
+      copy(c = Some(BelleTopLevelLabel(l))).append(BelleCommitTxLabel)
   }
 }
+
 /** Rollback a label transaction. */
 object BelleRollbackTxLabel extends BelleLabel {
   override val label = ""
@@ -79,6 +100,7 @@ object BelleRollbackTxLabel extends BelleLabel {
   override def components: List[BelleLabel] = this :: Nil
   override def append(l: BelleLabel): BelleLabel = l
 }
+
 /** Commits a label transaction. */
 object BelleCommitTxLabel extends BelleLabel {
   override val label = ""
@@ -92,10 +114,17 @@ object BelleStartTxLabel extends BelleLabel {
   override def components: List[BelleLabel] = this :: Nil
   override def append(l: BelleLabel): BelleLabel = l
 }
+
 /** A sublabel for a BelleProvable */
-case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
-  require(!label.contains(BelleLabel.LABEL_DELIMITER), s"Label should not contain the sublabel delimiter ${BelleLabel.LABEL_DELIMITER}")
-  require(!label.contains(BelleLabel.LABEL_SEPARATOR), s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}")
+case class BelleSubLabel(parent: BelleLabel, label: String) extends BelleLabel {
+  require(
+    !label.contains(BelleLabel.LABEL_DELIMITER),
+    s"Label should not contain the sublabel delimiter ${BelleLabel.LABEL_DELIMITER}",
+  )
+  require(
+    !label.contains(BelleLabel.LABEL_SEPARATOR),
+    s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}",
+  )
   override def prettyString: String = parent.prettyString + BelleLabel.LABEL_DELIMITER + label
   override def components: List[BelleLabel] = parent.components :+ this
   override def append(l: BelleLabel): BelleLabel = l match {

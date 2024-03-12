@@ -2,6 +2,7 @@
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
+
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core.ProverException
@@ -27,21 +28,24 @@ case class ToolCommunicationException(msg: String, cause: Throwable = null) exte
 /** External execution errors when setting up tool, starting, executing commands, shutdown etc. */
 case class ToolExecutionException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
 
-
 /** User-triggered abort (e.g., by stopping from the UI). */
 case class MathematicaComputationUserAbortException(msg: String) extends ToolInternalException(msg, null)
 
 /** Abort of external computations (e.g. by $Abort). */
-case class MathematicaComputationAbortedException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+case class MathematicaComputationAbortedException(msg: String, cause: Throwable = null)
+    extends ToolExternalException(msg, cause)
 
 /** Time out of external computations (e.g. by TimeConstrained) */
-case class MathematicaComputationTimedOutException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)
+case class MathematicaComputationTimedOutException(msg: String, cause: Throwable = null)
+    extends ToolInternalException(msg, cause)
 
 /** Abort of external computation due to inapplicable methods. */
-case class MathematicaInapplicableMethodException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+case class MathematicaInapplicableMethodException(msg: String, cause: Throwable = null)
+    extends ToolExternalException(msg, cause)
 
 /** Reports external Mathematica computation failures ($Failed). */
-case class MathematicaComputationFailedException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+case class MathematicaComputationFailedException(msg: String, cause: Throwable = null)
+    extends ToolExternalException(msg, cause)
 
 /** Critical Mathlink errors that require restarting Mathematica. */
 case class MathematicaMathlinkException(msg: String, cause: Throwable = null) extends ToolCriticalException(msg, cause)
