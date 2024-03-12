@@ -474,6 +474,8 @@ case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   *     - `_` dot as reserved nullary predicational [[DotFormula]] for formula argument placeholders
   *   - [[ComparisonFormula]] are [[AtomicFormula]] composed of two terms but not composed of formulas
   *     - `e>=d` comparisons as [[GreaterEqual]]([[Term]],[[Term]]) and likewise [[Equal]], [[NotEqual]], [[Greater]], [[LessEqual]], [[Less]]
+ *    - [[ProgramComparison]] are [[AtomicFormula]] composed of two programs
+ *      - `a<=b` comparisons as [[Refinement]]([[Program]],[[Program]]) and likewise [[ProgramEquivalence]]
   *   - [[ApplicationOf]] predicate applications
   *     - `p(e)` predicate application as [[PredOf]]([[Function]], [[Term]])
   *     - `P{Q}` predicational application or quantifier symbol as [[PredicationalOf]]([[Function]], [[Formula]])
@@ -657,6 +659,17 @@ case class Diamond(program: Program, child: Formula) extends Modal { def reapply
 /** Differential formula are differentials of formulas in analogy to differential terms (child)'.
   * In theory they are only used in the form (e>=k)' which is (e)'>=(k)'. In practice, derived forms are useful. */
 case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { def reapply = copy }
+
+/** Atomic comparison of two programs */
+trait ProgramComparison extends AtomicFormula with BinaryComposite {
+  def reapply: (Program, Program)=> Formula
+  val left: Program
+  val right: Program
+}
+/** Refinements of programs: left <= right */
+case class Refinement(left: Program, right: Program) extends ProgramComparison { def reapply = copy }
+/** Equivalence of programs: left == right */
+case class ProgramEquivalence(left: Program, right: Program) extends ProgramComparison { def reapply = copy }
 
 /*********************************************************************************
   * Programs of differential dynamic logic

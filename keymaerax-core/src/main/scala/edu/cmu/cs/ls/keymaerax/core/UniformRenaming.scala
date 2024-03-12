@@ -149,6 +149,9 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
     case PredicationalOf(c, fml) => throw RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case DotFormula              => if (semantic) DotFormula else throw RenamingClashException("Cannot replace semantic dependencies syntactically: DotFormula " + formula, this.toString, formula.toString)
     case UnitPredicational(p,sp) => if (semantic) UnitPredicational(p,renSpace(sp)) else throw RenamingClashException("Cannot replace semantic dependencies syntactically: UnitPredicational " + formula, this.toString, formula.toString)
+
+    case Refinement(p, q) => Refinement(rename(p), rename(q))
+    case ProgramEquivalence(p, q) => ProgramEquivalence(rename(p), rename(q))
   }
 
   private def rename(program: Program): Program = program match {
