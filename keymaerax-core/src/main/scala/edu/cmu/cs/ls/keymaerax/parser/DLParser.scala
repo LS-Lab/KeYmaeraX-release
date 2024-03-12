@@ -590,6 +590,8 @@ class DLParser extends Parser {
         // Now we try parsing a comparison, which will fail & backtrack
         // if it can't parse a term
         comparison |
+        // Now we try parsing a program first
+        programComparison |
         // Since we already tried (and failed) to parse a term, now we
         // can safely try the ambiguous cases
         ambiguousBaseF
@@ -665,9 +667,17 @@ class DLParser extends Parser {
   })
 
   /** Regular predicationals C{} */
-  def predicational[$: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({ case (s, idx, f) =>
+  def predicational[$: P]: P[PredicationalOf] = P(ident ~~ "{" ~ !"|" ~/ formula ~ "}").map({ case (s, idx, f) =>
     PredicationalOf(Function(s, idx, Bool, Bool), f)
   })
+
+  /** Parses a program comparison */
+  def programComparison[$: P]: P[ProgramComparison] = P((program ~/ programComparator.! ~ program).map {
+    case (left, "<=", right) => Refinement(left, right)
+    case (left, "==", right) => ProgramEquivalence(left, right)
+  })
+
+  def programComparator[$: P]: P[Unit] = P("<=" | "==" ~~ !">")
 
   // *****************
   // program parser

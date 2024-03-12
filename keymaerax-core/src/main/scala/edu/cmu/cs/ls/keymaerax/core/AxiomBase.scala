@@ -309,14 +309,20 @@ private[core] object AxiomBase extends Logging {
     val p = Function("p", None, Real, Bool)
     val pany = UnitPredicational("p", AnyArg)
     val q0 = PredOf(Function("q", None, Unit, Bool), Nothing)
+    val q = Function("q", None, Real, Bool)
     val qany = UnitPredicational("q", AnyArg)
     val c = FuncOf(Function("c", None, Unit, Real), Nothing)
     val f0 = FuncOf(Function("f", None, Unit, Real), Nothing)
+    val f = Function("f", None, Real, Real)
     val fany = UnitFunctional("f", AnyArg, Real)
+    val g = Function("g", None, Real, Real)
     val gany = UnitFunctional("g", AnyArg, Real)
     val a = ProgramConst("a")
     val b = ProgramConst("b")
     val sys = SystemConst("a")
+    val sysb = SystemConst("b")
+    val sysc = SystemConst("c")
+    val sysd = SystemConst("d")
     val ode = DifferentialProgramConst("c", AnyArg)
 
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
@@ -512,6 +518,191 @@ private[core] object AxiomBase extends Logging {
     // insist(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,f0)), "all instantiate")
     // soundness-critical that these are for p() not for p(x) or p(||)
     // insist(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
+
+    /* REFINEMENT AXIOMS */
+    insist(
+      axs("refinement transitive") == Imply(And(Refinement(sys, sysc), Refinement(sysc, sysb)), Refinement(sys, sysb)),
+      "refinement transitive",
+    )
+    insist(
+      axs("refinement antisymmetry") ==
+        Equiv(ProgramEquivalence(sys, sysb), And(Refinement(sys, sysb), Refinement(sysb, sys))),
+      "refinement antisymmetry",
+    )
+    insist(
+      axs("refinement box") == Imply(Refinement(sys, sysb), Imply(Box(sysb, pany), Box(sys, pany))),
+      "refinement box",
+    )
+    insist(axs("refinement test") == Equiv(Refinement(Test(p0), Test(q0)), Imply(p0, q0)), "refinement test")
+    insist(axs("refinement assign") == Refinement(Assign(x, f0), AssignAny(x)), "refinement assign")
+    insist(axs("refinement stutter") == Refinement(Assign(x, x), Test(True)), "refinement stutter")
+    insist(
+      axs("refinement choice left") ==
+        Equiv(Refinement(Choice(sys, sysb), sysc), And(Refinement(sys, sysc), Refinement(sysb, sysc))),
+      "refinement choice left",
+    )
+    insist(
+      axs("refinement choice right") ==
+        Imply(Or(Refinement(sys, sysb), Refinement(sys, sysc)), Refinement(sys, Choice(sysb, sysc))),
+      "refinement choice right",
+    )
+    insist(
+      axs("refinement sequence") == Imply(
+        And(Refinement(sys, sysc), Box(sys, Refinement(sysb, sysd))),
+        Refinement(Compose(sys, sysb), Compose(sysc, sysd)),
+      ),
+      "refinement sequence",
+    )
+    insist(
+      axs("refinement loop left") ==
+        Imply(Box(Loop(sys), Refinement(Compose(sys, sysb), sysb)), Refinement(Compose(Loop(sys), sysb), sysb)),
+      "refinement loop left",
+    )
+    insist(
+      axs("refinement loop right") ==
+        Imply(Refinement(Compose(sys, sysb), sys), Refinement(Compose(sys, Loop(sysb)), sys)),
+      "refinement loop right",
+    )
+    insist(
+      axs("refinement test det") ==
+        Equiv(Refinement(Compose(Test(p0), sys), Compose(Test(p0), sysb)), Box(Test(p0), Refinement(sys, sysb))),
+      "refinement test det",
+    )
+    insist(
+      axs("refinement assign det") == Equiv(
+        Refinement(Compose(Assign(x, f0), sys), Compose(Assign(x, f0), sysb)),
+        Box(Assign(x, f0), Refinement(sys, sysb)),
+      ),
+      "refinement assign det",
+    )
+    insist(
+      axs("refinement :* merge") == ProgramEquivalence(
+        Compose(AssignAny(x), Compose(Test(PredOf(p, x)), AssignAny(x))),
+        Compose(AssignAny(x), Test(Exists(immutable.Seq(y), PredOf(p, y)))),
+      ),
+      "refinement :* merge",
+    )
+    insist(
+      axs("refinement unloop") == Imply(Box(Loop(sys), Refinement(sys, sysb)), Refinement(Loop(sys), Loop(sysb))),
+      "refinement unloop",
+    )
+    insist(
+      axs("refinement ode") == Equiv(
+        Refinement(
+          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
+          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(g, x)), PredOf(q, x)),
+        ),
+        Box(
+          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
+          And(Equal(FuncOf(f, x), FuncOf(g, x)), PredOf(q, x)),
+        ),
+      ),
+      "refinement ode",
+    )
+    insist(
+      axs("ode idempotent") ==
+        ProgramEquivalence(Compose(ODESystem(ode, pany), ODESystem(ode, pany)), ODESystem(ode, pany)),
+      "ode idempotent",
+    )
+    insist(
+      axs("refinement DE") == ProgramEquivalence(
+        ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
+        Compose(
+          ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
+          Assign(DifferentialSymbol(x), fany),
+        ),
+      ),
+      "refinement DE",
+    )
+    insist(
+      axs("refinement DW") == ProgramEquivalence(ODESystem(ode, pany), Compose(ODESystem(ode, pany), Test(pany))),
+      "refinement DW",
+    )
+    insist(
+      axs("refinement DX") == Refinement(
+        Compose(Assign(DifferentialSymbol(x), FuncOf(f, x)), Test(PredOf(p, x))),
+        ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
+      ),
+      "refinement DX",
+    )
+    /* KAT AXIOMS */
+    insist(axs("refinement reflexive") == Refinement(sys, sys), "refinement reflexive")
+    insist(axs("choice identity") == ProgramEquivalence(Choice(sys, Test(False)), sys), "refinement identity")
+    insist(axs("choice idempotent") == ProgramEquivalence(Choice(sys, sys), sys), "choice idempotent")
+    insist(axs("choice commute") == ProgramEquivalence(Choice(sys, sysb), Choice(sysb, sys)), "choice commute")
+    insist(
+      axs("choice associative") == ProgramEquivalence(Choice(sys, Choice(sysb, sysc)), Choice(Choice(sys, sysb), sysc)),
+      "choice associative",
+    )
+    insist(axs("sequence identity left") == ProgramEquivalence(Compose(Test(True), sys), sys), "sequence identity left")
+    insist(
+      axs("sequence identity right") == ProgramEquivalence(Compose(sys, Test(True)), sys),
+      "sequence identity right",
+    )
+    insist(
+      axs("sequence associative") ==
+        ProgramEquivalence(Compose(sys, Compose(sysb, sysc)), Compose(Compose(sys, sysb), sysc)),
+      "sequence associative",
+    )
+    insist(
+      axs("distribute left") ==
+        ProgramEquivalence(Choice(Compose(sys, sysb), Compose(sys, sysc)), Compose(sys, Choice(sysb, sysc))),
+      "distribute left",
+    )
+    insist(
+      axs("distribute right") ==
+        ProgramEquivalence(Choice(Compose(sys, sysc), Compose(sysb, sysc)), Compose(Choice(sys, sysb), sysc)),
+      "distribute right",
+    )
+    insist(axs("annihile left") == ProgramEquivalence(Compose(Test(False), sys), Test(False)), "annihile left")
+    insist(axs("annihile right") == ProgramEquivalence(Compose(sys, Test(False)), Test(False)), "annihile right")
+    insist(
+      axs("unfold left") == ProgramEquivalence(Choice(Test(True), Compose(sys, Loop(sys))), Loop(sys)),
+      "unfold left",
+    )
+    insist(
+      axs("unfold right") == ProgramEquivalence(Choice(Test(True), Compose(Loop(sys), sys)), Loop(sys)),
+      "unfold right",
+    )
+    /* SKAT AXIOMS */
+    insist(
+      axs("assign commute") == ProgramEquivalence(
+        Compose(Assign(x, f0), Assign(y, FuncOf(g, x))),
+        Compose(Assign(y, FuncOf(g, f0)), Assign(x, f0)),
+      ),
+      "assign commute",
+    )
+    insist(
+      axs("assign substitution") == ProgramEquivalence(
+        Compose(Assign(x, f0), Assign(y, FuncOf(g, x))),
+        Compose(Assign(x, f0), Assign(y, FuncOf(g, f0))),
+      ),
+      "assign substitution",
+    )
+    insist(
+      axs("assign test") ==
+        ProgramEquivalence(Compose(Assign(x, f0), Test(PredOf(p, x))), Compose(Test(PredOf(p, f0)), Assign(x, f0))),
+      "assign test",
+    )
+    insist(
+      axs("assign merge") ==
+        ProgramEquivalence(Compose(Assign(x, f0), Assign(x, FuncOf(g, x))), Assign(x, FuncOf(g, f0))),
+      "assign merge",
+    )
+    insist(
+      axs("nondet assign commute") ==
+        ProgramEquivalence(Compose(AssignAny(x), AssignAny(y)), Compose(AssignAny(y), AssignAny(x))),
+      "nondet assign commute",
+    )
+    insist(
+      axs(":=* commute") ==
+        ProgramEquivalence(Compose(Assign(x, f0), AssignAny(y)), Compose(AssignAny(y), Assign(x, f0))),
+      ":=* commute",
+    )
+    insist(
+      axs("nondet assign test") == ProgramEquivalence(Compose(AssignAny(x), Test(p0)), Compose(Test(p0), AssignAny(x))),
+      "nondet assign test",
+    )
 
     true
   }
@@ -821,6 +1012,178 @@ Axiom "all eliminate"
 End.
 Axiom "all eliminate prime"
   (\forall x_' p(||)) -> p(||)
+End.
+
+/** REFINEMENT AXIOMS */
+Axiom "refinement transitive"
+  a{|^@|}; <= b{|^@|}; <- (a{|^@|}; <= c{|^@|}; & c{|^@|}; <= b{|^@|};)
+End.
+
+Axiom "refinement antisymmetry"
+  a{|^@|}; == b{|^@|}; <-> (a{|^@|}; <= b{|^@|}; & b{|^@|}; <= a{|^@|};)
+End.
+
+Axiom "refinement box"
+  a{|^@|}; <= b{|^@|}; -> ([a{|^@|};]p(||) <- [b{|^@|};]p(||))
+End.
+
+Axiom "refinement test"
+  (?p(); <= ?q();) <-> (p() -> q())
+End.
+
+Axiom "refinement assign"
+  x_:=f(); <= x_:=*;
+End.
+
+Axiom "refinement stutter"
+  x_:=x_; <= ?true;
+End.
+
+Axiom "refinement choice left"
+  a{|^@|};++b{|^@|}; <= c{|^@|}; <-> (a{|^@|}; <= c{|^@|}; & b{|^@|}; <= c{|^@|};)
+End.
+
+Axiom "refinement choice right"
+  a{|^@|}; <= b{|^@|};++c{|^@|}; <- (a{|^@|}; <= b{|^@|}; | a{|^@|}; <= c{|^@|};)
+End.
+
+Axiom "refinement sequence"
+  a{|^@|};b{|^@|}; <= c{|^@|};d{|^@|}; <- a{|^@|}; <= c{|^@|}; & [a{|^@|};](b{|^@|}; <= d{|^@|};)
+End.
+
+Axiom "refinement loop left"
+  {a{|^@|};}*;b{|^@|}; <= b{|^@|}; <- [{a{|^@|};}*](a{|^@|};b{|^@|}; <= b{|^@|};)
+End.
+
+Axiom "refinement loop right"
+  a{|^@|};{b{|^@|};}* <= a{|^@|}; <- a{|^@|};b{|^@|}; <= a{|^@|};
+End.
+
+Axiom "refinement test det"
+  ?p();a{|^@|}; <= ?p();b{|^@|}; <-> [?p();](a{|^@|}; <= b{|^@|};)
+End.
+
+Axiom "refinement assign det"
+  x_:=f();a{|^@|}; <= x_:=f();b{|^@|}; <-> [x_:=f();](a{|^@|}; <= b{|^@|};)
+End.
+
+Axiom "refinement :* merge"
+  x_:=*;?p(x_);x_:=*; == x_:=*;?(\exists y_ p(y_));
+End.
+
+Axiom "refinement :=* merge"
+  x_:=*;?p(x_);x_:=f(x_); == x_:=*;?(\exists y_ (p(y_) & x_ = f(y_)));
+End.
+
+Axiom "refinement unloop"
+  {a{|^@|};}* <= {b{|^@|};}* <- [{a{|^@|};}*](a{|^@|}; <= b{|^@|};)
+End.
+
+Axiom "refinement ode"
+  {x_' = f(x_) & p(x_)} <= {x_' = g(x_) & q(x_)} <-> [{x_' = f(x_) & p(x_)}](f(x_) = g(x_) & q(x_))
+End.
+
+Axiom "ode idempotent"
+  {c&p(||)};{c&p(||)} == {c&p(||)}
+End.
+
+Axiom "refinement DE"
+  {x_' = f(||),c & p(||)} == {x_' = f(||),c & p(||)};x_':=f(||);
+End.
+
+Axiom "refinement DW"
+  {c & p(||)} == {c & p(||)};?p(||);
+End.
+
+Axiom "refinement DX"
+  x_':=f(x_);?p(x_); <= {x_' = f(x_) & p(x_)}
+End.
+
+/** KAT Axioms */
+
+Axiom "refinement reflexive"
+  a{|^@|}; <= a{|^@|};
+End.
+
+Axiom "choice identity"
+  a{|^@|}; ++ ?false; == a{|^@|};
+End.
+
+Axiom "choice idempotent"
+  a{|^@|}; ++ a{|^@|}; == a{|^@|};
+End.
+
+Axiom "choice commute"
+  a{|^@|}; ++ b{|^@|}; == b{|^@|}; ++ a{|^@|};
+End.
+
+Axiom "choice associative"
+  a{|^@|}; ++ {b{|^@|}; ++ c{|^@|};} == {a{|^@|}; ++ b{|^@|};} ++ c{|^@|};
+End.
+
+Axiom "sequence identity left"
+  ?true;a{|^@|}; == a{|^@|};
+End.
+
+Axiom "sequence identity right"
+  a{|^@|};?true; == a{|^@|};
+End.
+
+Axiom "sequence associative"
+  a{|^@|};{b{|^@|};c{|^@|};} == {a{|^@|};b{|^@|};};c{|^@|};
+End.
+
+Axiom "distribute left"
+  a{|^@|};b{|^@|}; ++ a{|^@|};c{|^@|}; == a{|^@|};{b{|^@|};++c{|^@|};}
+End.
+
+Axiom "distribute right"
+  a{|^@|};c{|^@|}; ++ b{|^@|};c{|^@|}; == {a{|^@|};++b{|^@|};};c{|^@|};
+End.
+
+Axiom "annihile left"
+  ?false;a{|^@|}; == ?false;
+End.
+
+Axiom "annihile right"
+  a{|^@|};?false; == ?false;
+End.
+
+Axiom "unfold left"
+  ?true; ++ {a{|^@|};{a{|^@|};}*} == {a{|^@|};}*
+End.
+
+Axiom "unfold right"
+  ?true; ++ {{a{|^@|};}*;a{|^@|};} == {a{|^@|};}*
+End.
+
+/** SKAT axioms */
+Axiom "assign commute"
+  x_:=f();y_:=g(x_); == y_:=g(f());x_:=f();
+End.
+
+Axiom "assign substitution"
+  x_:=f();y_:=g(x_); == x_:=f();y_:=g(f());
+End.
+
+Axiom "assign test"
+  x_:=f();?p(x_); == ?p(f());x_:=f();
+End.
+
+Axiom "assign merge"
+  x_:=f();x_:=g(x_); == x_:=g(f());
+End.
+
+Axiom "nondet assign commute"
+  x_:=*;y_:=*; == y_:=*;x_:=*;
+End.
+
+Axiom ":=* commute"
+  x_:=f();y_:=*; == y_:=*;x_:=f();
+End.
+
+Axiom "nondet assign test"
+  x_:=*;?p(); == ?p();x_:=*;
 End.
 """
 }

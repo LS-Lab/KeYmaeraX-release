@@ -21,7 +21,7 @@ import scala.collection.immutable._
  */
 object DLAxiomParser extends (String => List[(String, Formula)]) {
   import DLParser.string
-  private val checkAgainst: Option[String => List[(String, Formula)]] = Some(KeYmaeraXAxiomParser)
+  private val checkAgainst: Option[String => List[(String, Formula)]] = None // Some(KeYmaeraXAxiomParser)
 
   /**
    * Parse an axiom string into a list of named axioms.
