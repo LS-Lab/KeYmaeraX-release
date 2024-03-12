@@ -1,7 +1,7 @@
 # Developing KeYmaera X
 
 To set up a development environment, first follow the [build instructions](build.md).
-Then follow the instructions for setting up your IDE below.
+Then follow the instructions for setting up the repo and your IDE below.
 We strongly recommend using IntelliJ IDEA and its Scala plugin.
 
 Also make sure to read the [coding conventions](../CodingConventions.md).
@@ -10,6 +10,15 @@ Also make sure to read the [coding conventions](../CodingConventions.md).
 The KeYmaera X project currently does not accept outside contributions,
 meaning pull requests on the `KeYmaeraX-release` repo won't be merged.
 However, issues are always welcome!
+
+## Repo setup
+
+Some commits should be omitted from `git blame` by default
+(e.g. reformatting commits that don't meaningfully change the code).
+
+```shell
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
 
 ## IntelliJ IDEA
 

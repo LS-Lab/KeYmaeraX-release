@@ -1,0 +1,9 @@
+# Add to your config using:
+# $ git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# See also:
+# https://www.stefanjudis.com/today-i-learned/how-to-exclude-commits-from-git-blame/
+# https://git-scm.com/docs/git-blame#Documentation/git-blame.txt---ignore-revs-fileltfilegt
+# https://docs.github.com/en/repositories/working-with-files/using-files/viewing-a-file#ignore-commits-in-the-blame-view
+
+b74407c9775657f6476301205e357576e557ac7e
