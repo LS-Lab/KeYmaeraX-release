@@ -55,11 +55,28 @@ To create just the webui jar file, run `sbt --mem 2048 'project webui' assembly`
 To clean up build files, run `sbt clean`.
 
 The core jar file can be found at `keymaerax-core/target/scala-<scala version>/keymaerax-core-<version>.jar`.  
-The webui jar file can be found at `keymaerax-webui/target/scala-<scala version>/keymaerax-webui-<version>.jar`.  
+The webui jar file can be found at `keymaerax-webui/target/scala-<scala version>/keymaerax-webui-<version>.jar`.
+
+## Formatting with scalafmt
+
+When editing code with IntelliJ, files are automatically formatted on save.
+
+To format all source files, run:
+
+```shell
+sbt scalafmt Test/scalafmt
+```
+
+To check if files are formatted correctly, run:
+
+```shell
+sbt scalafmtCheck Test/scalafmtCheck
+```
 
 ## Tests
 
 To run a quick smoke test suite, run:
+
 ```shell
 sbt "testOnly \
   -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest \
@@ -67,11 +84,14 @@ sbt "testOnly \
 ```
 
 To run the full but lengthy test suite, run:
+
 ```shell
 sbt "test \
   -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest"
 ```
+
 To leave out slower tests, run:
+
 ```shell
 
 sbt "testOnly \
@@ -82,16 +102,20 @@ sbt "testOnly \
 ```
 
 To run a single test (e.g. `BenchmarkTests`), run:
+
 ```shell
 sbt "testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests"
 ```
+
 You can also use wildcards:
+
 ```shell
 sbt "testOnly *USubst*"
 ```
 
 Of course, you can also use all these commands in the interactive sbt shell:
-```sbt
+
+```shell
 testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests
 testOnly *USubst*
 ```
