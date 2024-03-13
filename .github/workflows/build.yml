@@ -38,5 +38,8 @@ jobs:
       - name: Prepare local.properties
         run: echo "mathematica.jlink.path=JLink.jar" > local.properties
 
+      - name: Check formatting
+        run: sbt --mem 2048 scalafmtCheck Test/scalafmtCheck
+
       - name: Build
         run: sbt --mem 2048 assembly
