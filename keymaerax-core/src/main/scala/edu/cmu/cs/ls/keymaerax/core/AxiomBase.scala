@@ -270,7 +270,7 @@ private[core] object AxiomBase extends Logging {
     //insist(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
 
     /* REFINEMENT AXIOMS */
-    insist(axs("refinement transitive") == Equiv(Refinement(sys,sysb), And(Refinement(sys, sysc), Refinement(sysc, sysb))), "refinement transitive")
+    insist(axs("refinement transitive") == Imply(And(Refinement(sys, sysc), Refinement(sysc, sysb)), Refinement(sys,sysb)), "refinement transitive")
     insist(axs("refinement antisymmetry") == Equiv(ProgramEquivalence(sys,sysb), And(Refinement(sys,sysb), Refinement(sysb,sys))), "refinement antisymmetry")
     insist(axs("refinement box") == Imply(Refinement(sys,sysb), Imply(Box(sysb,pany),Box(sys,pany))), "refinement box")
     insist(axs("refinement test") == Equiv(Refinement(Test(p0), Test(q0)), Imply(p0,q0)), "refinement test")
@@ -610,7 +610,7 @@ End.
 
 /** REFINEMENT AXIOMS */
 Axiom "refinement transitive"
-  a{|^@|}; <= b{|^@|}; <-> (a{|^@|}; <= c{|^@|}; & c{|^@|}; <= b{|^@|};)
+  a{|^@|}; <= b{|^@|}; <- (a{|^@|}; <= c{|^@|}; & c{|^@|}; <= b{|^@|};)
 End.
 
 Axiom "refinement antisymmetry"
