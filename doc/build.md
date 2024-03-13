@@ -78,7 +78,7 @@ sbt scalafmtCheck Test/scalafmtCheck
 To run a quick smoke test suite, run:
 
 ```shell
-sbt "testOnly \
+sbt "testOnly -- \
   -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest \
   -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest"
 ```
@@ -86,7 +86,7 @@ sbt "testOnly \
 To run the full but lengthy test suite, run:
 
 ```shell
-sbt "test \
+sbt "test -- \
   -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest"
 ```
 
@@ -94,7 +94,7 @@ To leave out slower tests, run:
 
 ```shell
 
-sbt "testOnly \
+sbt "test -- \
   -l edu.cmu.cs.ls.keymaerax.tags.SlowTest \
   -l edu.cmu.cs.ls.keymaerax.tags.ExtremeTest \
   -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest \
