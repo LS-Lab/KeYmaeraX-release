@@ -5,9 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.pptests
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{ReflectiveExpressionBuilder, SaturateTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{DLBelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
@@ -23,7 +23,8 @@ import scala.language.postfixOps
  */
 @UsualTest
 class BTacticPrettyPrinterTests extends TacticTestBase {
-  private val parser = BelleParser
+  private val parser =
+    new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
 
   private def roundTrip(tactic: String) = {
     val parsed = parser(tactic)
@@ -99,5 +100,10 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
 
   it should "parenthesize tactic combinators" in withTactics {
     parser(BellePrettyPrinter(SaturateTactic(TactixLibrary.alphaRule))) shouldBe SaturateTactic(TactixLibrary.alphaRule)
+  }
+
+  "Position locator" should "be printed correctly" in withTactics {
+    val tactic = parser("""andTrue(2.1.1=="x=2&true")""")
+    tactic.prettyString shouldBe """andTrue(2.1.1=="x=2&true")"""
   }
 }

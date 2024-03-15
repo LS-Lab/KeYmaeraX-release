@@ -108,9 +108,10 @@ object PositionLocator {
  */
 case class Fixed private[keymaerax] (pos: Position, shape: Option[Expression] = None, exact: Boolean = true)
     extends PositionLocator {
+  private val exprPP = new KeYmaeraXOmitInterpretationPrettyPrinter
   override def prettyString: String = (shape, exact) match {
-    case (Some(fml), true) => pos.topLevel.prettyString + "==\"" + PositionLocator.withMarkers(fml, pos.inExpr) + "\""
-    case (Some(fml), false) => pos.topLevel.prettyString + "~=\"" + PositionLocator.withMarkers(fml, pos.inExpr) + "\""
+    case (Some(fml), true) => pos.prettyString + "==\"" + exprPP(fml) + "\""
+    case (Some(fml), false) => pos.prettyString + "~=\"" + exprPP(fml) + "\""
     case (None, _) => pos.prettyString
   }
 

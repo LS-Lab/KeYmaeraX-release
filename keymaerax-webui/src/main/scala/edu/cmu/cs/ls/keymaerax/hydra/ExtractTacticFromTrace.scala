@@ -226,14 +226,13 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends LabelledTraceToTa
 
   /** Converts fixed position locators into search locators. */
   private def convertLocator(loc: PositionLocator, node: ProofTreeNode): PositionLocator = loc match {
-    case Fixed(pos, None, _) => node.goal.flatMap(_.sub(pos.top)) match {
-        case Some(e) => Find(0, Some(e), firstInSuccOrAnte(pos), exact = true, defs)
+    case Fixed(pos, _, exact) => node.goal.flatMap(_.sub(pos.top)) match {
+        case Some(e) => Find(0, Some(e), firstInSuccOrAnte(pos), exact, defs)
         case None => throw TacticExtractionError(
             "Recorded position " + pos.prettyString + " does not exist in " +
               node.localProvable.subgoals.head.prettyString
           )
       }
-    case Fixed(pos, Some(f), exact) => Find(0, Some(f), firstInSuccOrAnte(pos), exact, defs)
     case Find(goal, None, start, exact, _) =>
       val childGoal = node.children.headOption.flatMap(_.goal)
       val affected =
