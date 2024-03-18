@@ -262,7 +262,6 @@ class TaylorModelTests extends TacticTestBase {
     }
   }
 
-
   it should "prove a lemma about van der Pol" in withMathematica { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val vdp = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
