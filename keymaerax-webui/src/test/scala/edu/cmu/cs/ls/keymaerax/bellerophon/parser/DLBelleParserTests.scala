@@ -144,17 +144,41 @@ class DLBelleParserTests
 
   it should "elaborate consistently with defs" in {
     val defs = Declaration(Map(
-      Name("p", None) ->
-        Signature(Some(Unit), Bool, None, Right(None), UnknownLocation),
-      Name("f", None) ->
-        Signature(Some(Unit), Real, None, Right(None), UnknownLocation)
+      Name("p", None) -> Signature(Some(Unit), Bool, None, Right(None), UnknownLocation),
+      Name("f", None) -> Signature(Some(Unit), Real, None, Right(None), UnknownLocation),
+      Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("?f()=2;".asProgram)), UnknownLocation),
     ))
-    parse("""hideL(2=="p()")""", defs) should have('locator(Fixed(SuccPos(1), Some("p()".asFormula))))
-    parse("""hideL(2=="#f()#=2")""", defs) should have('locator
-      (Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("f()".asTerm))))
-    parse("""hideL(2=="!#p()#")""", defs) should have('locator
-      (Fixed(SuccPosition.base0(1, PosInExpr(0::Nil)), Some("p()".asFormula))))
-    parse("""hideL(2=="f()")""", defs) should have('locator(Fixed(SuccPos(1), Some("f()".asTerm)))) //This is based on: `expr already points verbatim to the sub-position, e.g. 2.1.1=="x"'
+
+    // Test with/without parentheses and/or when subexpresssion is the first occurrence or not
+    parse("""hideL(2=="p()")""", defs) should have(Symbol("locator")(Fixed(SuccPos(1), Some("p()".asFormula))))
+    parse("""hideL(2=="p")""", defs) should have(Symbol("locator")(Fixed(SuccPos(1), Some("p()".asFormula))))
+    parse("""hideL(2=="#p()#->p()")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("p()".asFormula))))
+    parse("""hideL(2=="#p#->p")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("p()".asFormula))))
+    parse("""hideL(2=="p()->#p()#")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(1 :: Nil)), Some("p()".asFormula))))
+    parse("""hideL(2=="p->#p#")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(1 :: Nil)), Some("p()".asFormula))))
+
+    // Same tests with functions
+    parse("""hideL(2.0=="f()")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("f()".asTerm))))
+    parse("""hideL(2.0=="f")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("f()".asTerm))))
+    parse("""hideL(2=="#f()#=f()")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("f()".asTerm))))
+    parse("""hideL(2=="#f#=f")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("f()".asTerm))))
+    parse("""hideL(2=="f()=#f()#")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(1 :: Nil)), Some("f()".asTerm))))
+    parse("""hideL(2=="f=#f#")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(1 :: Nil)), Some("f()".asTerm))))
+
+    parse("""hideL(2=="[a;][#a;#]false")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(1 :: 0 :: Nil)), Some("a{|^@|};".asProgram))))
+    parse("""hideL(2=="[#a;#][a;]false")""", defs) should
+      have(Symbol("locator")(Fixed(SuccPosition.base0(1, PosInExpr(0 :: Nil)), Some("a{|^@|};".asProgram))))
   }
 
   it should "parse PosInExpr attached to locator" taggedAs TodoTest in {

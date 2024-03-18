@@ -36,7 +36,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Pa
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.parser.DLParser.{fullExpression, parseException}
+import edu.cmu.cs.ls.keymaerax.parser.DLParser.{fullExpression, fullFormula, parseException}
 
 import scala.collection.immutable._
 import scala.util.Try
@@ -351,49 +351,48 @@ class DLBelleParser(
       if (hashStart == hashEnd && hashStart != -1) Fail
       else if (hashStart == -1) {
         // No hashes, just return Here for PosIn
+        // Can be a term (or a program), e.g. in "2.1==x"
+        // Potentially unsafe for ambiguous "p()" with an archive without definition
         fastparse.parse(str, fullExpression(_)) match {
-          case Parsed.Success(value, _) =>
-            Pass((defs.elaborateFull(value), HereP))
+          case Parsed.Success(value, _) => Pass((defs.elaborateFull(value), HereP))
           case failure: Parsed.Failure =>
             // What information do we expose here??
             Fail
         }
       } else {
         // Has hashes; extract subexpression and find its position in full expression (hashes act as parentheses)
+        // Outer expression must be a formula
         val sub = str.substring(hashStart + 1, hashEnd)
-        val (lp, rp) = fastparse.parse(sub, fullExpression(_)) match {
-          case Parsed.Success(_: Program, _) => ("{", "}")
-          case Parsed.Success(_: Formula, _) => ("(", ")")
-          case Parsed.Success(_: Term, _) => ("(", ")")
+        val subExpr = fastparse.parse(sub, fullExpression(_)) match {
+          case Parsed.Success(e, _) => defs.elaborateToFunctions(e)
           case _: Parsed.Failure => return Fail
         }
+        val (lp, rp) = subExpr match {
+          case _: Program => ("{", "}")
+          case _: Formula => ("(", ")")
+          case _: Term => ("(", ")")
+        }
         val noHashes = str.substring(0, hashStart) + lp + sub + rp + str.substring(hashEnd + 1, str.length)
-        fastparse.parse(noHashes, fullExpression(_)) match {
+        fastparse.parse(noHashes, fullFormula(_)) match {
           case failure: Parsed.Failure =>
             // What information do we expose here??
             Fail
-          case Parsed.Success(expr, _) => fastparse.parse(sub, fullExpression(_)) match {
-              case failure: Parsed.Failure =>
-                // What information do we expose here??
-                Fail
-              case Parsed.Success(subExpr, _) =>
-                val subExprCorrected = defs.elaborateFull(subExpr)
-                val posIn =
-                  if (noHashes.indexOf(sub) != hashStart + 1) {
-                    // marked sub-expression is not leftmost in expr, mark with "hash" placeholder function/predicate/program
-                    val (markedStr, placeholder) =
-                      PositionLocator.withMarkers(noHashes, subExprCorrected, hashStart, hashEnd - hashStart + 1)
-                    val markedExpr = fastparse.parse(markedStr, fullExpression(_)).get.value
-                    FormulaTools.posOf(markedExpr, placeholder)
-                  } else { FormulaTools.posOf(expr, subExprCorrected) }
+          case Parsed.Success(expr, _) =>
+            val posIn =
+              if (noHashes.indexOf(sub) != hashStart + 1) {
+                // marked sub-expression is not leftmost in expr, mark with "hash" placeholder function/predicate/program
+                val (markedStr, placeholder) = PositionLocator
+                  .withMarkers(noHashes, subExpr, hashStart, hashEnd - hashStart + 1)
+                val markedExpr = fastparse.parse(markedStr, fullFormula(_)).get.value
+                FormulaTools.posOf(markedExpr, placeholder)
+              } else { FormulaTools.posOf(defs.elaborateToFunctions(expr), subExpr) }
 
-                posIn match {
-                  case Some(pi) => Pass((defs.elaborateFull(expr), pi))
-                  case None => Fail.opaque(
-                      "Parsed a position locator with subexpression successfully, but could not find subexpression: " +
-                        subExprCorrected.prettyString + " in expression " + expr.prettyString
-                    )
-                }
+            posIn match {
+              case Some(pi) => Pass((defs.elaborateFull(expr), pi))
+              case None => Fail.opaque(
+                  "Parsed a position locator with subexpression successfully, but could not find subexpression: " +
+                    subExpr.prettyString + " in expression " + expr.prettyString
+                )
             }
         }
       }

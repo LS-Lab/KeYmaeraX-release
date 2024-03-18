@@ -206,7 +206,10 @@ case class Declaration(decls: Map[Name, Signature]) {
   /** Elaborates the expression `expr` fully (functions, constants, builtin/imported functions), but does not expand. */
   def elaborateFull[T <: Expression](expr: T): T = implicitSubst(elaborateToSystemConsts(elaborateToFunctions(expr)))
 
-  /** Elaborates variable uses of declared functions, except those listed in taboo. */
+  /**
+   * Elaborates variable uses of declared functions, except those listed in taboo. Also elaborates [[FuncOf]] to
+   * [[PredOf]] per sort in `decls`.
+   */
   // @todo need to look into concrete programs that implement program constants when elaborating
   def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T =
     try { expr.elaborateToFunctions(asNamedSymbols.toSet -- taboo).asInstanceOf[T] }
