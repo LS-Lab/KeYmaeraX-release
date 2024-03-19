@@ -7,15 +7,14 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics.eqL2R
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
-import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{prop, QE}
+import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
-import testHelper.KeYmaeraXTestTags
 import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
@@ -210,9 +209,8 @@ class UnifyUSCalculusTest extends TacticTestBase {
     ) shouldBe Symbol("proved")
   }
 
-  it should
-    "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs
-    KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" in
+    withMathematica { qeTool =>
       proveBy(
         Sequent(
           IndexedSeq(),
@@ -436,24 +434,22 @@ class UnifyUSCalculusTest extends TacticTestBase {
     shouldReduceTo("0*x+1<=3".asFormula, 1, PosInExpr(0 :: Nil), "1<=3".asFormula)
   }
 
-  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" taggedAs KeYmaeraXTestTags.SummaryTest in
-    withMathematica { qeTool =>
-      shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, 1, PosInExpr(0 :: 1 :: 0 :: Nil), "x<5 & 1<=3 | x>=2".asFormula)
-    }
+  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" in withMathematica { qeTool =>
+    shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, 1, PosInExpr(0 :: 1 :: 0 :: Nil), "x<5 & 1<=3 | x>=2".asFormula)
+  }
 
   it should "reduce \\forall x 0*x+1<=3 to \\forall x 1<=3" in withMathematica { qeTool =>
     shouldReduceTo("\\forall x 0*x+1<=3".asFormula, 1, PosInExpr(0 :: 0 :: Nil), "\\forall x 1<=3".asFormula)
   }
 
-  ignore should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" taggedAs
-    KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
-      shouldReduceTo(
-        "x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula,
-        1,
-        PosInExpr(0 :: 1 :: 0 :: 0 :: Nil),
-        "x<5 & \\forall x 1<=3 | x>=2".asFormula,
-      )
-    }
+  ignore should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in withMathematica { qeTool =>
+    shouldReduceTo(
+      "x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula,
+      1,
+      PosInExpr(0 :: 1 :: 0 :: 0 :: Nil),
+      "x<5 & \\forall x 1<=3 | x>=2".asFormula,
+    )
+  }
 
   it should "reduce [x:=7;]0*x+1<=3 to [x:=7;]1<=3" in withMathematica { qeTool =>
     shouldReduceTo("[x:=7;]0*x+1<=3".asFormula, 1, PosInExpr(1 :: 0 :: Nil), "[x:=7;]1<=3".asFormula)
@@ -522,16 +518,15 @@ class UnifyUSCalculusTest extends TacticTestBase {
     )
   }
 
-  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" taggedAs KeYmaeraXTestTags.SummaryTest in
-    withMathematica { qeTool =>
-      shouldReduceTo(
-        "[{x' = 5*x & x^2<4}]x>=1".asFormula,
-        1,
-        PosInExpr(0 :: 1 :: Nil),
-        "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula,
-        basicEquiv,
-      )
-    }
+  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" in withMathematica { qeTool =>
+    shouldReduceTo(
+      "[{x' = 5*x & x^2<4}]x>=1".asFormula,
+      1,
+      PosInExpr(0 :: 1 :: Nil),
+      "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula,
+      basicEquiv,
+    )
+  }
 
   it should
     "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in

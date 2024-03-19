@@ -5,15 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.prop.TableDrivenPropertyChecks._
-import testHelper.KeYmaeraXTestTags
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -864,15 +863,15 @@ class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "The parser" should "parse table of string pairs as expected" in { pairParse(expectedParseExpression, parser) }
 
-  it should "term parse table of string pairs as expected" taggedAs KeYmaeraXTestTags.SummaryTest in {
+  it should "term parse table of string pairs as expected" in {
     pairParse(expectedParseTerm, s => { val r = parser.termParser(s); r shouldBe a[Term]; r })
   }
 
-  it should "formula parse table of string pairs as expected" taggedAs KeYmaeraXTestTags.SummaryTest in {
+  it should "formula parse table of string pairs as expected" in {
     pairParse(expectedParseFormula, s => { val r = parser.formulaParser(s); r shouldBe a[Formula]; r })
   }
 
-  it should "program parse table of string pairs as expected" taggedAs KeYmaeraXTestTags.SummaryTest in {
+  it should "program parse table of string pairs as expected" in {
     pairParse(expectedParseProgram, s => { val r = parser.programParser(s); r shouldBe a[Program]; r })
   }
 

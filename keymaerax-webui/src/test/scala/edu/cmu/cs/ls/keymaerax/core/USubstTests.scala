@@ -181,7 +181,7 @@ class USubstTests extends TacticTestBase {
   }
 
   it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs (
-    KeYmaeraXTestTags.USubstTest, KeYmaeraXTestTags.SummaryTest
+    KeYmaeraXTestTags.USubstTest
   ) in withQE { _ =>
     val x = Variable("x_", None, Real)
     val fml = GreaterEqual(x, Number(0))
@@ -193,7 +193,7 @@ class USubstTests extends TacticTestBase {
   }
 
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs (
-    KeYmaeraXTestTags.USubstTest, KeYmaeraXTestTags.SummaryTest
+    KeYmaeraXTestTags.USubstTest
   ) in {
     withMathematica { _ => // for AxiomInfo
       val x = Variable("x_", None, Real)
@@ -651,9 +651,8 @@ class USubstTests extends TacticTestBase {
 
   // uniform substitution of rules
 
-  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs (
-    KeYmaeraXTestTags.USubstTest, KeYmaeraXTestTags.SummaryTest
-  ) in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs (KeYmaeraXTestTags
+    .USubstTest) in {
     val fml = GreaterEqual(Power(Neg(x), Number(2)), Number(0))
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)

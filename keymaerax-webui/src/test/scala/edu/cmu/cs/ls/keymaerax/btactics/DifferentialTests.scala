@@ -10,23 +10,19 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
-
-import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, InterpretedSymbols, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
-import testHelper.CustomAssertions._
-import testHelper.KeYmaeraXTestTags
-
-import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.prop.TableDrivenPropertyChecks._
+import testHelper.CustomAssertions._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
+import scala.collection.immutable._
 import scala.util.Try
 
 /**
@@ -313,11 +309,11 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> [{x'=v,y'=a()&true}][x':=v;]a()>=0".asSequent
   }
 
-  "diffInd" should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+  "diffInd" should "auto-prove x>=5 -> [{x'=2}]x>=5" in withQE { _ =>
     proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
-  it should "step into a constified ODE" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+  it should "step into a constified ODE" in withQE { _ =>
     proveByS(
       "x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent,
       dI(auto = Symbol("diffInd"))(1),
@@ -328,25 +324,24 @@ class DifferentialTests extends TacticTestBase {
       "x>=a()&a()>=0, true ==> [x':=a();]x'>=0".asSequent :: Nil
   }
 
-  it should "auto-prove x>=5 -> [{x'=2}]!x<5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+  it should "auto-prove x>=5 -> [{x'=2}]!x<5" in withQE { _ =>
     proveBy("x>=5 -> [{x'=2}]!x<5".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
     proveBy("x>=5 -> [{x'=2}](!x<5 | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
     proveBy("x>=5 -> [{x'=2}](!(x<5 & (x<2 & !x>3)) | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe Symbol("proved")
   }
 
-  it should "disregard other modalities when auto-proving x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags
-    .SummaryTest in withQE { _ =>
+  it should "disregard other modalities when auto-proving x>=5 -> [{x'=2}]x>=5" in withQE { _ =>
     proveBy("x>=5, [y:=3;]y<=3 ==> [{x'=2}]x>=5".asSequent, dI()(1)) shouldBe Symbol("proved")
   }
 
-  it should "behave as DI rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+  it should "behave as DI rule on x>=5 -> [{x'=2}]x>=5" in withQE { _ =>
     val result = proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI(Symbol("none"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, true ==> x>=5".asSequent
     result.subgoals.last shouldBe "x>=5, true ==> [{x'=2}](x>=5)'".asSequent
   }
 
-  it should "behave as diffInd rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+  it should "behave as diffInd rule on x>=5 -> [{x'=2}]x>=5" in withQE { _ =>
     val result = proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI(Symbol("diffInd"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, true ==> x>=5".asSequent
@@ -388,21 +383,20 @@ class DifferentialTests extends TacticTestBase {
     ) shouldBe Symbol("proved")
   }
 
-  it should "x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
+  it should "x>=5 -> [{x'=2}]x>=5" in withTactics {
     val result = proveBy("x>=5 ==> [{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("none"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, true ==> x>=5".asSequent
     result.subgoals.last shouldBe "x>=5, true ==> [{x'=2}](x>=5)'".asSequent
   }
 
-  it should "x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
+  it should "x>=5 -> [{x'=2}]x>=5 in context" in withTactics {
     val result =
       proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("none"))(1, 1 :: Nil))
     result.subgoals.loneElement shouldBe "x>=5 ==> [x:=x+1;](true->x>=5&[{x'=2}](x>=5)')".asSequent
   }
 
-  it should "fail constification in context if ODE consts are bound outside" taggedAs KeYmaeraXTestTags
-    .SummaryTest in withTactics {
+  it should "fail constification in context if ODE consts are bound outside" in withTactics {
     proveBy("x>=5, y=2 ==> [x:=x+1;][{x'=y}]x>=y".asSequent, DifferentialTactics.diffInd(Symbol("full"))(1, 1 :: Nil))
       .subgoals
       .loneElement shouldBe "x>=5, y()=2 ==> [x:=x+1;](true->x>=y()&y()>=0)".asSequent
@@ -413,19 +407,19 @@ class DifferentialTests extends TacticTestBase {
       have message "Unable to constify in context ReplContext{{[y:=2;x:=x+1;][{x'=y}]x>=y at .1}}, because it binds y"
   }
 
-  it should "autoprove x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
+  it should "autoprove x>=5 -> [{x'=2}]x>=5 in context" in withTactics {
     val result =
       proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("full"))(1, 1 :: Nil))
     result.subgoals.loneElement shouldBe "x>=5 ==> [x:=x+1;](true->x>=5&2>=0)".asSequent
   }
 
-  it should "autoprove x>=5&y>=0 -> [{x'=y}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
+  it should "autoprove x>=5&y>=0 -> [{x'=y}]x>=5 in context" in withTactics {
     val result =
       proveBy("x>=5&y>=0 ==> [x:=x+1;][{x'=y}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("full"))(1, 1 :: Nil))
     result.subgoals.loneElement shouldBe "x>=5&y>=0 ==> [x:=x+1;](true->x>=5&y>=0)".asSequent
   }
 
-  it should "x>=5 -> [{x'=2&x>7}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+  it should "x>=5 -> [{x'=2&x>7}]x>=5" in withQE { _ =>
     val result = proveBy("x>=5 ==> [{x'=2 & x>7}]x>=5".asSequent, DifferentialTactics.diffInd(Symbol("diffInd"))(1))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "x>=5, x>7 ==> x>=5".asSequent

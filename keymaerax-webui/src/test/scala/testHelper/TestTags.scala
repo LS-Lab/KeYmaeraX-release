@@ -16,12 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /**
-   * A test that summarizes all of the tests occuring in a package or file. These tests definitely get run before
-   * *pushing* any code to GitHub in a normal development process. Set runs in under 15 minutes.
-   */
-  object SummaryTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SummaryTest")
-
   /** Average set of tests that run usually. */
   object UsualTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.UsualTest")
 

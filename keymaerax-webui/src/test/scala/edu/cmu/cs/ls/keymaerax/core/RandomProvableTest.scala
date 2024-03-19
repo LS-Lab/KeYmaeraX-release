@@ -8,9 +8,10 @@ package edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.SummaryTest
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.{FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.{SlowTest, SummaryTest, UsualTest}
+import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest}
 
 /**
  * Random Provable constructions
@@ -24,7 +25,7 @@ class RandomProvableTest extends FlatSpec with Matchers {
   val randomComplexity = 12
   val rand = new RandomFormula()
 
-  "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs (SummaryTest) in { test(10, 4) }
+  "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs SummaryTest in { test(10, 4) }
   it should "be proved and prolongued trivially (usual)" taggedAs (UsualTest) in { test(100, 8) }
   it should "be proved and prolongued trivially (slow)" taggedAs (SlowTest) in { test(randomTrials, randomComplexity) }
 

@@ -15,7 +15,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
@@ -203,10 +202,14 @@ class HilbertTests extends TacticTestBase {
       .subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
   }
 
-  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs KeYmaeraXTestTags
-    .SummaryTest in withMathematica { _ =>
-    proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)), derive(1, 1 :: Nil))
-      .subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
+  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" in withMathematica {
+    _ =>
+      proveBy(
+        Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
+        derive(1, 1 :: Nil),
+      ).subgoals shouldBe List(
+        Sequent(IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula))
+      )
   }
 
   it should "prove x>=5 -> [{x'=2}]x>=5" in withMathematica { _ =>
@@ -455,15 +458,17 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe Symbol("proved")
   }
 
-  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs KeYmaeraXTestTags
-    .SummaryTest in withMathematica { _ =>
-    proveBy(
-      Sequent(
-        IndexedSeq(),
-        IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula),
-      ),
-      chase(1, Nil) & QE,
-    ) shouldBe Symbol("proved")
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" in withMathematica {
+    _ =>
+      proveBy(
+        Sequent(
+          IndexedSeq(),
+          IndexedSeq(
+            "[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula
+          ),
+        ),
+        chase(1, Nil) & QE,
+      ) shouldBe Symbol("proved")
   }
 
   it should "prove [?x>0;x:=x+1;?x!=2; ++ ?x=0;x:=1;]x>=1 by chase" in withMathematica { _ =>
@@ -696,8 +701,7 @@ class HilbertTests extends TacticTestBase {
     shouldReduceTo("0*x+1<=3".asFormula, 1, PosInExpr(0 :: Nil), "1<=3".asFormula)
   }
 
-  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" taggedAs KeYmaeraXTestTags
-    .SummaryTest in withMathematica { _ =>
+  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" in withMathematica { _ =>
     shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, 1, PosInExpr(0 :: 1 :: 0 :: Nil), "x<5 & 1<=3 | x>=2".asFormula)
   }
 
@@ -705,8 +709,7 @@ class HilbertTests extends TacticTestBase {
     shouldReduceTo("\\forall x 0*x+1<=3".asFormula, 1, PosInExpr(0 :: 0 :: Nil), "\\forall x 1<=3".asFormula)
   }
 
-  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" taggedAs KeYmaeraXTestTags
-    .SummaryTest in withMathematica { _ =>
+  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in withMathematica { _ =>
     shouldReduceTo(
       "x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula,
       1,
@@ -783,8 +786,7 @@ class HilbertTests extends TacticTestBase {
     )
   }
 
-  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" taggedAs KeYmaeraXTestTags
-    .SummaryTest in withMathematica { _ =>
+  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" in withMathematica { _ =>
     shouldReduceTo(
       "[{x' = 5*x & x^2<4}]x>=1".asFormula,
       1,

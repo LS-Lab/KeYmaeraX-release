@@ -7,8 +7,8 @@ package edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
-import testHelper.KeYmaeraXTestTags.SummaryTest
 
 import scala.collection.immutable._
 
@@ -21,7 +21,7 @@ import scala.collection.immutable._
 class InterpretedFunctionTest extends TacticTestBase {
   import TactixLibrary._
 
-  "Interpreted / defined functions" should "not substitute abs" taggedAs (SummaryTest) in withMathematica { qeTool =>
+  "Interpreted / defined functions" should "not substitute abs" taggedAs SummaryTest in withMathematica { qeTool =>
     val wrong = "f(-1)=1".asFormula
     val intbase = "abs(-1)=1".asFormula
     val pr = proveBy(intbase, QE)

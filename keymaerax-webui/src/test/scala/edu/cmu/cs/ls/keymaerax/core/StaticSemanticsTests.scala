@@ -7,14 +7,15 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import testHelper.KeYmaeraXTestTags._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.SummaryTest
+import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
+import org.scalatest.{FlatSpec, Matchers}
 import testHelper.CustomAssertions.withSafeClue
+import testHelper.KeYmaeraXTestTags
+import testHelper.KeYmaeraXTestTags._
 
 import scala.collection.immutable._
-import org.scalatest.{FlatSpec, Matchers}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import testHelper.KeYmaeraXTestTags
 
 /**
  * Tests static semantics.

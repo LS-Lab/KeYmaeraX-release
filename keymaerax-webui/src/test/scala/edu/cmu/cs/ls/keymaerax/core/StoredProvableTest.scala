@@ -5,17 +5,18 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import testHelper.KeYmaeraXTestTags.{SlowTest, SummaryTest, TodoTest, UsualTest}
-
-import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.tagobjects.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.concurrent.{Signaler, TimeLimits}
 import org.scalatest.time._
+import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest, UsualTest}
+
+import scala.collection.immutable._
 
 /**
  * Random Provable constructions that are stored, read again, tampered with, read again.

@@ -13,19 +13,19 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
+import edu.cmu.cs.ls.keymaerax.tagobjects.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import edu.cmu.cs.ls.keymaerax.tools.Tool
-import testHelper.KeYmaeraXTestTags.{SummaryTest, TodoTest}
-
-import scala.collection.immutable._
-import scala.collection.immutable.IndexedSeq
-import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestCanceledException
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.SpanSugar._
+import testHelper.KeYmaeraXTestTags.TodoTest
+
+import scala.collection.immutable._
+import scala.language.postfixOps
 
 /** Tests automatic [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.ODE]] differential equations proving. */
 @UsualTest
