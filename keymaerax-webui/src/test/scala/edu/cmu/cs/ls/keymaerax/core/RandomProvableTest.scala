@@ -25,9 +25,9 @@ class RandomProvableTest extends FlatSpec with Matchers {
   val randomComplexity = 12
   val rand = new RandomFormula()
 
-  "Random Provable" should "be proved and prolongued trivially (summary)" taggedAs SummaryTest in { test(10, 4) }
-  it should "be proved and prolongued trivially (usual)" taggedAs UsualTest in { test(100, 8) }
-  it should "be proved and prolongued trivially (slow)" taggedAs (SlowTest) in { test(randomTrials, randomComplexity) }
+  "Random Provable" should "be proved and prolonged trivially (summary)" taggedAs SummaryTest in { test(10, 4) }
+  it should "be proved and prolonged trivially (usual)" taggedAs UsualTest in { test(100, 8) }
+  it should "be proved and prolonged trivially (slow)" taggedAs (SlowTest) in { test(randomTrials, randomComplexity) }
 
   private def test(randomTrials: Int = randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
