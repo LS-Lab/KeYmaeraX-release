@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** Tests that are overly optimistic about the capabilities and might want to be ignored. */
-  object OptimisticTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.OptimisticTest")
-
   /** Tests that are obsolete, e.g. from old tactic framework. */
   object ObsoleteTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest")
 

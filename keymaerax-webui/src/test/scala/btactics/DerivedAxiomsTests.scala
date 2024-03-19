@@ -5,22 +5,20 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.{File, FileWriter, FilenameFilter}
-import java.lang.reflect.InvocationTargetException
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.Ax._
-import edu.cmu.cs.ls.keymaerax.core.Sequent
-import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, StorableInfo}
-import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
-import testHelper.KeYmaeraXTestTags
-import testHelper.KeYmaeraXTestTags.OptimisticTest
+import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.tagobjects.OptimisticTest
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 
+import java.io.{File, FileWriter, FilenameFilter}
+import java.lang.reflect.InvocationTargetException
 import scala.collection.immutable
 import scala.reflect.runtime.{universe => ru}
 

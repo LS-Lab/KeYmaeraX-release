@@ -5,15 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
+import edu.cmu.cs.ls.keymaerax.tagobjects.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, OptimisticTest, TodoTest}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable
 import scala.collection.immutable._
