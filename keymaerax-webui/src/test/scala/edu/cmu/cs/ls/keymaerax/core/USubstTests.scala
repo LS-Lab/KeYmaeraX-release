@@ -6,21 +6,17 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, USubstTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
-import testHelper.KeYmaeraXTestTags
-import testHelper.CustomAssertions.withSafeClue
-import testHelper.KeYmaeraXTestTags.{AdvocatusTest, CoverageTest}
 import testHelper.CustomAssertions._
+import testHelper.KeYmaeraXTestTags
+import testHelper.KeYmaeraXTestTags.{AdvocatusTest, CoverageTest}
 
-import scala.collection.immutable.List
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
 /**
@@ -134,7 +130,7 @@ class USubstTests extends TacticTestBase {
   }
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs (
-    KeYmaeraXTestTags.USubstTest, KeYmaeraXTestTags.CheckinTest
+    KeYmaeraXTestTags.USubstTest
   ) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = ProvableSig.axioms("[:=] assign")
@@ -147,7 +143,7 @@ class USubstTests extends TacticTestBase {
   }
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs (
-    KeYmaeraXTestTags.USubstTest, KeYmaeraXTestTags.CheckinTest
+    KeYmaeraXTestTags.USubstTest
   ) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = ProvableSig.axioms("[:=] assign")
@@ -679,9 +675,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate nontrivial binding structures in [] congruence" taggedAs (
-    KeYmaeraXTestTags.USubstTest, KeYmaeraXTestTags.CheckinTest
-  ) in {
+  it should "instantiate nontrivial binding structures in [] congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
     val prem = "(-x)^2>=y <-> x^2>=y".asFormula
     val conc = "[{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
 

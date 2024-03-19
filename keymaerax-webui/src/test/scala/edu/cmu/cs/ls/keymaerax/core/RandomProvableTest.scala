@@ -5,17 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
-
-import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.scalatest.{FlatSpec, Matchers, TagAnnotation}
-
-import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.{FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags.{SlowTest, SummaryTest, UsualTest}
 
 /**
  * Random Provable constructions

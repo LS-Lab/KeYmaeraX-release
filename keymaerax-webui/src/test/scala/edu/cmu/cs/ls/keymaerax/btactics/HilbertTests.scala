@@ -7,19 +7,18 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
+import org.scalatest.LoneElement._
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
-
-import org.scalatest.LoneElement._
 
 /**
  * Tests Hilbert Calculus.
@@ -116,7 +115,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe Symbol("proved")
   }
 
-  it should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
+  it should "derive (x+2*y)'=x'+2*y'" in withMathematica { _ =>
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1, 0 :: Nil) & byUS(Ax.equalReflexive),
@@ -502,12 +501,12 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe Symbol("proved")
   }
 
-  it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
+  it should "chase [{x'=22}](2*x+x*y>=5)'" in withMathematica { _ =>
     proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula, chase(1, 1 :: Nil))
       .subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
   }
 
-  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" taggedAs KeYmaeraXTestTags.CheckinTest in withTactics {
+  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" in withTactics {
     proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula, chase(1, 1 :: Nil))
       .subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
   }

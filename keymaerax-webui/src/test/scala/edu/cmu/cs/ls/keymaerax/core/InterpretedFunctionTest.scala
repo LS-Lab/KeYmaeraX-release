@@ -4,12 +4,13 @@
  */
 
 package edu.cmu.cs.ls.keymaerax.core
-import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
+import testHelper.KeYmaeraXTestTags.SummaryTest
+
+import scala.collection.immutable._
 
 /**
  * Interpreted functions / defined functions substitution tests.

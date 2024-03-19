@@ -17,12 +17,6 @@ import org.scalatest.Tag
 object KeYmaeraXTestTags {
 
   /**
-   * A small core of very fasts tests that could be run before each check-in or even every compile. Each test should run
-   * in under :30 seconds Set runs in a minute or two.
-   */
-  object CheckinTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.CheckinTest")
-
-  /**
    * A test that summarizes all of the tests occuring in a package or file. These tests definitely get run before
    * *pushing* any code to GitHub in a normal development process. Set runs in under 15 minutes.
    */

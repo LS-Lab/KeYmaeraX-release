@@ -5,16 +5,17 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tagobjects.CheckinTest
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testHelper.CustomAssertions.withSafeClue
+import testHelper.KeYmaeraXTestTags.{SlowTest, SummaryTest, UsualTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
  * Instantiate generic tester for KeYmaera X formula parser

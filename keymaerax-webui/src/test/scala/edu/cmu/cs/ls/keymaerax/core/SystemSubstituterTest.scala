@@ -4,13 +4,14 @@
  */
 
 package edu.cmu.cs.ls.keymaerax.core
-import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, TacticTestBase, TactixLibrary}
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
-import testHelper.CustomAssertions._
+
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
+import testHelper.CustomAssertions._
+
+import scala.collection.immutable._
 
 /**
  * Advocatus Test when substituting systems instead of single differential equations.
