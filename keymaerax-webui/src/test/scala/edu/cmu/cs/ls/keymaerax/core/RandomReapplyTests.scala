@@ -80,9 +80,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
   private def test(randomTrials: Int = randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
-      // println("Random in: " + e)
       val r = reapplied(e)
-      // println("Reapplied: " + r)
       e shouldBe r
     }
 
@@ -90,17 +88,13 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     var pp: Expression => String = PrettyPrinter
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
-      println("Random in: " + pp(e))
       val r = reapplied(e)
-      println("Reapplied: " + pp(r))
       e shouldBe r
     }
     pp = KeYmaeraXPrettyPrinter
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
-      println("Random in: " + pp(e))
       val r = reapplied(e)
-      println("Reapplied: " + pp(r))
       e shouldBe r
     }
   }

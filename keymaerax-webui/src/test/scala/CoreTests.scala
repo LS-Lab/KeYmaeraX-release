@@ -86,11 +86,8 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]): Unit = {
-    println("\tCheck " + rule) // @TODO turn into "should" output?
     val pn = ProvableSig.startPlainProof(in)
     val resList = pn.apply(rule, 0).subgoals
-    println("\tResult\t" + resList)
-    println("\tExpected\t" + out)
     if (resList != out) println("Unexpected")
     resList.length should be(out.length)
     val res = resList
@@ -215,7 +212,6 @@ class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
       assertion(false)
       // no exception was thrown:
       // assertions are disabled (java -da) or elided (scalacOptions ++= Seq("-Xdisable-assertions"))
-      println("Assertions Disabled")
       // no side effects should occur
       fun1() shouldBe 0
       cnd1 shouldBe false

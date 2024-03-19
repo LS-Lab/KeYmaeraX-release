@@ -93,13 +93,9 @@ class RandomParserTests(parser: String => Formula, rand: RandomFormula)
 
   private def reparse(e: Expression): Unit = {
     val printed = pp.stringify(e)
-    println("Expression: " + printed)
     val full = pp.fullPrinter(e)
-    println("Fullform:   " + full)
     parseShouldBe(full, e)
-    println("Reparsing:  " + printed)
     parseShouldBe(printed, e)
-    println("Fullparse:  " + pp.fullPrinter(parser(printed)))
   }
 
 }

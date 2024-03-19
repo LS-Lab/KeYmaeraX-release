@@ -37,7 +37,6 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
 
   private def check(pi: => ProvableInfo): Sequent = {
     DerivationInfoRegistry.init(initLibrary = false)
-    println(pi.codeName + "\n" + pi.provable.conclusion)
     pi.provable shouldBe Symbol("proved")
     useToClose(pi)
     pi.provable.conclusion
@@ -71,11 +70,8 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
             withClue(
               "Missing dependency in '" + name + "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n"
             ) {
-              try {
-                println("Deriving " + fm.symbol + "...")
-                fm.bind(c.newInstance())()
-                println("...done")
-              } catch { case ex: InvocationTargetException => throw ex.getTargetException }
+              try { fm.bind(c.newInstance())() }
+              catch { case ex: InvocationTargetException => throw ex.getTargetException }
             }
           })
         }
@@ -530,11 +526,6 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
         val forwards = infos
           .groupBy({ case (_, info) => info })
           .filter((kv: (StorableInfo, Array[(String, StorableInfo)])) => kv._2.length > 1)
-        println(
-          "Lemma forwards:\n" + forwards
-            .map(f => f._1.storedName + " <- " + f._2.map(_._1).mkString("[", ",", "]"))
-            .mkString("\n")
-        )
         // the lemma database only stores the one lemma referred to from one or more lazy vals
         lemmaFiles.length shouldBe lemmaFiles.distinct.length
         // the lemma database stores all the distinct lemmas in DerivedAxioms

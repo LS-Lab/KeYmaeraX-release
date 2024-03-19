@@ -34,7 +34,7 @@ import scala.collection.mutable.ListBuffer
  *   the random seed, for repeatable random testing purposes.
  */
 class RandomFormula(val seed: Long = new Random().nextLong()) {
-  println("regenerate by RandomFormula(" + seed + "L)")
+//  println("regenerate by RandomFormula(" + seed + "L)")
   val rand: Random = new Random(seed)
 
   /** probability of prematurely stopping short at any given operator */

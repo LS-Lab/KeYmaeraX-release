@@ -52,18 +52,12 @@ class RandomContextTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     val (ctx, e) =
       try { origin.at(pos) }
       catch {
-        case _: IllegalArgumentException =>
-          println("\nInput:      " + origin + "\nIllposition: " + pos); (Context(DotFormula), origin)
-        case _: SubstitutionClashException =>
-          println("\nInput:      " + origin + "\nIllposition: " + pos); (Context(DotFormula), origin)
+        case _: IllegalArgumentException => (Context(DotFormula), origin)
+        case _: SubstitutionClashException => (Context(DotFormula), origin)
       }
-    println("\n" + "\nInput:      " + origin + "\nPosition:   " + pos + "\nContext:    " + ctx + "\nArgument:   " + e)
     val reassemble =
       try { Some(ctx(e)) }
-      catch {
-        case e: SubstitutionClashException => println("Clashes can happen when reassembling ill-defined:\n" + e); None
-      }
-    println("\nReassemble: " + reassemble.getOrElse(Variable("undefined")) + "\nExpected:  " + origin)
+      catch { case _: SubstitutionClashException => None }
     if (reassemble.isDefined && e != Nothing && !noCtx(ctx)) reassemble.get shouldBe origin
     true
   }

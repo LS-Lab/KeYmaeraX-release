@@ -383,11 +383,9 @@ class UnifyUSCalculusTest extends TacticTestBase {
 
   it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica {
     qeTool =>
-      println("Starting random contexts\n\n")
       for (i <- 1 to randomTrials) {
         val ctx = rand.nextFormulaContext(randomComplexity)
         if (ctx.isFormulaContext) {
-          println("Context: " + ctx)
           try {
             // @todo discard ctx unless positive
             if (

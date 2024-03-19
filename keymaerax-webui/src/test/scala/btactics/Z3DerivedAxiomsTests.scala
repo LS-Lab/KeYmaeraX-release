@@ -40,7 +40,6 @@ import scala.collection.immutable.Map
 class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
 
   private def check(pi: ProvableInfo): Sequent = {
-    println(pi.codeName + "\n" + pi.provable.conclusion)
     pi.provable shouldBe Symbol("proved")
     useToClose(pi)
     pi.provable.conclusion
@@ -71,11 +70,8 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
             "Missing dependency in '" + name +
               "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n"
           ) {
-            try {
-              println("Deriving " + fm.symbol + "...")
-              fm.bind(c.newInstance())()
-              println("...done")
-            } catch {
+            try { fm.bind(c.newInstance())() }
+            catch {
               case ex: InvocationTargetException =>
                 val missingDependency = "Lemma ([^\\s]*) should"
                   .r
@@ -299,12 +295,6 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
       val lemmas = getDerivedAxiomsMirrors.map({ case (valName, m) => valName -> m().asInstanceOf[Lemma] })
       // we allow lazy val forwarding, but all of them have to refer to the same lemma
       val forwards = lemmas.groupBy({ case (_, lemma) => lemma }).filter(_._2.length > 1)
-      println(
-        "Lemma forwards:\n" +
-          forwards
-            .map(f => f._1.name.getOrElse("<anonymous>") + " <- " + f._2.map(_._1).mkString("[", ",", "]"))
-            .mkString("\n")
-      )
       // the lemma database only stores the one lemma referred to from one or more lazy vals
       lemmaFiles.length shouldBe lemmaFiles.distinct.length
       // the lemma database stores all the distinct lemmas in DerivedAxioms

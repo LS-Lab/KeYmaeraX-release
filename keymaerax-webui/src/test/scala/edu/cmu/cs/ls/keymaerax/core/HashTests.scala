@@ -50,7 +50,6 @@ class HashTests extends FlatSpec with Matchers {
       .map(i => rand.nextExpression(randomComplexity))
       .filter(e => !data.contains(e))
       .toList
-    if (other.length != data.length) println("Probabilistic collisions: " + (data.length - other.length))
     val set: HashSet[Expression] = data.to(HashSet)
     test(data, other, set)
     val set2: ListSet[Expression] = data.to(ListSet)
@@ -86,7 +85,6 @@ class HashTests extends FlatSpec with Matchers {
       .map(i => rand.nextExpression(randomComplexity))
       .filter(e => !data.contains(e))
       .toList
-    if (other.length != data.length) println("Probabilistic collisions: " + (data.length - other.length))
     val map: Map[Expression, Int] = data.map(e => (e, e.hashCode())).toMap
     testmap(data, other, map)
     val map2: ListMap[Expression, Int] = ListMap(data.map(e => e -> e.hashCode): _*)

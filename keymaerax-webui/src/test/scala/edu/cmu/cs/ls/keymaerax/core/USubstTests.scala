@@ -715,8 +715,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(prog) }
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-        println("Random precontext " + prog.prettyString)
-
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
@@ -744,8 +742,6 @@ class USubstTests extends TacticTestBase {
     val prgString = withSafeClue("Error printing crazy program") { KeYmaeraXPrettyPrinter.stringify(prog) }
 
     withSafeClue("Random precontext " + prgString + "\n\n") {
-      println("Random precontext " + prog.prettyString)
-
       val s = USubst(Seq(
         SubstitutionPair(ap_, prog),
         SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
@@ -771,8 +767,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(prog) }
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-        println("Random precontext " + prog.prettyString)
-
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(
@@ -795,7 +789,6 @@ class USubstTests extends TacticTestBase {
     // @todo DotFormula is not replaced in substitution so this case will fail
     val prog = "{?[{?true;}*]PP{⎵};}*".asProgram
     val conc = Equiv(Diamond(prog, prem1), Diamond(prog, prem2))
-    println("Precontext " + prog.prettyString)
 
     val ctx_ = Function("ctx_", None, Bool, Bool)
 
@@ -824,8 +817,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(prog) }
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-        println("Random precontext " + prog.prettyString)
-
         val ctx_ = Function("ctx_", None, Bool, Bool)
 
         val s = USubst(
@@ -860,8 +851,6 @@ class USubstTests extends TacticTestBase {
     val prgString = withSafeClue("Error printing crazy program\n\n") { KeYmaeraXPrettyPrinter.stringify(prog) }
 
     withSafeClue("Random precontext " + prgString + "\n\n") {
-      println("Random precontext " + prog.prettyString)
-
       val ctx_ = Function("ctx_", None, Bool, Bool)
 
       val s = USubst(
@@ -891,8 +880,6 @@ class USubstTests extends TacticTestBase {
           withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(prog) }
 
         withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-          println("Random precontext " + prog.prettyString)
-
           val s = USubst(Seq(
             SubstitutionPair(ap_, prog),
             SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
@@ -971,7 +958,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(context) }
 
       withSafeClue("Random context " + prgString + "\n\n" + randClue) {
-        println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
@@ -998,7 +984,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(context) }
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-        println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
@@ -1025,7 +1010,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random program\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(context) }
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-        println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
@@ -1300,7 +1284,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random context\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(context) }
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-        println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(UnitFunctional("f_", AnyArg, Real), term1) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), term2) ::
@@ -1328,7 +1311,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random context\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(context) }
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
-        println("Random context " + context.prettyString)
         val s = USubst(
           SubstitutionPair(UnitPredicational("p_", AnyArg), fml1) ::
             SubstitutionPair(UnitPredicational("q_", AnyArg), fml2) ::
@@ -1355,7 +1337,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random expression\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(expr) }
 
       withSafeClue("Random expression " + exprString + "\n\n" + randClue) {
-        println("Random dot-free " + expr.prettyString)
         val s = USubst(
           SubstitutionPair(DotTerm(), trm1) ::
             SubstitutionPair(DotFormula, fml1) :: Nil
@@ -1389,20 +1370,19 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random formula\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(fml) }
 
       withSafeClue("Random formula " + prgString + "\n\n" + randClue) {
-        println("Random context-free formula " + fml.prettyString)
         val s = USubst(
           SubstitutionPair(DotTerm(), trm1) ::
             SubstitutionPair(PredOf(ctxf, DotTerm()), fml1) :: Nil
         )
         s(fml) shouldBe fml
+
         val dotfml = rand.nextDotFormula(randomComplexity)
-        println("test on: " + dotfml)
         s(dotfml) shouldBe s(dotfml.asInstanceOf[Expression])
+
         val dottrm = rand.nextDotTerm(randomComplexity)
-        println("test on: " + dottrm)
         s(dottrm) shouldBe s(dottrm.asInstanceOf[Expression])
+
         val dotprg = rand.nextDotProgram(randomComplexity)
-        println("test on: " + dotprg)
         s(dotprg) shouldBe s(dotprg.asInstanceOf[Expression])
       }
     }
@@ -1420,7 +1400,6 @@ class USubstTests extends TacticTestBase {
         withSafeClue("Error printing random formula\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(fml) }
 
       withSafeClue("Random formula " + prgString + "\n\n" + randClue) {
-        println("Random context-free formula " + fml.prettyString)
         val s = USubst(
           SubstitutionPair(DotTerm(), trm1) ::
             SubstitutionPair(PredicationalOf(ctx, DotFormula), fml1) :: Nil

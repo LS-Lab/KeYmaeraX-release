@@ -179,7 +179,6 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
    */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit =
     mathematicaProvider.synchronized {
-      println("with timeout: " + timeout + "s")
       val mathLinkTcp = System.getProperty(
         Configuration.Keys.MATH_LINK_TCPIP,
         Configuration(Configuration.Keys.MATH_LINK_TCPIP),
@@ -255,10 +254,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
 
   /** Tests with both Mathematica and Z3 as QE tools. */
   def withQE(testcode: Tool with QETacticTool => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
-    println("=====With Mathematica=====")
     withClue("Mathematica") { withMathematica(testcode, timeout, initLibrary) }
     afterEach()
-    println("=====With Z3=====")
     beforeEach()
     withClue("Z3") { withZ3(testcode, timeout, initLibrary) }
   }

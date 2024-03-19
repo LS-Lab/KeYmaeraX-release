@@ -47,9 +47,6 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
   private def matchDirect(axiom: AxiomInfo, instance: Formula): Boolean = {
     val ax: Formula = axiom.formula
     val u = UnifyUSCalculus.matcherFor(axiom)(ax, instance)
-    println("unify1:  " + ax)
-    println("unify2:  " + instance)
-    println("unifier: " + u)
     u(ax) shouldBe instance
     // @todo this might fail when the instance requires semantic renaming
     u.toCore(ax) shouldBe instance
@@ -61,9 +58,6 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
     val ax: Formula = axiom.formula
     val (_, keyPart) = ax.at(axiom.key)
     val u = UnifyUSCalculus.matcherFor(axiom)(keyPart, instance)
-    println("unify1:  " + keyPart)
-    println("unify2:  " + instance)
-    println("unifier: " + u)
     u(keyPart) shouldBe instance
     // @todo this might fail when the instance requires semantic renaming
     u.toCore(keyPart) shouldBe instance
@@ -206,7 +200,6 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   private def instantiateRandomSchematic(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
-      println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
@@ -216,10 +209,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
             rand.nextSchematicInstance(ax.formula.at(ax.key)._2.asInstanceOf[Formula], randomComplexity, false)
           }
 
-          withSafeClue("Random instance " + inst + "\n\n" + randClue) {
-            println("match instance: " + inst)
-            matchKey(ax, inst)
-          }
+          withSafeClue("Random instance " + inst + "\n\n" + randClue) { matchKey(ax, inst) }
         }
       }
     }
@@ -230,7 +220,6 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   private def instantiateFullSchematic(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
-      println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials / 5) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
@@ -239,10 +228,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
           rand.nextSchematicInstance(ax.formula, randomComplexity, renamed = false)
         }
 
-        withSafeClue("Random instance " + inst + "\n\n" + randClue) {
-          println("match instance: " + inst)
-          matchDirect(ax, inst)
-        }
+        withSafeClue("Random instance " + inst + "\n\n" + randClue) { matchDirect(ax, inst) }
       }
     }
   }
@@ -253,7 +239,6 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   private def instantiateRandomRenamed(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
-      println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
@@ -263,10 +248,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
             rand.nextSchematicInstance(ax.formula.at(ax.key)._2.asInstanceOf[Formula], randomComplexity)
           }
 
-          withSafeClue("Random instance " + inst + "\n\n" + randClue) {
-            println("match instance: " + inst)
-            matchKey(ax, inst)
-          }
+          withSafeClue("Random instance " + inst + "\n\n" + randClue) { matchKey(ax, inst) }
         }
       }
     }
@@ -278,7 +260,6 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   private def instantiateFullRandom(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
-      println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials / 5) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
@@ -287,10 +268,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
           rand.nextSchematicInstance(ax.formula, randomComplexity)
         }
 
-        withSafeClue("Random instance " + inst + "\n\n" + randClue) {
-          println("match instance: " + inst)
-          matchDirect(ax, inst)
-        }
+        withSafeClue("Random instance " + inst + "\n\n" + randClue) { matchDirect(ax, inst) }
       }
     }
   }
@@ -301,7 +279,6 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   private def instantiateRandomKey(): Unit = {
     for ((name, ax) <- AxiomInfo.allInfo) {
-      println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {
         try {
           val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -312,10 +289,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
               rand.nextSchematicInstance(ax.formula.at(ax.key)._2.asInstanceOf[Formula], randomComplexity)
             }
 
-            withSafeClue("Random instance " + inst + "\n\n" + randClue) {
-              println("match instance: " + inst)
-              matchKey(ax, inst)
-            }
+            withSafeClue("Random instance " + inst + "\n\n" + randClue) { matchKey(ax, inst) }
           }
         } catch {
           case e: CoreException

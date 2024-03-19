@@ -644,11 +644,9 @@ class HilbertTests extends TacticTestBase {
     .proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), TactixLibrary.QE)
 
   it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in most random positive contexts" in withMathematica { _ =>
-    println("Starting random contexts\n\n")
     for (_ <- 1 to randomTrials) {
       val ctx = rand.nextFormulaContext(randomComplexity)
       if (ctx.isFormulaContext) {
-        println("Context: " + ctx)
         try {
           // @todo discard ctx unless positive
           if (
@@ -926,7 +924,7 @@ class HilbertTests extends TacticTestBase {
 
   "Interval chase" should "reduce x+y+z<=5" in withMathematica { _ =>
     val proof = TactixLibrary.proveBy("x+y+z<=5".asFormula, intervalify(1))
-    println(proof)
+    // TODO Check conclusion?
   }
 
   lazy val intervalify: BuiltInPositionTactic = chaseI(

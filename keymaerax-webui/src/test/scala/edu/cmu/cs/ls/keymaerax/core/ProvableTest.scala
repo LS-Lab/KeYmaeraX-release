@@ -40,7 +40,6 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // construct a proof
     val proving = provable(CloseTrue(SuccPos(0)), 0)
     // check if proof successful
-    if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be(true)
     proving.steps shouldBe 1
   }
@@ -53,7 +52,6 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // construct a proof
     val proving = provable(CloseTrue(SuccPos(0)), 0)
     // check if proof successful
-    if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be(true)
     proving.steps shouldBe 1
 
@@ -67,7 +65,6 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // merge proofs by gluing their Provables together
     val mergedProving = moreProving(proving, 0)
     // check if proof successful
-    if (mergedProving.isProved) println("Successfully proved " + mergedProving.proved)
     mergedProving.isProved should be(true)
     mergedProving.steps shouldBe 3
   }
@@ -88,14 +85,12 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // construct a proof
     val proving = provable(CloseTrue(SuccPos(0)), 0)
     // check if proof successful
-    if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be(true)
     proving.steps shouldBe 1
 
     // merge proofs by gluing their Provables together
     val mergedProving = moreProving(proving, 0)
     // check if proof successful
-    if (mergedProving.isProved) println("Successfully proved " + mergedProving.proved)
     mergedProving.isProved should be(true)
     mergedProving.steps shouldBe 3
 
@@ -374,7 +369,6 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   }
 
   "Individual proof rules" should "refuse Skolemization clashes" in {
-    println("Testing " + Skolemize(SuccPos(0)))
     val goal = ProvableSig
       .startPlainProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("\\forall x p(x)".asFormula)))
     a[SkolemClashException] shouldBe thrownBy(goal(Skolemize(SuccPos(0)), 0))
@@ -391,7 +385,6 @@ class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   it should "refuse bound renaming except at bound occurrences" in {
     val rens = BoundRenaming(Variable("y"), Variable("x"), SuccPos(0))
-    println("Testing " + rens)
 //    val goal = Provable.startPlainProof(Sequent(Nil, IndexedSeq("p(y)".asFormula), IndexedSeq("\\forall y p(y)".asFormula)))
 //    a [CoreException] shouldBe thrownBy (goal(rens, 0))
     val goal2 = ProvableSig.startPlainProof(Sequent(IndexedSeq("p(x)".asFormula), IndexedSeq("x>=9".asFormula)))
