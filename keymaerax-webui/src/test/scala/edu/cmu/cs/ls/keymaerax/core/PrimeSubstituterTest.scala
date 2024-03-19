@@ -119,8 +119,8 @@ class PrimeSubstituterTest extends TacticTestBase {
   }
 
   // @author Yong Kiam Tan
-  it should "EXPLOIT: not prove x'=1 by putting primes into DX postconditions" taggedAs
-    (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in withMathematica { _ =>
+  it should "EXPLOIT: not prove x'=1 by putting primes into DX postconditions" taggedAs NotfixedTest in
+    withMathematica { _ =>
       // @note test is supposed to fail until DX axiom is fixed
 
       val ante = IndexedSeq()
@@ -140,41 +140,39 @@ class PrimeSubstituterTest extends TacticTestBase {
     }
 
   // @author Andre Platzer
-  it should "not put primes into DX's evolution domain constraint" taggedAs
-    (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in {
-      // [{c&q(||)}]p(||) -> (q(||)->p(||))
-      val pr = ProvableSig.axioms("DX differential skip")
+  it should "not put primes into DX's evolution domain constraint" taggedAs NotfixedTest in {
+    // [{c&q(||)}]p(||) -> (q(||)->p(||))
+    val pr = ProvableSig.axioms("DX differential skip")
 
-      pr shouldBe Symbol("proved")
-      // @note currently core datastructure assertion prevents bug until DX axiom is fixed
-      the[CoreException] thrownBy {
-        pr(USubst(
-          SubstitutionPair(ode, "{x'=2}".asDifferentialProgram) ::
-            SubstitutionPair(UnitPredicational("q", AnyArg), "x'>=5".asFormula) ::
-            SubstitutionPair(UnitPredicational("p", AnyArg), False) :: Nil
-        ))
-      } should have message "Core requirement failed: No differentials in evolution domain constraints {{x'=2} & x'>=5}"
-      // would prove bogus [x'=2&x'>=5]false -> (x'>=5 -> false)
-      // which is not valid in a state where x'=5
-    }
+    pr shouldBe Symbol("proved")
+    // @note currently core datastructure assertion prevents bug until DX axiom is fixed
+    the[CoreException] thrownBy {
+      pr(USubst(
+        SubstitutionPair(ode, "{x'=2}".asDifferentialProgram) ::
+          SubstitutionPair(UnitPredicational("q", AnyArg), "x'>=5".asFormula) ::
+          SubstitutionPair(UnitPredicational("p", AnyArg), False) :: Nil
+      ))
+    } should have message "Core requirement failed: No differentials in evolution domain constraints {{x'=2} & x'>=5}"
+    // would prove bogus [x'=2&x'>=5]false -> (x'>=5 -> false)
+    // which is not valid in a state where x'=5
+  }
 
   // @author Andre Platzer
-  it should "EXPLOIT: not put primes into DX's postcondition" taggedAs
-    (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in {
-      // @note test is supposed to fail until DX axiom is fixed
+  it should "EXPLOIT: not put primes into DX's postcondition" taggedAs NotfixedTest in {
+    // @note test is supposed to fail until DX axiom is fixed
 
-      // [{c&q(||)}]p(||) -> (q(||)->p(||))
-      val pr = ProvableSig.axioms("DX differential skip")
+    // [{c&q(||)}]p(||) -> (q(||)->p(||))
+    val pr = ProvableSig.axioms("DX differential skip")
 
-      pr shouldBe Symbol("proved")
-      a[CoreException] shouldBe thrownBy {
-        pr(USubst(
-          SubstitutionPair(ode, "{x'=2}".asDifferentialProgram) ::
-            SubstitutionPair(UnitPredicational("q", AnyArg), True) ::
-            SubstitutionPair(UnitPredicational("p", AnyArg), "x'=2".asFormula) :: Nil
-        ))
-      }
-      // would prove bogus [x'=2]x'=2 -> x'=2
-      // which is not valid in a state where x'=5
+    pr shouldBe Symbol("proved")
+    a[CoreException] shouldBe thrownBy {
+      pr(USubst(
+        SubstitutionPair(ode, "{x'=2}".asDifferentialProgram) ::
+          SubstitutionPair(UnitPredicational("q", AnyArg), True) ::
+          SubstitutionPair(UnitPredicational("p", AnyArg), "x'=2".asFormula) :: Nil
+      ))
     }
+    // would prove bogus [x'=2]x'=2 -> x'=2
+    // which is not valid in a state where x'=5
+  }
 }

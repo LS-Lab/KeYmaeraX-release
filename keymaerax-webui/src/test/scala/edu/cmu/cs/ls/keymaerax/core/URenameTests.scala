@@ -5,16 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.AdvocatusTest
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest}
-import testHelper.KeYmaeraXTestTags.AdvocatusTest
-
-import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
+
+import scala.collection.immutable._
 
 /**
  * Uniform renaming and bound renaming clash test dummies.
