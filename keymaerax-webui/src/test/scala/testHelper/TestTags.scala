@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** Uniform substitution tests */
-  object USubstTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.USubstTest")
-
   /** Tests that are overly optimistic about the capabilities and might want to be ignored. */
   object OptimisticTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.OptimisticTest")
 

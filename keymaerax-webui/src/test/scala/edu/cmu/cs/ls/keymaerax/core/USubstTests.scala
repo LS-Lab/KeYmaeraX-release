@@ -129,9 +129,7 @@ class USubstTests extends TacticTestBase {
     s(Sequent(IndexedSeq(), IndexedSeq(prem))) shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
 
-  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs (
-    KeYmaeraXTestTags.USubstTest
-  ) in {
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = ProvableSig.axioms("[:=] assign")
     val s = USubst(Seq(
@@ -142,9 +140,7 @@ class USubstTests extends TacticTestBase {
     a[SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
-  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs (
-    KeYmaeraXTestTags.USubstTest
-  ) in {
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = ProvableSig.axioms("[:=] assign")
     val s = USubst(
@@ -154,7 +150,7 @@ class USubstTests extends TacticTestBase {
     a[SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
-  it should "handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "handle nontrivial binding structures" in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = ProvableSig.axioms("[:=] assign")
     val conc =
@@ -180,21 +176,18 @@ class USubstTests extends TacticTestBase {
     s(prem.conclusion) shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
   }
 
-  it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs (
-    KeYmaeraXTestTags.USubstTest
-  ) in withQE { _ =>
-    val x = Variable("x_", None, Real)
-    val fml = GreaterEqual(x, Number(0))
-    val prem = Ax.allV.provable
-    val s = USubst(Seq(SubstitutionPair(p0, fml)))
-    // a [SubstitutionClashException] should be thrownBy
-    val e = intercept[ProverException] { prem(s) }
-    (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
+  it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" in withQE {
+    _ =>
+      val x = Variable("x_", None, Real)
+      val fml = GreaterEqual(x, Number(0))
+      val prem = Ax.allV.provable
+      val s = USubst(Seq(SubstitutionPair(p0, fml)))
+      // a [SubstitutionClashException] should be thrownBy
+      val e = intercept[ProverException] { prem(s) }
+      (e.isInstanceOf[SubstitutionClashException] || e.isInstanceOf[InapplicableRuleException]) shouldBe true
   }
 
-  it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs (
-    KeYmaeraXTestTags.USubstTest
-  ) in {
+  it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" in {
     withMathematica { _ => // for AxiomInfo
       val x = Variable("x_", None, Real)
       val fml = GreaterEqual(x, Number(0))
@@ -206,8 +199,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem =
       ProvableSig.axioms("c()' derive constant fn") // (c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
@@ -216,8 +208,7 @@ class USubstTests extends TacticTestBase {
     a[SubstitutionClashException] should be thrownBy s(prem.conclusion)
   }
 
-  it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem =
       ProvableSig.axioms("c()' derive constant fn") // "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
@@ -651,8 +642,7 @@ class USubstTests extends TacticTestBase {
 
   // uniform substitution of rules
 
-  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs (KeYmaeraXTestTags
-    .USubstTest) in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" in {
     val fml = GreaterEqual(Power(Neg(x), Number(2)), Number(0))
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
@@ -662,7 +652,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate Goedel from (-x)^2>=0 (II)" in {
     val fml = "(-x)^2>=0".asFormula
     val prog = "x:=x-1;".asProgram
     val s = USubst(
@@ -674,7 +664,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate nontrivial binding structures in [] congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate nontrivial binding structures in [] congruence" in {
     val prem = "(-x)^2>=y <-> x^2>=y".asFormula
     val conc = "[{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
 
@@ -694,7 +684,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(prem))))
   }
 
-  it should "instantiate random programs in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate random programs in [] monotone" in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
@@ -724,7 +714,7 @@ class USubstTests extends TacticTestBase {
    * Program produced in 12th run of 50 random trials, generated with 20 random complexity from seed
    * -3583806640264782477L
    */
-  it should "instantiate crazy program in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate crazy program in [] monotone" ignore {
     val prem1 = "(-z1)^2>=z4".asFormula
     val prem2 = "z4<=z1^2".asFormula
     val prog =
@@ -746,7 +736,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate random programs in [] congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate random programs in [] congruence" in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
@@ -775,7 +765,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate {?[{?true;}*]PP{⎵};}* in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate {?[{?true;}*]PP{⎵};}* in <> congruence" ignore {
     val prem1 = "(-z1)^2>=z4".asFormula
     val prem2 = "z4<=z1^2".asFormula
     val prem = Equiv(prem1, prem2)
@@ -796,7 +786,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
   }
 
-  it should "instantiate random programs in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate random programs in <> congruence" in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
@@ -832,7 +822,7 @@ class USubstTests extends TacticTestBase {
    * Program produced in 38th run of 50 random trials, generated with 20 random complexity from seed
    * -3583806640264782477L
    */
-  it should "instantiate crazy program in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate crazy program in <> congruence" ignore {
     val prem1 = "(-z1)^2>=z4".asFormula
     val prem2 = "z4<=z1^2".asFormula
     val prem = Equiv(prem1, prem2)
@@ -858,7 +848,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate random programs in <> monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate random programs in <> monotone" in {
     withMathematica { _ => // for AxiomInfo
       for (i <- 1 to randomTrials) {
         val prem1 = "(-z1)^2>=z4".asFormula
@@ -886,7 +876,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate random programs in Goedel" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate random programs in Goedel" in {
     for (i <- 1 to randomTrials) {
       val prem = "(-z1)^2>=0".asFormula
       val prog = rand.nextSystem(randomComplexity)
@@ -907,7 +897,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  "Congruence rules" should "instantiate CT from y+z=z+y" taggedAs KeYmaeraXTestTags.USubstTest in {
+  "Congruence rules" should "instantiate CT from y+z=z+y" in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -921,7 +911,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate CT from y+z=z+y in more context" ignore {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -938,7 +928,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CT from y+z=z+y in random context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate CT from y+z=z+y in random context" ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "y+z".asTerm
       val term2 = "z+y".asTerm
@@ -964,7 +954,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "z1+z3*z2".asTerm
       val term2 = "z2*z3+z1".asTerm
@@ -990,7 +980,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" ignore {
     for (i <- 1 to randomTrials) {
       val term1 = "z1*z3-z2".asTerm
       val term2 = "z2-z4/z1".asTerm
@@ -1016,7 +1006,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate CQ from y+z=z+y in context y>1&.<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CQ from y+z=z+y in context y>1&.<=5" in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -1038,7 +1028,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -1076,7 +1066,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CQ from y+z=z+y in context [x:=x-1]" in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
     val fml = Equal(term1, term2)
@@ -1114,7 +1104,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs KeYmaeraXTestTags.USubstTest ignore {
+  it should "instantiate CT from z^2*y=-(-z)^2*-y+0" ignore {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -1171,8 +1161,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (manual test)" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (manual test)" in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -1188,8 +1177,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (schematic test)" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (schematic test)" in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -1205,8 +1193,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CE from x=0 <-> x^2=0 into [x:=5] context (schematic test)" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into [x:=5] context (schematic test)" in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -1223,8 +1210,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CE from x=0 <-> x^2=0 into [x'=5] context (schematic test)" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into [x'=5] context (schematic test)" in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -1264,7 +1250,7 @@ class USubstTests extends TacticTestBase {
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -1290,8 +1276,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" in {
     val fml1 = "z^2*y>=5".asFormula
     val fml2 = "(-z)^2*-y+0<=-5".asFormula
     val fml = Equiv(fml1, fml2)
@@ -1317,8 +1302,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  "Random uniform substitutions" should "have no effect on random expressions without dots" taggedAs KeYmaeraXTestTags
-    .USubstTest in {
+  "Random uniform substitutions" should "have no effect on random expressions without dots" in {
     val trm1 = "x^2*y^3".asTerm
     val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
@@ -1351,7 +1335,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "have no effect on random formulas without that predicate" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "have no effect on random formulas without that predicate" in {
     val trm1 = "x^2*y^3".asTerm
     val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
@@ -1381,7 +1365,7 @@ class USubstTests extends TacticTestBase {
     }
   }
 
-  it should "have no effect on random formulas without that predicational" taggedAs KeYmaeraXTestTags.USubstTest in {
+  it should "have no effect on random formulas without that predicational" in {
     val trm1 = "x^2*y^3".asTerm
     val fml1 = "z1^2*z2>=x".asFormula
     for (i <- 1 to randomTrials) {
