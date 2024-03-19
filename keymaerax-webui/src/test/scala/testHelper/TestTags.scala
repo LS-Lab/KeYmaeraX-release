@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** Tests the persistence layer (DB, caches, etc.) */
-  object PersistenceTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.UITest")
-
   /** Tests that only make sense to run pre-deployment. */
   object DeploymentTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.Deployment")
 
