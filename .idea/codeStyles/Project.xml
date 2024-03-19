@@ -4,6 +4,7 @@
       <option name="classCountToUseImportOnDemand" value="999" />
       <option name="SCALAFMT_REFORMAT_ON_FILES_SAVE" value="true" />
       <option name="FORMATTER" value="1" />
+      <option name="MULTILINE_STRING_CLOSING_QUOTES_ON_NEW_LINE" value="true" />
     </ScalaCodeStyleSettings>
   </code_scheme>
 </component>
