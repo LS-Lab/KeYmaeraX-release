@@ -8,12 +8,10 @@ package edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.{CoverageTest, SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.CustomAssertions.withSafeClue
-import testHelper.KeYmaeraXTestTags
-import testHelper.KeYmaeraXTestTags._
 
 import scala.collection.immutable._
 
@@ -85,7 +83,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
 
   it should "@todo test symbols, signature" ignore {}
 
-  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs (CoverageTest) in { test(10) }
+  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs CoverageTest in { test(10) }
   it should "consistently compute randomly (summary)" taggedAs (SummaryTest, CoverageTest) in { test(50) }
   it should "consistently compute randomly (usual)" taggedAs (UsualTest, CoverageTest) in { test(1000, 12) }
   it should "consistently compute randomly (slow)" taggedAs (SlowTest, CoverageTest) in { test(randomTrials, 20) }
@@ -149,7 +147,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "consistently compute fir sequents" taggedAs KeYmaeraXTestTags.CoverageTest in {
+  it should "consistently compute fir sequents" taggedAs CoverageTest in {
     for (i <- 1 to randomTrials) {
       val e = rand.nextSequent(randomComplexity)
       val randClue = "Sequent produced in\n\t " + i + "th run of " + randomTrials +

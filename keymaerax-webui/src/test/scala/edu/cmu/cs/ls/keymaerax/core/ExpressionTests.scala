@@ -5,11 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
+import edu.cmu.cs.ls.keymaerax.tagobjects.CoverageTest
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import testHelper.KeYmaeraXTestTags._
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.immutable._
-import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests basic expression data structures
@@ -104,12 +104,12 @@ class ExpressionTests extends FlatSpec with Matchers {
     )
   }
 
-  "Kinds" should "have expected strings" taggedAs (CoverageTest) in {
+  "Kinds" should "have expected strings" taggedAs CoverageTest in {
     (ExpressionKind :: TermKind :: FormulaKind :: ProgramKind :: DifferentialProgramKind :: FunctionKind :: Nil)
       .forall(k => k.toString + "Kind$" == k.getClass.getSimpleName) shouldBe true
   }
 
-  "Sorts" should "have expected strings" taggedAs (CoverageTest) in {
+  "Sorts" should "have expected strings" taggedAs CoverageTest in {
     (Unit :: Bool :: Real :: Trafo :: Nil).forall(k => k.toString + "$" == k.getClass.getSimpleName) shouldBe true
     ObjectSort("lalalala").toString shouldBe "lalalala"
     Tuple(Real, Bool).toString shouldBe "(Real,Bool)"

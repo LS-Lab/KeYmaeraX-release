@@ -12,10 +12,10 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tagobjects.OptimisticTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{CoverageTest, OptimisticTest}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, USubstTest, UsualTest}
 import testHelper.CustomAssertions._
-import testHelper.KeYmaeraXTestTags.{AdvocatusTest, CoverageTest}
+import testHelper.KeYmaeraXTestTags.AdvocatusTest
 
 import scala.language.postfixOps
 
