@@ -9,9 +9,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.core.Number
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags
-import testHelper.KeYmaeraXTestTags.TodoTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.DeploymentTest
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests the series expansion tactics.
@@ -114,14 +114,14 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
-  "Tactic pretty printer" should "properly print expApproximate tactics" taggedAs KeYmaeraXTestTags.DeploymentTest in {
+  "Tactic pretty printer" should "properly print expApproximate tactics" taggedAs DeploymentTest in {
     val t = Approximator.expApproximate("e".asVariable, Number(10))(1)
     val print = t.prettyString
     print shouldBe """expApproximate("e", "10", 1)"""
     print.asTactic shouldBe t
   }
 
-  it should "properly print taylor approximation tactics" taggedAs KeYmaeraXTestTags.DeploymentTest in {
+  it should "properly print taylor approximation tactics" taggedAs DeploymentTest in {
     val t = Approximator.circularApproximate("s".asVariable, "c".asVariable, Number(5))(1)
     val print = BellePrettyPrinter(t)
     print should equal("""circularApproximate("s","c","5",1)""")(after being whiteSpaceRemoved)
@@ -129,14 +129,14 @@ class ApproximatorTests extends TacticTestBase {
     // @todo check print of parse after patching DerivationInfo.
   }
 
-  it should "properly print and parse top-level autoApproximate tactic" taggedAs KeYmaeraXTestTags.DeploymentTest in {
+  it should "properly print and parse top-level autoApproximate tactic" taggedAs DeploymentTest in {
     val t = Approximator.autoApproximate(Number(10))(1)
     val print = t.prettyString
     print shouldBe """autoApproximate("10", 1)"""
     print.asTactic shouldBe t
   }
 
-  "autoApproximate" should "approximate exp" taggedAs KeYmaeraXTestTags.DeploymentTest in withMathematica(_ => {
+  "autoApproximate" should "approximate exp" taggedAs DeploymentTest in withMathematica(_ => {
     val f =
       "t=0 & e=1 -> [{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.autoApproximate(Number(10))(1) & TactixLibrary.dW(1) &

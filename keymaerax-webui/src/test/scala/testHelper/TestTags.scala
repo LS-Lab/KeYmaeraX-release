@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** Tests that only make sense to run pre-deployment. */
-  object DeploymentTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.Deployment")
-
   /** Uniform substitution tests */
   object USubstTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.USubstTest")
 
