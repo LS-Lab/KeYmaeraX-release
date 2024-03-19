@@ -100,6 +100,6 @@ Springer, 2018. 659 pages. ISBN 978-3-319-63587-3.
 [Differential dynamic logic for hybrid systems](https://doi.org/10.1007/s10817-008-9103-8).
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 
-6. André Platzer.
+5. André Platzer.
 [Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics](https://doi.org/10.1007/978-3-642-14509-4).
 Springer, 2010. 426 pages. ISBN 978-3-642-14508-7.
