@@ -5,16 +5,17 @@
 
 package edu.cmu.cs.ls.keymaerax.codegen
 
-import java.io.File
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, NamedSymbol, Sequent, True, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
+import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
+import java.io.File
 import scala.collection.immutable.ListMap
 
 /**

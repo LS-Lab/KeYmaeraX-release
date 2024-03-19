@@ -9,10 +9,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
-import edu.cmu.cs.ls.keymaerax.tagobjects.OptimisticTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, OptimisticTest}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -120,7 +120,7 @@ class UnificationMatchTest extends SystemTestBase {
     )
   }
 
-  it should "unify 3+f(x) with 3+(x^2+y)" taggedAs (IgnoreInBuildTest) in {
+  it should "unify 3+f(x) with 3+(x^2+y)" taggedAs IgnoreInBuildTest in {
     shouldUnify(
       "3+f(x)".asPlainTerm,
       "3+(x^2+y)".asPlainTerm,

@@ -6,12 +6,12 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialSaturation._
-import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
 
 import scala.collection.immutable._
 

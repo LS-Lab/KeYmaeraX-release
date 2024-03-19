@@ -6,15 +6,14 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
-import edu.cmu.cs.ls.keymaerax.btactics.{InvariantGenerator, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
+import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
 
 import java.io.File
 import scala.collection.immutable._

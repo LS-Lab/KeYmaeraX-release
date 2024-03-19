@@ -5,17 +5,16 @@
 
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core.{CoreException, Formula}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import org.scalatest.BeforeAndAfterAll
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import testHelper.CustomAssertions._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Test whether axiom recursors are defined after using their key.

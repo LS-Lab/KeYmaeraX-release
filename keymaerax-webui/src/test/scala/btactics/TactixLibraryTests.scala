@@ -16,13 +16,13 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.time.SpanSugar._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer

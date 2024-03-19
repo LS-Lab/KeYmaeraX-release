@@ -6,30 +6,28 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper.timed
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.codegen._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Statistics}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import org.scalatest.LoneElement._
 import testHelper.ParserFactory._
 
+import java.io.File
 import scala.collection.immutable.{IndexedSeq, ListMap}
 import scala.language.postfixOps
-import org.scalatest.LoneElement._
-
-import java.io.File
-import edu.cmu.cs.ls.keymaerax.codegen._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Statistics}
 
 /**
  * Created by smitsch on 3/8/15.

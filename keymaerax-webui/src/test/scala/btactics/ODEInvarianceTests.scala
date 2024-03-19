@@ -6,20 +6,16 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
-import edu.cmu.cs.ls.keymaerax.btactics.Ax.{alld, doubleNegation, equivReflexive}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
-
-import scala.collection.immutable.{IndexedSeq, Nil}
+import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 class ODEInvarianceTests extends TacticTestBase {
 

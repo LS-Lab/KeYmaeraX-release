@@ -8,10 +8,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
-
-import scala.collection.immutable.Map
-import scala.collection.immutable.IndexedSeq
+import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** Tests of direct calls to quantifier elimination tools */
 class QETest extends TacticTestBase {

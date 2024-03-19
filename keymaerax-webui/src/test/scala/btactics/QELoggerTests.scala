@@ -6,13 +6,13 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
-import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Formula}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
 
 /** Tests for the simple QE logger Only logs first order formulae */
 class QELoggerTests extends TacticTestBase {

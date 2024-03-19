@@ -15,10 +15,10 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tagobjects.{DeploymentTest, SummaryTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.{DeploymentTest, IgnoreInBuildTest, SummaryTest}
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
-import testHelper.KeYmaeraXTestTags.{AdvocatusTest, IgnoreInBuildTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.{AdvocatusTest, TodoTest}
 
 import scala.collection.immutable._
 
