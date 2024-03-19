@@ -7,11 +7,11 @@ package edu.cmu.cs.ls.keymaerax.tagobjects
 
 import org.scalatest.Tag
 
+// TODO Tag every ExtremeTest as SlowTest?
+
 /**
- * A test that takes a long time to run.
+ * A test that takes a ''very'' long time to run.
  *
- * Use this instead of [[org.scalatest.tagobjects.Slow]].
- *
- * See also [[ExtremeTest]].
+ * See also [[SlowTest]].
  */
-object SlowTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.SlowTest")
+object ExtremeTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.ExtremeTest")
