@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** A user-interface test. */
-  object UITest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.UITest")
-
   /** Tests the persistence layer (DB, caches, etc.) */
   object PersistenceTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.UITest")
 
