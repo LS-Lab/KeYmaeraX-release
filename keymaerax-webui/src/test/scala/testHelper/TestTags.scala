@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** Tests of unfixed bugs. */
-  object NotfixedTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.NotfixedTest")
-
   /** Tests that are added for coverage analysis and not critically used. */
   object CoverageTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.CoverageTest")
 

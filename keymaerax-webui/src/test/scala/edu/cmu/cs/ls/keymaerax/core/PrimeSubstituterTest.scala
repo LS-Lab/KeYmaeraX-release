@@ -4,15 +4,17 @@
  */
 
 package edu.cmu.cs.ls.keymaerax.core
-import scala.collection.immutable._
+
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import testHelper.KeYmaeraXTestTags.NotfixedTest
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.NotfixedTest
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
-import TactixLibrary._
+
+import scala.collection.immutable._
 
 /**
  * Advocatus Test when substituting too many primes into axioms.
