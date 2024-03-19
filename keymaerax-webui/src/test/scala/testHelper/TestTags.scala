@@ -16,12 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /**
-   * Case Study tests are (typically long-running) tests that run an entire case study, sometimes step-by-step. Set runs
-   * for unbounded amount of time.
-   */
-  object CaseStudyTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.CaseStudyTest")
-
   /** A user-interface test. */
   object UITest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.UITest")
 
