@@ -7,11 +7,12 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.tagobjects.UsualTest
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, CoverageTest}
-import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest}
+import org.scalatest.{FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable
-import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests reapply function of expression data structures for identity after deep copy. Performance test if printing were
@@ -73,7 +74,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
 
   "Expression reapply" should // "reapply random formulas identically (checkin)" taggedAs(CheckinTest) in {test(10)}
     // it should "reapply random formulas identically (summary)" taggedAs(SummaryTest) in {test(50)}
-    "reapply random formulas identically (usual)" taggedAs (UsualTest) in { test(1000, 10) }
+    "reapply random formulas identically (usual)" taggedAs UsualTest in { test(1000, 10) }
   it should "reparse pretty-prints of random formulas (slow)" taggedAs (SlowTest) in { test(randomTrials, 20) }
   it should "reparse pretty-prints of random formulas (prints)" in { testPrint(100, 20) }
 

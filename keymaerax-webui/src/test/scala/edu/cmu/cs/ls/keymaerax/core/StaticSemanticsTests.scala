@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tagobjects.SummaryTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.CustomAssertions.withSafeClue

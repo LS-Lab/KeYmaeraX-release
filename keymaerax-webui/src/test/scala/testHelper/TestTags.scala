@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** Average set of tests that run usually. */
-  object UsualTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.UsualTest")
-
   /** Usually tests that call QE or test a lot of cases. Set runs for unbounded amount of time. */
   object SlowTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SlowTest")
 
