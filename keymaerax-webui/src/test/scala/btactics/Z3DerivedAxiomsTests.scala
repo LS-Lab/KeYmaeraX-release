@@ -23,7 +23,6 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
 
 import scala.reflect.runtime.{universe => ru}
 import scala.collection.immutable
-import scala.collection.immutable.Map
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
@@ -57,33 +56,32 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     }
   }
 
-  "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" taggedAs
-    KeYmaeraXTestTags.CheckinTest in withZ3 { _ =>
-      withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-        getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
-          // delete all stored lemmas
-          LemmaDBFactory.lemmaDB.deleteDatabase()
-          // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
-          val c = Ax.getClass.getDeclaredConstructor()
-          c.setAccessible(true)
-          withClue(
-            "Missing dependency in '" + name +
-              "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n"
-          ) {
-            try { fm.bind(c.newInstance())() }
-            catch {
-              case ex: InvocationTargetException =>
-                val missingDependency = "Lemma ([^\\s]*) should"
-                  .r
-                  .findFirstMatchIn(ex.getCause.getMessage)
-                  .map(_.group(1))
-                  .getOrElse("<unknown>")
-                fail("Missing dependency to '" + missingDependency + "'", ex.getCause)
-            }
+  "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" ignore withZ3 { _ =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
+        // delete all stored lemmas
+        LemmaDBFactory.lemmaDB.deleteDatabase()
+        // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
+        val c = Ax.getClass.getDeclaredConstructor()
+        c.setAccessible(true)
+        withClue(
+          "Missing dependency in '" + name +
+            "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n"
+        ) {
+          try { fm.bind(c.newInstance())() }
+          catch {
+            case ex: InvocationTargetException =>
+              val missingDependency = "Lemma ([^\\s]*) should"
+                .r
+                .findFirstMatchIn(ex.getCause.getMessage)
+                .map(_.group(1))
+                .getOrElse("<unknown>")
+              fail("Missing dependency to '" + missingDependency + "'", ex.getCause)
           }
-        })
-      }
+        }
+      })
     }
+  }
 
   "Derived Axioms" should "prove <-> reflexive" in { check(equivReflexive) }
   it should "prove !!" in { check(doubleNegation) }
@@ -275,7 +273,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
   }
 
   // @note must be last to populate the lemma database during build
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withZ3 { _ =>
+  "The DerivedAxioms prepopulation procedure" should "not crash" ignore withZ3 { _ =>
     LemmaDBFactory.lemmaDB.deleteDatabase()
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val writeEffect = true

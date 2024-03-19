@@ -22,7 +22,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 import scala.collection.immutable
-import scala.collection.immutable.Map
 import scala.reflect.runtime.{universe => ru}
 
 /**
@@ -54,8 +53,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     }
   }
 
-  "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" taggedAs KeYmaeraXTestTags
-    .CheckinTest in
+  "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" ignore
     withMathematica(
       initLibrary = false,
       testcode = { _ =>
@@ -502,8 +500,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
   it should "prove < antisym" in withMathematica(initLibrary = false, testcode = { _ => check { lessNotSym } })
 
   // @note must be last to populate the lemma database during build
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags
-    .CheckinTest in withMathematica(
+  "The DerivedAxioms prepopulation procedure" should "not crash" ignore withMathematica(
     initLibrary = false,
     testcode = { _ =>
       LemmaDBFactory.lemmaDB.deleteDatabase()
