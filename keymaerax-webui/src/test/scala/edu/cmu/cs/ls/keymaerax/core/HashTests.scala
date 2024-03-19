@@ -7,12 +7,12 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import testHelper.KeYmaeraXTestTags.SlowTest
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.immutable._
 import scala.collection.mutable
-import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests hash code and some collection expectations such as lookup and adds and removes.
@@ -76,7 +76,7 @@ class HashTests extends FlatSpec with Matchers {
     for (e <- other) storage.contains(e) shouldBe true
   }
 
-  it should "lookup in hash maps" taggedAs (SlowTest) in {
+  it should "lookup in hash maps" taggedAs SlowTest in {
     testmap((1 to collectionSize).map(i => rand.nextExpression(randomComplexity)).toList)
   }
 

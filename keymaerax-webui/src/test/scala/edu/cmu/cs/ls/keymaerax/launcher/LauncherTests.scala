@@ -5,9 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.File
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
@@ -17,12 +14,16 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   KeYmaeraXExtendedLemmaParser,
   PrettierPrintFormatProvider,
 }
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
-import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
-
-import scala.collection.immutable._
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
+
+import java.io.File
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import scala.collection.immutable._
 
 @IgnoreInBuildTest
 class LauncherTests extends TacticTestBase {

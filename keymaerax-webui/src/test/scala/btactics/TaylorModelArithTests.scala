@@ -6,20 +6,14 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.SlowTest
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.tools.ext.{BigDecimalTool, RingsLibrary}
-import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
-import org.scalatest.LoneElement._
 
 /** @author Fabian Immler */
 @SlowTest
@@ -142,8 +136,8 @@ class TaylorModelArithTests extends TacticTestBase {
   }
 
   it should "exact" in withMathematica { qeTool =>
-    import TaylorModelArith._
     import PolynomialArithV2._
+    import TaylorModelArith._
     val a = ofTerm("x0()".asTerm)
     val b = ofTerm("1".asTerm)
     val c = ofTerm("1/3".asTerm)
@@ -164,8 +158,6 @@ class TaylorModelArithTests extends TacticTestBase {
   }
 
   it should "collect higher order terms" in withMathematica { qeTool =>
-    import TaylorModelArith._
-    import PolynomialArithV2._
     val tm = (tm3 + tm2 + third) ^ 3
     val res0 = tm.collectHigherOrderTerms(new TaylorModelOptions {
       val precision = defaultOptions.precision; val order = 0
@@ -180,8 +172,6 @@ class TaylorModelArithTests extends TacticTestBase {
   }
 
   it should "interval" in withMathematica { qeTool =>
-    import TaylorModelArith._
-    import PolynomialArithV2._
     val tm = (tm3 + tm2 + third) ^ 3
     tm.interval._1 shouldBe "(-56647)*10^(-4)".asTerm
     tm.interval._2 shouldBe "73086*10^(-4)".asTerm

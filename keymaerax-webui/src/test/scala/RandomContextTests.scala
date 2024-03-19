@@ -8,11 +8,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Context, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.tagobjects.{CheckinTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable._
 

@@ -221,194 +221,192 @@ class ODEStabilityTests extends TacticTestBase {
     pr1 shouldBe Symbol("proved")
   }
 
-  it should "prove stability for inverted pendulum" taggedAs testHelper.KeYmaeraXTestTags.SlowTest in withMathematica {
-    _ =>
-      val ode = "theta' = w, w'= a()*theta - b()*w - (k1() * theta + k2() * w)".asDifferentialProgram
-      val stable = stabODE(ode)
-      val attractive = attrODE(ode)
+  it should "prove stability for inverted pendulum" in withMathematica { _ =>
+    val ode = "theta' = w, w'= a()*theta - b()*w - (k1() * theta + k2() * w)".asDifferentialProgram
+    val stable = stabODE(ode)
+    val attractive = attrODE(ode)
 
-      // Lyapunov function (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4
-      val qe = proveBy(
-        "a()>0&b()>=0&k1()>a()&k2()>-b(), eps>0 ==> \\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-((k1()-a())*(2*theta*w)*2/4+(2*((b()+k2())*theta+w)*((b()+k2())*w+(a()*theta-b()*w-(k1()*theta+k2()*w)))+2*w*(a()*theta-b()*w-(k1()*theta+k2()*w)))*4/16)>=bnd))"
-          .asSequent,
-        QE,
-      )
+    // Lyapunov function (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4
+    val qe = proveBy(
+      "a()>0&b()>=0&k1()>a()&k2()>-b(), eps>0 ==> \\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-((k1()-a())*(2*theta*w)*2/4+(2*((b()+k2())*theta+w)*((b()+k2())*w+(a()*theta-b()*w-(k1()*theta+k2()*w)))+2*w*(a()*theta-b()*w-(k1()*theta+k2()*w)))*4/16)>=bnd))"
+        .asSequent,
+      QE,
+    )
 
-      val pr1 = proveBy(
-        Imply("a() > 0 & b() >= 0 & k1() > a() & k2() > -b()".asFormula, stable),
-        unfoldProgramNormalize &
-          // On ||x||=eps, there is a global lower bound on k
-          cutR(
-            "\\exists k (k > 0 & \\forall theta \\forall w (theta*theta+w*w = eps*eps -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 >= k))"
-              .asFormula
-          )(1) <
-          (
-            QE,
-            unfoldProgramNormalize &
-              // There is del s.t. ||x||<del -> v < k
-              cutR(
-                "\\exists del (del > 0 & del < eps & \\forall theta \\forall w (theta*theta+w*w < del*del -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < k))"
-                  .asFormula
-              )(1) <
-              (
-                hideL(Symbol("Llast")) & QE,
-                unfoldProgramNormalize & existsR("del".asTerm)(1) &
-                  andR(1) <
-                  (
-                    prop,
-                    unfoldProgramNormalize & allL(-10) & allL(-10) & // theta, w
-                      implyL(-10) <
-                      (
-                        hideR(1) & prop,
-                        // Move the forall quantified antecedent into domain constraint
-                        // TODO: make tactic that adds universals directly into domain (without the universals)
-                        dC(
-                          "theta*theta+w*w=eps*eps->(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4>=k"
-                            .asFormula
-                        )(1) <
-                          (
-                            hideL(-5) &
-                              // This part is slightly simpler without having to close over the sub-domain
-                              dC("(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < k".asFormula)(1) <
-                              (ODEInvariance.sAIRankOne()(1), dR(True)(1) < (dI(Symbol("full"))(1), ODE(1))),
-                            dWPlus(1) & allL(-7) & allL(-7) & prop,
-                          ),
-                      ),
-                  ),
-              ),
-          ),
-      )
-
-      // The important direction of SAttr
-      val pr2 = proveBy(
-        Imply(
-          And(
-            stable,
-            "\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)"
-              .asFormula,
-          ),
-          "\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>[{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}]theta*theta+w*w < eps*eps)"
-            .asFormula,
-        ),
-        implyR(1) & andL(-1) & allR(1) & implyR(1) & allL(-1) &
-          implyL(-1) <
-          (
-            prop,
-            existsL(-1) & allL("del".asTerm)(-1) &
-              implyL(-1) <
-              (
-                prop,
-                ODELiveness.kDomainDiamond("theta*theta+w*w < del*del".asFormula)(1) <
-                  (
-                    prop,
-                    andL(Symbol("Llast")) &
+    val pr1 = proveBy(
+      Imply("a() > 0 & b() >= 0 & k1() > a() & k2() > -b()".asFormula, stable),
+      unfoldProgramNormalize &
+        // On ||x||=eps, there is a global lower bound on k
+        cutR(
+          "\\exists k (k > 0 & \\forall theta \\forall w (theta*theta+w*w = eps*eps -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 >= k))"
+            .asFormula
+        )(1) <
+        (
+          QE,
+          unfoldProgramNormalize &
+            // There is del s.t. ||x||<del -> v < k
+            cutR(
+              "\\exists del (del > 0 & del < eps & \\forall theta \\forall w (theta*theta+w*w < del*del -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < k))"
+                .asFormula
+            )(1) <
+            (
+              hideL(Symbol("Llast")) & QE,
+              unfoldProgramNormalize & existsR("del".asTerm)(1) &
+                andR(1) <
+                (
+                  prop,
+                  unfoldProgramNormalize & allL(-10) & allL(-10) & // theta, w
+                    implyL(-10) <
+                    (
+                      hideR(1) & prop,
                       // Move the forall quantified antecedent into domain constraint
                       // TODO: make tactic that adds universals directly into domain (without the universals)
                       dC(
-                        "(theta*theta+w*w < del*del->[{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}]theta*theta+w*w < eps*eps)"
-                          .asFormula
-                      )(1) < (dW(1) & prop, dWPlus(1) & allL(-3) & allL(-3) & close),
-                  ),
-              ),
-          ),
-      )
-
-      // The important direction of SAttr + some quantifiers
-      val pr3 = proveBy(
-        Imply(
-          And(
-            stable,
-            "\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)))"
-              .asFormula,
-          ),
-          attractive,
+                        "theta*theta+w*w=eps*eps->(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4>=k".asFormula
+                      )(1) <
+                        (
+                          hideL(-5) &
+                            // This part is slightly simpler without having to close over the sub-domain
+                            dC("(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < k".asFormula)(1) <
+                            (ODEInvariance.sAIRankOne()(1), dR(True)(1) < (dI(Symbol("full"))(1), ODE(1))),
+                          dWPlus(1) & allL(-7) & allL(-7) & prop,
+                        ),
+                    ),
+                ),
+            ),
         ),
-        implyR(1) & andL(-1) & existsL(-2) & andL(-2) & existsR(1) &
+    )
+
+    // The important direction of SAttr
+    val pr2 = proveBy(
+      Imply(
+        And(
+          stable,
+          "\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)"
+            .asFormula,
+        ),
+        "\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>[{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}]theta*theta+w*w < eps*eps)"
+          .asFormula,
+      ),
+      implyR(1) & andL(-1) & allR(1) & implyR(1) & allL(-1) &
+        implyL(-1) <
+        (
+          prop,
+          existsL(-1) & allL("del".asTerm)(-1) &
+            implyL(-1) <
+            (
+              prop,
+              ODELiveness.kDomainDiamond("theta*theta+w*w < del*del".asFormula)(1) <
+                (
+                  prop,
+                  andL(Symbol("Llast")) &
+                    // Move the forall quantified antecedent into domain constraint
+                    // TODO: make tactic that adds universals directly into domain (without the universals)
+                    dC(
+                      "(theta*theta+w*w < del*del->[{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}]theta*theta+w*w < eps*eps)"
+                        .asFormula
+                    )(1) < (dW(1) & prop, dWPlus(1) & allL(-3) & allL(-3) & close),
+                ),
+            ),
+        ),
+    )
+
+    // The important direction of SAttr + some quantifiers
+    val pr3 = proveBy(
+      Imply(
+        And(
+          stable,
+          "\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)))"
+            .asFormula,
+        ),
+        attractive,
+      ),
+      implyR(1) & andL(-1) & existsL(-2) & andL(-2) & existsR(1) &
+        andR(1) <
+        (
+          prop,
+          allR(1) & allR(1) & implyR(1) &
+            // weird
+            cutR(And(
+              stable,
+              "\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)"
+                .asFormula,
+            ))(1) < (andR(1) < (prop, allL(-3) & allL(-3) & implyL(-3) < (prop, prop)), cohideR(1) & byUS(pr2)),
+        ),
+    )
+
+    val pr4 = proveBy(
+      Imply("a() > 0 & b() >= 0 & k1() > a() & k2() > -b()".asFormula, Imply(stable, attractive)),
+      implyR(1) & implyR(1) &
+        cutR(And(
+          stable,
+          "\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)))"
+            .asFormula,
+        ))(1) <
+        (
           andR(1) <
-          (
-            prop,
-            allR(1) & allR(1) & implyR(1) &
-              // weird
-              cutR(And(
-                stable,
-                "\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)"
-                  .asFormula,
-              ))(1) < (andR(1) < (prop, allL(-3) & allL(-3) & implyL(-3) < (prop, prop)), cohideR(1) & byUS(pr2)),
-          ),
-      )
+            (
+              prop,
+              allL(Number(1))(-2) & // Because of global-ness, we can pick any arbitrary epsilon here
+                implyL(-2) <
+                (
+                  cohideR(2) & QE,
+                  existsL(-2) & existsR(1) &
+                    andR(1) <
+                    (
+                      prop,
+                      allR(1) & allR(1) & andL(-2) & implyR(1) & allL(-3) & allL(-3) &
+                        implyL(-3) <
+                        (
+                          prop,
+                          allR(1) & implyR(1) & ODELiveness.saveBox(1) &
+                            cutR(
+                              "\\exists bnd \\forall theta \\forall w (theta*theta+w*w < 1 * 1 -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 >= bnd)"
+                                .asFormula
+                            )(1) <
+                            (
+                              cohideR(1) & QE,
+                              implyR(1) & existsL(Symbol("Llast")) &
+                                ODELiveness.kDomainDiamond(
+                                  "(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < bnd ".asFormula
+                                )(1) <
+                                (
+                                  hideL(-7) & hideL(-4) & hideL(-2) & ODELiveness.dV(None)(1) &
+                                    // Nasty
+                                    cutR(
+                                      "\\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-((k1()-a())*(2*theta*w)*2/4+(2*((b()+k2())*theta+w)*((b()+k2())*w+(a()*theta-b()*w-(k1()*theta+k2()*w)))+2*w*(a()*theta-b()*w-(k1()*theta+k2()*w)))*4/16)>=bnd))"
+                                        .asFormula
+                                    )(1) <
+                                    (
+                                      byUS(qe),
+                                      implyR(1) & existsL(-3) & existsR("bnd".asTerm)(1) &
+                                        andR(1) <
+                                        (
+                                          prop,
+                                          andL(Symbol("Llast")) & cohideOnlyL(Symbol("Llast")) &
+                                            unfoldProgramNormalize & allL(-1) & allL(-1) & implyL(-1) < (prop, prop),
+                                        ),
+                                    ),
+                                  dWPlus(1) & allL(-5) & allL(-5) & QE, // can be done propositionally
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+          cohideR(1) & byUS(pr3),
+        ),
+    )
 
-      val pr4 = proveBy(
-        Imply("a() > 0 & b() >= 0 & k1() > a() & k2() > -b()".asFormula, Imply(stable, attractive)),
-        implyR(1) & implyR(1) &
-          cutR(And(
-            stable,
-            "\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=a()*theta - b()*w - (k1() * theta + k2() * w)&true}>theta*theta+w*w < eps*eps)))"
-              .asFormula,
-          ))(1) <
-          (
-            andR(1) <
-              (
-                prop,
-                allL(Number(1))(-2) & // Because of global-ness, we can pick any arbitrary epsilon here
-                  implyL(-2) <
-                  (
-                    cohideR(2) & QE,
-                    existsL(-2) & existsR(1) &
-                      andR(1) <
-                      (
-                        prop,
-                        allR(1) & allR(1) & andL(-2) & implyR(1) & allL(-3) & allL(-3) &
-                          implyL(-3) <
-                          (
-                            prop,
-                            allR(1) & implyR(1) & ODELiveness.saveBox(1) &
-                              cutR(
-                                "\\exists bnd \\forall theta \\forall w (theta*theta+w*w < 1 * 1 -> (k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 >= bnd)"
-                                  .asFormula
-                              )(1) <
-                              (
-                                cohideR(1) & QE,
-                                implyR(1) & existsL(Symbol("Llast")) &
-                                  ODELiveness.kDomainDiamond(
-                                    "(k1()-a())*(theta^2)/2 + (((b()+k2())*theta+w)^2+w^2)/4 < bnd ".asFormula
-                                  )(1) <
-                                  (
-                                    hideL(-7) & hideL(-4) & hideL(-2) & ODELiveness.dV(None)(1) &
-                                      // Nasty
-                                      cutR(
-                                        "\\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-((k1()-a())*(2*theta*w)*2/4+(2*((b()+k2())*theta+w)*((b()+k2())*w+(a()*theta-b()*w-(k1()*theta+k2()*w)))+2*w*(a()*theta-b()*w-(k1()*theta+k2()*w)))*4/16)>=bnd))"
-                                          .asFormula
-                                      )(1) <
-                                      (
-                                        byUS(qe),
-                                        implyR(1) & existsL(-3) & existsR("bnd".asTerm)(1) &
-                                          andR(1) <
-                                          (
-                                            prop,
-                                            andL(Symbol("Llast")) & cohideOnlyL(Symbol("Llast")) &
-                                              unfoldProgramNormalize & allL(-1) & allL(-1) & implyL(-1) < (prop, prop),
-                                          ),
-                                      ),
-                                    dWPlus(1) & allL(-5) & allL(-5) & QE, // can be done propositionally
-                                  ),
-                              ),
-                          ),
-                      ),
-                  ),
-              ),
-            cohideR(1) & byUS(pr3),
-          ),
-      )
+    // Propositional manipulation
+    val pr5 = proveBy(
+      Imply("a() > 0 & b() >= 0 & k1() > a() & k2() > -b()".asFormula, And(stable, attractive)),
+      implyR(1) &
+        cutR(And(stable, Imply(stable, attractive)))(1) < (andR(1) < (implyRi & byUS(pr1), implyRi & byUS(pr4)), prop),
+    )
 
-      // Propositional manipulation
-      val pr5 = proveBy(
-        Imply("a() > 0 & b() >= 0 & k1() > a() & k2() > -b()".asFormula, And(stable, attractive)),
-        implyR(1) &
-          cutR(And(stable, Imply(stable, attractive)))(1) < (andR(1) < (implyRi & byUS(pr1), implyRi & byUS(pr4)), prop),
-      )
-
-      println(pr5)
-      pr5 shouldBe Symbol("proved")
+    println(pr5)
+    pr5 shouldBe Symbol("proved")
   }
 
   it should "prove stability for 1st and 3rd axis of rigid body" in withMathematica { _ =>

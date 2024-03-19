@@ -14,16 +14,16 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.scalatest.time.SpanSugar._
-import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
-
-import scala.collection.mutable
-import scala.language.{postfixOps, reflectiveCalls}
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
+import org.scalatest.time.SpanSugar._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
+import scala.collection.mutable
+import scala.language.{postfixOps, reflectiveCalls}
 
 /**
  * Very fine-grained tests of the sequential interpreter. These tests are all I/O tests, so it should be possible to

@@ -17,9 +17,6 @@ import org.scalatest.Tag
 object KeYmaeraXTestTags {
 
   /** Usually tests that call QE or test a lot of cases. Set runs for unbounded amount of time. */
-  object SlowTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SlowTest")
-
-  /** Usually tests that call QE or test a lot of cases. Set runs for unbounded amount of time. */
   object ExtremeTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.ExtremeTest")
 
   /**

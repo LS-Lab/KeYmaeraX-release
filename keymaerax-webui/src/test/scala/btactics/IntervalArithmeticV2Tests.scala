@@ -8,12 +8,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Forall, Neg, Plus, Sequent, True}
+import edu.cmu.cs.ls.keymaerax.core.{Neg, Plus, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
 
@@ -280,7 +280,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase {
     IntervalArithmeticV2Tests.timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0 :: Nil) & prop & done))
     IntervalArithmeticV2Tests.timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0 :: Nil) & prop & done))
   }
-  "Slow.intervalArithmetic" should "be slow" taggedAs (SlowTest) in withMathematica { _ =>
+  "Slow.intervalArithmetic" should "be slow" taggedAs SlowTest in withMathematica { _ =>
     IntervalArithmeticV2Tests.timing("intervalArithmetic")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     IntervalArithmeticV2Tests.timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     IntervalArithmeticV2Tests.timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))

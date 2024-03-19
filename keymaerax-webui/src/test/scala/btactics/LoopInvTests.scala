@@ -10,7 +10,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 import scala.language.postfixOps

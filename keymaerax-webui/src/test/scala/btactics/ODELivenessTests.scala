@@ -6,17 +6,15 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
-import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
-import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
-import testHelper.KeYmaeraXTestTags.SlowTest
-
-import scala.collection.immutable.Nil
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 
 class ODELivenessTests extends TacticTestBase {
 

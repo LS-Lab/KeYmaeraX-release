@@ -5,13 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleNoProgress
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.Parser
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import org.scalatest.prop.TableDrivenPropertyChecks._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
-
-import scala.util.Try
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 /** @author Nathan Fulton */
 class ARCHNonlinearBenchmark extends TacticTestBase {

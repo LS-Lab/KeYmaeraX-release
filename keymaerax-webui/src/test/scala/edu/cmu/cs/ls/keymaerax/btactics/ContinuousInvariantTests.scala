@@ -11,11 +11,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery, whenever}
 import org.scalatest.prop.Tables._
-import testHelper.KeYmaeraXTestTags.{ExtremeTest, SlowTest}
+import testHelper.KeYmaeraXTestTags.ExtremeTest
 
 import scala.collection.immutable.{IndexedSeq, _}
 

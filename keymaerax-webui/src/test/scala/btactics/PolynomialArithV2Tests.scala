@@ -5,18 +5,19 @@
 
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.SlowTest
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import scala.collection.immutable._
 import org.scalatest.LoneElement._
+
+import scala.collection.immutable._
 
 /** @author Fabian Immler */
 class PolynomialArithV2Tests extends TacticTestBase {
@@ -171,8 +172,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "represent as bigDecimal" in withMathematica { _ =>
-    import ring23._
     import PolynomialArithV2Helpers._
+    import ring23._
     val c1 = Coefficient(BigDecimal("0.1"), BigDecimal("2"))
     val c2 = Coefficient(BigDecimal("0.1"), BigDecimal("3"))
     c2.bigDecimalOption shouldBe None
@@ -200,15 +201,15 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "be constructed" in withMathematica { _ =>
-    import ring23._
     import PA4._
+    import ring23._
     val res = Monomial(Coefficient(2, 3), ofSparse((y, 1), (g, 2)))
     res.rhs shouldBe "2/3*(1*y^1*g()^2)".asTerm
   }
 
   it should "multiply" in withMathematica { _ =>
-    import ring23._
     import PA4._
+    import ring23._
     val pp = new KeYmaeraXPrettierPrinter(100)
     val m1 = Monomial(Coefficient(2, 3), ofSparse((y, 1), (g, 2)))
     val m2 = Monomial(Coefficient(4, 2), ofSparse((x, 2), (y, 3)))
@@ -220,8 +221,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "multiply (again)" in withMathematica { _ =>
-    import ring23._
     import PA4._
+    import ring23._
     val pp = new KeYmaeraXPrettierPrinter(100)
     val m1 = Monomial(Coefficient(2, 3), ofSparse((y, 1), (g, 2)))
     val m2 = Monomial(Coefficient(4, 2), ofSparse((x, 2), (y, 3)))
@@ -233,8 +234,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "add" in withMathematica { _ =>
-    import ring23._
     import PA4._
+    import ring23._
     val pp = new KeYmaeraXPrettierPrinter(100)
     val m1 = Monomial(Coefficient(2, 3), ofSparse((y, 1), (g, 2)))
     val m2 = Monomial(Coefficient(4, 2), ofSparse((y, 1), (g, 2)))
@@ -316,7 +317,6 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
   it should "multiply with monomials" in withMathematica { _ =>
     import ring23._
-    import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     def x(i: Int) = Var(PA4.x, i)
     def y(i: Int) = Var(PA4.y, i)
@@ -392,8 +392,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "partition polynomials" in withMathematica { _ =>
-    import ring23._
     import PolynomialArithV2Helpers._
+    import ring23._
     val t = "2*x + 3*x*y + 4*y^2 + 2*x^2 + x^2*y^2 + x^3 + 4*x^4".asTerm
     val poly = ofTerm(t)
     val (pos, neg, prv) = poly.partition { (_, _, powers) =>
@@ -442,8 +442,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "normalize monomials" in withMathematica { _ =>
-    import ring23._
     import PA4._
+    import ring23._
     Monomial(Coefficient(2, 1, None), ofSparse((x, 2), (y, 1), (f, 2))).normalized.conclusion.succ(0) shouldBe
       "2/1*(1*x^2*y^1*f()^2)=2*x^2*y*f()^2".asFormula
     Monomial(Coefficient(1, 1, None), ofSparse((x, 2), (y, 1), (f, 2))).normalized.conclusion.succ(0) shouldBe
@@ -479,8 +479,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "approx polynomials" in withMathematica { _ =>
-    import ring23._
     import PolynomialArithV2Helpers._
+    import ring23._
     val t = (1 to 9).map(i => Times(Divide(Number(1), Number(i)), Power("x".asTerm, Number(i)))).reduceLeft(Plus)
     val (prv, a, r) = ofTerm(t).asInstanceOf[TreePolynomial].approx(5)
     a.treeSketch shouldBe
