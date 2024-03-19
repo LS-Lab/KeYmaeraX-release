@@ -6,11 +6,6 @@ We strongly recommend using IntelliJ IDEA and its Scala plugin.
 
 Also make sure to read the [coding conventions](../CodingConventions.md).
 
-**WARNING:**
-The KeYmaera X project currently does not accept outside contributions,
-meaning pull requests on the `KeYmaeraX-release` repo won't be merged.
-However, issues are always welcome!
-
 ## Repo setup
 
 Some commits should be omitted from `git blame` by default
