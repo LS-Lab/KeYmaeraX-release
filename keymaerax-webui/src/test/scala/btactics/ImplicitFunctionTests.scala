@@ -10,8 +10,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{
-  BuiltinSymbols,
   DLArchiveParser,
   InterpretedSymbols,
   KeYmaeraXArchivePrinter,
@@ -19,11 +21,8 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   Parser,
   PrettierPrintFormatProvider,
 }
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -149,7 +148,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     }
 
   it should "prove sin differential axiom" in withMathematica { _ =>
-    import InterpretedSymbols.{sinF, cosF}
+    import InterpretedSymbols.{cosF, sinF}
     val prob = Equal(
       Differential(FuncOf(sinF, "x".asVariable)),
       Times(FuncOf(cosF, "x".asVariable), Differential("x".asVariable)),

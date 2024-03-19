@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, TodoTest}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.{
   MathematicaComputationAbortedException,
@@ -23,7 +23,6 @@ import edu.cmu.cs.ls.keymaerax.tools.{
 }
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests [[ToolTactics.fullQE]] and [[ToolTactics.partialQE]].

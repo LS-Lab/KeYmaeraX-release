@@ -16,9 +16,6 @@ import org.scalatest.Tag
  */
 object KeYmaeraXTestTags {
 
-  /** Tests codifying todo's. These may be ignored and should be un-ignored occasionally. */
-  object TodoTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.TodoTest")
-
   /** Tests of unfixed bugs. */
   object NotfixedTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.NotfixedTest")
 

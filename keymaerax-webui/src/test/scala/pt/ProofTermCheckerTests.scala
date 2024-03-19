@@ -5,17 +5,17 @@
 
 package edu.cmu.cs.ls.pt
 
-import java.io.PrintWriter
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
-import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
-import testHelper.KeYmaeraXTestTags.TodoTest
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+
+import java.io.PrintWriter
 
 /**
  * Tests of the proof term checker <strike>from</strike> inspired by Nathan Fulton and Andre Platzer, "A Logic of Proofs
@@ -504,15 +504,14 @@ class ProofTermCheckerTests extends TacticTestBase {
     println(tacticResult)
   })
 
-  import pt.lib.Sum_Type._
-  import pt.lib.Scratch._
-  import pt.lib.Syntax._
-  import pt.lib.Nat._
   import pt.lib.Int._
   import pt.lib.Rat._
   import pt.lib.Real._
+  import pt.lib.Scratch._
+  import pt.lib.Sum_Type._
+  import pt.lib.Syntax._
   import pt.lib.Proof_Checker._
-  import pt.lib.Parser._
+  import _root_.pt.lib.Parser._
 
   "sexp parser" should "parse ids" in {
     val (i1(), 2) = mv("i1", 0)

@@ -9,12 +9,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, ModelPlex, ModelPlexC
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ext.TestSynthesis
-
-import scala.language.postfixOps
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable.ListMap
+import scala.language.postfixOps
 
 /**
  * Tests the test synthesis tactics.

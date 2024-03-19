@@ -14,11 +14,10 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   KeYmaeraXExtendedLemmaParser,
   PrettierPrintFormatProvider,
 }
-import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, TodoTest}
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import java.io.File
 import java.nio.charset.StandardCharsets

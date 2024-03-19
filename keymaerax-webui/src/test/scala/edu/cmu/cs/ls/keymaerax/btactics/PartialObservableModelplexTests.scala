@@ -12,16 +12,15 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.codegen.{CodeGenerator, PythonGenerator, PythonMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, SimplificationTool}
-import edu.cmu.cs.ls.keymaerax.utils.EulerIntegrationCompiler
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable.ListMap
 

@@ -12,20 +12,20 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{
   Let,
   TacticInapplicableFailure,
 }
-import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable.{IndexedSeq, List}
-import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** Tests the proof tree data structure. Created by smitsch on 3/31/17. */
 class ProofTreeTests extends TacticTestBase {

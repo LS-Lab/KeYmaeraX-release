@@ -11,11 +11,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-
-import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** Tests [[edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics]]. */
 @SummaryTest @UsualTest

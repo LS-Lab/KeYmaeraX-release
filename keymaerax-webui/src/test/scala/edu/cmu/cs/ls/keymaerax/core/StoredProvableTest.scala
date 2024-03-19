@@ -8,13 +8,12 @@ package edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, SummaryTest, TodoTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.concurrent.{Signaler, TimeLimits}
 import org.scalatest.time._
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 

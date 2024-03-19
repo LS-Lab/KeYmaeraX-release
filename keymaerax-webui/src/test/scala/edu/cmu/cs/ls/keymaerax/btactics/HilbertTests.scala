@@ -13,9 +13,9 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 

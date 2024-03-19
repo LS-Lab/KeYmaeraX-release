@@ -3,15 +3,15 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Equiv, Power, Sequent, Term}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, SMTConverter, Z3Solver}
-import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.Inside._
-import testHelper.KeYmaeraXTestTags.TodoTest
+import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
  * Tests Z3 on SMT-Lib format input. Created by ran on 3/27/15.

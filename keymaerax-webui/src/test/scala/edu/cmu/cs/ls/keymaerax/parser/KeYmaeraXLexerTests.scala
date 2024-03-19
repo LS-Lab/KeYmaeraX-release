@@ -5,8 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.{FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * These are white space processing tests and location munging tests. All tests that don't care about white space or

@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.TodoTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 
 /**
  * Tests for DGauto tactic.
@@ -70,7 +70,7 @@ class AutoDGTests extends TacticTestBase {
 
   /** @note please leave this here, because it's the "clear exposition of main idea" version of dgZero. */
   "canonical x=0 & n>0 -> [{x'=c*x^n}]x=0" should "prove by custom tactic" in withMathematica { _ =>
-    import TactixLibrary.{dG, boxAnd, dI, QE}
+    import TactixLibrary.{QE, boxAnd, dG, dI}
     val t = dG("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, Some("x*y^2=0&y>0".asFormula))(1) &
       boxAnd(1, 0 :: Nil) & DifferentialTactics.diffInd()(1, 0 :: 0 :: Nil) &
       dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0 :: 1 :: Nil) &

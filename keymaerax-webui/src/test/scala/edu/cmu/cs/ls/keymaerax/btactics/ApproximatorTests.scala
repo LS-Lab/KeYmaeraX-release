@@ -9,9 +9,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.core.Number
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tagobjects.DeploymentTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{DeploymentTest, TodoTest}
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests the series expansion tactics.

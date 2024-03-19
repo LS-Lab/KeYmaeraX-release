@@ -13,9 +13,8 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 class ODEInvarianceTests extends TacticTestBase {
 

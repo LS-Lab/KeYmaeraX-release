@@ -13,8 +13,8 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => _, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.prop.TableDrivenPropertyChecks._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * @param name

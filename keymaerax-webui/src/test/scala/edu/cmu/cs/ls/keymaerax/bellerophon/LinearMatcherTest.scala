@@ -9,9 +9,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
-import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, OptimisticTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, OptimisticTest, TodoTest}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 

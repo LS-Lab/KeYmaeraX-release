@@ -5,14 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Cancellable, LazySequentialInterpreter, ReflectiveExpressionBuilder}
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest._
-import org.scalamock.scalatest.MockFactory
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, ToolProvider, Z3ToolProvider}
-import testHelper.KeYmaeraXTestTags.TodoTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalamock.scalatest.MockFactory
+import org.scalatest._
 
 import scala.collection.immutable._
 

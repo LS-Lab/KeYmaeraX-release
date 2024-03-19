@@ -5,17 +5,16 @@
 
 package bellerophon.pptests
 
-import java.io.File
-import edu.cmu.cs.ls.keymaerax.bellerophon.{SeqTactic, _}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{
   ArchiveParser,
-  BuiltinSymbols,
   Declaration,
   Name,
   ParseException,
@@ -24,13 +23,13 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   TacticReservedSymbols,
   UnknownLocation,
 }
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
-
-import scala.language.postfixOps
 import org.scalatest.Inside._
 import org.scalatest.matchers.MatchResult
-import testHelper.KeYmaeraXTestTags.TodoTest
+
+import java.io.File
+import scala.language.postfixOps
 
 /**
  * Very simple positive unit tests for the Bellerophon parser. Useful for TDD and bug isolation but probably not so

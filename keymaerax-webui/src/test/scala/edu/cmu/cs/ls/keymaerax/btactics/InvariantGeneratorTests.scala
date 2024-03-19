@@ -5,27 +5,27 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.{FileOutputStream, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
-import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{MathematicaInvGenTool, PlotConverter}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{Seconds, Span}
-import testHelper.KeYmaeraXTestTags.TodoTest
+import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 
+import java.io.{FileOutputStream, PrintWriter}
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map, Nil}
 import scala.collection.mutable.ListBuffer

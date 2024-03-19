@@ -6,21 +6,19 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, InputTactic, ReflectiveExpressionBuilder, SeqTactic}
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, FixedGenerator, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, InputTactic, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{
   Assign,
   Bool,
   DotTerm,
-  Equal,
   FuncOf,
   Function,
   Greater,
   Number,
   Pair,
   Plus,
-  Power,
   PredOf,
   Real,
   SubstitutionPair,
@@ -31,11 +29,11 @@ import edu.cmu.cs.ls.keymaerax.core.{
 }
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.Inside.inside
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
 import org.scalatest.matchers.{MatchResult, Matcher}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests the archive parser. Created by smitsch on 12/29/16.

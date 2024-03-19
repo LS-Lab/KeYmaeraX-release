@@ -12,11 +12,10 @@ import edu.cmu.cs.ls.keymaerax.core.{CoreException, Formula}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
-import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import org.scalatest.BeforeAndAfterAll
 import testHelper.CustomAssertions._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Test whether unification algorithm can instantiate axioms correctly.

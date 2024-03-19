@@ -7,16 +7,15 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, Find, OnAll, ReflectiveExpressionBuilder, Using}
-import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
-import testHelper.KeYmaeraXTestTags.TodoTest
-
-import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers._
 
 /**
  * Tests the DL archive parser.

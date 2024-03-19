@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.TodoTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 
 class SwitchedSystemsTests extends TacticTestBase {
 

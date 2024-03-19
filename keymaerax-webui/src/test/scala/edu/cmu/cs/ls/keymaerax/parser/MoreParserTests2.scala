@@ -5,13 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 

@@ -11,9 +11,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
-import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import java.io.File
 import scala.collection.immutable.ListMap

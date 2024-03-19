@@ -6,22 +6,21 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.{assignbExists, cexLoop}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DbProofTree
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-
-import scala.collection.immutable.IndexedSeq
-import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
-import testHelper.KeYmaeraXTestTags.TodoTest
+
+import scala.language.postfixOps
 
 /** Tests [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst]] */
 @SummaryTest @UsualTest

@@ -14,12 +14,11 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, TodoTest}
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.time.SpanSugar._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 import scala.collection.mutable

@@ -15,14 +15,13 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
-import edu.cmu.cs.ls.keymaerax.tagobjects.SummaryTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SummaryTest, TodoTest}
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestCanceledException
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.SpanSugar._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 import scala.language.postfixOps

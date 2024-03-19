@@ -35,12 +35,12 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   TacticReservedSymbols,
   UnknownLocation,
 }
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests the DLBelleParser.

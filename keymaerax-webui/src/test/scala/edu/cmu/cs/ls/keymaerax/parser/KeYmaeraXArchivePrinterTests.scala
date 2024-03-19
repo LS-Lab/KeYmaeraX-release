@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.TodoTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 
 /** Tests the archive printer. Created by smitsch on 11/05/18. */
 class KeYmaeraXArchivePrinterTests extends TacticTestBase {

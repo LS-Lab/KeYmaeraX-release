@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleLabel
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, SlowTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, SlowTest, TodoTest}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{
   ExtMathematicaOpSpec,
@@ -28,7 +28,6 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.{
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests the JLink Mathematica implementation.

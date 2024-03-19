@@ -9,18 +9,17 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Function, Real, SubstitutionPair, USubst, Unit}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import org.scalatest.LoneElement._
 import testHelper.ParserFactory._
 
 import scala.language.postfixOps
-import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tutorial test cases.

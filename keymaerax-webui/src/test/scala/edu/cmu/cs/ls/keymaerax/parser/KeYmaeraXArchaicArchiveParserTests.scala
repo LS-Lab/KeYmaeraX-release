@@ -5,17 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.Find
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.simplify
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{
   Bool,
-  Formula,
   FuncOf,
   GreaterEqual,
   Number,
-  Program,
   Real,
   SubstitutionPair,
   Trafo,
@@ -25,10 +23,10 @@ import edu.cmu.cs.ls.keymaerax.core.{
 }
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** Tests the archive parser with mostly old archaic outdated file format. Created by smitsch on 12/29/16. */
 class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {

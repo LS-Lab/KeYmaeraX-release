@@ -9,8 +9,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** Tests [[edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics]] */
 class EqualityTests extends TacticTestBase {

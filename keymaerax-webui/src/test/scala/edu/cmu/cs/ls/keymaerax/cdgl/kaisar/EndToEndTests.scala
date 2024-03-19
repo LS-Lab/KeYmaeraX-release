@@ -13,10 +13,10 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import fastparse.Parsed.{Failure, Success}
 import fastparse._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 // @TODO: Decide how useful pattern selectors and match statements are. (match statements might be kind of useless)
 // @TODO: Test end-to-end angelic loop proofs with nominals etc

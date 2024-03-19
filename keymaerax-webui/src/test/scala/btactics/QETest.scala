@@ -8,8 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tagobjects.IgnoreInBuildTest
-import testHelper.KeYmaeraXTestTags.TodoTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 
 /** Tests of direct calls to quantifier elimination tools */
 class QETest extends TacticTestBase {

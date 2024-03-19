@@ -15,18 +15,49 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.hydra.requests.models.{GetModelListRequest, ListExamplesRequest, UploadArchiveRequest}
-import edu.cmu.cs.ls.keymaerax.hydra.requests.proofs.{BelleTermInput, CheckIsProvedRequest, CheckTacticInputRequest, CreateModelTacticProofRequest, ExtractTacticRequest, GetAgendaAwesomeRequest, GetApplicableAxiomsRequest, InitializeProofFromTacticRequest, OpenProofRequest, ProofTaskExpandRequest, RunBelleTermRequest, TaskResultRequest, TaskStatusRequest}
+import edu.cmu.cs.ls.keymaerax.hydra.requests.proofs.{
+  BelleTermInput,
+  CheckIsProvedRequest,
+  CheckTacticInputRequest,
+  CreateModelTacticProofRequest,
+  ExtractTacticRequest,
+  GetAgendaAwesomeRequest,
+  GetApplicableAxiomsRequest,
+  InitializeProofFromTacticRequest,
+  OpenProofRequest,
+  ProofTaskExpandRequest,
+  RunBelleTermRequest,
+  TaskResultRequest,
+  TaskStatusRequest,
+}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.models.ModelUploadResponse
-import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.{AgendaAwesomeResponse, ExpandTacticResponse, GetTacticResponse, OpenProofResponse, ProofVerificationResponse, RunBelleTermResponse, TaskResultResponse, TaskStatusResponse}
+import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.{
+  AgendaAwesomeResponse,
+  ExpandTacticResponse,
+  GetTacticResponse,
+  OpenProofResponse,
+  ProofVerificationResponse,
+  RunBelleTermResponse,
+  TaskResultResponse,
+  TaskStatusResponse,
+}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLParser, Declaration, Name, Parser, Region, Signature, UnknownLocation}
-import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
+import edu.cmu.cs.ls.keymaerax.parser.{
+  ArchiveParser,
+  DLParser,
+  Declaration,
+  Name,
+  Parser,
+  Region,
+  Signature,
+  UnknownLocation,
+}
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, TodoTest}
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import spray.json.{JsArray, JsBoolean, JsString}
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** Tests the server-side web API with scripted requests. Created by smitsch on 4/13/17. */
 class ScriptedRequestTests extends TacticTestBase {

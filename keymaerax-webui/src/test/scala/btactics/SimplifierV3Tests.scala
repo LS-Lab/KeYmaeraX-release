@@ -7,14 +7,14 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
-import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 /** Created by yongkiat on 12/19/16. */
 class SimplifierV3Tests extends TacticTestBase {

@@ -8,16 +8,22 @@ package bellerophon
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, DifferentialEquationCalculus, Idioms, SimplifierV3, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{
+  DebuggingTactics,
+  DifferentialEquationCalculus,
+  Idioms,
+  SimplifierV3,
+  TacticTestBase,
+  TactixLibrary,
+}
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Function, Real, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
+import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, TodoTest}
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
-import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable._
 import scala.language.{postfixOps, reflectiveCalls}
