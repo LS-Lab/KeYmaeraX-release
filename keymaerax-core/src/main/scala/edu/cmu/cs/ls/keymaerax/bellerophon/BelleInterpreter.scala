@@ -13,9 +13,15 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 object BelleInterpreter extends Interpreter {
   private[this] var theInterpreter: Interpreter = _
 
+  /** Unsets the interpreter, killing it in the process. */
+  def unsetInterpreter(): Unit = {
+    if (theInterpreter != null) kill()
+    theInterpreter = null
+  }
+
   /** Sets a new interpreter (kills the old one). */
   def setInterpreter(i: Interpreter): Unit = {
-    if (interpreter != null) kill()
+    unsetInterpreter()
     theInterpreter = i
     start()
   }

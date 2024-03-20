@@ -342,6 +342,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
       PrettyPrinter.setPrinter(e => e.getClass.getName)
       ToolProvider.shutdown()
       ToolProvider.setProvider(new NoneToolProvider())
+      BelleInterpreter.unsetInterpreter()
       if (dbTester.isInitialized) {
         dbTester().db.sqldb.close()
         dbTester = null
