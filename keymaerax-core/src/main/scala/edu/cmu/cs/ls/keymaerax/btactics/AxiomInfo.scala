@@ -90,7 +90,7 @@ object DerivationInfoRegistry extends Logging {
     }
   }
 
-  /* Apply a reflected method with well-typed dummy arguments (for its side effects)*/
+  /** Apply a reflected method with well-typed dummy arguments (for its side effects) */
   private def applyMirror(m: ru.MethodMirror, argSyms: List[ru.Symbol]): Unit = {
     val args = argSyms.map((theSymbol: ru.Symbol) => theSymbol.info.typeConstructor.toString.split('.').last)
     args match {
@@ -102,7 +102,7 @@ object DerivationInfoRegistry extends Logging {
     }
   }
 
-  /* Initialize TacticInfo for all @Tactic annotations in given class [[cl]]*/
+  /** Initialize TacticInfo for all @Tactic annotations in given class `cl` */
   private def initClass(cl: Class[_], tpe: ru.Type): Unit = {
     // @TODO: Reduce code duplication
     /* Collect fields and methods of class */
@@ -181,17 +181,20 @@ object DerivationInfoRegistry extends Logging {
     )
   }
 
-  /* Has the global DerivationInfo list been initialized? */
+  /** Has the global DerivationInfo list been initialized? */
   def isInit: Boolean = DerivationInfo._allInfo.nonEmpty
-  /* Initialize global DerivationInfo list. This is surprisingly tricky because DerivationInfo is attached to tactic
-   * (and axiom and rule) definitions, which are scattered throughout the prover. Here we maintain a global list of files
-   * that can contain @Tactic definitions. Those classes are reflected and all annotated definitions are evaluated.
-   * Having been modified by the @Tactic macro, those definitions all contain a function call which adds their TacticInfo
-   * object to the global list. While this process does not require evaluating tactics in full, it does require loading
-   * a number of classes, which triggers their static initializers and thus requires some attention to initialization order.
+
+  /**
+   * Initialize global DerivationInfo list. This is surprisingly tricky because DerivationInfo is attached to tactic
+   * (and axiom and rule) definitions, which are scattered throughout the prover. Here we maintain a global list of
+   * files that can contain @Tactic definitions. Those classes are reflected and all annotated definitions are
+   * evaluated. Having been modified by the @Tactic macro, those definitions all contain a function call which adds
+   * their TacticInfo object to the global list. While this process does not require evaluating tactics in full, it does
+   * require loading a number of classes, which triggers their static initializers and thus requires some attention to
+   * initialization order.
    *
    * Sanity checks ensure a runtime error is raised if @Tactic is used outside the allowed classes.
-   * */
+   */
   def init(initLibrary: Boolean = true): Unit = {
     /* Initialization is relatively slow, so only initialize once*/
     if (isInit) return
