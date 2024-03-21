@@ -3,15 +3,16 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
+package edu.cmu.cs.ls.keymaerax.core
+
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{USubstTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.testhelper.CustomAssertions.withSafeClue
 import org.scalatest.PrivateMethodTester
-import testHelper.CustomAssertions.withSafeClue
 
 import scala.util.Random
 

@@ -16,11 +16,11 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.testhelper.CustomAssertions._
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.prop.TableDrivenPropertyChecks._
-import testHelper.CustomAssertions._
 
 import scala.collection.immutable._
 import scala.util.Try

@@ -4,6 +4,7 @@
  */
 
 package edu.cmu.cs.ls.keymaerax.core
+
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._

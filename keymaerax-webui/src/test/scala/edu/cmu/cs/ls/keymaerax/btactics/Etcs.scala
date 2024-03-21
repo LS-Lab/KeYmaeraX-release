@@ -11,12 +11,11 @@ import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import testHelper.ParserFactory._
-
-import scala.language.postfixOps
+import edu.cmu.cs.ls.keymaerax.testhelper.ParserFactory._
 import org.scalatest.LoneElement._
 
 import scala.io.Source
+import scala.language.postfixOps
 
 /**
  * ETCS test cases. Essentials of European Train Control System (ETCS).

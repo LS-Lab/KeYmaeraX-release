@@ -10,9 +10,9 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tagobjects.{CoverageTest, SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
+import edu.cmu.cs.ls.keymaerax.testhelper.CustomAssertions.withSafeClue
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable._
 

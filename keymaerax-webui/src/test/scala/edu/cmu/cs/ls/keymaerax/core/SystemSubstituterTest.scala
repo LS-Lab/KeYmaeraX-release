@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
-import testHelper.CustomAssertions._
+import edu.cmu.cs.ls.keymaerax.testhelper.CustomAssertions._
 
 import scala.collection.immutable._
 

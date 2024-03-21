@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tagobjects.{AdvocatusTest, CoverageTest, OptimisticTest}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, USubstTest, UsualTest}
-import testHelper.CustomAssertions._
+import edu.cmu.cs.ls.keymaerax.testhelper.CustomAssertions._
 
 import scala.language.postfixOps
 

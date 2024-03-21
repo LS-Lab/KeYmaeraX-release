@@ -9,12 +9,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tagobjects.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.testhelper.CustomAssertions.withSafeClue
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable._
 

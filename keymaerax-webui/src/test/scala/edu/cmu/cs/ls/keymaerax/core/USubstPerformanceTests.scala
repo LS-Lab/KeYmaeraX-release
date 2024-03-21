@@ -9,11 +9,11 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Statistics
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SlowTest, USubstTest}
+import edu.cmu.cs.ls.keymaerax.testhelper.CustomAssertions.withSafeClue
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable._
 import scala.concurrent.duration.Duration
