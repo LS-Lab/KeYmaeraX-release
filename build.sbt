@@ -131,14 +131,14 @@ lazy val webui = project
     // Testing //
     /////////////
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.4" % Test,
-    libraryDependencies += "org.scalamock" %% "scalamock" % "4.4.0" % Test,
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.18" % Test,
+    libraryDependencies += "org.scalamock" %% "scalamock" % "5.2.0" % Test,
 
     // For generating HTML scalatest reports using the `-h <directory>` flag
     // See "Using Reporters" in https://www.scalatest.org/user_guide/using_scalatest_with_sbt
     // https://stackoverflow.com/a/59059383
     // https://github.com/scalatest/scalatest/issues/1736
-    libraryDependencies += "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" % Test,
+    libraryDependencies += "com.vladsch.flexmark" % "flexmark-all" % "0.64.8" % Test,
 
     Test / parallelExecution := false,
 
