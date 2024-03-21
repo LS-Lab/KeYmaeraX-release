@@ -55,8 +55,8 @@ class CodeNameChecker extends TacticTestBase with Matchers {
     val im = mirror.reflect(moduleMirror.instance)
 
     // @note lazy vals have a "hidden" getter method that does the initialization
-    val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
-    val fieldMirrors = fields.map(im.reflectMethod)
+    val fields = fns.map(fn => fn -> ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fieldMirrors = fields.map(f => im.reflectMethod(f._2))
 
     Range(0, fieldMirrors.length - 1).foreach(idx => {
       try {
