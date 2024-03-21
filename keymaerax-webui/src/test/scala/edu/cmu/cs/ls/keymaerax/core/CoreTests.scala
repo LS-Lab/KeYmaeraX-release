@@ -32,7 +32,7 @@ class CoreTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   private val y = Variable("y", None, Real)
   private val z = Variable("z", None, Real)
 
-  "Core (Data Strutures)" should "accept explicit differential equations" in {
+  "Core (Data Structures)" should "accept explicit differential equations" in {
     AtomicODE(DifferentialSymbol(x), Number(5)) should be(AtomicODE(DifferentialSymbol(x), Number(5)))
   }
 

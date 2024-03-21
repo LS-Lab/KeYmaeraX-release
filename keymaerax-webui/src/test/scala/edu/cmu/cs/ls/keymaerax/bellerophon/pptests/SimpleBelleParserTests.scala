@@ -95,11 +95,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     tacticParser("cut(\"1=1\")") shouldBe (round trip TactixLibrary.cut("1=1".asFormula))
   }
 
-  it should "parse a built-in argument with an absolute top-level postion" in {
+  it should "parse a built-in argument with an absolute top-level position" in {
     tacticParser("andR(1)") shouldBe (round trip andR(1))
   }
 
-  it should "parse a built-in argument with an absolute non-top-level postion" in {
+  it should "parse a built-in argument with an absolute non-top-level position" in {
     tacticParser("boxAnd(1.1)") shouldBe (round trip HilbertCalculus.boxAnd(Fixed(1, List(1), None, exact = true)))
   }
 
@@ -496,7 +496,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   // endregion
 
-  // region Kleene Star Comabinator
+  // region Kleene Star Combinator
 
   "Kleene star parser" should "parse e*" in {
     val tactic = tacticParser("andR(1)*").asInstanceOf[SaturateTactic]

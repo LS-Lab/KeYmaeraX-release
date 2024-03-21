@@ -34,7 +34,7 @@ import scala.util.control.Breaks._
  * Sequential interpreter for Bellerophon tactic expressions.
  *
  * @param listeners
- *   Pre- and pos-processing hooks for step-wise tactic execution.
+ *   Pre- and post-processing hooks for step-wise tactic execution.
  * @author
  *   Nathan Fulton
  * @author
@@ -290,6 +290,7 @@ abstract class BelleBaseInterpreter(
         }
       }
       apply(s.last, v)
+
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v

@@ -13,7 +13,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
  * All Bellerophon tactic expressions are of type [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]], which provides the
  * following tactic combinators
  *
- *   - `s ; t` [[edu.cmu.cs.ls.keymaerax.bellerophon.SeqTactic sequential composition]] executes t` on the output of
+ *   - `s ; t` [[edu.cmu.cs.ls.keymaerax.bellerophon.SeqTactic sequential composition]] executes `t` on the output of
  *     `s`, failing if either fail.
  *   - `s | t` [[edu.cmu.cs.ls.keymaerax.bellerophon.EitherTactic alternative composition]] executes `t` if applying `s`
  *     fails, failing if both fail.

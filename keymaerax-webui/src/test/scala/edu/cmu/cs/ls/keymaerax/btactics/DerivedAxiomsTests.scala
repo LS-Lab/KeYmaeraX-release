@@ -351,7 +351,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
     initLibrary = false,
     testcode = { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { check(max) } },
   )
-  it should "prove & recusor" in withMathematica(initLibrary = false, testcode = { _ => check(andRecursor) })
+  it should "prove & recursor" in withMathematica(initLibrary = false, testcode = { _ => check(andRecursor) })
   it should "prove | recursor" in withMathematica(initLibrary = false, testcode = { _ => check(orRecursor) })
   it should "prove <= both" in withMathematica(initLibrary = false, testcode = { _ => check(intervalLEBoth) })
   it should "prove < both" in withMathematica(initLibrary = false, testcode = { _ => check(intervalLBoth) })

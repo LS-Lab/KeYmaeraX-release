@@ -784,8 +784,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     nextODE(vars, n, 0, vars.length, dotTs = dotTs, funcs = funcs)
 
   /**
-   * randomly generate an ODE paying attention to avoid duplicates. This algorithm is merg-sort-esque and only generates
-   * ODEs for differential equations of vars[lower..upper) It just watches that both subintervals remain nonempty
+   * Randomly generate an ODE paying attention to avoid duplicates. This algorithm is merge-sort-esque and only
+   * generates ODEs for differential equations of `vars[lower..upper)`. It just watches that both subintervals remain
+   * nonempty.
    */
   private def nextODE(
       vars: IndexedSeq[Variable],

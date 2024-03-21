@@ -104,7 +104,7 @@ object PosInExpr {
 //object HereP extends PosInExpr
 
 /**
- * Position at which formula and subexpresion ofa a sequent to apply a tactic.
+ * Position at which formula and subexpression of a a sequent to apply a tactic.
  * @TODO
  *   this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is
  *   irrelevant for rules, merely for tactics. Thus simplify into just a positive or negative integer type with some
