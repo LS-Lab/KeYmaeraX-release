@@ -384,10 +384,10 @@ class SequentialInterpreterTests extends TacticTestBase {
     a[BelleThrowable] should be thrownBy proveBy(
       "x>0 -> x>5 & x>0 & [?x>1;]x>1".asFormula,
       implyR(1) & andR(1) < (
-        DebuggingTactics.printIndexed("Branch 1") & id & /* not reached */ logDone(1),
+        id & /* not reached */ logDone(1),
         andR(1) < (
-          DebuggingTactics.printIndexed("Branch 2") & id & logDone(2),
-          DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
+          id & logDone(2),
+          testb(1) & prop & logDone(3)
         )
       ),
     )
@@ -407,10 +407,10 @@ class SequentialInterpreterTests extends TacticTestBase {
     the[BelleThrowable] thrownBy proveBy(
       "x>0 -> x>5 & x>2 & [?x>1;]x>1".asFormula,
       implyR(1) & andR(1) < (
-        DebuggingTactics.printIndexed("Branch 1") & id & /* not reached */ logDone(1),
+        id & /* not reached */ logDone(1),
         andR(1) < (
-          DebuggingTactics.printIndexed("Branch 2") & id & /* not reached */ logDone(2),
-          DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
+          id & /* not reached */ logDone(2),
+          testb(1) & prop & logDone(3)
         )
       ),
     ) should have message
@@ -639,7 +639,6 @@ class SequentialInterpreterTests extends TacticTestBase {
         BelleProvable.plain(ProvableSig.startPlainProof("1=1 & 2=2".asFormula)),
       )
     }
-    thrown.printStackTrace()
     thrown.getMessage should include("Fails...")
     val s = thrown.getCause.getStackTrace
     // @todo works in isolation, but when run with other tests, we pick up stack trace elements of those too
@@ -1117,9 +1116,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       t,
       (labels: Option[List[BelleLabel]]) =>
         labels match {
-          case Some(l) =>
-            println(BelleLabel.toPrettyString(l))
-            l should contain theSameElementsAs
+          case Some(l) => l should contain theSameElementsAs
               BelleLabel.fromString(
                 "w*dhf>=0->(case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h))&(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h)"
               ) ++
@@ -1155,16 +1152,12 @@ class SequentialInterpreterTests extends TacticTestBase {
       val s = "x^2+y^2=1 ==> [{x'=y,y'=-x}]x^2+y^2=1".asSequent
       var recursiveCalls = 0
       val listener = new IOListener() {
-        override def begin(input: BelleValue, expr: BelleExpr): Unit = {
-          println(expr.prettyString)
-          recursiveCalls += 1
-        }
+        override def begin(input: BelleValue, expr: BelleExpr): Unit = { recursiveCalls += 1 }
         override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
         override def kill(): Unit = {}
       }
       BelleInterpreter.setInterpreter(LazySequentialInterpreter(List(listener)))
       val result = proveBy(s, dI()(1))
-      println(s"$recursiveCalls interpreter executeTactic calls for ${result.steps} proof steps")
   }
 
   it should "execute solve proof steps instead of wasting time traversing tactics" in withMathematica { _ =>
@@ -1177,6 +1170,5 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(List(listener)))
     val result = proveBy(s, solve(1))
-    println(s"$recursiveCalls interpreter executeTactic calls for ${result.steps} proof steps")
   }
 }
