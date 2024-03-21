@@ -11,7 +11,9 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{Context, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tagobjects.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable._
 
@@ -20,7 +22,7 @@ import scala.collection.immutable._
  * @author
  *   Andre Platzer
  */
-class RandomContextTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+class RandomContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   private val randomTrials = 400
   private val randomReps = 10
   private val randomComplexity = 6

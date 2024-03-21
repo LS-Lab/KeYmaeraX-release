@@ -10,14 +10,15 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
  * Random Provable constructions
  * @author
  *   Andre Platzer
  */
-class RandomProvableTest extends FlatSpec with Matchers {
+class RandomProvableTest extends AnyFlatSpec with Matchers {
   Configuration.setConfiguration(FileConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 40000

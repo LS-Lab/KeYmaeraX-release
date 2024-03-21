@@ -7,10 +7,11 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /** Created by nfulton on 6/12/15. */
-class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
+class KeYmaeraXAxiomParserTests extends AnyFlatSpec with Matchers {
   "Axiom parser" should "parse a formula inside an axiom box" in {
     val input = """
                   |Axiom "This is an axiom"

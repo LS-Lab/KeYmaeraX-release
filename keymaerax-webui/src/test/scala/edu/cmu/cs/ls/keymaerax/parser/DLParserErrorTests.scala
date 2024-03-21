@@ -12,12 +12,14 @@ import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import scala.collection.immutable._
 
 class DLParserErrorTests
-    extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
+    extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

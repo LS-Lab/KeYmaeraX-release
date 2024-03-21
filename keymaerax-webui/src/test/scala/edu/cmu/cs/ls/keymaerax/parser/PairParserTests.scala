@@ -11,8 +11,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks._
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -24,7 +26,7 @@ import scala.collection.immutable._
  *   Andre Platzer
  */
 @SummaryTest
-class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   Configuration.setConfiguration(FileConfiguration)
 
   private val pp = KeYmaeraXPrettyPrinter

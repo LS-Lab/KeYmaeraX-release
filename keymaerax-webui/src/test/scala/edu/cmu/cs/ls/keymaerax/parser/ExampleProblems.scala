@@ -5,19 +5,20 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.OptionValues._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
-import scala.collection.immutable.Map
 import scala.collection.mutable.ListBuffer
 
 /** @author Nathan Fulton */
-class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(

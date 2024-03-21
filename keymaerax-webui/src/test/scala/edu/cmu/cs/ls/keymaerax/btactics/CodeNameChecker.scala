@@ -5,18 +5,16 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.bellerophon.NamedBelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedBelleExpr}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 
-import scala.collection.immutable.Range
+import scala.reflect.runtime.universe.typeTag
 import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe.{typeTag, MethodSymbolTag}
 
 /**
  * Tests code names of tactics and AxiomInfo for compatibility for TacticExtraction.

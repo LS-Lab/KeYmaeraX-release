@@ -8,13 +8,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, ProofTree}
+import edu.cmu.cs.ls.keymaerax.hydra.DBAbstractionObj
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Ignore, Matchers}
+import org.scalatest.Ignore
 
 import scala.collection.immutable._
 

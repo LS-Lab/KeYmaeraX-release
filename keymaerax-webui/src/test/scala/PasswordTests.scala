@@ -1,17 +1,18 @@
-import edu.cmu.cs.ls.keymaerax.hydra.Password
 /*
  * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
  * See LICENSE.txt for the conditions of this license.
  */
 
-import org.scalatest.{FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.hydra.Password
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
  * For debugging cross-platform password hashing inconsistencies.
  *
  * Created by bbohrer on 1/12/16.
  */
-class PasswordTests extends FlatSpec with Matchers {
+class PasswordTests extends AnyFlatSpec with Matchers {
   "Password hashing" should "have the same result on all platforms" in {
     val password = "guest".toCharArray
     val iterations = 10000

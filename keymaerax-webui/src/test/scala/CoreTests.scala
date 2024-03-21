@@ -5,17 +5,19 @@
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
-import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable._
 import scala.language.implicitConversions
 
 @CheckinTest @SummaryTest
-class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+class CoreTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = { Configuration.setConfiguration(FileConfiguration) }
 

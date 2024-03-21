@@ -5,8 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.File
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{
   InterpreterConsistencyListener,
   PrintProgressListener,
@@ -16,24 +14,28 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{
 }
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{JLinkMathematicaLink, Mathematica, QETacticTool, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, M2KConverter}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest._
 import org.scalatest.concurrent.{Signaler, TimeLimitedTests, TimeLimits}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time._
+import org.scalatest.{AppendedClues, BeforeAndAfterAll, BeforeAndAfterEach, PrivateMethodTester}
 
+import java.io.File
 import scala.collection.immutable._
 
 /**
@@ -47,7 +49,7 @@ import scala.collection.immutable._
  *     withTactics/withMathematica/withZ3 on the test to register tactics for only those tests)
  */
 class TacticTestBase(registerAxTactics: Option[String] = None)
-    extends FlatSpec
+    extends AnyFlatSpec
     with Matchers
     with BeforeAndAfterEach
     with BeforeAndAfterAll

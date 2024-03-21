@@ -5,24 +5,23 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => CorePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks._
-
-import scala.collection.immutable.Map
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 /**
  * Created by smitsch on 1/8/15.
  * @author
  *   Stefan Mitsch
  */
-class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class ParsePrintParseTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   private val randomTrials = 20
   private val randomComplexity = 25
   private val rand = new RandomFormula()

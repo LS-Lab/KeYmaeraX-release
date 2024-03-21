@@ -7,15 +7,17 @@ package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Variable}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /** Tests expression, term, formula, program, sequent augmentors. */
-class AugmentorsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class AugmentorsTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 
   override protected def beforeEach(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

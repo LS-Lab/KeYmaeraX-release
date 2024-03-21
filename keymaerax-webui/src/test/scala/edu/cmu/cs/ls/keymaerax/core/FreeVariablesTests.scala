@@ -5,14 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
-
-import scala.collection.immutable.Set
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.OptionValues._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 /**
  * Tests free variables
@@ -24,7 +24,7 @@ import org.scalatest.OptionValues._
  *   Ran Ji
  */
 @SummaryTest
-class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class FreeVariablesTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   private def V(s: String) = Variable(s, None, Real)
 
   override def beforeAll(): Unit = { Configuration.setConfiguration(FileConfiguration) }

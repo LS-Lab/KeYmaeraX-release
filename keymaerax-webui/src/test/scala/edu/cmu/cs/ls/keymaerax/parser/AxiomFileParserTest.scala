@@ -5,18 +5,18 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, PrivateMethodTester}
-
-import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, PrivateMethodTester}
 
 /** @author Nathan Fulton */
 @CheckinTest
-class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
+class AxiomFileParserTest extends AnyFlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
 
   private val loadAxiomString = PrivateMethod[String](Symbol("loadAxiomString"))
 

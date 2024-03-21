@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.tagobjects.CoverageTest
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable._
 
@@ -18,7 +19,7 @@ import scala.collection.immutable._
  *   Andre Platzer
  */
 @CheckinTest
-class ExpressionTests extends FlatSpec with Matchers {
+class ExpressionTests extends AnyFlatSpec with Matchers {
   "Expressions" should "refuse empty names" in {
     a[CoreException] shouldBe thrownBy(Variable("", None, Real))
     a[CoreException] shouldBe thrownBy(new Function("", None, Unit, Real))

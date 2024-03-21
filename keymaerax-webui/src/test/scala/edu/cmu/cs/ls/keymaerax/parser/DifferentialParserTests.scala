@@ -5,14 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, PrivateMethodTester}
-
-import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, PrivateMethodTester}
 
 /**
  * Tests for ContEvolve -> NFContEvolve refactoring. Created by nfulton on 1/2/15.
@@ -21,7 +21,7 @@ import scala.collection.immutable.Map
  * @author
  *   Stefan Mitsch
  */
-class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
+class DifferentialParserTests extends AnyFlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(

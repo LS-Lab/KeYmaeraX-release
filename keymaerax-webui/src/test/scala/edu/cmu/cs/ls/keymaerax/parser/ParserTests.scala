@@ -16,12 +16,14 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import scala.collection.immutable._
 
-class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
+class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(

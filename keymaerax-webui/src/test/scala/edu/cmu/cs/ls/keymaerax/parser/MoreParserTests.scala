@@ -5,10 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
  * Created by nfulton on 2/23/15.
@@ -16,7 +18,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
  * @author
  *   Nathan Fulton
  */
-class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class ArithmeticParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 
   private val one = Number(1)
   private val two = Number(2)

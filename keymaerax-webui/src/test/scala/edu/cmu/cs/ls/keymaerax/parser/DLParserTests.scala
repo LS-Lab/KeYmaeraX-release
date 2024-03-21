@@ -12,7 +12,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.pointAt
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import scala.collection.mutable.ListBuffer
 
@@ -21,7 +23,7 @@ import scala.collection.mutable.ListBuffer
  * @author
  *   James Gallicchio
  */
-class DLParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
+class DLParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

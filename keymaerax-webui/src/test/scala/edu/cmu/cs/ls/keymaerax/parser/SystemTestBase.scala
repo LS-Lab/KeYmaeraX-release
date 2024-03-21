@@ -5,20 +5,22 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerator
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.LoneElement._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
  * Base class for KeYmaera X system tests without tactics need.
  * @see
  *   [[edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase]]
  */
-class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
+class SystemTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Test setup */
   override def beforeEach(): Unit = {

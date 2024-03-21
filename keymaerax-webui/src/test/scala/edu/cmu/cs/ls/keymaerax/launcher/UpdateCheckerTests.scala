@@ -7,7 +7,9 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.Version
 import edu.cmu.cs.ls.keymaerax.Version.VersionString
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
  * Tests the update checker string->version conversion.
@@ -16,7 +18,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
  * @author
  *   Nathan Fulton
  */
-class UpdateCheckerTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class UpdateCheckerTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 
   // versions in ascending order
   private val versionStrings = ("4.0", VersionString(4, 0, -1, None, None)) ::

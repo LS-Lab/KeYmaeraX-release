@@ -4,19 +4,16 @@
  */
 
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{USubstTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
+import org.scalatest.PrivateMethodTester
 import testHelper.CustomAssertions.withSafeClue
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, PrivateMethodTester}
 
-import scala.collection.immutable.{List, Seq, Set}
 import scala.util.Random
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
 
 /**
  * Created by rjcn on 01/09/15.

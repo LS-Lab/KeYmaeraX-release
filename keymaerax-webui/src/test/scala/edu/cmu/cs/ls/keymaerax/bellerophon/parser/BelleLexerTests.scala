@@ -5,10 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /** @author Nathan Fulton */
-class BelleLexerTests extends FlatSpec with Matchers {
+class BelleLexerTests extends AnyFlatSpec with Matchers {
   val testCases = List(
     ("nil", List(IDENT("nil"))),
     ("nil & nil", List(IDENT("nil"), DEPRECATED_SEQ_COMBINATOR, IDENT("nil"))),

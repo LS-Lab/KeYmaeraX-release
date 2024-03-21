@@ -4,14 +4,15 @@
  */
 
 import edu.cmu.cs.ls.keymaerax.infrastruct.TreeForm._
-import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
  * Tests for algorithms that compare terms according to different measures of complexity. Created by bbohrer on
  * 10/28/15.
  */
-class TermOrderingTests extends FlatSpec with Matchers {
+class TermOrderingTests extends AnyFlatSpec with Matchers {
   def O(s: String): TermSymbol = Operator(s, None)
 
   val testPreference = List("+", "-", "*", "/", "^")

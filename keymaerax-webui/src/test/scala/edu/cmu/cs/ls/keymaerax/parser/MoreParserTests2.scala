@@ -11,12 +11,14 @@ import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
 import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import scala.collection.immutable._
 
 /** More tests for KeYmaeraXParser */
-class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   private val x = Variable("x")
   private val y = Variable("y")
   private val z = Variable("z")

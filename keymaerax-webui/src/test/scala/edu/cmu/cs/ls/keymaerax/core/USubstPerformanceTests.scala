@@ -5,13 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Statistics
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SlowTest, USubstTest}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import testHelper.CustomAssertions.withSafeClue
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
 import scala.concurrent.duration.Duration
@@ -22,7 +24,7 @@ import scala.concurrent.duration.Duration
  *   Andre Platzer
  */
 @USubstTest @SlowTest
-class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class USubstPerformanceTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val deterministicComplexity = 10
 

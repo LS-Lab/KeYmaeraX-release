@@ -5,9 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.codegen
 
-import java.io.{File, FileWriter}
-import org.scalatest.Matchers._
+import org.scalatest.Assertions.withClue
+import org.scalatest.matchers.should.Matchers._
 
+import java.io.{File, FileWriter}
 import scala.collection.mutable.ListBuffer
 
 /**

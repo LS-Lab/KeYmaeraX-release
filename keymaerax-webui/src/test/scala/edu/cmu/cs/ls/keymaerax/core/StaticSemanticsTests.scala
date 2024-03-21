@@ -10,7 +10,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tagobjects.{CoverageTest, SlowTest, SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable._
@@ -22,7 +23,7 @@ import scala.collection.immutable._
  *   Andre Platzer
  */
 @CheckinTest
-class StaticSemanticsTests extends FlatSpec with Matchers {
+class StaticSemanticsTests extends AnyFlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   private val randomTrials = 1000
   private val randomComplexity = 12

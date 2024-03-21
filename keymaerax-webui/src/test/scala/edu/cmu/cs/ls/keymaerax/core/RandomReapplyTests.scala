@@ -9,7 +9,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, CoverageTest}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable
 
@@ -23,7 +24,7 @@ import scala.collection.immutable
  *   Andre Platzer
  */
 @CoverageTest @CheckinTest
-class RandomReapplyTests extends FlatSpec with Matchers {
+class RandomReapplyTests extends AnyFlatSpec with Matchers {
   val randomTrials = 4000
   val randomComplexity = 30
   val rand = new RandomFormula()

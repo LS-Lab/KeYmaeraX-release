@@ -5,13 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class UnificationToolsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class UnificationToolsTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 
   override protected def beforeEach(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

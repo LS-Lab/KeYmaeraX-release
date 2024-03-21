@@ -5,15 +5,17 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
-import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
-
-import scala.collection.immutable._
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+
+import scala.collection.immutable._
 
 /**
  * Test Provable constructions
@@ -23,7 +25,7 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
  *   more exhaustive tests needed
  */
 @CheckinTest @SummaryTest
-class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
+class ProvableTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(

@@ -11,9 +11,11 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tagobjects.{SlowTest, SummaryTest, TodoTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.PrivateMethodTester
 import org.scalatest.concurrent.{Signaler, TimeLimits}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time._
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
 import scala.collection.immutable._
 
@@ -22,7 +24,7 @@ import scala.collection.immutable._
  * @author
  *   Andre Platzer
  */
-class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester with TimeLimits {
+class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTester with TimeLimits {
   Configuration.setConfiguration(FileConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   KeYmaeraXTool.init(Map())

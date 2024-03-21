@@ -11,9 +11,9 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => _, _}
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => _}
 import org.scalactic.Equality
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 
 case class TotalizerTestCase(name: String, model: Statement, sandbox: Statement, fallback: Option[Statement] = None) {
   def prettyString: String = s"$name expected sandbox:\n$sandbox\n but got:\n$model"

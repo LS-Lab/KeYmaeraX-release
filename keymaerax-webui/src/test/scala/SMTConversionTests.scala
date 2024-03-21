@@ -3,21 +3,21 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
-
-import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 /**
  * Created by ran on 3/23/15.
  * @author
  *   Ran Ji
  */
-class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class SMTConversionTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

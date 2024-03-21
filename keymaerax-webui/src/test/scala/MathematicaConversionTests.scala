@@ -4,27 +4,28 @@
  */
 
 import com.wolfram.jlink.Expr
-import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, Parser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, Parser}
 import edu.cmu.cs.ls.keymaerax.tools._
-
-import java.math.{BigDecimal, BigInteger}
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{
   BaseKeYmaeraMathematicaBridge,
   JLinkMathematicaLink,
   UncheckedBaseK2MConverter,
   UncheckedBaseM2KConverter,
 }
-import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
 import edu.cmu.cs.ls.keymaerax.tools.qe.ExprFactory._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
+import java.math.{BigDecimal, BigInteger}
 import scala.collection.immutable._
 
-class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   private lazy val mathematicaConfig: Map[String, String] = Map(
     "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),

@@ -9,7 +9,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tagobjects.SlowTest
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable._
 import scala.collection.mutable
@@ -23,7 +24,7 @@ import scala.collection.mutable
  *   Andre Platzer
  */
 @CheckinTest
-class HashTests extends FlatSpec with Matchers {
+class HashTests extends AnyFlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 1000
   val randomComplexity = 25

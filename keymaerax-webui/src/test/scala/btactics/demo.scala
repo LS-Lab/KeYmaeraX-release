@@ -7,14 +7,14 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Sequent}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import scala.collection.immutable.IndexedSeq
-import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /** Created by nfulton on 11/3/15. */
-class demo extends FlatSpec with Matchers {
+class demo extends AnyFlatSpec with Matchers {
   val listener = new IOListener() {
     override def begin(input: BelleValue, expr: BelleExpr): Unit = { println(expr.getClass) }
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
