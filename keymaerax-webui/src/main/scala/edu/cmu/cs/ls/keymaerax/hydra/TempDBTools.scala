@@ -129,11 +129,19 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       constructGlobalProvable = false,
     )
     val listeners = listener :: Nil ++ additionalListeners
-    BelleInterpreter.setInterpreter(interpreter(listeners))
-    BelleInterpreter(
-      t,
-      BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs)),
-    ) match {
+
+    val result =
+      try {
+        BelleInterpreter.setInterpreter(interpreter(listeners))
+        BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula], entry.defs)))
+      } finally {
+        // The TraceRecordingListener has a reference to the db. When the interpreter is killed (e.g. by another call to
+        // BelleInterpreter.setInterpreter later), this can cause errors if the db has been closed in the meantime.
+        // Because of this, we unset (and thereby kill) the interpreter here while the db is still valid.
+        BelleInterpreter.unsetInterpreter()
+      }
+
+    result match {
       case BelleProvable(provable, _) =>
         assert(
           entry.defs.exhaustiveSubst(provable.conclusion) == expectedSubstConclusion,
