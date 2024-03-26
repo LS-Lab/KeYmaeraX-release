@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{ReflectiveExpressionBuilder, SaturateTactic}
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{DLBelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
