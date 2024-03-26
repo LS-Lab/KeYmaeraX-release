@@ -33,8 +33,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
 
       val (failedModels, succeededModels) = archiveEntries
         .foldLeft((List[String](), List[(String, Int)]()))({ case ((failedImports, succeededImports), entry) =>
-          val result = DatabasePopulator
-            .importModel(db, userId, prove = false)(DatabasePopulator.toTutorialEntry(entry))
+          val result = DatabasePopulator.importModel(db, userId)(DatabasePopulator.toTutorialEntry(entry))
           (failedImports ++ result.toSeq, succeededImports ++ result.left.toSeq)
         })
       if (failedModels.isEmpty) {
@@ -55,7 +54,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
           .getOrElse("<anonymous>")
 
         val entry = TutorialEntry(entryName, archiveText, None, None, None, List.empty)
-        DatabasePopulator.importModel(db, userId, prove = false)(entry) match {
+        DatabasePopulator.importModel(db, userId)(entry) match {
           case Left((_, id)) => ModelUploadResponse(Some(id.toString), Some(e.getMessage)) :: Nil
           case _ => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
         }

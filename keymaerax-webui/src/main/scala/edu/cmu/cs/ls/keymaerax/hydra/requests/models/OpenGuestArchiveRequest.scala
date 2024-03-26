@@ -21,7 +21,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
       if (!userExists) db.createUser(userId, pwd, "3")
 
       val models = db.getModelList(userId)
-      DatabasePopulator.importKya(db, userId, uri, prove = false, models)
+      DatabasePopulator.importKya(db, userId, uri, models)
 
       // @todo template engine, e.g., twirl, or at least figure out how to parse from a string
       val html = {

@@ -128,7 +128,7 @@ object HyDRAInitializer extends Logging {
               ""
             case Some(user) =>
               LoadingDialogFactory().addToStatus(15, Some("Importing archive..."))
-              val result = DatabasePopulator.importKya(database, user, archive.toString, prove = false, List.empty)
+              val result = DatabasePopulator.importKya(database, user, archive.toString, List.empty)
               result.succeeded.headOption match {
                 case Some((_, id)) => database.getProofsForModel(id).headOption match {
                     case Some(p) => proofUrl(user, p.proofId)

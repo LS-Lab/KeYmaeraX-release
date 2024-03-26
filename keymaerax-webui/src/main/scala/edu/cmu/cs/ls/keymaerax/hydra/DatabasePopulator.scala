@@ -44,17 +44,11 @@ object DatabasePopulator extends Logging {
   /** Succeeded imports: model name and created Id, failed: model name. */
   case class ImportResult(succeeded: List[(String, Int)], failed: List[String])
 
-  /** Imports an archive from URL. Optionally proves the models when tactics are present. */
-  def importKya(
-      db: DBAbstraction,
-      user: String,
-      url: String,
-      prove: Boolean,
-      exclude: List[ModelPOJO],
-  ): ImportResult = {
+  /** Imports an archive from URL. */
+  def importKya(db: DBAbstraction, user: String, url: String, exclude: List[ModelPOJO]): ImportResult = {
     val result = readKyx(url)
       .filterNot(e => exclude.exists(_.name == e.name))
-      .map(DatabasePopulator.importModel(db, user, prove = false))
+      .map(DatabasePopulator.importModel(db, user))
     ImportResult(result.flatMap(_.left.toOption), result.flatMap(_.toOption))
   }
 
@@ -135,9 +129,7 @@ object DatabasePopulator extends Logging {
    * Imports a model with info into the database; optionally records a proof obtained using `tactic`. Returns
    * Left(modelName, ID) on success, Right(modelName) on failure
    */
-  def importModel(db: DBAbstraction, user: String, prove: Boolean)(
-      entry: TutorialEntry
-  ): Either[(String, Int), String] = {
+  def importModel(db: DBAbstraction, user: String)(entry: TutorialEntry): Either[(String, Int), String] = {
     val now = Calendar.getInstance()
 
     def doImport(entry: TutorialEntry): Either[(String, Int), String] = {
@@ -157,9 +149,7 @@ object DatabasePopulator extends Logging {
             .tactic
             .foreach({ case (tname, ttext, _) =>
               logger.info("Importing proof...")
-              val proofId =
-                db.createProofForModel(modelId, tname, "Proof from archive", now.getTime.toString, Some(ttext))
-              if (prove) executeTactic(db, entry.model, proofId, ttext)
+              db.createProofForModel(modelId, tname, "Proof from archive", now.getTime.toString, Some(ttext))
               logger.info("...done")
             })
           Left(entry.name -> modelId)
