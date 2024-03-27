@@ -255,14 +255,4 @@ object DatabasePopulator extends Logging {
       recordInternal = false,
     )
   }
-
-  /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */
-  def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
-    val entry = ArchiveParser(model).head
-    val interpreter = prepareInterpreter(db, proofId, entry.defs)
-    val parsedTactic = BelleParser.parseBackwardsCompatible(tactic, entry.defs)
-    interpreter(parsedTactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(model))))
-    interpreter.kill()
-  }
-
 }

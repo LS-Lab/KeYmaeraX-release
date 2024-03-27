@@ -987,24 +987,6 @@ object Proofs {
       }
     }
 
-  val runBelleTerm: SessionToken => Route = (t: SessionToken) =>
-    path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "tactics" / "runBelleTerm") {
-      (userId, proofId, nodeId) =>
-        {
-          pathEnd {
-            post {
-              entity(as[String]) { params =>
-                {
-                  val term = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
-                  val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term, None)
-                  completeRequest(request, t)
-                }
-              }
-            }
-          }
-        }
-    }
-
   val changeProofName: SessionToken => Route = (t: SessionToken) =>
     path("proofs" / "user" / Segment / Segment / "name" / Segment) { (userId, proofId, newName) =>
       {

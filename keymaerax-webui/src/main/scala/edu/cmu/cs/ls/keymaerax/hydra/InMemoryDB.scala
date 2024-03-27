@@ -298,8 +298,6 @@ class InMemoryDB extends DBAbstraction {
   /** Deletes execution steps. */
   override def deleteExecutionStep(proofId: Int, stepId: Int): Unit = executionSteps.remove(stepId)
 
-  def printStats(): Unit = {}
-
   def proofSteps(executionId: Int): List[ExecutionStepPOJO] = synchronized {
     executionSteps
       .values
