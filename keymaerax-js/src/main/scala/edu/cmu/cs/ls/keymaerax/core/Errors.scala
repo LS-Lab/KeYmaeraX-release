@@ -57,6 +57,8 @@ case class RenamingClashException(msg: String, ren: String/*URename*/, e: String
 case class SkolemClashException(msg: String, clashedNames:SetLattice[Variable], vars:String/*Seq[Variable]*/, s:String/*Sequent*/)
   extends CriticalCoreException(msg + " " + clashedNames + "\nwhen skolemizing variables " + vars + "\nin " + s)
 
+case class MalformedProgramException(dp: DifferentialProgram)
+  extends CriticalCoreException(s"Found DifferentialProgram where Program was expected: $dp")
 
 // mediocre prover kernel exceptions whose presence does not indicate logical errors but still malfunctioning uses
 
