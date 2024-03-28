@@ -328,9 +328,12 @@ case class Declaration(decls: Map[Name, Signature]) {
   def project(e: List[Expression], taboo: Set[Name] = Set.empty): Declaration = {
     val syms = e.flatMap(_.baseSymbols).map(s => Name(s.name, s.index)).toSet -- taboo
     Declaration(decls.flatMap({
-      case (_, Signature(_, _, _, Left(_), _)) => Map.empty[Name, Signature]
+      case e @ (name, Signature(_, _, args, Left(int), _)) =>
+        if (syms.contains(name)) project(List(int), taboo ++ args.map(_.map(_._1)).getOrElse(List.empty)).decls + e
+        else Map.empty[Name, Signature]
       case e @ (name, Signature(_, _, args, Right(int), _)) =>
         // @note implicit definitions have not only args but also bind their own name
+        // Otherwise, the resulting Declaration will have a duplicate signature for `name`
         if (syms.contains(name)) int
           .map(i => project(List(i), taboo ++ args.map(_.map(_._1)).getOrElse(List.empty) + name))
           .getOrElse(Declaration(Map.empty))

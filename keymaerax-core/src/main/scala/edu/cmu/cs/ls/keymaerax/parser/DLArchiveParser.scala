@@ -106,13 +106,16 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def packageDecl[$: P]: P[String] = P(("package" ~ packageIdent ~~ ("." ~~ packageIdent).repX).?.!)
 
   /** Parse a list of archive entries */
-  def archiveEntries[$: P]: P[List[ParsedArchiveEntry]] = for {
-    // @todo add package name to identifier names
-    pkg <- Start ~ packageDecl
-    pkgDefs <- DLParserUtils.captureWithValue(packageDefinitions(pkg)).?
-    // @todo add only imported package definitions
-    entries <- DLParserUtils.captureWithValue(archiveEntry(pkgDefs.map(_._1))).rep(1) ~ End
-  } yield entries.map({ case (entry, content) => entry.withFileContent(pkgDefs.map(_._2).getOrElse("") + content) }).toList
+  def archiveEntries[$: P]: P[List[ParsedArchiveEntry]] =
+    for {
+      // @todo add package name to identifier names
+      pkg <- Start ~ packageDecl
+      pkgDefs <- DLParserUtils.captureWithValue(packageDefinitions(pkg)).?
+      // @todo add only imported package definitions
+      entries <- DLParserUtils.captureWithValue(archiveEntry(pkgDefs.map(_._1))).rep(1) ~ End
+    } yield entries
+      .map({ case (entry, content) => entry.withFileContent(pkgDefs.map(_._2 + "\n").getOrElse("") + content) })
+      .toList
 
   def definitionsPackage[$: P]: P[Declaration] = for {
     pkg <- Start ~ packageDecl
@@ -168,9 +171,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   }
 
   /** Parses a single archive entry */
-  def archiveEntry[$: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = DLParserUtils
-    .captureWithValue(archiveEntryNoSource(shared))
-    .map({ case (e, s) => e.copy(fileContent = s.trim) })
+  def archiveEntry[$: P](shared: Option[Declaration]): P[ParsedArchiveEntry] =
+    DLParserUtils.captureWithValue(archiveEntryNoSource(shared)).map({ case (e, s) => e.copy(fileContent = s.trim) })
 
   def archiveStart[$: P]: P[String] = P(
     ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise")
@@ -236,22 +238,27 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    *   - `import path.to.lib.*;`
    */
   def declOrDef[$: P](curDecls: Declaration): P[List[(Name, Signature)]] =
-    (implicitDef(curDecls) ~ ";" | progDef.map(p => p :: Nil) | declPartList.flatMap(decls => {
-      val redefined = decls.map(_._1).toSet.intersect(curDecls.decls.keySet)
-      if (redefined.isEmpty) {
-        Pass(decls.map({
-          case (n, s @ Signature(_, _, _, Left(i), _)) => (n, s.copy(interpretation = Left(curDecls.implicitSubst(i))))
-          case d => d
-        })) ~ ";"./ |
-          (decls match {
-            case (id, sig @ Signature(_, _, args, Right(None), _)) :: Nil => ("="./ ~ term(true) ~ ";")
-                .map(e => (id, sig.copy(interpretation = Right(Some(curDecls.implicitSubst(e))))) :: Nil) |
-                ("<->" ~ formula ~ ";")
-                  .map(f => (id, sig.copy(interpretation = Right(Some(curDecls.implicitSubst(f))))) :: Nil)
-            case _ => Fail
-          })
-      } else { Fail.opaque("Unique name (" + redefined.map(_.prettyString).mkString(",") + " not unique)") }
-    }) | importDef)
+    (
+      implicitDef(curDecls) ~ ";" | progDef.map(p => p :: Nil) |
+        declPartList
+          .flatMap(decls => {
+            val redefined = decls.map(_._1).toSet.intersect(curDecls.decls.keySet)
+            if (redefined.isEmpty) {
+              Pass(decls.map({
+                case (n, s @ Signature(_, _, _, Left(i), _)) =>
+                  (n, s.copy(interpretation = Left(curDecls.implicitSubst(i))))
+                case d => d
+              })) ~ ";"./ |
+                (decls match {
+                  case (id, sig @ Signature(_, _, args, Right(None), _)) :: Nil => ("="./ ~ term(true) ~ ";")
+                      .map(e => (id, sig.copy(interpretation = Right(Some(curDecls.implicitSubst(e))))) :: Nil) |
+                      ("<->" ~ formula ~ ";")
+                        .map(f => (id, sig.copy(interpretation = Right(Some(curDecls.implicitSubst(f))))) :: Nil)
+                  case _ => Fail
+                })
+            } else { Fail.opaque("Unique name (" + redefined.map(_.prettyString).mkString(",") + " not unique)") }
+          }) | importDef
+    )
 
   private def namedTupleDo(
       ty1: Sort,

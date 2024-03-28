@@ -850,6 +850,24 @@ class DLArchiveParserTests extends TacticTestBase {
     entry.fileContent shouldBe input.trim()
   }
 
+  it should "parse shared built-in interpreted functions" in {
+    val input = """Definitions import kyx.math.abs; End.
+                  |
+                  |ArchiveEntry "Entry 1"
+                  | Problem abs(-5)>0 End.
+                  |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.model shouldBe "abs(-5)>0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe """Definitions import kyx.math.abs; End.
+                                 |ArchiveEntry "Entry 1"
+                                 | Problem abs(-5)>0 End.
+                                 |End.""".stripMargin.trim()
+  }
+
   it should "parse an annotation that uses the reserved function symbol old" in {
     val input = """ArchiveEntry "Entry 1"
                   | ProgramVariables Real x; End.
