@@ -64,7 +64,8 @@ object UpdateChecker extends Logging {
    */
   def needDatabaseUpgrade(databaseVersion: String): Option[Boolean] = {
     minDBVersion match {
-      case Some(oldestAcceptableDBVersion) => Some(Version(databaseVersion) < Version(oldestAcceptableDBVersion))
+      case Some(oldestAcceptableDBVersion) =>
+        Some(Version.parse(databaseVersion) < Version.parse(oldestAcceptableDBVersion))
       case None => None
     }
   }

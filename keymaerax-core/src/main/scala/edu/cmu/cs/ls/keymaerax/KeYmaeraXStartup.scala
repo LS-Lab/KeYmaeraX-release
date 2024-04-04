@@ -19,8 +19,8 @@ object KeYmaeraXStartup {
   }): Unit = {
     try {
       // Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
-      val cacheVersion = LemmaDBFactory.lemmaDB.version()
-      if (Version(cacheVersion) < Version(edu.cmu.cs.ls.keymaerax.core.VERSION)) LemmaDBFactory.lemmaDB.deleteDatabase()
+      val cacheVersion = Version.parse(LemmaDBFactory.lemmaDB.version())
+      if (cacheVersion < Version.CURRENT) LemmaDBFactory.lemmaDB.deleteDatabase()
       KeYmaeraXTool.init(Map(
         KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
         KeYmaeraXTool.INTERPRETER -> ExhaustiveSequentialInterpreter.getClass.getSimpleName,

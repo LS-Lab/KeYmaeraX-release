@@ -138,7 +138,7 @@ object Main {
       val cacheVersion = source.mkString.replace("\n", "")
       source.reader().close() // Ensure that the associated reader is closed so that we can delete the file if need to.
       try {
-        if (Version(cacheVersion) != Version(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
+        if (Version.parse(cacheVersion) != Version.CURRENT) {
           assert(
             cacheVersionFile.delete(),
             s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath}",
