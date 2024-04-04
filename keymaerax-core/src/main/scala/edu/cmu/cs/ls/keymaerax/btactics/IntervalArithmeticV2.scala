@@ -73,7 +73,7 @@ object IntervalArithmeticV2 extends TacticProvider {
       val (la, _) = eval_ivl(prec)(bounds)(lat)
       val (_, ua) = eval_ivl(prec)(bounds)(uat)
       if (n == 0) {
-        if (la > 0 || ua < 0) (1, 1)
+        if (la > 0 || ua < 0) return (1, 1)
         else throw new IllegalArgumentException("Power [" + la + ", " + ua + "]^0 is not defined")
       }
       val lower: BigDecimal =
