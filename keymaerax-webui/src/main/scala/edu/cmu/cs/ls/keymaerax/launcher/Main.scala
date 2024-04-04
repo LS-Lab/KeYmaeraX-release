@@ -5,15 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io._
-import javax.swing.JOptionPane
-import edu.cmu.cs.ls.keymaerax.{core, Configuration, FileConfiguration, UpdateChecker, Version}
 import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
-import spray.json._
+import edu.cmu.cs.ls.keymaerax.{core, Configuration, FileConfiguration, UpdateChecker, Version}
 import spray.json.DefaultJsonProtocol._
+import spray.json._
 
-import scala.collection.immutable.List
+import java.io._
+import javax.swing.JOptionPane
+import scala.io.{Codec, Source}
 
 /**
  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]], the
@@ -199,19 +199,23 @@ object Main {
    *   similar behavior for the cache
    */
   private def exitIfDeprecated(): Unit = {
-    val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
-    launcherLog("Database version: " + databaseVersion)
+    // The version string is requested separately because it is used in a path.
+    // Converting the Version back into a string would yield a different string and thus different path.
+    val dbVersion = SQLite.versionOf(SQLite.ProdDB)
+    val dbVersionString = SQLite.versionStringOf(SQLite.ProdDB)
+
+    launcherLog(s"Database version: $dbVersionString")
     cleanupGuestData()
     LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
-    if (UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
+    if (UpdateChecker.dbUpgradeRequired(dbVersion).getOrElse(false)) {
       // @todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
-      val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$databaseVersion-*"
+      val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$dbVersionString-*"
       launcherLog("Backing up database to " + backupPath)
       val defaultName = new File(Configuration.path(Configuration.Keys.DB_PATH)).getName
       try {
         launcherLog("Upgrading database...")
-        val upgradedVersion = upgradeDatabase(databaseVersion)
-        if (UpdateChecker.needDatabaseUpgrade(upgradedVersion).getOrElse(false)) {
+        val upgradedDbVersion = upgradeDatabase(dbVersion, dbVersionString)
+        if (UpdateChecker.dbUpgradeRequired(upgradedDbVersion).getOrElse(false)) {
           val message = upgradeFailedMessage(defaultName, backupPath)
           launcherLog(message)
           JOptionPane.showMessageDialog(null, message)
@@ -259,17 +263,18 @@ object Main {
   }
 
   /** Stores a backup of the database, identifies the backup with `currentVersion` and the current system time. */
-  private def backupDatabase(currentVersion: String): Unit = {
+  private def backupDatabase(dbVersionString: String): Unit = {
     val src = new File(SQLite.ProdDB.dblocation)
-    val dest = new File(src.getAbsolutePath + "-" + currentVersion + "-" + System.currentTimeMillis())
+    val dest = new File(src.getAbsolutePath + "-" + dbVersionString + "-" + System.currentTimeMillis())
     new FileOutputStream(dest).getChannel.transferFrom(new FileInputStream(src).getChannel, 0, Long.MaxValue)
   }
 
   /**
-   * Runs the upgrade script located at `scriptUrl`. Statements (separated by ;) in the script are run in batch mode.
+   * Runs the upgrade script located at `scriptResourcePath`. Statements (separated by ;) in the script are run in batch
+   * mode.
    */
-  private def runUpgradeScript(scriptUrl: String): Unit = {
-    val script = io.Source.fromInputStream(getClass.getResourceAsStream(scriptUrl)).mkString
+  private def runUpgradeScript(scriptResourcePath: String): Unit = {
+    val script = Source.fromResource(scriptResourcePath)(Codec.UTF8).mkString
     val statements = script.split(";")
     val session = SQLite.ProdDB.sqldb.createSession()
     val conn = session.conn
@@ -288,17 +293,27 @@ object Main {
   }
 
   /** Runs auto-upgrades from the current version, returns the version after upgrade */
-  private def upgradeDatabase(currentVersion: String): String = {
-    backupDatabase(currentVersion)
-    val upgradeScripts = io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
-    val scripts = upgradeScripts.parseJson.asJsObject.fields("autoUpgrades").asInstanceOf[JsArray]
-    val currentScripts = scripts.elements.filter(_.asJsObject.fields("upgradeFrom").convertTo[String] == currentVersion)
-    if (currentScripts.nonEmpty) {
-      currentScripts
-        .map(_.asJsObject.fields("scripts").asInstanceOf[JsArray])
-        .foreach(script => script.elements.foreach(s => runUpgradeScript(s.asJsObject.fields("url").convertTo[String])))
-    }
-    SQLite.ProdDB.getConfiguration("version").config("version")
+  private def upgradeDatabase(dbVersion: Version, dbVersionString: String): Version = {
+    backupDatabase(dbVersionString)
+
+    val upgrades = Source
+      .fromResource("/sql/upgradescripts.json")(Codec.UTF8)
+      .mkString
+      .parseJson
+      .asJsObject
+      .fields("autoUpgrades")
+      .convertTo[List[JsObject]]
+      .filter(e => {
+        val versionString = e.fields("upgradeFrom").convertTo[String]
+        val version = Version.parse(versionString)
+        version == dbVersion
+      })
+
+    val scripts = upgrades.flatMap(_.fields("scripts").convertTo[List[JsObject]]).map(_.fields("url").convertTo[String])
+
+    for (script <- scripts) { runUpgradeScript(script) }
+
+    SQLite.versionOf(SQLite.ProdDB)
   }
 
   /** Returns a list of outdated guest-user created models (literal model content comparison) */

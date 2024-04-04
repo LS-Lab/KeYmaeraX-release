@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.core.VERSION
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
@@ -24,21 +23,27 @@ object UpdateChecker extends Logging {
 
   /**
    * Whether this KeYmaera X instance is using the latest version, or [[None]] if version info could not be retrieved.
+   *
+   * If this KeYmaera X instance's version number is newer than the latest version, it is also considered up-to-date.
+   * This may happen during development or testing of a new version.
    */
-  // TODO Compare using VersionString instead of == on Strings
-  lazy val upToDate: Option[Boolean] = latestVersion.map(_ == VERSION)
+  lazy val upToDate: Option[Boolean] = latestVersion.map(_ >= Version.CURRENT)
 
   /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
-  lazy val latestVersion: Option[String] = fetchLatestVersion()
+  lazy val latestVersion: Option[Version] = latestVersionInfo.map(_._2)
+
+  /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
+  lazy val latestVersionString: Option[String] = latestVersionInfo.map(_._1)
+
+  private lazy val latestVersionInfo: Option[(String, Version)] = fetchLatestVersionInfo()
 
   /** Queries [[https://keymaerax.org/version.json]] and returns the version number. */
-  // TODO Return a VersionString instead
-  private def fetchLatestVersion(): Option[String] =
+  private def fetchLatestVersionInfo(): Option[(String, Version)] =
     try {
       val uri = new URI("https://keymaerax.org/version.json")
       val timeout = Duration.ofSeconds(3)
       val versionString = fetchStringFromUri(uri, timeout).parseJson.asJsObject.fields("version").convertTo[String]
-      Some(versionString)
+      Some((versionString, Version.parse(versionString)))
     } catch { case _: Throwable => None }
 
   /**
@@ -59,23 +64,19 @@ object UpdateChecker extends Logging {
     data
   }
 
-  /**
-   * Indicates whether `databaseVersion` is outdated (i.e. older than expected by this KeYmaera X) and needs upgrading.
-   */
-  def needDatabaseUpgrade(databaseVersion: String): Option[Boolean] = {
-    minDBVersion match {
-      case Some(oldestAcceptableDBVersion) =>
-        Some(Version.parse(databaseVersion) < Version.parse(oldestAcceptableDBVersion))
-      case None => None
-    }
-  }
+  /** Indicates whether `dbVersion` is outdated (i.e. older than expected by this KeYmaera X) and needs upgrading. */
+  def dbUpgradeRequired(dbVersion: Version): Option[Boolean] = { oldestAcceptableDbVersion.map(dbVersion < _) }
 
-  private lazy val minDBVersion: Option[String] = {
+  private lazy val oldestAcceptableDbVersion: Option[Version] =
     try {
-      val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
-      val versionString = json.parseJson.asJsObject.fields("minVersion").convertTo[String]
-      logger.debug("Compatible database versions: " + versionString + "+")
-      Some(versionString)
+      val versionString = Source
+        .fromResource("/sql/upgradescripts.json")(Codec.UTF8)
+        .mkString
+        .parseJson
+        .asJsObject
+        .fields("minVersion")
+        .convertTo[String]
+
+      Some(Version.parse(versionString))
     } catch { case _: Throwable => None }
-  }
 }

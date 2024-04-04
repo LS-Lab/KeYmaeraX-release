@@ -6,6 +6,7 @@
 /** @note Code Review 2016-08-02 LemmaDB aspects only */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import edu.cmu.cs.ls.keymaerax.Version
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.core.{Formula, _}
@@ -55,6 +56,10 @@ object SQLite {
 
   private val RULENAME_BRANCH_SEPARATOR: String = "@@"
 
+  def versionStringOf(db: SQLiteDB): String = db.getConfiguration("version").config("version")
+
+  def versionOf(db: SQLiteDB): Version = Version.parse(versionStringOf(db))
+
   /** Stores lemmas in the Lemma table of the given database. */
   class UncachedSQLiteLemmaDB(db: SQLiteDB) extends LemmaDBBase {
 
@@ -99,7 +104,7 @@ object SQLite {
     final override def deleteDatabase(): Unit = db.deleteAllLemmas()
 
     /** @inheritdoc */
-    override def version(): String = db.getConfiguration("version").config("version")
+    override def version(): Version = versionOf(db)
   }
 
   /** Creates a new cached lemma DB backed by `db`. */

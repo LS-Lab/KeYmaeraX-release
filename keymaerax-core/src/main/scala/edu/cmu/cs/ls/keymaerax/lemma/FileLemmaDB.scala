@@ -14,7 +14,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 import edu.cmu.cs.ls.keymaerax.core.VERSION
 
 import java.io.{File, IOException, PrintWriter}
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, Version}
 
 import scala.reflect.io.Directory
 import scala.util.matching.Regex
@@ -120,12 +120,14 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   }
 
   /** @inheritdoc */
-  final override def version(): String = {
+  final override def version(): Version = {
     val file = new File(cachePath + File.separator + "VERSION")
-    if (!file.exists()) { "0.0" }
-    else {
-      assert(file.canRead, s"Cache VERSION file exists but is not readable: ${file.getAbsolutePath}")
-      read(file)
-    }
+    val versionStr =
+      if (!file.exists()) { "0.0" }
+      else {
+        assert(file.canRead, s"Cache VERSION file exists but is not readable: ${file.getAbsolutePath}")
+        read(file)
+      }
+    Version.parse(versionStr)
   }
 }
