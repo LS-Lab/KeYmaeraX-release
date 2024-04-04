@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra.responses.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.Response
-import spray.json.{JsFalse, JsObject, JsString, JsTrue}
+import spray.json.{JsBoolean, JsObject, JsString}
 
 class KeymaeraXVersionResponse(installedVersion: String, upToDate: Option[Boolean], latestVersion: Option[String])
     extends Response {
@@ -15,11 +15,9 @@ class KeymaeraXVersionResponse(installedVersion: String, upToDate: Option[Boolea
     "upToDate and latestVersion should both be defined, or both be undefined.",
   )
   def getJson: JsObject = upToDate match {
-    case Some(b) if b => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsTrue)
-    case Some(b) if !b =>
-      JsObject(
+    case Some(b) => JsObject(
         "keymaeraXVersion" -> JsString(installedVersion),
-        "upToDate" -> JsFalse,
+        "upToDate" -> JsBoolean(b),
         "latestVersion" -> JsString(latestVersion.get),
       )
     case None => JsObject("keymaeraXVersion" -> JsString(installedVersion))
