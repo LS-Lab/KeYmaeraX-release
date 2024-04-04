@@ -13,9 +13,6 @@ import java.time.Duration
 import scala.io.{Codec, Source}
 
 /**
- * Uses the JSON file at [[https://keymaerax.org/version.json]] to check whether a new update is available. The JSON
- * should have a field called `version` that is the version of the latest stable release.
- *
  * @author
  *   Nathan Fulton
  */
@@ -32,13 +29,34 @@ object UpdateChecker extends Logging {
   /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
   lazy val latestVersion: Option[Version] = fetchLatestVersion()
 
-  /** Queries [[https://keymaerax.org/version.json]] and returns the version number. */
+  /**
+   * Queries the [[https://github.com/LS-Lab/KeYmaeraX-release/releases GitHub releases]] and returns the latest
+   * release's tag name as version number.
+   *
+   * We might want to publish bug fix releases for older versions in-between releases for the latest version. If we just
+   * fetched the latest release, we might not get the latest version number. Because of this, more than one release is
+   * queried and the highest version number found is returned.
+   *
+   * @return
+   *   Version number of the latest release, or [[None]] if anything went wrong.
+   */
   private def fetchLatestVersion(): Option[Version] =
     try {
-      val uri = new URI("https://keymaerax.org/version.json")
+      // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
+      val owner = "LS-Lab"
+      val repo = "KeYmaeraX-release"
+      val amount = 32 // Max value according to API docs is 100
+      val uri = new URI(s"https://api.github.com/repos/$owner/$repo/releases?per_page=$amount")
+
       val timeout = Duration.ofSeconds(3)
-      val versionString = fetchStringFromUri(uri, timeout).parseJson.asJsObject.fields("version").convertTo[String]
-      Some(Version.parse(versionString))
+      val releases = fetchStringFromUri(uri, timeout).parseJson.convertTo[List[JsObject]]
+
+      releases
+        .filter(r => !r.fields("draft").convertTo[Boolean])
+        .filter(r => !r.fields("prerelease").convertTo[Boolean])
+        .map(r => r.fields("tag_name").convertTo[String])
+        .flatMap(Version.parseOption)
+        .maxOption
     } catch { case _: Throwable => None }
 
   /**

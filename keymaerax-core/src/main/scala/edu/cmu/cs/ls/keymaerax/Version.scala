@@ -44,4 +44,9 @@ object Version {
       Version(major, minor, patch)
     } catch { case _: NumberFormatException => throw new IllegalArgumentException(s"Invalid version string $s") }
   }
+
+  /** Like [[parse]] but return [[None]] if version is invalid. */
+  def parseOption(s: String): Option[Version] =
+    try { Some(parse(s)) }
+    catch { case _: IllegalArgumentException => None }
 }

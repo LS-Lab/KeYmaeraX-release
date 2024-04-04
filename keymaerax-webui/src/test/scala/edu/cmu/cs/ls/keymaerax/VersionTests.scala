@@ -70,11 +70,17 @@ class VersionTests extends AnyFlatSpec with Matchers {
   behavior of "Version"
 
   it should "correctly parse valid version strings" in {
-    for ((s, v) <- versionStrings) { Version.parse(s) shouldBe v }
+    for ((s, v) <- versionStrings) {
+      Version.parse(s) shouldBe v
+      Version.parseOption(s) shouldBe Some(v)
+    }
   }
 
   it should "throw exception on invalid version strings" in {
-    for (s <- invalidVersionStrings) { assertThrows[IllegalArgumentException] { Version.parse(s) } }
+    for (s <- invalidVersionStrings) {
+      assertThrows[IllegalArgumentException] { Version.parse(s) }
+      Version.parseOption(s) shouldBe None
+    }
   }
 
   it should "correctly compare versions" in {
