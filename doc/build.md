@@ -4,7 +4,7 @@ This is a guide to building the various artifacts this repository provides.
 
 You will need the following tools for most artifacts:
 
-- JDK 8
+- JDK 21
 - [sbt](https://www.scala-sbt.org/)
 - [Mathematica](https://www.wolfram.com/mathematica/)
   or the [Wolfram Engine](https://www.wolfram.com/engine/)
@@ -80,14 +80,16 @@ To run a quick smoke test suite, run:
 ```shell
 sbt "testOnly -- \
   -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest \
-  -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest"
+  -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest \
+  -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
 ```
 
 To run the full but lengthy test suite, run:
 
 ```shell
 sbt "test -- \
-  -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest"
+  -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest \
+  -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
 ```
 
 To leave out slower tests, run:
