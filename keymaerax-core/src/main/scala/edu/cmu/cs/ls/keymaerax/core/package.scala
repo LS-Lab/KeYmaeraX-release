@@ -45,9 +45,9 @@ import scala.collection.immutable
  *
  *   - Provides basic
  *     [[edu.cmu.cs.ls.keymaerax.core.Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable* Stored Provables as Strings]],
- * [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
- * [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
- * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]] for sets of symbols.
+ *     [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
+ *     [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
+ *     [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]] for sets of symbols.
  *
  * ==Usage Overview==
  * The KeYmaera X Kernel package provides the ''soundness-critical core of
