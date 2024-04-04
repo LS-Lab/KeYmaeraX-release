@@ -796,8 +796,9 @@ class DLParser extends Parser {
   def sequentList[$: P]: P[List[Sequent]] = P(sequent.rep(sep = ";;"./)).map(_.toList)
 
   /** sequent ::= `aformula1 :: aformula2 :: ... :: aformulan ==>  sformula1 :: sformula2 :: ... :: sformulam`. */
-  def storedSequent[_: P]: P[Sequent] = P(formula.rep(sep = "::"./) ~ "==>" ~ formula.rep(sep = "::"./))
+  def storedSequent[$: P]: P[Sequent] = P(formula.rep(sep = "::"./) ~ "==>" ~ formula.rep(sep = "::"./))
     .map({ case (ante, succ) => Sequent(ante.toIndexedSeq, succ.toIndexedSeq) })
-  def storedProvable[_: P]: P[List[Sequent]] = P(Start ~ storedSequent.rep(sep = "\\from"./) ~ "\\qed" ~ End)
+
+  def storedProvable[$: P]: P[List[Sequent]] = P(Start ~ storedSequent.rep(sep = "\\from"./) ~ "\\qed" ~ End)
     .map(_.toList)
 }
