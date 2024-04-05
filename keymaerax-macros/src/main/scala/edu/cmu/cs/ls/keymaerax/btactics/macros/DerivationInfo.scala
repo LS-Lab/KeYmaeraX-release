@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.ExprPos
 
 import scala.collection.immutable.{List, Nil}
 import scala.language.implicitConversions

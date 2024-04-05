@@ -5,11 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
-
 import scala.reflect.macros.blackbox
 
 object AnnotationCommon {
+  type ExprPos = List[Int]
+
   def toArgInfo(name: String, tpe: String, allowFresh: List[String])(implicit c: blackbox.Context): ArgInfo = {
     val first = tpe.indexOf('[')
     val last = tpe.lastIndexOf(']')

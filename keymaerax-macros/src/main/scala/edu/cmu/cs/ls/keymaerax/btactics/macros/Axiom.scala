@@ -5,8 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
+  convDI,
+  foldParams,
+  parseAIs,
+  parsePos,
+  parsePoses,
+  ExprPos,
+}
 
 import scala.annotation.StaticAnnotation
 import scala.language.experimental.macros
@@ -82,10 +88,6 @@ class Axiom(
 ) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
   def macroTransform(annottees: Any*): Any = macro AxiomImpl.apply
-}
-
-object Axiom {
-  type ExprPos = List[Int]
 }
 
 class AxiomImpl(val c: whitebox.Context) {

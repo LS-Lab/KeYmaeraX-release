@@ -5,7 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
+  convAIs,
+  convDI,
+  convSymbol,
+  parseAIs,
+  parseSequent,
+  parseSequents,
+}
 
 import scala.annotation.StaticAnnotation
 import scala.language.experimental.macros
