@@ -26,10 +26,6 @@ ThisBuild / scalacOptions ++= {
     // Silence type erasure warnings
     "cat=unchecked&msg=erasure:s",
 
-    // Silence warning about ClassfileAnnotation in macro subproject
-    // TODO Remove when preparing macros for Scala 3
-    "origin=scala.annotation.ClassfileAnnotation:s",
-
     // Default configuration, see -Wconf:help
     "cat=deprecation:ws",
     "cat=feature:ws",
