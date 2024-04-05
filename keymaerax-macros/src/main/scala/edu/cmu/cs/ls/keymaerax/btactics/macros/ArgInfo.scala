@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-/** Information on the arguments, their names and sorts, that an axiom/rule/tactic requires as input. */
+/** Information on the arguments that an axiom/rule/tactic requires as input. */
 sealed trait ArgInfo {
 
   /** Argument sort. */

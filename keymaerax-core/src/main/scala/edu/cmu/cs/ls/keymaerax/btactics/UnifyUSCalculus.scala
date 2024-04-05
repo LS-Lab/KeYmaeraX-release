@@ -3312,7 +3312,7 @@ trait UnifyUSCalculus {
    *   - 'linear: No symbol can occur twice in the shape. If a symbol does occur twice, it is assumed that the identical
    *     match is found in all use cases, which is a strong assumption and can lead to unpredictable behavior otherwise.
    *     Using [[LinearMatcher]]
-   *   - 'surjlinear: Both 'surject and 'linear Using [[UniformMatcher]] but [[LinearMatcher]] would be okay/
+   *   - 'surjlinear: Both 'surjective and 'linear. Using [[UniformMatcher]] but [[LinearMatcher]] would be okay.
    *   - 'surjlinearpretend: An axiom that pretends to be surjective and linear even if it isn't necessarily so.
    *   - 'full: General unification [[UnificationMatch]] is the default fallback.
    * @see

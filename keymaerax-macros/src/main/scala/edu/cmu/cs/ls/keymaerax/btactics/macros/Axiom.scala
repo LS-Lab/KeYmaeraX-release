@@ -19,7 +19,7 @@ import scala.reflect.macros.whitebox
  * @param names
  *   Display names to render in the user interface. If two names are given, the first is Unicode and the second ASCII.
  *   If one ASCII name is given, it is also used as the Unicode name. Unicode names are useful for display to end users,
- *   ASCII names appear to be better-supported in error messages. Optional, defaults to codeName
+ *   ASCII names appear to be better-supported in error messages. Optional, defaults to `codeName`
  * @param codeName
  *   You usually don't need to specify this argument, especially for axioms. Permanent unique code name used to invoke
  *   this axiom in tactics as a string and for Lemma storage. `codeName` will be inferred from the val that is annotated
@@ -30,10 +30,11 @@ import scala.reflect.macros.whitebox
  *   Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to Unicode
  *   name
  * @param conclusion
- *   Formula string displayed for axioms as html with unicode in the user interface For axioms with (non-position)
- *   inputs, the conclusion must mention each input. Sequent syntax is optionally supported: A, B |- C, D
+ *   Formula string displayed for axioms as html with unicode in the user interface. For axioms with (non-position)
+ *   inputs, the conclusion must mention each input. Sequent syntax is optionally supported: `A, B |- C, D`
  * @param unifier
- *   Which unifier to use for axiom: "surjective" or "linear" or "surjlinear" or "surjlinearpretend" or "full"
+ *   Which unifier to use for axiom: `"surjective"` or `"linear"` or `"surjlinear"` or `"surjlinearpretend"` or
+ *   `"full"`.
  *   [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus#matcherFor(edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo)]]
  * @param displayLevel
  *   Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
