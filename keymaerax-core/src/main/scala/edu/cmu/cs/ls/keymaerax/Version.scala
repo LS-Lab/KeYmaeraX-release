@@ -5,22 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax
 
-// TODO Either get rid of letter and incr or make version format more general
-
 /** A version parsed into its constituent components. */
-case class Version(major: Int, minor: Int, rev: Int, letter: Option[Char], incr: Option[Int]) extends Ordered[Version] {
+case class Version(major: Int, minor: Int, patch: Int) extends Ordered[Version] {
   override def compare(that: Version): Int = {
-    if (major != that.major) major.compareTo(that.major)
-    else if (minor != that.minor) minor.compareTo(that.minor)
-    else if (rev != that.rev) rev.compareTo(that.rev) // undefined rev == -1, so 4.0 (.-1) < 4.0.0 < 4.0.1
-    else if (letter.isEmpty && that.letter.isDefined) 1 // 4.0b < 4.0
-    else if (letter.isDefined && that.letter.isEmpty) -1
-    else if (letter != that.letter) letter.get.compareTo(that.letter.get)
-    else if (incr.isEmpty && that.incr.isDefined) 1 // 4.0a1 < 4.0a
-    else if (incr.isDefined && that.incr.isEmpty) -1
-    else if (incr != that.incr) incr.get.compareTo(that.incr.get) // 4.0b1 < 4.0b2
-    else 0
+    import scala.math.Ordered.orderingToOrdered
+    (this.major, this.minor, this.patch) compare (that.major, that.minor, that.patch)
   }
+
+  override def toString: String = s"$major.$minor.$patch"
 }
 
 object Version {
@@ -29,16 +21,8 @@ object Version {
   val CURRENT: Version = Version.parse(edu.cmu.cs.ls.keymaerax.core.VERSION)
 
   /**
-   * Parse a version from a string.
-   *
-   * The string must have one of these formats:
-   *   1. `<major>.<minor>`
-   *   1. `<major>.<minor>.<rev>`
-   *   1. `<major>.<minor><letter>`
-   *   1. `<major>.<minor><letter><incr>`
-   *
-   * The fields `major`, `minor`, `rev` are positive integers with at least one digit. The field `letter` is a single
-   * character. The field `incr` is a single digit.
+   * Parse a version from a string with the format `<major>.<minor>.<patch>`. The fields `major`, `minor`, `patch` are
+   * positive integers with at least one digit and no additional leading zeroes.
    *
    * If you need the current version, use [[CURRENT]] instead of parsing [[edu.cmu.cs.ls.keymaerax.core.VERSION]].
    *
@@ -46,18 +30,18 @@ object Version {
    *   invalid version string
    */
   def parse(s: String): Version = {
-    val versionFormat = """^(?<major>\d+)\.(?<minor>\d+)((?<letter>\w)(?<incr>\d)?|\.(?<rev>\d+))?$""".r
+    val versionFormat = """^(?<major>0|[1-9][0-9]*)\.(?<minor>0|[1-9][0-9]*)\.(?<patch>0|[1-9][0-9]*)$""".r
     val matched = versionFormat.findFirstMatchIn(s) match {
       case Some(m) => m
       case None => throw new IllegalArgumentException(s"Invalid version string $s")
     }
 
-    val major: Int = matched.group("major").toInt
-    val minor: Int = matched.group("minor").toInt
-    val letter: Option[Char] = Option(matched.group("letter")).map(s => s.charAt(0))
-    val incr: Option[Int] = Option(matched.group("incr")).map(s => s.toInt)
-    val rev: Int = Option(matched.group("rev")).map(s => s.toInt).getOrElse(-1)
-
-    Version(major, minor, rev, letter, incr)
+    try {
+      // These conversions could still fail because the numbers could be too large.
+      val major = matched.group("major").toInt
+      val minor = matched.group("minor").toInt
+      val patch = matched.group("patch").toInt
+      Version(major, minor, patch)
+    } catch { case _: NumberFormatException => throw new IllegalArgumentException(s"Invalid version string $s") }
   }
 }
