@@ -12,9 +12,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   parsePoses,
   parseSequent,
   parseSequents,
+  ExprPos,
 }
 
-import scala.annotation.StaticAnnotation
+import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
 
@@ -48,6 +49,7 @@ import scala.reflect.macros.whitebox
  * @see
  *   [[TacticInfo]]
  */
+@compileTimeOnly("enable -Ymacro-annotations")
 class ProofRule(
     val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
     val codeName: String = "",
@@ -59,14 +61,14 @@ class ProofRule(
     val key: String = "",
     val recursor: String = "*",
 ) extends StaticAnnotation {
-  // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
-  def macroTransform(annottees: Any*): Any = macro RuleImpl.apply
+  // Magic incantation, see https://docs.scala-lang.org/overviews/macros/annotations.html
+  def macroTransform(annottees: Any*): Any = macro ProofRuleMacro.impl
 }
 
-class RuleImpl(val c: whitebox.Context) {
-  type ExprPos = List[Int]
-  import c.universe._
-  def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
+object ProofRuleMacro {
+  def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    import c.universe._
+
     def getLiteral(t: Tree): String = {
       t match {
         case Literal(Constant(s: String)) => s
@@ -199,7 +201,6 @@ class RuleImpl(val c: whitebox.Context) {
           )
       }
     }
-    import c.universe._
     annottees.map(_.tree).toList match {
       // Annottee must be a val declaration of an axiom
       case (valDecl: ValDef) :: Nil => valDecl match {

@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   ExprPos,
 }
 
-import scala.annotation.StaticAnnotation
+import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
 
@@ -75,6 +75,7 @@ import scala.reflect.macros.whitebox
  * @see
  *   [[AxiomInfo]]
  */
+@compileTimeOnly("enable -Ymacro-annotations")
 class Axiom(
     val names: Any,
     val codeName: String = "",
@@ -86,14 +87,14 @@ class Axiom(
     val key: String = "0",
     val recursor: String = "",
 ) extends StaticAnnotation {
-  // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
-  def macroTransform(annottees: Any*): Any = macro AxiomImpl.apply
+  // Magic incantation, see https://docs.scala-lang.org/overviews/macros/annotations.html
+  def macroTransform(annottees: Any*): Any = macro AxiomMacro.impl
 }
 
-class AxiomImpl(val c: whitebox.Context) {
-  import c.universe._
-  // Would just use PosInExpr but can't pull in core
-  def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
+object AxiomMacro {
+  def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    import c.universe._
+
     val paramNames =
       List("names", "codeName", "longDisplayName", "conclusion", "unifier", "displayLevel", "inputs", "key", "recursor")
     def getLiteral(t: Tree): String = {

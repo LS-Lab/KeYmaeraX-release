@@ -9,14 +9,15 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   convAIs,
   convDI,
   convSymbol,
+  foldParams,
   parseAIs,
   parseSequent,
   parseSequents,
 }
 
-import scala.annotation.StaticAnnotation
+import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
-import scala.reflect.macros.blackbox
+import scala.reflect.macros.whitebox
 
 /**
  * Tactic Annotation for proof tactics, which allows decentralized [[TacticInfo]].
@@ -107,7 +108,7 @@ import scala.reflect.macros.blackbox
  *   def sandwich(l: Option[Term], x: Term, r: Option[Term]): BelleExpr =  ...
  *   }}}
  */
-
+@compileTimeOnly("enable -Ymacro-annotations")
 class Tactic(
     val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
     val codeName: String = "",
@@ -122,29 +123,32 @@ class Tactic(
     val inputs: String = "",
     val inputGenerator: String = "",
 ) extends StaticAnnotation {
-  // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says Tactic.impl is the macro body
-  def macroTransform(annottees: Any*): Any = macro TacticImpl.apply
+  // Magic incantation, see https://docs.scala-lang.org/overviews/macros/annotations.html
+  def macroTransform(annottees: Any*): Any = macro TacticMacro.impl
 }
 
-class TacticImpl(val c: blackbox.Context) {
-  import c.universe._
-  private trait AnonSort
-  private case object CoreAnonSort extends AnonSort
-  private case object SimpleAnonSort extends AnonSort
-  private case object UnguardedAnonSort extends AnonSort
+object TacticMacro {
+  def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    import c.universe._
 
-  private trait PosArgs
-  private case class AnteSuccPos(anteName: ValDef, succName: ValDef) extends PosArgs
-  private case class AntePos(provableName: Option[ValDef], posName: ValDef) extends PosArgs
-  private case class SuccPos(provableName: Option[ValDef], posName: ValDef) extends PosArgs
+    trait AnonSort
+    case object CoreAnonSort extends AnonSort
+    case object SimpleAnonSort extends AnonSort
+    case object UnguardedAnonSort extends AnonSort
 
-  /** Arguments are Position, (Position, Sequent), or (ProvableSig, Position). In the latter case, useProvable = true */
-  private case class OnePos(lname: ValDef, rname: Option[ValDef], useProvable: Boolean = false) extends PosArgs
-  private case class TwoPos(provableName: ValDef, pos1Name: ValDef, pos2Name: ValDef) extends PosArgs
-  private case class SequentArg(sequentName: ValDef) extends PosArgs
-  private case class NoPos(provableName: Option[ValDef]) extends PosArgs
-  // Would just use PosInExpr but can't pull in core
-  def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    trait PosArgs
+    case class AnteSuccPos(anteName: ValDef, succName: ValDef) extends PosArgs
+    case class AntePos(provableName: Option[ValDef], posName: ValDef) extends PosArgs
+    case class SuccPos(provableName: Option[ValDef], posName: ValDef) extends PosArgs
+
+    /**
+     * Arguments are Position, (Position, Sequent), or (ProvableSig, Position). In the latter case, useProvable = true
+     */
+    case class OnePos(lname: ValDef, rname: Option[ValDef], useProvable: Boolean = false) extends PosArgs
+    case class TwoPos(provableName: ValDef, pos1Name: ValDef, pos2Name: ValDef) extends PosArgs
+    case class SequentArg(sequentName: ValDef) extends PosArgs
+    case class NoPos(provableName: Option[ValDef]) extends PosArgs
+
     val paramNames = List(
       "names",
       "codeName",
