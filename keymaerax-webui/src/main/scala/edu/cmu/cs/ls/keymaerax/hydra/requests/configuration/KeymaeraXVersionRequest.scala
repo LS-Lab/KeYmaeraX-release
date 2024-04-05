@@ -5,15 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
-import edu.cmu.cs.ls.keymaerax.UpdateChecker
-import edu.cmu.cs.ls.keymaerax.core.VERSION
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.KeymaeraXVersionResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{ReadRequest, Request, Response}
+import edu.cmu.cs.ls.keymaerax.{UpdateChecker, Version}
 
 import scala.collection.immutable.{List, Nil}
 
 class KeymaeraXVersionRequest extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new KeymaeraXVersionResponse(VERSION, UpdateChecker.upToDate, UpdateChecker.latestVersionString) :: Nil
+    new KeymaeraXVersionResponse(Version.CURRENT.toString, UpdateChecker.upToDate, UpdateChecker.latestVersionString) ::
+      Nil
   }
 }

@@ -5,13 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.Version
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-
-import scala.collection.immutable.Nil
 
 /**
  * In-memory database, e.g., for stepping into tactics.
@@ -32,7 +31,7 @@ class InMemoryDB extends DBAbstraction {
     .collection
     .mutable
     .Map(
-      "version" -> new ConfigurationPOJO("version", Map("version" -> VERSION)),
+      "version" -> new ConfigurationPOJO("version", Map("version" -> Version.CURRENT.toString)),
       "tool" -> new ConfigurationPOJO("tool", Map("qe" -> "mathematica")),
       "mathematica" -> new ConfigurationPOJO(
         "mathematica",

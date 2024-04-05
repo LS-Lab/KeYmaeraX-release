@@ -5,23 +5,28 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.core.VERSION
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.KyxConfigResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, ReadRequest, Response}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Version}
 
 import scala.collection.immutable.{List, Nil}
 
 class KyxConfigRequest extends LocalhostOnlyRequest with ReadRequest {
-  val newline = "\n"
   override def resultingResponses(): List[Response] = {
-    val kyxConfig =
-      ("KeYmaera X version: " + VERSION + newline) +
-        ("Java version: " + System.getProperty("java.runtime.version") + " with " +
-          System.getProperty("sun.arch.data.model") + " bits" + newline) +
-        ("OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + newline) +
-        ("LinkName: " + Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME) + newline) +
-        ("jlinkLibDir: " + Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR))
+    val javaVersion = System.getProperty("java.runtime.version")
+    val javaBits = System.getProperty("sun.arch.data.model")
+    val osName = System.getProperty("os.name")
+    val osVersion = System.getProperty("os.version")
+    val linkName = Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME)
+    val jlinkLibDir = Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+
+    val kyxConfig = s"""KeYmaera X version: ${Version.CURRENT}
+                       |Java version: $javaVersion with $javaBits bits
+                       |OS: $osName $osVersion
+                       |LinkName: $linkName
+                       |jlinkLibDir: $jlinkLibDir
+                       |""".stripMargin
+
     new KyxConfigResponse(kyxConfig) :: Nil
   }
 }

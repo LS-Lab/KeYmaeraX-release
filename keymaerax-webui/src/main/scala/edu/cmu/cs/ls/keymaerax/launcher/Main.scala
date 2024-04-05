@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
-import edu.cmu.cs.ls.keymaerax.{core, Configuration, FileConfiguration, UpdateChecker, Version}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker, Version}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
@@ -35,7 +35,6 @@ import scala.io.{Codec, Source}
  *   [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
  */
 object Main {
-  import core.VERSION
 
   /** This flag is set to true iff this process does nothing but re-launch */
   var IS_RELAUNCH_PROCESS = false
@@ -56,7 +55,7 @@ object Main {
     // prelaunch help without launching an extra JVM
     Configuration.setConfiguration(FileConfiguration)
     if (args.length > 0 && HELP_FLAGS.contains(args(0))) {
-      println("KeYmaera X Prover" + " " + VERSION)
+      println(s"KeYmaera X Prover ${Version.CURRENT}")
       println(KeYmaeraX.help)
       sys.exit(1)
     }
@@ -171,7 +170,7 @@ object Main {
     }
     assert(versionFile.exists())
     val fw = new FileWriter(versionFile)
-    fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+    fw.write(Version.CURRENT.toString)
     fw.flush()
     fw.close()
   }
@@ -199,22 +198,19 @@ object Main {
    *   similar behavior for the cache
    */
   private def exitIfDeprecated(): Unit = {
-    // The version string is requested separately because it is used in a path.
-    // Converting the Version back into a string would yield a different string and thus different path.
     val dbVersion = SQLite.versionOf(SQLite.ProdDB)
-    val dbVersionString = SQLite.versionStringOf(SQLite.ProdDB)
+    launcherLog(s"Database version: $dbVersion")
 
-    launcherLog(s"Database version: $dbVersionString")
     cleanupGuestData()
     LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
     if (UpdateChecker.dbUpgradeRequired(dbVersion).getOrElse(false)) {
       // @todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
-      val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$dbVersionString-*"
+      val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$dbVersion-*"
       launcherLog("Backing up database to " + backupPath)
       val defaultName = new File(Configuration.path(Configuration.Keys.DB_PATH)).getName
       try {
         launcherLog("Upgrading database...")
-        val upgradedDbVersion = upgradeDatabase(dbVersion, dbVersionString)
+        val upgradedDbVersion = upgradeDatabase(dbVersion)
         if (UpdateChecker.dbUpgradeRequired(upgradedDbVersion).getOrElse(false)) {
           val message = upgradeFailedMessage(defaultName, backupPath)
           launcherLog(message)
@@ -263,9 +259,9 @@ object Main {
   }
 
   /** Stores a backup of the database, identifies the backup with `currentVersion` and the current system time. */
-  private def backupDatabase(dbVersionString: String): Unit = {
+  private def backupDatabase(dbVersion: Version): Unit = {
     val src = new File(SQLite.ProdDB.dblocation)
-    val dest = new File(src.getAbsolutePath + "-" + dbVersionString + "-" + System.currentTimeMillis())
+    val dest = new File(s"${src.getAbsolutePath}-$dbVersion-${System.currentTimeMillis()}")
     new FileOutputStream(dest).getChannel.transferFrom(new FileInputStream(src).getChannel, 0, Long.MaxValue)
   }
 
@@ -293,8 +289,8 @@ object Main {
   }
 
   /** Runs auto-upgrades from the current version, returns the version after upgrade */
-  private def upgradeDatabase(dbVersion: Version, dbVersionString: String): Version = {
-    backupDatabase(dbVersionString)
+  private def upgradeDatabase(dbVersion: Version): Version = {
+    backupDatabase(dbVersion)
 
     val upgrades = Source
       .fromResource("/sql/upgradescripts.json")(Codec.UTF8)

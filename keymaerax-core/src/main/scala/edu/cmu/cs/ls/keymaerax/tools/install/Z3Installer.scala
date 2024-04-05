@@ -5,11 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.install
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, Version}
+
 import java.io.{File, FileOutputStream, InputStream, PrintWriter}
 import java.nio.channels.Channels
 import java.util.Locale
-
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 /** Installs and/or updates the Z3 binary in the KeYmaera X directory. */
 object Z3Installer extends Logging {
@@ -35,7 +35,7 @@ object Z3Installer extends Logging {
       else new File(z3Path + File.separator + "z3")
     if (!z3File.getParentFile.exists) z3File.mkdirs
 
-    val needsUpdate = installedFromKyxVersion(defaultZ3Path) != edu.cmu.cs.ls.keymaerax.core.VERSION
+    val needsUpdate = !installedFromKyxVersion(defaultZ3Path).contains(Version.CURRENT)
     val z3AbsPath =
       if (z3ConfigPath == defaultZ3Path && needsUpdate) {
         logger.debug("Updating default Z3 binary...")
@@ -58,22 +58,24 @@ object Z3Installer extends Logging {
    */
   def versionFile(z3TempDir: String): File = new File(z3TempDir + File.separator + "z3v")
 
-  /** Returns the KeYmaera X version that supplied the currently installed Z3. */
-  def installedFromKyxVersion(z3TempDir: String): String = {
+  /**
+   * Returns the KeYmaera X version that supplied the currently installed Z3, or [[None]] if it could not be determined.
+   */
+  def installedFromKyxVersion(z3TempDir: String): Option[Version] = {
     if (versionFile(z3TempDir).exists()) {
       val source = scala.io.Source.fromFile(versionFile(z3TempDir))
       val result = source.mkString
       source.close()
-      result
+      Some(Version.parse(result))
     } else {
-      "Not A Version Number" // Return an invalid version number, forcing Z3 to be copied to disk.
+      None // Return no version number, forcing Z3 to be copied to disk.
     }
   }
 
   /** Copies Z3 to the disk. Returns the path to the binary. */
   def copyToDisk(osName: String, z3TempDir: String): String = {
     // Update the version number.
-    new PrintWriter(versionFile(z3TempDir)) { write(edu.cmu.cs.ls.keymaerax.core.VERSION); close() }
+    new PrintWriter(versionFile(z3TempDir)) { write(Version.CURRENT.toString); close() }
     // Copy z3 binary to disk.
     val osArch = System.getProperty("os.arch")
     var resource: InputStream = null

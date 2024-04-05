@@ -56,9 +56,7 @@ object SQLite {
 
   private val RULENAME_BRANCH_SEPARATOR: String = "@@"
 
-  def versionStringOf(db: SQLiteDB): String = db.getConfiguration("version").config("version")
-
-  def versionOf(db: SQLiteDB): Version = Version.parse(versionStringOf(db))
+  def versionOf(db: SQLiteDB): Version = Version.parse(db.getConfiguration("version").config("version"))
 
   /** Stores lemmas in the Lemma table of the given database. */
   class UncachedSQLiteLemmaDB(db: SQLiteDB) extends LemmaDBBase {
@@ -73,7 +71,7 @@ object SQLite {
       assert(
         lemmas.isEmpty || lemmas.get.map(_._1) == lemmaIds,
         "Expected lemmas to be returned in requested order, but got\n" + lemmas.get.map(_._1).mkString(",") +
-          " insteadn of\n" + lemmaIds.mkString(","),
+          " instead of\n" + lemmaIds.mkString(","),
       )
       lemmas.map(_.map(_._2))
     }

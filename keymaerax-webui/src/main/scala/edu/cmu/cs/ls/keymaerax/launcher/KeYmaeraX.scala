@@ -6,20 +6,12 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
-
-import java.io.{FilePermission, PrintWriter}
-import java.lang.reflect.ReflectPermission
-import java.security.Permission
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{OptionMap, Tools, _}
+import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.hydra.{
   DBTools,
   DbProofTree,
@@ -29,19 +21,20 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   VerboseTraceToTacticConverter,
 }
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
-import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
-
-import scala.util.Random
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{PrettyPrinter, _}
+import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
+import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, Version}
 import org.apache.commons.lang3.StringUtils
 
+import java.io.PrintWriter
+import scala.annotation.tailrec
 import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
-
-import scala.annotation.tailrec
+import scala.util.Random
 
 /**
  * Command-line interface launcher for [[http://keymaeraX.org/ KeYmaera X]], the aXiomatic Tactical Theorem Prover for
@@ -118,7 +111,8 @@ object KeYmaeraX {
       println(help)
       exit(1)
     }
-    println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
+    println(s"KeYmaera X Prover ${Version.CURRENT}")
+    println("Use option -help for usage and license information")
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(
       nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList),

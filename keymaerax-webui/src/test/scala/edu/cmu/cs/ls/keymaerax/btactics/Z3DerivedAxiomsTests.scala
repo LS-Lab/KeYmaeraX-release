@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.Ax._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
@@ -16,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tagobjects.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Version}
 
 import java.io.{File, FileWriter, FilenameFilter}
 import java.lang.reflect.InvocationTargetException
@@ -303,7 +303,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
         }
         assert(versionFile.exists())
         val fw = new FileWriter(versionFile)
-        fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+        fw.write(Version.CURRENT.toString)
         fw.close()
       }
     }

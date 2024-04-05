@@ -5,10 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.awt.GridLayout
+import edu.cmu.cs.ls.keymaerax.{Logging, Version}
 
+import java.awt.GridLayout
 import javax.swing.{JLabel, JProgressBar, JWindow}
-import edu.cmu.cs.ls.keymaerax.{core, Logging}
 
 /**
  * The KeYmaera X loading splash screen.
@@ -52,7 +52,7 @@ object LoadingDialogFactory {
 /** Headless command line interface version of loading dialog splash screen. */
 class CLILoadingDialog() extends LoadingDialog with Logging {
   private var status: Int = 0
-  override val initialMsg: String = "Headless KeYmaera X Server " + core.VERSION + " is Loading... "
+  override val initialMsg: String = s"Headless KeYmaera X Server ${Version.CURRENT} is loading... "
 
   override def addToStatus(x: Int, msg: Option[String]): Unit = {
     status = status + x
@@ -67,7 +67,7 @@ class CLILoadingDialog() extends LoadingDialog with Logging {
 
 /** GUI version of splash screen indicator that the user interface is in the process of loading. */
 class GraphicalLoadingDialog() extends LoadingDialog {
-  private val titleMsg: String = "KeYmaera X " + core.VERSION
+  private val titleMsg: String = s"KeYmaera X s${Version.CURRENT}"
   override val initialMsg: String = "Loading..."
 
   private val progressBar = new JProgressBar()
