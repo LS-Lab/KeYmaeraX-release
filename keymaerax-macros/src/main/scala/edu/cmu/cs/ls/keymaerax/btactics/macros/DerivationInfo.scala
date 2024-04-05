@@ -7,9 +7,9 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
 
+import scala.collection.immutable.{List, Nil}
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
-import scala.collection.immutable.{HashMap, List, Nil}
 
 ////////////////////////////////////////////////////////////
 // Type structure for central registry of derivation steps

@@ -5,13 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
 
 import scala.annotation.StaticAnnotation
-import scala.collection.immutable.Nil
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
-import AnnotationCommon._
 
 /**
  * Axiom Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]]. This annotation can

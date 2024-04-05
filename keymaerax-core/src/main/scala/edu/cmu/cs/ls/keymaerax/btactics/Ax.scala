@@ -7,23 +7,22 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.tools.ext.Z3
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
-import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
-import scala.reflect.runtime.{universe => ru}
+import scala.collection.{immutable, mutable}
 import scala.reflect.runtime.universe.{Assign => _, _}
+import scala.reflect.runtime.{universe => ru}
 
 /**
  * Central Database of Derived Axioms and Derived Axiomatic Rules, including information about core axioms and axiomatic

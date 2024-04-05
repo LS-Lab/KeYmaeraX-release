@@ -5,11 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import scala.annotation.{ClassfileAnnotation, StaticAnnotation}
-import scala.collection.immutable.Nil
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon._
+
+import scala.annotation.StaticAnnotation
 import scala.language.experimental.macros
-import scala.reflect.macros.{blackbox, Universe}
-import AnnotationCommon._
+import scala.reflect.macros.blackbox
 
 /**
  * Tactic Annotation for proof tactics, which allows decentralized [[TacticInfo]].

@@ -11,7 +11,6 @@ import scala.reflect.macros.blackbox
 
 object AnnotationCommon {
   def toArgInfo(name: String, tpe: String, allowFresh: List[String])(implicit c: blackbox.Context): ArgInfo = {
-    import c.universe._
     val first = tpe.indexOf('[')
     val last = tpe.lastIndexOf(']')
     if (first != -1 && last != -1) {

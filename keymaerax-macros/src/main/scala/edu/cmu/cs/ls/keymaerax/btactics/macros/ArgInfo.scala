@@ -17,6 +17,7 @@ sealed trait ArgInfo {
   /** A list of allowed fresh symbols. */
   val allowsFresh: List[String]
 }
+
 case class FormulaArg(override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "formula"
 }
