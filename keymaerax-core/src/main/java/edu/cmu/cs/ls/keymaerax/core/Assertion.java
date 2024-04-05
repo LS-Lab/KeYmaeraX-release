@@ -3,9 +3,8 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-/**
- * @note Code Review: 2020-02-14
- */
+// Code Review: 2020-02-14
+
 package edu.cmu.cs.ls.keymaerax.core;
 
 import java.util.function.Supplier;
@@ -13,10 +12,11 @@ import java.util.function.Supplier;
 /**
  * A wrapper around the Java `assert` keyword.
  * Lazy evaluation of conditions and messages.
- *
+ * <p>
  * Disabled by default.
  * Enable at run-time with `java -ea`.
  * Disable with `java -da`.
+ *
  * @author Fabian Immler
  */
 public class Assertion {
