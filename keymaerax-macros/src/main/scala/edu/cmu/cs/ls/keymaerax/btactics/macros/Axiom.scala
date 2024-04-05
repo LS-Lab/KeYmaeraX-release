@@ -5,14 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
-  convDI,
-  foldParams,
-  parseAIs,
-  parsePos,
-  parsePoses,
-  ExprPos,
-}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{convDI, parseAIs, parsePos, parsePoses}
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
@@ -91,197 +84,188 @@ class Axiom(
   def macroTransform(annottees: Any*): Any = macro AxiomMacro.impl
 }
 
+/** Helper class for easy annotation argument parsing. Must stay in sync with [[Axiom]]! */
+case class AxiomArgs(
+    names: Any,
+    codeName: String = "",
+    longDisplayName: String = "",
+    conclusion: String = "",
+    unifier: String = "full",
+    displayLevel: String = "internal",
+    inputs: String = "",
+    key: String = "0",
+    recursor: String = "",
+)
+
 object AxiomMacro {
+
+  /** Functions that can be used with `@Axiom` and their corresponding min and max parameter counts. */
+  private val ALLOWED_FUNCTIONS_AND_ARGUMENTS: Map[String, (Int, Int)] = Map(
+    "coreAxiom" -> (1, 1),
+    "derivedAxiom" -> (3, 4),
+    "derivedAxiomFromFact" -> (3, 4),
+    "derivedFormula" -> (3, 4),
+    "derivedFact" -> (2, 3),
+  )
+
+  private val ALLOWED_FUNCTION_NAMES_STR: String = ALLOWED_FUNCTIONS_AND_ARGUMENTS.keys.toList.sorted.mkString(", ")
+
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
-    val paramNames =
-      List("names", "codeName", "longDisplayName", "conclusion", "unifier", "displayLevel", "inputs", "key", "recursor")
-    def getLiteral(t: Tree): String = {
-      t match {
-        case Literal(Constant(s: String)) => s
-        case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
-      }
-    }
-    // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
-    // Searching the prefix allows us to recover the arguments
-    def getParams: (String, String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
-      c.prefix.tree match {
-        case q"new $annotation(..$params)" =>
-          val defaultMap: Map[String, Tree] = Map(
-            "codeName" -> Literal(Constant("")),
-            "longDisplayName" -> Literal(Constant("")),
-            "conclusion" -> Literal(Constant("")),
-            "unifier" -> Literal(Constant("full")),
-            "displayLevel" -> Literal(Constant("internal")),
-            "key" -> Literal(Constant("0")),
-            "recursor" -> Literal(Constant("")),
-            "inputs" -> Literal(Constant("")),
-          )
-          val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({ case (acc, x) =>
-            foldParams(c, paramNames)(acc, x)
-          })
-          val simpleDisplay = paramMap("names") match {
-            case q"""(${Literal(Constant(sl: String))}, ${Literal(Constant(sr: String))})""" =>
-              SimpleDisplayInfo(sl, sr)
-            case Literal(Constant(s: String)) => SimpleDisplayInfo(s, s)
-            // case sdi: SimpleDisplayInfo => sdi
-            case di => c.abort(
-                c.enclosingPosition,
-                "@Axiom expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di,
-              )
-          }
-          val (concl, inputString, codeName, longDisplayName, unifier, displayLevel, keyString, recursorString) = (
-            getLiteral(paramMap("conclusion")),
-            getLiteral(paramMap("inputs")),
-            getLiteral(paramMap("codeName")),
-            getLiteral(paramMap("longDisplayName")),
-            getLiteral(paramMap("unifier")),
-            getLiteral(paramMap("displayLevel")),
-            getLiteral(paramMap("key")),
-            getLiteral(paramMap("recursor")),
-          )
-          val inputs: List[ArgInfo] = parseAIs(inputString)(c)
-          val key = parsePos(keyString)(c)
-          val recursor = parsePoses(recursorString)(c)
-          val displayInfo = (concl, inputs) match {
-            case ("", Nil) => simpleDisplay
-            case (fml, Nil) if fml != "" => AxiomDisplayInfo.render(simpleDisplay, fml)
-            case (fml, args) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
-            // case ("", Nil, premises, Some(conclusion)) => RuleDisplayInfo(simpleDisplay, conclusion, premises)
-            case _ => c.abort(
-                c.enclosingPosition,
-                "Unsupported argument combination for @Axiom: axioms with inputs must have conclusion specified",
-              )
-          }
-          (codeName, longDisplayName, displayInfo, unifier, displayLevel, key, recursor)
-        case e => c.abort(c.enclosingPosition, "Excepted @Axiom(args), got: " + e)
-      }
-    }
-    val (
-      codeNameParam: String,
-      longDisplayNameParam: String,
-      display: DisplayInfo,
-      unifier: String,
-      displayLevel: String,
-      key,
-      recursor,
-    ) = getParams
-    // Annotation can only be attached to library functions for defining new axioms
-    def correctName(t: c.universe.Tree): Boolean = {
-      t match {
-        case id: Ident => {
-          if (
-            Set("coreAxiom", "derivedAxiom", "derivedFormula", "derivedAxiomFromFact", "derivedFact")
-              .contains(id.name.decodedName.toString)
-          ) true
-          else c.abort(
-            c.enclosingPosition,
-            "Expected function name: one of {coreAxiom, derivedAxiom, derivedFormula, derivedAxiomFromFact, derivedFact}, got: " +
-              t + " of type " + t.getClass(),
-          )
-        }
-        case t => c.abort(
-            c.enclosingPosition,
-            "Invalid annottee: Expected axiom function, got: " + t + " of type " + t.getClass(),
-          )
-      }
-    }
-    def paramCount(t: c.universe.Tree): (Int, Int) = {
-      t match {
-        case id: Ident => {
-          id.name.decodedName.toString match {
-            case "coreAxiom" => (1, 1)
-            case "derivedAxiom" | "derivedAxiomFromFact" | "derivedFormula" => (3, 4)
-            case "derivedFact" => (2, 3)
-            case _ => c.abort(
-                c.enclosingPosition,
-                "Expected function name: one of {coreAxiom, derivedAxiom, derivedFormula, derivedAxiomFromFact, derivedFact}, got: " +
-                  t + " of type " + t.getClass(),
-              )
-          }
-        }
-        case t => c.abort(
-            c.enclosingPosition,
-            "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass(),
-          )
-      }
-    }
-    annottees.map(_.tree).toList match {
-      // Annottee must be a val declaration of an axiom
-      case (valDecl: ValDef) :: Nil => valDecl match {
-          // val declaration must be an invocation of one of the functions for defining derived axioms and optionally can
-          // have modifiers and type annotations
-          case q"$mods val $declName: $tpt = $functionName( ..$params )" =>
-            if (!correctName(functionName)) c.abort(
-              c.enclosingPosition,
-              "Invalid annottee: Expected val name = <derivedAxiomFunction>(x1, x2, x3), got: " + functionName +
-                " of type " + functionName.getClass(),
-            )
-            val (minParam, maxParam) = paramCount(functionName)
-            val isCore = (minParam == maxParam)
-            if (params.length < minParam || params.length > maxParam) c.abort(
-              c.enclosingPosition,
-              s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam",
-            )
-            // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
-            val codeName = if (codeNameParam.nonEmpty) TermName(codeNameParam) else declName
-            if (codeName.toString.exists(c => c == '\"')) c
-              .abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
-            // display name defaults to ascii name if not provided
-            val longDisplayName = Literal(Constant(
-              if (longDisplayNameParam.nonEmpty) longDisplayNameParam
-              else if (display.name.nonEmpty) display.name
-              else codeName.decodedName.toString
-            ))
-            val storageName = TermName(codeName.toString.toLowerCase)
-            // AST for literal strings for the names
-            val codeString = Literal(Constant(codeName.decodedName.toString))
-            val storageString = Literal(Constant(storageName.decodedName.toString))
-            val canonString = params(0)
-            // derivedAxiom functions allow an optional argument for the codeName, which we supply here
-            val fullParams = if (isCore) params else params.take(minParam).:+(q"Some($storageString)")
-            val fullRhs = q"$functionName( ..$fullParams)"
-            // Tactic implementation of derived axiom is always useAt
-            val expr =
-              q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonString))})""" // : (Unit => Any)
-            val unif = unifier match {
-              case "surjective" => Symbol("surjective")
-              case "surjlinear" => Symbol("surlinear")
-              case "full" => Symbol("full")
-              case "linear" => Symbol("linear")
-              case "surjlinearpretend" => Symbol("surlinearpretend")
-              case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
-            }
-            val dispLvl = displayLevel match {
-              case "internal" => Symbol("internal")
-              case "browse" => Symbol("browse")
-              case "menu" => Symbol("menu")
-              case "all" => Symbol("all")
-              case s => c.abort(c.enclosingPosition, "Unknown display level " + s)
-            }
-            val info =
-              if (isCore) q"""CoreAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(
-                  c
-                )}, codeName = $codeString, longDisplayName = $longDisplayName, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
-              else q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(
-                  c
-                )}, codeName = $codeString, longDisplayName = $longDisplayName, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
-            // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
-            // the axiom info to the global axiom info table
-            val application = q"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerR($fullRhs, $info)"
-            val lemmaType =
-              if (isCore) { tq"edu.cmu.cs.ls.keymaerax.btactics.macros.CoreAxiomInfo" }
-              else { tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedAxiomInfo" }
-            c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
-          case q"$mods val $cName: $tpt = $functionName( ..$params )" =>
-            c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)
+    /*
+     * Obtain annotation arguments
+     */
 
-        }
-      case t => c.abort(
-          c.enclosingPosition,
-          "Invalid annottee: Expected val declaration got: " + t.head + " of type: " + t.head.getClass(),
-        )
+    // While this is quite a bit slower than the previous code, it is also a lot simpler and more type safe.
+    // https://stackoverflow.com/questions/32631372/getting-parameters-from-scala-macro-annotation
+    // https://stackoverflow.com/questions/37891855/macro-annotation-with-default-arguments
+    val args = c.prefix.tree match {
+      case q"new $_(..$args)" =>
+        c.eval(c.Expr[AxiomArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomArgs(..$args)"))
+      case q"new $_()" => c.eval(c.Expr[AxiomArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomArgs()"))
+      case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
+
+    /*
+     * Deconstruct syntax tree and check for consistency
+     */
+
+    // Annotation must be applied to the val definition of an axiom.
+    val valDef = annottees.map(_.tree).toList match {
+      case List(valDef: ValDef) => valDef
+      case t: Tree => c.abort(t.pos, "@Axiom must be applied to val definition")
+    }
+
+    // The val definition must be an invocation of one of the functions for defining derived axioms.
+    // It may optionally have modifiers and type annotations.
+    val (tMods, tDeclName: TermName, tFunctionName: Tree, tParams) = valDef match {
+      case q"$mods val $declName: $_ = $functionName(..$params)" => (mods, declName, functionName, params)
+      case _ => c.abort(valDef.pos, "@Axiom must be applied to val definition")
+    }
+
+    // Annotation can only be attached to known library functions for defining new axioms.
+    val functionName = tFunctionName match {
+      case id: Ident => id.name.decodedName.toString
+      case t: Tree => c.abort(t.pos, s"@Axiom definition must use one of $ALLOWED_FUNCTION_NAMES_STR")
+    }
+    val (minParam, maxParam) = ALLOWED_FUNCTIONS_AND_ARGUMENTS.get(functionName) match {
+      case Some(params) => params
+      case None => c.abort(tFunctionName.pos, s"@Axiom definition must use one of $ALLOWED_FUNCTION_NAMES_STR")
+    }
+    if (tParams.length < minParam || tParams.length > maxParam) {
+      c.abort(tFunctionName.pos, s"@Axiom requires function to have $minParam to $maxParam arguments")
+    }
+    val isCore = functionName == "coreAxiom"
+
+    /*
+     * Parse annotation arguments
+     */
+
+    val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
+    val key = parsePos(args.key)(c)
+    val recursor = parsePoses(args.recursor)(c)
+
+    val simpleDisplay = args.names match {
+      case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
+      case s: String => SimpleDisplayInfo(s, s)
+      case _ => c.abort(c.enclosingPosition, "@Axiom names must be String or (String, String)")
+    }
+
+    val display: DisplayInfo = (args.conclusion, inputs) match {
+      case ("", Nil) => simpleDisplay
+      case ("", _) => c.abort(c.enclosingPosition, "@Axiom with inputs must have a conclusion")
+      case (fml, Nil) => AxiomDisplayInfo.render(simpleDisplay, fml)
+      case (fml, args) => InputAxiomDisplayInfo(simpleDisplay, fml, args)
+    }
+
+    /*
+     * Compute different names
+     */
+
+    // If the codeName is not specified, it is taken from the declaration name.
+    val codeName = if (args.codeName.nonEmpty) args.codeName else tDeclName.decodedName.toString
+    if (codeName.contains('"')) c.abort(c.enclosingPosition, s"Code name $codeName must not contain escape characters")
+
+    val longDisplayName =
+      if (args.longDisplayName.nonEmpty) args.longDisplayName
+      else if (display.name.nonEmpty) display.name
+      else if (display.asciiName.nonEmpty) display.asciiName
+      else codeName
+
+    val storageName = codeName.toLowerCase
+
+    val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
+
+    /*
+     * Build AST
+     */
+
+    // The derived* functions allow an optional argument for the codeName, which we supply here.
+    val fullParams = if (isCore) tParams else tParams.take(minParam) :+ q"Some($storageName)"
+    val fullRhs = q"$tFunctionName( ..$fullParams)"
+
+    // Tactic implementation of derived axiom is always useAt
+    val expr = q"""
+      ({ case () =>
+        edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonicalName))
+      })
+    """ // : (Unit => Any)
+
+    val unifier = args.unifier match {
+      case "surjective" => Symbol("surjective")
+      case "surjlinear" => Symbol("surlinear")
+      case "full" => Symbol("full")
+      case "linear" => Symbol("linear")
+      case "surjlinearpretend" => Symbol("surlinearpretend")
+      case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
+    }
+
+    val displayLevel = args.displayLevel match {
+      case "internal" => Symbol("internal")
+      case "browse" => Symbol("browse")
+      case "menu" => Symbol("menu")
+      case "all" => Symbol("all")
+      case s => c.abort(c.enclosingPosition, "Unknown display level " + s)
+    }
+
+    val (infoType, info) =
+      if (isCore) (
+        tq"edu.cmu.cs.ls.keymaerax.btactics.macros.CoreAxiomInfo",
+        q"""CoreAxiomInfo(
+          canonicalName = $canonicalName,
+          display = ${convDI(display)(c)},
+          codeName = $codeName,
+          longDisplayName = $longDisplayName,
+          unifier = $unifier,
+          displayLevel = $displayLevel,
+          theKey = $key,
+          theRecursor = $recursor,
+          theExpr = $expr,
+        )""",
+      )
+      else (
+        tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedAxiomInfo",
+        q"""DerivedAxiomInfo(
+          canonicalName = $canonicalName,
+          display = ${convDI(display)(c)},
+          codeName = $codeName,
+          longDisplayName = $longDisplayName,
+          unifier = $unifier,
+          displayLevel = $displayLevel,
+          theKey = $key,
+          theRecursor = $recursor,
+          theExpr = $expr,
+        )""",
+      )
+
+    // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of
+    // registering the axiom info to the global axiom info table.
+    val result = q"""
+      $tMods val $tDeclName: $infoType =
+        edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerR($fullRhs, $info)
+    """
+
+    c.Expr[Nothing](result)
   }
 }
