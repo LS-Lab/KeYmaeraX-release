@@ -30,8 +30,8 @@ object KeYmaeraX {
       // inspect archives and print warning if no program variables block/definitions but archive entry defs nonempty
       val noDefEntries = entries.filter(e => e.defs.decls.nonEmpty && !e.fileContent.contains("Definitions") && !e.fileContent.contains("ProgramVariables"))
       val noDefEntryWarnings = noDefEntries.map(e => {
-        val fc = e.fileContent.lines
-        val eline = if (fc.hasNext) input.lines.indexOf(fc.next) + 1 else 1
+        val fc = e.fileContent.linesIterator
+        val eline = if (fc.hasNext) input.linesIterator.indexOf(fc.next) + 1 else 1
         Dictionary(
           "kind" -> "warning",
           "line" -> eline,
