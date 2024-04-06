@@ -7,12 +7,10 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   convDI,
-  foldParams,
   parsePos,
   parsePoses,
   parseSequent,
   parseSequents,
-  ExprPos,
 }
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
@@ -65,223 +63,181 @@ class ProofRule(
   def macroTransform(annottees: Any*): Any = macro ProofRuleMacro.impl
 }
 
+/** Helper class for easy annotation argument parsing. Must stay in sync with [[ProofRule]]! */
+case class ProofRuleArgs(
+    names: Any = false,
+    codeName: String = "",
+    longDisplayName: String = "",
+    premises: String = "",
+    conclusion: String = "",
+    unifier: String = "full",
+    displayLevel: String = "internal",
+    key: String = "",
+    recursor: String = "*",
+)
+
 object ProofRuleMacro {
+
+  /** Functions that can be used with `@Axiom` and their corresponding min and max parameter counts. */
+  private val ALLOWED_FUNCTIONS_AND_ARGUMENTS: Map[String, (Int, Int)] =
+    Map("coreRule" -> (1, 1), "derivedRule" -> (2, 3), "derivedRuleSequent" -> (3, 4))
+
+  private val ALLOWED_FUNCTION_NAMES_STR: String = ALLOWED_FUNCTIONS_AND_ARGUMENTS.keys.toList.sorted.mkString(", ")
+
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
-    def getLiteral(t: Tree): String = {
-      t match {
-        case Literal(Constant(s: String)) => s
-        case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
-      }
+    /*
+     * Obtain annotation arguments
+     */
+
+    // While this is quite a bit slower than the previous code, it is also a lot simpler and more type safe.
+    // https://stackoverflow.com/questions/32631372/getting-parameters-from-scala-macro-annotation
+    // https://stackoverflow.com/questions/37891855/macro-annotation-with-default-arguments
+    val args = c.prefix.tree match {
+      case q"new $_(..$args)" =>
+        c.eval(c.Expr[ProofRuleArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.ProofRuleArgs(..$args)"))
+      case q"new $_()" => c.eval(c.Expr[ProofRuleArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.ProofRuleArgs()"))
+      case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
-    val paramNames = List(
-      "names",
-      "codeName",
-      "longDisplayName",
-      "premises",
-      "conclusion",
-      "unifier",
-      "displayLevel",
-      "key",
-      "recursor",
-    )
-    // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
-    // Searching the prefix allows us to recover the arguments
-    def paramify(
-        tn: TermName,
-        params: Seq[Tree],
-    ): (String, String, DisplayInfo, String, ExprPos, List[ExprPos], String) = {
-      val defaultMap: Map[String, c.universe.Tree] = Map(
-        "names" -> Literal(Constant(false)),
-        "unifier" -> Literal(Constant("full")),
-        "codeName" -> Literal(Constant("")),
-        "longDisplayName" -> Literal(Constant(false)),
-        "premises" -> Literal(Constant("")),
-        "conclusion" -> Literal(Constant("")),
-        "displayLevel" -> Literal(Constant("internal")),
-        "key" -> Literal(Constant("")),
-        "recursor" -> Literal(Constant("*")),
-      )
-      val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({ case (acc, x) =>
-        foldParams(c, paramNames)(acc, x)
+
+    /*
+     * Deconstruct syntax tree and check for consistency
+     */
+
+    // Annotation must be applied to the val definition of an axiom.
+    val valDef = annottees.map(_.tree).toList match {
+      case List(valDef: ValDef) => valDef
+      case t: Tree => c.abort(t.pos, "@ProofRule must be applied to val definition")
+    }
+
+    // The val definition must be an invocation of one of the functions for defining proof rules.
+    // It may optionally have modifiers and type annotations.
+    val (tMods, tDeclName: TermName, tFunctionName: Tree, tParams) = valDef match {
+      case q"$mods val $declName: $_ = $functionName(..$params)" => (mods, declName, functionName, params)
+      case _ => c.abort(valDef.pos, "@ProofRule must be applied to val definition")
+    }
+
+    // Annotation can only be attached to known library functions for defining new axioms.
+    val functionName = tFunctionName match {
+      case id: Ident => id.name.decodedName.toString
+      case t: Tree => c.abort(t.pos, s"@ProofRule definition must use one of $ALLOWED_FUNCTION_NAMES_STR")
+    }
+    val (minParam, maxParam) = ALLOWED_FUNCTIONS_AND_ARGUMENTS.get(functionName) match {
+      case Some(params) => params
+      case None => c.abort(tFunctionName.pos, s"@ProofRule definition must use one of $ALLOWED_FUNCTION_NAMES_STR")
+    }
+    if (tParams.length < minParam || tParams.length > maxParam) {
+      c.abort(tFunctionName.pos, s"@ProofRule requires function to have $minParam to $maxParam arguments")
+    }
+    val isCore = functionName == "coreRule"
+
+    /*
+     * Parse annotation arguments
+     */
+
+    val declName = tDeclName.decodedName.toString
+
+    val premises = parseSequents(args.premises)(c)
+    val conclusionOpt = if (args.conclusion.isEmpty) None else Some(parseSequent(args.conclusion)(c))
+    val key = parsePos(args.key)(c)
+    val recursor = parsePoses(args.recursor)(c)
+
+    val simpleDisplay = args.names match {
+      case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
+      case s: String => SimpleDisplayInfo(s, s)
+      case false => SimpleDisplayInfo(declName, declName)
+      case _ => c.abort(c.enclosingPosition, "@ProofRule names must be String or (String, String)")
+    }
+
+    val display = (simpleDisplay, premises, conclusionOpt) match {
+      case (_, Nil, None) => simpleDisplay
+      case (sd, p, Some(c)) => RuleDisplayInfo(sd, c, p, "")
+      case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")
+    }
+
+    /*
+     * Compute different names
+     */
+
+    // If the codeName is not specified, it is taken from the declaration name.
+    val codeName = if (args.codeName.nonEmpty) args.codeName else declName
+
+    val longDisplayName: String = if (args.longDisplayName.nonEmpty) args.longDisplayName else simpleDisplay.asciiName
+
+    val storageName = codeName.toLowerCase
+
+    val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
+
+    /*
+     * Build AST
+     */
+
+    // The derived* functions allow an optional argument for the codeName, which we supply here.
+    val fullParams = if (isCore) tParams else tParams.take(minParam).:+(q"Some($storageName)")
+    val fullRhs = q"$tFunctionName( ..$fullParams)"
+
+    // Tactic implementation of derived rule is always useAt
+    val expr = q"""
+      ({ case () =>
+        edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonicalName))
       })
-      val (
-        displayObject,
-        premisesString,
-        conclusionString,
-        unifier,
-        codeName,
-        displayLevel,
-        keyString,
-        recursorString,
-      ) = (
-        paramMap("names"),
-        getLiteral(paramMap("premises")),
-        getLiteral(paramMap("conclusion")),
-        getLiteral(paramMap("unifier")),
-        getLiteral(paramMap("codeName")),
-        getLiteral(paramMap("displayLevel")),
-        getLiteral(paramMap("key")),
-        getLiteral(paramMap("recursor")),
+    """ // : (Unit => Any)
+
+    val unifier = args.unifier match {
+      case "surjective" => Symbol("surjective")
+      case "surjlinear" => Symbol("surlinear")
+      case "full" => Symbol("full")
+      case "linear" => Symbol("linear")
+      case "surjlinearpretend" => Symbol("surlinearpretend")
+      case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
+    }
+
+    val displayLevel = args.displayLevel match {
+      case "internal" => Symbol("internal")
+      case "browse" => Symbol("browse")
+      case "menu" => Symbol("menu")
+      case "all" => Symbol("all")
+      case s => c.abort(c.enclosingPosition, "Unknown display level " + s)
+    }
+
+    val (infoType, info) =
+      if (isCore) (
+        tq"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomaticRuleInfo",
+        q"""AxiomaticRuleInfo(
+          canonicalName = $canonicalName,
+          display = ${convDI(display)(c)},
+          codeName = $codeName,
+          longDisplayName = $longDisplayName,
+          unifier = $unifier,
+          theExpr = $expr,
+          displayLevel = $displayLevel,
+          theKey = $key,
+          theRecursor = $recursor,
+        )""",
       )
-      val key = parsePos(keyString)(c)
-      val recursor = parsePoses(recursorString)(c)
-      val simpleDisplay = displayObject match {
-        case q"""(${Literal(Constant(sl: String))}, ${Literal(Constant(sr: String))})""" => SimpleDisplayInfo(sl, sr)
-        case Literal(Constant(s: String)) => SimpleDisplayInfo(s, s)
-        case Literal(Constant(false)) => {
-          val s = tn.decodedName.toString
-          SimpleDisplayInfo(s, s)
-        }
-        case di => c.abort(
-            c.enclosingPosition,
-            "@ProofRule expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di,
-          )
-      }
-      val premises = parseSequents(premisesString)(c)
-      val conclusionOpt = if (conclusionString == "") None else Some(parseSequent(conclusionString)(c))
-      val displayInfo = (simpleDisplay, premises, conclusionOpt) match {
-        case (_, Nil, None) => simpleDisplay
-        case (sd, p, Some(c)) => RuleDisplayInfo(sd, c, p, "")
-        case _ => c.abort(c.enclosingPosition, "Expected both premises and conclusion")
-      }
-      val longDisplayName = paramMap("longDisplayName") match {
-        case Literal(Constant(s: String)) => s
-        case Literal(Constant(false)) => { simpleDisplay.asciiName }
-      }
+      else (
+        tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedRuleInfo",
+        q"""DerivedRuleInfo(
+          canonicalName = $canonicalName,
+          display = ${convDI(display)(c)},
+          codeName = $codeName,
+          longDisplayName = $longDisplayName,
+          unifier = $unifier,
+          theExpr = $expr,
+          displayLevel = $displayLevel,
+          theKey = $key,
+          theRecursor = $recursor,
+        )""",
+      )
 
-      (codeName, longDisplayName, displayInfo, displayLevel, key, recursor, unifier)
-    }
-    def getParams(tn: TermName): (String, String, DisplayInfo, String, ExprPos, List[ExprPos], String) = {
-      import c.universe._
-      c.prefix.tree match {
-        case q"new $annotation(..$params)" => paramify(tn, params)
-        case q"new $annotation()" => paramify(tn, Nil)
-        case e => c.abort(c.enclosingPosition, "Expected @ProofRule(args), got: " + e)
-      }
-    }
-    // Annotation can only be attached to library functions for defining new axioms
-    def correctName(c: whitebox.Context)(t: c.universe.Tree): Boolean = {
-      import c.universe._
-      t match {
-        case id: Ident => {
-          if (Set("coreRule", "derivedRule", "derivedRuleSequent").contains(id.name.decodedName.toString)) true
-          else c.abort(
-            c.enclosingPosition,
-            "Expected function name coreRule, derivedRule or derivedRuleSequent, got: " + t + " of type " + t.getClass(),
-          )
-        }
-        case t => c.abort(
-            c.enclosingPosition,
-            "Invalid annottee: Expected rule function, got: " + t + " of type " + t.getClass(),
-          )
-      }
-    }
-    // private[btactics] def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): Lemma = {
-    // private[btactics] def derivedRule(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
-    def paramCount(c: whitebox.Context)(t: c.universe.Tree): (Int, Int) = {
-      import c.universe._
-      t match {
-        case id: Ident => {
-          id.name.decodedName.toString match {
-            case "coreRule" => (1, 1)
-            case "derivedRule" => (2, 3)
-            case "derivedRuleSequent" => (3, 4)
-            case _ => c.abort(
-                c.enclosingPosition,
-                "Expected function name: one of {coreRule, derivedRule, derivedRuleSequent}, got: " + t + " of type " +
-                  t.getClass(),
-              )
-          }
-        }
-        case t => c.abort(
-            c.enclosingPosition,
-            "Invalid annottee: Expected rule function, got: " + t + " of type " + t.getClass(),
-          )
-      }
-    }
-    annottees.map(_.tree).toList match {
-      // Annottee must be a val declaration of an axiom
-      case (valDecl: ValDef) :: Nil => valDecl match {
-          // val declaration must be an invocation of one of the functions for defining derived axioms and optionally can
-          // have modifiers and type annotations
-          case q"$mods val ${declName: TermName}: $tpt = $functionName( ..$params )" =>
-            if (!correctName(c)(functionName)) c.abort(
-              c.enclosingPosition,
-              "Invalid annottee: Expected val name = <ruleFunction>(x1, x2, ..), got: " + functionName + " of type " +
-                functionName.getClass(),
-            )
-            val (minParam, maxParam) = paramCount(c)(functionName)
-            val isCore = (minParam == maxParam)
-            val (
-              codeNameParam: String,
-              longDisplayNameParam: String,
-              display: DisplayInfo,
-              displayLevel: String,
-              key,
-              recursor,
-              unifier,
-            ) = getParams(declName)
-            if (params.length < minParam || params.length > maxParam) c.abort(
-              c.enclosingPosition,
-              s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam",
-            )
-            // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
-            val codeName = if (codeNameParam.nonEmpty) TermName(codeNameParam) else declName
-            val storageName = TermName(codeName.toString.toLowerCase)
-            // AST for literal strings for the names
-            val codeString = Literal(Constant(codeName.decodedName.toString))
-            val storageString = Literal(Constant(storageName.decodedName.toString))
-            val canonString = params(0)
-            // derivedAxiom functions allow an optional argument for the codeName, which we supply here
-            val fullParams = if (isCore) params else params.take(minParam).:+(q"Some($storageString)")
-            val fullRhs = q"$functionName( ..$fullParams)"
-            // Tactic implementation of derived axiom is always useAt
-            val expr =
-              q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonString))})""" // : (Unit => Any)
-            val dispLvl = displayLevel match {
-              case "internal" => Symbol("internal")
-              case "browse" => Symbol("browse")
-              case "menu" => Symbol("menu")
-              case "all" => Symbol("all")
-              case s => c.abort(c.enclosingPosition, "Unknown display level " + s)
-            }
-            val unif = unifier match {
-              case "surjective" => Symbol("surjective")
-              case "surjlinear" => Symbol("surlinear")
-              case "full" => Symbol("full")
-              case "linear" => Symbol("linear")
-              case "surjlinearpretend" => Symbol("surlinearpretend")
-              case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
-            }
-            val longDisplayName = Literal(Constant(longDisplayNameParam))
-            val info =
-              if (isCore) {
-                q"""AxiomaticRuleInfo(canonicalName = $canonString, display = ${convDI(display)(
-                    c
-                  )}, codeName = $codeString, longDisplayName = $longDisplayName, unifier = $unif, theExpr = $expr, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor)"""
-              } else {
-                q"""DerivedRuleInfo(canonicalName = $canonString, display = ${convDI(display)(
-                    c
-                  )}, codeName = $codeString, longDisplayName = $longDisplayName, unifier = $unif, theExpr = $expr, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor)"""
-              }
-            // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
-            // the axiom info to the global axiom info table
-            val application = q"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerR($fullRhs, $info)"
-            val lemmaType =
-              if (isCore) { tq"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomaticRuleInfo" }
-              else { tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedRuleInfo" }
-            val res = c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
-            res
-          case q"$mods val $cName: $tpt = $functionName( ..$params )" =>
-            c.abort(c.enclosingPosition, "Expected derivedRule with 2-3 parameters, got:" + params.length)
+    // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of
+    // registering the proof rule info to the global proof rule info table.
+    val result = q"""
+      $tMods val $tDeclName: $infoType =
+        edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerR($fullRhs, $info)
+    """
 
-        }
-      case t => c.abort(
-          c.enclosingPosition,
-          "Invalid annottee: Expected val declaration got: " + t.head + " of type: " + t.head.getClass(),
-        )
-    }
+    c.Expr[Nothing](result)
   }
 }
