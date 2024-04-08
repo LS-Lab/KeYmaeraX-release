@@ -277,7 +277,7 @@ sealed trait DerivationInfo {
  * @see
  *   [[DerivedRuleInfo]]
  */
-trait ProvableInfo extends DerivationInfo {
+sealed trait ProvableInfo extends DerivationInfo {
 
   /**
    * The [[ProvableSig]] representing this (derived) axiom or (derived) axiomatic rule. Needs to be [[Any]] to avoid
@@ -319,7 +319,7 @@ trait ProvableInfo extends DerivationInfo {
  * @see
  *   [[DerivedRuleInfo]]
  */
-trait StorableInfo extends DerivationInfo {
+sealed trait StorableInfo extends DerivationInfo {
   val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
 
   /** Gives the [[Lemma]] stored for this derivation info (after initialization). */
@@ -339,7 +339,7 @@ trait StorableInfo extends DerivationInfo {
  * @see
  *   [[Axiom]]
  */
-trait AxiomInfo extends ProvableInfo
+sealed trait AxiomInfo extends ProvableInfo
 
 /**
  * Meta-Information for an axiom from the prover core
@@ -459,7 +459,7 @@ class BuiltinInfo(
 }
 
 /** Meta-information on a tactic performing a proof step (or more) */
-abstract class TacticInfo(
+sealed abstract class TacticInfo(
     override val codeName: String,
     override val longDisplayName: String,
     override val display: DisplayInfo,
