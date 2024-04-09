@@ -628,7 +628,8 @@ object ComponentSystem extends TacticProvider {
        |""".stripMargin
 
   /** Proves system safety from isolated component and compatibility proofs. */
-  @Tactic("proveComponentSystem", codeName = "proveComponentSystem",
+  @Tactic(
+    name = "proveComponentSystem",
     inputs = """System Name:string;;
       C1 Base: Om & A1 -> I1:string;;
       C1 Use:  Om & I1 -> G1 & P1:string;;

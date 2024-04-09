@@ -15,19 +15,19 @@ import scala.reflect.macros.whitebox
  * Axiom Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]]. This annotation can
  * only be applied to val declarations whose right-hand-sides are applications of [[derivedAxiom]] or related functions,
  * see [[Ax]] for examples.
- * @param names
- *   Display names to render in the user interface. If two names are given, the first is Unicode and the second ASCII.
- *   If one ASCII name is given, it is also used as the Unicode name. Unicode names are useful for display to end users,
- *   ASCII names appear to be better-supported in error messages. Optional, defaults to `codeName`
- * @param codeName
- *   You usually don't need to specify this argument, especially for axioms. Permanent unique code name used to invoke
- *   this axiom in tactics as a string and for Lemma storage. `codeName` will be inferred from the val that is annotated
- *   by this `@Axiom` and is usually recommended to be identical to it. The exception is when you wish to have different
- *   arguments in the parsed Bellerophon language than does your implementation. In this case it is conventional to
- *   write a declaration `val <name>X = <name>(...)` with codeName `<name>` which converts arguments as needed.
- * @param longDisplayName
- *   Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to Unicode
- *   name
+ *
+ * @param name
+ *   Unique identifier for this axiom. Used to invoke the axiom in tactics and for lemma storage. Must only contain the
+ *   characters `a-zA-Z0-9_`. It is strongly recommended that this name is identical to the name of the annotated scala
+ *   definition.
+ * @param displayName
+ *   Short name used for the axiom in the user interface. Defaults to [[name]].
+ * @param displayNameAscii
+ *   ASCII-only version of [[displayName]] that must be specified if [[displayName]] contains characters outside the
+ *   printable ASCII range. Defaults to [[displayName]].
+ * @param displayNameLong
+ *   Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase.
+ *   Defaults to [[displayName]].
  * @param conclusion
  *   Formula string displayed for axioms as html with unicode in the user interface. For axioms with (non-position)
  *   inputs, the conclusion must mention each input. Sequent syntax is optionally supported: `A, B |- C, D`
@@ -70,9 +70,10 @@ import scala.reflect.macros.whitebox
  */
 @compileTimeOnly("enable -Ymacro-annotations")
 class Axiom(
-    val names: Any,
-    val codeName: String = "",
-    val longDisplayName: String = "",
+    val name: String,
+    val displayName: Option[String] = None,
+    val displayNameAscii: Option[String] = None,
+    val displayNameLong: Option[String] = None,
     val conclusion: String = "",
     val unifier: String = "full",
     val displayLevel: String = "internal",
@@ -86,9 +87,10 @@ class Axiom(
 
 /** Helper class for easy annotation argument parsing. Must stay in sync with [[Axiom]]! */
 case class AxiomArgs(
-    names: Any,
-    codeName: String = "",
-    longDisplayName: String = "",
+    name: String,
+    displayName: Option[String] = None,
+    displayNameAscii: Option[String] = None,
+    displayNameLong: Option[String] = None,
     conclusion: String = "",
     unifier: String = "full",
     displayLevel: String = "internal",
@@ -123,7 +125,6 @@ object AxiomMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" =>
         c.eval(c.Expr[AxiomArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomArgs(..$args)"))
-      case q"new $_()" => c.eval(c.Expr[AxiomArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomArgs()"))
       case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
 
@@ -159,6 +160,18 @@ object AxiomMacro {
     val isCore = functionName == "coreAxiom"
 
     /*
+     * Compute different names
+     */
+
+    val name = AnnotationCommon.getName(args.name)(c)
+    val displayName = AnnotationCommon.getDisplayName(args.displayName, name)(c)
+    val displayNameAscii = AnnotationCommon.getDisplayNameAscii(args.displayNameAscii, displayName)(c)
+    val displayNameLong = AnnotationCommon.getDisplayNameLong(args.displayNameLong, displayName)(c)
+
+    val storageName = name.toLowerCase
+    val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
+
+    /*
      * Parse annotation arguments
      */
 
@@ -166,36 +179,13 @@ object AxiomMacro {
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val simpleDisplay = args.names match {
-      case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
-      case s: String => SimpleDisplayInfo(s, s)
-      case _ => c.abort(c.enclosingPosition, "@Axiom names must be String or (String, String)")
-    }
-
+    val simpleDisplay = SimpleDisplayInfo(displayName, displayNameAscii)
     val display: DisplayInfo = (args.conclusion, inputs) match {
       case ("", Nil) => simpleDisplay
       case ("", _) => c.abort(c.enclosingPosition, "@Axiom with inputs must have a conclusion")
       case (fml, Nil) => AxiomDisplayInfo.render(simpleDisplay, fml)
       case (fml, args) => InputAxiomDisplayInfo(simpleDisplay, fml, args)
     }
-
-    /*
-     * Compute different names
-     */
-
-    // If the codeName is not specified, it is taken from the declaration name.
-    val codeName = if (args.codeName.nonEmpty) args.codeName else tDeclName.decodedName.toString
-    if (codeName.contains('"')) c.abort(c.enclosingPosition, s"Code name $codeName must not contain escape characters")
-
-    val longDisplayName =
-      if (args.longDisplayName.nonEmpty) args.longDisplayName
-      else if (display.name.nonEmpty) display.name
-      else if (display.asciiName.nonEmpty) display.asciiName
-      else codeName
-
-    val storageName = codeName.toLowerCase
-
-    val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
 
     /*
      * Build AST
@@ -235,8 +225,8 @@ object AxiomMacro {
         q"""CoreAxiomInfo(
           canonicalName = $canonicalName,
           display = ${convDI(display)(c)},
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           unifier = $unifier,
           displayLevel = $displayLevel,
           theKey = $key,
@@ -249,8 +239,8 @@ object AxiomMacro {
         q"""DerivedAxiomInfo(
           canonicalName = $canonicalName,
           display = ${convDI(display)(c)},
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           unifier = $unifier,
           displayLevel = $displayLevel,
           theKey = $key,

@@ -141,7 +141,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       }
     }
 
-  @Tactic(longDisplayName = "ModelPlex Monitor Synthesis")
+  @Tactic(name = "mxSynthesize", displayNameLong = Some("ModelPlex Monitor Synthesis"))
   def mxSynthesize(kind: String): InputTactic = inputanon {
     kind match {
       case "controller" => controllerMonitorByChase(1)
@@ -152,7 +152,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     }
   }
 
-  @Tactic(longDisplayName = "ModelPlex Auto-Instantiation")
+  @Tactic(name = "mxAutoInstantiate", displayNameLong = Some("ModelPlex Auto-Instantiation"))
   def mxAutoInstantiate(assumptions: List[Formula]): InputTactic =
     inputanon { mxAutoInstantiate(assumptions, List.empty, Some(ModelPlex.mxSimplify)) }
 
@@ -170,7 +170,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     )
   }
 
-  @Tactic(longDisplayName = "ModelPlex Monitor Shape Formatting")
+  @Tactic(name = "mxFormatShape", displayNameLong = Some("ModelPlex Monitor Shape Formatting"))
   def mxFormatShape(shape: String): InputTactic = inputanon((seq: Sequent) =>
     shape match {
       case "boolean" => PropositionalTactics.rightAssociate(SuccPos(0))

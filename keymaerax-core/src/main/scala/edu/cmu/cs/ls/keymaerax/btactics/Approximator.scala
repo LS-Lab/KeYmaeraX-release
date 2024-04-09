@@ -51,7 +51,12 @@ object Approximator extends TacticProvider with Logging {
    * @return
    *   The relevant tactic.
    */
-  @Tactic("Approximate", conclusion = "Γ |- [{X'=F}], Δ", premises = "Γ |- [{X'=F & Α(n)}], Δ")
+  @Tactic(
+    name = "autoApproximate",
+    displayName = Some("Approximate"),
+    conclusion = "Γ |- [{X'=F}], Δ",
+    premises = "Γ |- [{X'=F & Α(n)}], Δ",
+  )
   def autoApproximate(n: Number): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, sequent: Sequent) =>
       sequent.sub(pos) match {
@@ -80,7 +85,8 @@ object Approximator extends TacticProvider with Logging {
 
   // region Approximation for {{{e'=e}}}
   @Tactic(
-    "e'=e Approximation",
+    name = "expApproximate",
+    displayName = Some("e'=e Approximation"),
     conclusion = "Γ |- [{c1,exp'=exp,c2}], Δ",
     premises = "Γ |- [{c1,exp'=exp,c2 & approximate(n)}], Δ",
     inputs = "exp:variable;;n:number",
@@ -127,7 +133,8 @@ object Approximator extends TacticProvider with Logging {
    *   Good error messages for when the first cut or two fail ==> "missing assumptions."
    */
   @Tactic(
-    "Circular Dynamics Approximation",
+    name = "circularApproximate",
+    displayName = Some("Circular Dynamics Approximation"),
     conclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
     premises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
     inputs = "sin[sin]:variable;;cos[cos]:variable;;num:number",

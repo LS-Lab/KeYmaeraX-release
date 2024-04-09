@@ -31,7 +31,11 @@ object Transitivity extends TacticProvider {
   /** @inheritdoc */
   override def getInfo: (Class[_], universe.Type) = (Transitivity.getClass, universe.typeOf[Transitivity.type])
 
-  @Tactic(names = "Close Transitive", conclusion = "a>=b, b >= c, c >= z |- a >= z")
+  @Tactic(
+    name = "closeTransitive",
+    displayName = Some("Close Transitive"),
+    conclusion = "a>=b, b >= c, c >= z |- a >= z",
+  )
   val closeTransitive: DependentTactic = anon((s: Sequent) => {
 
     val transitiveInequalities = search(s) match {

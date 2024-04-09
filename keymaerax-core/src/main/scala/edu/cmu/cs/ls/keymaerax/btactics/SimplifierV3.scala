@@ -1100,7 +1100,13 @@ object SimplifierV3 extends TacticProvider {
     }
   }
 
-  @Tactic(names = "Simplify", premises = "Γ |- simplify(P), Δ", conclusion = "Γ |- P, Δ", displayLevel = "browse")
+  @Tactic(
+    name = "simplify",
+    displayName = Some("Simplify"),
+    premises = "Γ |- simplify(P), Δ",
+    conclusion = "Γ |- P, Δ",
+    displayLevel = "browse",
+  )
   val simplify: BuiltInPositionTactic = simpTac()
 
   /** Simplifies with full context (antecedent + negated succedent). */
@@ -1190,7 +1196,13 @@ object SimplifierV3 extends TacticProvider {
     succ(hideTrues, 0)(hideFalses, 0)
   }
 
-  @Tactic(names = "Full Simplify", premises = "simplify(Γ |- P, Δ)", conclusion = "Γ |- P, Δ", displayLevel = "browse")
+  @Tactic(
+    name = "fullSimplify",
+    displayName = Some("Full Simplify"),
+    premises = "simplify(Γ |- P, Δ)",
+    conclusion = "Γ |- P, Δ",
+    displayLevel = "browse",
+  )
   val fullSimplify: BuiltInTactic = fullSimpTac()
 
   /** Term simplification indices */

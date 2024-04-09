@@ -74,7 +74,13 @@ private object ProofRuleTactics extends TacticProvider with Logging {
    * @see
    *   [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
    */
-  @Tactic("UR", premises = "P(y) |- Q(y)", conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
+  @Tactic(
+    name = "uniformRename",
+    displayName = Some("UR"),
+    premises = "P(y) |- Q(y)",
+    conclusion = "P(x) |- Q(x)",
+    inputs = "x:variable ;; y:variable",
+  )
   def uniformRename(what: Variable, repl: Variable): InputTactic = inputanon { uniformRenameFw(what, repl) }
 
   /** Builtin forward implementation of uniformRename. */
@@ -102,7 +108,13 @@ private object ProofRuleTactics extends TacticProvider with Logging {
    *   if this bound renaming is not admissible for s at the indicated position because repl,repl',what' already
    *   occurred, or because a semantic symbol occurs, or because the formula at `pos` has the wrong shape.
    */
-  @Tactic("BR", premises = "Γ |- ∀y Q(y), Δ", conclusion = "Γ |- ∀x Q(x), Δ", inputs = "x:variable;;y:variable")
+  @Tactic(
+    name = "boundRename",
+    displayName = Some("BR"),
+    premises = "Γ |- ∀y Q(y), Δ",
+    conclusion = "Γ |- ∀x Q(x), Δ",
+    inputs = "x:variable;;y:variable",
+  )
   def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position) => boundRenameFw(what, repl)(pos) }
   def boundRenameFw(what: Variable, repl: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
@@ -136,7 +148,8 @@ private object ProofRuleTactics extends TacticProvider with Logging {
 
   /** Bound renaming at a position (must point to universal quantifier or assignment). */
   @Tactic(
-    "BRat",
+    name = "boundRenameAt",
+    displayName = Some("BRat"),
     premises = "Γ |- ∀y Q(y), Δ",
     conclusion = "Γ |- ∀x Q(x), Δ",
     inputs = "y:variable",
@@ -228,7 +241,7 @@ private object ProofRuleTactics extends TacticProvider with Logging {
    *   if the quantified variable that is to be Skolemized already occurs free in the sequent. Use [[BoundRenaming]] to
    *   resolve.
    */
-  @Tactic(premises = "Γ |- p(x), Δ", conclusion = "Γ |- ∀x p(x), Δ", codeName = "skolem")
+  @Tactic(name = "skolem", premises = "Γ |- p(x), Δ", conclusion = "Γ |- ∀x p(x), Δ")
   val skolemizeR: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
     {
       require(pos.isTopLevel, "Skolemization only at top-level")
@@ -236,14 +249,14 @@ private object ProofRuleTactics extends TacticProvider with Logging {
     }
   }
 
-  @deprecated("Use SequentCalculus.closeT instead") @Tactic()
+  @deprecated("Use SequentCalculus.closeT instead") @Tactic(name = "closeTrue")
   private[btactics] val closeTrue: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
     requireOneSubgoal(provable, "closeTrue")
     provable(core.CloseTrue(pos.top), 0)
   }
   private[btactics] val closeTrueInfo: TacticInfo = TacticInfo("closeTrue")
 
-  @deprecated("Use SequentCalculus.closeF instead") @Tactic()
+  @deprecated("Use SequentCalculus.closeF instead") @Tactic(name = "closeFalse")
   private[btactics] val closeFalse: BuiltInLeftTactic = anon { (provable: ProvableSig, pos: AntePosition) =>
     requireOneSubgoal(provable, "closeFalse")
     provable(core.CloseFalse(pos.top), 0)

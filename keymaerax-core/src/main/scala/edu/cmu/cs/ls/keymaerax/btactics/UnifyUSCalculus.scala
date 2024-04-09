@@ -136,11 +136,11 @@ trait UnifyUSCalculus {
    * @see
    *   [[TactixLibrary.done]]
    */
-  @Tactic()
+  @Tactic(name = "skip")
   val skip: BuiltInTactic = anonnoop { Idioms.ident.result }
 
   /** nil=skip is a no-op tactic that has no effect */
-  @Tactic()
+  @Tactic(name = "nil")
   val nil: BuiltInTactic = anonnoop { Idioms.nil.result }
 
   /**
@@ -148,7 +148,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[skip]],[[nil]]
    */
-  @Tactic()
+  @Tactic(name = "todo")
   val todo: BuiltInTactic = anonnoop { Idioms.todo.result }
 
   /**
@@ -156,7 +156,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[skip]]
    */
-  @Tactic()
+  @Tactic(name = "fail")
   val fail: BuiltInTactic = anon { (_: ProvableSig) => throw new TacticInapplicableFailure("fail") }
 
   /* ******************************************************************
@@ -340,7 +340,13 @@ trait UnifyUSCalculus {
 
   /** Do-not-call: exclusively for internal tactic interpreter usage. */
   @deprecated("Exclusively use for tactic interpreters")
-  @Tactic(("US", "byUS"), codeName = "byUS", conclusion = "|- S(P)", premises = "|- P")
+  @Tactic(
+    name = "byUS",
+    displayName = Some("US"),
+    displayNameAscii = Some("byUS"),
+    conclusion = "|- S(P)",
+    premises = "|- P",
+  )
   private[btactics]
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
@@ -379,7 +385,7 @@ trait UnifyUSCalculus {
 
   /** Do-not-call: exclusively for internal tactic interpreter usage. */
   // @note serializes as useAt({`axiomName`},{`k`})
-  @deprecated("Exclusively use for tactic interpreters") @Tactic("useAt", codeName = "useAt")
+  @deprecated("Exclusively use for tactic interpreters") @Tactic(name = "useAt")
   private[btactics] def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, seq: Sequent) =>
       val keyPos = key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList))
@@ -662,7 +668,7 @@ trait UnifyUSCalculus {
   /** @see [[US()]] */
   def uniformSubstitute(subst: USubst): InputTactic = inputanon { US(subst) }
 
-  @Tactic(("US", "US"), codeName = "US", conclusion = "|- S(P)", premises = "|- P")
+  @Tactic(name = "US", conclusion = "|- S(P)", premises = "|- P")
   def USX(S: List[SubstitutionPair]): InputTactic = inputanonP { (pr: ProvableSig) =>
     // add user-provided substitutions to the definitions
     US(USubst(S))(pr).reapply(pr.defs ++ Declaration.fromSubst(S, pr.defs))
@@ -1239,7 +1245,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
-  @Tactic(premises = "e=k", conclusion = "c(e)↔c(k)")
+  @Tactic(name = "CQ", premises = "e=k", conclusion = "c(e)↔c(k)")
   def CQ(inEqPos: PosInExpr): InputTactic = inputanon { CQFw(inEqPos) }
 
   /** Builtin forward implementation of CQ. */
@@ -1308,7 +1314,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
-  @Tactic(premises = "e=k", conclusion = "c(e)→c(k)")
+  @Tactic(name = "CQimp", premises = "e=k", conclusion = "c(e)→c(k)")
   def CQimp(inEqPos: PosInExpr): InputTactic = inputanon { CQimpFw(inEqPos) }
 
   /** Builtin forward implementation of CQimp. */
@@ -1377,7 +1383,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
-  @Tactic(premises = "k=e", conclusion = "c(e)→c(k)")
+  @Tactic(name = "CQrevimp", premises = "k=e", conclusion = "c(e)→c(k)")
   def CQrevimp(inEqPos: PosInExpr): InputTactic = inputanon { CQrevimpFw(inEqPos) }
 
   /** Builtin forward implementation of CQrevimp. */
@@ -1458,7 +1464,7 @@ trait UnifyUSCalculus {
    *   Germany, Proceedings, LNCS. Springer, 2015.
    *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
    */
-  @Tactic(premises = "P↔Q", conclusion = "C{P}↔C{Q}", codeName = "CECongruence")
+  @Tactic(name = "CECongruence", premises = "P↔Q", conclusion = "C{P}↔C{Q}")
   def CE(inEqPos: PosInExpr): InputTactic = inputanon { CEFw(inEqPos) }
 
   /** Builtin forward implementation of CE. */
@@ -1512,7 +1518,7 @@ trait UnifyUSCalculus {
    *   Germany, Proceedings, LNCS. Springer, 2015.
    *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
    */
-  @Tactic(premises = "P↔Q", conclusion = "C{P}→C{Q}")
+  @Tactic(name = "CEimp", premises = "P↔Q", conclusion = "C{P}→C{Q}")
   def CEimp(inEqPos: PosInExpr): InputTactic = inputanon { CEimpFw(inEqPos) }
 
   /** Builtin forward implementation of CEimp. */
@@ -1566,7 +1572,7 @@ trait UnifyUSCalculus {
    *   Germany, Proceedings, LNCS. Springer, 2015.
    *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
    */
-  @Tactic(premises = "Q↔P", conclusion = "C{P}→C{Q}")
+  @Tactic(name = "CErevimp", premises = "Q↔P", conclusion = "C{P}→C{Q}")
   def CErevimp(inEqPos: PosInExpr): InputTactic = inputanon { CErevimpFw(inEqPos) }
 
   /** Builtin forward implementation of CErevimp. */
@@ -1633,7 +1639,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[HilbertCalculus.mond]]
    */
-  @Tactic(premises = "P→Q", conclusion = "C{P}→C{Q}", codeName = "CMonCongruence")
+  @Tactic(name = "CMonCongruence", premises = "P→Q", conclusion = "C{P}→C{Q}")
   def CMon(inEqPos: PosInExpr): InputTactic = inputanon { CMonFw(inEqPos) }
 
   /** Builtin forward implementation of CMon. */
@@ -1678,7 +1684,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[CMon()]]
    */
-  @Tactic(premises = "P→Q", conclusion = "C{P}→C{Q}")
+  @Tactic(name = "CMon", premises = "P→Q", conclusion = "C{P}→C{Q}")
   def CMon: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
     // require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
     (provable(CoHideRight(pos.top), 0)(CMonFw(PosInExpr(pos.inExpr.pos.tail)).result _, 0))
@@ -1919,7 +1925,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CEat(Provable)]]
    */
-  @Tactic(premises = "Γ |- C{repl}, Δ ;; Γ |- C{repl}→C{c}, Δ", conclusion = "Γ |- C{c}, Δ")
+  @Tactic(name = "cutAt", premises = "Γ |- C{repl}, Δ ;; Γ |- C{repl}→C{c}, Δ", conclusion = "Γ |- C{c}, Δ")
   def cutAt(repl: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
     cutAtFw(repl)(pos)
   }
@@ -2958,7 +2964,7 @@ trait UnifyUSCalculus {
    * critical choices. Unlike [[TactixLibrary.chaseAt]] will not branch or use propositional rules, merely transform the
    * chosen formula in place.
    */
-  @Tactic(longDisplayName = "Decompose")
+  @Tactic(name = "chase", displayNameLong = Some("Decompose"))
   val chase: BuiltInPositionTactic = anon { chase(3, 3, AxIndex.axiomsFor(_: Expression)).computeResult _ }
   private[btactics] val chaseInfo: TacticInfo = TacticInfo("chase")
 
@@ -2966,7 +2972,7 @@ trait UnifyUSCalculus {
    * Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
    * exhaustively.
    */
-  @Tactic(longDisplayName = "Deep Decompose")
+  @Tactic(name = "deepChase", displayNameLong = Some("Deep Decompose"))
   val deepChase: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "deepChase")
     val expanded = pr(TactixLibrary.expandAllDefsFw(Nil), 0)

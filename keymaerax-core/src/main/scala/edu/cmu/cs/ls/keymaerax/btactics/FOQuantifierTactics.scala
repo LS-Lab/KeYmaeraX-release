@@ -670,7 +670,9 @@ protected object FOQuantifierTactics extends TacticProvider {
    *   The tactic.
    */
   @Tactic(
-    names = ("∀Cl", "allClosure"),
+    name = "universalClosure",
+    displayName = Some("∀Cl"),
+    displayNameAscii = Some("allClosure"),
     displayLevel = "browse",
     premises = "Γ |- \\forall order p(x,y,z), Δ",
     conclusion = "Γ |- p(x,y,z), Δ",

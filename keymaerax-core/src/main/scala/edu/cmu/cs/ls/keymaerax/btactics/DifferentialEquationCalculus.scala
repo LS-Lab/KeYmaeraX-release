@@ -75,8 +75,9 @@ trait DifferentialEquationCalculus {
    * `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`.
    */
   @Tactic(
-    "[']",
-    longDisplayName = "Solution",
+    name = "solve",
+    displayName = Some("[']"),
+    displayNameLong = Some("Solution"),
     premises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     contextPremises = "Γ |- C( ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)) ), Δ",
@@ -93,7 +94,8 @@ trait DifferentialEquationCalculus {
    * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`.
    */
   @Tactic(
-    longDisplayName = "Solution with q(x) true at end",
+    name = "solveEnd",
+    displayNameLong = Some("Solution with q(x) true at end"),
     premises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = true,
@@ -164,11 +166,13 @@ trait DifferentialEquationCalculus {
    *   initial values of x and y, respectively.
    * @note
    *   dC is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
-   * @see[[HilbertCalculus.DC]]
+   * @see
+   *   [[HilbertCalculus.DC]]
    */
   def dC(R: Formula): DependentPositionWithAppliedInputTactic = dC(List(R))
   @Tactic(
-    longDisplayName = "Differential Cut",
+    name = "dC",
+    displayNameLong = Some("Differential Cut"),
     premises = "Γ |- [x'=f(x) & Q∧R]P, Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( [x'=f(x) & Q∧R]P ), Δ ;; Γ |- C( [x'=f(x) & Q]R ), Δ",
@@ -199,7 +203,8 @@ trait DifferentialEquationCalculus {
    *   [[HilbertCalculus.DI]]
    */
   @Tactic(
-    longDisplayName = "Differential Invariant",
+    name = "dIRule",
+    displayNameLong = Some("Differential Invariant"),
     premises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
@@ -235,7 +240,8 @@ trait DifferentialEquationCalculus {
    *   [[HilbertCalculus.DI]]
    */
   @Tactic(
-    longDisplayName = "Differential Invariant Auto-Close",
+    name = "dIClose",
+    displayNameLong = Some("Differential Invariant Auto-Close"),
     premises = "*",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
@@ -306,15 +312,14 @@ trait DifferentialEquationCalculus {
   def dI(auto: Symbol = Symbol("full")): DependentPositionTactic = DifferentialTactics.diffInd(auto)
 
   @Tactic(
-    names = "dI",
-    longDisplayName = "Differential Invariant",
+    name = "dI",
+    displayNameLong = Some("Differential Invariant"),
     premises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", // todo: how to indicate closed premise?
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel = "all",
     revealInternalSteps = true,
-    codeName = "dI",
   )
   def dIX: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
 
@@ -350,7 +355,8 @@ trait DifferentialEquationCalculus {
    *   }}}
    */
   @Tactic(
-    longDisplayName = "Differential Ghost",
+    name = "dG",
+    displayNameLong = Some("Differential Ghost"),
     premises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]G ), Δ",
@@ -368,8 +374,9 @@ trait DifferentialEquationCalculus {
   }
 
   @Tactic(
-    "dG",
-    longDisplayName = "Differential Ghost",
+    name = "dGold",
+    displayName = Some("dG"),
+    displayNameLong = Some("Differential Ghost"),
     conclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
     premises = "Γ |- ∃y [{x'=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
     inputs = "y[y]:variable;;a(x):term;;b(x):term;;P[y]:option[formula]",
@@ -412,7 +419,8 @@ trait DifferentialEquationCalculus {
    */
   // NB: Annotate diffInvariant(Formula) rather than DifferentialTactics.diffInvariant(List[Formula]) for compatibility
   @Tactic(
-    longDisplayName = "Differential Cut + Auto Differential Invariant",
+    name = "diffInvariant",
+    displayNameLong = Some("Differential Cut + Auto Differential Invariant"),
     premises = "Γ |- [x'=f(x) & Q∧R]P, Δ",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     inputs = "R:formula",

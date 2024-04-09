@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import scala.reflect.macros.blackbox
+import scala.reflect.macros.{blackbox, whitebox}
 
 object AnnotationCommon {
   type ExprPos = List[Int]
@@ -158,24 +158,44 @@ object AnnotationCommon {
           )}, ${convAIs(input)})"""
     }
   }
-  def foldParams(c: blackbox.Context, paramNames: List[String])(
-      acc: (Int, Boolean, Map[String, c.universe.Tree]),
-      param: c.universe.Tree,
-  ): (Int, Boolean, Map[String, c.universe.Tree]) = {
-    import c.universe._
-    val (idx, wereNamed, paramMap) = acc
-    val (k, v, isNamed) = param match {
-      case na: NamedArg => {
-        na.lhs match {
-          case id: Ident => (id.name.decodedName.toString, na.rhs, true)
-          case e => c.abort(c.enclosingPosition, "Expected argument name to be identifier, got: " + e)
-        }
-      }
-      case t: Tree if !wereNamed => (paramNames(idx), t, false)
-      case t: Tree =>
-        c.abort(c.enclosingPosition, "Positional argument " + t + " must appear before all named arguments")
-    }
-    (idx + 1, isNamed || wereNamed, paramMap.+(k -> v))
+
+  def getName(name: String)(implicit c: whitebox.Context): String = {
+    val valid = "^[a-zA-Z0-9_]*$".r.matches(name)
+    if (!valid) c.abort(c.enclosingPosition, "name must consist only of a-z, A-Z, 0-9, _")
+
+    name
   }
 
+  def getDisplayName(displayName: Option[String], name: String)(implicit c: whitebox.Context): String = {
+    if (displayName.contains(name)) c.warning(c.enclosingPosition, "redundant displayName")
+
+    displayName.getOrElse(name)
+  }
+
+  def getDisplayNameAscii(displayNameAscii: Option[String], displayName: String)(implicit
+      c: whitebox.Context
+  ): String = {
+    if (displayNameAscii.contains(displayName)) c.warning(c.enclosingPosition, "redundant displayNameAscii")
+
+    val result = displayNameAscii.getOrElse(displayName)
+
+    // This check is currently disabled because some of the ascii display names did not contain ascii-only values
+    // when this refactoring started. However, I don't want to introduce actual changes in names before I've fully
+    // migrated to this name system, so the test will have to wait until later.
+    // TODO Uncomment again
+    /*
+    val isPrintableAscii = result.codePoints().allMatch(c => 0x20 <= c && c <= 0x7e)
+    if (!isPrintableAscii) {
+      c.abort(c.enclosingPosition, "displayNameAscii contains characters outside the printable ASCII range")
+    }
+     */
+
+    result
+  }
+
+  def getDisplayNameLong(displayNameLong: Option[String], displayName: String)(implicit c: whitebox.Context): String = {
+    if (displayNameLong.contains(displayName)) c.warning(c.enclosingPosition, "redundant displayNameLong")
+
+    displayNameLong.getOrElse(displayName)
+  }
 }

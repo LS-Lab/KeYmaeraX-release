@@ -28,7 +28,12 @@ private object HybridProgramTactics extends TacticProvider {
   import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
   /** Decomposes a question of the form `{a ++ b ++ c}; plant` into `a;plant`, `b;plant`, `c;plant`. */
-  @Tactic(names = "Decompose Controller", premises = "[a][c]P; ...; [b][c]P", conclusion = "[{a ++ ... ++ b}; c] P")
+  @Tactic(
+    name = "decomposeController",
+    displayName = Some("Decompose Controller"),
+    premises = "[a][c]P; ...; [b][c]P",
+    conclusion = "[{a ++ ... ++ b}; c] P",
+  )
   val decomposeController: DependentPositionTactic = anon((pos: Position, s: Sequent) => {
     s(pos) match {
       case Box(Compose(ctrl, plant), phi) => decomposeChoices(ctrl, pos)

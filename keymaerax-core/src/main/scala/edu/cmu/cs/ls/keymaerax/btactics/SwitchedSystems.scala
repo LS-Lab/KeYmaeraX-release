@@ -562,9 +562,8 @@ object SwitchedSystems extends TacticProvider {
   }
 
   @Tactic(
-    names = "stabilityCLF",
-    codeName = "stabilityCLF",
-    longDisplayName = "Stability by Common Lyapunov Function",
+    name = "stabilityCLF",
+    displayNameLong = Some("Stability by Common Lyapunov Function"),
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<=0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0)",
     conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
     displayLevel = "browse",
@@ -701,9 +700,8 @@ object SwitchedSystems extends TacticProvider {
   }
 
   @Tactic(
-    names = "attractivityCLF",
-    codeName = "attractivityCLF",
-    longDisplayName = "Attractivity by Common Lyapunov Function",
+    name = "attractivityCLF",
+    displayNameLong = Some("Attractivity by Common Lyapunov Function"),
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0) ∧ RUB(V)",
     conclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
@@ -986,9 +984,8 @@ object SwitchedSystems extends TacticProvider {
 
   // MLF tactic for state-dependent and guarded state-dependents
   @Tactic(
-    names = "stabilityStateMLF",
-    codeName = "stabilityStateMLF",
-    longDisplayName = "Stability for State-dependent Switching by Multiple Lyapunov Functions",
+    name = "stabilityStateMLF",
+    displayNameLong = Some("Stability for State-dependent Switching by Multiple Lyapunov Functions"),
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<=0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0)",
     conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ a; x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
     displayLevel = "browse",
@@ -1260,9 +1257,8 @@ object SwitchedSystems extends TacticProvider {
    *   Tactic proving stability for the Timed switched system at a given position
    */
   @Tactic(
-    names = "stabilityTimeMLF",
-    codeName = "stabilityTimeMLF",
-    longDisplayName = "Time-based Stability by Multiple Lyapunov Functions",
+    name = "stabilityTimeMLF",
+    displayNameLong = Some("Time-based Stability by Multiple Lyapunov Functions"),
     premises = "Γ |- Vp' <= Lp*Vp",
     conclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
@@ -1573,9 +1569,8 @@ object SwitchedSystems extends TacticProvider {
   }
 
   @Tactic(
-    names = "attractivityStateMLF",
-    codeName = "attractivityStateMLF",
-    longDisplayName = "Attractivity for State-dependent Switching by Multiple Lyapunov Functions",
+    name = "attractivityStateMLF",
+    displayNameLong = Some("Attractivity for State-dependent Switching by Multiple Lyapunov Functions"),
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0) ∧ RUB(Vp)",
     conclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
@@ -2001,9 +1996,8 @@ object SwitchedSystems extends TacticProvider {
   }
 
   @Tactic(
-    names = "attractivityTimeMLF",
-    codeName = "attractivityTimeMLF",
-    longDisplayName = "Time-based Attractivity by Multiple Lyapunov Functions",
+    name = "attractivityTimeMLF",
+    displayNameLong = Some("Time-based Attractivity by Multiple Lyapunov Functions"),
     premises = "Γ |- Vp' <= Lp*Vp, rate > 0",
     conclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",

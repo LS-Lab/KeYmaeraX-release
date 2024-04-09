@@ -20,20 +20,21 @@ import scala.reflect.macros.whitebox
 
 /**
  * Tactic Annotation for proof tactics, which allows decentralized [[TacticInfo]].
- * @param names
- *   Display names to render in the user interface. If two names are given, the first is Unicode and the second ASCII.
- *   If one ASCII name is given, it is also used as the Unicode name. Unicode names are useful for display to end users,
- *   ASCII names appear to be better-supported in error messages. Optional, defaults to codeName
- * @param codeName
- *   You usually don't need to specify this argument. Permanent unique code name used to invoke this tactic from a
- *   parsed string and for Lemma storage. `codeName` will be inferred from the val that is annotated by this `@Tactic`
- *   and is usually recommended to be identical to it. The exception is when you wish for your tactic to have different
- *   arguments in the parsed Bellerophon language than does your implementation. In this case it is conventional to
- *   write a declaration `val <tacticName>X = <tacticName>(...)` with codeName `<tacticName>` which converts arguments
- *   as needed.
- * @param longDisplayName
- *   Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to Unicode
- *   display name
+ *
+ * @param name
+ *   Unique identifier for this axiom. Used to invoke the axiom in tactics and for lemma storage. Must only contain the
+ *   characters `a-zA-Z0-9_`. It is strongly recommended that this name is identical to the name of the annotated scala
+ *   definition. The exception is when you wish for your tactic to have different arguments in the parsed Bellerophon
+ *   language than does your implementation. In this case it is conventional to write a declaration `val <tacticName>X =
+ *   <tacticName>(...)` with [[name]] `<tacticName>` which converts arguments as needed.
+ * @param displayName
+ *   Short name used for the axiom in the user interface. Defaults to [[name]].
+ * @param displayNameAscii
+ *   ASCII-only version of [[displayName]] that must be specified if [[displayName]] contains characters outside the
+ *   printable ASCII range. Defaults to [[displayName]].
+ * @param displayNameLong
+ *   Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase.
+ *   Defaults to [[displayName]].
  * @param inputs
  *   Display input information for non-positioning arguments, e.g., "C:Formula" for cut. Arguments are separated with ;;
  *   and optional square brackets []. In the default case, without brackets, the inputs of tactic must not introduce any
@@ -72,7 +73,7 @@ import scala.reflect.macros.whitebox
  *   [[TacticInfo]]
  * @example
  *   {{{
- *   @Tactic("diffCuts")
+ *   @Tactic(name = "diffCuts")
  *   def diffCuts(fmls: List[Formula]): BelleExpr = ...   /* Definition */
  *   diffCuts(List("acc > 0".asFormula)) /* Used in Scala */
  *   diffCuts({`acc > 0`}) /* Used in Bellerophon */
@@ -81,7 +82,7 @@ import scala.reflect.macros.whitebox
  *   }}}
  * @example
  *   {{{
- *   @Tactic("cutFresh", inputs = "x:Variable;; p(x)[x]:Formula")
+ *   @Tactic(name = "cutFresh", inputs = "x:Variable;; p(x)[x]:Formula")
  *   def cutFresh(x: Variable, px: Formula): InputTactic = ...
  *   cutFresh("x".asVariable, "x^2 >= 0".asFormula)  /* Used in Scala */
  *   cutFresh({`x`}, {`x^2 >= 0`})  /* Used in Bellerophon */
@@ -89,7 +90,7 @@ import scala.reflect.macros.whitebox
  * @example
  *   {{{
  *   /* Discharge x:=*, optionally instantiate x := f for [] on left or <> on right */
- *   @Tactic("random", inputs = "f:Option[Term]")
+ *   @Tactic(name = "random", inputs = "f:Option[Term]")
  *   def random(maybeF: Option[Term]): DependentPositionWithAppliedPositionTactic = ...
  *   random(None)(1) & random(Some("x".asTerm"))   /* Scala */
  *   random(1) & random({`x`})   /* Bellerophon */
@@ -97,21 +98,22 @@ import scala.reflect.macros.whitebox
  * @example
  *   {{{
  *   /* Invalid: multiple variadic argument lists. Don't do this. */
- *   @Tactic("cutLAndOrR", inputs = "lcuts: List[Formula];; rcuts: List[Formula]")
+ *   @Tactic(name = "cutLAndOrR", inputs = "lcuts: List[Formula];; rcuts: List[Formula]")
  *   def cutLAndOrR(lcuts: List[Formula], rcuts: List[Formula]): BelleExpr =  ...
  *   }}}
  * @example
  *   {{{
  *   /* Invalid: optional arguments stuttered with required arguments. Don't do this. */
- *   @Tactic("sandwich", inputs = "l: Option[Term];; x: Term;; r: Option[Term]")
+ *   @Tactic(name = "sandwich", inputs = "l: Option[Term];; x: Term;; r: Option[Term]")
  *   def sandwich(l: Option[Term], x: Term, r: Option[Term]): BelleExpr =  ...
  *   }}}
  */
 @compileTimeOnly("enable -Ymacro-annotations")
 class Tactic(
-    val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
-    val codeName: String = "",
-    val longDisplayName: String = "",
+    val name: String,
+    val displayName: Option[String] = None,
+    val displayNameAscii: Option[String] = None,
+    val displayNameLong: Option[String] = None,
     val premises: String = "",
     val conclusion: String = "",
     val contextPremises: String = "",
@@ -128,9 +130,10 @@ class Tactic(
 
 /** Helper class for easy annotation argument parsing. Must stay in sync with [[Tactic]]! */
 case class TacticArgs(
-    names: Any = false,
-    codeName: String = "",
-    longDisplayName: String = "",
+    name: String,
+    displayName: Option[String] = None,
+    displayNameAscii: Option[String] = None,
+    displayNameLong: Option[String] = None,
     premises: String = "",
     conclusion: String = "",
     contextPremises: String = "",
@@ -203,7 +206,6 @@ object TacticMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" =>
         c.eval(c.Expr[TacticArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.TacticArgs(..$args)"))
-      case q"new $_()" => c.eval(c.Expr[TacticArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.TacticArgs()"))
       case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
 
@@ -272,22 +274,21 @@ object TacticMacro {
     val funcSort = funcName.flatMap(ANON_SORTS.get)
 
     /*
+     * Compute different names
+     */
+
+    val name = AnnotationCommon.getName(args.name)(c)
+    val displayName = AnnotationCommon.getDisplayName(args.displayName, name)(c)
+    val displayNameAscii = AnnotationCommon.getDisplayNameAscii(args.displayNameAscii, displayName)(c)
+    val displayNameLong = AnnotationCommon.getDisplayNameLong(args.displayNameLong, displayName)(c)
+
+    /*
      * Parse annotation arguments
      */
 
-    val declName = definition.declName.decodedName.toString
-    val codeName = if (args.codeName.nonEmpty) args.codeName else declName
-    if (codeName.contains("\"")) c.abort(c.enclosingPosition, s"Code name $codeName must not contain \"")
-
     val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
 
-    val simpleDisplay = args.names match {
-      case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
-      case s: String => SimpleDisplayInfo(s, s)
-      case false => SimpleDisplayInfo(codeName, codeName)
-      case _ => c.abort(c.enclosingPosition, "@Tactic names must be String or (String, String) or false")
-    }
-
+    val simpleDisplay = SimpleDisplayInfo(displayName, displayNameAscii)
     val display = (inputs, args.premises, args.conclusion, args.contextPremises, args.contextConclusion) match {
       case (Nil, "", "", _, _) => simpleDisplay
       case (Nil, "", concl, _, _) if concl != "" => AxiomDisplayInfo.render(simpleDisplay, concl)
@@ -301,8 +302,6 @@ object TacticMacro {
         TacticDisplayInfo(simpleDisplay, conc, prem, ctxConc, ctxPrem, args.inputGenerator)
       case _ => c.abort(c.enclosingPosition, "@Tactic with premises or inputs must have a conclusion")
     }
-
-    val longDisplayName = if (args.longDisplayName.nonEmpty) args.longDisplayName else simpleDisplay.name
 
     /*
      * Scrape position argument info from lambda declaration
@@ -440,7 +439,7 @@ object TacticMacro {
         .map(ai => Ident(TermName(ai.name)))
         .foldRight[Tree](q"Nil") { case (arg, acc) => q"$arg :: $acc" }
 
-      val tFactory = q"new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory($codeName)"
+      val tFactory = q"new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory($name)"
 
       /** The body, but if the function used is in [[ANON_SORTS]], the function is removed. */
       val tRhs = body match {
@@ -542,8 +541,8 @@ object TacticMacro {
     val info = returnType match {
       case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PlainTacticInfo(
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           display = ${convDI(display)(c)},
           displayLevel = ${convSymbol(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
@@ -553,8 +552,8 @@ object TacticMacro {
 
       case "InputTactic" | "StringInputTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTacticInfo(
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           display = ${convDI(display)(c)},
           inputs = ${convAIs(displayInputs)(c)},
           displayLevel = ${convSymbol(args.displayLevel)(c)},
@@ -566,8 +565,8 @@ object TacticMacro {
       case "DependentPositionTactic" | "BuiltInLeftTactic" | "BuiltInRightTactic" | "BuiltInPositionTactic" |
           "CoreLeftTactic" | "CoreRightTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PositionTacticInfo(
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           display = ${convDI(display)(c)},
           displayLevel = ${convSymbol(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
@@ -577,8 +576,8 @@ object TacticMacro {
 
       case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputPositionTacticInfo(
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           display = ${convDI(display)(c)},
           inputs = ${convAIs(displayInputs)(c)},
           displayLevel = ${convSymbol(args.displayLevel)(c)},
@@ -589,8 +588,8 @@ object TacticMacro {
 
       case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.TwoPositionTacticInfo(
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           display = ${convDI(display)(c)},
           displayLevel = ${convSymbol(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
@@ -599,8 +598,8 @@ object TacticMacro {
 
       case "AppliedBuiltInTwoPositionTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           display = ${convDI(display)(c)},
           displayLevel = ${convSymbol(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,

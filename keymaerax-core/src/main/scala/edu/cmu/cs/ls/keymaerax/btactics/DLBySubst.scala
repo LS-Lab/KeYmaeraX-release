@@ -77,10 +77,10 @@ private object DLBySubst extends TacticProvider {
   }
 
   /** @see [[TactixLibrary.abstractionb]] */
+  // @todo code name on cheat sheet is abstract
   @Tactic(
-    names = "GV",
-    codeName = "GV", // @todo code name on cheat sheet is abstract
-    longDisplayName = "Gödel Vacuous",
+    name = "GV",
+    displayNameLong = Some("Gödel Vacuous"),
     premises = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
     //       GVR --------------------------------------------
     conclusion = "Γ |- [a]P, Δ",
@@ -126,7 +126,7 @@ private object DLBySubst extends TacticProvider {
   /**
    * Safe abstraction checks to not lose information from tests and evolution domain constraints before it abstracts.
    */
-  @Tactic()
+  @Tactic(name = "safeabstractionb")
   val safeabstractionb: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     // internal automation support
     seq.sub(pos) match {
@@ -167,8 +167,9 @@ private object DLBySubst extends TacticProvider {
    *   The self-assigned variable.
    */
   @Tactic(
-    names = "[:=]",
-    longDisplayName = "Introduce Self-Assign",
+    name = "stutter",
+    displayName = Some("[:=]"),
+    displayNameLong = Some("Introduce Self-Assign"),
     premises = "Γ |- [x:=x]P, Δ",
     //      [:=] ------------------
     conclusion = "Γ |- P, Δ",
@@ -309,8 +310,9 @@ private object DLBySubst extends TacticProvider {
    * @incontext
    */
   @Tactic(
-    names = "[:=]=",
-    longDisplayName = "Assign Equality",
+    name = "assignEquality",
+    displayName = Some("[:=]="),
+    displayNameLong = Some("Assign Equality"),
     premises = "Γ, x=e |- P, Δ",
     //    [:=]=  ------------------
     conclusion = "Γ |- [x:=e]P, Δ",
@@ -400,8 +402,9 @@ private object DLBySubst extends TacticProvider {
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
   @Tactic(
-    names = "<:=>=",
-    longDisplayName = "Assign Equality",
+    name = "assigndEquality",
+    displayName = Some("<:=>="),
+    displayNameLong = Some("Assign Equality"),
     premises = "Γ, x=e |- P, Δ",
     //     <:=>= -----------------
     conclusion = "Γ |- ⟨x:=e⟩P, Δ",
@@ -511,7 +514,8 @@ private object DLBySubst extends TacticProvider {
    *   Uses K modal modus ponens, which is unsound for hybrid games.
    */
   @Tactic(
-    longDisplayName = "Cut in Postcondition",
+    name = "postCut",
+    displayNameLong = Some("Cut in Postcondition"),
     premises = "Γ |- [a]C, Δ ;; Γ |- [a](C→P)",
     //   postCut -------------------------------
     conclusion = "Γ |- [a]P, Δ",
@@ -730,7 +734,8 @@ private object DLBySubst extends TacticProvider {
    *   The invariant.
    */
   @Tactic(
-    longDisplayName = "Loop Rule",
+    name = "loopRule",
+    displayNameLong = Some("Loop Rule"),
     premises = "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
     //  loopRule -----------------------------------
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ",
@@ -752,7 +757,8 @@ private object DLBySubst extends TacticProvider {
 
   /** @see [[TactixLibrary.throughout]] */
   @Tactic(
-    longDisplayName = "Loop Throughout Invariant",
+    name = "throughout",
+    displayNameLong = Some("Loop Throughout Invariant"),
     premises = "Γ |- J, Δ ;; J |- [a]J ;; J |- [b]J ;; J |- P",
     // throughout ------------------------------------------------
     conclusion = "Γ |- [{a;b}<sup>*</sup>]P, Δ",
@@ -795,7 +801,8 @@ private object DLBySubst extends TacticProvider {
 
   /** [[TactixLibrary.con()]] */
   @Tactic(
-    longDisplayName = "Loop Convergence",
+    name = "con",
+    displayNameLong = Some("Loop Convergence"),
     premises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // Loop Convergence -----------------------------------------------------------
     conclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
@@ -893,7 +900,8 @@ private object DLBySubst extends TacticProvider {
    *   The variant J(x) ~> (x = z) is specified as x=="x".asVariable, variant == "x = z".asFormula
    */
   @Tactic(
-    longDisplayName = "Loop Convergence Rule",
+    name = "conRule",
+    displayNameLong = Some("Loop Convergence Rule"),
     premises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // conRule   -----------------------------------------------------------
     conclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
@@ -926,8 +934,9 @@ private object DLBySubst extends TacticProvider {
 
   /** @see [[TactixLibrary.discreteGhost()]] */
   @Tactic(
-    names = "iG",
-    longDisplayName = "Discrete Ghost",
+    name = "discreteGhost",
+    displayName = Some("iG"),
+    displayNameLong = Some("Discrete Ghost"),
     premises = "Γ |- [x:=e]P, Δ",
     //        iG ------------------
     conclusion = "Γ |- P, Δ",
@@ -1043,9 +1052,9 @@ private object DLBySubst extends TacticProvider {
    *   The tactic.
    */
   @Tactic(
-    names = "[:=] assign exists",
-    codeName = "assignbExistsRule",
-    longDisplayName = "Translate Quantifier to Assignment",
+    name = "assignbExistsRule",
+    displayName = Some("[:=] assign exists"),
+    displayNameLong = Some("Translate Quantifier to Assignment"),
     premises = "Γ |- [t:=e][x:=t]P, Δ",
     // [:=] assign exists -----------------------
     conclusion = "Γ |- ∃t [x:=t]P, Δ",
@@ -1083,9 +1092,9 @@ private object DLBySubst extends TacticProvider {
    *   The tactic.
    */
   @Tactic(
-    names = "[:=] assign all",
-    codeName = "assignbAllRule",
-    longDisplayName = "Translate Quantifier to Assignment",
+    name = "assignbAllRule",
+    displayName = Some("[:=] assign all"),
+    displayNameLong = Some("Translate Quantifier to Assignment"),
     premises = "Γ, [t:=e][x:=t]P |- Δ",
     // [:=] assign all -----------------------
     conclusion = "Γ, ∀t [x:=t]P |- Δ",
@@ -1117,8 +1126,8 @@ private object DLBySubst extends TacticProvider {
    * }}}
    */
   @Tactic(
-    "boxElim",
-    longDisplayName = "Eliminate Matching Modalities",
+    name = "boxElim",
+    displayNameLong = Some("Eliminate Matching Modalities"),
     premises = "Q |- P",
     conclusion = "Γ1, [a]Q, Γ2  |- Δ1, [a]P, Δ2",
   )

@@ -68,7 +68,7 @@ object DebuggingTactics extends TacticProvider {
       }
     }
 
-  @Tactic(("Debug", "debug"), codeName = "debug")
+  @Tactic(name = "debug", displayName = Some("Debug"), displayNameAscii = Some("debug"))
   def debugX(msg: String): StringInputTactic = inputanonS { (p: ProvableSig) => debug(msg).result(p) }
 
   /** print is a no-op tactic that prints a message and the current provable, regardless of DEBUG being true or false */
@@ -79,7 +79,7 @@ object DebuggingTactics extends TacticProvider {
    * indices), regardless of DEBUG being true or false
    */
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint = true, _.prettyString)
-  @Tactic(("Print", "print"), codeName = "print")
+  @Tactic(name = "print", displayName = Some("Print"), displayNameAscii = Some("print"))
   def printX(msg: String): StringInputTactic = inputanonS { (p: ProvableSig) => printIndexed(msg).result(p) }
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
@@ -296,7 +296,7 @@ object DebuggingTactics extends TacticProvider {
    */
   def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic =
     assertE(expected, message, new TacticAssertionError(_))
-  @Tactic(("Assert", "assert"), codeName = "assert")
+  @Tactic(name = "assert", displayName = Some("Assert"), displayNameAscii = Some("assert"))
   def assertX(expected: Expression, msg: String): DependentPositionWithAppliedInputTactic =
     inputanon { DebuggingTactics.assertE(expected, msg)(_: Position) }
 
@@ -304,7 +304,7 @@ object DebuggingTactics extends TacticProvider {
   lazy val done: BelleExpr = done(None, None)
   def done(msg: String): StringInputTactic = done(Some(msg), None)
   def done(msg: String, storeLemma: Option[String]): StringInputTactic = done(Some(msg), storeLemma)
-  @Tactic(("Done", "done"), codeName = "done")
+  @Tactic(name = "done", displayName = Some("Done"), displayNameAscii = Some("done"))
   def done(msg: Option[String], lemmaName: Option[String]): StringInputTactic = doneImpl(msg.getOrElse(""), lemmaName)
   private def doneImpl(msg: String = "", storeLemma: Option[String] = None): StringInputTactic = new StringInputTactic(
     "done",
@@ -324,13 +324,13 @@ object DebuggingTactics extends TacticProvider {
   import TacticFactory._
 
   /** Placeholder for a tactic string that is not executed. */
-  @Tactic("pending", codeName = "pending")
+  @Tactic(name = "pending")
   def pending(tactic: String): StringInputTactic = {
     val t = tactic.replace("\"", "\\\"").replace("\\\\\"", "\\\"")
     pendingX(t)
   }
 
-  @Tactic("pendingX", codeName = "pendingX")
+  @Tactic(name = "pendingX")
   def pendingX(tactic: String): StringInputTactic = inputanonS { (ps: ProvableSig) => ps }
 }
 

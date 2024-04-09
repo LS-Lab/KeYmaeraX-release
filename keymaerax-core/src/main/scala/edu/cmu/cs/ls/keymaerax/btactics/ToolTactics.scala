@@ -45,7 +45,7 @@ private object ToolTactics extends TacticProvider {
 
   private val namespace = "tooltactics"
 
-  @Tactic("useSolver", codeName = "useSolver")
+  @Tactic(name = "useSolver")
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
   def switchSolver(tool: String): InputTactic = inputanon { _: Sequent =>
@@ -210,7 +210,7 @@ private object ToolTactics extends TacticProvider {
   }
 
   /** QE preparation steps, forms universal closure in the `order` of variables (lexicographic if empty). */
-  @Tactic()
+  @Tactic(name = "prepareQE")
   def prepareQE(order: List[Variable]): InputTactic = inputanonP { prepareQE(order, skip) }
 
   /** Performs QE and fails if the goal isn't closed. */

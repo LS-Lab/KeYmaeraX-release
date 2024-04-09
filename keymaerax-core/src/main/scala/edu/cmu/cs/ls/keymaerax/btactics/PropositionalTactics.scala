@@ -263,7 +263,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
     }
 
   /** Automated modus ponens for p->q ==> ; tries to automatically prove p from the rest of the assumptions. */
-  @Tactic()
+  @Tactic(name = "autoMP")
   private[btactics] val autoMP: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq(pos.checkAnte.checkTop) match {
       case Imply(p, _) =>
@@ -320,7 +320,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
    *   (A ^ B) -> (S \/ T \/ U)
    * }}}
    */
-  @Tactic()
+  @Tactic(name = "toSingleFormula")
   val toSingleFormula: BuiltInTactic = anon { pr: ProvableSig =>
     ProofRuleTactics.requireOneSubgoal(pr, "toSingleFormula")
     val sequent = pr.subgoals.head
@@ -552,7 +552,11 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
    *   \forall x. p(x) <-> q(z), p(x) |-
    * }}}
    */
-  @Tactic("equivRewriting", conclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ", premises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ")
+  @Tactic(
+    name = "equivRewriting",
+    conclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ",
+    premises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ",
+  )
   val equivRewriting: BuiltInTwoPositionTactic = anon((p: ProvableSig, equivPos: Position, targetPos: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
     val seq = p.subgoals.head
@@ -739,7 +743,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
       (NotLeft(negatedOtherPos), 0)(HideLeft(AntePos(postCut.subgoals(1).ante.length - 2)), 0))
     }
   }
-  @Tactic("instantiatedEquivRewriting")
+  @Tactic(name = "instantiatedEquivRewriting")
   val instantiatedEquivRewriting: BuiltInTwoPositionTactic =
     anon((p: ProvableSig, equivPos: Position, targetPos: Position) => {
       assert(targetPos.isTopLevel, "Simple equivalence rewriting only when target is top-level")
@@ -1073,7 +1077,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
   }
 
   /** Reassociates the formula at position `pos` to default right-associativity. */
-  @Tactic()
+  @Tactic(name = "rightAssociate")
   def rightAssociate: BuiltInPositionTactic = anon { (p: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(p, "PropositionalTactics.rightAssociate")
     p.subgoals.head.sub(pos) match {

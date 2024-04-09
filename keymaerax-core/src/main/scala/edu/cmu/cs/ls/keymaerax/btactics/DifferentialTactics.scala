@@ -466,10 +466,10 @@ private object DifferentialTactics extends TacticProvider with Logging {
   private[btactics] def diffRefine(f: Formula, hide: Boolean = true): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) => { diffRefineInternal(f, hide)(pos, sequent) })
 
+  // todo: rename the tactic directly
   @Tactic(
-    "dR",
-    longDisplayName = "Differential Refine",
-    codeName = "dR", // todo: rename the tactic directly
+    name = "dR",
+    displayNameLong = Some("Differential Refine"),
     premises = "Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     conclusion = "Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel = "browse",
@@ -501,10 +501,10 @@ private object DifferentialTactics extends TacticProvider with Logging {
    * @see
    *   AxiomaticODESolver.inverseDiffCut
    */
+  // todo: rename the tactic directly
   @Tactic(
-    "dCi",
-    longDisplayName = "Inverse Differential Cut",
-    codeName = "dCi", // todo: rename the tactic directly
+    name = "dCi",
+    displayNameLong = Some("Inverse Differential Cut"),
     premises = "Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
     conclusion = "Γ |- [x'=f(x) & Q∧R]P, Δ",
     displayLevel = "browse",
@@ -850,8 +850,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
    * }}}
    */
   @Tactic(
-    names = "Inverse Differential Ghost",
-    codeName = "dGi", // todo: rename the tactic directly
+    name = "dGi", // todo: rename the tactic directly
+    displayName = Some("Inverse Differential Ghost"),
     premises = "Γ |- [x'=f(x) & Q]P, Δ",
     conclusion = "Γ |- ∃y [x'=f(x),E & Q]P, Δ",
     displayLevel = "browse",
@@ -901,7 +901,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   // @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
   // @todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   // @Tactic in HilbertCalculus.Derive.Dvar same
-  @Tactic(names = "x'", conclusion = "__(x)'__ = x", displayLevel = "internal")
+  @Tactic(name = "Dvariable", displayName = Some("x'"), conclusion = "__(x)'__ = x", displayLevel = "internal")
   private[btactics] lazy val Dvariable: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "Dvariable")
     val OPTIMIZED = true
@@ -960,8 +960,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
    * }}}
    */
   @Tactic(
-    names = "Unpack evolution domain",
-    codeName = "diffUnpackEvolDomain", // todo: rename the tactic directly
+    name = "diffUnpackEvolDomain", // todo: rename the tactic directly
+    displayName = Some("Unpack evolution domain"),
     premises = "Γ, Q |- [x'=f(x) & Q]P, Δ",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayLevel = "browse",
@@ -985,10 +985,10 @@ private object DifferentialTactics extends TacticProvider with Logging {
   )
 
   /** [[DifferentialEquationCalculus.dW]]. diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
+  // todo: rename the tactic directly
   @Tactic(
-    names = "dW",
-    codeName = "dW", // todo: rename the tactic directly
-    longDisplayName = "Differential Weaken",
+    name = "dW",
+    displayNameLong = Some("Differential Weaken"),
     premises = "Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
@@ -1035,10 +1035,12 @@ private object DifferentialTactics extends TacticProvider with Logging {
    * [[DifferentialEquationCalculus.dWPlus]]. diffWeaken preserving all initial facts and mimicking the initial sequent
    * shape.
    */
+  // todo: rename the tactic directly
   @Tactic(
-    names = ("dW+", "dWplus"), // Initial State-Preserving Differential Weaken
-    codeName = "dWplus", // todo: rename the tactic directly
-    longDisplayName = "Differential Weaken",
+    name = "dWplus",
+    displayName = Some("dW+"),
+    displayNameAscii = Some("dWplus"), // Initial State-Preserving Differential Weaken
+    displayNameLong = Some("Differential Weaken"),
     premises = "Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
@@ -1232,7 +1234,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
    *   Leaves False as the only subgoal if it finds a counterexample to the ODE question at the position it is called
    *   Succeeds in all other cases (including when the sequent or position are not of the expected shape)
    */
-  @Tactic("cexODE")
+  @Tactic(name = "cexODE")
   val cexODE: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length == 1)) {
       // todo: currently only works if there is exactly one succedent
@@ -1634,7 +1636,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
    *   Nathan Fulton
    */
   @Tactic(
-    names = "Split weak inequality",
+    name = "splitWeakInequality",
+    displayName = Some("Split weak inequality"),
     premises = "Γ |- [{x'=f(x) & Q}] p>q, Δ ;; Γ |- [{x'=f(x) & Q}] p=q, Δ",
     conclusion = "Γ |- [{x'=f(x) & Q}] p≳q, Δ",
     displayLevel = "browse",
@@ -1911,9 +1914,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   })
 
   @Tactic(
-    names = "Barr",
-    longDisplayName = "Strict Barrier Certificate",
-    codeName = "barrier", // todo: rename the tactic directly
+    name = "barrier", // todo: rename the tactic directly
+    displayName = Some("Barr"),
+    displayNameLong = Some("Strict Barrier Certificate"),
     premises = "Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
     conclusion = "Γ |- [x'=f(x) & Q] p≳0, Δ",
     displayLevel = "browse",
@@ -2622,7 +2625,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
   })
 
   @Tactic(
-    names = "dC Closure",
+    name = "dCClosure",
+    displayName = Some("dC Closure"),
     premises = "Γ |- [x'=f(x)&Q∧closure(P)]interior(P), Δ ;; Γ |- interior(P)",
     conclusion = "Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel = "browse",
@@ -2631,7 +2635,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
   val dCClosure: DependentPositionTactic = anon((pos: Position) => dCClosure(true)(pos))
 
   @Tactic(
-    names = "dI Closed",
+    name = "dIClosed",
+    displayName = Some("dI Closed"),
     premises = "Γ |- [x'=f(x)&Q∧P]q'(x)>0, Δ ;; Γ |- q(x)>=0",
     conclusion = "Γ |- [x'=f(x)&Q]q(x)>=0, Δ",
     displayLevel = "browse",
@@ -2646,7 +2651,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
 
   // TODO how to write description in a general way for nth order polynomial.
   @Tactic(
-    names = "Taylor Polynomial is Bound",
+    name = "taylorB",
+    displayName = Some("Taylor Polynomial is Bound"),
     premises = "Q |- q''(x)>=0",
     conclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
     displayLevel = "browse",
@@ -2676,7 +2682,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
 
   // TODO how to write description in a general way for nth order polynomial.
   @Tactic(
-    names = "Taylor Polynomial is Bound: step",
+    name = "taylorStep",
+    displayName = Some("Taylor Polynomial is Bound: step"),
     premises = "Q |- q'(x)>=q'(x_0)",
     conclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
     displayLevel = "browse",

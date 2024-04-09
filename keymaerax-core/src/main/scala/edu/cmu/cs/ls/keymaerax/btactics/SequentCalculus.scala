@@ -58,7 +58,13 @@ trait SequentCalculus {
   // Propositional tactics
 
   /** Hide/weaken whether left or right */
-  @Tactic("W", longDisplayName = "Weaken", premises = "Γ |- Δ", conclusion = "Γ |- P, Δ")
+  @Tactic(
+    name = "hide",
+    displayName = Some("W"),
+    displayNameLong = Some("Weaken"),
+    premises = "Γ |- Δ",
+    conclusion = "Γ |- P, Δ",
+  )
   val hide: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     pos match {
       case p: AntePosition => SequentCalculus.hideL(p).computeResult(pr)
@@ -70,35 +76,65 @@ trait SequentCalculus {
    * Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft
    * HideLeft]])
    */
-  @Tactic("WL", longDisplayName = "Weaken Left", premises = "Γ |- Δ", conclusion = "Γ, P |- Δ")
+  @Tactic(
+    name = "hideL",
+    displayName = Some("WL"),
+    displayNameLong = Some("Weaken Left"),
+    premises = "Γ |- Δ",
+    conclusion = "Γ, P |- Δ",
+  )
   val hideL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(HideLeft(pos.checkTop), 0) }
 
   /**
    * Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight
    * HideRight]])
    */
-  @Tactic("WR", longDisplayName = "Weaken Right", premises = "Γ |- Δ", conclusion = "Γ |- P, Δ")
+  @Tactic(
+    name = "hideR",
+    displayName = Some("WR"),
+    displayNameLong = Some("Weaken Right"),
+    premises = "Γ |- Δ",
+    conclusion = "Γ |- P, Δ",
+  )
   val hideR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(HideRight(pos.checkTop), 0) }
 
   /**
    * CoHide/weaken left: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft
    * CoHideLeft]])
    */
-  @Tactic("WL", longDisplayName = "Co-Weaken Left", premises = "P |- ", conclusion = "Γ, P |- Δ")
+  @Tactic(
+    name = "cohideL",
+    displayName = Some("WL"),
+    displayNameLong = Some("Co-Weaken Left"),
+    premises = "P |- ",
+    conclusion = "Γ, P |- Δ",
+  )
   val cohideL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
 
   /**
    * CoHide/weaken right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideRight
    * CoHideRight]])
    */
-  @Tactic("WR", longDisplayName = "Co-Weaken Right", premises = "|- P", conclusion = "Γ |- P, Δ")
+  @Tactic(
+    name = "cohideR",
+    displayName = Some("WR"),
+    displayNameLong = Some("Co-Weaken Right"),
+    premises = "|- P",
+    conclusion = "Γ |- P, Δ",
+  )
   val cohideR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
 
   /**
    * CoHide/coweaken whether left or right: drop all other formulas from the sequent
    * ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]])
    */
-  @Tactic("W", longDisplayName = "Co-Weaken", premises = "|- P", conclusion = "Γ |- P, Δ")
+  @Tactic(
+    name = "cohide",
+    displayName = Some("W"),
+    displayNameLong = Some("Co-Weaken"),
+    premises = "|- P",
+    conclusion = "Γ |- P, Δ",
+  )
   val cohide: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     pos match {
       case p: AntePosition => SequentCalculus.cohideL(p).computeResult(pr)
@@ -111,9 +147,9 @@ trait SequentCalculus {
    * ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]])
    */
   @Tactic(
-    "WLR",
-    codeName = "coHide2",
-    longDisplayName = "Co-Weaken Both",
+    name = "coHide2",
+    displayName = Some("WLR"),
+    displayNameLong = Some("Co-Weaken Both"),
     premises = "P |- Q",
     conclusion = "Γ, P |- Q, Δ",
   )
@@ -125,14 +161,26 @@ trait SequentCalculus {
   }
 
   /** Cohides in succedent, but leaves antecedent as is. */
-  @Tactic("WR", longDisplayName = "Co-Weaken Only Right", premises = "Γ, P |- Q", conclusion = "Γ, P |- Q, Δ")
+  @Tactic(
+    name = "cohideOnlyR",
+    displayName = Some("WR"),
+    displayNameLong = Some("Co-Weaken Only Right"),
+    premises = "Γ, P |- Q",
+    conclusion = "Γ, P |- Q, Δ",
+  )
   val cohideOnlyR: BuiltInRightTactic = anon { (pr: ProvableSig, pos: SuccPosition) =>
     val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideR(1).computeResult(p) })
     (2 to hiddenUntil.subgoals.head.succ.length).foldLeft(hiddenUntil)({ case (p, _) => hideR(2).computeResult(p) })
   }
 
   /** Cohides in antecedent, but leaves succedent as is. */
-  @Tactic("WL", longDisplayName = "Co-Weaken Only Left", premises = "|- Q, Δ", conclusion = "Γ, P |- Q, Δ")
+  @Tactic(
+    name = "cohideOnlyL",
+    displayName = Some("WL"),
+    displayNameLong = Some("Co-Weaken Only Left"),
+    premises = "|- Q, Δ",
+    conclusion = "Γ, P |- Q, Δ",
+  )
   val cohideOnlyL: BuiltInLeftTactic = anon { (pr: ProvableSig, pos: AntePosition) =>
     val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideL(-1).computeResult(p) })
     (2 to hiddenUntil.subgoals.head.ante.length).foldLeft(hiddenUntil)({ case (p, _) => hideL(-2).computeResult(p) })
@@ -141,7 +189,13 @@ trait SequentCalculus {
   /**
    * !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]])
    */
-  @Tactic(("¬L", "!L"), premises = "Γ |- P, Δ", conclusion = "¬P, Γ |- Δ")
+  @Tactic(
+    name = "notL",
+    displayName = Some("¬L"),
+    displayNameAscii = Some("!L"),
+    premises = "Γ |- P, Δ",
+    conclusion = "¬P, Γ |- Δ",
+  )
   val notL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(NotLeft(pos.checkTop), 0) }
   private[btactics] val notLInfo: TacticInfo = TacticInfo("notL")
 
@@ -149,7 +203,13 @@ trait SequentCalculus {
    * !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight
    * NotRight]])
    */
-  @Tactic(("¬R", "!R"), premises = "Γ, P |- Δ", conclusion = "Γ |- ¬P, Δ")
+  @Tactic(
+    name = "notR",
+    displayName = Some("¬R"),
+    displayNameAscii = Some("!R"),
+    premises = "Γ, P |- Δ",
+    conclusion = "Γ |- ¬P, Δ",
+  )
   val notR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(NotRight(pos.checkTop), 0) }
   private[btactics] val notRInfo: TacticInfo = TacticInfo("notR")
 
@@ -157,7 +217,13 @@ trait SequentCalculus {
    * &L And left: split a conjunction in the antecedent into separate assumptions
    * ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]])
    */
-  @Tactic(("∧L", "&L"), premises = "Γ, P, Q |- Δ", conclusion = "P∧Q, Γ |- Δ")
+  @Tactic(
+    name = "andL",
+    displayName = Some("∧L"),
+    displayNameAscii = Some("&L"),
+    premises = "Γ, P, Q |- Δ",
+    conclusion = "P∧Q, Γ |- Δ",
+  )
   val andL: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(AndLeft(pos.checkTop), 0) }
   private[btactics] val andLInfo: TacticInfo = TacticInfo("andL")
 
@@ -176,24 +242,48 @@ trait SequentCalculus {
    * &R And right: prove a conjunction in the succedent on two separate branches
    * ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]])
    */
-  @Tactic(("∧R", "&R"), premises = "Γ |- P, Δ ;; Γ |- Q, Δ", conclusion = "Γ |- P∧Q, Δ")
+  @Tactic(
+    name = "andR",
+    displayName = Some("∧R"),
+    displayNameAscii = Some("&R"),
+    premises = "Γ |- P, Δ ;; Γ |- Q, Δ",
+    conclusion = "Γ |- P∧Q, Δ",
+  )
   val andR: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("andR", Right(andRRule), And.unapply, pos, seq)
   }
   private[btactics] val andRInfo: TacticInfo = TacticInfo("andR")
-  @Tactic(("∧R", "&R"), premises = "Γ |- P, Δ ;; Γ |- Q, Δ", conclusion = "Γ |- P∧Q, Δ")
+  @Tactic(
+    name = "andRRule",
+    displayName = Some("∧R"),
+    displayNameAscii = Some("&R"),
+    premises = "Γ |- P, Δ ;; Γ |- Q, Δ",
+    conclusion = "Γ |- P∧Q, Δ",
+  )
   val andRRule: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(AndRight(pos.checkTop), 0) }
 
   /**
    * \|L Or left: use a disjunction in the antecedent by assuming each option on separate branches
    * ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]])
    */
-  @Tactic(("∨L", "|L"), premises = "P, Γ |- Δ ;; Q, Γ |- Δ", conclusion = "P∨Q, Γ |- Δ")
+  @Tactic(
+    name = "orL",
+    displayName = Some("∨L"),
+    displayNameAscii = Some("|L"),
+    premises = "P, Γ |- Δ ;; Q, Γ |- Δ",
+    conclusion = "P∨Q, Γ |- Δ",
+  )
   val orL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("orL", Left(orLRule), Or.unapply, pos, seq)
   }
   private[btactics] val orLInfo: TacticInfo = TacticInfo("orL")
-  @Tactic(("∨L", "|L"), premises = "P, Γ |- Δ ;; Q, Γ |- Δ", conclusion = "P∨Q, Γ |- Δ")
+  @Tactic(
+    name = "orLRule",
+    displayName = Some("∨L"),
+    displayNameAscii = Some("|L"),
+    premises = "P, Γ |- Δ ;; Q, Γ |- Δ",
+    conclusion = "P∨Q, Γ |- Δ",
+  )
   val orLRule: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(OrLeft(pos.checkTop), 0) }
 
   /**
@@ -211,7 +301,13 @@ trait SequentCalculus {
    * \|R Or right: split a disjunction in the succedent into separate formulas to show alternatively
    * ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]])
    */
-  @Tactic(("∨R", "|R"), premises = "Γ |- Δ, P, Q", conclusion = "Γ |- P∨Q, Δ")
+  @Tactic(
+    name = "orR",
+    displayName = Some("∨R"),
+    displayNameAscii = Some("|R"),
+    premises = "Γ |- Δ, P, Q",
+    conclusion = "Γ |- P∨Q, Δ",
+  )
   val orR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(OrRight(pos.checkTop), 0) }
   private[btactics] val orRInfo: TacticInfo = TacticInfo("orR")
 
@@ -219,19 +315,37 @@ trait SequentCalculus {
    * ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its
    * right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]])
    */
-  @Tactic(("→L", "->L"), premises = "Γ |- Δ, P ;; Q, Γ |- Δ", conclusion = "P→Q, Γ |- Δ")
+  @Tactic(
+    name = "implyL",
+    displayName = Some("→L"),
+    displayNameAscii = Some("->L"),
+    premises = "Γ |- Δ, P ;; Q, Γ |- Δ",
+    conclusion = "P→Q, Γ |- Δ",
+  )
   val implyL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby("implyL", Left(implyLRule), Imply.unapply, pos, seq)
   }
   private[btactics] val implyLInfo: TacticInfo = TacticInfo("implyL")
-  @Tactic(("→L", "->L"), premises = "Γ |- Δ, P ;; Q, Γ |- Δ", conclusion = "P→Q, Γ |- Δ")
+  @Tactic(
+    name = "implyLRule",
+    displayName = Some("→L"),
+    displayNameAscii = Some("->L"),
+    premises = "Γ |- Δ, P ;; Q, Γ |- Δ",
+    conclusion = "P→Q, Γ |- Δ",
+  )
   val implyLRule: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
 
   /**
    * ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand
    * side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]])
    */
-  @Tactic(("→R", "->R"), premises = "Γ, P |- Q, Δ", conclusion = "Γ |- P→Q, Δ")
+  @Tactic(
+    name = "implyR",
+    displayName = Some("→R"),
+    displayNameAscii = Some("->R"),
+    premises = "Γ, P |- Q, Δ",
+    conclusion = "Γ |- P→Q, Δ",
+  )
   val implyR: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
   private[btactics] val implyRInfo: TacticInfo = TacticInfo("implyR")
 
@@ -247,14 +361,20 @@ trait SequentCalculus {
   val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
 
   /** eXternal wrapper for implyRi */
-  @Tactic("implyRi", codeName = "implyRi")
+  @Tactic(name = "implyRi")
   val implyRiX: BuiltInTwoPositionTactic = PropositionalTactics.implyRi(keep = false)
 
   /**
    * <->L Equiv left: use an equivalence by considering both true or both false cases
    * ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]])
    */
-  @Tactic(("↔L", "<->L"), premises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ", conclusion = "P↔Q, Γ |- Δ")
+  @Tactic(
+    name = "equivL",
+    displayName = Some("↔L"),
+    displayNameAscii = Some("<->L"),
+    premises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
+    conclusion = "P↔Q, Γ |- Δ",
+  )
   val equivL: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby(
       "equivL",
@@ -266,14 +386,26 @@ trait SequentCalculus {
     )
   }
   private[btactics] val equivLInfo: TacticInfo = TacticInfo("equivL")
-  @Tactic(("↔L", "<->L"), premises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ", conclusion = "P↔Q, Γ |- Δ")
+  @Tactic(
+    name = "equivLRule",
+    displayName = Some("↔L"),
+    displayNameAscii = Some("<->L"),
+    premises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
+    conclusion = "P↔Q, Γ |- Δ",
+  )
   val equivLRule: CoreLeftTactic = coreanon { (pr: ProvableSig, pos: AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
 
   /**
    * <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight
    * EquivRight]])
    */
-  @Tactic(("↔R", "<->R"), premises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P", conclusion = "Γ |- P↔Q, Δ")
+  @Tactic(
+    name = "equivR",
+    displayName = Some("↔R"),
+    displayNameAscii = Some("<->R"),
+    premises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
+    conclusion = "Γ |- P↔Q, Δ",
+  )
   val equivR: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     corelabelledby(
       "equivR",
@@ -285,7 +417,13 @@ trait SequentCalculus {
     )
   }
   private[btactics] val equivRInfo: TacticInfo = TacticInfo("equivR")
-  @Tactic(("↔R", "<->R"), premises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P", conclusion = "Γ |- P↔Q, Δ")
+  @Tactic(
+    name = "equivRRule",
+    displayName = Some("↔R"),
+    displayNameAscii = Some("<->R"),
+    premises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
+    conclusion = "Γ |- P↔Q, Δ",
+  )
   val equivRRule: CoreRightTactic = coreanon { (pr: ProvableSig, pos: SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
 
   /**
@@ -298,7 +436,7 @@ trait SequentCalculus {
    *         G |- D
    * }}}
    */
-  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C", conclusion = "Γ |- Δ", inputs = "C:formula")
+  @Tactic(name = "cut", premises = "Γ, C |- Δ ;; Γ |- Δ, C", conclusion = "Γ |- Δ", inputs = "C:formula")
   def cut(f: Formula): InputTactic =
     inputanon { cutX(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow)) }
   private def cutX(f: Formula): BuiltInTactic = anon { (provable: ProvableSig) => provable(core.Cut(f), 0) }
@@ -312,7 +450,7 @@ trait SequentCalculus {
    *        G |- p, D
    * }}}
    */
-  @Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ", conclusion = "Γ |- P, Δ", inputs = "C:formula")
+  @Tactic(name = "cutR", premises = "Γ |- C, Δ ;; Γ |- C→P, Δ", conclusion = "Γ |- P, Δ", inputs = "C:formula")
   def cutR(f: Formula): DependentPositionWithAppliedInputTactic =
     inputanonR { (provable: ProvableSig, pos: SuccPosition) =>
       requireOneSubgoal(provable, "cutR(" + f + ")")
@@ -328,7 +466,7 @@ trait SequentCalculus {
    *        p, G |- D
    * }}}
    */
-  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C", conclusion = "Γ, P |- Δ", inputs = "C:formula")
+  @Tactic(name = "cutL", premises = "Γ, C |- Δ ;; Γ |- Δ, P→C", conclusion = "Γ, P |- Δ", inputs = "C:formula")
   def cutL(f: Formula): DependentPositionWithAppliedInputTactic =
     inputanonL { (provable: ProvableSig, pos: AntePosition) =>
       requireOneSubgoal(provable, "cutL(" + f + ")")
@@ -351,7 +489,7 @@ trait SequentCalculus {
    *        G |- p, D
    * }}}
    */
-  @Tactic()
+  @Tactic(name = "cutLR")
   def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = inputanon { cutLRFw(f)(_: Position) }
 
   /** Builtin forward implementation of cutLR. */
@@ -369,7 +507,13 @@ trait SequentCalculus {
    * p, q, G |- D
    * }}}
    */
-  @Tactic("XL", longDisplayName = "Exchange Assumptions", premises = "Q, P, Γ |- Δ", conclusion = "P, Q, Γ |- Δ")
+  @Tactic(
+    name = "exchangeL",
+    displayName = Some("XL"),
+    displayNameLong = Some("Exchange Assumptions"),
+    premises = "Q, P, Γ |- Δ",
+    conclusion = "P, Q, Γ |- Δ",
+  )
   val exchangeL: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
     pr(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
   }
@@ -382,7 +526,13 @@ trait SequentCalculus {
    * G |- p, q, D
    * }}}
    */
-  @Tactic("XR", longDisplayName = "Exchange Obligations", premises = "Γ |- Q, P, Δ", conclusion = "Γ |- P, Q, Δ")
+  @Tactic(
+    name = "exchangeR",
+    displayName = Some("XR"),
+    displayNameLong = Some("Exchange Obligations"),
+    premises = "Γ |- Q, P, Δ",
+    conclusion = "Γ |- P, Q, Δ",
+  )
   val exchangeR: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
     pr(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
   }
@@ -416,11 +566,12 @@ trait SequentCalculus {
    *   x>0   |- \forall x x^2>=0
    *   }}}
    */
-  @Tactic("∀R", premises = "Γ |- p(x), Δ", conclusion = "Γ |- ∀x p(x), Δ")
+  @Tactic(name = "allR", displayName = Some("∀R"), premises = "Γ |- p(x), Δ", conclusion = "Γ |- ∀x p(x), Δ")
   val allR: BuiltInPositionTactic = FOQuantifierTactics.allSkolemize
   private[btactics] val allRInfo: TacticInfo = TacticInfo("allR")
   @Tactic(
-    "∀Ri",
+    name = "allRi",
+    displayName = Some("∀Ri"),
     inputs = "f:term;;x[x]:option[variable]",
     premises = "Γ |- ∀x p(f(x)), Δ",
     conclusion = "Γ |- p(f(y)), Δ",
@@ -440,7 +591,13 @@ trait SequentCalculus {
   def allL(x: Variable, inst: Term): BuiltInPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
 
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
-  @Tactic("∀L", inputs = "θ[θ]:option[term]", premises = "p(θ), Γ |- Δ", conclusion = "∀x p(x), Γ |- Δ")
+  @Tactic(
+    name = "allL",
+    displayName = Some("∀L"),
+    inputs = "θ[θ]:option[term]",
+    premises = "p(θ), Γ |- Δ",
+    conclusion = "∀x p(x), Γ |- Δ",
+  )
   def allL(e: Option[Term]): DependentPositionWithAppliedInputTactic =
     inputanon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
   def allL(e: Term): DependentPositionWithAppliedInputTactic = allL(Some(e))
@@ -473,7 +630,8 @@ trait SequentCalculus {
    * }}}
    */
   @Tactic(
-    "M∀L",
+    name = "allLmon",
+    displayName = Some("M∀L"),
     inputs = "q(x):formula",
     premises = "Γ, ∀x q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
     conclusion = "Γ, ∀x p(x) |- Δ",
@@ -505,7 +663,13 @@ trait SequentCalculus {
    * \forall x p(x), G |- D
    * }}}
    */
-  @Tactic("∀Lk", inputs = "θ[θ]:term", premises = "∀x p(x), Γ, p(θ) |- Δ", conclusion = "∀x p(x), Γ |- Δ")
+  @Tactic(
+    name = "allLkeep",
+    displayName = Some("∀Lk"),
+    inputs = "θ[θ]:term",
+    premises = "∀x p(x), Γ, p(θ) |- Δ",
+    conclusion = "∀x p(x), Γ |- Δ",
+  )
   def allLkeep(e: Term): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(Forall(x, p)) => cut(Forall(x, p)) <
@@ -527,13 +691,14 @@ trait SequentCalculus {
    * \exists x p(x), G |- D
    * }}}
    */
-  @Tactic("∃L", premises = "p(x), Γ |- Δ", conclusion = "∃x p(x), Γ |- Δ")
+  @Tactic(name = "existsL", displayName = Some("∃L"), premises = "p(x), Γ |- Δ", conclusion = "∃x p(x), Γ |- Δ")
   val existsL: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     FOQuantifierTactics.existsSkolemize(pos).computeResult(provable)
   }
   private[btactics] val existsLInfo: TacticInfo = TacticInfo("existsL")
   @Tactic(
-    "∃Li",
+    name = "existsLi",
+    displayName = Some("∃Li"),
     inputs = "f:term;;x[x]:option[variable]",
     premises = "Γ, ∃x p(f(x)) |- Δ",
     conclusion = "Γ, p(f(y)) |- Δ",
@@ -555,7 +720,13 @@ trait SequentCalculus {
     .existsInstantiate(Some(x), Some(inst))
 
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
-  @Tactic("∃R", inputs = "θ[θ]:option[term]", premises = "Γ |- p(θ), Δ", conclusion = "Γ |- ∃x p(x), Δ")
+  @Tactic(
+    name = "existsR",
+    displayName = Some("∃R"),
+    inputs = "θ[θ]:option[term]",
+    premises = "Γ |- p(θ), Δ",
+    conclusion = "Γ |- ∃x p(x), Δ",
+  )
   def existsR(e: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon { pos: Position =>
     FOQuantifierTactics.existsInstantiate(None, e)(pos)
   }
@@ -592,7 +763,8 @@ trait SequentCalculus {
    * }}}
    */
   @Tactic(
-    "M∃R",
+    name = "existsRmon",
+    displayName = Some("M∃R"),
     inputs = "q(x):formula",
     premises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
     conclusion = "Γ |- ∃x p(x), Δ",
@@ -636,7 +808,13 @@ trait SequentCalculus {
    *   false, G |- D
    * }}}
    */
-  @Tactic("⊥/⊤", longDisplayName = "Close by id/⊥/⊤", premises = "*", conclusion = "Γ, P |- P, Δ")
+  @Tactic(
+    name = "close",
+    displayName = Some("⊥/⊤"),
+    displayNameLong = Some("Close by id/⊥/⊤"),
+    premises = "*",
+    conclusion = "Γ, P |- P, Δ",
+  )
   val close: BuiltInTactic = anon { (pr: ProvableSig) => findClose.result(pr) }
 
   // alternative implementation
@@ -708,7 +886,7 @@ trait SequentCalculus {
    * }}}
    */
   // @note same name (closeId) as SequentCalculus.closeId for serialization
-  @Tactic(codeName = "closeId", longDisplayName = "Close by Identity")
+  @Tactic(name = "closeId", displayNameLong = Some("Close by Identity"))
   val closeId: BuiltInTwoPositionTactic = anon((provable: ProvableSig, a: Position, s: Position) => {
     ProofRuleTactics.requireOneSubgoal(provable, "closeId(" + a + "," + s + ")")
     try { provable(Close(a.checkAnte.checkTop, s.checkSucc.checkTop), 0) }
@@ -726,7 +904,7 @@ trait SequentCalculus {
    * closeIdWith: closes the branch with the formula at the given position when the same formula is in the antecedent
    * and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]])
    */
-  @Tactic(longDisplayName = "Close by Identity", premises = "*", conclusion = "Γ, P |- P, Δ", codeName = "idWith")
+  @Tactic(name = "idWith", displayNameLong = Some("Close by Identity"), premises = "*", conclusion = "Γ, P |- P, Δ")
   val closeIdWith: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     val s = provable.subgoals.head
     pos.top match {
@@ -754,7 +932,7 @@ trait SequentCalculus {
   // @TODO: Currently needs to be new DependentTactic() for some crazy reason: SpoonFeedingInterpreter serializes as "closeId()"
   // if we use  anons {...}, even though the implementation is literally new DependentTactic(...). Mysterious.
   // Maybe the interpreter is checking type equality of anonymous classes somewhere...
-  @Tactic(premises = "*", conclusion = "Γ, P |- P, Δ", codeName = "id")
+  @Tactic(name = "id", premises = "*", conclusion = "Γ, P |- P, Δ")
   val id: BuiltInTactic = anon { provable: ProvableSig =>
     require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
     val s = provable.subgoals.head
@@ -766,7 +944,7 @@ trait SequentCalculus {
     }
   }
 
-  @Tactic(premises = "*", conclusion = "Γ, x=y, P(x) |- P(y), Δ")
+  @Tactic(name = "idx", premises = "*", conclusion = "Γ, x=y, P(x) |- P(y), Δ")
   val idx: DependentTactic = new SingleGoalDependentTactic("idx") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       sequent.ante.intersect(sequent.succ).headOption match {
@@ -798,8 +976,9 @@ trait SequentCalculus {
    *   }}}
    */
   @Tactic(
-    "BR",
-    longDisplayName = "Alpha Bound Rename",
+    name = "alphaRen",
+    displayName = Some("BR"),
+    displayNameLong = Some("Alpha Bound Rename"),
     premises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y",
     conclusion = "Γ |- P(x), Δ",
     inputs = "x:Variable;;y[y]:Variable",
@@ -842,8 +1021,9 @@ trait SequentCalculus {
    *   }}}
    */
   @Tactic(
-    "α-renall",
-    longDisplayName = "Alpha Rename All",
+    name = "alphaRenAll",
+    displayName = Some("α-renall"),
+    displayNameLong = Some("Alpha Rename All"),
     premises = "Γ(y) |- Δ(y) ;; Γ(x) |- Δ(x), x=y",
     conclusion = "Γ(x) |- Δ(x)",
     inputs = "x:Variable;;y[y]:Variable",
@@ -899,8 +1079,9 @@ trait SequentCalculus {
 
   /** Alpha renaming everywhere in the sequent using an equality at a specific position in the antecedent. */
   @Tactic(
-    "α-renallby",
-    longDisplayName = "Alpha Rename All By Equality",
+    name = "alphaRenAllBy",
+    displayName = Some("α-renallby"),
+    displayNameLong = Some("Alpha Rename All By Equality"),
     conclusion = "Γ(x), x=y |- Δ(x)",
     premises = "Γ(y), x=y |- Δ(y)",
   )
@@ -931,7 +1112,13 @@ trait SequentCalculus {
    *   G |- true, D
    * }}}
    */
-  @Tactic("⊤R", longDisplayName = "Close ⊤", premises = "*", conclusion = "Γ |- ⊤, Δ")
+  @Tactic(
+    name = "closeT",
+    displayName = Some("⊤R"),
+    displayNameLong = Some("Close ⊤"),
+    premises = "*",
+    conclusion = "Γ |- ⊤, Δ",
+  )
   val closeT: BuiltInTactic = anon { (pr: ProvableSig) =>
     ProofRuleTactics.closeTrue(Symbol("R"), True).computeResult(pr)
   }
@@ -944,7 +1131,13 @@ trait SequentCalculus {
    *   false, G |- D
    * }}}
    */
-  @Tactic("⊥L", longDisplayName = "Close ⊥", premises = "*", conclusion = "Γ, ⊥ |- Δ")
+  @Tactic(
+    name = "closeF",
+    displayName = Some("⊥L"),
+    displayNameLong = Some("Close ⊥"),
+    premises = "*",
+    conclusion = "Γ, ⊥ |- Δ",
+  )
   val closeF: BuiltInTactic = anon { (pr: ProvableSig) =>
     ProofRuleTactics.closeFalse(Symbol("L"), False).computeResult(pr)
   }
@@ -963,8 +1156,10 @@ trait SequentCalculus {
    * }}}
    */
   @Tactic(
-    ("→2↔", "->2<->R"),
-    longDisplayName = "Strengthen to Equivalence",
+    name = "equivifyR",
+    displayName = Some("→2↔"),
+    displayNameAscii = Some("->2<->R"),
+    displayNameLong = Some("Strengthen to Equivalence"),
     premises = "Γ |- P↔Q, Δ",
     conclusion = "Γ |- P→Q, Δ",
   )
@@ -997,8 +1192,10 @@ trait SequentCalculus {
    * }}}
    */
   @Tactic(
-    ("↔cL", "<->cLR"),
-    longDisplayName = "Commute Equivalence Left",
+    name = "commuteEquivL",
+    displayName = Some("↔cL"),
+    displayNameAscii = Some("<->cLR"),
+    displayNameLong = Some("Commute Equivalence Left"),
     premises = "Q↔P, Γ |- Δ",
     conclusion = "P↔Q, Γ |- Δ",
   )
@@ -1015,8 +1212,10 @@ trait SequentCalculus {
    * }}}
    */
   @Tactic(
-    ("↔cR", "<->cR"),
-    longDisplayName = "Commute Equivalence Right",
+    name = "commuteEquivR",
+    displayName = Some("↔cR"),
+    displayNameAscii = Some("<->cR"),
+    displayNameLong = Some("Commute Equivalence Right"),
     premises = "Γ |- Q↔P, Δ",
     conclusion = "Γ |- P↔Q, Δ",
   )
@@ -1025,7 +1224,12 @@ trait SequentCalculus {
   }
 
   /** Commute equality `a=b` to `b=a` */
-  @Tactic("=c", longDisplayName = "Commute Equal", conclusion = "__p=q__ ↔ q=p")
+  @Tactic(
+    name = "commuteEqual",
+    displayName = Some("=c"),
+    displayNameLong = Some("Commute Equal"),
+    conclusion = "__p=q__ ↔ q=p",
+  )
   lazy val commuteEqual: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
 
   // Equality rewriting tactics
@@ -1058,7 +1262,7 @@ trait SequentCalculus {
    * @see
    *   [[BelleLabels]]
    */
-  @Tactic()
+  @Tactic(name = "label")
   def label(s: String): InputTactic = inputanon { label(BelleTopLevelLabel(s)) }
 
   /**

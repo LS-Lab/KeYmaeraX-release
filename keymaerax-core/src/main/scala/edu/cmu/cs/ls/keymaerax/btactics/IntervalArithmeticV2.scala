@@ -1224,7 +1224,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     }
   }
 
-  @Tactic("Interval Arithmetic", displayLevel = "menu")
+  @Tactic(name = "intervalArithmetic", displayName = Some("Interval Arithmetic"), displayLevel = "menu")
   lazy val intervalArithmetic: BelleExpr = anon {
     val precision = 15 // @todo: precision as (optional) argument?
     SaturateTactic((orRi |! skip)) & intervalArithmeticPreproc(1) &
@@ -1254,8 +1254,8 @@ object IntervalArithmeticV2 extends TacticProvider {
   })
 
   @Tactic(
-    "Interval Arithmetic Cut",
-    codeName = "intervalCutTerms" /* @todo old codeName */,
+    name = "intervalCutTerms" /* @todo old codeName */,
+    displayName = Some("Interval Arithmetic Cut"),
     // @TODO: closed premise
     premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     conclusion = "Γ |- Δ",
@@ -1273,7 +1273,8 @@ object IntervalArithmeticV2 extends TacticProvider {
   }
 
   @Tactic(
-    "Interval Arithmetic Cut",
+    name = "intervalCut",
+    displayName = Some("Interval Arithmetic Cut"),
     premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     conclusion = "Γ |- Δ",
     displayLevel = "internal",

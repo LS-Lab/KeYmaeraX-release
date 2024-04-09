@@ -38,8 +38,8 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
    * none of the simplifications work out.
    */
   @Tactic(
-    names = "Speculative QE",
-    codeName = "smartQE",
+    name = "smartQE",
+    displayName = Some("Speculative QE"),
     premises = "*",
     //    smartQE -----------
     conclusion = "Γ<sub>FOLR</sub> |- Δ<sub>FOLR</sub>",

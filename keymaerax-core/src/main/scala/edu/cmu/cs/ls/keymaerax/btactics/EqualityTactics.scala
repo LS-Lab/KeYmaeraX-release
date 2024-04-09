@@ -211,8 +211,8 @@ private object EqualityTactics extends TacticProvider {
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or uninterpreted function) */
   @Tactic(
-    names = "L=R all atoms",
-    codeName = "atomAllL2R",
+    name = "atomAllL2R",
+    displayName = Some("L=R all atoms"),
     premises = "Γ(e) |- Δ(e)",
     // atomAllL2R -------------------------
     conclusion = "Γ(x), x=e |- Δ(e)",
@@ -235,7 +235,7 @@ private object EqualityTactics extends TacticProvider {
   }
 
   /** Rewrites all atom equalities in the assumptions. */
-  @Tactic(displayLevel = "internal")
+  @Tactic(name = "applyEqualities", displayLevel = "internal")
   val applyEqualities: BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "applyEqualities")
     val seq = provable.subgoals.head
@@ -360,7 +360,7 @@ private object EqualityTactics extends TacticProvider {
    * @return
    *   The tactic.
    */
-  @Tactic(displayLevel = "internal")
+  @Tactic(name = "abbrvAt", displayLevel = "internal")
   def abbrvAt(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => {
       val inFml = sequent.sub(pos) match {
@@ -413,7 +413,7 @@ private object EqualityTactics extends TacticProvider {
    * @return
    *   The tactic.
    */
-  @Tactic(names = "Expand absolute value", codeName = "absExp")
+  @Tactic(name = "absExp", displayName = Some("Expand absolute value"))
   val abs: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "abs")
     val sequent = provable.subgoals.head
@@ -454,7 +454,7 @@ private object EqualityTactics extends TacticProvider {
   private lazy val maxContradiction = AnonymousLemmas.remember("f()<g() & f()>=g() <-> false".asFormula, QE, namespace)
 
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
-  @Tactic(displayLevel = "internal")
+  @Tactic(name = "absAt", displayLevel = "internal")
   val absAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "absAt")
     val sequent = provable.subgoals.head
@@ -558,7 +558,7 @@ private object EqualityTactics extends TacticProvider {
    * @return
    *   The tactic.
    */
-  @Tactic(names = "Expand min/max")
+  @Tactic(name = "minmax", displayName = Some("Expand min/max"))
   val minmax: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "minmax")
     val sequent = provable.subgoals.head
@@ -613,7 +613,7 @@ private object EqualityTactics extends TacticProvider {
   }
 
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
-  @Tactic(displayLevel = "internal")
+  @Tactic(name = "minmaxAt", displayLevel = "internal")
   val minmaxAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "minmaxAt")
     val sequent = provable.subgoals.head
@@ -713,7 +713,7 @@ private object EqualityTactics extends TacticProvider {
     }
 
   /** Expands all special functions (abs/min/max). */
-  @Tactic(names = "Expand all special functions")
+  @Tactic(name = "expandAll", displayName = Some("Expand all special functions"))
   val expandAll: BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "expandAll")
     val s = provable.subgoals.head
@@ -749,7 +749,7 @@ private object EqualityTactics extends TacticProvider {
   }
 
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
-  @Tactic(displayLevel = "internal")
+  @Tactic(name = "expandAllAt", displayLevel = "internal")
   val expandAllAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "expandAllAt")
     val tactics = Idioms.mapSubpositions(

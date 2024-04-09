@@ -46,7 +46,8 @@ object ArithmeticSimplification extends TacticProvider {
    */
 // todo: unsure
   @Tactic(
-    names = "Smart Hide",
+    name = "smartHide",
+    displayName = Some("Smart Hide"),
     premises = "Γ<sub>hide</sub> |- Δ",
 //     smartHide -------------------------
     conclusion = "Γ |- Δ",
@@ -123,7 +124,8 @@ object ArithmeticSimplification extends TacticProvider {
    *   the variable to hide
    */
   @Tactic(
-    names = "Hide Facts",
+    name = "hideFactsAbout",
+    displayName = Some("Hide Facts"),
     premises = "Γ |- Δ",
     //    transformEquality(equality f=g) -----------
     conclusion = "Γ, P(xs) |- Q(xs), Δ",
@@ -157,7 +159,8 @@ object ArithmeticSimplification extends TacticProvider {
    *   the variable to hide
    */
   @Tactic(
-    names = "Keep Facts",
+    name = "keepFactsAbout",
+    displayName = Some("Keep Facts"),
     premises = "P(xs) |- Q(xs)",
     //    transformEquality(equality f=g) -----------
     conclusion = "Γ(!xs), P(xs) |- Q(xs), Δ(!xs)",
@@ -193,7 +196,8 @@ object ArithmeticSimplification extends TacticProvider {
    *   Stefan Mitsch
    */
   @Tactic(
-    names = "Transform Equality",
+    name = "transformEquality",
+    displayName = Some("Transform Equality"),
     premises = "Γ |- equality ;; Γ |- P(equalityRHS) Δ",
     //    transformEquality(equality f=g) -----------
     conclusion = "Γ |- P(equalityLHS), Δ",

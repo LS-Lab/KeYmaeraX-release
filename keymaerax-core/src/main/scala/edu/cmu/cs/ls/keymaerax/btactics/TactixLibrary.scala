@@ -155,7 +155,7 @@ object TactixLibrary
   /**
    * step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed)
    */
-  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true, displayLevel = "browse")
+  @Tactic(name = "step", displayNameLong = Some("Program Step"), revealInternalSteps = true, displayLevel = "browse")
   val step: DependentPositionTactic = doStep(sequentStepIndex)
 
   def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon(
@@ -176,8 +176,8 @@ object TactixLibrary
 
   /** Normalize to sequent form. */
   @Tactic(
-    "normalize",
-    longDisplayName = "Normalize to Sequent Form",
+    name = "normalize",
+    displayNameLong = Some("Normalize to Sequent Form"),
     revealInternalSteps = true,
     displayLevel = "browse",
   )
@@ -206,8 +206,8 @@ object TactixLibrary
    * else).
    */
   @Tactic(
-    codeName = "unfold",
-    longDisplayName = "Unfold Program Structure",
+    name = "unfold",
+    displayNameLong = Some("Unfold Program Structure"),
     revealInternalSteps = true,
     displayLevel = "menu",
   )
@@ -230,13 +230,7 @@ object TactixLibrary
     )))
   }
 
-  @Tactic(
-    "chaseAt",
-    longDisplayName = "Decompose",
-    codeName = "chaseAt",
-    revealInternalSteps = true,
-    displayLevel = "menu",
-  )
+  @Tactic(name = "chaseAt", displayNameLong = Some("Decompose"), revealInternalSteps = true, displayLevel = "menu")
   def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) =>
     chaseAt((isAnte: Boolean) =>
       (expr: Expression) =>
@@ -285,7 +279,12 @@ object TactixLibrary
       else chase(pos) // @todo forward index to chase
     })
 
-  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true, displayLevel = "menu")
+  @Tactic(
+    name = "prop",
+    displayNameLong = Some("Unfold Propositional"),
+    revealInternalSteps = true,
+    displayLevel = "menu",
+  )
   val prop: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (_: Forall, _) => None
@@ -304,10 +303,15 @@ object TactixLibrary
   }
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true, displayLevel = "menu")
+  @Tactic(
+    name = "propClose",
+    displayNameLong = Some("Prove Propositional"),
+    revealInternalSteps = true,
+    displayLevel = "menu",
+  )
   val propClose: BelleExpr =
     anon { prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods") }
-  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
+  @Tactic(name = "propAuto", displayNameLong = Some("Prove Propositional"), revealInternalSteps = true)
   val propAuto: BelleExpr = propClose
 
   /**
@@ -438,11 +442,10 @@ object TactixLibrary
    * @see
    *   [[autoClose]]
    */
-  @Tactic(longDisplayName = "Unfold Automatically")
+  @Tactic(name = "auto", displayNameLong = Some("Unfold Automatically"))
   def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic =
     inputanon { autoImpl(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True) }
-  @Tactic(names = "master", codeName = "master", longDisplayName = "Unfold Automatically")
-  @deprecated("Use auto instead")
+  @Tactic(name = "master", displayNameLong = Some("Unfold Automatically")) @deprecated("Use auto instead")
   def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic =
     auto(generator, keepQEFalse)
 
@@ -452,7 +455,7 @@ object TactixLibrary
    * @see
    *   [[auto]]
    */
-  @Tactic(longDisplayName = "Prove Automatically")
+  @Tactic(name = "autoClose", displayNameLong = Some("Prove Automatically"))
   def autoClose: DependentTactic = anons { (_: ProvableSig) =>
     autoImpl(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse = true) &
       DebuggingTactics.done("Automation failed to prove goal")
@@ -462,7 +465,7 @@ object TactixLibrary
    * Automatically explore a model with all annotated loop/differential invariants, keeping failed attempts and only
    * using ODE invariant generators in absence of annotated invariants and when they close goals.
    */
-  @Tactic("explore", longDisplayName = "Explore Provability", revealInternalSteps = true)
+  @Tactic(name = "explore", displayNameLong = Some("Explore Provability"), revealInternalSteps = true)
   def explore(gen: Generator[GenProduct]): InputTactic = inputanon {
     autoImpl(
       anon((pos: Position, seq: Sequent, defs: Declaration) =>
@@ -569,12 +572,7 @@ object TactixLibrary
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next() else otherwise
     }
   }
-  @Tactic(
-    "loopAuto",
-    codeName = "loopAuto",
-    longDisplayName = "Loop with Invariant Automation",
-    conclusion = "Γ |- [a*]P, Δ",
-  )
+  @Tactic(name = "loopAuto", displayNameLong = Some("Loop with Invariant Automation"), conclusion = "Γ |- [a*]P, Δ")
   def loopautoX(gen: Generator[GenProduct]): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, seq: Sequent) => loopauto(gen)(pos) }
 
@@ -715,7 +713,7 @@ object TactixLibrary
    *   For sequent `x=1 |- [{x'=x}]x >=-1`, the postcondition is not invariant but [[ODE]] proves it automatically using
    *   e.g. `x>=1` as the generated invariant.
    */
-  @Tactic(longDisplayName = "ODE Auto", revealInternalSteps = true)
+  @Tactic(name = "ODE", displayNameLong = Some("ODE Auto"), revealInternalSteps = true)
   lazy val ODE: DependentPositionTactic = ODEImpl
   private lazy val ODEImpl: DependentPositionTactic = anon((pos: Position, seq: Sequent, defs: Declaration) =>
     must(
@@ -812,7 +810,7 @@ object TactixLibrary
     }
   )
 
-  @Tactic(longDisplayName = "ODE Invariant")
+  @Tactic(name = "ODEinv", displayNameLong = Some("ODE Invariant"))
   def ODEinv(tryHard: Option[Formula], useDw: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon({
     pos: Position =>
       DifferentialTactics.odeInvariant(tryHard.getOrElse(True) == True, useDw.getOrElse(True) == True)(pos)
@@ -875,9 +873,8 @@ object TactixLibrary
    *   [[odeInvariantComplete]] but not [[odeInvariant]]
    */
   @Tactic(
-    "ODE Invariant Complete",
-    codeName = "odeInvC",
-    longDisplayName = "ODE Invariant Complete",
+    name = "odeInvC",
+    displayName = Some("ODE Invariant Complete"),
     premises = "*",
     conclusion = "Γ, P |- [x'=f(x)&Q]P",
     displayLevel = "menu",
@@ -892,18 +889,20 @@ object TactixLibrary
    * @see
    *   [[dG]]
    */
-  @Tactic(longDisplayName = "Auto Differential Ghost")
+  @Tactic(name = "DGauto", displayNameLong = Some("Auto Differential Ghost"))
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
   @Tactic(
-    longDisplayName = "Differential Conditional Cut",
+    name = "dCC",
+    displayNameLong = Some("Differential Conditional Cut"),
     premises = "Γ |- [x'=f(x)&R&P]Q ;; Γ, R, !P |- [x'=f(x)&R]!P",
     conclusion = "Γ |- [x'=f(x)&R](P -> Q)",
   )
   val dCC: DependentPositionTactic = DifferentialTactics.dCC
 
   @Tactic(
-    longDisplayName = "Darboux (in)equalities",
+    name = "dbx",
+    displayNameLong = Some("Darboux (in)equalities"),
     premises = "Γ |- p≳0 ;; Q |- p' ≳ g p",
     conclusion = "Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs = "g:option[term]",
@@ -974,7 +973,7 @@ object TactixLibrary
   }
 
   /** @see [[QE()]] */
-  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
+  @Tactic(name = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     new SingleGoalDependentTactic(TacticFactory.ANON) {
       override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = (tool, timeout) match {
@@ -998,9 +997,8 @@ object TactixLibrary
    *   You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
    */
   @Tactic(
-    names = "Partial QE",
-    codeName = "pQE",
-    longDisplayName = "Partial QE",
+    name = "pQE",
+    displayName = Some("Partial QE"),
     premises = "Γ |- Δ",
     //    pQE -----------
     conclusion = "Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
@@ -1064,12 +1062,13 @@ object TactixLibrary
    * abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that
    * term.
    */
+  // @todo name clash with abbrv above
+  // Response from BB:
+  // Not a name clash if only one is annotated.
+  // This appears to be correct because it maintains backwards-compatibility.
   @Tactic(
-    names = "abbrv",
-    codeName =
-      "abbrv", // @todo name clash with abbrv above (response from BB: not a name clash if only one is annotated. This
-    longDisplayName = "Abbreviate",
-    // appears to be correct because it maintains backwards-compatibility)
+    name = "abbrv",
+    displayNameLong = Some("Abbreviate"),
     premises = "Γ(x), x=e |- Δ(x)",
     conclusion = "Γ(e) |- Δ(e)",
     inputs = "e:term;;x[x]:option[variable]",
@@ -1095,8 +1094,8 @@ object TactixLibrary
 
   /** eXternal wrapper for eqL2R */
   @Tactic(
-    codeName = "L2R",
-    longDisplayName = "Apply Equality",
+    name = "L2R",
+    displayNameLong = Some("Apply Equality"),
     conclusion = "Γ, x=y, P(x) |- Q(x), Δ",
     premises = "Γ, x=y, P(y) |- Q(y), Δ",
   )
@@ -1118,7 +1117,12 @@ object TactixLibrary
    * Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively
    * ([[EqualityTactics.exhaustiveEqL2R]]).
    */
-  @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities", revealInternalSteps = true)
+  @Tactic(
+    name = "allL2R",
+    displayName = Some("L=R all"),
+    displayNameLong = Some("Apply All Equalities"),
+    revealInternalSteps = true,
+  )
   val exhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     exhaustiveEqL2R(false)(pos).computeResult(provable)
   }
@@ -1150,9 +1154,9 @@ object TactixLibrary
    * ([[EqualityTactics.exhaustiveEqR2L]]).
    */
   @Tactic(
-    names = "R=L all",
-    codeName = "allR2L",
-    longDisplayName = "Apply All Equalities Inverse",
+    name = "allR2L",
+    displayName = Some("R=L all"),
+    displayNameLong = Some("Apply All Equalities Inverse"),
     revealInternalSteps = true,
   )
   val exhaustiveEqR2L: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
@@ -1213,8 +1217,9 @@ object TactixLibrary
    *   The transformed formula or term that is desired as the result of this transformation.
    */
   @Tactic(
-    "trafo",
-    longDisplayName = "Transform Expression",
+    name = "transform",
+    displayName = Some("trafo"),
+    displayNameLong = Some("Transform Expression"),
     conclusion = "Γ |- P, Δ",
     premises = "Γ |- Q, Δ",
     /* revealInternalSteps = true not yet possible since non-serializable ProvableSig input used internally */
@@ -1227,7 +1232,7 @@ object TactixLibrary
    * Determines difference between expression at position and expression `to` and turns diff. into transformations and
    * abbreviations.
    */
-  @Tactic("edit", longDisplayName = "Edit Expression", revealInternalSteps = true)
+  @Tactic(name = "edit", displayNameLong = Some("Edit Expression"), revealInternalSteps = true)
   def edit(to: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
     ToolTactics.edit(to)(pos)
   }
@@ -1281,7 +1286,7 @@ object TactixLibrary
   lazy val max: BuiltInPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  @Tactic()
+  @Tactic(name = "alphaRule")
   lazy val alphaRule: BuiltInTactic = anon { provable: ProvableSig =>
     ProofRuleTactics.requireOneSubgoal(provable, "alphaRule")
     val sequent = provable.subgoals.head
@@ -1312,7 +1317,7 @@ object TactixLibrary
   }
 
   /** Beta rules are propositional rules that split */
-  @Tactic()
+  @Tactic(name = "betaRule")
   lazy val betaRule: BuiltInTactic = anon { provable: ProvableSig =>
     ProofRuleTactics.requireOneSubgoal(provable, "betaRule")
     val sequent = provable.subgoals.head
@@ -1348,8 +1353,8 @@ object TactixLibrary
    *   [[QE]]
    */
   @Tactic(
-    names = "RCF",
-    codeName = "rcf",
+    name = "rcf",
+    displayName = Some("RCF"),
     premises = "*",
     //    pQE -----------
     conclusion = "Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
@@ -1427,7 +1432,7 @@ object TactixLibrary
     case _ => generator // other generators do not include predefined invariants; they produce their results when asked
   }
 
-  @Tactic(("Expand", "expand"), codeName = "expand")
+  @Tactic(name = "expand", displayName = Some("Expand"), displayNameAscii = Some("expand"))
   def expand(n: String): StringInputTactic = inputanonS { (p: ProvableSig) => expandFw(n.asNamedSymbol, None)(p) }
 
   /**
@@ -1468,7 +1473,7 @@ object TactixLibrary
     US(subst)(pr)
   }
 
-  @Tactic()
+  @Tactic(name = "expandAllDefs")
   def expandAllDefs(defs: List[SubstitutionPair]): InputTactic = inputanon { expandAllDefsFw(defs) }
 
   /**
@@ -1566,7 +1571,7 @@ object TactixLibrary
 
   // lemmas
 
-  @Tactic("useLemma", codeName = "useLemma", longDisplayName = "Use Lemma")
+  @Tactic(name = "useLemma", displayNameLong = Some("Use Lemma"))
   def useLemmaX(lemma: String, tactic: Option[String]): InputTactic =
     inputanon { TactixLibrary.useLemma(lemma, tactic.map(BelleParser)) }
 
@@ -1662,7 +1667,7 @@ object TactixLibrary
   }
 
   /** Applies the lemma by matching `key` in the lemma with the tactic position. */
-  @Tactic("useLemmaAt", longDisplayName = "Use Lemma at Position")
+  @Tactic(name = "useLemmaAt", displayNameLong = Some("Use Lemma at Position"))
   def useLemmaAt(lemma: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = inputanon(
     (pos: Position, _: Sequent) => {
       val userLemmaName = "user" + File.separator + lemma // @todo FileLemmaDB + multi-user environment
@@ -1738,8 +1743,8 @@ object TactixLibrary
    *   `x >= 1 -> x > 1 | x =1` proves by SOS automatically
    */
   @Tactic(
-    "sosQE",
-    longDisplayName = "Prove arithmetic with sum-of-squares witness",
+    name = "sosQE",
+    displayNameLong = Some("Prove arithmetic with sum-of-squares witness"),
     premises =
       "normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
     //    sosQE -----------

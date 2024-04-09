@@ -90,10 +90,10 @@ trait HybridProgramCalculus {
    *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
    *   }}}
    */
+  // @todo code name on cheat sheet is generalize
   @Tactic(
-    names = "MR",
-    codeName = "MR", // @todo code name on cheat sheet is generalize
-    longDisplayName = "Monotonicity",
+    name = "MR",
+    displayNameLong = Some("Monotonicity"),
     premises = "Γ |- [a]Q, Δ ;; Q |- P",
     // Monotonicity ------------------------
     conclusion = "Γ |- [a]P, Δ",
@@ -147,7 +147,8 @@ trait HybridProgramCalculus {
    *   Beware that, unlike for hybrid systems, the order of premises for hybrid games is Post, Step, Init.
    */
   @Tactic(
-    longDisplayName = "Loop Invariant",
+    name = "loop",
+    displayNameLong = Some("Loop Invariant"),
     premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ",
     revealInternalSteps = true,
@@ -188,7 +189,8 @@ trait HybridProgramCalculus {
    *   A formula `J` that is a prefixpoint of `⟨a⟩` that also follows from `P`.
    */
   @Tactic(
-    longDisplayName = "Fixpoint",
+    name = "fp",
+    displayNameLong = Some("Fixpoint"),
     premises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P ∨ &langle;a&rangle;J |- J",
     conclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ",
     revealInternalSteps = true,

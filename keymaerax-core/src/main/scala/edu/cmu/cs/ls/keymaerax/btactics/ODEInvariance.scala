@@ -868,6 +868,7 @@ object ODEInvariance extends TacticProvider {
   )
 
   @Tactic(
+    name = "domainStuck",
     premises = "Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
     conclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
     displayLevel = "browse",
@@ -1198,7 +1199,8 @@ object ODEInvariance extends TacticProvider {
    *   [[https://doi.org/10.1007/978-3-319-10936-7_10 Invariance of conjunctions of polynomial equalities for algebraic differential equations]].
    */
   @Tactic(
-    names = "(Conj.) Differential Radical Invariants",
+    name = "dRI",
+    displayName = Some("(Conj.) Differential Radical Invariants"),
     premises = "Γ, Q |- p*=0",
     conclusion = "Γ |- [x'=f(x) & Q}]p=0, Δ",
     displayLevel = "browse",
@@ -1254,7 +1256,8 @@ object ODEInvariance extends TacticProvider {
 
   // todo: this needs a better tactic interface
   @Tactic(
-    names = "Vectorial Darboux (auto)",
+    name = "dgVdbxAuto",
+    displayName = Some("Vectorial Darboux (auto)"),
     premises = "Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
     conclusion = "Γ |- [x'=f(x) & Q}]p!=0, Δ",
     displayLevel = "browse",
@@ -1505,7 +1508,8 @@ object ODEInvariance extends TacticProvider {
    * }}}
    */
   @Tactic(
-    names = "Differential Fixed Point",
+    name = "dFP",
+    displayName = Some("Differential Fixed Point"),
     premises = "Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
     conclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
     displayLevel = "browse",
@@ -2071,8 +2075,9 @@ object ODEInvariance extends TacticProvider {
   }
 
   @Tactic(
-    "[']n",
-    longDisplayName = "nilsolve",
+    name = "nilpotentSolve",
+    displayName = Some("[']n"),
+    displayNameLong = Some("nilsolve"),
     premises = "Γ,x=x0,t=0 |- [x'=f(x),t'=1&q(x)&x=y(x0,t)]p(x), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = false,

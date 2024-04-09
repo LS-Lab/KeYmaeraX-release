@@ -22,17 +22,18 @@ import scala.reflect.macros.whitebox
  * only be applied to val declarations whose right-hand-sides are applications of [[derivedRule]] or related functions,
  * see [[Ax]] for examples.
  *
- * @param names
- *   Display names to display in user interface. If two names are given, the first is Unicode and the second ASCII. If
- *   one ASCII name is given, it is also used as the Unicode name. Unicode names are useful for display to end users,
- *   ASCII names appear to be better-supported in error messages. Optional, defaults to codeName
- * @param codeName
- *   You almost never need to specify this argument (for proof rules, as opposed to tactics). Permanent unique code name
- *   used to invoke this axiom in tactics as a string and for Lemma storage. `codeName` will be inferred from the val
- *   that is annotated by this `@ProofRule` and is strongly recommended to be identical to it.
- * @param longDisplayName
- *   Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to ASCII
- *   display name
+ * @param name
+ *   Unique identifier for this axiom. Used to invoke the axiom in tactics and for lemma storage. Must only contain the
+ *   characters `a-zA-Z0-9_`. It is strongly recommended that this name is identical to the name of the annotated scala
+ *   definition.
+ * @param displayName
+ *   Short name used for the axiom in the user interface. Defaults to [[name]].
+ * @param displayNameAscii
+ *   ASCII-only version of [[displayName]] that must be specified if [[displayName]] contains characters outside the
+ *   printable ASCII range. Defaults to [[displayName]].
+ * @param displayNameLong
+ *   Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase.
+ *   Defaults to [[displayName]].
  * @param premises
  *   String of premises when (if) the rule is displayed on the UI. Rules with premises must have conclusions. Premises
  *   are separated by `;;` and each premise is optionally a sequent. `P;; A, B |- C` specifies two premises, the latter
@@ -49,9 +50,10 @@ import scala.reflect.macros.whitebox
  */
 @compileTimeOnly("enable -Ymacro-annotations")
 class ProofRule(
-    val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
-    val codeName: String = "",
-    val longDisplayName: String = "",
+    val name: String,
+    val displayName: Option[String] = None,
+    val displayNameAscii: Option[String] = None,
+    val displayNameLong: Option[String] = None,
     val premises: String = "",
     val conclusion: String = "",
     val unifier: String = "full",
@@ -65,9 +67,10 @@ class ProofRule(
 
 /** Helper class for easy annotation argument parsing. Must stay in sync with [[ProofRule]]! */
 case class ProofRuleArgs(
-    names: Any = false,
-    codeName: String = "",
-    longDisplayName: String = "",
+    name: String,
+    displayName: Option[String] = None,
+    displayNameAscii: Option[String] = None,
+    displayNameLong: Option[String] = None,
     premises: String = "",
     conclusion: String = "",
     unifier: String = "full",
@@ -97,7 +100,6 @@ object ProofRuleMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" =>
         c.eval(c.Expr[ProofRuleArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.ProofRuleArgs(..$args)"))
-      case q"new $_()" => c.eval(c.Expr[ProofRuleArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.ProofRuleArgs()"))
       case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
 
@@ -133,41 +135,32 @@ object ProofRuleMacro {
     val isCore = functionName == "coreRule"
 
     /*
-     * Parse annotation arguments
+     * Compute different names
      */
 
-    val declName = tDeclName.decodedName.toString
+    val name = AnnotationCommon.getName(args.name)(c)
+    val displayName = AnnotationCommon.getDisplayName(args.displayName, name)(c)
+    val displayNameAscii = AnnotationCommon.getDisplayNameAscii(args.displayNameAscii, displayName)(c)
+    val displayNameLong = AnnotationCommon.getDisplayNameLong(args.displayNameLong, displayName)(c)
+
+    val storageName = name.toLowerCase
+    val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
+
+    /*
+     * Parse annotation arguments
+     */
 
     val premises = parseSequents(args.premises)(c)
     val conclusionOpt = if (args.conclusion.isEmpty) None else Some(parseSequent(args.conclusion)(c))
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val simpleDisplay = args.names match {
-      case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
-      case s: String => SimpleDisplayInfo(s, s)
-      case false => SimpleDisplayInfo(declName, declName)
-      case _ => c.abort(c.enclosingPosition, "@ProofRule names must be String or (String, String)")
-    }
-
-    val display = (simpleDisplay, premises, conclusionOpt) match {
-      case (_, Nil, None) => simpleDisplay
-      case (sd, p, Some(c)) => RuleDisplayInfo(sd, c, p, "")
+    val simpleDisplay = SimpleDisplayInfo(displayName, displayNameAscii)
+    val display = (premises, conclusionOpt) match {
+      case (Nil, None) => simpleDisplay
+      case (p, Some(c)) => RuleDisplayInfo(simpleDisplay, c, p, "")
       case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")
     }
-
-    /*
-     * Compute different names
-     */
-
-    // If the codeName is not specified, it is taken from the declaration name.
-    val codeName = if (args.codeName.nonEmpty) args.codeName else declName
-
-    val longDisplayName: String = if (args.longDisplayName.nonEmpty) args.longDisplayName else simpleDisplay.asciiName
-
-    val storageName = codeName.toLowerCase
-
-    val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
 
     /*
      * Build AST
@@ -207,8 +200,8 @@ object ProofRuleMacro {
         q"""AxiomaticRuleInfo(
           canonicalName = $canonicalName,
           display = ${convDI(display)(c)},
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           unifier = $unifier,
           theExpr = $expr,
           displayLevel = $displayLevel,
@@ -221,8 +214,8 @@ object ProofRuleMacro {
         q"""DerivedRuleInfo(
           canonicalName = $canonicalName,
           display = ${convDI(display)(c)},
-          codeName = $codeName,
-          longDisplayName = $longDisplayName,
+          codeName = $name,
+          longDisplayName = $displayNameLong,
           unifier = $unifier,
           theExpr = $expr,
           displayLevel = $displayLevel,
