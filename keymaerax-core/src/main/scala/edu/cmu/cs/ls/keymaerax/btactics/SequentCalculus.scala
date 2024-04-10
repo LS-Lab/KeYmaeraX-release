@@ -566,12 +566,19 @@ trait SequentCalculus {
    *   x>0   |- \forall x x^2>=0
    *   }}}
    */
-  @Tactic(name = "allR", displayName = Some("∀R"), premises = "Γ |- p(x), Δ", conclusion = "Γ |- ∀x p(x), Δ")
+  @Tactic(
+    name = "allR",
+    displayName = Some("∀R"),
+    displayNameAscii = Some("allR"),
+    premises = "Γ |- p(x), Δ",
+    conclusion = "Γ |- ∀x p(x), Δ",
+  )
   val allR: BuiltInPositionTactic = FOQuantifierTactics.allSkolemize
   private[btactics] val allRInfo: TacticInfo = TacticInfo("allR")
   @Tactic(
     name = "allRi",
     displayName = Some("∀Ri"),
+    displayNameAscii = Some("allRi"),
     inputs = "f:term;;x[x]:option[variable]",
     premises = "Γ |- ∀x p(f(x)), Δ",
     conclusion = "Γ |- p(f(y)), Δ",
@@ -594,6 +601,7 @@ trait SequentCalculus {
   @Tactic(
     name = "allL",
     displayName = Some("∀L"),
+    displayNameAscii = Some("allL"),
     inputs = "θ[θ]:option[term]",
     premises = "p(θ), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ",
@@ -632,6 +640,7 @@ trait SequentCalculus {
   @Tactic(
     name = "allLmon",
     displayName = Some("M∀L"),
+    displayNameAscii = Some("MallL"),
     inputs = "q(x):formula",
     premises = "Γ, ∀x q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
     conclusion = "Γ, ∀x p(x) |- Δ",
@@ -666,6 +675,7 @@ trait SequentCalculus {
   @Tactic(
     name = "allLkeep",
     displayName = Some("∀Lk"),
+    displayNameAscii = Some("allLk"),
     inputs = "θ[θ]:term",
     premises = "∀x p(x), Γ, p(θ) |- Δ",
     conclusion = "∀x p(x), Γ |- Δ",
@@ -691,7 +701,13 @@ trait SequentCalculus {
    * \exists x p(x), G |- D
    * }}}
    */
-  @Tactic(name = "existsL", displayName = Some("∃L"), premises = "p(x), Γ |- Δ", conclusion = "∃x p(x), Γ |- Δ")
+  @Tactic(
+    name = "existsL",
+    displayName = Some("∃L"),
+    displayNameAscii = Some("existsL"),
+    premises = "p(x), Γ |- Δ",
+    conclusion = "∃x p(x), Γ |- Δ",
+  )
   val existsL: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     FOQuantifierTactics.existsSkolemize(pos).computeResult(provable)
   }
@@ -699,6 +715,7 @@ trait SequentCalculus {
   @Tactic(
     name = "existsLi",
     displayName = Some("∃Li"),
+    displayNameAscii = Some("existsLi"),
     inputs = "f:term;;x[x]:option[variable]",
     premises = "Γ, ∃x p(f(x)) |- Δ",
     conclusion = "Γ, p(f(y)) |- Δ",
@@ -723,6 +740,7 @@ trait SequentCalculus {
   @Tactic(
     name = "existsR",
     displayName = Some("∃R"),
+    displayNameAscii = Some("existsR"),
     inputs = "θ[θ]:option[term]",
     premises = "Γ |- p(θ), Δ",
     conclusion = "Γ |- ∃x p(x), Δ",
@@ -765,6 +783,7 @@ trait SequentCalculus {
   @Tactic(
     name = "existsRmon",
     displayName = Some("M∃R"),
+    displayNameAscii = Some("MexistsR"),
     inputs = "q(x):formula",
     premises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
     conclusion = "Γ |- ∃x p(x), Δ",
@@ -811,6 +830,7 @@ trait SequentCalculus {
   @Tactic(
     name = "close",
     displayName = Some("⊥/⊤"),
+    displayNameAscii = Some("false/true"),
     displayNameLong = Some("Close by id/⊥/⊤"),
     premises = "*",
     conclusion = "Γ, P |- P, Δ",
@@ -1023,6 +1043,7 @@ trait SequentCalculus {
   @Tactic(
     name = "alphaRenAll",
     displayName = Some("α-renall"),
+    displayNameAscii = Some("alpha-renall"),
     displayNameLong = Some("Alpha Rename All"),
     premises = "Γ(y) |- Δ(y) ;; Γ(x) |- Δ(x), x=y",
     conclusion = "Γ(x) |- Δ(x)",
@@ -1081,6 +1102,7 @@ trait SequentCalculus {
   @Tactic(
     name = "alphaRenAllBy",
     displayName = Some("α-renallby"),
+    displayNameAscii = Some("alpha-renallby"),
     displayNameLong = Some("Alpha Rename All By Equality"),
     conclusion = "Γ(x), x=y |- Δ(x)",
     premises = "Γ(y), x=y |- Δ(y)",
@@ -1115,6 +1137,7 @@ trait SequentCalculus {
   @Tactic(
     name = "closeT",
     displayName = Some("⊤R"),
+    displayNameAscii = Some("trueR"),
     displayNameLong = Some("Close ⊤"),
     premises = "*",
     conclusion = "Γ |- ⊤, Δ",
@@ -1134,6 +1157,7 @@ trait SequentCalculus {
   @Tactic(
     name = "closeF",
     displayName = Some("⊥L"),
+    displayNameAscii = Some("falseL"),
     displayNameLong = Some("Close ⊥"),
     premises = "*",
     conclusion = "Γ, ⊥ |- Δ",

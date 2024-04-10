@@ -1305,7 +1305,13 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @ProofRule(name = "monallrule", displayName = Some("M∀"), premises = "P |- Q", conclusion = "∀x P |- ∀ x Q")
+  @ProofRule(
+    name = "monallrule",
+    displayName = Some("M∀"),
+    displayNameAscii = Some("Mall"),
+    premises = "P |- Q",
+    conclusion = "∀x P |- ∀ x Q",
+  )
   lazy val monallrule: DerivedRuleInfo = derivedRuleSequent(
     "all monotone",
     Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
@@ -2764,7 +2770,7 @@ object Ax extends Logging {
    *
    * @Derived
    */
-  @Axiom(name = "existsAnd", displayName = Some("∃∧"))
+  @Axiom(name = "existsAnd", displayName = Some("∃∧"), displayNameAscii = Some("existsand"))
   lazy val existsAnd: DerivedAxiomInfo = derivedAxiom(
     "\\exists& exists and",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (q_(||) & p_(||)) -> \\exists x_ (p_(||))".asFormula)),
@@ -2780,7 +2786,7 @@ object Ax extends Logging {
    *
    * @Derived
    */
-  @Axiom(name = "existsOr", displayName = Some("∃∨"))
+  @Axiom(name = "existsOr", displayName = Some("∃∨"), displayNameAscii = Some("existsor"))
   lazy val existsOr: DerivedAxiomInfo = derivedAxiom(
     "\\exists| exists or",
     Sequent(
@@ -2805,7 +2811,7 @@ object Ax extends Logging {
    *
    * @Derived
    */
-  @Axiom(name = "forallImplies", displayName = Some("∀→"))
+  @Axiom(name = "forallImplies", displayName = Some("∀→"), displayNameAscii = Some("forallimplies"))
   lazy val forallImplies: DerivedAxiomInfo = derivedAxiom(
     "\\forall-> forall implies",
     Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) -> \\forall x_ (q_(||) -> p_(||))".asFormula)),
@@ -4570,7 +4576,12 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @Axiom(name = "DWeakenAnd", displayName = Some("DW∧"), conclusion = "[x'=f(x)&Q]P→[x'=f(x)&Q](Q∧P)")
+  @Axiom(
+    name = "DWeakenAnd",
+    displayName = Some("DW∧"),
+    displayNameAscii = Some("DWand"),
+    conclusion = "[x'=f(x)&Q]P→[x'=f(x)&Q](Q∧P)",
+  )
   lazy val DWeakenAnd: DerivedAxiomInfo = derivedAxiom(
     "DW differential weakening and",
     Sequent(IndexedSeq(), IndexedSeq("[{c_&q_(||)}]p_(||) -> ([{c_&q_(||)}](q_(||)&p_(||)))".asFormula)),

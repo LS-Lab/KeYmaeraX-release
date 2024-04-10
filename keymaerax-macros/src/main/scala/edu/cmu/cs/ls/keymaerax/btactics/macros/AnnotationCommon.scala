@@ -179,16 +179,10 @@ object AnnotationCommon {
 
     val result = displayNameAscii.getOrElse(displayName)
 
-    // This check is currently disabled because some of the ascii display names did not contain ascii-only values
-    // when this refactoring started. However, I don't want to introduce actual changes in names before I've fully
-    // migrated to this name system, so the test will have to wait until later.
-    // TODO Uncomment again
-    /*
     val isPrintableAscii = result.codePoints().allMatch(c => 0x20 <= c && c <= 0x7e)
     if (!isPrintableAscii) {
       c.abort(c.enclosingPosition, "displayNameAscii contains characters outside the printable ASCII range")
     }
-     */
 
     result
   }
