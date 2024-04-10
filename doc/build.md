@@ -131,4 +131,4 @@ For more details on running tests, see the
 
 Run `sbt unidoc` in the project root.
 This will generate offline documentation at
-[`target/scala-2.12/unidoc/index.html`](target/scala-2.12/unidoc/index.html).
+[`target/scala-2.13/unidoc/index.html`](target/scala-2.13/unidoc/index.html).
