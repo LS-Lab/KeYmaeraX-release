@@ -77,9 +77,7 @@ the required values on the different platforms are:
 
 ## Building
 
-To compile KeYmaera X from source, see the [build instructions](doc/build.md).
-To set up a development environment, see the [dev instructions](doc/develop.md).
-
+To compile KeYmaera X from source or set up a development environment, see [procedures.md](doc/procedures.md).
 More detailed but outdated instructions are available
 [in the wiki on GitHub](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
 
