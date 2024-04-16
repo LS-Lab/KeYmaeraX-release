@@ -13,7 +13,10 @@ import scala.collection.immutable.{List, Nil}
 
 class KeymaeraXVersionRequest extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new KeymaeraXVersionResponse(Version.CURRENT.toString, UpdateChecker.upToDate, UpdateChecker.latestVersionString) ::
-      Nil
+    new KeymaeraXVersionResponse(
+      Version.CURRENT.toString,
+      UpdateChecker.upToDate,
+      UpdateChecker.latestVersion.map(_.toString),
+    ) :: Nil
   }
 }

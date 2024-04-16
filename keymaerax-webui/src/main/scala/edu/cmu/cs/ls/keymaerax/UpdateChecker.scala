@@ -30,20 +30,15 @@ object UpdateChecker extends Logging {
   lazy val upToDate: Option[Boolean] = latestVersion.map(_ >= Version.CURRENT)
 
   /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
-  lazy val latestVersion: Option[Version] = latestVersionInfo.map(_._2)
-
-  /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
-  lazy val latestVersionString: Option[String] = latestVersionInfo.map(_._1)
-
-  private lazy val latestVersionInfo: Option[(String, Version)] = fetchLatestVersionInfo()
+  lazy val latestVersion: Option[Version] = fetchLatestVersion()
 
   /** Queries [[https://keymaerax.org/version.json]] and returns the version number. */
-  private def fetchLatestVersionInfo(): Option[(String, Version)] =
+  private def fetchLatestVersion(): Option[Version] =
     try {
       val uri = new URI("https://keymaerax.org/version.json")
       val timeout = Duration.ofSeconds(3)
       val versionString = fetchStringFromUri(uri, timeout).parseJson.asJsObject.fields("version").convertTo[String]
-      Some((versionString, Version.parse(versionString)))
+      Some(Version.parse(versionString))
     } catch { case _: Throwable => None }
 
   /**
