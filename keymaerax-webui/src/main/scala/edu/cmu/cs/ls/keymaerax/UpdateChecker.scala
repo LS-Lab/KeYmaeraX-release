@@ -5,35 +5,59 @@
 
 package edu.cmu.cs.ls.keymaerax
 
-import java.net.{SocketTimeoutException, URL}
-
+import edu.cmu.cs.ls.keymaerax.core.VERSION
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
+import java.net.URI
+import java.time.Duration
+import scala.io.{Codec, Source}
+
 /**
- * The JSON should be a https://keymaerax.org/version.json and should look like:
- * {{{
- *   {
- *     "version": "A_VERSION_STRING",
- *     "oldestAcceptableDB": "A_VERSION_STRING"
- *   }
- * }}}
- *
- * where the value of {{{"version"}}} is the latest stable release and the value of {{{"oldestAcceptableDB"}}} is the
- * last version number where the DB schema changed.
- *
- * A_VERSION_STRING should have one of the formats following:
- * {{{
- *   X.X
- *   X.X.X
- *   X.XbX
- * }}}
- * where X is a natural number.
+ * Uses the JSON file at [[https://keymaerax.org/version.json]] to check whether a new update is available. The JSON
+ * should have a field called `version` that is the version of the latest stable release.
  *
  * @author
  *   Nathan Fulton
  */
 object UpdateChecker extends Logging {
+
+  /**
+   * Whether this KeYmaera X instance is using the latest version, or [[None]] if version info could not be retrieved.
+   */
+  // TODO Compare using VersionString instead of == on Strings
+  lazy val upToDate: Option[Boolean] = latestVersion.map(_ == VERSION)
+
+  /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
+  lazy val latestVersion: Option[String] = fetchLatestVersion()
+
+  /** Queries [[https://keymaerax.org/version.json]] and returns the version number. */
+  // TODO Return a VersionString instead
+  private def fetchLatestVersion(): Option[String] =
+    try {
+      val uri = new URI("https://keymaerax.org/version.json")
+      val timeout = Duration.ofSeconds(3)
+      val versionString = fetchStringFromUri(uri, timeout).parseJson.asJsObject.fields("version").convertTo[String]
+      Some(versionString)
+    } catch { case _: Throwable => None }
+
+  /**
+   * Fetch a string from a URL.
+   *
+   * Similar to [[Source.fromURI]], but with timeout.
+   */
+  private def fetchStringFromUri(uri: URI, timeout: Duration): String = {
+    val conn = uri.toURL.openConnection()
+
+    val timeoutMillis = timeout.toMillis.toInt
+    conn.setConnectTimeout(timeoutMillis)
+    conn.setReadTimeout(timeoutMillis)
+
+    val source = Source.fromInputStream(conn.getInputStream)(Codec.UTF8)
+    val data = source.mkString
+    source.close()
+    data
+  }
 
   /**
    * Indicates whether `databaseVersion` is outdated (i.e. older than expected by this KeYmaera X) and needs upgrading.
@@ -45,37 +69,6 @@ object UpdateChecker extends Logging {
     }
   }
 
-  /**
-   * Returns a pair containing:
-   *   - a boolean flag that is set to true whenever the current version equals the latest version number
-   *   - the latest version number according to KeYmaeraX.org/version.json
-   * or else None if we could not determine the most recent version (e.g., because we have no network connection).
-   */
-  def getVersionStatus: Option[(Boolean, String)] = {
-    downloadCurrentVersion match {
-      case Some(current) => Some((current == edu.cmu.cs.ls.keymaerax.core.VERSION, current))
-      case None => None
-    }
-  }
-
-  /**
-   * Returns an option containing a boolean value indicating whether KeYmaera X is up to date, or None if current
-   * version info could not be downloaded.
-   */
-  def upToDate(): Option[Boolean] = getVersionStatus match {
-    case Some((latest, _)) => Some(latest)
-    case None => None
-  }
-
-  /**
-   * Returns an option containing the version number of the latest KeYmaera X release, or None if current version info
-   * could not be downloaded.
-   */
-  def latestVersion(): Option[String] = getVersionStatus match {
-    case Some((_, version)) => Some(version)
-    case None => None
-  }
-
   private lazy val minDBVersion: Option[String] = {
     try {
       val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
@@ -84,37 +77,4 @@ object UpdateChecker extends Logging {
       Some(versionString)
     } catch { case _: Throwable => None }
   }
-
-  /**
-   * Returns the current version # in keymaerax.org/version.json, or None if the contents cannot be downloaded/parsed.
-   */
-  private lazy val downloadCurrentVersion: Option[String] = {
-    try {
-      readWithTimeout("https://keymaerax.org/version.json", 3000) match {
-        case None => None
-        case Some(string) =>
-          val json = JsonParser(string)
-          val version = json.asJsObject.getFields("version")
-          if (version.isEmpty) throw new Exception("version.json does not contain a version key.")
-          else {
-            val versionString = version.last.toString.replace("\"", "")
-            Some(versionString)
-          }
-      }
-    } catch { case _: Throwable => None }
-  }
-
-  /** Read contents of url or None if unreachable within given timeout in milliseconds */
-  private def readWithTimeout(url: String, timeout: Int): Option[String] =
-    try {
-      // like scala.io.Source.fromURL(url).mkString but with timeout
-      val conn = new URL(url).openConnection()
-      conn.setConnectTimeout(timeout)
-      conn.setReadTimeout(timeout)
-      val source = conn.getInputStream
-      val read = scala.io.Source.fromInputStream(source).mkString
-      if (source != null) source.close()
-      Some(read)
-    } catch { case _: SocketTimeoutException => None }
-
 }

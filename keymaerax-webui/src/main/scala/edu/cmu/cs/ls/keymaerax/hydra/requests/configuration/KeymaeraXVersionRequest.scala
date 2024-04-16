@@ -15,10 +15,6 @@ import scala.collection.immutable.{List, Nil}
 class KeymaeraXVersionRequest extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val keymaeraXVersion = VERSION
-    val (upToDate, latestVersion) = UpdateChecker.getVersionStatus match {
-      case Some((upd, lv)) => (Some(upd), Some(lv))
-      case _ => (None, None)
-    }
-    new KeymaeraXVersionResponse(keymaeraXVersion, upToDate, latestVersion) :: Nil
+    new KeymaeraXVersionResponse(keymaeraXVersion, UpdateChecker.upToDate, UpdateChecker.latestVersion) :: Nil
   }
 }
