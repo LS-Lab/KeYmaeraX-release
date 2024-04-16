@@ -11,7 +11,7 @@ import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 /**
- * The JSON should be a http://keymaerax.org/version.json and should look like:
+ * The JSON should be a https://keymaerax.org/version.json and should look like:
  * {{{
  *   {
  *     "version": "A_VERSION_STRING",
@@ -90,7 +90,7 @@ object UpdateChecker extends Logging {
    */
   private lazy val downloadCurrentVersion: Option[String] = {
     try {
-      readWithTimeout("http://keymaerax.org/version.json", 3000) match {
+      readWithTimeout("https://keymaerax.org/version.json", 3000) match {
         case None => None
         case Some(string) =>
           val json = JsonParser(string)
