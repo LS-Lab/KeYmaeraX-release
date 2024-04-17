@@ -19,6 +19,14 @@ import scala.reflect.runtime.universe.TypeTag
 case class AxiomNotFoundException(axiomName: String)
     extends Exception("(Derived) Axiom or rule or tactic not found: " + axiomName)
 
+// TODO Convert into enum after updating to Scala 3
+sealed trait Unifier
+case object UnifierFull extends Unifier
+case object UnifierLinear extends Unifier
+case object UnifierSurjective extends Unifier
+case object UnifierSurjectiveLinear extends Unifier
+case object UnifierSurjectiveLinearPretend extends Unifier
+
 /**
  * Central meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic. Provides
  * information such as unique canonical names, internal code names, display information, etc.

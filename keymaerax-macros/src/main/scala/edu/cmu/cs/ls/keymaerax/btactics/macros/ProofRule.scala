@@ -43,6 +43,9 @@ import scala.reflect.macros.whitebox
  * @param conclusion
  *   Conclusion of rule displayed on UI. The name of each input is given in [[inputs]], which may be generated from the
  *   [[def]]. Sequent syntax is optionally supported: `A, B |- C, D`
+ * @param unifier
+ *   Which unifier to use. See also
+ *   [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus#matcherFor(edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo)]]
  * @author
  *   Brandon Bohrer
  * @see
@@ -57,7 +60,7 @@ class ProofRule(
     val displayLevel: DisplayLevel = DisplayLevelInternal,
     val premises: String = "",
     val conclusion: String = "",
-    val unifier: String = "full",
+    val unifier: Unifier = UnifierFull,
     val key: String = "",
     val recursor: String = "*",
 ) extends StaticAnnotation {
@@ -74,7 +77,7 @@ case class ProofRuleArgs(
     displayLevel: DisplayLevel = DisplayLevelInternal,
     premises: String = "",
     conclusion: String = "",
-    unifier: String = "full",
+    unifier: Unifier = UnifierFull,
     key: String = "",
     recursor: String = "*",
 )
@@ -100,11 +103,21 @@ object ProofRuleMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" => c.eval(c.Expr[ProofRuleArgs](
           q"""{
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevel;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelBrowse;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelMenu;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelAll;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+              DisplayLevel,
+              DisplayLevelInternal,
+              DisplayLevelBrowse,
+              DisplayLevelMenu,
+              DisplayLevelAll,
+            };
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+              Unifier,
+              UnifierFull,
+              UnifierLinear,
+              UnifierSurjective,
+              UnifierSurjectiveLinear,
+              UnifierSurjectiveLinearPretend,
+            };
             edu.cmu.cs.ls.keymaerax.btactics.macros.ProofRuleArgs(..$args)
           }"""
         ))
@@ -200,12 +213,11 @@ object ProofRuleMacro {
     """ // : (Unit => Any)
 
     val unifier = args.unifier match {
-      case "surjective" => Symbol("surjective")
-      case "surjlinear" => Symbol("surlinear")
-      case "full" => Symbol("full")
-      case "linear" => Symbol("linear")
-      case "surjlinearpretend" => Symbol("surlinearpretend")
-      case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
+      case UnifierFull => Symbol("full")
+      case UnifierLinear => Symbol("linear")
+      case UnifierSurjective => Symbol("surjective")
+      case UnifierSurjectiveLinear => Symbol("surlinear")
+      case UnifierSurjectiveLinearPretend => Symbol("surlinearpretend")
     }
 
     val (infoType, info) =

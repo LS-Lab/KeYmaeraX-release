@@ -206,11 +206,13 @@ object TacticMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" => c.eval(c.Expr[TacticArgs](
           q"""{
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevel;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelBrowse;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelMenu;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelAll;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+              DisplayLevel,
+              DisplayLevelInternal,
+              DisplayLevelBrowse,
+              DisplayLevelMenu,
+              DisplayLevelAll,
+            };
             edu.cmu.cs.ls.keymaerax.btactics.macros.TacticArgs(..$args)
           }"""
         ))

@@ -40,8 +40,7 @@ import scala.reflect.macros.whitebox
  *   Formula string displayed for axioms as html with unicode in the user interface. For axioms with (non-position)
  *   inputs, the conclusion must mention each input. Sequent syntax is optionally supported: `A, B |- C, D`
  * @param unifier
- *   Which unifier to use for axiom: `"surjective"` or `"linear"` or `"surjlinear"` or `"surjlinearpretend"` or
- *   `"full"`.
+ *   Which unifier to use. See also
  *   [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus#matcherFor(edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo)]]
  * @param inputs
  *   Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut. Arguments are separated with
@@ -82,7 +81,7 @@ class Axiom(
     val displayNameLong: Option[String] = None,
     val displayLevel: DisplayLevel = DisplayLevelInternal,
     val conclusion: String = "",
-    val unifier: String = "full",
+    val unifier: Unifier = UnifierFull,
     val inputs: String = "",
     val key: String = "0",
     val recursor: String = "",
@@ -99,7 +98,7 @@ case class AxiomArgs(
     displayNameLong: Option[String] = None,
     displayLevel: DisplayLevel = DisplayLevelInternal,
     conclusion: String = "",
-    unifier: String = "full",
+    unifier: Unifier = UnifierFull,
     inputs: String = "",
     key: String = "0",
     recursor: String = "",
@@ -131,11 +130,21 @@ object AxiomMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" => c.eval(c.Expr[AxiomArgs](
           q"""{
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevel;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelBrowse;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelMenu;
-            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelAll;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+              DisplayLevel,
+              DisplayLevelInternal,
+              DisplayLevelBrowse,
+              DisplayLevelMenu,
+              DisplayLevelAll,
+            };
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+              Unifier,
+              UnifierFull,
+              UnifierLinear,
+              UnifierSurjective,
+              UnifierSurjectiveLinear,
+              UnifierSurjectiveLinearPretend,
+            };
             edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomArgs(..$args)
           }"""
         ))
@@ -237,12 +246,11 @@ object AxiomMacro {
     """ // : (Unit => Any)
 
     val unifier = args.unifier match {
-      case "surjective" => Symbol("surjective")
-      case "surjlinear" => Symbol("surlinear")
-      case "full" => Symbol("full")
-      case "linear" => Symbol("linear")
-      case "surjlinearpretend" => Symbol("surlinearpretend")
-      case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
+      case UnifierFull => Symbol("full")
+      case UnifierLinear => Symbol("linear")
+      case UnifierSurjective => Symbol("surjective")
+      case UnifierSurjectiveLinear => Symbol("surlinear")
+      case UnifierSurjectiveLinearPretend => Symbol("surlinearpretend")
     }
 
     val (infoType, info) =
