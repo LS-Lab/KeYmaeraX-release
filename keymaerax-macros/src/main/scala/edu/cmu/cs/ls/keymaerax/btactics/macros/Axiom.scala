@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   astForDisplayInfo,
+  astForUnifier,
   parseAIs,
   parsePos,
   parsePoses,
@@ -245,14 +246,6 @@ object AxiomMacro {
       })
     """ // : (Unit => Any)
 
-    val unifier = args.unifier match {
-      case UnifierFull => Symbol("full")
-      case UnifierLinear => Symbol("linear")
-      case UnifierSurjective => Symbol("surjective")
-      case UnifierSurjectiveLinear => Symbol("surlinear")
-      case UnifierSurjectiveLinearPretend => Symbol("surlinearpretend")
-    }
-
     val (infoType, info) =
       if (isCore) (
         tq"edu.cmu.cs.ls.keymaerax.btactics.macros.CoreAxiomInfo",
@@ -260,7 +253,7 @@ object AxiomMacro {
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
-          unifier = $unifier,
+          unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,
           theExpr = $expr,
@@ -272,7 +265,7 @@ object AxiomMacro {
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
-          unifier = $unifier,
+          unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,
           theExpr = $expr,

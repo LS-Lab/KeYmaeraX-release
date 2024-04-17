@@ -189,6 +189,17 @@ object AnnotationCommon {
     }
   }
 
+  def astForUnifier(unifier: Unifier)(implicit c: blackbox.Context): c.universe.Tree = {
+    import c.universe._
+    unifier match {
+      case UnifierFull => q"edu.cmu.cs.ls.keymaerax.btactics.macros.UnifierFull"
+      case UnifierLinear => q"edu.cmu.cs.ls.keymaerax.btactics.macros.UnifierLinear"
+      case UnifierSurjective => q"edu.cmu.cs.ls.keymaerax.btactics.macros.UnifierSurjective"
+      case UnifierSurjectiveLinear => q"edu.cmu.cs.ls.keymaerax.btactics.macros.UnifierSurjectiveLinear"
+      case UnifierSurjectiveLinearPretend => q"edu.cmu.cs.ls.keymaerax.btactics.macros.UnifierSurjectiveLinearPretend"
+    }
+  }
+
   def getName(name: String)(implicit c: whitebox.Context): String = {
     val valid = "^[a-zA-Z0-9_]*$".r.matches(name)
     if (!valid) c.abort(c.enclosingPosition, "name must consist only of a-z, A-Z, 0-9, _")

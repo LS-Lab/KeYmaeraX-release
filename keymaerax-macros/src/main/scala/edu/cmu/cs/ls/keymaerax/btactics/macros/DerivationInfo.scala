@@ -21,10 +21,29 @@ case class AxiomNotFoundException(axiomName: String)
 
 // TODO Convert into enum after updating to Scala 3
 sealed trait Unifier
+
+/** General unification. */
 case object UnifierFull extends Unifier
+
+/**
+ * No symbol can occur twice in the shape. If a symbol does occur twice, it is assumed that the identical match is found
+ * in all use cases, which is a strong assumption and can lead to unpredictable behavior otherwise.
+ */
 case object UnifierLinear extends Unifier
+
+/**
+ * A formula is surjective iff rule US can instantiate it to any of its axiom schema instances, so those obtained by
+ * uniformly replacing program constant symbols by hybrid games and unit predicationals by formulas. If no arguments
+ * occur, so no function or predicate symbols or predicationals, then the axiom is surjective. UnitFunctional,
+ * UnitPredicational, ProgramConst etc. can still occur. Function or predicate symbols that occur in a context without
+ * any bound variables are exempt. For example [[Ax.testb]].
+ */
 case object UnifierSurjective extends Unifier
+
+/** Both [[UnifierSurjective]] and [[UnifierLinear]]. */
 case object UnifierSurjectiveLinear extends Unifier
+
+/** An axiom that pretends to be surjective and linear even if it isn't necessarily so. */
 case object UnifierSurjectiveLinearPretend extends Unifier
 
 /**
@@ -283,12 +302,12 @@ sealed trait ProvableInfo extends DerivationInfo {
   private[macros] var theFormula: Option[Any] = None
 
   /**
-   * Which unifier to use. 'surjective or 'linear or 'surjlinear or 'surjlinearpretend or 'full For completeness, this
-   * declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
+   * Which unifier to use. For completeness, this declaration must be consistent with the default key from
+   * [[AxiomIndex.axiomFor()]].
    * @see
    *   [[LinearMatcher]]
    */
-  def unifier: Symbol
+  def unifier: Unifier
 
   /**
    * The key at which this formula will be unified against an input formula.
@@ -346,7 +365,7 @@ case class CoreAxiomInfo(
     override val canonicalName: String,
     override val display: DisplayInfo,
     override val codeName: String,
-    override val unifier: Symbol,
+    override val unifier: Unifier,
     val theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
@@ -368,7 +387,7 @@ case class DerivedAxiomInfo(
     override val canonicalName: String,
     override val display: DisplayInfo,
     override val codeName: String,
-    override val unifier: Symbol,
+    override val unifier: Unifier,
     theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
@@ -391,7 +410,7 @@ case class AxiomaticRuleInfo(
     override val canonicalName: String,
     override val display: DisplayInfo,
     override val codeName: String,
-    override val unifier: Symbol,
+    override val unifier: Unifier,
     theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
@@ -420,7 +439,7 @@ case class DerivedRuleInfo(
     override val canonicalName: String,
     override val display: DisplayInfo,
     override val codeName: String,
-    override val unifier: Symbol,
+    override val unifier: Unifier,
     val theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,

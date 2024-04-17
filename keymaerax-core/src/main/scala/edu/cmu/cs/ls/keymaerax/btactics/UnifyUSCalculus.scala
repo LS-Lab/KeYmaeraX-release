@@ -6,24 +6,34 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, _}
-import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.closeTrue
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+  AxiomInfo,
+  DerivationInfo,
+  ProvableInfo,
+  Tactic,
+  TacticInfo,
+  UnifierFull,
+  UnifierLinear,
+  UnifierSurjective,
+  UnifierSurjectiveLinear,
+  UnifierSurjectiveLinearPretend,
+}
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position.seqPos2Position
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic, TacticInfo}
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig, TermProvable}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position.seqPos2Position
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable._
@@ -374,7 +384,6 @@ trait UnifyUSCalculus {
      *******************************************************************/
 
   import TacticFactory._
-
   import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.AxiomInfoAugmentor
 
   /**
@@ -3308,19 +3317,8 @@ trait UnifyUSCalculus {
 
   /**
    * Which unification matcher to use for which [[ProvableInfo]]. [[AxiomInfo.unifier]] declaration will be consulted
-   * from @[[edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom]] declarations:
-   *   - 'surjective: A formula is surjective iff rule US can instantiate it to any of its axiom schema instances, so
-   *     those obtained by uniformly replacing program constant symbols by hybrid games and unit predicationals by
-   *     formulas. If no arguments occur, so no function or predicate symbols or predicationals, then the axiom is
-   *     surjective. UnitFunctional, UnitPredicational, ProgramConst etc. can still occur. Function or predicate symbols
-   *     that occur in a context without any bound variables are exempt. For example [[Ax.testb]]. Using
-   *     [[UniformMatcher]]
-   *   - 'linear: No symbol can occur twice in the shape. If a symbol does occur twice, it is assumed that the identical
-   *     match is found in all use cases, which is a strong assumption and can lead to unpredictable behavior otherwise.
-   *     Using [[LinearMatcher]]
-   *   - 'surjlinear: Both 'surjective and 'linear. Using [[UniformMatcher]] but [[LinearMatcher]] would be okay.
-   *   - 'surjlinearpretend: An axiom that pretends to be surjective and linear even if it isn't necessarily so.
-   *   - 'full: General unification [[UnificationMatch]] is the default fallback.
+   * from @[[edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom]] declarations.
+   *
    * @see
    *   Andre Platzer.
    *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
@@ -3328,11 +3326,11 @@ trait UnifyUSCalculus {
    */
   private[keymaerax] def matcherFor(pi: ProvableInfo): Matcher = pi match {
     case ifo: AxiomInfo => ifo.unifier match {
-        case Symbol("surjective") => UniformMatcher
-        case Symbol("surjlinear") => UniformMatcher
-        case Symbol("linear") => LinearMatcher
-        case Symbol("surjlinearpretend") => UniformMatcher
-        case _ => defaultMatcher
+        case UnifierFull => defaultMatcher
+        case UnifierLinear => LinearMatcher
+        case UnifierSurjective => UniformMatcher
+        case UnifierSurjectiveLinear => UniformMatcher // LinearMatcher would be okay
+        case UnifierSurjectiveLinearPretend => UniformMatcher
       }
     case _ => defaultMatcher
   }
