@@ -60,8 +60,8 @@ case class ApplicableAxiomsResponse(
 
   def axiomJson(info: DerivationInfo): JsObject = {
     val formulaText = (info, info.display) match {
-      case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
-      case (_, InputAxiomDisplayInfo(_, formulaDisplay, _)) => formulaDisplay
+      case (_, di: AxiomDisplayInfo) => di.displayFormula
+      case (_, di: InputAxiomDisplayInfo) => di.displayFormula
       case (info: AxiomInfo, _) => info.formula.prettyString
     }
     JsObject(
@@ -132,12 +132,21 @@ case class ApplicableAxiomsResponse(
           case (pi: DerivationInfo, _: AxiomDisplayInfo) => axiomJson(pi)
           case (pi: DerivationInfo, _: InputAxiomDisplayInfo) =>
             axiomJson(pi) // @todo usually those have tactics with RuleDisplayInfo
-          case (_, RuleDisplayInfo(_, conclusion, premises, inputGenerator)) =>
-            ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
-          case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem, inputGenerator)) =>
-            if (topLevel)
-              ruleJson(info, conclusion, premises, if (inputGenerator.isEmpty) None else Some(inputGenerator))
-            else ruleJson(info, ctxConc, ctxPrem, if (inputGenerator.isEmpty) None else Some(inputGenerator))
+          case (_, di: RuleDisplayInfo) =>
+            ruleJson(info, di.conclusion, di.premises, if (di.inputGenerator.isEmpty) None else Some(di.inputGenerator))
+          case (_, di: TacticDisplayInfo) =>
+            if (topLevel) ruleJson(
+              info,
+              di.conclusion,
+              di.premises,
+              if (di.inputGenerator.isEmpty) None else Some(di.inputGenerator),
+            )
+            else ruleJson(
+              info,
+              di.ctxConclusion,
+              di.ctxPremises,
+              if (di.inputGenerator.isEmpty) None else Some(di.inputGenerator),
+            )
           case (_, _: AxiomDisplayInfo | _: InputAxiomDisplayInfo) => throw new IllegalArgumentException(
               s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo"
             )
@@ -146,7 +155,7 @@ case class ApplicableAxiomsResponse(
     JsObject(
       "id" -> new JsString(derivationInfo.codeName),
       "name" -> new JsString(derivationInfo.display.name),
-      "asciiName" -> new JsString(derivationInfo.display.asciiName),
+      "asciiName" -> new JsString(derivationInfo.display.nameAscii),
       "codeName" -> new JsString(derivationInfo.codeName),
       "longName" -> new JsString(derivationInfo.longDisplayName),
       "displayLevel" -> new JsString(derivationInfo.displayLevel.name),

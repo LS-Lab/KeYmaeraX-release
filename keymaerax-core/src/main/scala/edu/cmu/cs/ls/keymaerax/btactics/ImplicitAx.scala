@@ -66,7 +66,7 @@ object ImplicitAx extends TacticProvider {
 
     val info = new DerivedAxiomInfo(
       name,
-      AxiomDisplayInfo(SimpleDisplayInfo(name, name), "__" + lhs + "__ = " + rhs),
+      AxiomDisplayInfo(name, name, "__" + lhs + "__ = " + rhs),
       codename,
       name,
       Symbol("surlinear"),
@@ -129,7 +129,7 @@ object ImplicitAx extends TacticProvider {
 
     val info = new DerivedAxiomInfo(
       name,
-      AxiomDisplayInfo(SimpleDisplayInfo(name, name), "__" + lhs + "__ = " + rhs),
+      AxiomDisplayInfo(name, name, "__" + lhs + "__ = " + rhs),
       codename,
       name,
       Symbol("surlinear"),
@@ -188,7 +188,7 @@ object ImplicitAx extends TacticProvider {
 
     val info = new DerivedAxiomInfo(
       name,
-      AxiomDisplayInfo(SimpleDisplayInfo(name, name), "__" + lhs + "__ <-> " + rhs),
+      AxiomDisplayInfo(name, name, "__" + lhs + "__ <-> " + rhs),
       codename,
       name,
       Symbol("surlinear"),

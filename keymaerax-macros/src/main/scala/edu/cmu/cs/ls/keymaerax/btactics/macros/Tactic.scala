@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   parseAIs,
   parseSequent,
   parseSequents,
+  renderDisplayFormula,
 }
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
@@ -287,18 +288,24 @@ object TacticMacro {
 
     val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
 
-    val simpleDisplay = SimpleDisplayInfo(displayName, displayNameAscii)
     val display = (inputs, args.premises, args.conclusion, args.contextPremises, args.contextConclusion) match {
-      case (Nil, "", "", _, _) => simpleDisplay
-      case (Nil, "", concl, _, _) if concl != "" => AxiomDisplayInfo.render(simpleDisplay, concl)
-      case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
+      case (Nil, "", "", _, _) => SimpleDisplayInfo(displayName, displayNameAscii)
+
+      case (Nil, "", concl, _, _) if concl != "" =>
+        AxiomDisplayInfo(displayName, displayNameAscii, renderDisplayFormula(concl))
+
+      case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty =>
+        InputAxiomDisplayInfo(displayName, displayNameAscii, concl, inputs)
+
       case (_, prem, concl, "", "") if concl != "" && prem != "" =>
         val (prem, conc) = (parseSequents(args.premises)(c), parseSequent(args.conclusion)(c))
-        RuleDisplayInfo(simpleDisplay, conc, prem, args.inputGenerator)
+        RuleDisplayInfo(displayName, displayNameAscii, conc, prem, args.inputGenerator)
+
       case (_, prem, concl, ctxPrem, ctxConcl) if concl != "" && prem != "" && ctxPrem != "" && ctxConcl != "" =>
         val (prem, conc) = (parseSequents(args.premises)(c), parseSequent(args.conclusion)(c))
         val (ctxPrem, ctxConc) = (parseSequents(args.contextPremises)(c), parseSequent(args.contextConclusion)(c))
-        TacticDisplayInfo(simpleDisplay, conc, prem, ctxConc, ctxPrem, args.inputGenerator)
+        TacticDisplayInfo(displayName, displayNameAscii, conc, prem, ctxConc, ctxPrem, args.inputGenerator)
+
       case _ => c.abort(c.enclosingPosition, "@Tactic with premises or inputs must have a conclusion")
     }
 
@@ -525,8 +532,8 @@ object TacticMacro {
 
         val shouldMentionInputButDoesnt = display match {
           case _: AxiomDisplayInfo | _: SimpleDisplayInfo => true
-          case InputAxiomDisplayInfo(_, displayFormula, _) => !displayFormula.contains(name)
-          case RuleDisplayInfo(_, conc, prem, _) => !(sdContains(conc, name) || prem.exists(sd => sdContains(sd, name)))
+          case d: InputAxiomDisplayInfo => !d.displayFormula.contains(name)
+          case d: RuleDisplayInfo => !(sdContains(d.conclusion, name) || d.premises.exists(sd => sdContains(sd, name)))
         }
 
         if (shouldMentionInputButDoesnt) {

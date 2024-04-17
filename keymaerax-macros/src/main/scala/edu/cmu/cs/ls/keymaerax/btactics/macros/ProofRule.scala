@@ -155,10 +155,9 @@ object ProofRuleMacro {
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val simpleDisplay = SimpleDisplayInfo(displayName, displayNameAscii)
     val display = (premises, conclusionOpt) match {
-      case (Nil, None) => simpleDisplay
-      case (p, Some(c)) => RuleDisplayInfo(simpleDisplay, c, p, "")
+      case (Nil, None) => SimpleDisplayInfo(displayName, displayNameAscii)
+      case (prem, Some(conc)) => RuleDisplayInfo(displayName, displayNameAscii, conc, prem, "")
       case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")
     }
 

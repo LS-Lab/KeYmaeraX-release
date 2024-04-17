@@ -496,7 +496,7 @@ object Helpers {
         case Some(di) => (
             di.display.name,
             di.codeName,
-            di.display.asciiName,
+            di.display.nameAscii,
             di.longDisplayName,
             ruleName,
             ApplicableAxiomsResponse(Nil, Map.empty, topLevel = true, pos)

@@ -117,22 +117,24 @@ object AnnotationCommon {
     import c.universe._
 
     displayInfo match {
-      case SimpleDisplayInfo(name, asciiName) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SimpleDisplayInfo(
+      case SimpleDisplayInfo(name, nameAscii) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SimpleDisplayInfo(
           name = $name,
-          asciiName = $asciiName,
+          nameAscii = $nameAscii,
         )"""
 
-      case RuleDisplayInfo(names, conclusion, premises, inputGenerator) =>
+      case RuleDisplayInfo(name, nameAscii, conclusion, premises, inputGenerator) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo(
-          names = ${astForDisplayInfo(names)},
+          name = $name,
+          nameAscii = $nameAscii,
           conclusion = ${astForSequentDisplay(conclusion)},
           premises = ${premises.map(astForSequentDisplay)},
           inputGenerator = $inputGenerator,
         )"""
 
-      case TacticDisplayInfo(names, conclusion, premises, ctxConclusion, ctxPremises, inputGenerator) =>
+      case TacticDisplayInfo(name, nameAscii, conclusion, premises, ctxConclusion, ctxPremises, inputGenerator) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TacticDisplayInfo(
-          names = ${astForDisplayInfo(names)},
+          name = $name,
+          nameAscii = $nameAscii,
           conclusion = ${astForSequentDisplay(conclusion)},
           premises = ${premises.map(astForSequentDisplay)},
           ctxConclusion = ${astForSequentDisplay(ctxConclusion)},
@@ -140,15 +142,17 @@ object AnnotationCommon {
           inputGenerator = $inputGenerator,
         )"""
 
-      case AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) =>
+      case AxiomDisplayInfo(name, nameAscii, displayFormula) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(
-          names = ${astForDisplayInfo(names)},
+          name = $name,
+          nameAscii = $nameAscii,
           displayFormula = $displayFormula,
         )"""
 
-      case InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) =>
+      case InputAxiomDisplayInfo(name, nameAscii, displayFormula, input) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputAxiomDisplayInfo(
-          names = ${astForDisplayInfo(names)},
+          name = $name,
+          nameAscii = $nameAscii,
           displayFormula = $displayFormula,
           input = ${input.map(astForArgInfo)},
         )"""
@@ -188,4 +192,12 @@ object AnnotationCommon {
 
     displayNameLong.getOrElse(displayName)
   }
+
+  /** Elaborate the display formula from a raw unicode string that may contain HTML tags to HTML. */
+  // TODO Figure out how to get rid of this
+  def renderDisplayFormula(displayFormula: String) = displayFormula
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
+    .replaceAll("&lt;(/?(\\w+))&gt;", "<$1>") // undo escaping HTML tags
+    .replaceFirst("__", "<span class=\"k4-axiom-key\">").replaceFirst("__", "</span>")
 }

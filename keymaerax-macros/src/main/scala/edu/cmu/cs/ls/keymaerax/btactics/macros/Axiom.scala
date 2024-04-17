@@ -5,7 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{astForDisplayInfo, parseAIs, parsePos, parsePoses}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
+  astForDisplayInfo,
+  parseAIs,
+  parsePos,
+  parsePoses,
+  renderDisplayFormula,
+}
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
@@ -179,12 +185,11 @@ object AxiomMacro {
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val simpleDisplay = SimpleDisplayInfo(displayName, displayNameAscii)
     val display: DisplayInfo = (args.conclusion, inputs) match {
-      case ("", Nil) => simpleDisplay
+      case ("", Nil) => SimpleDisplayInfo(displayName, displayNameAscii)
       case ("", _) => c.abort(c.enclosingPosition, "@Axiom with inputs must have a conclusion")
-      case (fml, Nil) => AxiomDisplayInfo.render(simpleDisplay, fml)
-      case (fml, args) => InputAxiomDisplayInfo(simpleDisplay, fml, args)
+      case (fml, Nil) => AxiomDisplayInfo(displayName, displayNameAscii, renderDisplayFormula(fml))
+      case (fml, args) => InputAxiomDisplayInfo(displayName, displayNameAscii, fml, args)
     }
 
     /*
