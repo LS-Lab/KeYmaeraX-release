@@ -162,7 +162,7 @@ case class ApplicableAxiomsResponse(
       "asciiName" -> new JsString(derivationInfo.display.nameAscii),
       "codeName" -> new JsString(derivationInfo.codeName),
       "longName" -> new JsString(derivationInfo.display.nameLong),
-      "displayLevel" -> new JsString(derivationInfo.displayLevel match {
+      "displayLevel" -> new JsString(derivationInfo.display.level match {
         case DisplayLevelInternal => "internal"
         case DisplayLevelBrowse => "browse"
         case DisplayLevelMenu => "menu"

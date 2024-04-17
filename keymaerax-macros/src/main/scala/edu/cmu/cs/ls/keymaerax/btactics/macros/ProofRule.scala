@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   astForDisplayInfo,
-  astForDisplayLevel,
   parsePos,
   parsePoses,
   parseSequent,
@@ -165,8 +164,23 @@ object ProofRuleMacro {
     val recursor = parsePoses(args.recursor)(c)
 
     val display = (premises, conclusionOpt) match {
-      case (Nil, None) => SimpleDisplayInfo(displayName, displayNameAscii, displayNameLong)
-      case (prem, Some(conc)) => RuleDisplayInfo(displayName, displayNameAscii, displayNameLong, conc, prem, "")
+      case (Nil, None) => SimpleDisplayInfo(
+          name = displayName,
+          nameAscii = displayNameAscii,
+          nameLong = displayNameLong,
+          level = args.displayLevel,
+        )
+
+      case (prem, Some(conc)) => RuleDisplayInfo(
+          name = displayName,
+          nameAscii = displayNameAscii,
+          nameLong = displayNameLong,
+          level = args.displayLevel,
+          conclusion = conc,
+          premises = prem,
+          inputGenerator = "",
+        )
+
       case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")
     }
 
@@ -203,7 +217,6 @@ object ProofRuleMacro {
           codeName = $name,
           unifier = $unifier,
           theExpr = $expr,
-          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
         )""",
@@ -216,7 +229,6 @@ object ProofRuleMacro {
           codeName = $name,
           unifier = $unifier,
           theExpr = $expr,
-          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
         )""",

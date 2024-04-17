@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   astForDisplayInfo,
-  astForDisplayLevel,
   parseAIs,
   parsePos,
   parsePoses,
@@ -195,10 +194,31 @@ object AxiomMacro {
     val recursor = parsePoses(args.recursor)(c)
 
     val display: DisplayInfo = (args.conclusion, inputs) match {
-      case ("", Nil) => SimpleDisplayInfo(displayName, displayNameAscii, displayNameLong)
+      case ("", Nil) => SimpleDisplayInfo(
+          name = displayName,
+          nameAscii = displayNameAscii,
+          nameLong = displayNameLong,
+          level = args.displayLevel,
+        )
+
       case ("", _) => c.abort(c.enclosingPosition, "@Axiom with inputs must have a conclusion")
-      case (fml, Nil) => AxiomDisplayInfo(displayName, displayNameAscii, displayNameLong, renderDisplayFormula(fml))
-      case (fml, args) => InputAxiomDisplayInfo(displayName, displayNameAscii, displayNameLong, fml, args)
+
+      case (fml, Nil) => AxiomDisplayInfo(
+          name = displayName,
+          nameAscii = displayNameAscii,
+          nameLong = displayNameLong,
+          level = args.displayLevel,
+          displayFormula = renderDisplayFormula(fml),
+        )
+
+      case (fml, input) => InputAxiomDisplayInfo(
+          name = displayName,
+          nameAscii = displayNameAscii,
+          nameLong = displayNameLong,
+          level = args.displayLevel,
+          displayFormula = fml,
+          input = input,
+        )
     }
 
     /*
@@ -233,7 +253,6 @@ object AxiomMacro {
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           unifier = $unifier,
-          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
           theExpr = $expr,
@@ -246,7 +265,6 @@ object AxiomMacro {
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           unifier = $unifier,
-          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
           theExpr = $expr,

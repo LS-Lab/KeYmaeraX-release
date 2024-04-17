@@ -179,7 +179,7 @@ object DerivationInfo {
   def ofBuiltinName(name: String): Option[DerivationInfo] = {
     val expandPattern = """(expand\("[^"]*"\))|(expandAllDefs)""".r
     name match {
-      case expandPattern(_*) => Some(new BuiltinInfo(name, SimpleDisplayInfo(name, name, name)))
+      case expandPattern(_*) => Some(new BuiltinInfo(name, SimpleDisplayInfo(name, name, name, DisplayLevelInternal)))
       case _ => None
     }
   }
@@ -233,9 +233,6 @@ sealed trait DerivationInfo {
     case (_: GeneratorArg) => false
     case _ => true
   }
-
-  /** Where to display an axiom/rule/tactic in the user interface. */
-  val displayLevel: DisplayLevel
 
   /**
    * Number of positional arguments to the derivation. Can be 0, 1 or 2.
@@ -343,7 +340,6 @@ case class CoreAxiomInfo(
     override val codeName: String,
     override val unifier: Symbol,
     val theExpr: Unit => Any,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends AxiomInfo {
@@ -366,7 +362,6 @@ case class DerivedAxiomInfo(
     override val codeName: String,
     override val unifier: Symbol,
     theExpr: Unit => Any,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends AxiomInfo with StorableInfo {
@@ -390,7 +385,6 @@ case class AxiomaticRuleInfo(
     override val codeName: String,
     override val unifier: Symbol,
     theExpr: Unit => Any,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends ProvableInfo {
@@ -420,7 +414,6 @@ case class DerivedRuleInfo(
     override val codeName: String,
     override val unifier: Symbol,
     val theExpr: Unit => Any,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends ProvableInfo with StorableInfo {
@@ -434,7 +427,6 @@ case class DerivedRuleInfo(
 class BuiltinInfo(
     override val codeName: String,
     override val display: DisplayInfo,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
     override val revealInternalSteps: Boolean = false,
 ) extends DerivationInfo {
@@ -446,7 +438,6 @@ sealed abstract class TacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     val theExpr: Unit => Any,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
     override val revealInternalSteps: Boolean = false,
 ) extends DerivationInfo {
@@ -457,30 +448,27 @@ sealed abstract class TacticInfo(
 case class PlainTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
     override val revealInternalSteps: Boolean = false,
 )(override val theExpr: Unit => Any)
-    extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {}
+    extends TacticInfo(codeName, display, theExpr, needsGenerator, revealInternalSteps) {}
 
 case class PositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
     override val revealInternalSteps: Boolean = false,
 )(override val theExpr: Unit => Any)
-    extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
+    extends TacticInfo(codeName, display, theExpr, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
 case class TwoPositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
 )(override val theExpr: Unit => Any)
-    extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator) {
+    extends TacticInfo(codeName, display, theExpr, needsGenerator) {
   override val numPositionArgs = 2
 }
 
@@ -488,21 +476,19 @@ case class InputTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     override val inputs: List[ArgInfo],
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
     override val revealInternalSteps: Boolean = false,
 )(override val theExpr: Unit => TypedFunc[_, _])
-    extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps)
+    extends TacticInfo(codeName, display, theExpr, needsGenerator, revealInternalSteps)
 
 case class InputPositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     override val inputs: List[ArgInfo],
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
     override val revealInternalSteps: Boolean = false,
 )(override val theExpr: Unit => TypedFunc[_, _])
-    extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
+    extends TacticInfo(codeName, display, theExpr, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
@@ -510,10 +496,9 @@ case class InputTwoPositionTacticInfo(
     override val codeName: String,
     override val display: DisplayInfo,
     override val inputs: List[ArgInfo],
-    override val displayLevel: DisplayLevel = DisplayLevelInternal,
     override val needsGenerator: Boolean = false,
 )(override val theExpr: Unit => TypedFunc[_, _])
-    extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator) {
+    extends TacticInfo(codeName, display, theExpr, needsGenerator) {
   override val numPositionArgs = 2
 }
 

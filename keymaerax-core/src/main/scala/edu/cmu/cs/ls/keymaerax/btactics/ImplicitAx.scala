@@ -64,14 +64,19 @@ object ImplicitAx extends TacticProvider {
     val rhs = uninterpretFunctions(fml.sub(PosInExpr(1 :: Nil)).get).toString
 
     val info = new DerivedAxiomInfo(
-      name,
-      AxiomDisplayInfo(name, name, name, "__" + lhs + "__ = " + rhs),
-      codename,
-      Symbol("surlinear"),
-      { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      DisplayLevelInternal,
-      List(0),
-      List(List(1)),
+      canonicalName = name,
+      display = AxiomDisplayInfo(
+        name = name,
+        nameAscii = name,
+        nameLong = name,
+        level = DisplayLevelInternal,
+        displayFormula = "__" + lhs + "__ = " + rhs,
+      ),
+      codeName = codename,
+      unifier = Symbol("surlinear"),
+      theExpr = { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
+      theKey = List(0),
+      theRecursor = List(List(1)),
     )
     DerivationInfo.registerR(Ax.derivedAxiomFromFact(name, p.conclusion.succ(0), p, Some(codename)), info)
   }
@@ -126,14 +131,19 @@ object ImplicitAx extends TacticProvider {
     val rhs = uninterpretFunctions(fml.sub(PosInExpr(1 :: Nil)).get).toString
 
     val info = new DerivedAxiomInfo(
-      name,
-      AxiomDisplayInfo(name, name, name, "__" + lhs + "__ = " + rhs),
-      codename,
-      Symbol("surlinear"),
-      { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      DisplayLevelInternal,
-      List(0),
-      List(List(1)),
+      canonicalName = name,
+      display = AxiomDisplayInfo(
+        name = name,
+        nameAscii = name,
+        nameLong = name,
+        level = DisplayLevelInternal,
+        displayFormula = "__" + lhs + "__ = " + rhs,
+      ),
+      codeName = codename,
+      unifier = Symbol("surlinear"),
+      theExpr = { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
+      theKey = List(0),
+      theRecursor = List(List(1)),
     )
     DerivationInfo.registerR(Ax.derivedAxiomFromFact(name, p.conclusion.succ(0), p, Some(codename)), info)
   }
@@ -184,14 +194,19 @@ object ImplicitAx extends TacticProvider {
     val rhs = fml.sub(PosInExpr(1 :: Nil)).get.toString
 
     val info = new DerivedAxiomInfo(
-      name,
-      AxiomDisplayInfo(name, name, name, "__" + lhs + "__ <-> " + rhs),
-      codename,
-      Symbol("surlinear"),
-      { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      DisplayLevelInternal,
-      List(0),
-      List(List(1)),
+      canonicalName = name,
+      display = AxiomDisplayInfo(
+        name = name,
+        nameAscii = name,
+        nameLong = name,
+        level = DisplayLevelInternal,
+        displayFormula = "__" + lhs + "__ <-> " + rhs,
+      ),
+      codeName = codename,
+      unifier = Symbol("surlinear"),
+      theExpr = { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
+      theKey = List(0),
+      theRecursor = List(List(1)),
     )
     DerivationInfo.registerR(Ax.derivedAxiomFromFact(name, p.conclusion.succ(0), p, Some(codename)), info)
   }

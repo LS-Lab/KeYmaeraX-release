@@ -107,7 +107,7 @@ object AnnotationCommon {
     }
   }
 
-  def astForDisplayLevel(level: DisplayLevel)(implicit c: blackbox.Context): c.universe.Tree = {
+  private def astForDisplayLevel(level: DisplayLevel)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     level match {
       case DisplayLevelInternal => q"edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal"
@@ -117,7 +117,7 @@ object AnnotationCommon {
     }
   }
 
-  def astForSequentDisplay(sequentDisplay: SequentDisplay)(implicit c: blackbox.Context): c.universe.Tree = {
+  private def astForSequentDisplay(sequentDisplay: SequentDisplay)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     val SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean) = sequentDisplay
     q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SequentDisplay($ante, $succ, $isClosed)"""
@@ -127,18 +127,20 @@ object AnnotationCommon {
     import c.universe._
 
     displayInfo match {
-      case SimpleDisplayInfo(name, nameAscii, nameLong) =>
+      case SimpleDisplayInfo(name, nameAscii, nameLong, level) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SimpleDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
           nameLong = $nameLong,
+          level = ${astForDisplayLevel(level)},
         )"""
 
-      case RuleDisplayInfo(name, nameAscii, nameLong, conclusion, premises, inputGenerator) =>
+      case RuleDisplayInfo(name, nameAscii, nameLong, level, conclusion, premises, inputGenerator) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
           nameLong = $nameLong,
+          level = ${astForDisplayLevel(level)},
           conclusion = ${astForSequentDisplay(conclusion)},
           premises = ${premises.map(astForSequentDisplay)},
           inputGenerator = $inputGenerator,
@@ -148,6 +150,7 @@ object AnnotationCommon {
             name,
             nameAscii,
             nameLong,
+            level,
             conclusion,
             premises,
             ctxConclusion,
@@ -157,6 +160,7 @@ object AnnotationCommon {
           name = $name,
           nameAscii = $nameAscii,
           nameLong = $nameLong,
+          level = ${astForDisplayLevel(level)},
           conclusion = ${astForSequentDisplay(conclusion)},
           premises = ${premises.map(astForSequentDisplay)},
           ctxConclusion = ${astForSequentDisplay(ctxConclusion)},
@@ -164,19 +168,21 @@ object AnnotationCommon {
           inputGenerator = $inputGenerator,
         )"""
 
-      case AxiomDisplayInfo(name, nameAscii, nameLong, displayFormula) =>
+      case AxiomDisplayInfo(name, nameAscii, nameLong, level, displayFormula) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
           nameLong = $nameLong,
+          level = ${astForDisplayLevel(level)},
           displayFormula = $displayFormula,
         )"""
 
-      case InputAxiomDisplayInfo(name, nameAscii, nameLong, displayFormula, input) =>
+      case InputAxiomDisplayInfo(name, nameAscii, nameLong, level, displayFormula, input) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputAxiomDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
           nameLong = $nameLong,
+          level = ${astForDisplayLevel(level)},
           displayFormula = $displayFormula,
           input = ${input.map(astForArgInfo)},
         )"""
