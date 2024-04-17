@@ -218,7 +218,7 @@ object Ax extends Logging {
       case Some(lemma) => lemma
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
-        derivedRule(name, witness, codeNameOpt).getLemma
+        derivedRule(name, witness, codeNameOpt).lemma
     }
     dri.setLemma(lemma)
     dri
@@ -282,7 +282,7 @@ object Ax extends Logging {
           witness.isProved,
           "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness,
         )
-        derivedFact(canonicalName, witness, Some(storedName)).getLemma
+        derivedFact(canonicalName, witness, Some(storedName)).lemma
     }
     dai.setLemma(lemma)
     dai
