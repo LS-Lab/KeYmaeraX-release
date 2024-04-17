@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
-  convDI,
+  astForDisplayInfo,
   parsePos,
   parsePoses,
   parseSequent,
@@ -199,7 +199,7 @@ object ProofRuleMacro {
         tq"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomaticRuleInfo",
         q"""AxiomaticRuleInfo(
           canonicalName = $canonicalName,
-          display = ${convDI(display)(c)},
+          display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           longDisplayName = $displayNameLong,
           unifier = $unifier,
@@ -213,7 +213,7 @@ object ProofRuleMacro {
         tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedRuleInfo",
         q"""DerivedRuleInfo(
           canonicalName = $canonicalName,
-          display = ${convDI(display)(c)},
+          display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           longDisplayName = $displayNameLong,
           unifier = $unifier,

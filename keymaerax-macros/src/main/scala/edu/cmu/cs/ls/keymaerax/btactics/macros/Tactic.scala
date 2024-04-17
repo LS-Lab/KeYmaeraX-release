@@ -6,9 +6,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
-  convAIs,
-  convDI,
-  convSymbol,
+  astForArgInfo,
+  astForDisplayInfo,
   parseAIs,
   parseSequent,
   parseSequents,
@@ -543,8 +542,8 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PlainTacticInfo(
           codeName = $name,
           longDisplayName = $displayNameLong,
-          display = ${convDI(display)(c)},
-          displayLevel = ${convSymbol(args.displayLevel)(c)},
+          display = ${astForDisplayInfo(display)(c)},
+          displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -554,9 +553,9 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTacticInfo(
           codeName = $name,
           longDisplayName = $displayNameLong,
-          display = ${convDI(display)(c)},
-          inputs = ${convAIs(displayInputs)(c)},
-          displayLevel = ${convSymbol(args.displayLevel)(c)},
+          display = ${astForDisplayInfo(display)(c)},
+          inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
+          displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -567,8 +566,8 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PositionTacticInfo(
           codeName = $name,
           longDisplayName = $displayNameLong,
-          display = ${convDI(display)(c)},
-          displayLevel = ${convSymbol(args.displayLevel)(c)},
+          display = ${astForDisplayInfo(display)(c)},
+          displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -578,9 +577,9 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputPositionTacticInfo(
           codeName = $name,
           longDisplayName = $displayNameLong,
-          display = ${convDI(display)(c)},
-          inputs = ${convAIs(displayInputs)(c)},
-          displayLevel = ${convSymbol(args.displayLevel)(c)},
+          display = ${astForDisplayInfo(display)(c)},
+          inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
+          displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -590,8 +589,8 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.TwoPositionTacticInfo(
           codeName = $name,
           longDisplayName = $displayNameLong,
-          display = ${convDI(display)(c)},
-          displayLevel = ${convSymbol(args.displayLevel)(c)},
+          display = ${astForDisplayInfo(display)(c)},
+          displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)
       """
@@ -600,8 +599,8 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
           codeName = $name,
           longDisplayName = $displayNameLong,
-          display = ${convDI(display)(c)},
-          displayLevel = ${convSymbol(args.displayLevel)(c)},
+          display = ${astForDisplayInfo(display)(c)},
+          displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)
       """

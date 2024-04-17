@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{convDI, parseAIs, parsePos, parsePoses}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{astForDisplayInfo, parseAIs, parsePos, parsePoses}
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
@@ -224,7 +224,7 @@ object AxiomMacro {
         tq"edu.cmu.cs.ls.keymaerax.btactics.macros.CoreAxiomInfo",
         q"""CoreAxiomInfo(
           canonicalName = $canonicalName,
-          display = ${convDI(display)(c)},
+          display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           longDisplayName = $displayNameLong,
           unifier = $unifier,
@@ -238,7 +238,7 @@ object AxiomMacro {
         tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedAxiomInfo",
         q"""DerivedAxiomInfo(
           canonicalName = $canonicalName,
-          display = ${convDI(display)(c)},
+          display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           longDisplayName = $displayNameLong,
           unifier = $unifier,
