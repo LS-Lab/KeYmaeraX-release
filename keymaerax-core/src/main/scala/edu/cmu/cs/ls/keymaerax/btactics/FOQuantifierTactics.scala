@@ -6,14 +6,14 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DisplayLevelBrowse, ProvableInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, ProvableInfo, Tactic}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
@@ -673,7 +673,7 @@ protected object FOQuantifierTactics extends TacticProvider {
     name = "universalClosure",
     displayName = Some("∀Cl"),
     displayNameAscii = Some("allClosure"),
-    displayLevel = "browse",
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- \\forall order p(x,y,z), Δ",
     conclusion = "Γ |- p(x,y,z), Δ",
     inputs = "order:list[variable]",

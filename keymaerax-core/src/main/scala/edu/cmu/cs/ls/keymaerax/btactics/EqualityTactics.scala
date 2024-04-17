@@ -6,17 +6,17 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions, opt}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{mapSubpositions, opt}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelInternal, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
@@ -235,7 +235,7 @@ private object EqualityTactics extends TacticProvider {
   }
 
   /** Rewrites all atom equalities in the assumptions. */
-  @Tactic(name = "applyEqualities", displayLevel = "internal")
+  @Tactic(name = "applyEqualities", displayLevel = DisplayLevelInternal)
   val applyEqualities: BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "applyEqualities")
     val seq = provable.subgoals.head
@@ -360,7 +360,7 @@ private object EqualityTactics extends TacticProvider {
    * @return
    *   The tactic.
    */
-  @Tactic(name = "abbrvAt", displayLevel = "internal")
+  @Tactic(name = "abbrvAt", displayLevel = DisplayLevelInternal)
   def abbrvAt(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => {
       val inFml = sequent.sub(pos) match {
@@ -454,7 +454,7 @@ private object EqualityTactics extends TacticProvider {
   private lazy val maxContradiction = AnonymousLemmas.remember("f()<g() & f()>=g() <-> false".asFormula, QE, namespace)
 
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
-  @Tactic(name = "absAt", displayLevel = "internal")
+  @Tactic(name = "absAt", displayLevel = DisplayLevelInternal)
   val absAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "absAt")
     val sequent = provable.subgoals.head
@@ -613,7 +613,7 @@ private object EqualityTactics extends TacticProvider {
   }
 
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
-  @Tactic(name = "minmaxAt", displayLevel = "internal")
+  @Tactic(name = "minmaxAt", displayLevel = DisplayLevelInternal)
   val minmaxAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "minmaxAt")
     val sequent = provable.subgoals.head
@@ -749,7 +749,7 @@ private object EqualityTactics extends TacticProvider {
   }
 
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
-  @Tactic(name = "expandAllAt", displayLevel = "internal")
+  @Tactic(name = "expandAllAt", displayLevel = DisplayLevelInternal)
   val expandAllAt: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "expandAllAt")
     val tactics = Idioms.mapSubpositions(

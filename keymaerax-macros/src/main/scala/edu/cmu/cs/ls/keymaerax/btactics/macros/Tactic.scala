@@ -35,6 +35,8 @@ import scala.reflect.macros.whitebox
  * @param displayNameLong
  *   Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase.
  *   Defaults to [[displayName]].
+ * @param displayLevel
+ *   Where to display an axiom/rule/tactic in the user interface. Defaults to [[DisplayLevelInternal]].
  * @param inputs
  *   Display input information for non-positioning arguments, e.g., "C:Formula" for cut. Arguments are separated with ;;
  *   and optional square brackets []. In the default case, without brackets, the inputs of tactic must not introduce any
@@ -62,8 +64,6 @@ import scala.reflect.macros.whitebox
  *   must have conclusions. For tactics with (non-position) inputs, the premises or conclusion must mention each input.
  *   The name of each input is given in [[inputs]], which may be generated from the [[def]]. Sequent syntax is
  *   optionally supported: A, B |- C, D
- * @param displayLevel
- *   Where to show the tactic: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
  * @param needsGenerator
  *   Does the tactic use invariant formula generators such as the @invariant annotation in .kyx files? Used for a small
  *   number of tactics such as master.
@@ -114,11 +114,11 @@ class Tactic(
     val displayName: Option[String] = None,
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
+    val displayLevel: DisplayLevel = DisplayLevelInternal,
     val premises: String = "",
     val conclusion: String = "",
     val contextPremises: String = "",
     val contextConclusion: String = "",
-    val displayLevel: String = "internal",
     val needsGenerator: Boolean = false,
     val revealInternalSteps: Boolean = false,
     val inputs: String = "",
@@ -134,11 +134,11 @@ case class TacticArgs(
     displayName: Option[String] = None,
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
+    displayLevel: DisplayLevel = DisplayLevelInternal,
     premises: String = "",
     conclusion: String = "",
     contextPremises: String = "",
     contextConclusion: String = "",
-    displayLevel: String = "internal",
     needsGenerator: Boolean = false,
     revealInternalSteps: Boolean = false,
     inputs: String = "",
@@ -204,8 +204,16 @@ object TacticMacro {
     // https://stackoverflow.com/questions/32631372/getting-parameters-from-scala-macro-annotation
     // https://stackoverflow.com/questions/37891855/macro-annotation-with-default-arguments
     val args = c.prefix.tree match {
-      case q"new $_(..$args)" =>
-        c.eval(c.Expr[TacticArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.TacticArgs(..$args)"))
+      case q"new $_(..$args)" => c.eval(c.Expr[TacticArgs](
+          q"""{
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevel;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelBrowse;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelMenu;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelAll;
+            edu.cmu.cs.ls.keymaerax.btactics.macros.TacticArgs(..$args)
+          }"""
+        ))
       case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
 
@@ -535,7 +543,7 @@ object TacticMacro {
     // Error check:
     // The web UI uses the axiom/rule display to let the user input arguments of a tactic.
     // This requires every argument name to appear in the display info.
-    if (args.displayLevel != "internal") {
+    if (args.displayLevel != DisplayLevelInternal) {
       for (input <- displayInputs) {
         val name = input.name
 
@@ -553,12 +561,19 @@ object TacticMacro {
 
     val expr = q"((_: Unit) => ($curriedTerm))"
 
+    val displayLevel = args.displayLevel match {
+      case DisplayLevelInternal => Symbol("internal")
+      case DisplayLevelBrowse => Symbol("browse")
+      case DisplayLevelMenu => Symbol("menu")
+      case DisplayLevelAll => Symbol("all")
+    }
+
     val info = returnType match {
       case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PlainTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = ${Symbol(args.displayLevel)},
+          displayLevel = $displayLevel,
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -569,7 +584,7 @@ object TacticMacro {
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-          displayLevel = ${Symbol(args.displayLevel)},
+          displayLevel = $displayLevel,
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -580,7 +595,7 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PositionTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = ${Symbol(args.displayLevel)},
+          displayLevel = $displayLevel,
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -591,7 +606,7 @@ object TacticMacro {
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-          displayLevel = ${Symbol(args.displayLevel)},
+          displayLevel = $displayLevel,
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -601,7 +616,7 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.TwoPositionTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = ${Symbol(args.displayLevel)},
+          displayLevel = $displayLevel,
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)
       """
@@ -610,7 +625,7 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = ${Symbol(args.displayLevel)},
+          displayLevel = $displayLevel,
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)
       """

@@ -6,29 +6,35 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.smartHide
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
-import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+  AxiomInfo,
+  DisplayLevelAll,
+  DisplayLevelBrowse,
+  DisplayLevelInternal,
+  Tactic,
+}
+import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, Name, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, Name, TacticReservedSymbols}
-import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
@@ -470,9 +476,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dR",
     displayNameLong = Some("Differential Refine"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     conclusion = "Γ |- [x'=f(x)&Q]P, Δ",
-    displayLevel = "browse",
   )
   def diffRefine(R: Formula): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => diffRefineInternal(R, hide = true)(pos, sequent))
@@ -505,9 +511,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dCi",
     displayNameLong = Some("Inverse Differential Cut"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
     conclusion = "Γ |- [x'=f(x) & Q∧R]P, Δ",
-    displayLevel = "browse",
   )
   val inverseDiffCut: DependentPositionTactic = anon((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
@@ -852,9 +858,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dGi", // todo: rename the tactic directly
     displayName = Some("Inverse Differential Ghost"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [x'=f(x) & Q]P, Δ",
     conclusion = "Γ |- ∃y [x'=f(x),E & Q]P, Δ",
-    displayLevel = "browse",
   )
   val inverseDiffGhost: DependentPositionTactic = anon((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
@@ -901,7 +907,12 @@ private object DifferentialTactics extends TacticProvider with Logging {
   // @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
   // @todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   // @Tactic in HilbertCalculus.Derive.Dvar same
-  @Tactic(name = "Dvariable", displayName = Some("x'"), conclusion = "__(x)'__ = x", displayLevel = "internal")
+  @Tactic(
+    name = "Dvariable",
+    displayName = Some("x'"),
+    displayLevel = DisplayLevelInternal,
+    conclusion = "__(x)'__ = x",
+  )
   private[btactics] lazy val Dvariable: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(pr, "Dvariable")
     val OPTIMIZED = true
@@ -962,9 +973,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "diffUnpackEvolDomain", // todo: rename the tactic directly
     displayName = Some("Unpack evolution domain"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ, Q |- [x'=f(x) & Q]P, Δ",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    displayLevel = "browse",
   )
   lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = anon((pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
@@ -989,11 +1000,11 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dW",
     displayNameLong = Some("Differential Weaken"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    displayLevel = "all",
     revealInternalSteps = true,
   )
   private[btactics] lazy val diffWeaken: DependentPositionTactic = anon((pos: Position, sequent: Sequent) =>
@@ -1041,11 +1052,11 @@ private object DifferentialTactics extends TacticProvider with Logging {
     displayName = Some("dW+"),
     displayNameAscii = Some("dWplus"), // Initial State-Preserving Differential Weaken
     displayNameLong = Some("Differential Weaken"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    displayLevel = "browse",
     revealInternalSteps = true,
   )
   private[btactics] lazy val diffWeakenPlus: DependentPositionTactic = anon((pos: Position, sequent: Sequent) =>
@@ -1638,9 +1649,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "splitWeakInequality",
     displayName = Some("Split weak inequality"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [{x'=f(x) & Q}] p>q, Δ ;; Γ |- [{x'=f(x) & Q}] p=q, Δ",
     conclusion = "Γ |- [{x'=f(x) & Q}] p≳q, Δ",
-    displayLevel = "browse",
   )
   val splitWeakInequality: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     val postcondition = seq.at(pos)._2 match {
@@ -1917,9 +1928,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
     name = "barrier", // todo: rename the tactic directly
     displayName = Some("Barr"),
     displayNameLong = Some("Strict Barrier Certificate"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
     conclusion = "Γ |- [x'=f(x) & Q] p≳0, Δ",
-    displayLevel = "browse",
   )
   val dgBarrier: DependentPositionTactic = anon((pos: Position, _: Sequent) => { Dconstify(dgBarrierAux(pos))(pos) })
 
@@ -2627,9 +2638,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dCClosure",
     displayName = Some("dC Closure"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [x'=f(x)&Q∧closure(P)]interior(P), Δ ;; Γ |- interior(P)",
     conclusion = "Γ |- [x'=f(x)&Q]P, Δ",
-    displayLevel = "browse",
     revealInternalSteps = true,
   )
   val dCClosure: DependentPositionTactic = anon((pos: Position) => dCClosure(true)(pos))
@@ -2637,9 +2648,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dIClosed",
     displayName = Some("dI Closed"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [x'=f(x)&Q∧P]q'(x)>0, Δ ;; Γ |- q(x)>=0",
     conclusion = "Γ |- [x'=f(x)&Q]q(x)>=0, Δ",
-    displayLevel = "browse",
     revealInternalSteps = true,
   )
   val dIClosed: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
@@ -2653,9 +2664,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "taylorB",
     displayName = Some("Taylor Polynomial is Bound"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Q |- q''(x)>=0",
     conclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
-    displayLevel = "browse",
     revealInternalSteps = true,
   )
   val taylorB: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
@@ -2684,9 +2695,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "taylorStep",
     displayName = Some("Taylor Polynomial is Bound: step"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Q |- q'(x)>=q'(x_0)",
     conclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
-    displayLevel = "browse",
     revealInternalSteps = true,
   )
   val taylorStep: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>

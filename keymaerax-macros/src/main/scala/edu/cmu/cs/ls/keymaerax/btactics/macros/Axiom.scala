@@ -34,6 +34,8 @@ import scala.reflect.macros.whitebox
  * @param displayNameLong
  *   Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase.
  *   Defaults to [[displayName]].
+ * @param displayLevel
+ *   Where to display an axiom/rule/tactic in the user interface. Defaults to [[DisplayLevelInternal]].
  * @param conclusion
  *   Formula string displayed for axioms as html with unicode in the user interface. For axioms with (non-position)
  *   inputs, the conclusion must mention each input. Sequent syntax is optionally supported: `A, B |- C, D`
@@ -41,8 +43,6 @@ import scala.reflect.macros.whitebox
  *   Which unifier to use for axiom: `"surjective"` or `"linear"` or `"surjlinear"` or `"surjlinearpretend"` or
  *   `"full"`.
  *   [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus#matcherFor(edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo)]]
- * @param displayLevel
- *   Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
  * @param inputs
  *   Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut. Arguments are separated with
  *   ;; and allowed fresh variables are given in square brackets, for example E[y,x,y']:Formula;; P[y]:Formula are the
@@ -80,9 +80,9 @@ class Axiom(
     val displayName: Option[String] = None,
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
+    val displayLevel: DisplayLevel = DisplayLevelInternal,
     val conclusion: String = "",
     val unifier: String = "full",
-    val displayLevel: String = "internal",
     val inputs: String = "",
     val key: String = "0",
     val recursor: String = "",
@@ -97,9 +97,9 @@ case class AxiomArgs(
     displayName: Option[String] = None,
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
+    displayLevel: DisplayLevel = DisplayLevelInternal,
     conclusion: String = "",
     unifier: String = "full",
-    displayLevel: String = "internal",
     inputs: String = "",
     key: String = "0",
     recursor: String = "",
@@ -129,8 +129,16 @@ object AxiomMacro {
     // https://stackoverflow.com/questions/32631372/getting-parameters-from-scala-macro-annotation
     // https://stackoverflow.com/questions/37891855/macro-annotation-with-default-arguments
     val args = c.prefix.tree match {
-      case q"new $_(..$args)" =>
-        c.eval(c.Expr[AxiomArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomArgs(..$args)"))
+      case q"new $_(..$args)" => c.eval(c.Expr[AxiomArgs](
+          q"""{
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevel;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelBrowse;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelMenu;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelAll;
+            edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomArgs(..$args)
+          }"""
+        ))
       case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
 
@@ -217,11 +225,10 @@ object AxiomMacro {
     }
 
     val displayLevel = args.displayLevel match {
-      case "internal" => Symbol("internal")
-      case "browse" => Symbol("browse")
-      case "menu" => Symbol("menu")
-      case "all" => Symbol("all")
-      case s => c.abort(c.enclosingPosition, "Unknown display level " + s)
+      case DisplayLevelInternal => Symbol("internal")
+      case DisplayLevelBrowse => Symbol("browse")
+      case DisplayLevelMenu => Symbol("menu")
+      case DisplayLevelAll => Symbol("all")
     }
 
     val (infoType, info) =

@@ -6,12 +6,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelAll, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-
-import scala.collection.immutable._
 
 /**
  * Hybrid Program Calculus for differential dynamic logic.
@@ -149,12 +147,12 @@ trait HybridProgramCalculus {
   @Tactic(
     name = "loop",
     displayNameLong = Some("Loop Invariant"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ",
     revealInternalSteps = true,
     // @note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula",
-    displayLevel = "full",
   )
   def loop(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
     DLBySubst.loop(invariant)(pos)
@@ -191,12 +189,12 @@ trait HybridProgramCalculus {
   @Tactic(
     name = "fp",
     displayNameLong = Some("Fixpoint"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P ∨ &langle;a&rangle;J |- J",
     conclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ",
     revealInternalSteps = true,
     // @note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula",
-    displayLevel = "full",
   )
   def fp(fixpoint: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
     DLBySubst.fpRule(fixpoint)(pos)

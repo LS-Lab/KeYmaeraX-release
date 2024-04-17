@@ -5,16 +5,23 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.smartHide
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{dgDbx, dgDbxAuto}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{
+  DerivationInfo,
+  DisplayLevelAll,
+  DisplayLevelBrowse,
+  DisplayLevelMenu,
+  Tactic,
+}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{
   AntePosition,
   FormulaTools,
@@ -22,9 +29,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{
   Position,
   RestrictedBiDiUnificationMatch,
 }
-import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -32,6 +37,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.ext.{AllOf, Atom, Mathematica, OneOf}
 import org.slf4j.LoggerFactory
 
+import java.io.File
 import scala.collection.immutable.{List, _}
 import scala.reflect.runtime.universe
 import scala.util.Try
@@ -155,7 +161,12 @@ object TactixLibrary
   /**
    * step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed)
    */
-  @Tactic(name = "step", displayNameLong = Some("Program Step"), revealInternalSteps = true, displayLevel = "browse")
+  @Tactic(
+    name = "step",
+    displayNameLong = Some("Program Step"),
+    displayLevel = DisplayLevelBrowse,
+    revealInternalSteps = true,
+  )
   val step: DependentPositionTactic = doStep(sequentStepIndex)
 
   def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon(
@@ -178,8 +189,8 @@ object TactixLibrary
   @Tactic(
     name = "normalize",
     displayNameLong = Some("Normalize to Sequent Form"),
+    displayLevel = DisplayLevelBrowse,
     revealInternalSteps = true,
-    displayLevel = "browse",
   )
   lazy val normalize: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
@@ -208,8 +219,8 @@ object TactixLibrary
   @Tactic(
     name = "unfold",
     displayNameLong = Some("Unfold Program Structure"),
+    displayLevel = DisplayLevelMenu,
     revealInternalSteps = true,
-    displayLevel = "menu",
   )
   val unfoldProgramNormalize: BelleExpr = anon {
     // normalize(andR)
@@ -230,7 +241,12 @@ object TactixLibrary
     )))
   }
 
-  @Tactic(name = "chaseAt", displayNameLong = Some("Decompose"), revealInternalSteps = true, displayLevel = "menu")
+  @Tactic(
+    name = "chaseAt",
+    displayNameLong = Some("Decompose"),
+    displayLevel = DisplayLevelMenu,
+    revealInternalSteps = true,
+  )
   def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) =>
     chaseAt((isAnte: Boolean) =>
       (expr: Expression) =>
@@ -282,8 +298,8 @@ object TactixLibrary
   @Tactic(
     name = "prop",
     displayNameLong = Some("Unfold Propositional"),
+    displayLevel = DisplayLevelMenu,
     revealInternalSteps = true,
-    displayLevel = "menu",
   )
   val prop: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
@@ -306,8 +322,8 @@ object TactixLibrary
   @Tactic(
     name = "propClose",
     displayNameLong = Some("Prove Propositional"),
+    displayLevel = DisplayLevelMenu,
     revealInternalSteps = true,
-    displayLevel = "menu",
   )
   val propClose: BelleExpr =
     anon { prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods") }
@@ -875,9 +891,9 @@ object TactixLibrary
   @Tactic(
     name = "odeInvC",
     displayName = Some("ODE Invariant Complete"),
+    displayLevel = DisplayLevelMenu,
     premises = "*",
     conclusion = "Γ, P |- [x'=f(x)&Q]P",
-    displayLevel = "menu",
   )
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
@@ -903,10 +919,10 @@ object TactixLibrary
   @Tactic(
     name = "dbx",
     displayNameLong = Some("Darboux (in)equalities"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- p≳0 ;; Q |- p' ≳ g p",
     conclusion = "Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs = "g:option[term]",
-    displayLevel = "browse",
   )
   def dbx(g: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon({ pos: Position =>
     g match {
@@ -999,10 +1015,10 @@ object TactixLibrary
   @Tactic(
     name = "pQE",
     displayName = Some("Partial QE"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- Δ",
     //    pQE -----------
     conclusion = "Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
-    displayLevel = "browse",
   )
   def partialQE: BelleExpr = ToolTactics.partialQE(
     ToolProvider.qeTool().getOrElse(throw new ProverSetupException("partialQE requires a QETool, but got None"))
@@ -1355,10 +1371,10 @@ object TactixLibrary
   @Tactic(
     name = "rcf",
     displayName = Some("RCF"),
+    displayLevel = DisplayLevelBrowse,
     premises = "*",
     //    pQE -----------
     conclusion = "Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
-    displayLevel = "browse",
   )
   def RCF: BuiltInTactic = ToolTactics
     .rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
@@ -1745,11 +1761,11 @@ object TactixLibrary
   @Tactic(
     name = "sosQE",
     displayNameLong = Some("Prove arithmetic with sum-of-squares witness"),
+    displayLevel = DisplayLevelAll,
     premises =
       "normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
     //    sosQE -----------
     conclusion = "Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
-    displayLevel = "all",
   )
   val sosQE: BelleExpr = anon(SOSSolve.sos())
 }

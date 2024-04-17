@@ -6,14 +6,14 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.{core, Logging}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.{core, Logging}
 
 import scala.reflect.runtime.universe
 
@@ -150,10 +150,10 @@ private object ProofRuleTactics extends TacticProvider with Logging {
   @Tactic(
     name = "boundRenameAt",
     displayName = Some("BRat"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- ∀y Q(y), Δ",
     conclusion = "Γ |- ∀x Q(x), Δ",
     inputs = "y:variable",
-    displayLevel = "browse",
   )
   def boundRenameAt(repl: Variable): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, sequent: Sequent) =>

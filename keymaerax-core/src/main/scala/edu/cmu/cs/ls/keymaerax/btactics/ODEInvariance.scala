@@ -7,30 +7,29 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness.vDG
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelBrowse, DisplayLevelMenu, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, RenUSubst, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
-import edu.cmu.cs.ls.keymaerax.lemma._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
-import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
-import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
-import org.slf4j.LoggerFactory
-
 import scala.reflect.runtime.universe
 
 /**
@@ -869,9 +868,9 @@ object ODEInvariance extends TacticProvider {
 
   @Tactic(
     name = "domainStuck",
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
     conclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
-    displayLevel = "browse",
   )
   def domainStuck: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -1201,9 +1200,9 @@ object ODEInvariance extends TacticProvider {
   @Tactic(
     name = "dRI",
     displayName = Some("(Conj.) Differential Radical Invariants"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ, Q |- p*=0",
     conclusion = "Γ |- [x'=f(x) & Q}]p=0, Δ",
-    displayLevel = "browse",
   )
   val dRI: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -1258,9 +1257,9 @@ object ODEInvariance extends TacticProvider {
   @Tactic(
     name = "dgVdbxAuto",
     displayName = Some("Vectorial Darboux (auto)"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
     conclusion = "Γ |- [x'=f(x) & Q}]p!=0, Δ",
-    displayLevel = "browse",
   )
   val dgVdbxAuto: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -1510,9 +1509,9 @@ object ODEInvariance extends TacticProvider {
   @Tactic(
     name = "dFP",
     displayName = Some("Differential Fixed Point"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
     conclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
-    displayLevel = "browse",
   )
   val dFP: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -2078,10 +2077,10 @@ object ODEInvariance extends TacticProvider {
     name = "nilpotentSolve",
     displayName = Some("[']n"),
     displayNameLong = Some("nilsolve"),
+    displayLevel = DisplayLevelMenu,
     premises = "Γ,x=x0,t=0 |- [x'=f(x),t'=1&q(x)&x=y(x0,t)]p(x), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = false,
-    displayLevel = "menu",
   )
   def nilpotentSolve: DependentPositionTactic = nilpotentSolve(false)
 

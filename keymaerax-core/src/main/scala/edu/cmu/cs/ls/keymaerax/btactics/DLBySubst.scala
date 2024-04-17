@@ -6,24 +6,21 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
+import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SequentType, USubstPatternTactic}
-import edu.cmu.cs.ls.keymaerax.core.Sequent
-import BelleLabels._
-import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelAll, DisplayLevelBrowse, DisplayLevelMenu, Tactic}
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Signature, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
 import scala.reflect.runtime.universe
 import scala.util.{Failure, Success, Try}
@@ -81,12 +78,12 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "GV",
     displayNameLong = Some("Gödel Vacuous"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
     //       GVR --------------------------------------------
     conclusion = "Γ |- [a]P, Δ",
     contextPremises = "Γ |- C( ∀x P ), Δ",
     contextConclusion = "Γ |- C( [a]P ), Δ",
-    displayLevel = "all",
     revealInternalSteps = true,
   )
   val abstractionb: DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
@@ -170,10 +167,10 @@ private object DLBySubst extends TacticProvider {
     name = "stutter",
     displayName = Some("[:=]"),
     displayNameLong = Some("Introduce Self-Assign"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [x:=x]P, Δ",
     //      [:=] ------------------
     conclusion = "Γ |- P, Δ",
-    displayLevel = "browse",
   )
   def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon { pos: Position => stutterFw(x)(pos) }
   private[btactics] def stutterFw(x: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
@@ -313,10 +310,10 @@ private object DLBySubst extends TacticProvider {
     name = "assignEquality",
     displayName = Some("[:=]="),
     displayNameLong = Some("Assign Equality"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ, x=e |- P, Δ",
     //    [:=]=  ------------------
     conclusion = "Γ |- [x:=e]P, Δ",
-    displayLevel = "all",
   )
   private[btactics] val assignEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assignEqualityFw")
@@ -405,10 +402,10 @@ private object DLBySubst extends TacticProvider {
     name = "assigndEquality",
     displayName = Some("<:=>="),
     displayNameLong = Some("Assign Equality"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ, x=e |- P, Δ",
     //     <:=>= -----------------
     conclusion = "Γ |- ⟨x:=e⟩P, Δ",
-    displayLevel = "all",
   )
   private[btactics] val assigndEquality: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "DLBySubst.assigndEquality")
@@ -516,10 +513,10 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "postCut",
     displayNameLong = Some("Cut in Postcondition"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [a]C, Δ ;; Γ |- [a](C→P)",
     //   postCut -------------------------------
     conclusion = "Γ |- [a]P, Δ",
-    displayLevel = "browse",
   )
   def postCut(C: Formula): DependentPositionWithAppliedInputTactic = inputanon(
     useAt(
@@ -759,10 +756,10 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "throughout",
     displayNameLong = Some("Loop Throughout Invariant"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- J, Δ ;; J |- [a]J ;; J |- [b]J ;; J |- P",
     // throughout ------------------------------------------------
     conclusion = "Γ |- [{a;b}<sup>*</sup>]P, Δ",
-    displayLevel = "browse",
   )
   def throughout(J: Formula): DependentPositionWithAppliedInputTactic =
     inputanon(throughout(J, SaturateTactic(alphaRule))(_: Position))
@@ -803,11 +800,11 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "con",
     displayNameLong = Some("Loop Convergence"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // Loop Convergence -----------------------------------------------------------
     conclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
     inputs = "x[x]:variable;;J(x)[x]:formula",
-    displayLevel = "all",
   )
   def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic =
     inputanon(con(x, J, SaturateTactic(alphaRule))(_: Position))
@@ -902,11 +899,11 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "conRule",
     displayNameLong = Some("Loop Convergence Rule"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // conRule   -----------------------------------------------------------
     conclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
     inputs = "x:variable;;J[x]:formula",
-    displayLevel = "browse",
   )
   def conRule(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => {
@@ -937,11 +934,11 @@ private object DLBySubst extends TacticProvider {
     name = "discreteGhost",
     displayName = Some("iG"),
     displayNameLong = Some("Discrete Ghost"),
+    displayLevel = DisplayLevelMenu,
     premises = "Γ |- [x:=e]P, Δ",
     //        iG ------------------
     conclusion = "Γ |- P, Δ",
     inputs = "e:term;;x[x]:option[variable]",
-    displayLevel = "menu",
   )
   private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
     inputanon(discreteGhost(e, x, assignInContext = true)(_: Position))
@@ -1055,10 +1052,10 @@ private object DLBySubst extends TacticProvider {
     name = "assignbExistsRule",
     displayName = Some("[:=] assign exists"),
     displayNameLong = Some("Translate Quantifier to Assignment"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [t:=e][x:=t]P, Δ",
     // [:=] assign exists -----------------------
     conclusion = "Γ |- ∃t [x:=t]P, Δ",
-    displayLevel = "browse",
   )
   def assignbExists(e: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
@@ -1095,10 +1092,10 @@ private object DLBySubst extends TacticProvider {
     name = "assignbAllRule",
     displayName = Some("[:=] assign all"),
     displayNameLong = Some("Translate Quantifier to Assignment"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ, [t:=e][x:=t]P |- Δ",
     // [:=] assign all -----------------------
     conclusion = "Γ, ∀t [x:=t]P |- Δ",
-    displayLevel = "browse",
   )
   def assignbAll(e: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {

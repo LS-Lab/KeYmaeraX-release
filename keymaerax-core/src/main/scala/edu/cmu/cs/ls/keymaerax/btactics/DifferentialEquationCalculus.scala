@@ -6,10 +6,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelAll, DisplayLevelBrowse, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
@@ -78,12 +78,12 @@ trait DifferentialEquationCalculus {
     name = "solve",
     displayName = Some("[']"),
     displayNameLong = Some("Solution"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     contextPremises = "Γ |- C( ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)) ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x)&q(x)]p(x) ), Δ",
     revealInternalSteps = true,
-    displayLevel = "all",
   )
   lazy val solve: DependentPositionTactic = anon { (pos: Position) =>
     AxiomaticODESolver.axiomaticSolve(instEnd = false)(pos)
@@ -96,10 +96,10 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "solveEnd",
     displayNameLong = Some("Solution with q(x) true at end"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = true,
-    displayLevel = "browse",
   )
   lazy val solveEnd: DependentPositionTactic = anon { (pos: Position) =>
     AxiomaticODESolver.axiomaticSolve(instEnd = true)(pos)
@@ -205,11 +205,11 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dIRule",
     displayNameLong = Some("Differential Invariant"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    displayLevel = "all",
     revealInternalSteps = true,
   )
   def dIRule: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("diffInd"))
@@ -242,11 +242,11 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dIClose",
     displayNameLong = Some("Differential Invariant Auto-Close"),
+    displayLevel = DisplayLevelAll,
     premises = "*",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    displayLevel = "all",
     revealInternalSteps = true,
   )
   def dIClose: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
@@ -314,11 +314,11 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dI",
     displayNameLong = Some("Differential Invariant"),
+    displayLevel = DisplayLevelAll,
     premises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", // todo: how to indicate closed premise?
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    displayLevel = "all",
     revealInternalSteps = true,
   )
   def dIX: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))

@@ -8,11 +8,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 
@@ -48,10 +48,10 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "smartHide",
     displayName = Some("Smart Hide"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ<sub>hide</sub> |- Δ",
 //     smartHide -------------------------
     conclusion = "Γ |- Δ",
-    displayLevel = "browse",
   )
   lazy val smartHide: BuiltInTactic = anon((p: ProvableSig) => {
     assert(
@@ -126,10 +126,10 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "hideFactsAbout",
     displayName = Some("Hide Facts"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- Δ",
     //    transformEquality(equality f=g) -----------
     conclusion = "Γ, P(xs) |- Q(xs), Δ",
-    displayLevel = "browse",
   )
   def hideFactsAbout(xs: List[Variable]): InputTactic = inputanon((sequent: Sequent) => {
     val irrelevantSet = xs.toSet
@@ -161,10 +161,10 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "keepFactsAbout",
     displayName = Some("Keep Facts"),
+    displayLevel = DisplayLevelBrowse,
     premises = "P(xs) |- Q(xs)",
     //    transformEquality(equality f=g) -----------
     conclusion = "Γ(!xs), P(xs) |- Q(xs), Δ(!xs)",
-    displayLevel = "browse",
   )
   def keepFactsAbout(xs: List[Variable]): InputTactic = inputanon((sequent: Sequent) => {
     val relevantSet = xs.toSet
@@ -198,10 +198,10 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "transformEquality",
     displayName = Some("Transform Equality"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- equality ;; Γ |- P(equalityRHS) Δ",
     //    transformEquality(equality f=g) -----------
     conclusion = "Γ |- P(equalityLHS), Δ",
-    displayLevel = "browse",
   )
   def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) =>

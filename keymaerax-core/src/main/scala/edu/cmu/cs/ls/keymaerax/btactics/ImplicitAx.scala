@@ -1030,9 +1030,9 @@ object ImplicitAx extends TacticProvider {
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
   @Tactic(
     name = "diffUnfold",
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=(-1) & v0<=v]P(v)",
     conclusion = "Γ |- P(v0), Δ",
-    displayLevel = "browse",
   )
   def diffUnfold(v0: Term, t0: Term): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, seq: Sequent) =>
@@ -1077,9 +1077,9 @@ object ImplicitAx extends TacticProvider {
   // Diamond version of diffUnfold for existentials
   @Tactic(
     name = "diffUnfoldD",
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ, v=t0 |- <v'=1>P(v) ∨ <v'=(-1)> P(v), Δ ",
     conclusion = "Γ |- ∃v P(v), Δ",
-    displayLevel = "browse",
   )
   def diffUnfoldD(t0: Term): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
     {

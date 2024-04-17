@@ -371,7 +371,7 @@ object Ax extends Logging {
   @ProofRule(name = "mondrule")
   val mondrule: AxiomaticRuleInfo = coreRule("<> monotone")
 
-  @ProofRule(name = "FPrule", conclusion = "<a*>P |- Q", premises = "P | <a>Q |- Q", displayLevel = "browse")
+  @ProofRule(name = "FPrule", displayLevel = DisplayLevelBrowse, conclusion = "<a*>P |- Q", premises = "P | <a>Q |- Q")
   val FPrule: AxiomaticRuleInfo = coreRule("FP fixpoint")
 
   @ProofRule(name = "conrule")
@@ -388,8 +388,8 @@ object Ax extends Logging {
     name = "diamond",
     displayName = Some("<·>"),
     displayNameAscii = Some("<.>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__&not;[a]&not;P__↔&langle;a&rangle;P",
-    displayLevel = "all",
     key = "0",
     recursor = "*",
     unifier = "surjlinear",
@@ -399,8 +399,8 @@ object Ax extends Logging {
   @Axiom(
     name = "assignbAxiom",
     displayName = Some("[:=]"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[x:=e]p(x)__↔p(e)",
-    displayLevel = "all",
     key = "0",
     recursor = "*",
     unifier = "full",
@@ -410,8 +410,8 @@ object Ax extends Logging {
   @Axiom(
     name = "assignbeq",
     displayName = Some("[:=]="),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[x:=e]P__↔∀x(x=e→P)",
-    displayLevel = "all",
     key = "0",
     recursor = "0.1;*",
     unifier = "surjlinearpretend",
@@ -434,8 +434,8 @@ object Ax extends Logging {
   @Axiom(
     name = "Dassignbeq",
     displayName = Some("[:=]="),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[x':=e]P__↔∀x'(x'=e→P)",
-    displayLevel = "all",
     key = "0",
     recursor = "0.1;*",
     unifier = "surjlinearpretend",
@@ -448,8 +448,8 @@ object Ax extends Logging {
   @Axiom(
     name = "randomb",
     displayName = Some("[:*]"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[x:=*]P__↔∀x P",
-    displayLevel = "all",
     key = "0",
     recursor = "0;*",
     unifier = "surjlinear",
@@ -459,8 +459,8 @@ object Ax extends Logging {
   @Axiom(
     name = "testb",
     displayName = Some("[?]"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[?Q]P__↔(Q→P)",
-    displayLevel = "all",
     key = "0",
     recursor = "1",
     unifier = "surjlinear",
@@ -471,8 +471,8 @@ object Ax extends Logging {
     name = "choiceb",
     displayName = Some("[∪]"),
     displayNameAscii = Some("[++]"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a∪b]P__↔[a]P∧[b]P",
-    displayLevel = "all",
     key = "0",
     recursor = "0;1",
     unifier = "surjlinear",
@@ -482,8 +482,8 @@ object Ax extends Logging {
   @Axiom(
     name = "composeb",
     displayName = Some("[;]"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a;b]P__↔[a][b]P",
-    displayLevel = "all",
     key = "0",
     recursor = "1;*",
     unifier = "surjlinear",
@@ -493,8 +493,8 @@ object Ax extends Logging {
   @Axiom(
     name = "iterateb",
     displayName = Some("[*]"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a*]P__↔P∧[a][a*]P",
-    displayLevel = "all",
     key = "0",
     recursor = "1",
     unifier = "surjlinear",
@@ -504,8 +504,8 @@ object Ax extends Logging {
   @Axiom(
     name = "barcan",
     displayName = Some("B Barcan"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a]∀x p(x)__ ↔∀x[a]p(x)  (x∉a)",
-    displayLevel = "all",
     key = "0",
     recursor = "0",
     unifier = "surjlinear",
@@ -518,8 +518,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DWbase",
     displayName = Some("DW base"),
+    displayLevel = DisplayLevelInternal,
     conclusion = "__[{x'=f(x)&Q}]Q__",
-    displayLevel = "internal",
     key = "",
     recursor = "",
     unifier = "surjlinear",
@@ -528,8 +528,8 @@ object Ax extends Logging {
 
   @Axiom(
     name = "DE",
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P",
-    displayLevel = "browse",
     key = "0",
     recursor = "1;*",
     unifier = "surjlinear",
@@ -539,8 +539,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DEs",
     displayName = Some("DE"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P",
-    displayLevel = "browse",
     key = "0",
     recursor = "1;*",
     unifier = "surjlinear",
@@ -551,8 +551,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DIequiv",
     displayName = Some("DI"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')",
-    displayLevel = "browse",
     key = "1.0",
     recursor = "*",
     unifier = "surjlinear",
@@ -562,8 +562,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DGa",
     displayName = Some("DG"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P",
-    displayLevel = "browse",
     key = "0",
     recursor = "0;*",
     unifier = "surjlinear",
@@ -584,8 +584,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DGi",
     displayName = Some("DG inverse differential ghost implicational"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P",
-    displayLevel = "browse",
     key = "0",
     recursor = "0;*",
     unifier = "surjlinear",
@@ -615,8 +615,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DS",
     displayName = Some("DS&"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
-    displayLevel = "browse",
     key = "0",
     recursor = "0.1.1;0.1;*",
     unifier = "surjlinearpretend",
@@ -635,8 +635,8 @@ object Ax extends Logging {
 
   @Axiom(
     name = "Dcomp",
+    displayLevel = DisplayLevelBrowse,
     conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P",
-    displayLevel = "browse",
     unifier = "linear",
   )
   val Dcomp: CoreAxiomInfo = coreAxiom("D[;] differential self compose")
@@ -653,17 +653,17 @@ object Ax extends Logging {
 
   @Axiom(
     name = "DMP",
+    displayLevel = DisplayLevelBrowse,
     conclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)",
     inputs = "R:formula",
-    displayLevel = "browse",
     key = "1.1", /*@todo, recursor = (0::Nil)::(Nil)::Nil*/
   )
   val DMP: CoreAxiomInfo = coreAxiom("DMP differential modus ponens")
 
   @Axiom(
     name = "Uniq",
+    displayLevel = DisplayLevelBrowse,
     conclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__",
-    displayLevel = "browse",
     key = "1",
     recursor = "0;1",
     unifier = "surjlinear",
@@ -673,8 +673,8 @@ object Ax extends Logging {
   /* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
   @Axiom(
     name = "Cont",
+    displayLevel = DisplayLevelBrowse,
     conclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__",
-    displayLevel = "browse",
     key = "1",
     recursor = "*",
   )
@@ -683,8 +683,8 @@ object Ax extends Logging {
   @Axiom(
     name = "RIclosedgeq",
     displayName = Some("RI& >="),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)",
-    displayLevel = "browse",
     key = "0",
     recursor = "1.1.1;1.1.0;1;0",
   )
@@ -710,8 +710,8 @@ object Ax extends Logging {
 
   @Axiom(
     name = "DCC",
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)",
-    displayLevel = "browse",
     key = "1",
     recursor = "0",
     unifier = "linear",
@@ -884,8 +884,8 @@ object Ax extends Logging {
     name = "duald",
     displayName = Some("&langle;<sup>d</sup>&rangle;"),
     displayNameAscii = Some("<d>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__&langle;a<sup>d</sup>&rangle;P__↔¬&langle;a&rangle;¬P",
-    displayLevel = "all",
     key = "0",
     recursor = "0",
     unifier = "surjlinear",
@@ -894,8 +894,8 @@ object Ax extends Logging {
 
   @Axiom(
     name = "VK",
+    displayLevel = DisplayLevelBrowse,
     conclusion = "(p→__[a]p__)←[a]⊤",
-    displayLevel = "browse",
     key = "1.1",
     recursor = "*",
     unifier = "surjlinear",
@@ -905,15 +905,21 @@ object Ax extends Logging {
   @Axiom(
     name = "boxTrueAxiom",
     displayName = Some("[]T axiom"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a]⊤__",
-    displayLevel = "all",
     key = "",
     recursor = "",
     unifier = "surjlinear",
   )
   val boxTrueAxiom: CoreAxiomInfo = coreAxiom("[]T system")
 
-  @Axiom(name = "K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)", displayLevel = "all", key = "1", recursor = "*")
+  @Axiom(
+    name = "K",
+    displayLevel = DisplayLevelAll,
+    conclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
+    key = "1",
+    recursor = "*",
+  )
   val K: CoreAxiomInfo = coreAxiom("K modal modus ponens")
 
   // @note the tactic I has a name and belleExpr, but there's no tactic that simply applies the I-> axiom,
@@ -922,8 +928,8 @@ object Ax extends Logging {
     name = "Iind",
     displayName = Some("I<sub>→</sub>"),
     displayNameAscii = Some("Iind"),
+    displayLevel = DisplayLevelInternal,
     conclusion = "P∧[a<sup>*</sup>](P→[a]P)→__[a<sup>*</sup>]P__",
-    displayLevel = "internal",
     key = "1",
     recursor = "1;*",
     unifier = "surjlinear",
@@ -937,8 +943,8 @@ object Ax extends Logging {
     name = "alld",
     displayName = Some("∀d"),
     displayNameAscii = Some("alld"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__¬∃x ¬P__ ↔ ∀x P",
-    displayLevel = "all",
     key = "0",
     recursor = "*",
     unifier = "surjlinear",
@@ -949,8 +955,8 @@ object Ax extends Logging {
     name = "allPd",
     displayName = Some("∀'d"),
     displayNameAscii = Some("allPd"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__¬∃x' ¬P__ ↔ ∀x' P",
-    displayLevel = "all",
     key = "0",
     recursor = "*",
     unifier = "surjlinear",
@@ -996,7 +1002,7 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "assignbeqy", displayName = Some("[:=]=y"), displayLevel = "internal")
+  @Axiom(name = "assignbeqy", displayName = Some("[:=]=y"), displayLevel = DisplayLevelInternal)
   lazy val assignbeqy: DerivedAxiomInfo = derivedAxiomFromFact(
     "[:=] assign equality y",
     "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
@@ -1013,7 +1019,7 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "selfassignby", displayName = Some("[:=]y"), displayLevel = "internal")
+  @Axiom(name = "selfassignby", displayName = Some("[:=]y"), displayLevel = DisplayLevelInternal)
   lazy val selfassignby: DerivedAxiomInfo = derivedAxiomFromFact(
     "[:=] self assign y",
     "[y_:=y_;]p(||) <-> p(||)".asFormula,
@@ -1033,8 +1039,8 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "DEsysy",
+    displayLevel = DisplayLevelInternal,
     conclusion = "__[{y'=F,c&Q}]P__↔[{c,y'=F&Q}][y':=f(x)]P",
-    displayLevel = "internal",
     key = "0",
     recursor = "1;*",
   )
@@ -1054,7 +1060,12 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "alldy", displayName = Some("∀d"), displayNameAscii = Some("alldy"), displayLevel = "internal")
+  @Axiom(
+    name = "alldy",
+    displayName = Some("∀d"),
+    displayNameAscii = Some("alldy"),
+    displayLevel = DisplayLevelInternal,
+  )
   lazy val alldy: DerivedAxiomInfo = derivedAxiomFromFact(
     "all dual y",
     "(!\\exists y_ !p(||)) <-> \\forall y_ p(||)".asFormula,
@@ -1071,7 +1082,12 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "alldt", displayName = Some("∀d"), displayNameAscii = Some("alldt"), displayLevel = "internal")
+  @Axiom(
+    name = "alldt",
+    displayName = Some("∀d"),
+    displayNameAscii = Some("alldt"),
+    displayLevel = DisplayLevelInternal,
+  )
   lazy val alldt: DerivedAxiomInfo = derivedAxiomFromFact(
     "all dual time",
     "(!\\exists t_ !p(||)) <-> \\forall t_ p(||)".asFormula,
@@ -1088,7 +1104,7 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "ally", displayName = Some("∀y"), displayNameAscii = Some("ally"), displayLevel = "internal")
+  @Axiom(name = "ally", displayName = Some("∀y"), displayNameAscii = Some("ally"), displayLevel = DisplayLevelInternal)
   lazy val ally: DerivedAxiomInfo = derivedAxiomFromFact(
     "all eliminate y",
     "(\\forall y_ p(||)) -> p(||)".asFormula,
@@ -1229,9 +1245,9 @@ object Ax extends Logging {
    */
   @ProofRule(
     name = "FPruleduplicate",
+    displayLevel = DisplayLevelInternal,
     conclusion = "<a*>P |- Q",
     premises = "P | <a>Q |- Q ;; P | <a>Q |- Q",
-    displayLevel = "internal",
   )
   private[btactics] lazy val FPruleduplicate: DerivedRuleInfo = derivedRuleSequent(
     "FP rule duplicate",
@@ -1894,8 +1910,8 @@ object Ax extends Logging {
     name = "existsDual",
     displayName = Some("∃d"),
     displayNameAscii = Some("existsd"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__¬∀x ¬P__ ↔ ∃x P",
-    displayLevel = "all",
     key = "0",
     recursor = "*",
     unifier = "surjlinear",
@@ -1925,7 +1941,12 @@ object Ax extends Logging {
       byUS(equivReflexive),
   )
 
-  @Axiom(name = "existsDualy", displayName = Some("∃d"), displayNameAscii = Some("existsdy"), displayLevel = "internal")
+  @Axiom(
+    name = "existsDualy",
+    displayName = Some("∃d"),
+    displayNameAscii = Some("existsdy"),
+    displayLevel = DisplayLevelInternal,
+  )
   lazy val existsDualy: DerivedAxiomInfo = derivedAxiom(
     "exists dual y",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall y_ (!p_(||))) <-> \\exists y_ p_(||)".asFormula)),
@@ -2140,8 +2161,8 @@ object Ax extends Logging {
     name = "box",
     displayName = Some("[·]"),
     displayNameAscii = Some("[.]"),
+    displayLevel = DisplayLevelMenu,
     conclusion = "__&not;&langle;a&rangle;&not;P__ ↔ [a]P",
-    displayLevel = "menu",
     key = "0",
     recursor = "*",
     unifier = "surjlinear",
@@ -2370,8 +2391,8 @@ object Ax extends Logging {
     name = "boxAnd",
     displayName = Some("[]∧"),
     displayNameAscii = Some("[]^"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a](P∧Q)__↔[a]P ∧ [a]Q",
-    displayLevel = "all",
     key = "0",
     recursor = "0;1",
     unifier = "linear",
@@ -2398,8 +2419,8 @@ object Ax extends Logging {
     name = "boxOrLeft",
     displayName = Some("[]∨L"),
     displayNameAscii = Some("[]orL"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "[a]P->__[a](P∨Q)__",
-    displayLevel = "browse",
     key = "1",
   )
   lazy val boxOrLeft: DerivedAxiomInfo = derivedAxiom(
@@ -2421,8 +2442,8 @@ object Ax extends Logging {
     name = "boxOrRight",
     displayName = Some("[]∨R"),
     displayNameAscii = Some("[]orR"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "[a]Q->__[a](P∨Q)__",
-    displayLevel = "browse",
     key = "1",
   )
   lazy val boxOrRight: DerivedAxiomInfo = derivedAxiom(
@@ -2505,8 +2526,8 @@ object Ax extends Logging {
     name = "diamondOr",
     displayName = Some("<>∨"),
     displayNameAscii = Some("<>|"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__&langle;a&rangle;(P∨Q)__↔&langle;a&rangle;P ∨ &langle;a&rangle;Q",
-    displayLevel = "all",
     key = "0",
     recursor = "0;1",
     unifier = "surjlinear",
@@ -2650,8 +2671,8 @@ object Ax extends Logging {
   @Axiom(
     name = "assigndEqualityAxiom",
     displayName = Some("<:=>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__<x:=e>P__↔∃x(x=e∧P)",
-    displayLevel = "all",
     key = "0",
     recursor = "0.1;*",
   )
@@ -2669,8 +2690,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DassigndEqualityAxiom",
     displayName = Some("<':=>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__<x':=e>P__↔∃x'(x'=e∧P)",
-    displayLevel = "all",
     key = "0",
     recursor = "0.1;*",
   )
@@ -2729,7 +2750,7 @@ object Ax extends Logging {
     name = "assignbexists",
     displayName = Some("[:=]∃"),
     displayNameAscii = Some("[:=]exists"),
-    displayLevel = "internal",
+    displayLevel = DisplayLevelInternal,
     key = "0",
     recursor = "*",
   )
@@ -3035,9 +3056,9 @@ object Ax extends Logging {
   @Axiom(
     name = "Dassignby",
     displayName = Some("[y':=]"),
+    displayLevel = DisplayLevelInternal,
     conclusion = "__[y':=c]p(y')__↔p(c)",
     unifier = "full",
-    displayLevel = "internal",
   )
   lazy val Dassignby: DerivedAxiomInfo = derivedAxiom(
     "[':=] differential assign y",
@@ -3076,11 +3097,11 @@ object Ax extends Logging {
   @Axiom(
     name = "randomd",
     displayName = Some("<:*>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__<x:=*>P__↔∃x P",
     key = "0",
     recursor = "0;*",
     unifier = "surjlinear",
-    displayLevel = "all",
   )
   lazy val randomd: DerivedAxiomInfo = derivedAxiom(
     "<:*> assign nondet",
@@ -3105,11 +3126,11 @@ object Ax extends Logging {
   @Axiom(
     name = "testd",
     displayName = Some("<?>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__<?Q>P__↔Q∧P",
     key = "0",
     recursor = "1;0",
     unifier = "surjlinear",
-    displayLevel = "all",
   )
   lazy val testd: DerivedAxiomInfo = derivedAxiom(
     "<?> test",
@@ -3154,8 +3175,8 @@ object Ax extends Logging {
     name = "choiced",
     displayName = Some("<∪>"),
     displayNameAscii = Some("<++>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__<a∪b>P__↔<a>P∨<b>P",
-    displayLevel = "all",
     key = "0",
     recursor = "0;1",
     unifier = "surjlinear",
@@ -3182,8 +3203,8 @@ object Ax extends Logging {
   @Axiom(
     name = "composed",
     displayName = Some("<;>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__<a;b>P__↔<a><b>P",
-    displayLevel = "all",
     key = "0",
     recursor = "1;*",
     unifier = "surjlinear",
@@ -3211,8 +3232,8 @@ object Ax extends Logging {
   @Axiom(
     name = "iterated",
     displayName = Some("<*>"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__<a*>P__↔P∨<a><a*>P",
-    displayLevel = "all",
     key = "0",
     recursor = "1",
     unifier = "surjlinear",
@@ -3294,7 +3315,7 @@ object Ax extends Logging {
    *
    * @Derived
    */
-  @Axiom(name = "IIinduction", displayName = Some("II induction"), displayLevel = "internal")
+  @Axiom(name = "IIinduction", displayName = Some("II induction"), displayLevel = DisplayLevelInternal)
   lazy val IIinduction: DerivedAxiomInfo = derivedAxiom(
     "II induction",
     "==> [{a_{|^@|};}*](p_(||)->[a_{|^@|};]p_(||)) -> (p_(||)->[{a_{|^@|};}*]p_(||))".asSequent,
@@ -3313,8 +3334,8 @@ object Ax extends Logging {
   @Axiom(
     name = "loopMergeb",
     displayName = Some("[*] merge"),
+    displayLevel = DisplayLevelMenu,
     conclusion = "__[a*][a*]P__ ↔ [a*]P",
-    displayLevel = "menu",
     key = "0",
     recursor = "*",
   )
@@ -3339,8 +3360,8 @@ object Ax extends Logging {
   @Axiom(
     name = "loopMerged",
     displayName = Some("<*> merge"),
+    displayLevel = DisplayLevelMenu,
     conclusion = "__<a*><a*>P__ ↔ <a*>P",
-    displayLevel = "menu",
     key = "0",
     recursor = "*",
   )
@@ -3434,7 +3455,11 @@ object Ax extends Logging {
    * @Derived
    *   for programs
    */
-  @Axiom(name = "backiteratebsuff", displayName = Some("[*-] backiterate sufficiency"), displayLevel = "internal")
+  @Axiom(
+    name = "backiteratebsuff",
+    displayName = Some("[*-] backiterate sufficiency"),
+    displayLevel = DisplayLevelInternal,
+  )
   lazy val backiteratebsuff: DerivedAxiomInfo = derivedAxiom(
     "[*-] backiterate sufficiency",
     "p_(||) & [{a_{|^@|};}*][a_{|^@|};]p_(||) ==> [{a_{|^@|};}*]p_(||)".asSequent,
@@ -3455,7 +3480,11 @@ object Ax extends Logging {
    * @Derived
    *   for programs
    */
-  @Axiom(name = "backiteratebnecc", displayName = Some("[*-] backiterate necessity"), displayLevel = "internal")
+  @Axiom(
+    name = "backiteratebnecc",
+    displayName = Some("[*-] backiterate necessity"),
+    displayLevel = DisplayLevelInternal,
+  )
   lazy val backiteratebnecc: DerivedAxiomInfo = derivedAxiom(
     "[*-] backiterate necessity",
     "[{b_{|^@|};}*]q_(||) ==> q_(||) & [{b_{|^@|};}*][b_{|^@|};]q_(||)".asSequent,
@@ -3484,8 +3513,8 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "I",
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a*]P__↔P∧[a*](P→[a]P)",
-    displayLevel = "all",
     key = "0",
     recursor = "1.1.1;1",
     unifier = "surjlinear",
@@ -3529,7 +3558,7 @@ object Ax extends Logging {
     name = "existsGeneralizey",
     displayName = Some("∃Gy"),
     displayNameAscii = Some("existsGy"),
-    displayLevel = "internal",
+    displayLevel = DisplayLevelInternal,
   )
   lazy val existsGeneralizey: DerivedAxiomInfo = derivedAxiom(
     "exists generalize y",
@@ -3577,7 +3606,12 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @Axiom(name = "existsey", displayName = Some("∃ey"), displayNameAscii = Some("existsey"), displayLevel = "internal")
+  @Axiom(
+    name = "existsey",
+    displayName = Some("∃ey"),
+    displayNameAscii = Some("existsey"),
+    displayLevel = DisplayLevelInternal,
+  )
   lazy val existsey: DerivedAxiomInfo = derivedAxiom(
     "exists eliminate y",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) -> (\\exists y_ p_(||))".asFormula)),
@@ -4311,7 +4345,7 @@ object Ax extends Logging {
     name = "forallThenExists",
     displayName = Some("∀→∃"),
     displayNameAscii = Some("all->exists"),
-    displayLevel = "internal",
+    displayLevel = DisplayLevelInternal,
   )
   lazy val forallThenExists: DerivedAxiomInfo = derivedAxiom(
     "\\forall->\\exists",
@@ -4674,8 +4708,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DCaxiom",
     displayName = Some("DC"),
+    displayLevel = DisplayLevelMenu,
     conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R",
-    displayLevel = "menu",
     key = "1.0",
     recursor = "*",
     unifier = "surjlinear",
@@ -4728,8 +4762,8 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "DI",
+    displayLevel = DisplayLevelMenu,
     conclusion = "__[{x'=f(x)&Q}]P__←(Q→P∧[{x'=f(x)&Q}](P)')",
-    displayLevel = "menu",
     unifier = "surjlinear",
     key = "1",
     recursor = "1.1",
@@ -5277,8 +5311,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DBXgt",
     displayName = Some("DBX>"),
+    displayLevel = DisplayLevelMenu,
     conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e)'≥ge",
-    displayLevel = "menu",
     key = "1.1",
     recursor = "1.0",
     unifier = "surjlinearpretend",
@@ -5501,8 +5535,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DBXge",
     displayName = Some("DBX>="),
+    displayLevel = DisplayLevelMenu,
     conclusion = "(e>=0 → __[x'=f(x)&Q]e>=0__) ← [x'=f(x)&Q](e)'≥ge",
-    displayLevel = "menu",
     key = "1.1",
     recursor = "1.0",
     unifier = "surjlinearpretend",
@@ -5610,8 +5644,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DBXeq",
     displayName = Some("DBX="),
+    displayLevel = DisplayLevelMenu,
     conclusion = "(e=0 → __[x'=f(x)&Q]e=0__) ← [x'=f(x)&Q](e)'=ge",
-    displayLevel = "menu",
     key = "1.1",
     recursor = "1.0",
     unifier = "surjlinearpretend",
@@ -5708,8 +5742,8 @@ object Ax extends Logging {
   @Axiom(
     name = "DBXle",
     displayName = Some("DBX<="),
+    displayLevel = DisplayLevelMenu,
     conclusion = "(e<=0 → __[x'=f(x)&Q]e<=0__) ← [x'=f(x)&Q](e)'<=ge",
-    displayLevel = "menu",
     key = "1.1",
     recursor = "1.0",
     unifier = "surjlinearpretend",
@@ -5893,8 +5927,8 @@ object Ax extends Logging {
   @Axiom(
     name = "dualb",
     displayName = Some("[d]"),
+    displayLevel = DisplayLevelAll,
     conclusion = "__[a<sup>d</sup>]P__↔¬[a]¬P",
-    displayLevel = "all",
     key = "0",
     recursor = "0",
     unifier = "surjlinear",
@@ -5919,8 +5953,8 @@ object Ax extends Logging {
   @Axiom(
     name = "dualDirectb",
     displayName = Some("[d]"),
+    displayLevel = DisplayLevelMenu,
     conclusion = "__[a<sup>d</sup>]P__↔&langle;a&rangle;P",
-    displayLevel = "menu",
     key = "0",
     recursor = ".",
     unifier = "surjlinear",
@@ -6247,9 +6281,9 @@ object Ax extends Logging {
     name = "notEqual2Or",
     displayName = Some("≠2∨"),
     displayNameAscii = Some("!=2|"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__(f≠g)__ ↔ f<g ∨ f>g",
     unifier = "linear",
-    displayLevel = "browse",
   )
   lazy val notEqual2Or: DerivedAxiomInfo = derivedAxiom(
     "!=2|",
@@ -6269,9 +6303,9 @@ object Ax extends Logging {
     name = "equal2And",
     displayName = Some("=2∧"),
     displayNameAscii = Some("=2&"),
+    displayLevel = DisplayLevelBrowse,
     conclusion = "__(f≠g)__ ↔ f<g ∨ f>g",
     unifier = "linear",
-    displayLevel = "browse",
   )
   lazy val equal2And: DerivedAxiomInfo = derivedAxiom(
     "=2&",
@@ -7826,7 +7860,13 @@ object Ax extends Logging {
    * @note
    *   Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
-  @Axiom(name = "allStutter", displayName = Some("all stutter"), key = "0", recursor = "0", displayLevel = "internal")
+  @Axiom(
+    name = "allStutter",
+    displayName = Some("all stutter"),
+    displayLevel = DisplayLevelInternal,
+    key = "0",
+    recursor = "0",
+  )
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom(
     "all stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
@@ -7836,9 +7876,9 @@ object Ax extends Logging {
   @Axiom(
     name = "allStutterPrime",
     displayName = Some("all stutter'"),
+    displayLevel = DisplayLevelInternal,
     key = "0",
     recursor = "",
-    displayLevel = "internal",
   )
   lazy val allStutterPrime: DerivedAxiomInfo = derivedAxiom(
     "all stutter prime",
@@ -7860,9 +7900,9 @@ object Ax extends Logging {
   @Axiom(
     name = "existsStutter",
     displayName = Some("exists stutter"),
+    displayLevel = DisplayLevelInternal,
     key = "0",
     recursor = "0",
-    displayLevel = "internal",
   )
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom(
     "exists stutter",
@@ -7873,9 +7913,9 @@ object Ax extends Logging {
   @Axiom(
     name = "existsStutterPrime",
     displayName = Some("exists stutter'"),
+    displayLevel = DisplayLevelInternal,
     key = "0",
     recursor = "",
-    displayLevel = "internal",
   )
   lazy val existsStutterPrime: DerivedAxiomInfo = derivedAxiom(
     "exists stutter prime",
@@ -7894,7 +7934,13 @@ object Ax extends Logging {
    * @note
    *   Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
-  @Axiom(name = "andStutter", displayName = Some("and stutter"), key = "0", recursor = "0;1", displayLevel = "internal")
+  @Axiom(
+    name = "andStutter",
+    displayName = Some("and stutter"),
+    displayLevel = DisplayLevelInternal,
+    key = "0",
+    recursor = "0;1",
+  )
   lazy val andStutter: DerivedAxiomInfo = derivedAxiom(
     "and stutter",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) & q_(||) <-> p_(||) & q_(||)".asFormula)),
@@ -7912,7 +7958,13 @@ object Ax extends Logging {
    * @note
    *   Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
-  @Axiom(name = "orStutter", displayName = Some("or stutter"), key = "0", recursor = "0;1", displayLevel = "internal")
+  @Axiom(
+    name = "orStutter",
+    displayName = Some("or stutter"),
+    displayLevel = DisplayLevelInternal,
+    key = "0",
+    recursor = "0;1",
+  )
   lazy val orStutter: DerivedAxiomInfo = derivedAxiom(
     "or stutter",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) | q_(||) <-> p_(||) | q_(||)".asFormula)),
@@ -7933,9 +7985,9 @@ object Ax extends Logging {
   @Axiom(
     name = "implyStutter",
     displayName = Some("imply stutter"),
+    displayLevel = DisplayLevelInternal,
     key = "0",
     recursor = "0;1",
-    displayLevel = "internal",
   )
   lazy val implyStutter: DerivedAxiomInfo = derivedAxiom(
     "imply stutter",
@@ -7957,9 +8009,9 @@ object Ax extends Logging {
   @Axiom(
     name = "equivStutter",
     displayName = Some("equiv stutter"),
+    displayLevel = DisplayLevelInternal,
     key = "0",
     recursor = "0;1",
-    displayLevel = "internal",
   )
   lazy val equivStutter: DerivedAxiomInfo = derivedAxiom(
     "equiv stutter",
@@ -7978,7 +8030,13 @@ object Ax extends Logging {
    * @note
    *   Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
-  @Axiom(name = "notStutter", displayName = Some("not stutter"), key = "0", recursor = "0", displayLevel = "internal")
+  @Axiom(
+    name = "notStutter",
+    displayName = Some("not stutter"),
+    displayLevel = DisplayLevelInternal,
+    key = "0",
+    recursor = "0",
+  )
   lazy val notStutter: DerivedAxiomInfo = derivedAxiom(
     "not stutter",
     Sequent(IndexedSeq(), IndexedSeq("!p_(||) <-> !p_(||)".asFormula)),
@@ -9281,8 +9339,8 @@ object Ax extends Logging {
   @Axiom(
     name = "dBarcan",
     displayName = Some("D Barcan"),
+    displayLevel = DisplayLevelAll,
     conclusion = "∃x<a>p(x)__ ↔ <a>∃x p(x) (x∉a)",
-    displayLevel = "all",
     key = "0",
     recursor = "0",
     unifier = "surjlinear",

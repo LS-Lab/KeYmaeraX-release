@@ -7,13 +7,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{exhaustiveEqL2R, uniformRename, useAt}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.reflect.runtime.universe
@@ -579,10 +579,10 @@ trait SequentCalculus {
     name = "allRi",
     displayName = Some("∀Ri"),
     displayNameAscii = Some("allRi"),
+    displayLevel = DisplayLevelBrowse,
     inputs = "f:term;;x[x]:option[variable]",
     premises = "Γ |- ∀x p(f(x)), Δ",
     conclusion = "Γ |- p(f(y)), Δ",
-    displayLevel = "browse",
   )
   def allRi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
     inputanon { FOQuantifierTactics.universalGen(x, t)(_: Position) }
@@ -716,10 +716,10 @@ trait SequentCalculus {
     name = "existsLi",
     displayName = Some("∃Li"),
     displayNameAscii = Some("existsLi"),
+    displayLevel = DisplayLevelBrowse,
     inputs = "f:term;;x[x]:option[variable]",
     premises = "Γ, ∃x p(f(x)) |- Δ",
     conclusion = "Γ, p(f(y)) |- Δ",
-    displayLevel = "browse",
   )
   def existsLi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic =
     inputanon { FOQuantifierTactics.existsGen(x, t)(_: Position) }

@@ -8,13 +8,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.saturate
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelAll, DisplayLevelBrowse, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -603,7 +602,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   // def ind
 
   /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
-  @Tactic(name = "boxTrue", displayName = Some("[]T"), conclusion = "__[a]⊤__ ↔ ⊤", displayLevel = "all")
+  @Tactic(name = "boxTrue", displayName = Some("[]T"), displayLevel = DisplayLevelAll, conclusion = "__[a]⊤__ ↔ ⊤")
   // @note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
   lazy val boxTrue: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     (provable(useAt(Ax.boxTrueTrue)(pos).computeResult _, 0)(
@@ -712,7 +711,7 @@ trait Derive extends UnifyUSCalculus {
    *   }}}
    * @incontext
    */
-  @Tactic(name = "Dvar", displayName = Some("(x)'"), conclusion = "(x)' = x", displayLevel = "browse")
+  @Tactic(name = "Dvar", displayName = Some("(x)'"), displayLevel = DisplayLevelBrowse, conclusion = "(x)' = x")
   lazy val Dvar: DependentPositionTactic = anon { (pos: Position) =>
     (if (INTERNAL) useAt(Ax.DvarAxiom) else DifferentialTactics.Dvariable) (pos)
   }

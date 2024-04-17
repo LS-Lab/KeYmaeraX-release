@@ -5,20 +5,19 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.math.{MathContext, RoundingMode}
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelInternal, Tactic}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position, RenUSubst, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
-import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 
+import java.math.{MathContext, RoundingMode}
 import scala.annotation.tailrec
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
@@ -1224,7 +1223,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     }
   }
 
-  @Tactic(name = "intervalArithmetic", displayName = Some("Interval Arithmetic"), displayLevel = "menu")
+  @Tactic(name = "intervalArithmetic", displayName = Some("Interval Arithmetic"), displayLevel = DisplayLevelMenu)
   lazy val intervalArithmetic: BelleExpr = anon {
     val precision = 15 // @todo: precision as (optional) argument?
     SaturateTactic((orRi |! skip)) & intervalArithmeticPreproc(1) &
@@ -1256,10 +1255,10 @@ object IntervalArithmeticV2 extends TacticProvider {
   @Tactic(
     name = "intervalCutTerms" /* @todo old codeName */,
     displayName = Some("Interval Arithmetic Cut"),
+    displayLevel = DisplayLevelMenu,
     // @TODO: closed premise
     premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     conclusion = "Γ |- Δ",
-    displayLevel = "menu",
   )
   def intervalCutTerm(t: Term): InputTactic = inputanon { intervalCutTerms(Seq(t)) }
 
@@ -1275,9 +1274,9 @@ object IntervalArithmeticV2 extends TacticProvider {
   @Tactic(
     name = "intervalCut",
     displayName = Some("Interval Arithmetic Cut"),
+    displayLevel = DisplayLevelInternal,
     premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     conclusion = "Γ |- Δ",
-    displayLevel = "internal",
   )
   val intervalCut: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {

@@ -7,14 +7,14 @@ package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, SimplifierV3, TacticProvider, ToolTactics}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnalysis}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, SimplifierV3, TacticProvider, ToolTactics}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 import scala.collection.mutable.ListBuffer
@@ -40,10 +40,10 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
   @Tactic(
     name = "smartQE",
     displayName = Some("Speculative QE"),
+    displayLevel = DisplayLevelBrowse,
     premises = "*",
     //    smartQE -----------
     conclusion = "Γ<sub>FOLR</sub> |- Δ<sub>FOLR</sub>",
-    displayLevel = "browse",
   )
   lazy val speculativeQE: BelleExpr = anon((_: Sequent) => {
     (DebuggingTactics.debug("Trying abs...", DEBUG) & SaturateTactic(alphaRule) & proveOrRefuteAbs &

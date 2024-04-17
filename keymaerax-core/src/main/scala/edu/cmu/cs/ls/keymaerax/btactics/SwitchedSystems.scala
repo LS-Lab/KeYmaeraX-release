@@ -10,14 +10,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas.remember
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.annotation.tailrec
-import scala.collection.immutable.Nil
 import scala.reflect.runtime.universe
 
 /**
@@ -564,9 +563,9 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "stabilityCLF",
     displayNameLong = Some("Stability by Common Lyapunov Function"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<=0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0)",
     conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
-    displayLevel = "browse",
   )
   def proveStabilityCLF(V: Option[Term]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) => {
@@ -702,10 +701,10 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "attractivityCLF",
     displayNameLong = Some("Attractivity by Common Lyapunov Function"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0) ∧ RUB(V)",
     conclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
-    displayLevel = "browse",
   )
   def proveAttractivityCLF(V: Option[Term]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) => {
@@ -986,9 +985,9 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "stabilityStateMLF",
     displayNameLong = Some("Stability for State-dependent Switching by Multiple Lyapunov Functions"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<=0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0)",
     conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ a; x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
-    displayLevel = "browse",
   )
   def proveStabilityStateMLF(Vp: List[Term]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) => {
@@ -1571,10 +1570,10 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "attractivityStateMLF",
     displayNameLong = Some("Attractivity for State-dependent Switching by Multiple Lyapunov Functions"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0) ∧ RUB(Vp)",
     conclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
-    displayLevel = "browse",
   )
   def proveAttractivityStateMLF(Vp: List[Term]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) => {

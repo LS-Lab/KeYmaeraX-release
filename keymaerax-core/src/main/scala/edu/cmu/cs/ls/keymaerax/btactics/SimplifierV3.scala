@@ -5,20 +5,19 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{InfiniteTacticLoopError, _}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.prop
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
-import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.prop
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, Tactic}
 
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
@@ -1103,9 +1102,9 @@ object SimplifierV3 extends TacticProvider {
   @Tactic(
     name = "simplify",
     displayName = Some("Simplify"),
+    displayLevel = DisplayLevelBrowse,
     premises = "Γ |- simplify(P), Δ",
     conclusion = "Γ |- P, Δ",
-    displayLevel = "browse",
   )
   val simplify: BuiltInPositionTactic = simpTac()
 
@@ -1199,9 +1198,9 @@ object SimplifierV3 extends TacticProvider {
   @Tactic(
     name = "fullSimplify",
     displayName = Some("Full Simplify"),
+    displayLevel = DisplayLevelBrowse,
     premises = "simplify(Γ |- P, Δ)",
     conclusion = "Γ |- P, Δ",
-    displayLevel = "browse",
   )
   val fullSimplify: BuiltInTactic = fullSimpTac()
 

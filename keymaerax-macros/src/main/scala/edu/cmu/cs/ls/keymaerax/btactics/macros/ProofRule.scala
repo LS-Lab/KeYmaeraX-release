@@ -34,6 +34,8 @@ import scala.reflect.macros.whitebox
  * @param displayNameLong
  *   Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase.
  *   Defaults to [[displayName]].
+ * @param displayLevel
+ *   Where to display an axiom/rule/tactic in the user interface. Defaults to [[DisplayLevelInternal]].
  * @param premises
  *   String of premises when (if) the rule is displayed on the UI. Rules with premises must have conclusions. Premises
  *   are separated by `;;` and each premise is optionally a sequent. `P;; A, B |- C` specifies two premises, the latter
@@ -41,8 +43,6 @@ import scala.reflect.macros.whitebox
  * @param conclusion
  *   Conclusion of rule displayed on UI. The name of each input is given in [[inputs]], which may be generated from the
  *   [[def]]. Sequent syntax is optionally supported: `A, B |- C, D`
- * @param displayLevel
- *   Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
  * @author
  *   Brandon Bohrer
  * @see
@@ -54,10 +54,10 @@ class ProofRule(
     val displayName: Option[String] = None,
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
+    val displayLevel: DisplayLevel = DisplayLevelInternal,
     val premises: String = "",
     val conclusion: String = "",
     val unifier: String = "full",
-    val displayLevel: String = "internal",
     val key: String = "",
     val recursor: String = "*",
 ) extends StaticAnnotation {
@@ -71,10 +71,10 @@ case class ProofRuleArgs(
     displayName: Option[String] = None,
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
+    displayLevel: DisplayLevel = DisplayLevelInternal,
     premises: String = "",
     conclusion: String = "",
     unifier: String = "full",
-    displayLevel: String = "internal",
     key: String = "",
     recursor: String = "*",
 )
@@ -98,8 +98,16 @@ object ProofRuleMacro {
     // https://stackoverflow.com/questions/32631372/getting-parameters-from-scala-macro-annotation
     // https://stackoverflow.com/questions/37891855/macro-annotation-with-default-arguments
     val args = c.prefix.tree match {
-      case q"new $_(..$args)" =>
-        c.eval(c.Expr[ProofRuleArgs](q"edu.cmu.cs.ls.keymaerax.btactics.macros.ProofRuleArgs(..$args)"))
+      case q"new $_(..$args)" => c.eval(c.Expr[ProofRuleArgs](
+          q"""{
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevel;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelBrowse;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelMenu;
+            import edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelAll;
+            edu.cmu.cs.ls.keymaerax.btactics.macros.ProofRuleArgs(..$args)
+          }"""
+        ))
       case _ => c.abort(c.enclosingPosition, "this should never happen")
     }
 
@@ -186,11 +194,10 @@ object ProofRuleMacro {
     }
 
     val displayLevel = args.displayLevel match {
-      case "internal" => Symbol("internal")
-      case "browse" => Symbol("browse")
-      case "menu" => Symbol("menu")
-      case "all" => Symbol("all")
-      case s => c.abort(c.enclosingPosition, "Unknown display level " + s)
+      case DisplayLevelInternal => Symbol("internal")
+      case DisplayLevelBrowse => Symbol("browse")
+      case DisplayLevelMenu => Symbol("menu")
+      case DisplayLevelAll => Symbol("all")
     }
 
     val (infoType, info) =
