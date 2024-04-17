@@ -186,10 +186,10 @@ object AxiomMacro {
     val recursor = parsePoses(args.recursor)(c)
 
     val display: DisplayInfo = (args.conclusion, inputs) match {
-      case ("", Nil) => SimpleDisplayInfo(displayName, displayNameAscii)
+      case ("", Nil) => SimpleDisplayInfo(displayName, displayNameAscii, displayNameLong)
       case ("", _) => c.abort(c.enclosingPosition, "@Axiom with inputs must have a conclusion")
-      case (fml, Nil) => AxiomDisplayInfo(displayName, displayNameAscii, renderDisplayFormula(fml))
-      case (fml, args) => InputAxiomDisplayInfo(displayName, displayNameAscii, fml, args)
+      case (fml, Nil) => AxiomDisplayInfo(displayName, displayNameAscii, displayNameLong, renderDisplayFormula(fml))
+      case (fml, args) => InputAxiomDisplayInfo(displayName, displayNameAscii, displayNameLong, fml, args)
     }
 
     /*
@@ -231,7 +231,6 @@ object AxiomMacro {
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
-          longDisplayName = $displayNameLong,
           unifier = $unifier,
           displayLevel = $displayLevel,
           theKey = $key,
@@ -245,7 +244,6 @@ object AxiomMacro {
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
-          longDisplayName = $displayNameLong,
           unifier = $unifier,
           displayLevel = $displayLevel,
           theKey = $key,

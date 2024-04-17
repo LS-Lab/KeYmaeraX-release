@@ -69,7 +69,7 @@ case class ApplicableAxiomsResponse(
       "formula" -> JsString(formulaText),
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
-      "longName" -> JsString(info.longDisplayName),
+      "longName" -> JsString(info.display.nameLong),
       "defaultKeyPos" ->
         (info match {
           case pi: ProvableInfo =>
@@ -157,7 +157,7 @@ case class ApplicableAxiomsResponse(
       "name" -> new JsString(derivationInfo.display.name),
       "asciiName" -> new JsString(derivationInfo.display.nameAscii),
       "codeName" -> new JsString(derivationInfo.codeName),
-      "longName" -> new JsString(derivationInfo.longDisplayName),
+      "longName" -> new JsString(derivationInfo.display.nameLong),
       "displayLevel" -> new JsString(derivationInfo.displayLevel.name),
       "numPositionArgs" -> new JsNumber(derivationInfo.numPositionArgs),
       "derivation" -> derivation,

@@ -156,8 +156,8 @@ object ProofRuleMacro {
     val recursor = parsePoses(args.recursor)(c)
 
     val display = (premises, conclusionOpt) match {
-      case (Nil, None) => SimpleDisplayInfo(displayName, displayNameAscii)
-      case (prem, Some(conc)) => RuleDisplayInfo(displayName, displayNameAscii, conc, prem, "")
+      case (Nil, None) => SimpleDisplayInfo(displayName, displayNameAscii, displayNameLong)
+      case (prem, Some(conc)) => RuleDisplayInfo(displayName, displayNameAscii, displayNameLong, conc, prem, "")
       case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")
     }
 
@@ -200,7 +200,6 @@ object ProofRuleMacro {
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
-          longDisplayName = $displayNameLong,
           unifier = $unifier,
           theExpr = $expr,
           displayLevel = $displayLevel,
@@ -214,7 +213,6 @@ object ProofRuleMacro {
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
-          longDisplayName = $displayNameLong,
           unifier = $unifier,
           theExpr = $expr,
           displayLevel = $displayLevel,

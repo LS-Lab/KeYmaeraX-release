@@ -497,7 +497,7 @@ object Helpers {
             di.display.name,
             di.codeName,
             di.display.nameAscii,
-            di.longDisplayName,
+            di.display.nameLong,
             ruleName,
             ApplicableAxiomsResponse(Nil, Map.empty, topLevel = true, pos)
               .derivationJson(di)

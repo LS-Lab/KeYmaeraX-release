@@ -117,24 +117,36 @@ object AnnotationCommon {
     import c.universe._
 
     displayInfo match {
-      case SimpleDisplayInfo(name, nameAscii) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SimpleDisplayInfo(
+      case SimpleDisplayInfo(name, nameAscii, nameLong) =>
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SimpleDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
+          nameLong = $nameLong,
         )"""
 
-      case RuleDisplayInfo(name, nameAscii, conclusion, premises, inputGenerator) =>
+      case RuleDisplayInfo(name, nameAscii, nameLong, conclusion, premises, inputGenerator) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
+          nameLong = $nameLong,
           conclusion = ${astForSequentDisplay(conclusion)},
           premises = ${premises.map(astForSequentDisplay)},
           inputGenerator = $inputGenerator,
         )"""
 
-      case TacticDisplayInfo(name, nameAscii, conclusion, premises, ctxConclusion, ctxPremises, inputGenerator) =>
-        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TacticDisplayInfo(
+      case TacticDisplayInfo(
+            name,
+            nameAscii,
+            nameLong,
+            conclusion,
+            premises,
+            ctxConclusion,
+            ctxPremises,
+            inputGenerator,
+          ) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TacticDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
+          nameLong = $nameLong,
           conclusion = ${astForSequentDisplay(conclusion)},
           premises = ${premises.map(astForSequentDisplay)},
           ctxConclusion = ${astForSequentDisplay(ctxConclusion)},
@@ -142,17 +154,19 @@ object AnnotationCommon {
           inputGenerator = $inputGenerator,
         )"""
 
-      case AxiomDisplayInfo(name, nameAscii, displayFormula) =>
+      case AxiomDisplayInfo(name, nameAscii, nameLong, displayFormula) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
+          nameLong = $nameLong,
           displayFormula = $displayFormula,
         )"""
 
-      case InputAxiomDisplayInfo(name, nameAscii, displayFormula, input) =>
+      case InputAxiomDisplayInfo(name, nameAscii, nameLong, displayFormula, input) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputAxiomDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
+          nameLong = $nameLong,
           displayFormula = $displayFormula,
           input = ${input.map(astForArgInfo)},
         )"""

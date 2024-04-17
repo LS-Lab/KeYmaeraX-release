@@ -289,22 +289,31 @@ object TacticMacro {
     val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
 
     val display = (inputs, args.premises, args.conclusion, args.contextPremises, args.contextConclusion) match {
-      case (Nil, "", "", _, _) => SimpleDisplayInfo(displayName, displayNameAscii)
+      case (Nil, "", "", _, _) => SimpleDisplayInfo(displayName, displayNameAscii, displayNameLong)
 
       case (Nil, "", concl, _, _) if concl != "" =>
-        AxiomDisplayInfo(displayName, displayNameAscii, renderDisplayFormula(concl))
+        AxiomDisplayInfo(displayName, displayNameAscii, displayNameLong, renderDisplayFormula(concl))
 
       case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty =>
-        InputAxiomDisplayInfo(displayName, displayNameAscii, concl, inputs)
+        InputAxiomDisplayInfo(displayName, displayNameAscii, displayNameLong, concl, inputs)
 
       case (_, prem, concl, "", "") if concl != "" && prem != "" =>
         val (prem, conc) = (parseSequents(args.premises)(c), parseSequent(args.conclusion)(c))
-        RuleDisplayInfo(displayName, displayNameAscii, conc, prem, args.inputGenerator)
+        RuleDisplayInfo(displayName, displayNameAscii, displayNameLong, conc, prem, args.inputGenerator)
 
       case (_, prem, concl, ctxPrem, ctxConcl) if concl != "" && prem != "" && ctxPrem != "" && ctxConcl != "" =>
         val (prem, conc) = (parseSequents(args.premises)(c), parseSequent(args.conclusion)(c))
         val (ctxPrem, ctxConc) = (parseSequents(args.contextPremises)(c), parseSequent(args.contextConclusion)(c))
-        TacticDisplayInfo(displayName, displayNameAscii, conc, prem, ctxConc, ctxPrem, args.inputGenerator)
+        TacticDisplayInfo(
+          displayName,
+          displayNameAscii,
+          displayNameLong,
+          conc,
+          prem,
+          ctxConc,
+          ctxPrem,
+          args.inputGenerator,
+        )
 
       case _ => c.abort(c.enclosingPosition, "@Tactic with premises or inputs must have a conclusion")
     }
@@ -548,7 +557,6 @@ object TacticMacro {
       case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PlainTacticInfo(
           codeName = $name,
-          longDisplayName = $displayNameLong,
           display = ${astForDisplayInfo(display)(c)},
           displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
@@ -559,7 +567,6 @@ object TacticMacro {
       case "InputTactic" | "StringInputTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTacticInfo(
           codeName = $name,
-          longDisplayName = $displayNameLong,
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
           displayLevel = ${Symbol(args.displayLevel)},
@@ -572,7 +579,6 @@ object TacticMacro {
           "CoreLeftTactic" | "CoreRightTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PositionTacticInfo(
           codeName = $name,
-          longDisplayName = $displayNameLong,
           display = ${astForDisplayInfo(display)(c)},
           displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
@@ -583,7 +589,6 @@ object TacticMacro {
       case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputPositionTacticInfo(
           codeName = $name,
-          longDisplayName = $displayNameLong,
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
           displayLevel = ${Symbol(args.displayLevel)},
@@ -595,7 +600,6 @@ object TacticMacro {
       case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.TwoPositionTacticInfo(
           codeName = $name,
-          longDisplayName = $displayNameLong,
           display = ${astForDisplayInfo(display)(c)},
           displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,
@@ -605,7 +609,6 @@ object TacticMacro {
       case "AppliedBuiltInTwoPositionTactic" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
           codeName = $name,
-          longDisplayName = $displayNameLong,
           display = ${astForDisplayInfo(display)(c)},
           displayLevel = ${Symbol(args.displayLevel)},
           needsGenerator = $needsGenerator,

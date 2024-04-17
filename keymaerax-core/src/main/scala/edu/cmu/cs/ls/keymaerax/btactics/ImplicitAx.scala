@@ -6,23 +6,22 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.{anon, inputanon}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.inputanon
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ODEToInterpreted}
+import edu.cmu.cs.ls.keymaerax.pt._
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.List
 import scala.reflect.runtime.universe
 
 /** Derives axioms from implicit (differential) definitions */
@@ -66,9 +65,8 @@ object ImplicitAx extends TacticProvider {
 
     val info = new DerivedAxiomInfo(
       name,
-      AxiomDisplayInfo(name, name, "__" + lhs + "__ = " + rhs),
+      AxiomDisplayInfo(name, name, name, "__" + lhs + "__ = " + rhs),
       codename,
-      name,
       Symbol("surlinear"),
       { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
       Symbol("internal"),
@@ -129,9 +127,8 @@ object ImplicitAx extends TacticProvider {
 
     val info = new DerivedAxiomInfo(
       name,
-      AxiomDisplayInfo(name, name, "__" + lhs + "__ = " + rhs),
+      AxiomDisplayInfo(name, name, name, "__" + lhs + "__ = " + rhs),
       codename,
-      name,
       Symbol("surlinear"),
       { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
       Symbol("internal"),
@@ -188,9 +185,8 @@ object ImplicitAx extends TacticProvider {
 
     val info = new DerivedAxiomInfo(
       name,
-      AxiomDisplayInfo(name, name, "__" + lhs + "__ <-> " + rhs),
+      AxiomDisplayInfo(name, name, name, "__" + lhs + "__ <-> " + rhs),
       codename,
-      name,
       Symbol("surlinear"),
       { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
       Symbol("internal"),

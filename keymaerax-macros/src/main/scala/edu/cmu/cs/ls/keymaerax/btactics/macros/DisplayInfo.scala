@@ -21,15 +21,19 @@ sealed trait DisplayInfo {
   /** ASCII-only version of [[name]]. */
   def nameAscii: String
   require(nameAscii.codePoints().allMatch(c => 0x20 <= c && c <= 0x7e), "nameAscii must only be printable ASCII")
+
+  /** Descriptive long name used in some menus in the user interface. Should be a short, grammatical English phrase. */
+  def nameLong: String
 }
 
 /** The bare minimum to classify as a [[DisplayInfo]]. */
-case class SimpleDisplayInfo(name: String, nameAscii: String) extends DisplayInfo
+case class SimpleDisplayInfo(name: String, nameAscii: String, nameLong: String) extends DisplayInfo
 
 /** Render a rule with a name as a conclusion and list of premises. */
 case class RuleDisplayInfo(
     name: String,
     nameAscii: String,
+    nameLong: String,
     conclusion: SequentDisplay,
     premises: List[SequentDisplay],
     inputGenerator: String,
@@ -42,6 +46,7 @@ case class RuleDisplayInfo(
 case class TacticDisplayInfo(
     name: String,
     nameAscii: String,
+    nameLong: String,
     conclusion: SequentDisplay,
     premises: List[SequentDisplay],
     ctxConclusion: SequentDisplay,
@@ -50,8 +55,14 @@ case class TacticDisplayInfo(
 ) extends DisplayInfo
 
 /** Render an axiom with a name as a UI string for the formula. */
-case class AxiomDisplayInfo(name: String, nameAscii: String, displayFormula: String) extends DisplayInfo
+case class AxiomDisplayInfo(name: String, nameAscii: String, nameLong: String, displayFormula: String)
+    extends DisplayInfo
 
 /** Render an axiom that has a name and a UI string formula but needs a list of inputs filled in first. */
-case class InputAxiomDisplayInfo(name: String, nameAscii: String, displayFormula: String, input: List[ArgInfo])
-    extends DisplayInfo
+case class InputAxiomDisplayInfo(
+    name: String,
+    nameAscii: String,
+    nameLong: String,
+    displayFormula: String,
+    input: List[ArgInfo],
+) extends DisplayInfo
