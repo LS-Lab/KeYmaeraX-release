@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   astForDisplayInfo,
+  astForDisplayLevel,
   parseAIs,
   parsePos,
   parsePoses,
@@ -224,13 +225,6 @@ object AxiomMacro {
       case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
     }
 
-    val displayLevel = args.displayLevel match {
-      case DisplayLevelInternal => Symbol("internal")
-      case DisplayLevelBrowse => Symbol("browse")
-      case DisplayLevelMenu => Symbol("menu")
-      case DisplayLevelAll => Symbol("all")
-    }
-
     val (infoType, info) =
       if (isCore) (
         tq"edu.cmu.cs.ls.keymaerax.btactics.macros.CoreAxiomInfo",
@@ -239,7 +233,7 @@ object AxiomMacro {
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           unifier = $unifier,
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
           theExpr = $expr,
@@ -252,7 +246,7 @@ object AxiomMacro {
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           unifier = $unifier,
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
           theExpr = $expr,

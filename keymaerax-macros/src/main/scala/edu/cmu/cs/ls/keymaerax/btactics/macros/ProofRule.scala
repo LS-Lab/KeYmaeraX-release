@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   astForDisplayInfo,
+  astForDisplayLevel,
   parsePos,
   parsePoses,
   parseSequent,
@@ -193,13 +194,6 @@ object ProofRuleMacro {
       case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)
     }
 
-    val displayLevel = args.displayLevel match {
-      case DisplayLevelInternal => Symbol("internal")
-      case DisplayLevelBrowse => Symbol("browse")
-      case DisplayLevelMenu => Symbol("menu")
-      case DisplayLevelAll => Symbol("all")
-    }
-
     val (infoType, info) =
       if (isCore) (
         tq"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomaticRuleInfo",
@@ -209,7 +203,7 @@ object ProofRuleMacro {
           codeName = $name,
           unifier = $unifier,
           theExpr = $expr,
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
         )""",
@@ -222,7 +216,7 @@ object ProofRuleMacro {
           codeName = $name,
           unifier = $unifier,
           theExpr = $expr,
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           theKey = $key,
           theRecursor = $recursor,
         )""",

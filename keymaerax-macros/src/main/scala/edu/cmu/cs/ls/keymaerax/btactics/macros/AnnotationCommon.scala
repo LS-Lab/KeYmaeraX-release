@@ -107,6 +107,16 @@ object AnnotationCommon {
     }
   }
 
+  def astForDisplayLevel(level: DisplayLevel)(implicit c: blackbox.Context): c.universe.Tree = {
+    import c.universe._
+    level match {
+      case DisplayLevelInternal => q"edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelInternal"
+      case DisplayLevelBrowse => q"edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelBrowse"
+      case DisplayLevelMenu => q"edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelMenu"
+      case DisplayLevelAll => q"edu.cmu.cs.ls.keymaerax.btactics.macros.DisplayLevelAll"
+    }
+  }
+
   def astForSequentDisplay(sequentDisplay: SequentDisplay)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     val SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean) = sequentDisplay

@@ -69,7 +69,7 @@ object ImplicitAx extends TacticProvider {
       codename,
       Symbol("surlinear"),
       { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      Symbol("internal"),
+      DisplayLevelInternal,
       List(0),
       List(List(1)),
     )
@@ -131,7 +131,7 @@ object ImplicitAx extends TacticProvider {
       codename,
       Symbol("surlinear"),
       { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      Symbol("internal"),
+      DisplayLevelInternal,
       List(0),
       List(List(1)),
     )
@@ -189,7 +189,7 @@ object ImplicitAx extends TacticProvider {
       codename,
       Symbol("surlinear"),
       { case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
-      Symbol("internal"),
+      DisplayLevelInternal,
       List(0),
       List(List(1)),
     )

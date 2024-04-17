@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.macros
 import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   astForArgInfo,
   astForDisplayInfo,
+  astForDisplayLevel,
   parseAIs,
   parseSequent,
   parseSequents,
@@ -561,19 +562,12 @@ object TacticMacro {
 
     val expr = q"((_: Unit) => ($curriedTerm))"
 
-    val displayLevel = args.displayLevel match {
-      case DisplayLevelInternal => Symbol("internal")
-      case DisplayLevelBrowse => Symbol("browse")
-      case DisplayLevelMenu => Symbol("menu")
-      case DisplayLevelAll => Symbol("all")
-    }
-
     val info = returnType match {
       case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => q"""
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PlainTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -584,7 +578,7 @@ object TacticMacro {
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -595,7 +589,7 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.PositionTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -606,7 +600,7 @@ object TacticMacro {
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
         )(theExpr = $expr)
@@ -616,7 +610,7 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.TwoPositionTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)
       """
@@ -625,7 +619,7 @@ object TacticMacro {
         new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
           codeName = $name,
           display = ${astForDisplayInfo(display)(c)},
-          displayLevel = $displayLevel,
+          displayLevel = ${astForDisplayLevel(args.displayLevel)(c)},
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)
       """
