@@ -111,13 +111,8 @@ case class TacticDisplayInfo(
 ) extends DisplayInfo
 
 /** Render an axiom with a name as a UI string for the formula. */
-case class AxiomDisplayInfo(
-    name: String,
-    nameAscii: String,
-    nameLong: String,
-    level: DisplayLevel,
-    displayFormula: String,
-) extends DisplayInfo
+case class AxiomDisplayInfo(name: String, nameAscii: String, nameLong: String, level: DisplayLevel, formula: String)
+    extends DisplayInfo
 
 /** Render an axiom that has a name and a UI string formula but needs a list of inputs filled in first. */
 case class InputAxiomDisplayInfo(
@@ -125,6 +120,6 @@ case class InputAxiomDisplayInfo(
     nameAscii: String,
     nameLong: String,
     level: DisplayLevel,
-    displayFormula: String,
+    formula: String,
     input: List[ArgInfo],
 ) extends DisplayInfo

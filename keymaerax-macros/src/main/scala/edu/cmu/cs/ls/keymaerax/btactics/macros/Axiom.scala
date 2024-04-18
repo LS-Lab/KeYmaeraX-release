@@ -218,7 +218,7 @@ object AxiomMacro {
           nameAscii = displayNameAscii,
           nameLong = displayNameLong,
           level = args.displayLevel,
-          displayFormula = renderDisplayFormula(fml),
+          formula = renderDisplayFormula(fml),
         )
 
       case (fml, input) => InputAxiomDisplayInfo(
@@ -226,7 +226,7 @@ object AxiomMacro {
           nameAscii = displayNameAscii,
           nameLong = displayNameLong,
           level = args.displayLevel,
-          displayFormula = fml,
+          formula = fml,
           input = input,
         )
     }

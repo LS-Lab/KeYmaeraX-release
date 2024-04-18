@@ -24,7 +24,7 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
         },
         "displayInfo" ->
           (i.display match {
-            case di: AxiomDisplayInfo => JsString(di.displayFormula)
+            case di: AxiomDisplayInfo => JsString(di.formula)
             case _ => JsNull
           }),
         "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(i),

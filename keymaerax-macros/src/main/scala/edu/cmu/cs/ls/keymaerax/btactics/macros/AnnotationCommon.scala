@@ -155,22 +155,22 @@ object AnnotationCommon {
           inputGenerator = $inputGenerator,
         )"""
 
-      case AxiomDisplayInfo(name, nameAscii, nameLong, level, displayFormula) =>
+      case AxiomDisplayInfo(name, nameAscii, nameLong, level, formula) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
           nameLong = $nameLong,
           level = ${astForDisplayLevel(level)},
-          displayFormula = $displayFormula,
+          formula = $formula,
         )"""
 
-      case InputAxiomDisplayInfo(name, nameAscii, nameLong, level, displayFormula, input) =>
+      case InputAxiomDisplayInfo(name, nameAscii, nameLong, level, formula, input) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputAxiomDisplayInfo(
           name = $name,
           nameAscii = $nameAscii,
           nameLong = $nameLong,
           level = ${astForDisplayLevel(level)},
-          displayFormula = $displayFormula,
+          formula = $formula,
           input = ${input.map(astForArgInfo)},
         )"""
     }

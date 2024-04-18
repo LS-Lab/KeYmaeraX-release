@@ -64,8 +64,8 @@ case class ApplicableAxiomsResponse(
 
   def axiomJson(info: DerivationInfo): JsObject = {
     val formulaText = (info, info.display) match {
-      case (_, di: AxiomDisplayInfo) => di.displayFormula
-      case (_, di: InputAxiomDisplayInfo) => di.displayFormula
+      case (_, di: AxiomDisplayInfo) => di.formula
+      case (_, di: InputAxiomDisplayInfo) => di.formula
       case (info: AxiomInfo, _) => info.formula.prettyString
     }
     JsObject(

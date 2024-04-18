@@ -316,7 +316,7 @@ object TacticMacro {
           nameAscii = displayNameAscii,
           nameLong = displayNameLong,
           level = args.displayLevel,
-          displayFormula = renderDisplayFormula(concl),
+          formula = renderDisplayFormula(concl),
         )
 
       case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty =>
@@ -325,7 +325,7 @@ object TacticMacro {
           nameAscii = displayNameAscii,
           nameLong = displayNameLong,
           level = args.displayLevel,
-          displayFormula = concl,
+          formula = concl,
           input = inputs,
         )
 
@@ -585,7 +585,7 @@ object TacticMacro {
 
         val shouldMentionInputButDoesnt = display match {
           case _: AxiomDisplayInfo | _: SimpleDisplayInfo => true
-          case d: InputAxiomDisplayInfo => !d.displayFormula.contains(name)
+          case d: InputAxiomDisplayInfo => !d.formula.contains(name)
           case d: RuleDisplayInfo => !(sdContains(d.conclusion, name) || d.premises.exists(sd => sdContains(sd, name)))
         }
 
