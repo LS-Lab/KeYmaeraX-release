@@ -120,7 +120,7 @@ class Tactic(
     val needsGenerator: Boolean = false,
     val revealInternalSteps: Boolean = false,
     val inputs: String = "",
-    val inputGenerator: String = "",
+    val inputGenerator: Option[String] = None,
 ) extends StaticAnnotation {
   // Magic incantation, see https://docs.scala-lang.org/overviews/macros/annotations.html
   def macroTransform(annottees: Any*): Any = macro TacticMacro.impl
@@ -140,7 +140,7 @@ case class TacticArgs(
     needsGenerator: Boolean = false,
     revealInternalSteps: Boolean = false,
     inputs: String = "",
-    inputGenerator: String = "",
+    inputGenerator: Option[String] = None,
 )
 
 object TacticMacro {

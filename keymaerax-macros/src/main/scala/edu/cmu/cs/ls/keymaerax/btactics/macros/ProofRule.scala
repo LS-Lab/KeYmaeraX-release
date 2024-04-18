@@ -184,7 +184,7 @@ object ProofRuleMacro {
           level = args.displayLevel,
           conclusion = conc,
           premises = prem,
-          inputGenerator = "",
+          inputGenerator = None,
         )
 
       case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")

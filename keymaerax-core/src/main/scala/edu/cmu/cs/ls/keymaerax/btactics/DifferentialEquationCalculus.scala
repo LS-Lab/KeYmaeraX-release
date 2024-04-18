@@ -177,7 +177,7 @@ trait DifferentialEquationCalculus {
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( [x'=f(x) & Q∧R]P ), Δ ;; Γ |- C( [x'=f(x) & Q]R ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
-    inputGenerator = "pegasusCandidates",
+    inputGenerator = Some("pegasusCandidates"),
     revealInternalSteps = true,
   )
   def dC(R: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>

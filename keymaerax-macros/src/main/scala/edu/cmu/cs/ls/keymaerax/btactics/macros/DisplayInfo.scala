@@ -91,7 +91,7 @@ case class RuleDisplayInfo(
     level: DisplayLevel,
     conclusion: DisplaySequent,
     premises: List[DisplaySequent],
-    inputGenerator: String,
+    inputGenerator: Option[String],
 ) extends DisplayInfo
 
 /**
@@ -107,7 +107,7 @@ case class TacticDisplayInfo(
     premises: List[DisplaySequent],
     ctxConclusion: DisplaySequent,
     ctxPremises: List[DisplaySequent],
-    inputGenerator: String,
+    inputGenerator: Option[String],
 ) extends DisplayInfo
 
 /** Render an axiom with a name as a UI string for the formula. */
