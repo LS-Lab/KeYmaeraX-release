@@ -77,8 +77,8 @@ private object ProofRuleTactics extends TacticProvider with Logging {
   @Tactic(
     name = "uniformRename",
     displayName = Some("UR"),
-    premises = "P(y) |- Q(y)",
-    conclusion = "P(x) |- Q(x)",
+    displayPremises = "P(y) |- Q(y)",
+    displayConclusion = "P(x) |- Q(x)",
     inputs = "x:variable ;; y:variable",
   )
   def uniformRename(what: Variable, repl: Variable): InputTactic = inputanon { uniformRenameFw(what, repl) }
@@ -111,8 +111,8 @@ private object ProofRuleTactics extends TacticProvider with Logging {
   @Tactic(
     name = "boundRename",
     displayName = Some("BR"),
-    premises = "Γ |- ∀y Q(y), Δ",
-    conclusion = "Γ |- ∀x Q(x), Δ",
+    displayPremises = "Γ |- ∀y Q(y), Δ",
+    displayConclusion = "Γ |- ∀x Q(x), Δ",
     inputs = "x:variable;;y:variable",
   )
   def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic =
@@ -151,8 +151,8 @@ private object ProofRuleTactics extends TacticProvider with Logging {
     name = "boundRenameAt",
     displayName = Some("BRat"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- ∀y Q(y), Δ",
-    conclusion = "Γ |- ∀x Q(x), Δ",
+    displayPremises = "Γ |- ∀y Q(y), Δ",
+    displayConclusion = "Γ |- ∀x Q(x), Δ",
     inputs = "y:variable",
   )
   def boundRenameAt(repl: Variable): DependentPositionWithAppliedInputTactic =
@@ -241,7 +241,7 @@ private object ProofRuleTactics extends TacticProvider with Logging {
    *   if the quantified variable that is to be Skolemized already occurs free in the sequent. Use [[BoundRenaming]] to
    *   resolve.
    */
-  @Tactic(name = "skolem", premises = "Γ |- p(x), Δ", conclusion = "Γ |- ∀x p(x), Δ")
+  @Tactic(name = "skolem", displayPremises = "Γ |- p(x), Δ", displayConclusion = "Γ |- ∀x p(x), Δ")
   val skolemizeR: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
     {
       require(pos.isTopLevel, "Skolemization only at top-level")

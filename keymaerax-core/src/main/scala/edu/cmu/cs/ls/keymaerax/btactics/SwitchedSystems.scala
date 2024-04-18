@@ -564,8 +564,8 @@ object SwitchedSystems extends TacticProvider {
     name = "stabilityCLF",
     displayNameLong = Some("Stability by Common Lyapunov Function"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<=0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0)",
-    conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
+    displayPremises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<=0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0)",
+    displayConclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
   )
   def proveStabilityCLF(V: Option[Term]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) => {
@@ -702,8 +702,8 @@ object SwitchedSystems extends TacticProvider {
     name = "attractivityCLF",
     displayNameLong = Some("Attractivity by Common Lyapunov Function"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0) ∧ RUB(V)",
-    conclusion =
+    displayPremises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0) ∧ RUB(V)",
+    displayConclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
   )
   def proveAttractivityCLF(V: Option[Term]): DependentPositionWithAppliedInputTactic =
@@ -986,8 +986,9 @@ object SwitchedSystems extends TacticProvider {
     name = "stabilityStateMLF",
     displayNameLong = Some("Stability for State-dependent Switching by Multiple Lyapunov Functions"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<=0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0)",
-    conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ a; x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
+    displayPremises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<=0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0)",
+    displayConclusion =
+      "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ a; x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
   )
   def proveStabilityStateMLF(Vp: List[Term]): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) => {
@@ -1258,8 +1259,8 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "stabilityTimeMLF",
     displayNameLong = Some("Time-based Stability by Multiple Lyapunov Functions"),
-    premises = "Γ |- Vp' <= Lp*Vp",
-    conclusion =
+    displayPremises = "Γ |- Vp' <= Lp*Vp",
+    displayConclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
   )
   def proveStabilityTimeMLF(Vp: List[Term], Lp: List[Formula]): DependentPositionWithAppliedInputTactic =
@@ -1571,8 +1572,9 @@ object SwitchedSystems extends TacticProvider {
     name = "attractivityStateMLF",
     displayNameLong = Some("Attractivity for State-dependent Switching by Multiple Lyapunov Functions"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0) ∧ RUB(Vp)",
-    conclusion =
+    displayPremises =
+      "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0) ∧ RUB(Vp)",
+    displayConclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
   )
   def proveAttractivityStateMLF(Vp: List[Term]): DependentPositionWithAppliedInputTactic =
@@ -1997,8 +1999,8 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "attractivityTimeMLF",
     displayNameLong = Some("Time-based Attractivity by Multiple Lyapunov Functions"),
-    premises = "Γ |- Vp' <= Lp*Vp, rate > 0",
-    conclusion =
+    displayPremises = "Γ |- Vp' <= Lp*Vp, rate > 0",
+    displayConclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
   )
   def proveAttractivityTimeMLF(Vp: List[Term], Lp: List[Formula], rate: Term): DependentPositionWithAppliedInputTactic =

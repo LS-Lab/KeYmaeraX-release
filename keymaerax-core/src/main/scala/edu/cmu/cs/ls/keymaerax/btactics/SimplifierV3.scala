@@ -1103,8 +1103,8 @@ object SimplifierV3 extends TacticProvider {
     name = "simplify",
     displayName = Some("Simplify"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- simplify(P), Δ",
-    conclusion = "Γ |- P, Δ",
+    displayPremises = "Γ |- simplify(P), Δ",
+    displayConclusion = "Γ |- P, Δ",
   )
   val simplify: BuiltInPositionTactic = simpTac()
 
@@ -1199,8 +1199,8 @@ object SimplifierV3 extends TacticProvider {
     name = "fullSimplify",
     displayName = Some("Full Simplify"),
     displayLevel = DisplayLevelBrowse,
-    premises = "simplify(Γ |- P, Δ)",
-    conclusion = "Γ |- P, Δ",
+    displayPremises = "simplify(Γ |- P, Δ)",
+    displayConclusion = "Γ |- P, Δ",
   )
   val fullSimplify: BuiltInTactic = fullSimpTac()
 

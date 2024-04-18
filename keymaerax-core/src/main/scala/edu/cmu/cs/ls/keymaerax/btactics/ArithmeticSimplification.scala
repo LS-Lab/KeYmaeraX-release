@@ -49,9 +49,8 @@ object ArithmeticSimplification extends TacticProvider {
     name = "smartHide",
     displayName = Some("Smart Hide"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ<sub>hide</sub> |- Δ",
-//     smartHide -------------------------
-    conclusion = "Γ |- Δ",
+    displayPremises = "Γ<sub>hide</sub> |- Δ",
+    displayConclusion = "Γ |- Δ",
   )
   lazy val smartHide: BuiltInTactic = anon((p: ProvableSig) => {
     assert(
@@ -127,9 +126,8 @@ object ArithmeticSimplification extends TacticProvider {
     name = "hideFactsAbout",
     displayName = Some("Hide Facts"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- Δ",
-    //    transformEquality(equality f=g) -----------
-    conclusion = "Γ, P(xs) |- Q(xs), Δ",
+    displayPremises = "Γ |- Δ",
+    displayConclusion = "Γ, P(xs) |- Q(xs), Δ",
   )
   def hideFactsAbout(xs: List[Variable]): InputTactic = inputanon((sequent: Sequent) => {
     val irrelevantSet = xs.toSet
@@ -162,9 +160,8 @@ object ArithmeticSimplification extends TacticProvider {
     name = "keepFactsAbout",
     displayName = Some("Keep Facts"),
     displayLevel = DisplayLevelBrowse,
-    premises = "P(xs) |- Q(xs)",
-    //    transformEquality(equality f=g) -----------
-    conclusion = "Γ(!xs), P(xs) |- Q(xs), Δ(!xs)",
+    displayPremises = "P(xs) |- Q(xs)",
+    displayConclusion = "Γ(!xs), P(xs) |- Q(xs), Δ(!xs)",
   )
   def keepFactsAbout(xs: List[Variable]): InputTactic = inputanon((sequent: Sequent) => {
     val relevantSet = xs.toSet
@@ -199,9 +196,8 @@ object ArithmeticSimplification extends TacticProvider {
     name = "transformEquality",
     displayName = Some("Transform Equality"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- equality ;; Γ |- P(equalityRHS) Δ",
-    //    transformEquality(equality f=g) -----------
-    conclusion = "Γ |- P(equalityLHS), Δ",
+    displayPremises = "Γ |- equality ;; Γ |- P(equalityRHS) Δ",
+    displayConclusion = "Γ |- P(equalityLHS), Δ",
   )
   def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, seq: Sequent) =>

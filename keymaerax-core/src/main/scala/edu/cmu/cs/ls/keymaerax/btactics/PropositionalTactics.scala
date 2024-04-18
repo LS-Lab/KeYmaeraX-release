@@ -554,8 +554,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
    */
   @Tactic(
     name = "equivRewriting",
-    conclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ",
-    premises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ",
+    displayPremises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ",
+    displayConclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ",
   )
   val equivRewriting: BuiltInTwoPositionTactic = anon((p: ProvableSig, equivPos: Position, targetPos: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")

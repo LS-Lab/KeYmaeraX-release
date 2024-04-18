@@ -55,7 +55,7 @@ import scala.reflect.runtime.{universe => ru}
  *     name = "choiceb",
  *     displayName = Some("[∪]"),
  *     displayNameAscii = Some("[++]"),
- *     conclusion = "__[a∪b]P__↔[a]P∧[b]P",
+ *     displayConclusion = "__[a∪b]P__↔[a]P∧[b]P",
  *     key = "0",
  *     recursor = "0;1",
  *     unifier = UnifierSurjectiveLinear,
@@ -67,7 +67,7 @@ import scala.reflect.runtime.{universe => ru}
  * {{{
  *   @Axiom(
  *     name = "V",
- *     conclusion = "p→__[a]p__",
+ *     displayConclusion = "p→__[a]p__",
  *     key = "1",
  *     recursor = "*",
  *   )
@@ -83,8 +83,8 @@ import scala.reflect.runtime.{universe => ru}
  *   @ProofRule(
  *     name = "monb",
  *     displayName = Some("M[]"),
- *     conclusion = "[a;]P |- [a;]Q",
- *     premises = "P |- Q",
+ *     displayPremises = "P |- Q",
+ *     displayConclusion = "[a;]P |- [a;]Q",
  *   )
  *   lazy val monb = derivedRuleSequent("M[]",
  *     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
@@ -371,7 +371,12 @@ object Ax extends Logging {
   @ProofRule(name = "mondrule")
   val mondrule: AxiomaticRuleInfo = coreRule("<> monotone")
 
-  @ProofRule(name = "FPrule", displayLevel = DisplayLevelBrowse, conclusion = "<a*>P |- Q", premises = "P | <a>Q |- Q")
+  @ProofRule(
+    name = "FPrule",
+    displayLevel = DisplayLevelBrowse,
+    displayPremises = "P | <a>Q |- Q",
+    displayConclusion = "<a*>P |- Q",
+  )
   val FPrule: AxiomaticRuleInfo = coreRule("FP fixpoint")
 
   @ProofRule(name = "conrule")
@@ -389,7 +394,7 @@ object Ax extends Logging {
     displayName = Some("<·>"),
     displayNameAscii = Some("<.>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__&not;[a]&not;P__↔&langle;a&rangle;P",
+    displayConclusion = "__&not;[a]&not;P__↔&langle;a&rangle;P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -400,7 +405,7 @@ object Ax extends Logging {
     name = "assignbAxiom",
     displayName = Some("[:=]"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[x:=e]p(x)__↔p(e)",
+    displayConclusion = "__[x:=e]p(x)__↔p(e)",
     key = "0",
     recursor = "*",
     unifier = UnifierFull,
@@ -411,20 +416,20 @@ object Ax extends Logging {
     name = "assignbeq",
     displayName = Some("[:=]="),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[x:=e]P__↔∀x(x=e→P)",
+    displayConclusion = "__[x:=e]P__↔∀x(x=e→P)",
     key = "0",
     recursor = "0.1;*",
     unifier = UnifierSurjectiveLinearPretend,
   )
   val assignbeq: CoreAxiomInfo = coreAxiom("[:=] assign equality")
 
-  @Axiom(name = "selfassignb", displayName = Some("[:=]"), conclusion = "__[x:=x]P__↔P")
+  @Axiom(name = "selfassignb", displayName = Some("[:=]"), displayConclusion = "__[x:=x]P__↔P")
   val selfassignb: CoreAxiomInfo = coreAxiom("[:=] self assign")
 
   @Axiom(
     name = "Dassignb",
     displayName = Some("[:=]"),
-    conclusion = "__[x':=c]p(x')__↔p(c)",
+    displayConclusion = "__[x':=c]p(x')__↔p(c)",
     key = "0",
     recursor = "*",
     unifier = UnifierFull,
@@ -435,21 +440,21 @@ object Ax extends Logging {
     name = "Dassignbeq",
     displayName = Some("[:=]="),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[x':=e]P__↔∀x'(x'=e→P)",
+    displayConclusion = "__[x':=e]P__↔∀x'(x'=e→P)",
     key = "0",
     recursor = "0.1;*",
     unifier = UnifierSurjectiveLinearPretend,
   )
   val Dassignbeq: CoreAxiomInfo = coreAxiom("[':=] assign equality")
 
-  @Axiom(name = "Dselfassignb", displayName = Some("[':=]"), conclusion = "__[x':=x']P__↔P")
+  @Axiom(name = "Dselfassignb", displayName = Some("[':=]"), displayConclusion = "__[x':=x']P__↔P")
   val Dselfassignb: CoreAxiomInfo = coreAxiom("[':=] self assign")
 
   @Axiom(
     name = "randomb",
     displayName = Some("[:*]"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[x:=*]P__↔∀x P",
+    displayConclusion = "__[x:=*]P__↔∀x P",
     key = "0",
     recursor = "0;*",
     unifier = UnifierSurjectiveLinear,
@@ -460,7 +465,7 @@ object Ax extends Logging {
     name = "testb",
     displayName = Some("[?]"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[?Q]P__↔(Q→P)",
+    displayConclusion = "__[?Q]P__↔(Q→P)",
     key = "0",
     recursor = "1",
     unifier = UnifierSurjectiveLinear,
@@ -472,7 +477,7 @@ object Ax extends Logging {
     displayName = Some("[∪]"),
     displayNameAscii = Some("[++]"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a∪b]P__↔[a]P∧[b]P",
+    displayConclusion = "__[a∪b]P__↔[a]P∧[b]P",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -483,7 +488,7 @@ object Ax extends Logging {
     name = "composeb",
     displayName = Some("[;]"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a;b]P__↔[a][b]P",
+    displayConclusion = "__[a;b]P__↔[a][b]P",
     key = "0",
     recursor = "1;*",
     unifier = UnifierSurjectiveLinear,
@@ -494,7 +499,7 @@ object Ax extends Logging {
     name = "iterateb",
     displayName = Some("[*]"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a*]P__↔P∧[a][a*]P",
+    displayConclusion = "__[a*]P__↔P∧[a][a*]P",
     key = "0",
     recursor = "1",
     unifier = UnifierSurjectiveLinear,
@@ -505,7 +510,7 @@ object Ax extends Logging {
     name = "barcan",
     displayName = Some("B Barcan"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a]∀x p(x)__ ↔∀x[a]p(x)  (x∉a)",
+    displayConclusion = "__[a]∀x p(x)__ ↔∀x[a]p(x)  (x∉a)",
     key = "0",
     recursor = "0",
     unifier = UnifierSurjectiveLinear,
@@ -519,7 +524,7 @@ object Ax extends Logging {
     name = "DWbase",
     displayName = Some("DW base"),
     displayLevel = DisplayLevelInternal,
-    conclusion = "__[{x'=f(x)&Q}]Q__",
+    displayConclusion = "__[{x'=f(x)&Q}]Q__",
     key = "",
     recursor = "",
     unifier = UnifierSurjectiveLinear,
@@ -529,7 +534,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DE",
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P",
+    displayConclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P",
     key = "0",
     recursor = "1;*",
     unifier = UnifierSurjectiveLinear,
@@ -540,7 +545,7 @@ object Ax extends Logging {
     name = "DEs",
     displayName = Some("DE"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P",
+    displayConclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P",
     key = "0",
     recursor = "1;*",
     unifier = UnifierSurjectiveLinear,
@@ -552,7 +557,7 @@ object Ax extends Logging {
     name = "DIequiv",
     displayName = Some("DI"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')",
+    displayConclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')",
     key = "1.0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -563,7 +568,7 @@ object Ax extends Logging {
     name = "DGa",
     displayName = Some("DG"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P",
+    displayConclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = UnifierSurjectiveLinear,
@@ -574,7 +579,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DGpp",
     displayName = Some("DG inverse differential ghost"),
-    conclusion = "__[{x'=f(x)&Q}]P__↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
+    displayConclusion = "__[{x'=f(x)&Q}]P__↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = UnifierSurjectiveLinear,
@@ -585,7 +590,7 @@ object Ax extends Logging {
     name = "DGi",
     displayName = Some("DG inverse differential ghost implicational"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P",
+    displayConclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = UnifierSurjectiveLinear,
@@ -595,7 +600,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DGC",
     displayName = Some("DG"),
-    conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=g()&Q}]P",
+    displayConclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=g()&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = UnifierSurjectiveLinear,
@@ -605,7 +610,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DGCa",
     displayName = Some("DGa"),
-    conclusion = "__[{x'=f(x)&Q}]P__↔∀y [{x'=f(x),y'=g()&Q}]P",
+    displayConclusion = "__[{x'=f(x)&Q}]P__↔∀y [{x'=f(x),y'=g()&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = UnifierSurjectiveLinear,
@@ -616,7 +621,7 @@ object Ax extends Logging {
     name = "DS",
     displayName = Some("DS&"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
+    displayConclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
     key = "0",
     recursor = "0.1.1;0.1;*",
     unifier = UnifierSurjectiveLinearPretend,
@@ -636,7 +641,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dcomp",
     displayLevel = DisplayLevelBrowse,
-    conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P",
+    displayConclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P",
     unifier = UnifierLinear,
   )
   val Dcomp: CoreAxiomInfo = coreAxiom("D[;] differential self compose")
@@ -644,17 +649,17 @@ object Ax extends Logging {
   @Axiom(
     name = "DIogreater",
     displayName = Some("DIo >"),
-    unifier = UnifierLinear,
-    conclusion = "(__[{x'=f(x)&Q}]g(x)>h(x)__↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
+    displayConclusion = "(__[{x'=f(x)&Q}]g(x)>h(x)__↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0",
     recursor = "*",
+    unifier = UnifierLinear,
   )
   val DIogreater: CoreAxiomInfo = coreAxiom("DIo open differential invariance >")
 
   @Axiom(
     name = "DMP",
     displayLevel = DisplayLevelBrowse,
-    conclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)",
+    displayConclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)",
     inputs = "R:formula",
     key = "1.1", /*@todo, recursor = (0::Nil)::(Nil)::Nil*/
   )
@@ -663,7 +668,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Uniq",
     displayLevel = DisplayLevelBrowse,
-    conclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__",
+    displayConclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__",
     key = "1",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -674,7 +679,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Cont",
     displayLevel = DisplayLevelBrowse,
-    conclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__",
+    displayConclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__",
     key = "1",
     recursor = "*",
   )
@@ -684,7 +689,8 @@ object Ax extends Logging {
     name = "RIclosedgeq",
     displayName = Some("RI& >="),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)",
+    displayConclusion =
+      "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)",
     key = "0",
     recursor = "1.1.1;1.1.0;1;0",
   )
@@ -693,7 +699,7 @@ object Ax extends Logging {
   @Axiom(
     name = "RI",
     displayName = Some("RI&"),
-    conclusion =
+    displayConclusion =
       "__[x'=f(x)&Q]P__ ↔ ∀s [t'=1,x'=f(x)&Q&(P|t=s)](t=s -> P & (<t'=1,x'=f(x)&(Q|t=s)>t!=s -> <t'=1,x'=f(x)&(P|t=s)>t!=s))",
     key = "0",
     recursor = "*",
@@ -702,7 +708,7 @@ object Ax extends Logging {
 
   @Axiom(
     name = "IVT",
-    conclusion =
+    displayConclusion =
       "<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z&p(t,x))→t<=z→<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t=z∧<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z∧p(t,x))",
     unifier = UnifierFull,
   )
@@ -711,7 +717,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DCC",
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)",
+    displayConclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)",
     key = "1",
     recursor = "0",
     unifier = UnifierLinear,
@@ -723,7 +729,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dconst",
     displayName = Some("c()'"),
-    conclusion = "__(c)'__=0",
+    displayConclusion = "__(c)'__=0",
     unifier = UnifierLinear,
     key = "0",
     recursor = "",
@@ -733,7 +739,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DvarAxiom",
     displayName = Some("x'"),
-    conclusion = "__(x)'__=x'",
+    displayConclusion = "__(x)'__=x'",
     unifier = UnifierLinear,
     key = "0",
     recursor = "",
@@ -744,7 +750,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dneg",
     displayName = Some("-'"),
-    conclusion = "__(-f(x))'__=-(f(x))'",
+    displayConclusion = "__(-f(x))'__=-(f(x))'",
     key = "0",
     recursor = "0",
     unifier = UnifierSurjectiveLinear,
@@ -754,7 +760,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dplus",
     displayName = Some("+'"),
-    conclusion = "__(f(x)+g(x))'__=f(x)'+g(x)'",
+    displayConclusion = "__(f(x)+g(x))'__=f(x)'+g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -765,7 +771,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dminus",
     displayName = Some("-'"),
-    conclusion = "__(f(x)-g(x))'__=f(x)'-g(x)'",
+    displayConclusion = "__(f(x)-g(x))'__=f(x)'-g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -776,7 +782,7 @@ object Ax extends Logging {
     name = "Dtimes",
     displayName = Some("·'"),
     displayNameAscii = Some("*'"),
-    conclusion = "__(f(x)·g(x))'__=(f(x))'·g(x)+f(x)·(g(x))'",
+    displayConclusion = "__(f(x)·g(x))'__=(f(x))'·g(x)+f(x)·(g(x))'",
     key = "0",
     recursor = "0.0;1.1",
     unifier = UnifierSurjectiveLinear,
@@ -786,7 +792,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dquotient",
     displayName = Some("/'"),
-    conclusion = "__(f(g)/g(x))'__=(g(x)·(f(x))-f(x)·(g(x))')/g(x)<sup>2</sup>",
+    displayConclusion = "__(f(g)/g(x))'__=(g(x)·(f(x))-f(x)·(g(x))')/g(x)<sup>2</sup>",
     key = "0",
     recursor = "0.0.0;0.1.1",
     unifier = UnifierSurjectiveLinear,
@@ -797,7 +803,7 @@ object Ax extends Logging {
     name = "Dcompose",
     displayName = Some("∘'"),
     displayNameAscii = Some("o'"),
-    conclusion = "[y:=g(x)][y':=1](__(f(g(x)))'__=(f(y))'·(g(x))'",
+    displayConclusion = "[y:=g(x)][y':=1](__(f(g(x)))'__=(f(y))'·(g(x))'",
     key = "1.1.0",
     recursor = "1.1;1;*",
   )
@@ -806,7 +812,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dpower",
     displayName = Some("^'"),
-    conclusion = "__(f(g)^n)'__=n·f(g)^(n-1)·(f(g))'←n≠0",
+    displayConclusion = "__(f(g)^n)'__=n·f(g)^(n-1)·(f(g))'←n≠0",
     unifier = UnifierLinear,
     key = "1.0",
     recursor = "1",
@@ -817,7 +823,7 @@ object Ax extends Logging {
     name = "Dgreaterequal",
     displayNameAscii = Some(">='"),
     displayName = Some("≥'"),
-    conclusion = "__(f(x)≥g(x))'__↔f(x)'≥g(x)'",
+    displayConclusion = "__(f(x)≥g(x))'__↔f(x)'≥g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -827,7 +833,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dgreater",
     displayName = Some(">'"),
-    conclusion = "__(f(x)>g(x))'__↔f(x)'≥g(x)'",
+    displayConclusion = "__(f(x)>g(x))'__↔f(x)'≥g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -838,7 +844,7 @@ object Ax extends Logging {
     name = "Dand",
     displayName = Some("∧'"),
     displayNameAscii = Some("&'"),
-    conclusion = "__(P&Q)'__↔P'∧Q'",
+    displayConclusion = "__(P&Q)'__↔P'∧Q'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -849,7 +855,7 @@ object Ax extends Logging {
     name = "Dor",
     displayName = Some("∨'"),
     displayNameAscii = Some("|'"),
-    conclusion = "__(P|Q)'__↔P'∧Q'",
+    displayConclusion = "__(P|Q)'__↔P'∧Q'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -860,7 +866,7 @@ object Ax extends Logging {
     name = "Dforall",
     displayName = Some("∀'"),
     displayNameAscii = Some("all'"),
-    conclusion = "__(∀x p(x))'__↔∀x (p(x))'",
+    displayConclusion = "__(∀x p(x))'__↔∀x (p(x))'",
     key = "0",
     recursor = "0",
     unifier = UnifierSurjectiveLinear,
@@ -871,7 +877,7 @@ object Ax extends Logging {
     name = "Dexists",
     displayName = Some("∃'"),
     displayNameAscii = Some("exists'"),
-    conclusion = "__(∃x p(x))'__↔∀x (p(x))'",
+    displayConclusion = "__(∃x p(x))'__↔∀x (p(x))'",
     key = "0",
     recursor = "0",
     unifier = UnifierSurjectiveLinear,
@@ -885,7 +891,7 @@ object Ax extends Logging {
     displayName = Some("&langle;<sup>d</sup>&rangle;"),
     displayNameAscii = Some("<d>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__&langle;a<sup>d</sup>&rangle;P__↔¬&langle;a&rangle;¬P",
+    displayConclusion = "__&langle;a<sup>d</sup>&rangle;P__↔¬&langle;a&rangle;¬P",
     key = "0",
     recursor = "0",
     unifier = UnifierSurjectiveLinear,
@@ -895,7 +901,7 @@ object Ax extends Logging {
   @Axiom(
     name = "VK",
     displayLevel = DisplayLevelBrowse,
-    conclusion = "(p→__[a]p__)←[a]⊤",
+    displayConclusion = "(p→__[a]p__)←[a]⊤",
     key = "1.1",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -906,7 +912,7 @@ object Ax extends Logging {
     name = "boxTrueAxiom",
     displayName = Some("[]T axiom"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a]⊤__",
+    displayConclusion = "__[a]⊤__",
     key = "",
     recursor = "",
     unifier = UnifierSurjectiveLinear,
@@ -916,7 +922,7 @@ object Ax extends Logging {
   @Axiom(
     name = "K",
     displayLevel = DisplayLevelAll,
-    conclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
+    displayConclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
     key = "1",
     recursor = "*",
   )
@@ -929,7 +935,7 @@ object Ax extends Logging {
     displayName = Some("I<sub>→</sub>"),
     displayNameAscii = Some("Iind"),
     displayLevel = DisplayLevelInternal,
-    conclusion = "P∧[a<sup>*</sup>](P→[a]P)→__[a<sup>*</sup>]P__",
+    displayConclusion = "P∧[a<sup>*</sup>](P→[a]P)→__[a<sup>*</sup>]P__",
     key = "1",
     recursor = "1;*",
     unifier = UnifierSurjectiveLinear,
@@ -944,7 +950,7 @@ object Ax extends Logging {
     displayName = Some("∀d"),
     displayNameAscii = Some("alld"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__¬∃x ¬P__ ↔ ∀x P",
+    displayConclusion = "__¬∃x ¬P__ ↔ ∀x P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -956,7 +962,7 @@ object Ax extends Logging {
     displayName = Some("∀'d"),
     displayNameAscii = Some("allPd"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__¬∃x' ¬P__ ↔ ∀x' P",
+    displayConclusion = "__¬∃x' ¬P__ ↔ ∀x' P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -968,7 +974,7 @@ object Ax extends Logging {
     name = "alle",
     displayName = Some("∀e"),
     displayNameAscii = Some("alle"),
-    conclusion = "__∀x P__ → P",
+    displayConclusion = "__∀x P__ → P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -979,7 +985,7 @@ object Ax extends Logging {
     name = "alleprime",
     displayName = Some("∀e'"),
     displayNameAscii = Some("allep"),
-    conclusion = "__∀x' P__ → P",
+    displayConclusion = "__∀x' P__ → P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -1040,7 +1046,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DEsysy",
     displayLevel = DisplayLevelInternal,
-    conclusion = "__[{y'=F,c&Q}]P__↔[{c,y'=F&Q}][y':=f(x)]P",
+    displayConclusion = "__[{y'=F,c&Q}]P__↔[{c,y'=F&Q}][y':=f(x)]P",
     key = "0",
     recursor = "1;*",
   )
@@ -1174,7 +1180,12 @@ object Ax extends Logging {
    *
    * @derived
    */
-  @ProofRule(name = "contraposition2Rule", displayName = Some("contra2"), premises = "!Q |- !P", conclusion = "P |- Q")
+  @ProofRule(
+    name = "contraposition2Rule",
+    displayName = Some("contra2"),
+    displayPremises = "!Q |- !P",
+    displayConclusion = "P |- Q",
+  )
   lazy val contraposition2Rule: DerivedRuleInfo = derivedRuleSequent(
     "contra2",
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
@@ -1206,7 +1217,7 @@ object Ax extends Logging {
 //  ("ind induction",
 //    (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
 //      Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
-  @ProofRule(name = "indrule", conclusion = "P |- [a*]P", premises = "P |- [a]P")
+  @ProofRule(name = "indrule", displayPremises = "P |- [a]P", displayConclusion = "P |- [a*]P")
   lazy val indrule: DerivedRuleInfo = derivedRuleSequent(
     "ind induction",
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("[{a_;}*]p_(||)".asFormula)),
@@ -1246,8 +1257,8 @@ object Ax extends Logging {
   @ProofRule(
     name = "FPruleduplicate",
     displayLevel = DisplayLevelInternal,
-    conclusion = "<a*>P |- Q",
-    premises = "P | <a>Q |- Q ;; P | <a>Q |- Q",
+    displayPremises = "P | <a>Q |- Q ;; P | <a>Q |- Q",
+    displayConclusion = "<a*>P |- Q",
   )
   private[btactics] lazy val FPruleduplicate: DerivedRuleInfo = derivedRuleSequent(
     "FP rule duplicate",
@@ -1299,8 +1310,8 @@ object Ax extends Logging {
     displayName = Some("all gen"),
     displayNameAscii = Some("allgen"),
     displayNameLong = Some("allgen"),
-    premises = "|- P",
-    conclusion = "|- \\forall x P",
+    displayPremises = "|- P",
+    displayConclusion = "|- \\forall x P",
   )
   lazy val allGeneralize: DerivedRuleInfo = derivedRuleSequent(
     "all generalization",
@@ -1325,8 +1336,8 @@ object Ax extends Logging {
     name = "monallrule",
     displayName = Some("M∀"),
     displayNameAscii = Some("Mall"),
-    premises = "P |- Q",
-    conclusion = "∀x P |- ∀ x Q",
+    displayPremises = "P |- Q",
+    displayConclusion = "∀x P |- ∀ x Q",
   )
   lazy val monallrule: DerivedRuleInfo = derivedRuleSequent(
     "all monotone",
@@ -1353,7 +1364,7 @@ object Ax extends Logging {
    * @derived
    *   from M and [a]true
    */
-  @ProofRule(name = "Goedel", displayName = Some("G"), conclusion = "|- [a;]P", premises = "|- P")
+  @ProofRule(name = "Goedel", displayName = Some("G"), displayPremises = "|- P", displayConclusion = "|- [a;]P")
   lazy val Goedel: DerivedRuleInfo = derivedRuleSequent(
     "Goedel",
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
@@ -1374,7 +1385,13 @@ object Ax extends Logging {
    * @note
    *   unsound for hybrid games
    */
-  @Axiom(name = "V", conclusion = "p→__[a]p__", key = "1", recursor = "*", unifier = UnifierSurjectiveLinearPretend)
+  @Axiom(
+    name = "V",
+    displayConclusion = "p→__[a]p__",
+    key = "1",
+    recursor = "*",
+    unifier = UnifierSurjectiveLinearPretend,
+  )
   lazy val V: DerivedAxiomInfo = derivedAxiom(
     "V vacuous",
     Sequent(IndexedSeq(), IndexedSeq("p() -> [a{|^@|};]p()".asFormula)),
@@ -1395,7 +1412,7 @@ object Ax extends Logging {
     name = "allInst",
     displayName = Some("∀inst"),
     displayNameAscii = Some("allInst"),
-    conclusion = "__∀x p(x)__ → p(f())",
+    displayConclusion = "__∀x p(x)__ → p(f())",
     key = "0",
     recursor = "*",
   )
@@ -1423,7 +1440,7 @@ object Ax extends Logging {
     name = "allInstPrime",
     displayName = Some("∀inst'"),
     displayNameAscii = Some("allInstPrime"),
-    conclusion = "__∀x' p(x')__ → p(f())",
+    displayConclusion = "__∀x' p(x')__ → p(f())",
     key = "0",
     recursor = "*",
   )
@@ -1483,8 +1500,8 @@ object Ax extends Logging {
     displayName = Some("CT term congruence"),
     displayNameAscii = Some("CTtermCongruence"),
     displayNameLong = Some("CTtermCongruence"),
-    conclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
-    premises = "|- f_(||) = g_(||)",
+    displayPremises = "|- f_(||) = g_(||)",
+    displayConclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
   )
   lazy val CTtermCongruence: DerivedRuleInfo = derivedRuleSequent(
     "CT term congruence",
@@ -1510,8 +1527,8 @@ object Ax extends Logging {
     displayName = Some("CQimply"),
     displayNameAscii = Some("CQimplyCongruence"),
     displayNameLong = Some("CQimplyCongruence"),
-    conclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
-    premises = "|- f_(||) = g_(||)",
+    displayPremises = "|- f_(||) = g_(||)",
+    displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
   )
   lazy val CQimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
     "CQimply equation congruence",
@@ -1532,8 +1549,8 @@ object Ax extends Logging {
     displayName = Some("CQrevimply"),
     displayNameAscii = Some("CQrevimplyCongruence"),
     displayNameLong = Some("CQrevimplyCongruence"),
-    conclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
-    premises = "|- g_(||) = f_(||)",
+    displayPremises = "|- g_(||) = f_(||)",
+    displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
   )
   lazy val CQrevimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
     "CQrevimply equation congruence",
@@ -1554,8 +1571,8 @@ object Ax extends Logging {
     displayName = Some("CEimply"),
     displayNameAscii = Some("CEimplyCongruence"),
     displayNameLong = Some("CEimplyCongruence"),
-    conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
-    premises = "|- p_(||) <-> q_(||)",
+    displayPremises = "|- p_(||) <-> q_(||)",
+    displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
   )
   lazy val CEimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
     "CEimply congruence",
@@ -1576,8 +1593,8 @@ object Ax extends Logging {
     displayName = Some("CErevimply"),
     displayNameAscii = Some("CErevimplyCongruence"),
     displayNameLong = Some("CErevimplyCongruence"),
-    conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
-    premises = "|- q_(||) <-> p_(||)",
+    displayPremises = "|- q_(||) <-> p_(||)",
+    displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
   )
   lazy val CErevimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
     "CErevimply congruence",
@@ -1607,8 +1624,8 @@ object Ax extends Logging {
     displayName = Some("[] monotone"),
     displayNameAscii = Some("[]monotone"),
     displayNameLong = Some("[]monotone"),
-    conclusion = "[a;]P |- [a;]Q",
-    premises = "P |- Q",
+    displayPremises = "P |- Q",
+    displayConclusion = "[a;]P |- [a;]Q",
   )
   lazy val monbaxiom: DerivedRuleInfo = derivedRuleSequent(
     "[] monotone",
@@ -1648,8 +1665,8 @@ object Ax extends Logging {
     displayName = Some("[] monotone 2"),
     displayNameAscii = Some("[]monotone 2"),
     displayNameLong = Some("[]monotone 2"),
-    conclusion = "[a;]Q |- [a;]P",
-    premises = "Q |- P",
+    displayPremises = "Q |- P",
+    displayConclusion = "[a;]Q |- [a;]P",
   )
   lazy val monb2: DerivedRuleInfo = derivedRuleSequent(
     "[] monotone 2",
@@ -1681,8 +1698,8 @@ object Ax extends Logging {
     displayName = Some("con flat"),
     displayNameAscii = Some("conflat"),
     displayNameLong = Some("conflat"),
-    conclusion = "J |- <a*>P",
-    premises = "\\exists v (v<=0&J) |- P;; v > 0, J |- <a>J(v-1)",
+    displayPremises = "\\exists v (v<=0&J) |- P;; v > 0, J |- <a>J(v-1)",
+    displayConclusion = "J |- <a*>P",
   )
   lazy val conflat: DerivedRuleInfo = derivedRuleSequent(
     "con convergence flat",
@@ -1716,7 +1733,7 @@ object Ax extends Logging {
     name = "equivReflexive",
     displayName = Some("↔R"),
     displayNameAscii = Some("<->R"),
-    conclusion = "__p↔p__",
+    displayConclusion = "__p↔p__",
     key = "",
     recursor = "",
     unifier = UnifierFull,
@@ -1867,7 +1884,7 @@ object Ax extends Logging {
     name = "doubleNegation",
     displayName = Some("¬¬"),
     displayNameAscii = Some("!!"),
-    conclusion = "__¬¬p__↔p",
+    displayConclusion = "__¬¬p__↔p",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -1911,7 +1928,7 @@ object Ax extends Logging {
     displayName = Some("∃d"),
     displayNameAscii = Some("existsd"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__¬∀x ¬P__ ↔ ∃x P",
+    displayConclusion = "__¬∀x ¬P__ ↔ ∃x P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -1969,7 +1986,7 @@ object Ax extends Logging {
     name = "notExists",
     displayName = Some("¬∃"),
     displayNameAscii = Some("!exists"),
-    conclusion = "__(¬∃x (p(x)))__↔∀x (¬p(x))",
+    displayConclusion = "__(¬∃x (p(x)))__↔∀x (¬p(x))",
     key = "0",
     recursor = "0;*",
   )
@@ -1994,7 +2011,7 @@ object Ax extends Logging {
     name = "notAll",
     displayName = Some("¬∀"),
     displayNameAscii = Some("!all"),
-    conclusion = "__¬∀x (p(x)))__↔∃x (¬p(x))",
+    displayConclusion = "__¬∀x (p(x)))__↔∃x (¬p(x))",
     key = "0",
     recursor = "0;*",
   )
@@ -2019,7 +2036,7 @@ object Ax extends Logging {
     name = "notBox",
     displayName = Some("¬[]"),
     displayNameAscii = Some("![]"),
-    conclusion = "__¬[a]P__↔<a>¬P",
+    displayConclusion = "__¬[a]P__↔<a>¬P",
     key = "0",
     recursor = "1;*",
     unifier = UnifierSurjectiveLinear,
@@ -2045,7 +2062,7 @@ object Ax extends Logging {
     name = "notDiamond",
     displayName = Some("¬<>"),
     displayNameAscii = Some("!<>"),
-    conclusion = "__¬<a>P__↔[a]¬P",
+    displayConclusion = "__¬<a>P__↔[a]¬P",
     key = "0",
     recursor = "1;*",
     unifier = UnifierSurjectiveLinear,
@@ -2072,7 +2089,7 @@ object Ax extends Logging {
     name = "allDist",
     displayName = Some("∀→"),
     displayNameAscii = Some("all->"),
-    conclusion = "(∀x (p(x)→q(x))) → (__∀x p(x) → ∀x q(x)__)",
+    displayConclusion = "(∀x (p(x)→q(x))) → (__∀x p(x) → ∀x q(x)__)",
     key = "1",
     recursor = "*",
   )
@@ -2095,7 +2112,7 @@ object Ax extends Logging {
     name = "allDistElim",
     displayName = Some("∀→"),
     displayNameAscii = Some("all->"),
-    conclusion = "(∀x (P→Q)) → (__∀x P → ∀x Q__)",
+    displayConclusion = "(∀x (P→Q)) → (__∀x P → ∀x Q__)",
     key = "1",
     recursor = "*",
   )
@@ -2129,7 +2146,7 @@ object Ax extends Logging {
     name = "existsDistElim",
     displayName = Some("∃→"),
     displayNameAscii = Some("exists->"),
-    conclusion = "(∀x (P→Q)) → (__∃x P → ∃x Q__)",
+    displayConclusion = "(∀x (P→Q)) → (__∃x P → ∃x Q__)",
     key = "1",
     recursor = "*",
   )
@@ -2162,7 +2179,7 @@ object Ax extends Logging {
     displayName = Some("[·]"),
     displayNameAscii = Some("[.]"),
     displayLevel = DisplayLevelMenu,
-    conclusion = "__&not;&langle;a&rangle;&not;P__ ↔ [a]P",
+    displayConclusion = "__&not;&langle;a&rangle;&not;P__ ↔ [a]P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -2185,7 +2202,7 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "Kd",
-    conclusion = "[a](P→Q) → (<a>P → __<a>Q__)",
+    displayConclusion = "[a](P→Q) → (<a>P → __<a>Q__)",
     key = "1.1",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -2209,7 +2226,7 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "Kd2",
-    conclusion = "[a]P → (<a>Q → __<a>(P∧Q)__)",
+    displayConclusion = "[a]P → (<a>Q → __<a>(P∧Q)__)",
     key = "1.1",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -2358,7 +2375,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Kand",
     displayName = Some("K&"),
-    conclusion = "[a](P→Q) ∧ [a]P → __[a]Q__)",
+    displayConclusion = "[a](P→Q) ∧ [a]P → __[a]Q__)",
     key = "1",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -2404,7 +2421,7 @@ object Ax extends Logging {
     displayName = Some("[]∧"),
     displayNameAscii = Some("[]^"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a](P∧Q)__↔[a]P ∧ [a]Q",
+    displayConclusion = "__[a](P∧Q)__↔[a]P ∧ [a]Q",
     key = "0",
     recursor = "0;1",
     unifier = UnifierLinear,
@@ -2432,7 +2449,7 @@ object Ax extends Logging {
     displayName = Some("[]∨L"),
     displayNameAscii = Some("[]orL"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "[a]P->__[a](P∨Q)__",
+    displayConclusion = "[a]P->__[a](P∨Q)__",
     key = "1",
   )
   lazy val boxOrLeft: DerivedAxiomInfo = derivedAxiom(
@@ -2455,7 +2472,7 @@ object Ax extends Logging {
     displayName = Some("[]∨R"),
     displayNameAscii = Some("[]orR"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "[a]Q->__[a](P∨Q)__",
+    displayConclusion = "[a]Q->__[a](P∨Q)__",
     key = "1",
   )
   lazy val boxOrRight: DerivedAxiomInfo = derivedAxiom(
@@ -2479,7 +2496,7 @@ object Ax extends Logging {
     name = "boxImpliesAnd",
     displayName = Some("[]→∧"),
     displayNameAscii = Some("[]->^"),
-    conclusion = "__[a](P→Q∧R)__ ↔ [a](P→Q) ∧ [a](P→R)",
+    displayConclusion = "__[a](P→Q∧R)__ ↔ [a](P→Q) ∧ [a](P→R)",
     unifier = UnifierLinear,
   )
   lazy val boxImpliesAnd: DerivedAxiomInfo = derivedAxiom(
@@ -2539,7 +2556,7 @@ object Ax extends Logging {
     displayName = Some("<>∨"),
     displayNameAscii = Some("<>|"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__&langle;a&rangle;(P∨Q)__↔&langle;a&rangle;P ∨ &langle;a&rangle;Q",
+    displayConclusion = "__&langle;a&rangle;(P∨Q)__↔&langle;a&rangle;P ∨ &langle;a&rangle;Q",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -2643,7 +2660,7 @@ object Ax extends Logging {
     name = "assignDual2",
     displayName = Some("⟨:=⟩D"),
     displayNameAscii = Some("<:=>D"),
-    conclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P",
+    displayConclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P",
     key = "0",
     recursor = "*",
   )
@@ -2684,7 +2701,7 @@ object Ax extends Logging {
     name = "assigndEqualityAxiom",
     displayName = Some("<:=>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__<x:=e>P__↔∃x(x=e∧P)",
+    displayConclusion = "__<x:=e>P__↔∃x(x=e∧P)",
     key = "0",
     recursor = "0.1;*",
   )
@@ -2703,7 +2720,7 @@ object Ax extends Logging {
     name = "DassigndEqualityAxiom",
     displayName = Some("<':=>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__<x':=e>P__↔∃x'(x'=e∧P)",
+    displayConclusion = "__<x':=e>P__↔∃x'(x'=e∧P)",
     key = "0",
     recursor = "0.1;*",
   )
@@ -2878,7 +2895,7 @@ object Ax extends Logging {
   @Axiom(
     name = "assigndAxiom",
     displayName = Some("<:=>"),
-    conclusion = "__&langle;x:=e&rangle;p(x)__↔p(e)",
+    displayConclusion = "__&langle;x:=e&rangle;p(x)__↔p(e)",
     key = "0",
     recursor = "*",
     unifier = UnifierFull,
@@ -2895,7 +2912,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DassigndAxiom",
     displayName = Some("<':=>"),
-    conclusion = "__&langle;x':=e&rangle;p(x')__↔p(e)",
+    displayConclusion = "__&langle;x':=e&rangle;p(x')__↔p(e)",
     key = "0",
     recursor = "*",
     unifier = UnifierFull,
@@ -3069,7 +3086,7 @@ object Ax extends Logging {
     name = "Dassignby",
     displayName = Some("[y':=]"),
     displayLevel = DisplayLevelInternal,
-    conclusion = "__[y':=c]p(y')__↔p(c)",
+    displayConclusion = "__[y':=c]p(y')__↔p(c)",
     unifier = UnifierFull,
   )
   lazy val Dassignby: DerivedAxiomInfo = derivedAxiom(
@@ -3110,7 +3127,7 @@ object Ax extends Logging {
     name = "randomd",
     displayName = Some("<:*>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__<x:=*>P__↔∃x P",
+    displayConclusion = "__<x:=*>P__↔∃x P",
     key = "0",
     recursor = "0;*",
     unifier = UnifierSurjectiveLinear,
@@ -3139,7 +3156,7 @@ object Ax extends Logging {
     name = "testd",
     displayName = Some("<?>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__<?Q>P__↔Q∧P",
+    displayConclusion = "__<?Q>P__↔Q∧P",
     key = "0",
     recursor = "1;0",
     unifier = UnifierSurjectiveLinear,
@@ -3188,7 +3205,7 @@ object Ax extends Logging {
     displayName = Some("<∪>"),
     displayNameAscii = Some("<++>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__<a∪b>P__↔<a>P∨<b>P",
+    displayConclusion = "__<a∪b>P__↔<a>P∨<b>P",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -3216,7 +3233,7 @@ object Ax extends Logging {
     name = "composed",
     displayName = Some("<;>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__<a;b>P__↔<a><b>P",
+    displayConclusion = "__<a;b>P__↔<a><b>P",
     key = "0",
     recursor = "1;*",
     unifier = UnifierSurjectiveLinear,
@@ -3245,7 +3262,7 @@ object Ax extends Logging {
     name = "iterated",
     displayName = Some("<*>"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__<a*>P__↔P∨<a><a*>P",
+    displayConclusion = "__<a*>P__↔P∨<a><a*>P",
     key = "0",
     recursor = "1",
     unifier = UnifierSurjectiveLinear,
@@ -3274,7 +3291,7 @@ object Ax extends Logging {
   @Axiom(
     name = "loopApproxd",
     displayName = Some("<*> approx"),
-    conclusion = "<a>P → __<a*>P__",
+    displayConclusion = "<a>P → __<a*>P__",
     key = "1",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -3302,7 +3319,7 @@ object Ax extends Logging {
   @Axiom(
     name = "loopApproxb",
     displayName = Some("[*] approx"),
-    conclusion = "__[a*]P__ → [a]P",
+    displayConclusion = "__[a*]P__ → [a]P",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -3347,7 +3364,7 @@ object Ax extends Logging {
     name = "loopMergeb",
     displayName = Some("[*] merge"),
     displayLevel = DisplayLevelMenu,
-    conclusion = "__[a*][a*]P__ ↔ [a*]P",
+    displayConclusion = "__[a*][a*]P__ ↔ [a*]P",
     key = "0",
     recursor = "*",
   )
@@ -3373,7 +3390,7 @@ object Ax extends Logging {
     name = "loopMerged",
     displayName = Some("<*> merge"),
     displayLevel = DisplayLevelMenu,
-    conclusion = "__<a*><a*>P__ ↔ <a*>P",
+    displayConclusion = "__<a*><a*>P__ ↔ <a*>P",
     key = "0",
     recursor = "*",
   )
@@ -3401,7 +3418,7 @@ object Ax extends Logging {
   @Axiom(
     name = "iterateiterateb",
     displayName = Some("[**]"),
-    conclusion = "__[a*;a*]P__ ↔ [a*]P",
+    displayConclusion = "__[a*;a*]P__ ↔ [a*]P",
     key = "",
     recursor = "*",
     unifier = UnifierFull,
@@ -3424,7 +3441,7 @@ object Ax extends Logging {
   @Axiom(
     name = "iterateiterated",
     displayName = Some("<**>"),
-    conclusion = "__<a*;a*>P__ ↔ <a*>P",
+    displayConclusion = "__<a*;a*>P__ ↔ <a*>P",
     key = "",
     recursor = "*",
     unifier = UnifierFull,
@@ -3526,7 +3543,7 @@ object Ax extends Logging {
   @Axiom(
     name = "I",
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a*]P__↔P∧[a*](P→[a]P)",
+    displayConclusion = "__[a*]P__↔P∧[a*](P→[a]P)",
     key = "0",
     recursor = "1.1.1;1",
     unifier = UnifierSurjectiveLinear,
@@ -3595,7 +3612,7 @@ object Ax extends Logging {
     name = "existse",
     displayName = Some("∃e"),
     displayNameAscii = Some("existse"),
-    conclusion = "P→__∃x P__",
+    displayConclusion = "P→__∃x P__",
     key = "1",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -3649,7 +3666,7 @@ object Ax extends Logging {
     name = "allThenExists",
     displayName = Some("∀→∃"),
     displayNameAscii = Some("allThenExists"),
-    conclusion = "∀x P → ∃x P",
+    displayConclusion = "∀x P → ∃x P",
   )
   lazy val allThenExists: DerivedAxiomInfo = derivedFormula(
     "all then exists",
@@ -3672,7 +3689,7 @@ object Ax extends Logging {
     name = "allSubstitute",
     displayName = Some("∀S"),
     displayNameAscii = Some("allS"),
-    conclusion = "__∀x(x=e→p(x))__ ↔ p(e)",
+    displayConclusion = "__∀x(x=e→p(x))__ ↔ p(e)",
     key = "0",
     recursor = "*",
   )
@@ -3698,7 +3715,7 @@ object Ax extends Logging {
     name = "existsV",
     displayName = Some("V∃"),
     displayNameAscii = Some("existsV"),
-    conclusion = "__∃x p__ ↔ p",
+    displayConclusion = "__∃x p__ ↔ p",
     key = "0",
     recursor = "*",
   )
@@ -3739,7 +3756,7 @@ object Ax extends Logging {
   @Axiom(
     name = "vacuousBoxAssignNondet",
     displayName = Some("V[:*]"),
-    conclusion = "__[x:=*;]p__ ↔ p",
+    displayConclusion = "__[x:=*;]p__ ↔ p",
     key = "0",
     recursor = "*",
   )
@@ -3765,7 +3782,7 @@ object Ax extends Logging {
   @Axiom(
     name = "vacuousDiamondAssignNondet",
     displayName = Some("V<:*>"),
-    conclusion = "__<x:=*;>p__ ↔ p",
+    displayConclusion = "__<x:=*;>p__ ↔ p",
     key = "0",
     recursor = "*",
   )
@@ -3981,7 +3998,7 @@ object Ax extends Logging {
     name = "notAnd",
     displayName = Some("¬∧"),
     displayNameAscii = Some("!&"),
-    conclusion = "__¬(p∧q)__↔(¬p|¬q)",
+    displayConclusion = "__¬(p∧q)__↔(¬p|¬q)",
     unifier = UnifierSurjectiveLinear,
     key = "0",
     recursor = "0;1",
@@ -4005,7 +4022,7 @@ object Ax extends Logging {
     name = "notOr",
     displayName = Some("¬∨"),
     displayNameAscii = Some("!|"),
-    conclusion = "__(¬(p|q))__↔(¬p∧¬q)",
+    displayConclusion = "__(¬(p|q))__↔(¬p∧¬q)",
     unifier = UnifierSurjectiveLinear,
     key = "0",
     recursor = "0;1",
@@ -4029,7 +4046,7 @@ object Ax extends Logging {
     name = "notImply",
     displayName = Some("¬→"),
     displayNameAscii = Some("!->"),
-    conclusion = "__¬(p->q)__↔(p∧¬q)",
+    displayConclusion = "__¬(p->q)__↔(p∧¬q)",
     unifier = UnifierSurjectiveLinear,
     key = "0",
     recursor = "0;1",
@@ -4053,7 +4070,7 @@ object Ax extends Logging {
     name = "notEquiv",
     displayName = Some("¬↔"),
     displayNameAscii = Some("!<->"),
-    conclusion = "__¬(p↔q)__↔(p∧¬q)| (¬p∧q)",
+    displayConclusion = "__¬(p↔q)__↔(p∧¬q)| (¬p∧q)",
     unifier = UnifierSurjectiveLinear,
     key = "0",
     recursor = "0.0;0.1;1.0;1.1",
@@ -4227,7 +4244,7 @@ object Ax extends Logging {
     name = "Dlessequal",
     displayName = Some("≤'"),
     displayNameAscii = Some("<='"),
-    conclusion = "__(f(x)≤g(x))'__↔f(x)'≤g(x)'",
+    displayConclusion = "__(f(x)≤g(x))'__↔f(x)'≤g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -4254,7 +4271,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dless",
     displayName = Some("<'"),
-    conclusion = "__(f(x)<g(m))'__↔f(x)'≤g(x)'",
+    displayConclusion = "__(f(x)<g(m))'__↔f(x)'≤g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -4270,7 +4287,7 @@ object Ax extends Logging {
   @Axiom(
     name = "Dequal",
     displayName = Some("='"),
-    conclusion = "__(f(x)=g(x))'__↔f(x)'=g(x)'",
+    displayConclusion = "__(f(x)=g(x))'__↔f(x)'=g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -4301,7 +4318,7 @@ object Ax extends Logging {
     name = "Dnotequal",
     displayName = Some("≠'"),
     displayNameAscii = Some("!='"),
-    conclusion = "__(f(x)≠g(x))'__↔f(x)'=g(x)'",
+    displayConclusion = "__(f(x)≠g(x))'__↔f(x)'=g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -4331,7 +4348,7 @@ object Ax extends Logging {
     name = "Dimply",
     displayName = Some("→'"),
     displayNameAscii = Some("->'"),
-    conclusion = "__(P→Q)'__↔(¬P∨Q)'",
+    displayConclusion = "__(P→Q)'__↔(¬P∨Q)'",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -4381,7 +4398,7 @@ object Ax extends Logging {
     name = "implyTrue",
     displayName = Some("→⊤"),
     displayNameAscii = Some("->T"),
-    conclusion = "__(p→⊤)__↔⊤",
+    displayConclusion = "__(p→⊤)__↔⊤",
     unifier = UnifierSurjectiveLinear,
   )
   lazy val implyTrue: DerivedAxiomInfo =
@@ -4400,7 +4417,7 @@ object Ax extends Logging {
     name = "trueImply",
     displayName = Some("⊤→"),
     displayNameAscii = Some("T->"),
-    conclusion = "__(⊤→p)__↔p",
+    displayConclusion = "__(⊤→p)__↔p",
     unifier = UnifierSurjectiveLinear,
   )
   lazy val trueImply: DerivedAxiomInfo =
@@ -4419,7 +4436,7 @@ object Ax extends Logging {
     name = "andTrue",
     displayName = Some("∧⊤"),
     displayNameAscii = Some("&T"),
-    conclusion = "__(p∧⊤)__↔p",
+    displayConclusion = "__(p∧⊤)__↔p",
     unifier = UnifierSurjectiveLinear,
   )
   lazy val andTrue: DerivedAxiomInfo =
@@ -4438,7 +4455,7 @@ object Ax extends Logging {
     name = "andFalse",
     displayName = Some("∧⊥"),
     displayNameAscii = Some("&false"),
-    conclusion = "__(p∧⊥)__↔⊥",
+    displayConclusion = "__(p∧⊥)__↔⊥",
     unifier = UnifierSurjectiveLinear,
   )
   lazy val andFalse: DerivedAxiomInfo =
@@ -4462,7 +4479,7 @@ object Ax extends Logging {
     name = "trueAnd",
     displayName = Some("⊤∧"),
     displayNameAscii = Some("T&"),
-    conclusion = "__(⊤∧p)__↔p",
+    displayConclusion = "__(⊤∧p)__↔p",
     unifier = UnifierSurjectiveLinear,
   )
   lazy val trueAnd: DerivedAxiomInfo =
@@ -4481,7 +4498,7 @@ object Ax extends Logging {
     name = "falseAnd",
     displayName = Some("⊥∧"),
     displayNameAscii = Some("false&"),
-    conclusion = "__(⊥∧p)__↔⊥",
+    displayConclusion = "__(⊥∧p)__↔⊥",
     unifier = UnifierSurjectiveLinear,
   )
   lazy val falseAnd: DerivedAxiomInfo =
@@ -4596,7 +4613,7 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "DW",
-    conclusion = "__[x'=f(x)&Q]P__↔[x'=f(x)&Q](Q→P)",
+    displayConclusion = "__[x'=f(x)&Q]P__↔[x'=f(x)&Q](Q→P)",
     key = "0",
     recursor = "",
     unifier = UnifierSurjectiveLinear,
@@ -4626,7 +4643,7 @@ object Ax extends Logging {
     name = "DWeakenAnd",
     displayName = Some("DW∧"),
     displayNameAscii = Some("DWand"),
-    conclusion = "[x'=f(x)&Q]P→[x'=f(x)&Q](Q∧P)",
+    displayConclusion = "[x'=f(x)&Q]P→[x'=f(x)&Q](Q∧P)",
   )
   lazy val DWeakenAnd: DerivedAxiomInfo = derivedAxiom(
     "DW differential weakening and",
@@ -4647,7 +4664,7 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @Axiom(name = "DWQinitial", displayName = Some("DW Q initial"), conclusion = "(Q→[x'=f(x)&Q]P) ↔ [x'=f(x)&Q]P")
+  @Axiom(name = "DWQinitial", displayName = Some("DW Q initial"), displayConclusion = "(Q→[x'=f(x)&Q]P) ↔ [x'=f(x)&Q]P")
   lazy val DWQinitial: DerivedAxiomInfo = derivedAxiom(
     "DW Q initial",
     Sequent(IndexedSeq(), IndexedSeq("(q_(||) -> [{c_&q_(||)}]p_(||)) <-> [{c_&q_(||)}]p_(||)".asFormula)),
@@ -4668,7 +4685,7 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "DR",
-    conclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}]R",
+    displayConclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}]R",
     key = "1.1",
     unifier = UnifierSurjectiveLinear,
     inputs = "R:formula",
@@ -4692,7 +4709,7 @@ object Ax extends Logging {
    */
   @Axiom(
     name = "DRd",
-    conclusion = "(__<{x'=f(x)&Q}>P__←<{x'=f(x)&R}>P)←[{x'=f(x)&R}]Q",
+    displayConclusion = "(__<{x'=f(x)&Q}>P__←<{x'=f(x)&R}>P)←[{x'=f(x)&R}]Q",
     key = "1.1",
     unifier = UnifierSurjectiveLinear,
     inputs = "R:formula",
@@ -4721,7 +4738,7 @@ object Ax extends Logging {
     name = "DCaxiom",
     displayName = Some("DC"),
     displayLevel = DisplayLevelMenu,
-    conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R",
+    displayConclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R",
     key = "1.0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -4775,7 +4792,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DI",
     displayLevel = DisplayLevelMenu,
-    conclusion = "__[{x'=f(x)&Q}]P__←(Q→P∧[{x'=f(x)&Q}](P)')",
+    displayConclusion = "__[{x'=f(x)&Q}]P__←(Q→P∧[{x'=f(x)&Q}](P)')",
     unifier = UnifierSurjectiveLinear,
     key = "1",
     recursor = "1.1",
@@ -4804,7 +4821,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DIoless",
     displayName = Some("DIo <"),
-    conclusion = "(__[{x'=f(x)&Q}]g(x)<h(x)__↔[?Q]g(x)<h(x))←(Q→[{x'=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))'))",
+    displayConclusion = "(__[{x'=f(x)&Q}]g(x)<h(x)__↔[?Q]g(x)<h(x))←(Q→[{x'=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))'))",
     unifier = UnifierSurjectiveLinear,
     key = "1.0",
     recursor = "*",
@@ -4854,7 +4871,13 @@ object Ax extends Logging {
    *
    * @Derived
    */
-  @Axiom(name = "dDX", conclusion = "Q∧P → <x'=f(x)&Q>P", key = "1", recursor = "1", unifier = UnifierSurjectiveLinear)
+  @Axiom(
+    name = "dDX",
+    displayConclusion = "Q∧P → <x'=f(x)&Q>P",
+    key = "1",
+    recursor = "1",
+    unifier = UnifierSurjectiveLinear,
+  )
   lazy val dDX: DerivedAxiomInfo = derivedAxiom(
     "DX diamond differential skip",
     Sequent(IndexedSeq(), IndexedSeq("<{c&q(||)}>p(||) <- q(||)&p(||)".asFormula)),
@@ -4879,7 +4902,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DSnodomain",
     displayName = Some("DS"),
-    conclusion = "__[{x'=c()}]P__ ↔ ∀t≥0 [x:=x+c()*t;]P",
+    displayConclusion = "__[{x'=c()}]P__ ↔ ∀t≥0 [x:=x+c()*t;]P",
     key = "0",
     recursor = "0.1.1;*",
     unifier = UnifierSurjectiveLinearPretend,
@@ -4911,7 +4934,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DSdnodomain",
     displayName = Some("DS"),
-    conclusion = "__<{x'=c()}>P__ ↔ ∃t≥0 <x:=x+c()*t;>P",
+    displayConclusion = "__<{x'=c()}>P__ ↔ ∃t≥0 <x:=x+c()*t;>P",
     key = "0",
     recursor = "0.1.1;*",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5053,7 +5076,7 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @Axiom(name = "DGCd", displayName = Some("DG"), conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=g()&Q}]P")
+  @Axiom(name = "DGCd", displayName = Some("DG"), displayConclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=g()&Q}]P")
   lazy val DGCd: DerivedAxiomInfo = derivedAxiom(
     "DGd diamond differential ghost constant",
     Sequent(
@@ -5176,7 +5199,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DCdaxiom",
     displayName = Some("DCd"),
-    conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
+    displayConclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
     key = "1.0",
     recursor = "*",
   )
@@ -5324,7 +5347,7 @@ object Ax extends Logging {
     name = "DBXgt",
     displayName = Some("DBX>"),
     displayLevel = DisplayLevelMenu,
-    conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e)'≥ge",
+    displayConclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e)'≥ge",
     key = "1.1",
     recursor = "1.0",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5433,7 +5456,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DBXgtOpen",
     displayName = Some("DBX> open"),
-    conclusion = "(e_>0 → __[x'=f(x)&Q]e_>0__) ← [x'=f(x)&Q](e_>0→(e_)'≥ge)",
+    displayConclusion = "(e_>0 → __[x'=f(x)&Q]e_>0__) ← [x'=f(x)&Q](e_>0→(e_)'≥ge)",
     key = "1.1",
     recursor = "1.1.0",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5548,7 +5571,7 @@ object Ax extends Logging {
     name = "DBXge",
     displayName = Some("DBX>="),
     displayLevel = DisplayLevelMenu,
-    conclusion = "(e>=0 → __[x'=f(x)&Q]e>=0__) ← [x'=f(x)&Q](e)'≥ge",
+    displayConclusion = "(e>=0 → __[x'=f(x)&Q]e>=0__) ← [x'=f(x)&Q](e)'≥ge",
     key = "1.1",
     recursor = "1.0",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5657,7 +5680,7 @@ object Ax extends Logging {
     name = "DBXeq",
     displayName = Some("DBX="),
     displayLevel = DisplayLevelMenu,
-    conclusion = "(e=0 → __[x'=f(x)&Q]e=0__) ← [x'=f(x)&Q](e)'=ge",
+    displayConclusion = "(e=0 → __[x'=f(x)&Q]e=0__) ← [x'=f(x)&Q](e)'=ge",
     key = "1.1",
     recursor = "1.0",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5708,7 +5731,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DBXltOpen",
     displayName = Some("DBX< open"),
-    conclusion = "(e<0 → __[x'=f(x)&Q]e<0__) ← [x'=f(x)&Q](e<0→(e)'<=ge)",
+    displayConclusion = "(e<0 → __[x'=f(x)&Q]e<0__) ← [x'=f(x)&Q](e<0→(e)'<=ge)",
     key = "1.1",
     recursor = "1.1.0",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5755,7 +5778,7 @@ object Ax extends Logging {
     name = "DBXle",
     displayName = Some("DBX<="),
     displayLevel = DisplayLevelMenu,
-    conclusion = "(e<=0 → __[x'=f(x)&Q]e<=0__) ← [x'=f(x)&Q](e)'<=ge",
+    displayConclusion = "(e<=0 → __[x'=f(x)&Q]e<=0__) ← [x'=f(x)&Q](e)'<=ge",
     key = "1.1",
     recursor = "1.0",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5801,7 +5824,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DBXneOpen",
     displayName = Some("DBX!= open"),
-    conclusion = "(e!=0 → __[x'=f(x)&Q]e!=0__) ← [x'=f(x)&Q](e!=0→(e)'=ge)",
+    displayConclusion = "(e!=0 → __[x'=f(x)&Q]e!=0__) ← [x'=f(x)&Q](e!=0→(e)'=ge)",
     key = "1.1",
     recursor = "1.1.0",
     unifier = UnifierSurjectiveLinearPretend,
@@ -5940,7 +5963,7 @@ object Ax extends Logging {
     name = "dualb",
     displayName = Some("[d]"),
     displayLevel = DisplayLevelAll,
-    conclusion = "__[a<sup>d</sup>]P__↔¬[a]¬P",
+    displayConclusion = "__[a<sup>d</sup>]P__↔¬[a]¬P",
     key = "0",
     recursor = "0",
     unifier = UnifierSurjectiveLinear,
@@ -5966,7 +5989,7 @@ object Ax extends Logging {
     name = "dualDirectb",
     displayName = Some("[d]"),
     displayLevel = DisplayLevelMenu,
-    conclusion = "__[a<sup>d</sup>]P__↔&langle;a&rangle;P",
+    displayConclusion = "__[a<sup>d</sup>]P__↔&langle;a&rangle;P",
     key = "0",
     recursor = ".",
     unifier = UnifierSurjectiveLinear,
@@ -5989,7 +6012,7 @@ object Ax extends Logging {
   @Axiom(
     name = "dualDirectd",
     displayName = Some("<d>"),
-    conclusion = "__&langle;a<sup>d</sup>&rangle;P__↔[a]P",
+    displayConclusion = "__&langle;a<sup>d</sup>&rangle;P__↔[a]P",
     key = "0",
     recursor = ".",
     unifier = UnifierSurjectiveLinear,
@@ -6014,7 +6037,7 @@ object Ax extends Logging {
   @Axiom(
     name = "DvariableCommutedAxiom",
     displayName = Some("x',C"),
-    conclusion = "x'=__(x)'__",
+    displayConclusion = "x'=__(x)'__",
     unifier = UnifierLinear,
     key = "0",
     recursor = "",
@@ -6033,7 +6056,7 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @Axiom(name = "DvariableAxiom", displayName = Some("x'"), conclusion = "__(x)'__=x'")
+  @Axiom(name = "DvariableAxiom", displayName = Some("x'"), displayConclusion = "__(x)'__=x'")
   lazy val DvariableAxiom: DerivedAxiomInfo = derivedFact(
     "x' derive variable",
     DerivedAxiomProvableSig.startProof(
@@ -6121,7 +6144,7 @@ object Ax extends Logging {
   @Axiom(
     name = "UniqIff",
     displayName = Some("Uniq"),
-    conclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P ↔ __<x'=f(x)&Q∧R>P__",
+    displayConclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P ↔ __<x'=f(x)&Q∧R>P__",
     key = "1",
     recursor = "0;1",
     unifier = UnifierSurjectiveLinear,
@@ -6150,7 +6173,7 @@ object Ax extends Logging {
    * @see
    *   [[equivReflexive]]
    */
-  @Axiom(name = "equalReflexive", displayName = Some("=R"), conclusion = "s=s", unifier = UnifierFull, key = "*")
+  @Axiom(name = "equalReflexive", displayName = Some("=R"), displayConclusion = "s=s", unifier = UnifierFull, key = "*")
   lazy val equalReflexive: DerivedAxiomInfo = derivedAxiom(
     "= reflexive",
     Sequent(IndexedSeq(), IndexedSeq("s_() = s_()".asFormula)),
@@ -6168,7 +6191,7 @@ object Ax extends Logging {
   @Axiom(
     name = "equalCommute",
     displayName = Some("=C"),
-    conclusion = "__f=g__ ↔ g=f",
+    displayConclusion = "__f=g__ ↔ g=f",
     key = "0",
     recursor = "*",
     unifier = UnifierSurjectiveLinear,
@@ -6257,7 +6280,7 @@ object Ax extends Logging {
     name = "notNotEqual",
     displayName = Some("¬≠"),
     displayNameAscii = Some("!!="),
-    conclusion = "__(¬(f≠g)__↔(f=g))",
+    displayConclusion = "__(¬(f≠g)__↔(f=g))",
     unifier = UnifierLinear,
   )
   lazy val notNotEqual: DerivedAxiomInfo = derivedAxiom(
@@ -6278,7 +6301,7 @@ object Ax extends Logging {
     name = "notEqual",
     displayName = Some("¬ ="),
     displayNameAscii = Some("! ="),
-    conclusion = "__(¬(f=g))__↔(f≠g)",
+    displayConclusion = "__(¬(f=g))__↔(f≠g)",
     unifier = UnifierLinear,
   )
   lazy val notEqual: DerivedAxiomInfo = derivedAxiom(
@@ -6300,7 +6323,7 @@ object Ax extends Logging {
     displayName = Some("≠2∨"),
     displayNameAscii = Some("!=2|"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__(f≠g)__ ↔ f<g ∨ f>g",
+    displayConclusion = "__(f≠g)__ ↔ f<g ∨ f>g",
     unifier = UnifierLinear,
   )
   lazy val notEqual2Or: DerivedAxiomInfo = derivedAxiom(
@@ -6322,7 +6345,7 @@ object Ax extends Logging {
     displayName = Some("=2∧"),
     displayNameAscii = Some("=2&"),
     displayLevel = DisplayLevelBrowse,
-    conclusion = "__(f≠g)__ ↔ f<g ∨ f>g",
+    displayConclusion = "__(f≠g)__ ↔ f<g ∨ f>g",
     unifier = UnifierLinear,
   )
   lazy val equal2And: DerivedAxiomInfo = derivedAxiom(
@@ -6343,7 +6366,7 @@ object Ax extends Logging {
     name = "notGreater",
     displayName = Some("¬>"),
     displayNameAscii = Some("!>"),
-    conclusion = "__¬(f>g)__↔(f≤g)",
+    displayConclusion = "__¬(f>g)__↔(f≤g)",
     unifier = UnifierLinear,
   )
   lazy val notGreater: DerivedAxiomInfo = derivedAxiom(
@@ -6424,7 +6447,7 @@ object Ax extends Logging {
     name = "notLess",
     displayName = Some("¬<"),
     displayNameAscii = Some("!<"),
-    conclusion = "__¬(f<g)__↔(f≥g)",
+    displayConclusion = "__¬(f<g)__↔(f≥g)",
     unifier = UnifierLinear,
   )
   lazy val notLess: DerivedAxiomInfo = derivedAxiom(
@@ -6446,7 +6469,7 @@ object Ax extends Logging {
     name = "notLessEqual",
     displayName = Some("¬≤"),
     displayNameAscii = Some("!<="),
-    conclusion = "__(¬(f≤g)__↔(f>g)",
+    displayConclusion = "__(¬(f≤g)__↔(f>g)",
     unifier = UnifierLinear,
   )
   lazy val notLessEqual: DerivedAxiomInfo = derivedAxiom(
@@ -8074,7 +8097,12 @@ object Ax extends Logging {
    * @note
    *   postcondition refinement
    */
-  @Axiom(name = "KDomD", conclusion = "[x'=f(x)&Q∧¬P]¬R → (__<x'=f(x)&Q>R → <x'=f(x)&Q>P__)", key = "1", recursor = "*")
+  @Axiom(
+    name = "KDomD",
+    displayConclusion = "[x'=f(x)&Q∧¬P]¬R → (__<x'=f(x)&Q>R → <x'=f(x)&Q>P__)",
+    key = "1",
+    recursor = "*",
+  )
   lazy val KDomD: DerivedAxiomInfo = derivedAxiom(
     "K<&>",
     "==> [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))".asSequent,
@@ -9358,7 +9386,7 @@ object Ax extends Logging {
     name = "dBarcan",
     displayName = Some("D Barcan"),
     displayLevel = DisplayLevelAll,
-    conclusion = "∃x<a>p(x)__ ↔ <a>∃x p(x) (x∉a)",
+    displayConclusion = "∃x<a>p(x)__ ↔ <a>∃x p(x) (x∉a)",
     key = "0",
     recursor = "0",
     unifier = UnifierSurjectiveLinear,

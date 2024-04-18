@@ -37,7 +37,7 @@ import scala.reflect.macros.whitebox
  *   Defaults to [[displayName]].
  * @param displayLevel
  *   Where to display an axiom/rule/tactic in the user interface. Defaults to [[DisplayLevelInternal]].
- * @param conclusion
+ * @param displayConclusion
  *   Formula string displayed for axioms as html with unicode in the user interface. For axioms with (non-position)
  *   inputs, the conclusion must mention each input. Sequent syntax is optionally supported: `A, B |- C, D`
  * @param unifier
@@ -81,7 +81,7 @@ class Axiom(
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
     val displayLevel: DisplayLevel = DisplayLevelInternal,
-    val conclusion: String = "",
+    val displayConclusion: String = "",
     val unifier: Unifier = UnifierFull,
     val inputs: String = "",
     val key: String = "0",
@@ -98,7 +98,7 @@ case class AxiomArgs(
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
     displayLevel: DisplayLevel = DisplayLevelInternal,
-    conclusion: String = "",
+    displayConclusion: String = "",
     unifier: Unifier = UnifierFull,
     inputs: String = "",
     key: String = "0",
@@ -203,7 +203,7 @@ object AxiomMacro {
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val display: DisplayInfo = (args.conclusion, inputs) match {
+    val display: DisplayInfo = (args.displayConclusion, inputs) match {
       case ("", Nil) => SimpleDisplayInfo(
           name = displayName,
           nameAscii = displayNameAscii,

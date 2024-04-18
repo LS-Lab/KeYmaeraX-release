@@ -213,9 +213,8 @@ private object EqualityTactics extends TacticProvider {
   @Tactic(
     name = "atomAllL2R",
     displayName = Some("L=R all atoms"),
-    premises = "Γ(e) |- Δ(e)",
-    // atomAllL2R -------------------------
-    conclusion = "Γ(x), x=e |- Δ(e)",
+    displayPremises = "Γ(e) |- Δ(e)",
+    displayConclusion = "Γ(x), x=e |- Δ(e)",
   )
   val atomExhaustiveEqL2R: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     ProofRuleTactics.requireOneSubgoal(provable, "atomExhaustiveEqL2R")

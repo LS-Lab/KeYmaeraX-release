@@ -41,9 +41,8 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
     name = "smartQE",
     displayName = Some("Speculative QE"),
     displayLevel = DisplayLevelBrowse,
-    premises = "*",
-    //    smartQE -----------
-    conclusion = "Γ<sub>FOLR</sub> |- Δ<sub>FOLR</sub>",
+    displayPremises = "*",
+    displayConclusion = "Γ<sub>FOLR</sub> |- Δ<sub>FOLR</sub>",
   )
   lazy val speculativeQE: BelleExpr = anon((_: Sequent) => {
     (DebuggingTactics.debug("Trying abs...", DEBUG) & SaturateTactic(alphaRule) & proveOrRefuteAbs &

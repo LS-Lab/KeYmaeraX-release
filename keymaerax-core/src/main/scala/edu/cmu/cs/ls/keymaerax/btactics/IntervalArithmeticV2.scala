@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelInternal, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DisplayLevelInternal, DisplayLevelMenu, Tactic}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, SuccPosition}
@@ -1257,8 +1257,8 @@ object IntervalArithmeticV2 extends TacticProvider {
     displayName = Some("Interval Arithmetic Cut"),
     displayLevel = DisplayLevelMenu,
     // @TODO: closed premise
-    premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
-    conclusion = "Γ |- Δ",
+    displayPremises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
+    displayConclusion = "Γ |- Δ",
   )
   def intervalCutTerm(t: Term): InputTactic = inputanon { intervalCutTerms(Seq(t)) }
 
@@ -1275,8 +1275,8 @@ object IntervalArithmeticV2 extends TacticProvider {
     name = "intervalCut",
     displayName = Some("Interval Arithmetic Cut"),
     displayLevel = DisplayLevelInternal,
-    premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
-    conclusion = "Γ |- Δ",
+    displayPremises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
+    displayConclusion = "Γ |- Δ",
   )
   val intervalCut: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {

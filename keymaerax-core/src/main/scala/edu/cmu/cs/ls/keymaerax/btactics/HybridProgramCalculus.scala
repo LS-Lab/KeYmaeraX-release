@@ -92,11 +92,10 @@ trait HybridProgramCalculus {
   @Tactic(
     name = "MR",
     displayNameLong = Some("Monotonicity"),
-    premises = "Γ |- [a]Q, Δ ;; Q |- P",
-    // Monotonicity ------------------------
-    conclusion = "Γ |- [a]P, Δ",
-    contextPremises = "Γ |- C( Γ<sub>const</sub>∧[a]Q ), Δ ;; Γ<sub>const</sub>, Q |- P",
-    contextConclusion = "Γ |- C( [a]P ), Δ",
+    displayPremises = "Γ |- [a]Q, Δ ;; Q |- P",
+    displayConclusion = "Γ |- [a]P, Δ",
+    displayContextPremises = "Γ |- C( Γ<sub>const</sub>∧[a]Q ), Δ ;; Γ<sub>const</sub>, Q |- P",
+    displayContextConclusion = "Γ |- C( [a]P ), Δ",
     inputs = "Q:formula",
     revealInternalSteps = true,
   )
@@ -148,8 +147,8 @@ trait HybridProgramCalculus {
     name = "loop",
     displayNameLong = Some("Loop Invariant"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
-    conclusion = "Γ |- [a<sup>*</sup>]P, Δ",
+    displayPremises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
+    displayConclusion = "Γ |- [a<sup>*</sup>]P, Δ",
     revealInternalSteps = true,
     // @note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula",
@@ -190,8 +189,8 @@ trait HybridProgramCalculus {
     name = "fp",
     displayNameLong = Some("Fixpoint"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P ∨ &langle;a&rangle;J |- J",
-    conclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ",
+    displayPremises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P ∨ &langle;a&rangle;J |- J",
+    displayConclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ",
     revealInternalSteps = true,
     // @note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula",

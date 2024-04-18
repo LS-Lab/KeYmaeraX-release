@@ -51,13 +51,13 @@ import scala.reflect.macros.whitebox
  *   have type T. At most one List[T] argument should be used, and it should be the last argument. If optional arguments
  *   are used, they should appear after all required arguments. Optional arguments are resolved positionally without
  *   regard to type. Type names are case-insensitive.
- * @param premises
+ * @param displayPremises
  *   String of premises when (if) the tactic is displayed like a rule on the UI. For tactics with (non-position) inputs,
  *   the premises or conclusion must mention each input. The name of each input is given in [[inputs]], which may be
  *   generated from the [[def]]. Premises are separated by ;; and each premise is optionally a sequent. "P;; A, B |- C"
  *   specifies two premises, the latter of which is a sequent with two assumptions. An asterisk "*" indicates a tactic
  *   that closes a branch.
- * @param conclusion
+ * @param displayConclusion
  *   Conclusion of rule displayed on UI. Axiom-like tactics have a conclusion and no premises. Tactics with premises
  *   must have conclusions. For tactics with (non-position) inputs, the premises or conclusion must mention each input.
  *   The name of each input is given in [[inputs]], which may be generated from the [[def]]. Sequent syntax is
@@ -113,10 +113,10 @@ class Tactic(
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
     val displayLevel: DisplayLevel = DisplayLevelInternal,
-    val premises: String = "",
-    val conclusion: String = "",
-    val contextPremises: String = "",
-    val contextConclusion: String = "",
+    val displayPremises: String = "",
+    val displayConclusion: String = "",
+    val displayContextPremises: String = "",
+    val displayContextConclusion: String = "",
     val needsGenerator: Boolean = false,
     val revealInternalSteps: Boolean = false,
     val inputs: String = "",
@@ -133,10 +133,10 @@ case class TacticArgs(
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
     displayLevel: DisplayLevel = DisplayLevelInternal,
-    premises: String = "",
-    conclusion: String = "",
-    contextPremises: String = "",
-    contextConclusion: String = "",
+    displayPremises: String = "",
+    displayConclusion: String = "",
+    displayContextPremises: String = "",
+    displayContextConclusion: String = "",
     needsGenerator: Boolean = false,
     revealInternalSteps: Boolean = false,
     inputs: String = "",
@@ -296,7 +296,13 @@ object TacticMacro {
 
     val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
 
-    val display = (inputs, args.premises, args.conclusion, args.contextPremises, args.contextConclusion) match {
+    val display = (
+      inputs,
+      args.displayPremises,
+      args.displayConclusion,
+      args.displayContextPremises,
+      args.displayContextConclusion,
+    ) match {
       case (Nil, "", "", _, _) => SimpleDisplayInfo(
           name = displayName,
           nameAscii = displayNameAscii,
@@ -324,30 +330,32 @@ object TacticMacro {
         )
 
       case (_, prem, concl, "", "") if concl != "" && prem != "" =>
-        val (prem, conc) = (DisplaySequent.parseMany(args.premises), DisplaySequent.parse(args.conclusion))
+        val premises = DisplaySequent.parseMany(args.displayPremises)
+        val conclusion = DisplaySequent.parse(args.displayConclusion)
         RuleDisplayInfo(
           name = displayName,
           nameAscii = displayNameAscii,
           nameLong = displayNameLong,
           level = args.displayLevel,
-          conclusion = conc,
-          premises = prem,
+          conclusion = conclusion,
+          premises = premises,
           inputGenerator = args.inputGenerator,
         )
 
       case (_, prem, concl, ctxPrem, ctxConcl) if concl != "" && prem != "" && ctxPrem != "" && ctxConcl != "" =>
-        val (prem, conc) = (DisplaySequent.parseMany(args.premises), DisplaySequent.parse(args.conclusion))
-        val (ctxPrem, ctxConc) =
-          (DisplaySequent.parseMany(args.contextPremises), DisplaySequent.parse(args.contextConclusion))
+        val premises = DisplaySequent.parseMany(args.displayPremises)
+        val conclusion = DisplaySequent.parse(args.displayConclusion)
+        val ctxPremises = DisplaySequent.parseMany(args.displayContextPremises)
+        val ctxConclusion = DisplaySequent.parse(args.displayContextConclusion)
         TacticDisplayInfo(
           name = displayName,
           nameAscii = displayNameAscii,
           nameLong = displayNameLong,
           level = args.displayLevel,
-          conclusion = conc,
-          premises = prem,
-          ctxConclusion = ctxConc,
-          ctxPremises = ctxPrem,
+          conclusion = conclusion,
+          premises = premises,
+          ctxConclusion = ctxConclusion,
+          ctxPremises = ctxPremises,
           inputGenerator = args.inputGenerator,
         )
 

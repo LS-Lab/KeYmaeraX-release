@@ -124,7 +124,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
    * @see
    *   [[boxTrue]]
    */
-  @Tactic(name = "G", premises = "|- P", conclusion = "Γ |- [a]P, Δ")
+  @Tactic(name = "G", displayPremises = "|- P", displayConclusion = "Γ |- [a]P, Δ")
   val G: DependentPositionTactic = anon { (pos: Position) => SequentCalculus.cohideR(pos) & DLBySubst.G }
 
   /**
@@ -139,7 +139,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
    *   [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  @Tactic(name = "monall", premises = "P |- Q", conclusion = "∀x P |- ∀x Q")
+  @Tactic(name = "monall", displayPremises = "P |- Q", displayConclusion = "∀x P |- ∀x Q")
   lazy val monall: BuiltInTactic = anon { US(Ax.monallrule.provable).result _ }
 
   /**
@@ -153,7 +153,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
    *   [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  @Tactic(name = "monb", premises = "P |- Q", conclusion = "[a]P |- [a]Q")
+  @Tactic(name = "monb", displayPremises = "P |- Q", displayConclusion = "[a]P |- [a]Q")
   lazy val monb: BuiltInTactic = anon { US(Ax.monbaxiom.provable).result _ }
 
   /**
@@ -167,7 +167,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
    *   [[UnifyUSCalculus.CMon()]]
    */
   // @todo flexibilize via cohide2 first
-  @Tactic(name = "mond", premises = "P |- Q", conclusion = "&langle;a&rangle;P |- &langle;a&rangle;Q")
+  @Tactic(name = "mond", displayPremises = "P |- Q", displayConclusion = "&langle;a&rangle;P |- &langle;a&rangle;Q")
   lazy val mond: BuiltInTactic = anon { US(Ax.mondrule.provable).result _ }
 
   //
@@ -184,7 +184,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     name = "diamondd",
     displayName = Some("<·>"),
     displayNameAscii = Some("<.>"),
-    conclusion = "__&langle;a&rangle;P__ ↔ &not;[a]&not;P",
+    displayConclusion = "__&langle;a&rangle;P__ ↔ &not;[a]&not;P",
   )
   lazy val diamondd: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))
 
@@ -226,7 +226,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
    * @see
    *   [[DLBySubst.assignEquality]]
    */
-  @Tactic(name = "assignb", displayName = Some("[:=]"), revealInternalSteps = true, conclusion = "__[x:=e]p(x)__↔p(e)")
+  @Tactic(
+    name = "assignb",
+    displayName = Some("[:=]"),
+    revealInternalSteps = true,
+    displayConclusion = "__[x:=e]p(x)__↔p(e)",
+  )
   lazy val assignb: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
     if (INTERNAL)
       try { useAt(Ax.assignbAxiom)(pos)(pr) }
@@ -270,7 +275,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     name = "boxd",
     displayName = Some("[·]"),
     displayNameAscii = Some("[.]"),
-    conclusion = "__[a]P__ ↔ &not;&langle;a&rangle;&not;P",
+    displayConclusion = "__[a]P__ ↔ &not;&langle;a&rangle;&not;P",
   )
   lazy val boxd: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.box, PosInExpr(1 :: Nil))
 
@@ -279,7 +284,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     name = "assignd",
     displayName = Some("<:=>"),
     revealInternalSteps = true,
-    conclusion = "__&langle;x:=e&rangle;p(x)__↔p(e)",
+    displayConclusion = "__&langle;x:=e&rangle;p(x)__↔p(e)",
   )
   lazy val assignd: DependentPositionTactic = anon { (pos: Position) =>
     useAt(Ax.assigndAxiom)(pos) |! useAt(Ax.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
@@ -306,7 +311,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val duald: BuiltInPositionTactic = useAt(Ax.duald)
 
   lazy val assigndDual: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.assignDual2)
-  @Tactic(name = "assignbDual", displayName = Some("[:=]D"), conclusion = "&langle;x:=f();&rangle;P ↔ __[x:=f();]P__")
+  @Tactic(
+    name = "assignbDual",
+    displayName = Some("[:=]D"),
+    displayConclusion = "&langle;x:=f();&rangle;P ↔ __[x:=f();]P__",
+  )
   lazy val assignbDual: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.assignDual2, PosInExpr(1 :: Nil))
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
@@ -382,7 +391,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
    */
   @Tactic(
     name = "DC",
-    conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R",
+    displayConclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R",
     inputs = "R:formula",
     revealInternalSteps = true,
   )
@@ -401,7 +410,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
    */
   @Tactic(
     name = "DCd",
-    conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
+    displayConclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
     inputs = "R:formula",
     revealInternalSteps = true,
   )
@@ -602,7 +611,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   // def ind
 
   /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
-  @Tactic(name = "boxTrue", displayName = Some("[]T"), displayLevel = DisplayLevelAll, conclusion = "__[a]⊤__ ↔ ⊤")
+  @Tactic(
+    name = "boxTrue",
+    displayName = Some("[]T"),
+    displayLevel = DisplayLevelAll,
+    displayConclusion = "__[a]⊤__ ↔ ⊤",
+  )
   // @note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
   lazy val boxTrue: BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     (provable(useAt(Ax.boxTrueTrue)(pos).computeResult _, 0)(
@@ -711,7 +725,7 @@ trait Derive extends UnifyUSCalculus {
    *   }}}
    * @incontext
    */
-  @Tactic(name = "Dvar", displayName = Some("(x)'"), displayLevel = DisplayLevelBrowse, conclusion = "(x)' = x")
+  @Tactic(name = "Dvar", displayName = Some("(x)'"), displayLevel = DisplayLevelBrowse, displayConclusion = "(x)' = x")
   lazy val Dvar: DependentPositionTactic = anon { (pos: Position) =>
     (if (INTERNAL) useAt(Ax.DvarAxiom) else DifferentialTactics.Dvariable) (pos)
   }

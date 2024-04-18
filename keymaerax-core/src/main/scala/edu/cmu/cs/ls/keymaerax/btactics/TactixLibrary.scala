@@ -588,7 +588,11 @@ object TactixLibrary
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next() else otherwise
     }
   }
-  @Tactic(name = "loopAuto", displayNameLong = Some("Loop with Invariant Automation"), conclusion = "Γ |- [a*]P, Δ")
+  @Tactic(
+    name = "loopAuto",
+    displayNameLong = Some("Loop with Invariant Automation"),
+    displayConclusion = "Γ |- [a*]P, Δ",
+  )
   def loopautoX(gen: Generator[GenProduct]): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, seq: Sequent) => loopauto(gen)(pos) }
 
@@ -892,8 +896,8 @@ object TactixLibrary
     name = "odeInvC",
     displayName = Some("ODE Invariant Complete"),
     displayLevel = DisplayLevelMenu,
-    premises = "*",
-    conclusion = "Γ, P |- [x'=f(x)&Q]P",
+    displayPremises = "*",
+    displayConclusion = "Γ, P |- [x'=f(x)&Q]P",
   )
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
@@ -911,8 +915,8 @@ object TactixLibrary
   @Tactic(
     name = "dCC",
     displayNameLong = Some("Differential Conditional Cut"),
-    premises = "Γ |- [x'=f(x)&R&P]Q ;; Γ, R, !P |- [x'=f(x)&R]!P",
-    conclusion = "Γ |- [x'=f(x)&R](P -> Q)",
+    displayPremises = "Γ |- [x'=f(x)&R&P]Q ;; Γ, R, !P |- [x'=f(x)&R]!P",
+    displayConclusion = "Γ |- [x'=f(x)&R](P -> Q)",
   )
   val dCC: DependentPositionTactic = DifferentialTactics.dCC
 
@@ -920,8 +924,8 @@ object TactixLibrary
     name = "dbx",
     displayNameLong = Some("Darboux (in)equalities"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- p≳0 ;; Q |- p' ≳ g p",
-    conclusion = "Γ |- [x'=f(x) & Q]p≳0, Δ",
+    displayPremises = "Γ |- p≳0 ;; Q |- p' ≳ g p",
+    displayConclusion = "Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs = "g:option[term]",
   )
   def dbx(g: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon({ pos: Position =>
@@ -1016,9 +1020,8 @@ object TactixLibrary
     name = "pQE",
     displayName = Some("Partial QE"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- Δ",
-    //    pQE -----------
-    conclusion = "Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
+    displayPremises = "Γ |- Δ",
+    displayConclusion = "Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
   )
   def partialQE: BelleExpr = ToolTactics.partialQE(
     ToolProvider.qeTool().getOrElse(throw new ProverSetupException("partialQE requires a QETool, but got None"))
@@ -1085,8 +1088,8 @@ object TactixLibrary
   @Tactic(
     name = "abbrv",
     displayNameLong = Some("Abbreviate"),
-    premises = "Γ(x), x=e |- Δ(x)",
-    conclusion = "Γ(e) |- Δ(e)",
+    displayPremises = "Γ(x), x=e |- Δ(x)",
+    displayConclusion = "Γ(e) |- Δ(e)",
     inputs = "e:term;;x[x]:option[variable]",
     revealInternalSteps = true,
   )
@@ -1112,8 +1115,8 @@ object TactixLibrary
   @Tactic(
     name = "L2R",
     displayNameLong = Some("Apply Equality"),
-    conclusion = "Γ, x=y, P(x) |- Q(x), Δ",
-    premises = "Γ, x=y, P(y) |- Q(y), Δ",
+    displayPremises = "Γ, x=y, P(y) |- Q(y), Δ",
+    displayConclusion = "Γ, x=y, P(x) |- Q(x), Δ",
   )
   val eqL2RX: DependentTwoPositionTactic = anon({ (pr: ProvableSig, ante: Position, pos: Position) =>
     {
@@ -1236,8 +1239,8 @@ object TactixLibrary
     name = "transform",
     displayName = Some("trafo"),
     displayNameLong = Some("Transform Expression"),
-    conclusion = "Γ |- P, Δ",
-    premises = "Γ |- Q, Δ",
+    displayPremises = "Γ |- Q, Δ",
+    displayConclusion = "Γ |- P, Δ",
     /* revealInternalSteps = true not yet possible since non-serializable ProvableSig input used internally */
   )
   def transform(Q: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
@@ -1372,9 +1375,8 @@ object TactixLibrary
     name = "rcf",
     displayName = Some("RCF"),
     displayLevel = DisplayLevelBrowse,
-    premises = "*",
-    //    pQE -----------
-    conclusion = "Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
+    displayPremises = "*",
+    displayConclusion = "Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
   )
   def RCF: BuiltInTactic = ToolTactics
     .rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
@@ -1762,10 +1764,9 @@ object TactixLibrary
     name = "sosQE",
     displayNameLong = Some("Prove arithmetic with sum-of-squares witness"),
     displayLevel = DisplayLevelAll,
-    premises =
+    displayPremises =
       "normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
-    //    sosQE -----------
-    conclusion = "Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
+    displayConclusion = "Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
   )
   val sosQE: BelleExpr = anon(SOSSolve.sos())
 }

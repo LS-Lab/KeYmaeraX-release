@@ -30,13 +30,12 @@ import scala.reflect.macros.whitebox
  *   Defaults to [[displayName]].
  * @param displayLevel
  *   Where to display an axiom/rule/tactic in the user interface. Defaults to [[DisplayLevelInternal]].
- * @param premises
+ * @param displayPremises
  *   String of premises when (if) the rule is displayed on the UI. Rules with premises must have conclusions. Premises
  *   are separated by `;;` and each premise is optionally a sequent. `P;; A, B |- C` specifies two premises, the latter
  *   of which is a sequent with two assumptions. An asterisk `*` indicates a rule that closes a branch.
- * @param conclusion
- *   Conclusion of rule displayed on UI. The name of each input is given in [[inputs]], which may be generated from the
- *   [[def]]. Sequent syntax is optionally supported: `A, B |- C, D`
+ * @param displayConclusion
+ *   Conclusion of rule displayed on UI. Sequent syntax is optionally supported: `A, B |- C, D`
  * @param unifier
  *   Which unifier to use. See also
  *   [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus#matcherFor(edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo)]]
@@ -52,8 +51,8 @@ class ProofRule(
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
     val displayLevel: DisplayLevel = DisplayLevelInternal,
-    val premises: String = "",
-    val conclusion: String = "",
+    val displayPremises: String = "",
+    val displayConclusion: String = "",
     val unifier: Unifier = UnifierFull,
     val key: String = "",
     val recursor: String = "*",
@@ -69,8 +68,8 @@ case class ProofRuleArgs(
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
     displayLevel: DisplayLevel = DisplayLevelInternal,
-    premises: String = "",
-    conclusion: String = "",
+    displayPremises: String = "",
+    displayConclusion: String = "",
     unifier: Unifier = UnifierFull,
     key: String = "",
     recursor: String = "*",
@@ -165,8 +164,8 @@ object ProofRuleMacro {
      * Parse annotation arguments
      */
 
-    val premises = DisplaySequent.parseMany(args.premises)
-    val conclusionOpt = if (args.conclusion.isEmpty) None else Some(DisplaySequent.parse(args.conclusion))
+    val premises = DisplaySequent.parseMany(args.displayPremises)
+    val conclusionOpt = Some(args.displayConclusion).filter(_.nonEmpty).map(DisplaySequent.parse)
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 

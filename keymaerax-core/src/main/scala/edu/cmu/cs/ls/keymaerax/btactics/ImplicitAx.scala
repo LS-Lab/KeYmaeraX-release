@@ -1046,8 +1046,8 @@ object ImplicitAx extends TacticProvider {
   @Tactic(
     name = "diffUnfold",
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=(-1) & v0<=v]P(v)",
-    conclusion = "Γ |- P(v0), Δ",
+    displayPremises = "Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=(-1) & v0<=v]P(v)",
+    displayConclusion = "Γ |- P(v0), Δ",
   )
   def diffUnfold(v0: Term, t0: Term): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, seq: Sequent) =>
@@ -1093,8 +1093,8 @@ object ImplicitAx extends TacticProvider {
   @Tactic(
     name = "diffUnfoldD",
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ, v=t0 |- <v'=1>P(v) ∨ <v'=(-1)> P(v), Δ ",
-    conclusion = "Γ |- ∃v P(v), Δ",
+    displayPremises = "Γ, v=t0 |- <v'=1>P(v) ∨ <v'=(-1)> P(v), Δ ",
+    displayConclusion = "Γ |- ∃v P(v), Δ",
   )
   def diffUnfoldD(t0: Term): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
     {

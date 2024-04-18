@@ -674,8 +674,8 @@ protected object FOQuantifierTactics extends TacticProvider {
     displayName = Some("∀Cl"),
     displayNameAscii = Some("allClosure"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- \\forall order p(x,y,z), Δ",
-    conclusion = "Γ |- p(x,y,z), Δ",
+    displayPremises = "Γ |- \\forall order p(x,y,z), Δ",
+    displayConclusion = "Γ |- p(x,y,z), Δ",
     inputs = "order:list[variable]",
   )
   def universalClosure(order: List[Variable]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>

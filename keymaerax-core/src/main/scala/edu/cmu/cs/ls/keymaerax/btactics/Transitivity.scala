@@ -34,7 +34,7 @@ object Transitivity extends TacticProvider {
   @Tactic(
     name = "closeTransitive",
     displayName = Some("Close Transitive"),
-    conclusion = "a>=b, b >= c, c >= z |- a >= z",
+    displayConclusion = "a>=b, b >= c, c >= z |- a >= z",
   )
   val closeTransitive: DependentTactic = anon((s: Sequent) => {
 

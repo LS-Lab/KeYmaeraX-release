@@ -822,8 +822,8 @@ object ODELiveness extends TacticProvider {
     name = "odeUnify",
     displayNameLong = Some("ODE Unify"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q&B]P, Δ ;; A |- Q",
-    conclusion = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q]P, Δ",
+    displayPremises = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q&B]P, Δ ;; A |- Q",
+    displayConclusion = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q]P, Δ",
   )
   def odeUnify: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
@@ -899,8 +899,8 @@ object ODELiveness extends TacticProvider {
     name = "compatCut",
     displayNameLong = Some("Compatible ODE Cut"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ, [x'=f(x) & Q]R |- C(⟨x'=f(x) & Q⟩P), Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
-    conclusion = "Γ |- C(⟨x'=f(x) & Q⟩P), Δ",
+    displayPremises = "Γ, [x'=f(x) & Q]R |- C(⟨x'=f(x) & Q⟩P), Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
+    displayConclusion = "Γ |- C(⟨x'=f(x) & Q⟩P), Δ",
     inputs = "R:formula",
   )
   def compatCut(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
@@ -939,8 +939,8 @@ object ODELiveness extends TacticProvider {
     name = "kDomainDiamond",
     displayName = Some("K<&>"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ |- ⟨x'=f(x) & Q⟩ R, Δ ;; Γ |- [x'=f(x) & Q∧¬P]¬R, Δ",
-    conclusion = "Γ |- ⟨x'=f(x) & Q⟩ P, Δ",
+    displayPremises = "Γ |- ⟨x'=f(x) & Q⟩ R, Δ ;; Γ |- [x'=f(x) & Q∧¬P]¬R, Δ",
+    displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩ P, Δ",
   )
   // was kDomD
   def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
@@ -985,8 +985,8 @@ object ODELiveness extends TacticProvider {
     name = "dDR",
     displayNameLong = Some("Diamond Differential Refinement"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- [x'=f(x) & R]Q, Δ",
-    conclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
+    displayPremises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- [x'=f(x) & R]Q, Δ",
+    displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
   )
   def dDR(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
     {
@@ -1750,8 +1750,8 @@ object ODELiveness extends TacticProvider {
     name = "closedRef",
     displayNameLong = Some("Closed Domain Refinement"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- g>0 & [x'=f(x) & R∧¬P∧g≳0]g>0, Δ",
-    conclusion = "Γ |- ⟨x'=f(x) & g≳0⟩P, Δ",
+    displayPremises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- g>0 & [x'=f(x) & R∧¬P∧g≳0]g>0, Δ",
+    displayConclusion = "Γ |- ⟨x'=f(x) & g≳0⟩P, Δ",
   )
   def closedRef(R: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
     {
@@ -1861,8 +1861,8 @@ object ODELiveness extends TacticProvider {
     name = "bDG",
     displayNameLong = Some("Bounded Differential Ghost"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- [ghost, x'=f(x) & Q] (||ghost||)^2 <= p, Δ ;; [ghost, x'=f(x) & Q]P, Δ",
-    conclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
+    displayPremises = "Γ |- [ghost, x'=f(x) & Q] (||ghost||)^2 <= p, Δ ;; [ghost, x'=f(x) & Q]P, Δ",
+    displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
     inputs = "ghost:expression ;; p:term",
   )
   def bDG(ghost: Expression, p: Term): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
@@ -1880,8 +1880,8 @@ object ODELiveness extends TacticProvider {
     name = "vDG",
     displayNameLong = Some("Affine Vectorial Differential Ghost"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- [ghost, x'=f(x) & Q]P, Δ",
-    conclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
+    displayPremises = "Γ |- [ghost, x'=f(x) & Q]P, Δ",
+    displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
     inputs = "ghost:expression",
   )
   def vDG(ghost: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
@@ -2012,8 +2012,8 @@ object ODELiveness extends TacticProvider {
     name = "dBDG",
     displayNameLong = Some("Bounded Diff Ghost"),
     displayLevel = DisplayLevelInternal,
-    premises = "Γ |- [y'=g(x,y),x'=f(x) & Q]||y||^2 ≤ p(x) ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
-    conclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
+    displayPremises = "Γ |- [y'=g(x,y),x'=f(x) & Q]||y||^2 ≤ p(x) ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
+    displayConclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
   )
   def dBDG(p: Term): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => dBDGInternal(p, 1)(pos, sequent))
@@ -2022,8 +2022,8 @@ object ODELiveness extends TacticProvider {
     name = "dDDG",
     displayNameLong = Some("Differentially-bounded Diff Ghost"),
     displayLevel = DisplayLevelInternal,
-    premises = "Γ |- [y'=g(x,y),x'=f(x) & Q](||y||^2)' <= L||y||+M ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
-    conclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
+    displayPremises = "Γ |- [y'=g(x,y),x'=f(x) & Q](||y||^2)' <= L||y||+M ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
+    displayConclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
   )
   def dDDG(L: Term, M: Term): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => dDDGInternal(L, M, 1)(pos, sequent))
@@ -2038,8 +2038,8 @@ object ODELiveness extends TacticProvider {
     name = "gEx",
     displayNameLong = Some("Global Existence"),
     displayLevel = DisplayLevelAll,
-    premises = "* (hint)",
-    conclusion = "Γ |- ⟨x'=f(x),t'=1⟩t>s(), Δ",
+    displayPremises = "* (hint)",
+    displayConclusion = "Γ |- ⟨x'=f(x),t'=1⟩t>s(), Δ",
   )
   def gEx(hint: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position) =>
     odeReduce(strict = true, hint.toList)(pos) & Idioms
@@ -2050,8 +2050,8 @@ object ODELiveness extends TacticProvider {
     name = "dV",
     displayNameLong = Some("Differential Variant"),
     displayLevel = DisplayLevelAll,
-    premises = " Γ |- ∃ε (ε>0 ∧ [x'=f(x)& Q∧¬P](P)'≳ε), Δ ;; Γ |- ∀s ⟨x'=f(x),t'=1 & Q⟩t≳s, Δ",
-    conclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
+    displayPremises = " Γ |- ∃ε (ε>0 ∧ [x'=f(x)& Q∧¬P](P)'≳ε), Δ ;; Γ |- ∀s ⟨x'=f(x),t'=1 & Q⟩t≳s, Δ",
+    displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     inputs = "ε:Option[Term]",
   )
   def dV(eps: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, sequent: Sequent) => {

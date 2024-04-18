@@ -869,8 +869,8 @@ object ODEInvariance extends TacticProvider {
   @Tactic(
     name = "domainStuck",
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
-    conclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
+    displayPremises = "Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
   )
   def domainStuck: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -1201,8 +1201,8 @@ object ODEInvariance extends TacticProvider {
     name = "dRI",
     displayName = Some("(Conj.) Differential Radical Invariants"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ, Q |- p*=0",
-    conclusion = "Γ |- [x'=f(x) & Q}]p=0, Δ",
+    displayPremises = "Γ, Q |- p*=0",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]p=0, Δ",
   )
   val dRI: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -1258,8 +1258,8 @@ object ODEInvariance extends TacticProvider {
     name = "dgVdbxAuto",
     displayName = Some("Vectorial Darboux (auto)"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
-    conclusion = "Γ |- [x'=f(x) & Q}]p!=0, Δ",
+    displayPremises = "Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]p!=0, Δ",
   )
   val dgVdbxAuto: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -1510,8 +1510,8 @@ object ODEInvariance extends TacticProvider {
     name = "dFP",
     displayName = Some("Differential Fixed Point"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
-    conclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
+    displayPremises = "Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
+    displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
   )
   val dFP: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
@@ -2078,8 +2078,8 @@ object ODEInvariance extends TacticProvider {
     displayName = Some("[']n"),
     displayNameLong = Some("nilsolve"),
     displayLevel = DisplayLevelMenu,
-    premises = "Γ,x=x0,t=0 |- [x'=f(x),t'=1&q(x)&x=y(x0,t)]p(x), Δ",
-    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
+    displayPremises = "Γ,x=x0,t=0 |- [x'=f(x),t'=1&q(x)&x=y(x0,t)]p(x), Δ",
+    displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = false,
   )
   def nilpotentSolve: DependentPositionTactic = nilpotentSolve(false)

@@ -79,10 +79,10 @@ trait DifferentialEquationCalculus {
     displayName = Some("[']"),
     displayNameLong = Some("Solution"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
-    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
-    contextPremises = "Γ |- C( ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)) ), Δ",
-    contextConclusion = "Γ |- C( [x'=f(x)&q(x)]p(x) ), Δ",
+    displayPremises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
+    displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
+    displayContextPremises = "Γ |- C( ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)) ), Δ",
+    displayContextConclusion = "Γ |- C( [x'=f(x)&q(x)]p(x) ), Δ",
     revealInternalSteps = true,
   )
   lazy val solve: DependentPositionTactic = anon { (pos: Position) =>
@@ -97,8 +97,8 @@ trait DifferentialEquationCalculus {
     name = "solveEnd",
     displayNameLong = Some("Solution with q(x) true at end"),
     displayLevel = DisplayLevelBrowse,
-    premises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
-    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
+    displayPremises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
+    displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = true,
   )
   lazy val solveEnd: DependentPositionTactic = anon { (pos: Position) =>
@@ -173,10 +173,10 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dC",
     displayNameLong = Some("Differential Cut"),
-    premises = "Γ |- [x'=f(x) & Q∧R]P, Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
-    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises = "Γ |- C( [x'=f(x) & Q∧R]P ), Δ ;; Γ |- C( [x'=f(x) & Q]R ), Δ",
-    contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
+    displayPremises = "Γ |- [x'=f(x) & Q∧R]P, Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
+    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayContextPremises = "Γ |- C( [x'=f(x) & Q∧R]P ), Δ ;; Γ |- C( [x'=f(x) & Q]R ), Δ",
+    displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     inputGenerator = "pegasusCandidates",
     revealInternalSteps = true,
   )
@@ -206,10 +206,10 @@ trait DifferentialEquationCalculus {
     name = "dIRule",
     displayNameLong = Some("Differential Invariant"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
-    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises = "Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
-    contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
+    displayPremises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
+    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayContextPremises = "Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
+    displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
   )
   def dIRule: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("diffInd"))
@@ -243,10 +243,10 @@ trait DifferentialEquationCalculus {
     name = "dIClose",
     displayNameLong = Some("Differential Invariant Auto-Close"),
     displayLevel = DisplayLevelAll,
-    premises = "*",
-    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
-    contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
+    displayPremises = "*",
+    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayContextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
+    displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
   )
   def dIClose: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
@@ -315,10 +315,10 @@ trait DifferentialEquationCalculus {
     name = "dI",
     displayNameLong = Some("Differential Invariant"),
     displayLevel = DisplayLevelAll,
-    premises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", // todo: how to indicate closed premise?
-    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
-    contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
+    displayPremises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", // todo: how to indicate closed premise?
+    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayContextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
+    displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
   )
   def dIX: DependentPositionTactic = DifferentialTactics.diffInd(Symbol("cex"))
@@ -357,10 +357,10 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dG",
     displayNameLong = Some("Differential Ghost"),
-    premises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",
-    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]G ), Δ",
-    contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
+    displayPremises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",
+    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayContextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]G ), Δ",
+    displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
     inputs = "E[y,x,y']:expression;; G[y]:option[formula]",
   )
@@ -377,8 +377,8 @@ trait DifferentialEquationCalculus {
     name = "dGold",
     displayName = Some("dG"),
     displayNameLong = Some("Differential Ghost"),
-    conclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
-    premises = "Γ |- ∃y [{x'=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
+    displayPremises = "Γ |- ∃y [{x'=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
+    displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
     inputs = "y[y]:variable;;a(x):term;;b(x):term;;P[y]:option[formula]",
   )
   def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): DependentPositionWithAppliedInputTactic =
@@ -421,8 +421,8 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "diffInvariant",
     displayNameLong = Some("Differential Cut + Auto Differential Invariant"),
-    premises = "Γ |- [x'=f(x) & Q∧R]P, Δ",
-    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    displayPremises = "Γ |- [x'=f(x) & Q∧R]P, Δ",
+    displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     inputs = "R:formula",
     revealInternalSteps = true,
   )

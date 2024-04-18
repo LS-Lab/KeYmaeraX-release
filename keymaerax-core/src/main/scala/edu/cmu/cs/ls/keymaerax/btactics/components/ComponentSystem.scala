@@ -639,8 +639,7 @@ object ComponentSystem extends TacticProvider {
       C2 Step: Om & I2 -> [mem2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2:string;;
       Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin)):string;;
       Com Safety:   [xin:=xo;]Z:string;;Com Liveness: <xin:=xo;>true:string""",
-    conclusion = "Γ|- t=t0 & Om & A1 & A2 -> [{ {mem1;mem2};{ctrl1;ctrl2};to:=t;{t'=1,plant1,plant2};{in1open;in2open};{cp1;cp2;con};}*]((G1&P1) & (G2&P2)), Δ",
-    premises =
+    displayPremises =
       """|- C1 Base: Om & A1 -> I1;;
          |- Om & I1 -> G1 & P1;;
          |- C1 Step: Om & I1 -> [mem1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1;;
@@ -649,7 +648,8 @@ object ComponentSystem extends TacticProvider {
          |- C2 Step: Om & I2 -> [mem2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2;;
          |- Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin));;
          |- Com Safety:   [xin:=xo;]Z;;
-         |- Com Liveness: <xin:=xo;>true"""
+         |- Com Liveness: <xin:=xo;>true""",
+    displayConclusion = "Γ|- t=t0 & Om & A1 & A2 -> [{ {mem1;mem2};{ctrl1;ctrl2};to:=t;{t'=1,plant1,plant2};{in1open;in2open};{cp1;cp2;con};}*]((G1&P1) & (G2&P2)), Δ",
   )
   def proveSystem(systemName: String,
                   c1baseLemma: String, c1useLemma: String, c1stepLemma: String,

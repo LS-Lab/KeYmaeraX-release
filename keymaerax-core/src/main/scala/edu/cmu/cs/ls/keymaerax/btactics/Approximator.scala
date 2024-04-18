@@ -54,8 +54,8 @@ object Approximator extends TacticProvider with Logging {
   @Tactic(
     name = "autoApproximate",
     displayName = Some("Approximate"),
-    conclusion = "Γ |- [{X'=F}], Δ",
-    premises = "Γ |- [{X'=F & Α(n)}], Δ",
+    displayPremises = "Γ |- [{X'=F & Α(n)}], Δ",
+    displayConclusion = "Γ |- [{X'=F}], Δ",
   )
   def autoApproximate(n: Number): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, sequent: Sequent) =>
@@ -87,8 +87,8 @@ object Approximator extends TacticProvider with Logging {
   @Tactic(
     name = "expApproximate",
     displayName = Some("e'=e Approximation"),
-    conclusion = "Γ |- [{c1,exp'=exp,c2}], Δ",
-    premises = "Γ |- [{c1,exp'=exp,c2 & approximate(n)}], Δ",
+    displayPremises = "Γ |- [{c1,exp'=exp,c2 & approximate(n)}], Δ",
+    displayConclusion = "Γ |- [{c1,exp'=exp,c2}], Δ",
     inputs = "exp:variable;;n:number",
   )
   def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic =
@@ -135,8 +135,8 @@ object Approximator extends TacticProvider with Logging {
   @Tactic(
     name = "circularApproximate",
     displayName = Some("Circular Dynamics Approximation"),
-    conclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
-    premises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
+    displayPremises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
+    displayConclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
     inputs = "sin[sin]:variable;;cos[cos]:variable;;num:number",
   )
   def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic =

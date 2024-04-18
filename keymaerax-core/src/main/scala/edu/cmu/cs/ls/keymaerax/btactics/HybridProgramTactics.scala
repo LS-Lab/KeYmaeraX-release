@@ -31,8 +31,8 @@ private object HybridProgramTactics extends TacticProvider {
   @Tactic(
     name = "decomposeController",
     displayName = Some("Decompose Controller"),
-    premises = "[a][c]P; ...; [b][c]P",
-    conclusion = "[{a ++ ... ++ b}; c] P",
+    displayPremises = "[a][c]P; ...; [b][c]P",
+    displayConclusion = "[{a ++ ... ++ b}; c] P",
   )
   val decomposeController: DependentPositionTactic = anon((pos: Position, s: Sequent) => {
     s(pos) match {
