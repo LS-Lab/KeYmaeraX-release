@@ -5,14 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
-  astForDisplayInfo,
-  astForUnifier,
-  parsePos,
-  parsePoses,
-  parseSequent,
-  parseSequents,
-}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{astForDisplayInfo, astForUnifier, parsePos, parsePoses}
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
@@ -172,8 +165,8 @@ object ProofRuleMacro {
      * Parse annotation arguments
      */
 
-    val premises = parseSequents(args.premises)(c)
-    val conclusionOpt = if (args.conclusion.isEmpty) None else Some(parseSequent(args.conclusion)(c))
+    val premises = DisplaySequent.parseMany(args.premises)
+    val conclusionOpt = if (args.conclusion.isEmpty) None else Some(DisplaySequent.parse(args.conclusion))
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 

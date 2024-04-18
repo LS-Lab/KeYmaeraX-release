@@ -52,24 +52,6 @@ object AnnotationCommon {
     val s = str.filter(c => !(c == '\n' || c == '\r'))
     if (s.isEmpty) Nil else s.split(";;").toList.map(s => parseAI(s.trim))
   }
-  def parseSequent(string: String)(implicit c: blackbox.Context): DisplaySequent = {
-    val str = string.filter(c => !(c == '\n' || c == '\r'))
-    if (str == "*") { DisplaySequent(Nil, Nil, isClosed = true) }
-    else {
-      str.split("\\|-").toList match {
-        case ante :: succ :: Nil =>
-          val (a, s) = (ante.split(",").toList.map(_.trim), succ.split(",").toList.map(_.trim))
-          DisplaySequent(a, s)
-        case succ :: Nil =>
-          val s = succ.split(",").toList.map(_.trim)
-          DisplaySequent(Nil, s)
-        case ss => c.abort(c.enclosingPosition, "Expected at most one |- in sequent, got: " + ss)
-      }
-    }
-  }
-  def parseSequents(s: String)(implicit c: blackbox.Context): List[DisplaySequent] = {
-    if (s.isEmpty) Nil else s.split(";;").toList.map(parseSequent)
-  }
   def toNonneg(s: String)(implicit c: blackbox.Context): Int = {
     val i =
       try { s.toInt }

@@ -9,8 +9,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.AnnotationCommon.{
   astForArgInfo,
   astForDisplayInfo,
   parseAIs,
-  parseSequent,
-  parseSequents,
   renderDisplayFormula,
 }
 
@@ -326,7 +324,7 @@ object TacticMacro {
         )
 
       case (_, prem, concl, "", "") if concl != "" && prem != "" =>
-        val (prem, conc) = (parseSequents(args.premises)(c), parseSequent(args.conclusion)(c))
+        val (prem, conc) = (DisplaySequent.parseMany(args.premises), DisplaySequent.parse(args.conclusion))
         RuleDisplayInfo(
           name = displayName,
           nameAscii = displayNameAscii,
@@ -338,8 +336,9 @@ object TacticMacro {
         )
 
       case (_, prem, concl, ctxPrem, ctxConcl) if concl != "" && prem != "" && ctxPrem != "" && ctxConcl != "" =>
-        val (prem, conc) = (parseSequents(args.premises)(c), parseSequent(args.conclusion)(c))
-        val (ctxPrem, ctxConc) = (parseSequents(args.contextPremises)(c), parseSequent(args.contextConclusion)(c))
+        val (prem, conc) = (DisplaySequent.parseMany(args.premises), DisplaySequent.parse(args.conclusion))
+        val (ctxPrem, ctxConc) =
+          (DisplaySequent.parseMany(args.contextPremises), DisplaySequent.parse(args.contextConclusion))
         TacticDisplayInfo(
           name = displayName,
           nameAscii = displayNameAscii,
