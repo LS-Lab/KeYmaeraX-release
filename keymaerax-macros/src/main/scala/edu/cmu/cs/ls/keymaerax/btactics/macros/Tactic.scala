@@ -562,7 +562,7 @@ object TacticMacro {
 
     val definitionArgsExprs: Seq[ValDef] = definitionArgs.map(argInfoToValDef)
 
-    def sdContains(sd: SequentDisplay, s: String): Boolean = {
+    def sdContains(sd: DisplaySequent, s: String): Boolean = {
       sd.ante.exists(n => n.contains(s)) || sd.succ.exists(n => n.contains(s))
     }
 

@@ -23,10 +23,11 @@ case object DisplayLevelAll extends DisplayLevel
 
 /**
  * Render a sequent as a list of antecedent UI strings and a list of succedent UI strings.
+ *
  * @param isClosed
  *   true to indicate that this sequent is closed so (*) star.
  */
-case class SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean = false)
+case class DisplaySequent(ante: List[String], succ: List[String], isClosed: Boolean = false)
 
 /** UI display information on how to render an axiom, rule, or tactic application */
 sealed trait DisplayInfo {
@@ -54,8 +55,8 @@ case class RuleDisplayInfo(
     nameAscii: String,
     nameLong: String,
     level: DisplayLevel,
-    conclusion: SequentDisplay,
-    premises: List[SequentDisplay],
+    conclusion: DisplaySequent,
+    premises: List[DisplaySequent],
     inputGenerator: String,
 ) extends DisplayInfo
 
@@ -68,10 +69,10 @@ case class TacticDisplayInfo(
     nameAscii: String,
     nameLong: String,
     level: DisplayLevel,
-    conclusion: SequentDisplay,
-    premises: List[SequentDisplay],
-    ctxConclusion: SequentDisplay,
-    ctxPremises: List[SequentDisplay],
+    conclusion: DisplaySequent,
+    premises: List[DisplaySequent],
+    ctxConclusion: DisplaySequent,
+    ctxPremises: List[DisplaySequent],
     inputGenerator: String,
 ) extends DisplayInfo
 

@@ -52,22 +52,22 @@ object AnnotationCommon {
     val s = str.filter(c => !(c == '\n' || c == '\r'))
     if (s.isEmpty) Nil else s.split(";;").toList.map(s => parseAI(s.trim))
   }
-  def parseSequent(string: String)(implicit c: blackbox.Context): SequentDisplay = {
+  def parseSequent(string: String)(implicit c: blackbox.Context): DisplaySequent = {
     val str = string.filter(c => !(c == '\n' || c == '\r'))
-    if (str == "*") { SequentDisplay(Nil, Nil, isClosed = true) }
+    if (str == "*") { DisplaySequent(Nil, Nil, isClosed = true) }
     else {
       str.split("\\|-").toList match {
         case ante :: succ :: Nil =>
           val (a, s) = (ante.split(",").toList.map(_.trim), succ.split(",").toList.map(_.trim))
-          SequentDisplay(a, s)
+          DisplaySequent(a, s)
         case succ :: Nil =>
           val s = succ.split(",").toList.map(_.trim)
-          SequentDisplay(Nil, s)
+          DisplaySequent(Nil, s)
         case ss => c.abort(c.enclosingPosition, "Expected at most one |- in sequent, got: " + ss)
       }
     }
   }
-  def parseSequents(s: String)(implicit c: blackbox.Context): List[SequentDisplay] = {
+  def parseSequents(s: String)(implicit c: blackbox.Context): List[DisplaySequent] = {
     if (s.isEmpty) Nil else s.split(";;").toList.map(parseSequent)
   }
   def toNonneg(s: String)(implicit c: blackbox.Context): Int = {
@@ -117,10 +117,15 @@ object AnnotationCommon {
     }
   }
 
-  private def astForSequentDisplay(sequentDisplay: SequentDisplay)(implicit c: blackbox.Context): c.universe.Tree = {
+  private def astForDisplaySequent(sequent: DisplaySequent)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
-    val SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean) = sequentDisplay
-    q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SequentDisplay($ante, $succ, $isClosed)"""
+
+    val DisplaySequent(ante, succ, isClosed) = sequent
+    q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.DisplaySequent(
+      ante = $ante,
+      succ = $succ,
+      isClosed = $isClosed,
+    )"""
   }
 
   def astForDisplayInfo(displayInfo: DisplayInfo)(implicit c: blackbox.Context): c.universe.Tree = {
@@ -141,8 +146,8 @@ object AnnotationCommon {
           nameAscii = $nameAscii,
           nameLong = $nameLong,
           level = ${astForDisplayLevel(level)},
-          conclusion = ${astForSequentDisplay(conclusion)},
-          premises = ${premises.map(astForSequentDisplay)},
+          conclusion = ${astForDisplaySequent(conclusion)},
+          premises = ${premises.map(astForDisplaySequent)},
           inputGenerator = $inputGenerator,
         )"""
 
@@ -161,10 +166,10 @@ object AnnotationCommon {
           nameAscii = $nameAscii,
           nameLong = $nameLong,
           level = ${astForDisplayLevel(level)},
-          conclusion = ${astForSequentDisplay(conclusion)},
-          premises = ${premises.map(astForSequentDisplay)},
-          ctxConclusion = ${astForSequentDisplay(ctxConclusion)},
-          ctxPremises = ${ctxPremises.map(astForSequentDisplay)},
+          conclusion = ${astForDisplaySequent(conclusion)},
+          premises = ${premises.map(astForDisplaySequent)},
+          ctxConclusion = ${astForDisplaySequent(ctxConclusion)},
+          ctxPremises = ${ctxPremises.map(astForDisplaySequent)},
           inputGenerator = $inputGenerator,
         )"""
 

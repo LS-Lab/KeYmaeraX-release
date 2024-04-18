@@ -17,12 +17,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.{
   DisplayLevelBrowse,
   DisplayLevelInternal,
   DisplayLevelMenu,
+  DisplaySequent,
   FormulaArg,
   InputAxiomDisplayInfo,
   ListArg,
   ProvableInfo,
   RuleDisplayInfo,
-  SequentDisplay,
   SimpleDisplayInfo,
   TacticDisplayInfo,
 }
@@ -100,7 +100,7 @@ case class ApplicableAxiomsResponse(
     )
   }
 
-  def sequentJson(sequent: SequentDisplay): JsValue = {
+  def sequentJson(sequent: DisplaySequent): JsValue = {
     val json = JsObject(
       "ante" -> JsArray(sequent.ante.map(JsString(_)): _*),
       "succ" -> JsArray(sequent.succ.map(JsString(_)): _*),
@@ -111,8 +111,8 @@ case class ApplicableAxiomsResponse(
 
   def ruleJson(
       info: DerivationInfo,
-      conclusion: SequentDisplay,
-      premises: List[SequentDisplay],
+      conclusion: DisplaySequent,
+      premises: List[DisplaySequent],
       inputGenerator: Option[String],
   ): JsObject = {
     val conclusionJson = sequentJson(conclusion)
