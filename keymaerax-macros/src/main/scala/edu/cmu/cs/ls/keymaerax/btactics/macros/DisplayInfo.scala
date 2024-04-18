@@ -49,8 +49,7 @@ case object DisplaySequent {
         val antes = if (ante.trim.isEmpty) Nil else ante.split(",").map(_.trim).toList
         val succs = if (succ.trim.isEmpty) Nil else succ.split(",").map(_.trim).toList
         require(antes.forall(_.nonEmpty), "antecedents must contain non-whitespace characters")
-        // Disabled for now because one @Tactic fails this rule
-        // require(succs.forall(_.nonEmpty), "succedents must contain non-whitespace characters")
+        require(succs.forall(_.nonEmpty), "succedents must contain non-whitespace characters")
         DisplaySequent(antes, succs)
 
       case _ => throw new IllegalArgumentException("sequent must contain at most one |-")

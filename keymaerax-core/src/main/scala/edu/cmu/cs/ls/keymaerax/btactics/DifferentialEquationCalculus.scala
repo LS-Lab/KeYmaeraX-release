@@ -208,7 +208,7 @@ trait DifferentialEquationCalculus {
     displayLevel = DisplayLevelAll,
     displayPremises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    displayContextPremises = "Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
+    displayContextPremises = "Γ |- C( Q→P∧[x':=f(x)](P)' ), Δ",
     displayContextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true,
   )
