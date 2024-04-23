@@ -110,7 +110,7 @@ object SQLite {
 
   /** Accesses the SQLite DB at location `dblocation`. */
   class SQLiteDB(val dblocation: String) extends DBAbstraction {
-    val sqldb: jdbc.SQLiteProfile.backend.DatabaseDef = {
+    val sqldb: jdbc.SQLiteProfile.backend.JdbcDatabaseDef = {
       val config = new SQLiteConfig()
       /* Enable write-ahead logging for SQLite - significantly improves write performance */
       config.setJournalMode(JournalMode.WAL)
