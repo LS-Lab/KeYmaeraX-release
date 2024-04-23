@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 // AUTO-GENERATED Slick data model
 /** Stand-alone Slick data model for immediate use */
 object Tables extends Tables {
-  val profile = slick.jdbc.SQLiteProfile
+  val profile: slick.jdbc.JdbcProfile = slick.jdbc.SQLiteProfile
 }
 
 /**
@@ -18,7 +18,8 @@ trait Tables {
   val profile: slick.jdbc.JdbcProfile
   import profile.api._
   import slick.model.ForeignKeyAction
-  // NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.
+  // NOTE: GetResult mappers for plain SQL are only generated for
+  // tables where Slick knows how to map the types of all columns.
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
@@ -32,8 +33,6 @@ trait Tables {
     Proofs.schema,
     Users.schema,
   ).reduceLeft(_ ++ _)
-  @deprecated("Use .schema instead of .ddl", "3.0")
-  def ddl = schema
 
   /**
    * Entity class storing rows of table Agendaitems
@@ -60,12 +59,12 @@ trait Tables {
   implicit def GetResultAgendaitemsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[AgendaitemsRow] =
     GR { prs =>
       import prs._
-      AgendaitemsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
+      (AgendaitemsRow.apply _).tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
     }
 
   /** Table description of table agendaItems. Objects of this class serve as prototypes for rows in queries. */
   class Agendaitems(_tableTag: Tag) extends profile.api.Table[AgendaitemsRow](_tableTag, "agendaItems") {
-    def * = (_Id, proofid, stepid, subgoalid, displayname).<>(AgendaitemsRow.tupled, AgendaitemsRow.unapply)
+    def * = ((_Id, proofid, stepid, subgoalid, displayname)).mapTo[AgendaitemsRow]
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -116,12 +115,12 @@ trait Tables {
   /** GetResult implicit for fetching ConfigRow objects using plain SQL queries */
   implicit def GetResultConfigRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ConfigRow] = GR { prs =>
     import prs._
-    ConfigRow.tupled((<<?[Int], <<?[String], <<?[String], <<?[String]))
+    (ConfigRow.apply _).tupled((<<?[Int], <<?[String], <<?[String], <<?[String]))
   }
 
   /** Table description of table config. Objects of this class serve as prototypes for rows in queries. */
   class Config(_tableTag: Tag) extends profile.api.Table[ConfigRow](_tableTag, "config") {
-    def * = (configid, configname, key, value).<>(ConfigRow.tupled, ConfigRow.unapply)
+    def * = ((configid, configname, key, value)).mapTo[ConfigRow]
 
     /** Database column configId SqlType(INTEGER), PrimaryKey */
     val configid: Rep[Option[Int]] = column[Option[Int]]("configId", O.PrimaryKey)
@@ -152,12 +151,12 @@ trait Tables {
   implicit def GetResultExecutablesRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutablesRow] =
     GR { prs =>
       import prs._
-      ExecutablesRow.tupled((<<?[Int], <<?[String]))
+      (ExecutablesRow.apply _).tupled((<<?[Int], <<?[String]))
     }
 
   /** Table description of table executables. Objects of this class serve as prototypes for rows in queries. */
   class Executables(_tableTag: Tag) extends profile.api.Table[ExecutablesRow](_tableTag, "executables") {
-    def * = (_Id, belleexpr).<>(ExecutablesRow.tupled, ExecutablesRow.unapply)
+    def * = ((_Id, belleexpr)).mapTo[ExecutablesRow]
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -224,7 +223,7 @@ trait Tables {
       e2: GR[Option[String]],
   ): GR[ExecutionstepsRow] = GR { prs =>
     import prs._
-    ExecutionstepsRow.tupled((
+    (ExecutionstepsRow.apply _).tupled((
       <<?[Int],
       <<?[Int],
       <<?[Int],
@@ -245,21 +244,23 @@ trait Tables {
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends profile.api.Table[ExecutionstepsRow](_tableTag, "executionSteps") {
     def * = (
-      _Id,
-      proofid,
-      previousstep,
-      branchorder,
-      status,
-      executableid,
-      inputprovableid,
-      resultprovableid,
-      localprovableid,
-      userexecuted,
-      childrenrecorded,
-      rulename,
-      numsubgoals,
-      numopensubgoals,
-    ).<>(ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+      (
+        _Id,
+        proofid,
+        previousstep,
+        branchorder,
+        status,
+        executableid,
+        inputprovableid,
+        resultprovableid,
+        localprovableid,
+        userexecuted,
+        childrenrecorded,
+        rulename,
+        numsubgoals,
+        numopensubgoals,
+      ),
+    ).mapTo[ExecutionstepsRow]
 
     /** Maps whole row to an option. Useful for outer joins. */
     def ? = (
@@ -284,7 +285,8 @@ trait Tables {
         { r =>
           import r._;
           _4.map(_ =>
-            ExecutionstepsRow.tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get))
+            (ExecutionstepsRow.apply _)
+              .tupled((_1, _2, _3, _4.get, _5, _6, _7, _8, _9, _10, _11, _12, _13.get, _14.get))
           )
         },
         (_: Any) => throw new Exception("Inserting into ? projection not supported."),
@@ -385,12 +387,12 @@ trait Tables {
   /** GetResult implicit for fetching LemmasRow objects using plain SQL queries */
   implicit def GetResultLemmasRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[LemmasRow] = GR { prs =>
     import prs._
-    LemmasRow.tupled((<<?[Int], <<?[String]))
+    (LemmasRow.apply _).tupled((<<?[Int], <<?[String]))
   }
 
   /** Table description of table lemmas. Objects of this class serve as prototypes for rows in queries. */
   class Lemmas(_tableTag: Tag) extends profile.api.Table[LemmasRow](_tableTag, "lemmas") {
-    def * = (_Id, lemma).<>(LemmasRow.tupled, LemmasRow.unapply)
+    def * = ((_Id, lemma)).mapTo[LemmasRow]
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -441,7 +443,7 @@ trait Tables {
   /** GetResult implicit for fetching ModelsRow objects using plain SQL queries */
   implicit def GetResultModelsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ModelsRow] = GR { prs =>
     import prs._
-    ModelsRow.tupled((
+    (ModelsRow.apply _).tupled((
       <<?[Int],
       <<?[String],
       <<?[String],
@@ -457,8 +459,7 @@ trait Tables {
 
   /** Table description of table models. Objects of this class serve as prototypes for rows in queries. */
   class Models(_tableTag: Tag) extends profile.api.Table[ModelsRow](_tableTag, "models") {
-    def * = (_Id, userid, name, date, description, filecontents, publink, title, tactic, istemporary)
-      .<>(ModelsRow.tupled, ModelsRow.unapply)
+    def * = ((_Id, userid, name, date, description, filecontents, publink, title, tactic, istemporary)).mapTo[ModelsRow]
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -537,14 +538,13 @@ trait Tables {
   /** GetResult implicit for fetching ProofsRow objects using plain SQL queries */
   implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR { prs =>
     import prs._
-    ProofsRow
+    (ProofsRow.apply _)
       .tupled((<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
   }
 
   /** Table description of table proofs. Objects of this class serve as prototypes for rows in queries. */
   class Proofs(_tableTag: Tag) extends profile.api.Table[ProofsRow](_tableTag, "proofs") {
-    def * = (_Id, modelid, name, description, date, closed, lemmaid, istemporary, tactic)
-      .<>(ProofsRow.tupled, ProofsRow.unapply)
+    def * = ((_Id, modelid, name, description, date, closed, lemmaid, istemporary, tactic)).mapTo[ProofsRow]
 
     /** Database column _id SqlType(INTEGER), PrimaryKey */
     val _Id: Rep[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -608,12 +608,12 @@ trait Tables {
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
   implicit def GetResultUsersRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[UsersRow] = GR { prs =>
     import prs._
-    UsersRow.tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
+    (UsersRow.apply _).tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int]))
   }
 
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
   class Users(_tableTag: Tag) extends profile.api.Table[UsersRow](_tableTag, "users") {
-    def * = (email, hash, salt, iterations, level).<>(UsersRow.tupled, UsersRow.unapply)
+    def * = ((email, hash, salt, iterations, level)).mapTo[UsersRow]
 
     /** Database column email SqlType(TEXT), PrimaryKey */
     val email: Rep[Option[String]] = column[Option[String]]("email", O.PrimaryKey)
