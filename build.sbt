@@ -67,13 +67,17 @@ lazy val core = project
     libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.0",
-    libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.1-42-gc68dbaa",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1",
     libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
     libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.4",
     libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
+
+    // A published version of scala-smtlib that works with Scala 2.13
+    // https://github.com/regb/scala-smtlib/issues/46#issuecomment-955691728
+    // https://mvnrepository.com/artifact/com.regblanc/scala-smtlib_2.13/0.2.1-42-gc68dbaa
+    libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.1-42-gc68dbaa",
 
     Compile / run / mainClass := mainClass.value,
     assembly / mainClass := mainClass.value,
