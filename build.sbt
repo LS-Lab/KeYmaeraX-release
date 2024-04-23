@@ -2,7 +2,7 @@ import java.io.{FileInputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
 
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "2.13.13"
 ThisBuild / version := "5.0.2"
 
 ThisBuild / scalacOptions ++= {
