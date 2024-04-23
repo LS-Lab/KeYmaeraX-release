@@ -81,6 +81,7 @@ lazy val core = project
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.0",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.10.1",
+    libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.14.0",
     libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
     libraryDependencies += "org.typelevel" %% "paiges-core" % "0.4.3",
     libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
