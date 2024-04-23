@@ -66,7 +66,7 @@ lazy val core = project
 
     libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
-    libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.0.2",
+    libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.0",
     libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.1-42-gc68dbaa",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5",
