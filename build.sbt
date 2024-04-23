@@ -71,7 +71,7 @@ lazy val core = project
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1",
     libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
-    libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.4",
+    libraryDependencies += "org.typelevel" %% "paiges-core" % "0.4.3",
     libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
 
     // A published version of scala-smtlib that works with Scala 2.13
