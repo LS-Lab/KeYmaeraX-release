@@ -43,11 +43,11 @@ ThisBuild / scalacOptions ++= {
 }
 
 ThisBuild / assemblyMergeStrategy := {
-  // The org.apache.logging.log4j dependency jars have module-info.class files in their root.
+  // Multiple dependency jars have a module-info.class file in the same location.
   // Without custom rules, they cause merge conflicts with sbt-assembly.
   // Since we're building an uberjar, it should be safe to discard them (according to stackoverflow).
   // https://stackoverflow.com/a/55557287
-  case PathList("module-info.class") => MergeStrategy.discard
+  case PathList(elements @ _*) if elements.last == "module-info.class" => MergeStrategy.discard
 
   // https://github.com/sbt/sbt-assembly#merge-strategy
   case path =>
@@ -143,7 +143,7 @@ lazy val webui = project
     /// sqlite driver
     libraryDependencies += "com.typesafe.slick" %% "slick" % "3.5.1",
     libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "3.5.1",
-    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2", // For SqliteTableGenerator
+    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.45.3.0",
 
     // Akka
     libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.5.3",
