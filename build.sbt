@@ -164,14 +164,6 @@ lazy val webui = project
     testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework"),
 
     logBuffered := false,
-
-    // Include test resources in uberjar created via `sbt Test/assembly`.
-    // In particular, this includes test/resources/examples over src/resources/examples.
-    inConfig(Test)(AssemblyPlugin.assemblySettings),
-    Test / assemblyMergeStrategy := {
-      case PathList("examples", _*) => MergeStrategy.last
-      case path => MergeStrategy.defaultMergeStrategy(path)
-    },
   )
 
 // build KeYmaera X full jar with sbt clean assembly
