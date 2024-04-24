@@ -42,6 +42,19 @@ ThisBuild / scalacOptions ++= {
   )
 }
 
+ThisBuild / assemblyMergeStrategy := {
+  // The org.apache.logging.log4j dependency jars have module-info.class files in their root.
+  // Without custom rules, they cause merge conflicts with sbt-assembly.
+  // Since we're building an uberjar, it should be safe to discard them (according to stackoverflow).
+  // https://stackoverflow.com/a/55557287
+  case PathList("module-info.class") => MergeStrategy.discard
+
+  // https://github.com/sbt/sbt-assembly#merge-strategy
+  case path =>
+    val oldStrategy = (ThisBuild / assemblyMergeStrategy).value
+    oldStrategy(path)
+}
+
 // Never execute tests in parallel across all sub-projects
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 
@@ -64,15 +77,21 @@ lazy val core = project
 
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
 
-    libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.0",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5",
-    libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1",
     libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
     libraryDependencies += "org.typelevel" %% "paiges-core" % "0.4.3",
     libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
+
+    // Logging
+    // https://github.com/jokade/slogging?tab=readme-ov-file#getting-started
+    // https://www.baeldung.com/slf4j-with-log4j2-logback#Log4j2
+    libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
+    libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.23.1",
+    libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.23.1",
+    libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.23.1",
 
     // A published version of scala-smtlib that works with Scala 2.13
     // https://github.com/regb/scala-smtlib/issues/46#issuecomment-955691728
