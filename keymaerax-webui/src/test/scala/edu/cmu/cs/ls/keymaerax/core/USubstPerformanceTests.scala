@@ -15,6 +15,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.concurrent.duration.Duration
 
@@ -24,6 +25,10 @@ import scala.concurrent.duration.Duration
  *   Andre Platzer
  */
 @USubstTest @SlowTest
+// This test compares the old USubstChurch against USubstOne.
+// It is a reason why USubstChurch has not been (and won't be) deleted, only deprecated.
+// Because of this, USubstChurch uses in this test should not cause warnings.
+@nowarn("cat=deprecation&origin=edu.cmu.cs.ls.keymaerax.core.USubstChurch")
 class USubstPerformanceTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val deterministicComplexity = 10
