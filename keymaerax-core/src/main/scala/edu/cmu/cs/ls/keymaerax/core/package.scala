@@ -238,9 +238,6 @@ import scala.collection.immutable
  */
 package object core {
 
-  /** KeYmaera X core kernel version number */
-  val VERSION: String = "5.0.2"
-
   /** The encoding used for storing lemmas and other artifacts. */
   val ENCODING: String = "UTF-8"
 

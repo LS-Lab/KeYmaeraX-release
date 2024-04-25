@@ -17,14 +17,14 @@ case class Version(major: Int, minor: Int, patch: Int) extends Ordered[Version] 
 
 object Version {
 
-  /** This KeYmaera X instance's version, parsed from [[edu.cmu.cs.ls.keymaerax.core.VERSION]]. */
-  val CURRENT: Version = Version.parse(edu.cmu.cs.ls.keymaerax.core.VERSION)
+  /** This KeYmaera X instance's version, parsed from [[BuildInfo.version]]. */
+  val CURRENT: Version = Version.parse(BuildInfo.version)
 
   /**
    * Parse a version from a string with the format `<major>.<minor>.<patch>`. The fields `major`, `minor`, `patch` are
    * positive integers with at least one digit and no additional leading zeroes.
    *
-   * If you need the current version, use [[CURRENT]] instead of parsing [[edu.cmu.cs.ls.keymaerax.core.VERSION]].
+   * Use [[CURRENT]] instead of manually parsing [[BuildInfo.version]].
    *
    * @throws IllegalArgumentException
    *   invalid version string

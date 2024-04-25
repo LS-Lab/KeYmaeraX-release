@@ -3,7 +3,6 @@ import java.nio.charset.StandardCharsets
 import java.util.Properties
 
 ThisBuild / scalaVersion := "2.13.12"
-// TODO Use this version number in keymaerax-core
 ThisBuild / version := "5.0.2"
 
 ThisBuild / scalacOptions ++= {
@@ -57,6 +56,7 @@ lazy val macros = project
 
 lazy val core = project
   .in(file("keymaerax-core"))
+  .enablePlugins(BuildInfoPlugin)
   .dependsOn(macros)
   .settings(
     name := "KeYmaeraX Core",
@@ -78,6 +78,10 @@ lazy val core = project
     Compile / run / mainClass := mainClass.value,
     assembly / mainClass := mainClass.value,
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
+
+    // Include version number as constant in source code
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "edu.cmu.cs.ls.keymaerax",
 
     // Use Mathematica's JLink.jar as unmanaged dependency
     // The path is read from the property mathematica.jlink.path in the file local.properties
