@@ -489,25 +489,25 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs (DeploymentTest, SummaryTest) in
     withMathematica { _ =>
       val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
-      val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
+      val t = implyR(1) & AxiomaticODESolver()(1) & QE
       proveBy(f, t) shouldBe Symbol("proved")
     }
 
   it should "prove the double integrator x''=a" taggedAs (DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2&a=3 -> [{x'=v,v'=a}]x^3>=1".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
+    val t = implyR(1) & AxiomaticODESolver()(1) & QE
     proveBy(f, t) shouldBe Symbol("proved")
   }
 
   it should "prove the triple integrator x'''=j" in withMathematica { _ =>
     val f = "x=1&v=2&a=3&j=4 -> [{x'=v,v'=a,a'=j}]x^3>=1".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
+    val t = implyR(1) & AxiomaticODESolver()(1) & QE
     proveBy(f, t) shouldBe Symbol("proved")
   }
 
   it should "prove with constant v'=0" in withMathematica { _ =>
     val f = "A>0 & B>0 & x+v^2/(2*B)<=S & v=0 -> [{x'=v,v'=0&v>=0&x+v^2/(2*B)>=S}](v>=0&x+v^2/(2*B)<=S)".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
+    val t = implyR(1) & AxiomaticODESolver()(1) & QE
     proveBy(f, t) shouldBe Symbol("proved")
   }
 
@@ -515,7 +515,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f =
       "A>0 & B>0 & ep>0 & v>=0 & x+v^2/(2*B)<=S & x+v^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v)<=S & c=0 -> [{x'=v,v'=A,c'=1&v>=0&c<=ep}](v>=0&x+v^2/(2*B)<=S)"
         .asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
+    val t = implyR(1) & AxiomaticODESolver()(1) & QE
     proveBy(f, t) shouldBe Symbol("proved")
   }
 
@@ -587,7 +587,6 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
       .toMap
     val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
     val result = new IntegratorODESolverTool().odeSolve(system.ode, "t".asVariable, initialConds)
-    println(result.get.asInstanceOf[And])
   }
   // endregion
 

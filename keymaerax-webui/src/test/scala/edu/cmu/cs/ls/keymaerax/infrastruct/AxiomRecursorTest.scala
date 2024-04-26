@@ -49,19 +49,13 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
     val ax: Formula = axiom.formula
     val (_, keyPart) = ax.at(axiom.key)
     val u = UnifyUSCalculus.matcherFor(axiom)(keyPart, instance)
-    println("unify1:  " + keyPart)
-    println("unify2:  " + instance)
-    println("unifier: " + u)
     u(keyPart) shouldBe instance
     // @todo this might fail when the instance requires semantic renaming
     u.toCore(keyPart) shouldBe instance
 
     if (axiom.displayLevel != Symbol("internal")) {
-      println(s"$axiom\ndisplayLevel=${axiom.displayLevel}")
       // useAt(axiom) should result in all recursors being well-defined
-      println("useAt(" + axiom.codeName + ")(1)")
       val pr = TactixLibrary.proveBy(instance, TactixLibrary.useAt(axiom)(1))
-      println(pr)
       for (pos <- axiom.recursor) { pr.subgoals.head.succ(0).sub(pos) shouldBe Symbol("defined") }
     }
     true

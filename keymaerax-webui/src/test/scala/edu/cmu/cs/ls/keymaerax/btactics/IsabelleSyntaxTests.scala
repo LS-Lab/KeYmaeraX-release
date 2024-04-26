@@ -41,24 +41,18 @@ class IsabelleSyntaxTests extends TacticTestBase {
   it should "derive negation bounds" in withMathematica { _ =>
     val fml = "a-(x*z+y) > b-(y*z+x)".asFormula
     val (prog, pff) = isarSyntax(fml)
-    println(pff)
-    println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
   it should "derive repeated addition bounds" in withMathematica { _ =>
     val fml = "(x+y)+z+((x+y)+z+5) <= a+b".asFormula
     val (prog, pff) = isarSyntax(fml)
-    println(pff)
-    println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
   it should "derive lower bounds for different forms of squares" in withMathematica { _ =>
     val fml = "x^2<=xopost()^2 & (a+b)^2 <= c^2 | (a+b)^2 <= (c+d)^2".asFormula
     val (prog, pff) = isarSyntax(fml)
-    println(pff)
-    // println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
@@ -67,8 +61,6 @@ class IsabelleSyntaxTests extends TacticTestBase {
       "m-z<=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=-b| m-z>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((vpost()=v&zpost()=z)&tpost()=0)&apost()=A"
         .asFormula
     val (prog, pff) = isarSyntax(uf)
-    println(pff)
-    // println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
@@ -78,8 +70,6 @@ class IsabelleSyntaxTests extends TacticTestBase {
         .asFormula
     val (f, pf) = normalise(uf)
     val (prog, pff) = deriveFormulaProof(f)
-    // println(prettyProg(prog))
-    println(pff)
     pf shouldBe Symbol("proved")
     pff shouldBe Symbol("proved")
   }
@@ -89,16 +79,12 @@ class IsabelleSyntaxTests extends TacticTestBase {
       "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=A)&tpost()=0|v=0&0<=ep&((xpost()=x&vpost()=0)&apost()=0)&tpost()=0|(v>=0&0<=ep)&((xpost()=x&vpost()=v)&apost()=-b)&tpost()=0"
         .asFormula
     val (prog, pff) = isarSyntax(uf)
-    println(pff)
-    // println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
   it should "stopsign with direct v control control monitor" in withMathematica { _ =>
     val uf = "S-x>=ep*vpost()&0<=ep&xpost()=x&tpost()=0|0<=ep&(xpost()=x&vpost()=0)&tpost()=0".asFormula
     val (prog, pff) = isarSyntax(uf)
-    println(pff)
-    println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
@@ -108,7 +94,6 @@ class IsabelleSyntaxTests extends TacticTestBase {
         .asFormula
     val (f, pf) = normalise(uf)
     val (prog, pff) = deriveFormulaProof(f)
-    // println(prettyProg(prog))
     pf shouldBe Symbol("proved")
     pff shouldBe Symbol("proved")
   }
@@ -118,8 +103,6 @@ class IsabelleSyntaxTests extends TacticTestBase {
       "S-x>=ep*vpost()&(0<=tpost()&ep>=tpost())&xpost()=tpost()*vpost()+x|((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0"
         .asFormula
     val (prog, pff) = isarSyntax(uf)
-    println(pff)
-    println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
@@ -128,13 +111,10 @@ class IsabelleSyntaxTests extends TacticTestBase {
       "S-x>=ep*(v+cpost()+D)&(-D<=dpost()&dpost()<=D)&((0<=tpost()&ep>=tpost())&-1*tpost()*(cpost()+dpost()+v)+xpost()=x)&v=vpost()|((((0<=tpost()&ep>=tpost())&x=xpost())&vpost()=0)&dpost()=0)&cpost()=0"
         .asFormula
     val (prog, pff) = isarSyntax(uf)
-    println(pff)
-    println(prettyProg(prog))
     pff shouldBe Symbol("proved")
   }
 
   it should "common subformula eliminate" in withMathematica { _ =>
     val uf = "(P() & Q() & R() & A() | P() & A() & R() ) | A() & R()".asFormula
-    println(commonFormulaProof(uf))
   }
 }

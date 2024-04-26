@@ -1158,10 +1158,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       interpreter(
         implyR(1) & andR(1) < (
           cut("eq(x,1)".asFormula) < (
-            expandFw(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT & DebuggingTactics
-              .print("Branch 1 proved?"),
-            Using("eq(x,one()), eq(x,1)".asFormulaList, QE & DebuggingTactics.print("Branch 2 proved?"))
-          ) & DebuggingTactics.print("Both branches proved?"),
+            expandFw(eq, None) & Using(List("x=x".asFormula), SimplifierV3.fullSimplify) & closeT,
+            Using("eq(x,one()), eq(x,1)".asFormulaList, QE)
+          ),
           expandFw(eq, None) & expandFw(Function("one", None, Unit, Real), None) & QE
         ),
         BelleProvable.plain(ProvableSig.startProof(problem.asFormula, defs)),

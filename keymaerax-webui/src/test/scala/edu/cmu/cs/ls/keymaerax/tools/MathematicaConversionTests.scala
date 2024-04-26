@@ -316,7 +316,6 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
         makeExpr(Expr.SYM_LIST, Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`y"), new MExpr(Expr.SYMBOL, "kyx`z"))),
       ),
     )
-    println(expected.toString)
     KeYmaeraToMathematica(in) should be(expected)
   }
 

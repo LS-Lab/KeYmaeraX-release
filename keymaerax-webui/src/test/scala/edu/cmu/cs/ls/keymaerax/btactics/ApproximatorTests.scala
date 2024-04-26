@@ -27,7 +27,6 @@ class ApproximatorTests extends TacticTestBase {
       result.subgoals.loneElement shouldBe
         "c=1&s=0&t=0, old=s^2+c^2 ==> [{s'=c,c'=-s,t'=1&(((((((((s^2+c^2=1&s<=t&c<=1)&s^2+c^2=old)&c>=1+-t^2/2)&s>=t+-t^3/6)&c<=1+-t^2/2+t^4/24)&s<=t+-t^3/6+t^5/120)&c>=1+-t^2/2+t^4/24+-t^6/720)&s>=t+-t^3/6+t^5/120+-t^7/5040)&c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320)&s<=t+-t^3/6+t^5/120+-t^7/5040+t^9/362880}]1=0"
           .asSequent
-      println(result.prettyString)
     }
 
   it should "FEATURE_REQUEST: approximate {s'=c, c'=s, t'=1} from c=1,s=0" taggedAs TodoTest in withMathematica(_ => {
@@ -66,9 +65,7 @@ class ApproximatorTests extends TacticTestBase {
 
   it should "prove initial bounds for sin" in withMathematica(_ => {
     val f = "c=1&s=0&t=0 -> [{s'=c,c'=-s,t'=1&(true&s^2+c^2=1)&c<=1}]s<=t".asFormula
-    val t = TactixLibrary.implyR(1) & TactixLibrary.dI()(1) & DebuggingTactics.print("About to close") &
-      TactixLibrary.QE
-
+    val t = TactixLibrary.implyR(1) & TactixLibrary.dI()(1) & TactixLibrary.QE
     proveBy(f, t) shouldBe Symbol("proved")
   })
 
@@ -78,15 +75,14 @@ class ApproximatorTests extends TacticTestBase {
 
     val result = proveBy(f, t)
     result.subgoals.length shouldBe 1
-    println(result.prettyString)
   })
 
   it should "prove a bound on e'=e" in withMathematica(_ => {
     val f =
       "t=0 & e=1 -> [{e'=e,t'=1 & e >= 1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)"
         .asFormula
-    val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) &
-      DebuggingTactics.print("here") & TactixLibrary.dW(1) & TactixLibrary.QE
+    val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) & TactixLibrary.dW(1) &
+      TactixLibrary.QE
     val result = proveBy(f, t)
     result shouldBe Symbol("proved")
   })

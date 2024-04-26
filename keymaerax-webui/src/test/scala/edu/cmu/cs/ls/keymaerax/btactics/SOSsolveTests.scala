@@ -117,7 +117,6 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     prv2.subgoals.loneElement shouldBe "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0, 2*b>0 ==> ".asSequent
 
     val prv3 = proveBy(ratFormPrv, SOSSolve.elimRatForms(true))
-    println(prv3)
     prv3.subgoals should contain theSameElementsInOrderAs
       List("b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0 ==> ".asSequent, "b>0, y+b*x=0, -y+2*x=0 ==> 2*b != 0".asSequent)
   }

@@ -37,21 +37,10 @@ class UnificationMatchTest extends SystemTestBase {
 
   private def should(e1: Expression, e2: Expression, us: Option[USubst]): Unit = {
     if (us.isDefined) {
-      println("Expression: " + e1)
-      println("Expression: " + e2)
       val s = matcher(e1, e2)
-      println("Unifier:  " + s)
-      println("Expected: " + us.get)
-      print("Unifies?")
       s(e1) shouldBe e2
-      println(" successfully!")
       shouldBeSameUnifier(s, Subst(us.get))
-    } else {
-      println("Expression: " + e1)
-      println("Expression: " + e2)
-      println("Expected: " + "<ununifiable>")
-      a[UnificationException] should be thrownBy matcher(e1, e2)
-    }
+    } else { a[UnificationException] should be thrownBy matcher(e1, e2) }
   }
 
   private def shouldUnify(e1: Expression, e2: Expression, us: USubst): Unit = should(e1, e2, Some(us))
@@ -66,31 +55,14 @@ class UnificationMatchTest extends SystemTestBase {
 
   private def shouldMatch(e1: Expression, e2: Expression, us: Option[RenUSubst]): Unit = {
     if (us.isDefined) {
-      println("Expression1: " + e1)
-      println("Expression2: " + e2)
       val s = UnificationMatch(e1, e2)
-      println("Unifier:     " + s)
-      println(
-        "Expected:    " + us.get + "\t" + (if (s == us.get) "identical substitution" else "different substitution")
-      )
-      print("Unifies?")
       // expect s to unify e1 against e2
       s(e1) shouldBe (e2)
-      println(" successfully!")
       // expect s to unify e1 against e2
       us.get(e1) shouldBe (e2)
-      println("recorded unifies successfully")
-      println("hence1:      " + s(e1))
-      println("Expression2: " + e2)
       s(e1) shouldBe (e2)
-      println("Success, now let's compare the unifier with the expected unifier")
       shouldBeSameUnifier(s, us.get)
-    } else {
-      println("Expression: " + e1)
-      println("Expression: " + e2)
-      println("Expected: " + "<ununifiable>")
-      a[UnificationException] should be thrownBy UnificationMatch(e1, e2)
-    }
+    } else { a[UnificationException] should be thrownBy UnificationMatch(e1, e2) }
   }
 
   private def shouldMatch(e1: Expression, e2: Expression, us: RenUSubst): Unit = shouldMatch(e1, e2, Some(us))
@@ -335,7 +307,6 @@ class UnificationMatchTest extends SystemTestBase {
   it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
     val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asPlainFormula))
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asPlainFormula))
-    println("Unify " + s1 + "\nwith  " + s2 + "\nyields " + UnificationMatch(s1, s2))
     // @todo not sure about the expected result
     UnificationMatch(s1, s2) shouldBe Subst(
       (

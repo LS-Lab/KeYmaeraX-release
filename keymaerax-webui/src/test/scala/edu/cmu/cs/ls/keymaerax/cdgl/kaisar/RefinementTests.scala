@@ -111,7 +111,6 @@ class RefinementTests extends TacticTestBase {
 
   "Refinement checker" should "check all cases" in withMathematica { _ =>
     forEvery(Table("Test Case", allCases: _*))({ case rtc @ RefinementTestCase(name, proof, game, shouldRefine) =>
-      println("Checking: " + name)
       didRefine(proof, game, name) shouldBe shouldRefine withClue s"in testcase ${rtc.prettyString}"
     })
   }
@@ -120,9 +119,7 @@ class RefinementTests extends TacticTestBase {
     // @note see SharedModels todo
     val chosenCases = List(basicForNoConv) // noteAnd basicForNoConv
     forEvery(Table("Test Case", chosenCases: _*))({ case rtc @ RefinementTestCase(name, proof, game, shouldRefine) =>
-      println("Checking: " + name)
       didRefine(proof, game, name) shouldBe shouldRefine withClue s"in testcase ${rtc.prettyString}"
     })
-    println("Finished checking chosen cases")
   }
 }

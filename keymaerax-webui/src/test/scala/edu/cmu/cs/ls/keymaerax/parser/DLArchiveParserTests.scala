@@ -1680,7 +1680,6 @@ class DLArchiveParserTests extends TacticTestBase {
       """.stripMargin
 
     val entry = parse(input).loneElement
-    println(entry.defs)
     entry.defs should beDecl(Declaration(Map(
       Name("exp1", None) ->
         Signature(
@@ -1715,7 +1714,6 @@ class DLArchiveParserTests extends TacticTestBase {
       """.stripMargin
 
     val entry = parse(input).loneElement
-    println(entry.defs)
     entry.defs should beDecl(Declaration(Map(
       Name("exp", None) -> Signature(
         Some(Real),

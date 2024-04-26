@@ -235,7 +235,6 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val s = proveBy(fml, SaturateTactic(alphaRule))
     // only check atoms
     val signs = SignAnalysis.computeSigns(s.subgoals.head)
-    println(signs)
     signs("A".asVariable).keySet should contain only Sign.Pos0
     signs("B".asVariable).keySet should contain only Sign.Pos0
     signs("V()".asTerm).keySet should contain only Sign.Pos0
@@ -307,7 +306,6 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     val s = proveBy(fml, tactic)
     val signs = SignAnalysis.computeSigns(s.subgoals.head)
     val bounds = SignAnalysis.bounds(s.subgoals.head.succ, signs, SuccPos)
-    println(bounds.mkString("\n"))
     bounds(SeqPos(1).asInstanceOf[SuccPos]) should contain theSameElementsAs Map(
       "x".asVariable -> Map(Bound.Lower -> Set()),
       "xo".asVariable -> Map(Bound.Upper -> Set()),

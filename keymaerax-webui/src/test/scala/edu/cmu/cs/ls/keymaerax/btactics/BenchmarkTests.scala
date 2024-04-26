@@ -147,11 +147,9 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
     extends TacticTestBase with AppendedClues {
 
   private lazy val entries = {
-    println("Reading " + url)
     try { DatabasePopulator.readKyx(url) }
     catch {
       case ex: Throwable =>
-        println("Failed reading: " + ex.getMessage)
         ex.printStackTrace()
         Nil
     }

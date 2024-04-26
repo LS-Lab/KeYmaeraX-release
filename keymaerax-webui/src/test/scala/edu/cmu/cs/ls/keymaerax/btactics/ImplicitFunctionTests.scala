@@ -161,8 +161,6 @@ class ImplicitFunctionTests extends TacticTestBase {
       withMathematica { _ =>
         import InterpretedSymbols.expF
 
-        println(Parser.parser.getClass.getSimpleName)
-
         val pr = proveBy(Equal(Times(FuncOf(expF, Number(-1)), FuncOf(expF, Number(1))), Number(1)), QE)
 
         pr shouldBe Symbol("proved")

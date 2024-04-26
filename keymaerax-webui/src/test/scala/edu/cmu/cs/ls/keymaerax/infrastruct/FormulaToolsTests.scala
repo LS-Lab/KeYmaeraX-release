@@ -38,7 +38,7 @@ class FormulaToolsTests extends AnyFlatSpec with Matchers with BeforeAndAfterEac
     val tic = System.currentTimeMillis()
     reassociate(fml) shouldBe expected
     val toc = System.currentTimeMillis()
-    println("Reassociated in " + (toc - tic) + "ms")
+//    println("Reassociated in " + (toc - tic) + "ms")
   }
 
   "DNF" should "rewrite a simple example" in {

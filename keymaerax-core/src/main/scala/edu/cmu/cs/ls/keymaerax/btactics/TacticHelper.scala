@@ -220,11 +220,11 @@ object TacticHelper {
 
   /** Executes the `task` with timing information printed to stdout. */
   def timed[A](task: => A, msg: String): A = {
-    println(msg + "... " + new Date())
+//    println(msg + "... " + new Date())
     val tic = System.currentTimeMillis()
     val result = task
     val toc = System.currentTimeMillis()
-    println("...done (" + ((toc - tic) / 1000) + "s)")
+//    println("...done (" + ((toc - tic) / 1000) + "s)")
     result
   }
 }

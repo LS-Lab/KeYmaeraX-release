@@ -92,25 +92,21 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "diffWeaken simple" in withTactics {
     val result = proveBy("[{x'=5&x<7}]x<7".asFormula, dW(1) & prop)
-    println(result)
     result shouldBe Symbol("proved")
   }
 
   it should "diffWeaken ouch" in withMathematica { _ =>
     val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula, dW(1) & dW(1) & prop)
-    println(result)
     result shouldBe Symbol("proved")
   }
 
   it should "diffWeaken before loopy" in withMathematica { _ =>
     val result = proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula, dW(1) & loop("x>0".asFormula)(1) & master())
-    println(result)
     result shouldBe Symbol("proved")
   }
 
   it should "diffWeaken before semibound" in withMathematica { _ =>
     val result = proveBy("[{x'=1&x>0}][{x:=2;++y:=2;}]x>0".asFormula, dW(1) & master())
-    println(result)
     result shouldBe Symbol("proved")
   }
 

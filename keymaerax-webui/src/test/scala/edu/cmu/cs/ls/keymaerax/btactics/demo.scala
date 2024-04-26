@@ -16,7 +16,7 @@ import org.scalatest.matchers.should.Matchers
 /** Created by nfulton on 11/3/15. */
 class demo extends AnyFlatSpec with Matchers {
   val listener = new IOListener() {
-    override def begin(input: BelleValue, expr: BelleExpr): Unit = { println(expr.getClass) }
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = {}
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
     override def kill(): Unit = ()
 
@@ -29,6 +29,6 @@ class demo extends AnyFlatSpec with Matchers {
   "usubst style dL tactic" should "work" in {
     val s = Sequent(IndexedSeq("[x:=1;]x>0".asFormula), IndexedSeq("[x:=1;]x>0".asFormula))
     val output = interp(TactixLibrary.monb, BelleProvable.plain(ProvableSig.startPlainProof(s)))
-    output match { case BelleProvable(p, _) => println(p.prettyString) }
+    output match { case BelleProvable(p, _) => () }
   }
 }

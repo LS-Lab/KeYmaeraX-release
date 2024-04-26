@@ -879,20 +879,13 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   def pairParse(expected: List[(String, String)], parser: String => Expression): Unit = {
     forEvery(Table(("Input", "Expected"), expected: _*))({ (s1, s2) =>
-      println("\ninput:    " + s1)
       if (s2 == unparseable) {
         // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
         a[Throwable] should be thrownBy parser(s1)
       } else {
         val p1 = parser(s1)
-        println("parsed:   " + pp(p1))
-        println("which is: " + pp.fullPrinter(p1))
-        println("versus:   " + s2)
         val p2 = parser(s2)
-        println("read as:  " + pp(p2))
-        println("which is: " + pp.fullPrinter(p2))
         p1 shouldBe p2
-        println("parsing of print")
         parser(pp(p1)) shouldBe parser(pp(p2))
         pp(p1) shouldBe pp(p2)
         if (uipp.isDefined) println(uipp.get(p1))
@@ -915,13 +908,9 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   private def reparse(e: Expression): Unit = {
     val printed = pp.stringify(e)
-    println("Expression: " + printed)
     val full = pp.fullPrinter(e)
-    println("Fullform:   " + full)
     parseShouldBe(full, e)
-    println("Reparsing:  " + printed)
     parseShouldBe(printed, e)
-    println("Fullparse:  " + pp.fullPrinter(parser(printed)))
   }
 
   //  "Parser" should "accept or throw parse errors for primes in primes" in {

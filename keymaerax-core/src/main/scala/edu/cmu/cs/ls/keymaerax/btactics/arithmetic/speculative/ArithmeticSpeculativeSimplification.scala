@@ -31,7 +31,7 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
   override def getInfo: (Class[_], universe.Type) =
     (ArithmeticSpeculativeSimplification.getClass, universe.typeOf[ArithmeticSpeculativeSimplification.type])
 
-  private val DEBUG = true
+  private val DEBUG = false
 
   /**
    * Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if

@@ -73,7 +73,6 @@ class AxiomSchemaTests extends TacticTestBase {
   "Diff Adjoint" should "return 1D diff adjoint" in {
     val da = Provable.diffAdjoint(1)
 
-    println(da)
     da shouldBe Symbol("proved")
     da.conclusion shouldBe
       "==>  <{x__1'=f__1(x__1)&q_(x__1)}>x__1=y__1<-><{y__1'=-f__1(y__1)&q_(y__1)}>x__1=y__1".asSequent
@@ -87,7 +86,6 @@ class AxiomSchemaTests extends TacticTestBase {
   it should "return 2D diff adjoint" in {
     val da = Provable.diffAdjoint(2)
 
-    println(da)
     da shouldBe Symbol("proved")
     da.conclusion shouldBe
       "==>  <{x__1'=f__1(x__1,x__2),x__2'=f__2(x__1,x__2)&q_(x__1,x__2)}>(x__1=y__1&x__2=y__2)<-><{y__1'=-f__1(y__1,y__2),y__2'=-f__2(y__1,y__2)&q_(y__1,y__2)}>(x__1=y__1&x__2=y__2)"

@@ -278,7 +278,6 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """.stripMargin
 
     val entry = parse(input).loneElement
-    println(entry.defs)
     entry.defs should beDecl(Declaration(Map(
       Name("exp1", None) ->
         Signature(

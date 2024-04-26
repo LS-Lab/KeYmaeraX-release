@@ -318,7 +318,6 @@ class LoopInvTests extends TacticTestBase {
       .map(_ -> None)
       .to(LazyList)
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
-    println("Prove again because it was so much fun")
     // todo: should be calling pegasusInvariants
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusCandidates)(1)) shouldBe Symbol("proved")
   }
@@ -327,7 +326,6 @@ class LoopInvTests extends TacticTestBase {
     val fml = "x=0&v=0 -> [{{v:=0; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "y=0" :: Nil).map(_.asFormula -> None).to(LazyList)
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
-    println("Prove again because it was so much fun")
     // todo: should be calling pegasusInvariants
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusCandidates)(1)) shouldBe Symbol("proved")
   }
@@ -340,7 +338,6 @@ class LoopInvTests extends TacticTestBase {
       fml,
       implyR(1) & loop("10-x>=v*v".asFormula)(1) < (QE, QE, chase(1) & unfoldProgramNormalize & OnAll(solve(1) & QE)),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -366,7 +363,6 @@ class LoopInvTests extends TacticTestBase {
             ),
         ),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -452,7 +448,6 @@ class LoopInvTests extends TacticTestBase {
           .asFormula
       val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).to(LazyList)
       proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe Symbol("proved")
-      println("Prove again because it was so much fun")
       proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
   }
 
@@ -464,7 +459,6 @@ class LoopInvTests extends TacticTestBase {
           .asFormula
       val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).to(LazyList)
       proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe Symbol("proved")
-      println("Prove again because it was so much fun")
       proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     }
 
@@ -476,7 +470,6 @@ class LoopInvTests extends TacticTestBase {
           .asFormula
       val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).to(LazyList)
       proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe Symbol("proved")
-      println("Prove again because it was so much fun")
       proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     }
 
@@ -488,7 +481,6 @@ class LoopInvTests extends TacticTestBase {
           .asFormula
       val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).to(LazyList)
       proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe Symbol("proved")
-      println("Prove again because it was so much fun")
       proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     }
 
@@ -497,7 +489,6 @@ class LoopInvTests extends TacticTestBase {
       "1/2*x<=x & x<=7/10 & 0<=y & y<=3/10 -> [{{x'=-x+x*y, y'=-y}}*]!(-8/10>=x & x>=-1 & -7/10>=y & y>=-1)".asFormula
     val invs = ("y<=0" :: "y>=0" :: "y=0" :: Nil).map(_.asFormula -> None).to(LazyList)
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
-    println("Prove again because it was so much fun")
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe Symbol("proved")
   }
 
@@ -600,7 +591,6 @@ class LoopInvTests extends TacticTestBase {
   def feedOneAfterTheOther[A <: Expression](list: List[A]): (ProvableSig, ProverException) => Seq[Expression] = {
     var rem = list
     (_, e) =>
-      println("SnR loop status " + e)
       rem match {
         case hd :: tail => rem = tail; hd :: Nil
         case Nil => throw new BelleNoProgress("SearchAndRescueAgain ran out of alternatives among: " + list)

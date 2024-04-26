@@ -42,7 +42,7 @@ object Approximator extends TacticProvider with Logging {
 
   // region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 
-  private val DEBUG = true // Configuration(Configuration.Keys.DEBUG) == "true"
+  private val DEBUG = false // Configuration(Configuration.Keys.DEBUG) == "true"
 
   /**
    * Approximates the variable `t` in the ODE up to the `n^th` term.
@@ -169,7 +169,7 @@ object Approximator extends TacticProvider with Logging {
       val cutTactics: Seq[BelleExpr] = cuts
         .filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms))
         .map(cut =>
-          DebuggingTactics.print("Cutting " + cut.prettyString) &
+          DebuggingTactics.debug("Cutting " + cut.prettyString) &
             TactixLibrary.dC(cut)(pos) <
             (
               nil,

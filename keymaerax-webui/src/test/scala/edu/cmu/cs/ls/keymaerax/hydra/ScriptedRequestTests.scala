@@ -293,7 +293,6 @@ class ScriptedRequestTests extends TacticTestBase {
           .getResultingResponses(t)
           .loneElement
       ) { case GetTacticResponse(tacticText, loc) =>
-        println(tacticText)
         tacticText should equal(
           """implyR('R=="x>=2->[{x:=x+1;}*]x>=0");
             |loop("x>=1", 'R=="[{x:=x+1;}*]x>=0"); <(
@@ -457,7 +456,6 @@ class ScriptedRequestTests extends TacticTestBase {
             |  )
             |)""".stripMargin
         )(after being whiteSpaceRemoved)
-        println(tacticText)
         val todoRegions = regionIn(tacticText, "todo")
         loc shouldBe Map(
           regionIn(tacticText, """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)")""").head -> "()",
@@ -503,7 +501,6 @@ class ScriptedRequestTests extends TacticTestBase {
             |  )
             |)""".stripMargin
         )(after being whiteSpaceRemoved)
-        println(tacticText)
         val todoRegions = regionIn(tacticText, "todo")
         loc shouldBe Map(
           regionIn(tacticText, """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)")""").head -> "(1,0)",

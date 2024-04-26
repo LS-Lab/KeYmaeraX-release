@@ -1003,10 +1003,10 @@ class ProofTreeTests extends TacticTestBase {
 
           val end = System.currentTimeMillis()
 
-          println(
-            s"Run $i, duration ${end - start}: construction=${treeConstructed - start}, goals=${openGoalsFetched -
-                treeConstructed}, suggestion=${tacticSuggestionFetch - openGoalsFetched}, execution=${tacticExecuted - tacticSuggestionFetch}"
-          )
+//          println(
+//            s"Run $i, duration ${end - start}: construction=${treeConstructed - start}, goals=${openGoalsFetched -
+//                treeConstructed}, suggestion=${tacticSuggestionFetch - openGoalsFetched}, execution=${tacticExecuted - tacticSuggestionFetch}"
+//          )
 
           durations(i) = end - start.toDouble
         }
@@ -1017,10 +1017,10 @@ class ProofTreeTests extends TacticTestBase {
 
         val medianDuration = median(durations.toList)
         val averageDuration = durations.sum / numStepsPerProof
-        println("Median duration " + medianDuration)
-        println("Average duration " + averageDuration)
-        println("Minimum duration " + durations.min + " (iteration " + durations.indexOf(durations.min) + ")")
-        println("Maximum duration " + durations.max + " (iteration " + durations.indexOf(durations.max) + ")")
+//        println("Median duration " + medianDuration)
+//        println("Average duration " + averageDuration)
+//        println("Minimum duration " + durations.min + " (iteration " + durations.indexOf(durations.min) + ")")
+//        println("Maximum duration " + durations.max + " (iteration " + durations.indexOf(durations.max) + ")")
       }
     }
 
@@ -1080,10 +1080,10 @@ class ProofTreeTests extends TacticTestBase {
 
       val medianDuration = median(durations.toList)
       val averageDuration = durations.sum / numStepsPerProof
-      println("Median duration " + medianDuration)
-      println("Average duration " + averageDuration)
-      println("Minimum duration " + durations.min)
-      println("Maximum duration " + durations.max)
+//      println("Median duration " + medianDuration)
+//      println("Average duration " + averageDuration)
+//      println("Minimum duration " + durations.min)
+//      println("Maximum duration " + durations.max)
     }
   }
 
@@ -1143,13 +1143,13 @@ class ProofTreeTests extends TacticTestBase {
         }
       }
 
-      println("Average durations " + avg.map(_.toInt).mkString(","))
-      println("Maximum durations " + max.map(_.toInt).mkString(","))
+//      println("Average durations " + avg.map(_.toInt).mkString(","))
+//      println("Maximum durations " + max.map(_.toInt).mkString(","))
 
       val medianAverages = median(avg.toList)
       val avgAverages = avg.sum / avg.length
-      println("Average averages " + avgAverages)
-      println("Median averages " + medianAverages)
+//      println("Average averages " + avgAverages)
+//      println("Median averages " + medianAverages)
     }
   }
 

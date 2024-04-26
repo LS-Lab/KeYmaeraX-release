@@ -1417,10 +1417,10 @@ class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTe
     val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
     // terms will cause exceptions
     try { parser("x+5") }
-    catch { case e: ParseException => println("Rejected") }
+    catch { case e: ParseException => () }
     // programs will cause exceptions
     try { parser("x:=1;") }
-    catch { case e: ParseException => println("Rejected") }
+    catch { case e: ParseException => () }
   }
 
   it should "compile and run parse of print 1" in {
@@ -1430,7 +1430,7 @@ class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTe
     // something like "true -> [x:=1;]x>=0" modulo spacing
     val print = pp(fml)
     val reparse = parser(print)
-    if (fml == reparse) println("Print and reparse successful") else println("Discrepancy")
+//    if (fml == reparse) println("Print and reparse successful") else println("Discrepancy")
   }
 
   it should "compile and run parse of print of parse" in {
@@ -1438,11 +1438,7 @@ class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTe
     val pp = KeYmaeraXPrettyPrinter
     val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
     val parse = parser(input)
-    println("Parsed:   " + parse)
     val print = pp(parse)
-    println("Printed:  " + print)
-    println("Original: " + input)
-    println("Can differ slightly by spacing and parentheses")
   }
 
   it should "compile and run full print" in {
@@ -1450,9 +1446,6 @@ class PrelexedParserTests extends AnyFlatSpec with Matchers with PrivateMethodTe
     val pp = FullPrettyPrinter
     val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
     val parse = parser(input)
-    println("Parsed:   " + parse)
     val print = pp(parse)
-    println("Printed:  " + print)
-    println("Original: " + input)
   }
 }

@@ -171,7 +171,6 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
     val workers = executor.availableWorkers()
     workers should be >= 1
-    println("Start with available workers: " + workers)
     val start = System.currentTimeMillis()
     val request = () => {
       val expr: Expr = ExtMathematicaOpSpec.compoundExpression(
@@ -181,12 +180,10 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
       commandRunner.run(expr, MathematicaToKeYmaera)._2
     }
     new Thread(() => theLink.run(request, executor)).start()
-    println("Started first task")
     (System.currentTimeMillis() - start) should be <= 200L
     Thread.sleep(1000)
     executor.availableWorkers() shouldBe (workers - 1)
     val intermediate = System.currentTimeMillis()
-    println("Second task")
     theLink.run(request, executor) shouldBe Number(7)
     // @note we wait about 1s of the 5s of the first worker (so if only 1 worker we still wait about 4s)
     // and then another 5s in the second worker (check with a little slack time around 9s for <= 1 worker or 5s for > 1 worker)

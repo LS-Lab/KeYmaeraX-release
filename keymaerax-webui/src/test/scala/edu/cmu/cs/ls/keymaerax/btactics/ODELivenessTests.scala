@@ -19,7 +19,6 @@ class ODELivenessTests extends TacticTestBase {
 
   "DGs" should "return raw DDGs" in withMathematica { _ =>
     val ax = (1 to 1).map(getDDG)
-    println(ax)
     // TODO: write some additional tests when parsing for list taboos is supported
   }
 
@@ -30,7 +29,6 @@ class ODELivenessTests extends TacticTestBase {
         "([{x'=1 & x <= 5}]x >= 5 <- [{y'=z,z'=-y,x'=1 & x <= 5}]x>=5)").asFormula,
       byUS(ax),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -41,7 +39,6 @@ class ODELivenessTests extends TacticTestBase {
 
   it should "get instantiated vdg" in withQE { _ =>
     val vdginst = getVDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
-    println(vdginst)
 
     vdginst._1 shouldBe Symbol("proved")
     vdginst._1.conclusion shouldBe
@@ -55,7 +52,6 @@ class ODELivenessTests extends TacticTestBase {
 
   it should "get instantiated ddg" in withQE { _ =>
     val ddginst = getDDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
-    println(ddginst)
 
     ddginst shouldBe Symbol("proved")
     ddginst.conclusion shouldBe
@@ -148,8 +144,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(seq, odeUnify(2))
 
-    println(pr)
-
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe
       "[{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1,a'=b&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  a > 0, [{x'=1,v'=2,a'=a^2+x+v^2&(x < 5&x>1)&x+z<=5}]1+1=2"
@@ -234,8 +228,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(seq, kDomainDiamond("x > 5".asFormula)(1))
 
-    println(pr)
-
     pr.subgoals.length shouldBe 2
     pr.subgoals(0) shouldBe
       "[{x'=x,v'=v&true}]v<=100, a>0, [{x'=x,v'=v&x+v^2<=6}]x<=1, b < 0, [{x'=x,v'=v&x=1}]1+1=2 ==> <{x'=x,v'=v&true}>x>5"
@@ -250,8 +242,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(seq, dDR("x > 100 & v <= 5".asFormula)(1))
 
-    println(pr)
-
     pr.subgoals.length shouldBe 2
     pr.subgoals(0) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  <{x'=x,v'=v&x>100&v<=5}>x+v^2>5".asSequent
     pr.subgoals(1) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  [{x'=x,v'=v&(x>100&v<=5)&v>=0}]v>=0".asSequent
@@ -262,7 +252,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml, dDX(1))
 
-    println(pr)
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "==> b*x^2<=v+c+a()&x+v<=a()".asSequent
   }
@@ -272,8 +261,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent, dV("a".asTerm)(2))
 
-    println(pr)
-    println(pr2)
     pr shouldBe Symbol("proved")
     pr2 shouldBe Symbol("proved")
   }
@@ -291,8 +278,6 @@ class ODELivenessTests extends TacticTestBase {
         (QE, implyR(2) & existsL(Symbol("Llast")) & dV("e_".asTerm)(2)),
     )
 
-    println(pr)
-    println(pr2)
     pr shouldBe Symbol("proved")
     pr2 shouldBe Symbol("proved")
   }
@@ -302,15 +287,12 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent, dVAuto()(2))
 
-    println(pr)
-    println(pr2)
     pr shouldBe Symbol("proved")
     pr2 shouldBe Symbol("proved")
   }
 
   it should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
     val pr = proveBy("a()>0 ==> <{x'=a()}>x>=b()".asSequent, dVAuto()(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -319,7 +301,6 @@ class ODELivenessTests extends TacticTestBase {
       "b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula,
       implyR(1) & existsR("b".asTerm)(1) & andR(1) < (QE, dVAuto()(1)),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -328,7 +309,6 @@ class ODELivenessTests extends TacticTestBase {
       "b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula,
       implyR(1) & allR(1) & existsR("b".asTerm)(1) & andR(1) < (QE, dVAuto()(1)),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -343,7 +323,6 @@ class ODELivenessTests extends TacticTestBase {
         dC("v>=coeff1+2*coeff2*t+3*coeff3*t^2".asFormula)(1) < (dI(Symbol("full"))(1), dI(Symbol("full"))(1)),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -355,21 +334,18 @@ class ODELivenessTests extends TacticTestBase {
         cut("\\exists absv (absv = abs(v))".asFormula) < (existsL(-2), hideR(1) & QE) & semialgdV("absv".asTerm)(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "support semialgebraic dV auto (disjunctive)" in withMathematica { _ =>
     val pr = proveBy("v!=0 -> v=0 | <{x'=v}> (x>100 | x < 100)".asFormula, implyR(1) & orR(1) & semialgdVAuto()(2))
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "support semialgebraic dV auto 2" taggedAs SlowTest in withMathematica { _ =>
     val pr = proveBy("<{u'=-u^3}>(-1<=u & u <=1 )".asFormula, semialgdVAuto()(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -399,7 +375,6 @@ class ODELivenessTests extends TacticTestBase {
         ),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -412,9 +387,7 @@ class ODELivenessTests extends TacticTestBase {
     val fail =
       "b()>0&k>0&initx_>0  ==>  [{v'=-k*v^3-v^2-b()*v+1,y'=y,t'=1&true&v*v<=initx_*initx_+root_*root_}]v*v<=initx_*initx_+root_*root_"
         .asSequent
-    println("fails on Z3: ", proveBy(fail, ODE(1)))
 
-//    println(pr)
 //    pr shouldBe 'proved
   }
 
@@ -439,7 +412,6 @@ class ODELivenessTests extends TacticTestBase {
     val fml = "a > 0 & b() < 0 & x<= a& x>= b()-> <{x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
 
     val pr = proveBy(fml, implyR(1) & odeReduce(true, Nil)(1) & solve(1) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -449,7 +421,6 @@ class ODELivenessTests extends TacticTestBase {
         .asFormula
 
     val pr = proveBy(fml, implyR(1) & odeReduce(true, Nil)(1) & solve(1) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -480,7 +451,6 @@ class ODELivenessTests extends TacticTestBase {
         ),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -491,9 +461,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -502,9 +469,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -516,9 +480,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy("\\forall tau <{v'=u*v, u'=u, t'=1}> t > tau".asFormula, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -527,9 +488,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy("\\forall tau <{u'=u, v'=u*v, t'=1}> t > tau".asFormula, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -541,9 +499,6 @@ class ODELivenessTests extends TacticTestBase {
       tac,
     )
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -560,9 +515,6 @@ class ODELivenessTests extends TacticTestBase {
       tac,
     )
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -590,9 +542,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -609,9 +558,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -657,16 +603,10 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr2 = proveBy(fml2, tac2)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
 
     // Note: proof steps for pr2 already includes those from pr
     // Total tactic size is counted as size for tac1 + tac2
-    println(pr2)
-    println("Proof steps:", pr2.steps)
-    println("Tactic size:", TacticStatistics.size(tac2))
     pr2 shouldBe Symbol("proved")
   }
 
@@ -693,16 +633,10 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr2 = proveBy(fml2, tac2)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
 
     // Note: proof steps for pr2 already includes those from pr
     // Total tactic size is counted as size for tac1 + tac2
-    println(pr2)
-    println("Proof steps:", pr2.steps)
-    println("Tactic size:", TacticStatistics.size(tac2))
     pr2 shouldBe Symbol("proved")
   }
 
@@ -723,9 +657,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -734,9 +665,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -798,14 +726,8 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr2 = proveBy(Imply(XT, Diamond(ODESystem(ode, dom), X0)), tac2)
 
-    println(pr1)
-    println("Proof steps:", pr1.steps)
-    println("Tactic size:", TacticStatistics.size(tac1))
     pr1 shouldBe Symbol("proved")
 
-    println(pr2)
-    println("Proof steps:", pr2.steps)
-    println("Tactic size:", TacticStatistics.size(tac2))
     pr2 shouldBe Symbol("proved")
   }
 
@@ -831,9 +753,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(Imply(X0, Diamond(ODESystem(ode, dom), XT)), tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -842,9 +761,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy("<{x1'=-x1,x2'=-x2}> (x1<=1 & x1>=-1 & x2<=1 &x2>=-1)".asFormula, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -881,9 +797,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(seq, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 
@@ -941,9 +854,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(seq, tac)
 
-    println(pr)
-    println("Proof steps:", pr.steps)
-    println("Tactic size:", TacticStatistics.size(tac))
     pr shouldBe Symbol("proved")
   }
 

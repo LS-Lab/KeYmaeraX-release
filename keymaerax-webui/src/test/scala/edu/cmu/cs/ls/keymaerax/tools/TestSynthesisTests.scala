@@ -30,7 +30,7 @@ class TestSynthesisTests extends TacticTestBase {
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(
       modelplexInput,
-      ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("After chase") &
+      ModelPlex.controllerMonitorByChase(1) &
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     ).subgoals.loneElement
 
@@ -62,7 +62,7 @@ class TestSynthesisTests extends TacticTestBase {
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(
       modelplexInput,
-      ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("After chase") &
+      ModelPlex.controllerMonitorByChase(1) &
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     ).subgoals.loneElement
 
@@ -92,7 +92,7 @@ class TestSynthesisTests extends TacticTestBase {
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(
       modelplexInput,
-      ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("After chase") &
+      ModelPlex.controllerMonitorByChase(1) &
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     ).subgoals.loneElement
 
@@ -115,7 +115,7 @@ class TestSynthesisTests extends TacticTestBase {
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(
       modelplexInput,
-      ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("After chase") &
+      ModelPlex.controllerMonitorByChase(1) &
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     ).subgoals.loneElement
 
@@ -133,7 +133,7 @@ class TestSynthesisTests extends TacticTestBase {
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(
       modelplexInput,
-      ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("After chase") &
+      ModelPlex.controllerMonitorByChase(1) &
         ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1),
     ).subgoals.loneElement
 

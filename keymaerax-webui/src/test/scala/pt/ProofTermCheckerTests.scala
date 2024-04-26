@@ -62,7 +62,6 @@ class ProofTermCheckerTests extends TacticTestBase {
 
     val provable = TermProvable.startPlainProof(f)
     val tacticResult = proveBy(provable, t)
-    println(tacticResult.prettyString)
     checkIfPT(tacticResult, f)
   }
 
@@ -72,7 +71,6 @@ class ProofTermCheckerTests extends TacticTestBase {
         val f = "A() -> A()".asFormula
         val provable = TermProvable.startPlainProof(f)
         val tacticResult = proveBy(provable, TactixLibrary.implyR(1) & TactixLibrary.close(-1, 1))
-        println(tacticResult)
         checkIfPT(tacticResult, f)
       }
     }
@@ -83,7 +81,6 @@ class ProofTermCheckerTests extends TacticTestBase {
         val f = "A() -> A()".asFormula
         val provable = TermProvable.startPlainProof(f)
         val tacticResult = proveBy(provable, TactixLibrary.propClose)
-        println(tacticResult)
         checkIfPT(tacticResult, f)
       }
     }
@@ -283,7 +280,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         val pt = FOLRConstant(f)
         val conv = new IsabelleConverter(pt)
         val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
-        println(source)
+        // TODO Do something with source
       }
     }
 
@@ -310,7 +307,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         case ptp: TermProvable =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
-          println(source)
+        // TODO Do something with source
         case _ =>
       }
     }
@@ -651,7 +648,6 @@ class ProofTermCheckerTests extends TacticTestBase {
     val start = System.currentTimeMillis()
     val (_, _) = proofTerm(cpp, 0)
     val end = System.currentTimeMillis()
-    println("Time taken(seconds): " + (end - start) / 1000.0)
   }
   /*
   it should "parse velocityCar" in {

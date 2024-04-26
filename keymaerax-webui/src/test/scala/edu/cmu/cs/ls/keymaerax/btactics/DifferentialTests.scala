@@ -2026,7 +2026,6 @@ class DifferentialTests extends TacticTestBase {
           withSafeClue("Error printing random invariant\n\n" + randClue) { KeYmaeraXPrettyPrinter.stringify(inv) }
 
         withSafeClue("Random invariant " + invString + "\n" + randClue) {
-          println("Random invariant " + inv.prettyString)
           val x = vars(0)
           val y = vars(1)
           val parts = {
@@ -2139,7 +2138,6 @@ class DifferentialTests extends TacticTestBase {
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
     val pr = proveBy(seq, DifferentialTactics.dgDbx("x*A+B()".asTerm)(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -2275,7 +2273,6 @@ class DifferentialTests extends TacticTestBase {
       " (-1/3 + x)^2 + 2*(-1/3 + y)^2 < 1/25  ==> y=1,  [{x'=x*(2-x-y), y'=x-y & x >0 & y > 0}] (3/8*x+23/56*x^2-123/56*y+3/14*x*y+29/28*y^2-1<0)"
         .asSequent
     val pr = proveBy(seq, DifferentialTactics.dgBarrier(2))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -2312,7 +2309,6 @@ class DifferentialTests extends TacticTestBase {
   "domSimplify" should "simplify box succedent with domain constraint" in withMathematica { _ =>
     val seq = "==> a<0,[{x'=1 & f()>0 & b<0}](b<0 & f()>1)".asSequent
     val pr = TactixLibrary.proveBy(seq, DifferentialTactics.domSimplify(2))
-    println(pr)
     pr.subgoals.loneElement shouldBe
       "==>  a < 0, [{x'=1&f()>0&b < 0}]f()>1".asSequent
   }
@@ -2321,7 +2317,6 @@ class DifferentialTests extends TacticTestBase {
     val seq = "==> a<0,[{x'=1 & ((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}](b<0 & f()>1)"
       .asSequent
     val pr = TactixLibrary.proveBy(seq, DifferentialTactics.domSimplify(2))
-    println(pr)
     pr.subgoals.loneElement shouldBe
       "==>  a < 0, [{x'=1&((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}]f()>1".asSequent
   }
@@ -2447,15 +2442,9 @@ class DifferentialTests extends TacticTestBase {
             proveBy(Equal(r2, r3), QE) shouldBe Symbol("proved")
             proveBy(Equal(r3, r1), QE) shouldBe Symbol("proved") // this should be unnecessary
           } catch {
-            case _: BelleThrowable =>
-              // Ignores failures due to division by 0
-              println("Lie derivatives mismatch (QE fails) on: " + ode + ", " + inv)
-              println(l1, l2, l3)
+            case _: BelleThrowable => () // Ignores failures due to division by 0
           }
-        case _ =>
-          // Ignores failures due to ^0 or division by 0
-          println("Lie derivatives mismatch (Calculation) on: " + ode + ", " + inv)
-          println(l1, l2, l3)
+        case _ => () // Ignores failures due to ^0 or division by 0
       }
     })
   }

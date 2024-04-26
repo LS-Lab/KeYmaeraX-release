@@ -152,17 +152,15 @@ object Simplifier {
 
   val pushConstPlus: Simplification = {
     case Plus(Plus(t1: Term, t2: Term), n: Number) =>
-      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Plus]) {
-        print("\n\npushin down " + n + " vs " + t2 + "\n\n"); Some(Plus(Plus(t1, n), t2), QE & done)
-      } else None
+      if (!t2.isInstanceOf[Number] && !t2.isInstanceOf[Plus]) { Some(Plus(Plus(t1, n), t2), QE & done) }
+      else None
     case _ => None
   }
 
   val flipConstPlus: Simplification = {
     case Plus(t1: Term, n: Number) =>
-      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) {
-        print("\n\nflippin " + t1 + " wit " + n + "\n\n"); Some(Plus(n, t1), QE & done)
-      } else None
+      if (!t1.isInstanceOf[Number] && !t1.isInstanceOf[Plus]) { Some(Plus(n, t1), QE & done) }
+      else None
     case _ => None
   }
 
@@ -243,7 +241,6 @@ object Simplifier {
     opt match {
       case Some((pos, t2, e)) =>
         val (ctx, t1: Term) = fml.at(pos)
-        print("Trying to prove " + Equal(t1, t2))
         val eqProof = TactixLibrary.proveBy(Equal(t1, t2), e)
         HilbertCalculus.useAt(HilbertCalculus.CE(ctx)(eqProof), PosInExpr(0 :: Nil))(where)
       case None => TactixLibrary.nil

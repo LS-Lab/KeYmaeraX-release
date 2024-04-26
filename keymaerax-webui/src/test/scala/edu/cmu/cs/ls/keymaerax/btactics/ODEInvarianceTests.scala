@@ -40,26 +40,20 @@ class ODEInvarianceTests extends TacticTestBase {
     val dim = 5
 
     // Initial versions in DB
-    println("Initial call")
     val cs1 = cauchy_schwartz_bound(dim)
     val fs1 = frobenius_subord_bound(dim)
-    println("Done.")
 
     // Definitely cached
-    println("Cached call")
     val cs2 = cauchy_schwartz_bound(dim)
     val fs2 = frobenius_subord_bound(dim)
-    println("Done.")
 
     lemmaDB.remove("cauchy_schwartz_" + dim.toString)
     lemmaDB.remove("frobenius_subord_U_" + dim.toString)
     lemmaDB.remove("frobenius_subord_L_" + dim.toString)
 
     // Definitely uncached
-    println("Uncached call")
     val cs3 = cauchy_schwartz_bound(dim)
     val fs3 = frobenius_subord_bound(dim)
-    println("Done.")
 
     (cs1 == cs2 && cs2 == cs3, fs1 == fs2 && fs2 == fs3) shouldBe (true, true)
   }
@@ -70,7 +64,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val cofactors = List(List("0", "1"), List("1", "0")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x", "y").map(s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors, polys)(1) & dW(1) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -80,7 +73,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val cofactors = List(List("0", "1"), List("1", "0")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x", "y").map(s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors, polys)(1) & dW(1) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -90,7 +82,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val cofactors = List(List("0", "1"), List("1", "0")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x", "y").map(s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors, polys, negate = true)(1) & dW(1) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -101,7 +92,6 @@ class ODEInvarianceTests extends TacticTestBase {
       .map(ls => ls.map(s => s.asTerm))
     val polys = List("x", "y", "z-1").map(s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors, polys)(2) & dW(2) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -112,7 +102,6 @@ class ODEInvarianceTests extends TacticTestBase {
       .map(ls => ls.map(s => s.asTerm))
     val polys = List("x", "y", "z-1").map(s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors, polys, negate = true)(2) & dW(2) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -125,7 +114,6 @@ class ODEInvarianceTests extends TacticTestBase {
       "x1^2+x2^2-1=0 & x3-x1=0 -> [{x1'=-x2,x2'=x3,x3'=-x2}](x1^2+x2^2-1=0 & x3-x1=0)".asFormula,
       implyR(1) & dgVdbx(cofactors, polys)(1) & dW(1) & QE,
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -134,7 +122,6 @@ class ODEInvarianceTests extends TacticTestBase {
       "x1^2+x2^2-1=0 & x3-x1=0 -> [{x1'=-x2,x2'=x3,x3'=-x2}](x1^2+x2^2-1=0 & x3-x1=0)".asFormula,
       implyR(1) & dRI(1),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -144,7 +131,6 @@ class ODEInvarianceTests extends TacticTestBase {
         .asFormula,
       implyR(1) & dRI(1),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -154,7 +140,6 @@ class ODEInvarianceTests extends TacticTestBase {
         .asFormula,
       implyR(1) & dRI(1),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -164,7 +149,6 @@ class ODEInvarianceTests extends TacticTestBase {
         .asFormula,
       implyR(1) & dRI(1),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -175,19 +159,16 @@ class ODEInvarianceTests extends TacticTestBase {
         .asFormula,
       implyR(1) & orR(1) & orR(2) & dRI(3),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "correctly handle constants" in withQE { _ =>
     val pr = proveBy("x+a+b+c+d=y -> [{y'=b+c+d& b=1 & c=-1 & d=0}](x+a=y-b-c-d)".asFormula, implyR(1) & dRI(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "correctly handle constants2" in withQE { _ =>
     val pr = proveBy("a=0&b=0&c=0&z=0 -> [{y'=b+c+d}](a=0&b=0&c=0&z=0)".asFormula, implyR(1) & dRI(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -204,8 +185,6 @@ class ODEInvarianceTests extends TacticTestBase {
         .asFormula,
       implyR(1) & dRI(1),
     )
-    println(pr)
-    println(pr2)
     pr shouldBe Symbol("proved")
     pr2 shouldBe Symbol("proved")
   }
@@ -215,7 +194,6 @@ class ODEInvarianceTests extends TacticTestBase {
       "x1=1 & x2=2 -> [{x1' = (x1 - 1)*x2, x2' = x1*(x2-2) }](x2=2 & x1=1 | x1*x2=1)".asFormula,
       implyR(1) & dRI(1),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -240,7 +218,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val odeSys = "{x'=x^2+1, y'=2*x+y, z'=x+y+z & x=5}".asProgram.asInstanceOf[ODESystem]
     val fml = "y>=0 & x-z>=0|x+y*z>0 & x>=0 &x+y+z = 0".asFormula
     val fs = fStar(odeSys, fml)
-    println(fs)
     fs._1 shouldBe
       "(y>=0&(y=0->2*x+y>0))&x-z>=0&(x-z=0->1+((-1)+x)*x+(-1)*y+(-1)*z>=0&(1+((-1)+x)*x+(-1)*y+(-1)*z=0->(-1)+((-1)+x)*x*(1+2*x)+(-2)*y+(-1)*z>0))|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&x>0&((-31)+z=0&36+y=0)&(-5)+x=0"
         .asFormula
@@ -249,7 +226,6 @@ class ODEInvarianceTests extends TacticTestBase {
   "sAIc" should "take a local progress step" in withMathematica { _ =>
     val seq = "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0".asSequent
     val pr = proveBy(seq, lpstep(2))
-    println(pr)
     pr.subgoals should have size 2
     // Local progress into p>=0 requires p>0 | p=0 initially
     pr.subgoals(0) shouldBe "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, x>0|x=0".asSequent
@@ -261,7 +237,6 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "take a local progress step with Dconstify" in withMathematica { _ =>
     val seq = "x>=0, a=1, b=1 ==> <{t_'=1,x'=a&x-a*b>=0}>t_!=0, <{t_'=1,x'=a&x-a*b>=0}>t_!=0".asSequent
     val pr = proveBy(seq, lpstep(2))
-    println(pr)
     pr.subgoals should have size 2
     // Local progress into p>=0 requires p>0 | p=0 initially
     pr.subgoals(0) shouldBe "x>=0, a=1, b=1 ==> <{t_'=1,x'=a&x-a*b>=0}>t_!=0, x-a*b>0|x-a*b=0".asSequent
@@ -274,35 +249,30 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml =
       "-x<=0 & -y<=0 | x+y<=1 | y>=0 -> [{z'=2,x'=x+1,y'=1&x^2+y^2<1}] (-x<=0 & -y<=0 | x+y<=1 | y>=0)".asFormula
     val pr = proveBy(fml, implyR(1) & sAIclosed(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "try some invariants (1)" in withMathematica { _ =>
     val fml = "x^2+y^2>=1 -> [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asFormula
     val pr = proveBy(fml, implyR(1) & dC("(2*(x^2+y^2)-1>=0)".asFormula)(1) < (dW(1) & QE, sAIclosed(1)))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "try some invariants (1) in position" in withMathematica { _ =>
     val seq = "x^2+y^2>=1 ==> a>0, [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asSequent
     val pr = proveBy(seq, dC("(2*(x^2+y^2)-1>=0)".asFormula)(2) < (dW(2) & QE, sAIclosed(2)))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: try some invariants (1) in position" taggedAs TodoTest in withZ3 { _ =>
     val seq = "x^2+y^2>=1 ==> a>0, [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asSequent
     val pr = proveBy(seq, dC("(2*(x^2+y^2)-1>=0)".asFormula)(2) < (dW(2) & QE, sAIclosed(2)))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "try some invariants (2)" in withQE { _ =>
     val fml = "x=-1 & y=-1 & z=a -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}](!(x>0 | y>0)& z=a)".asFormula
     val pr = proveBy(fml, implyR(1) & dC("((x<=0&x^2<=2*x*y)&y<=0)".asFormula)(1) < (dW(1) & QE, sAIclosed(1)))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -310,7 +280,6 @@ class ODEInvarianceTests extends TacticTestBase {
     // The disjunct x=0 should become "trivial" in the progress proof
     val fml = "x <=0 | x=0 -> [{x'=x-1}] (x <=0 | x=0)".asFormula
     val pr = proveBy(fml, implyR(1) & sAIclosed(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -326,7 +295,6 @@ class ODEInvarianceTests extends TacticTestBase {
           .asFormula
       )(1) < (dW(1) & QE, sAIclosed(1)),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -348,7 +316,6 @@ class ODEInvarianceTests extends TacticTestBase {
           sAIclosedPlus(3)(1),
         ),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -365,7 +332,6 @@ class ODEInvarianceTests extends TacticTestBase {
             .asFormula
         )(1) < (dW(1) & QE, sAIclosed(1)),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -381,7 +347,6 @@ class ODEInvarianceTests extends TacticTestBase {
         // sAIclosed(1)
         sAIclosedPlus(3)(1),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -394,14 +359,12 @@ class ODEInvarianceTests extends TacticTestBase {
         dC("(x-old(x))^2+(y-old(y))^2 <= (2*(x-x_0)*(x^5+y) + 2*(y-y_0)*x)*t".asFormula)(1) <
         (dW(1) & QE, dI(Symbol("full"))(1)),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "freeze predicates with time (auto)" in withMathematica { _ =>
     val fml = "x+y=5 -> [{t'=1,x'=x^5+y, y'=x, c'=5 ,d'=100 & t=0 & c=1}]x+y=5".asFormula
     val pr = proveBy(fml, implyR(1) & timeBound(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -413,12 +376,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val p2 = pStar(ode, poly, Some(2))
     val p3 = pStar(ode, poly, Some(3))
     val pn = pStar(ode, poly, None)
-
-    println(p0)
-    println(p1)
-    println(p2)
-    println(p3)
-    println(pn)
 
     p0 shouldBe "x+y*z>0".asFormula
     p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
@@ -448,7 +405,6 @@ class ODEInvarianceTests extends TacticTestBase {
         "(z>=0&(z=0->x+y+z>=0&(x+y+z=0->1+x*(3+x)+2*y+z>=0&(1+x*(3+x)+2*y+z=0->3+x*(7+x*(3+2*x))+3*y+z>0))))&(x>=0&(x=0->1+x^2>=0&(1+x^2=0->2*(x+x^3)>=0&(2*(x+x^3)=0->2+8*x^2+6*x^4>0))))&y>=0&(y=0->2*x+y>=0&(2*x+y=0->2+2*x*(1+x)+y>=0&(2+2*x*(1+x)+y=0->2+2*x*(3+x+2*x^2)+y>0)))|(x>=0&(x=0->1+x^2>=0&(1+x^2=0->2*(x+x^3)>=0&(2*(x+x^3)=0->2+8*x^2+6*x^4>0))))&y>=0&(y=0->2*x+y>=0&(2*x+y=0->2+2*x*(1+x)+y>=0&(2+2*x*(1+x)+y=0->2+2*x*(3+x+2*x^2)+y>0)))"
           .asFormula,
       )
-    println(p0, p1, p2, p3)
   }
 
   it should "aggressively try rank 1" in withMathematica { _ =>
@@ -456,7 +412,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "((x^2-2*x*y<=0 & x<=0)&y<=0)".asFormula
     val res = rankOneFml(ode, True, fml)
     // Reorder the conjuncts
-    println(res)
     res shouldBe Some("x<=0&y<=0&x^2-2*x*y<=0&true".asFormula)
   }
 
@@ -464,14 +419,12 @@ class ODEInvarianceTests extends TacticTestBase {
     val seq = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
     val pr =
       proveBy(seq, implyR(1) & dC("x=0&y=0 | (x^2<=2*x*y)&x<=0&y<=0".asFormula)(1) < (dW(1) & QE, sAIRankOne(true)(1)))
-    println("proved: ", pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "try rank 1 invariants (1) in position" in withQE { _ =>
     val seq = "x=-1 & y=-1 ==> a>0 , [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asSequent
     val pr = proveBy(seq, dC("x=0&y=0 | (x^2<=2*x*y)&x<=0&y<=0".asFormula)(2) < (dW(2) & QE, sAIRankOne(true)(2)))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -482,7 +435,6 @@ class ODEInvarianceTests extends TacticTestBase {
       seq,
       implyR(1) & dC("x=0&y=0 | x<=0&y<=0 & (x^2<=2*x*y)".asFormula)(1) < (dW(1) & QE, sAIRankOne(false)(1)),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -494,7 +446,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val pr =
       proveBy(fml, implyR(1) & dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)".asFormula)(1) < (dW(1), sAIclosedPlus(1)(1)))
     // This needs a strict inequality to prove
-    println(pr)
 
     // The actual invariant proves with the specialized rank 1 tactic:
     val pr2 = proveBy(
@@ -502,7 +453,6 @@ class ODEInvarianceTests extends TacticTestBase {
       implyR(1) &
         dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0".asFormula)(1) < (dW(1) & QE, sAIRankOne(true)(1)),
     )
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -510,14 +460,12 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
     // This worked out because the tactic reorders y>=0 before x>=0
     val pr = proveBy(fml, implyR(1) & sAIRankOne(true)(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "prove with consts (auto andL)" in withQE { _ =>
     val fml = "x>=0 & y>0 -> [{x'=x+y}](x>=0 & y>0)".asFormula
     val pr = proveBy(fml, implyR(1) & odeInvariant(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -528,7 +476,6 @@ class ODEInvarianceTests extends TacticTestBase {
     // val pr = proveBy(fml, implyR(1) & sAIRankOne(1))
     // Fortunately, sAIclosedPlus is a fallback
     val pr = proveBy(fml, implyR(1) & sAIclosedPlus()(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -544,7 +491,6 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "put postcondition into NNF first" in withQE { _ =>
     val fml3 = "!!!(x < 0) -> [{x'=x^10}]!!!(x<0)".asFormula
     val pr = proveBy(fml3, implyR(1) & odeInvariant(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -565,7 +511,6 @@ class ODEInvarianceTests extends TacticTestBase {
           sAIclosedPlus()(1),
         ),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -585,12 +530,6 @@ class ODEInvarianceTests extends TacticTestBase {
     val p2 = pStar(ode, poly, Some(2))
     val p3 = pStar(ode, poly, Some(3))
     val pn = pStar(ode, poly, None)
-
-    println(p0)
-    println(p1)
-    println(p2)
-    println(p3)
-    println(pn)
 
     p0 shouldBe "x+y*z>0".asFormula
     p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
@@ -618,7 +557,7 @@ class ODEInvarianceTests extends TacticTestBase {
       val start = System.currentTimeMillis
       val res = block
       val totalTime = System.currentTimeMillis - start
-      println("Elapsed time: %1d ms".format(totalTime))
+//      println("Elapsed time: %1d ms".format(totalTime))
       res
     }
 
@@ -639,7 +578,7 @@ class ODEInvarianceTests extends TacticTestBase {
       val start = System.currentTimeMillis
       val res = block
       val totalTime = System.currentTimeMillis - start
-      println("Elapsed time: %1d ms".format(totalTime))
+//      println("Elapsed time: %1d ms".format(totalTime))
       res
     }
 
@@ -662,7 +601,7 @@ class ODEInvarianceTests extends TacticTestBase {
       val start = System.currentTimeMillis
       val res = block
       val totalTime = System.currentTimeMillis - start
-      println("Elapsed time: %1d ms".format(totalTime))
+//      println("Elapsed time: %1d ms".format(totalTime))
       res
     }
 
@@ -725,13 +664,11 @@ class ODEInvarianceTests extends TacticTestBase {
     val seq =
       "x=1 , y=2 , z=3 , a=4, B > 0 ==> [{z'=a-z-x, x'=B*(a-z-x)*(z-x-y), a'=x^2*y^2*z^2*(y-2*x)}] (x<z^2+B)".asSequent
     val pr = proveBy(seq, dFP(1) & dW(1) & QE)
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   "domainStuck" should "work on a simple example" in withMathematica { _ =>
     val pr = proveBy("x=1 ==> [{x'=-x & x>=1}]x=1".asSequent, domainStuck(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -741,13 +678,11 @@ class ODEInvarianceTests extends TacticTestBase {
         .asSequent,
       domainStuck(1),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
   it should "work on a simple example in other positions" in withMathematica { _ =>
     val pr = proveBy("==> [{x'=-x & x>=1}]x=1, x!=1".asSequent, domainStuck(1))
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -757,7 +692,6 @@ class ODEInvarianceTests extends TacticTestBase {
         "a!= 0,[{v'=a,x'=c() * v,a'=b() & x>=1 | x^2>=1 & x >= -5 | x <= -2 }]x <= 5, b() >= 0, [{x'=x}]x<1").asSequent,
       domainStuck(2),
     )
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -767,16 +701,12 @@ class ODEInvarianceTests extends TacticTestBase {
       implyR(1) & orR(1) & sAI(2),
     )
 
-    println(pr)
-    println("Proof steps:", pr.steps)
     pr shouldBe Symbol("proved")
   }
 
   it should "work with domains" in withMathematica { _ =>
     val pr = proveBy("x = 1 -> [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0)".asFormula, implyR(1) & sAI(1))
 
-    println(pr)
-    println("Proof steps:", pr.steps)
     pr shouldBe Symbol("proved")
   }
 
@@ -784,16 +714,12 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml =
       "a() = 0 & 1/100 - x^2 - y^2 >= a() -> a()=1 | [{x'=-2*x+x^2+y, y'=x-2*y+y^2+a()}]!(x^2+y^2 >= 1/4)".asFormula
     val pr = proveBy(fml, implyR(1) & andL(-1) & orR(1) & sAI(2))
-    println(pr)
-    println("Proof steps:", pr.steps)
     pr shouldBe Symbol("proved")
   }
 
   it should "prove a simple inv" in withMathematica { _ =>
     val fml = "x>0 -> [{x'=x}] x>0".asFormula
     val pr = proveBy(fml, implyR(1) & sAI(1))
-    println(pr)
-    println("Proof steps:", pr.steps)
     pr shouldBe Symbol("proved")
   }
 
@@ -822,7 +748,6 @@ class ODEInvarianceTests extends TacticTestBase {
       implyR(1) & rewriteODEAt("x'=-(z+5)+10,y'=y*y+y-y".asDifferentialProgram)(1) & id,
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -833,7 +758,6 @@ class ODEInvarianceTests extends TacticTestBase {
         rewriteODEAt("x'=2".asDifferentialProgram)(-1) & rewriteODEAt("x'=2".asDifferentialProgram)(1),
     )
 
-    println(pr)
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "[{x'=2}]x>0, <{x'=2}>x>0  ==>  <{x'=2}>x>0, [{x'=2}]x>0".asSequent
   }
@@ -841,7 +765,6 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "rewrite with predicates" in withMathematica { _ =>
     val pr = proveBy("==> [{x'=x&x>0&q(x)}]x>0".asSequent, rewriteODEAt("x'=--x+x-x".asDifferentialProgram)(1))
 
-    println(pr)
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "==>  [{x'=--x+x-x&x>0&q(x)}]x>0".asSequent
   }

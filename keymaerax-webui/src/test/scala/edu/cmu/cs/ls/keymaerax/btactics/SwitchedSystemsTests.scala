@@ -22,9 +22,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     ss.cvars shouldBe List(Variable("x"), Variable("z"))
     ss.vars shouldBe List(Variable("z"), Variable("y"), Variable("x"), Variable("a"), Variable("b"))
 
-    println(ss)
-    println(ss.asProgram)
-    println(ss.asClockedProgram(Variable("t_")))
     ss.asProgram shouldBe "{{x'=-x+y,z'=a+b}++{x'=-x^3}++{x'=-x^5}}*".asProgram
     ss.asClockedProgram(Variable("t_")) shouldBe "{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*".asProgram
 
@@ -59,7 +56,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     cs.cvars shouldBe List(Variable("x"))
     cs.vars shouldBe List(Variable("u"), Variable("x"), Variable("a"), Variable("y"))
 
-    println(cs.asProgram)
     cs.asProgram shouldBe
       "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{{?x>a;x:=0;y:=0;}u:=mode2();++?x<=0;u:=mode2();++{?x=0;x:=0;}u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{{?x<=0;x:=0;}u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*"
         .asProgram
@@ -88,7 +84,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     cs.cvars shouldBe List(Variable("x"), Variable("t"))
     cs.vars shouldBe List(Variable("mode"), Variable("t"), Variable("x"), Variable("a"), Variable("y"))
 
-    println(cs.asProgram)
     cs.asProgram shouldBe
       "{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{x'=-x,t'=1}++?mode=mode2();{x'=-x^3,t'=1}}}*"
         .asProgram
@@ -121,7 +116,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     cs.cvars shouldBe List(Variable("x"))
     cs.vars shouldBe List(Variable("u"), Variable("x"), Variable("a"))
 
-    println(cs.asProgram)
     cs.asProgram shouldBe
       "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{?x>a;u:=mode2();++?x<=0;u:=mode2();++?x=0;u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{?x<=0;u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*"
         .asProgram
@@ -151,7 +145,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     cs.cvars shouldBe List(Variable("x"))
     cs.vars shouldBe List(Variable("u"), Variable("timer"), Variable("x"))
 
-    println(cs.asProgram)
     cs.asProgram shouldBe
       "{{u:=mode1();++u:=mode2();}timer:=0;}{{?u=mode1();{{?timer>=1;timer:=0;}u:=mode2();++{?true;timer:=0;}u:=mode2();++u:=u;}++?u=mode2();u:=u;}{?u=mode1();{timer'=1,x'=-x}++?u=mode2();{timer'=1,x'=-x^3&timer<=5}}}*"
         .asProgram
@@ -167,13 +160,11 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ss = StateDependent(List(ode1, ode2, ode3))
 
     val spec = stabilitySpec(ss)
-    println(spec)
     spec shouldBe
       "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall z (x^2+z^2 < del^2->[{{x'=-x+y,z'=a+b}++{x'=-x^3}++{x'=-x^5}}*]x^2+z^2 < eps^2)))"
         .asFormula
 
     val spec2 = attractivitySpec(ss)
-    println(spec2)
     spec2 shouldBe
       "\\forall eps (eps>0->\\forall del (del>0 -> \\exists T_ (T_>=0&\\forall x \\forall z (x^2+z^2 < del^2->[t_:=0;{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*](t_>=T_->x^2+z^2 < eps^2)))))"
         .asFormula
@@ -197,13 +188,11 @@ class SwitchedSystemsTests extends TacticTestBase {
     val cs = Controlled(Some("t:=0;".asProgram), List(mode1, mode2), Variable("mode"))
 
     val spec = stabilitySpec(cs)
-    println(spec)
     spec shouldBe
       "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall t (x^2+t^2 < del^2->[{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{x'=-x,t'=1}++?mode=mode2();{x'=-x^3,t'=1}}}*]x^2+t^2 < eps^2)))"
         .asFormula
 
     val spec2 = attractivitySpec(cs)
-    println(spec2)
     spec2 shouldBe
       "\\forall eps (eps>0->\\forall del (del>0 -> \\exists T_ (T_>=0&\\forall x \\forall t (x^2+t^2 < del^2->[t_:=0;{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{t_'=1,x'=-x,t'=1}++?mode=mode2();{t_'=1,x'=-x^3,t'=1}}}*](t_>=T_->x^2+t^2 < eps^2)))))"
         .asFormula
@@ -223,7 +212,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & orR(1) & proveStabilityCLF("x^4+x^2".asTerm)(2),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
@@ -233,7 +221,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & orR(1) & proveAttractivityCLF("x^4+x^2".asTerm)(2),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -255,14 +242,12 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val pr = proveBy(Imply("a > 0".asFormula, spec), implyR(1) & proveStabilityCLF("x^2 + y^2 + z^2".asTerm)(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(Imply("a > 0".asFormula, spec2), implyR(1) & proveAttractivityCLF("x^2 + y^2 + z^2".asTerm)(1))
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -289,7 +274,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & orR(1) & proveStabilityCLF("x^4+x^2".asTerm)(2),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
@@ -299,7 +283,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & orR(1) & proveAttractivityCLF("x^4+x^2".asTerm)(2),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -320,7 +303,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & orR(1) & proveStabilityCLF("x^4+x^2".asTerm)(2),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
@@ -330,7 +312,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & orR(1) & proveAttractivityCLF("x^4+x^2".asTerm)(2),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -343,14 +324,12 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val pr = proveBy(spec, proveStabilityCLF("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm)(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2, proveAttractivityCLF("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm)(1))
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -363,14 +342,12 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val pr = proveBy(stab, proveStabilityCLF("x1 ^ 2 + x2 ^2".asTerm)(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2, proveAttractivityCLF("x1 ^ 2 + x2 ^2".asTerm)(1))
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -391,7 +368,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(2),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
@@ -403,7 +379,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(2),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -420,7 +395,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
@@ -432,7 +406,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(1),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -451,7 +424,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
@@ -464,7 +436,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(1),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -484,14 +455,12 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val pr = proveBy(spec, proveStabilityStateMLF(v13 :: v24 :: v13 :: v24 :: Nil)(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2, proveAttractivityStateMLF(v13 :: v24 :: v13 :: v24 :: Nil)(1))
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -517,7 +486,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     val pr =
       proveBy(Imply("mode1()=1 & mode2()=2".asFormula, spec), implyR(1) & proveStabilityStateMLF(v1 :: v2 :: Nil)(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(ss)
@@ -526,7 +494,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & proveAttractivityStateMLF(v1 :: v2 :: Nil)(1),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -568,7 +535,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & proveStabilityTimeMLF(v1 :: v2 :: Nil, "1/4>0".asFormula :: "1/4>0".asFormula :: Nil)(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
@@ -578,7 +544,6 @@ class SwitchedSystemsTests extends TacticTestBase {
         proveAttractivityTimeMLF(v1 :: v2 :: Nil, "1/4>0".asFormula :: "1/4>0".asFormula :: Nil, "1/4-7/30".asTerm)(1),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -602,7 +567,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       implyR(1) & proveStabilityTimeMLF(v1 :: v2 :: Nil, "-2 <= 0".asFormula :: "2 > 0".asFormula :: Nil)(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
@@ -613,7 +577,6 @@ class SwitchedSystemsTests extends TacticTestBase {
         proveAttractivityTimeMLF(v1 :: v2 :: Nil, "-2 <= 0".asFormula :: "2 > 0".asFormula :: Nil, "1/100".asTerm)(1),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -639,7 +602,6 @@ class SwitchedSystemsTests extends TacticTestBase {
         proveStabilityTimeMLF(v1 :: v2 :: Nil, "-9 <= 0".asFormula :: "2 > 0".asFormula :: Nil)(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
@@ -649,7 +611,6 @@ class SwitchedSystemsTests extends TacticTestBase {
         proveAttractivityTimeMLF(v1 :: v2 :: Nil, "-9 <= 0".asFormula :: "2 > 0".asFormula :: Nil, "0.01".asTerm)(1),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -679,7 +640,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
 
     val spec2 = attractivitySpec(cs)
@@ -693,7 +653,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       )(1),
     )
 
-    println(pr2)
     pr2 shouldBe Symbol("proved")
   }
 
@@ -707,7 +666,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       proveStabilityStateMLF(v1 :: v2 :: Nil)(1),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 
@@ -799,9 +757,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     val stab1 = stableOrigin(ode)
     val stab2 = stableOrigin(ode, varsopt = Some(List("x", "y", "z").map(s => (s.asVariable, Number(0)))))
     val stab3 = stableOrigin(ode, varsopt = None, restr = Some("a > 0".asFormula))
-    println(stab1)
-    println(stab2)
-    println(stab3)
 
     stab1 shouldBe
       "\\forall eps (eps>0->\\exists del (del>0&\\forall z \\forall y \\forall x (z^2+y^2+x^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]z^2+y^2+x^2 < eps^2)))"
@@ -834,7 +789,6 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val pr = proveBy(stab1, proveStable("2*x1^2 + x2^4 + 3201/1024*x3^2 + 2943/1024*x4^2".asTerm, ode)(1))
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
   // todo: need to handle arithmetic much better here (too slow / doesn't prove)
@@ -845,8 +799,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     val stab1 = stableOrigin(ode)
 
     val pr = proveBy(stab1, proveStable("2*x1^2 + 4*x2^4 + x3^2 + 11*x4^2 + 2*x5^4 + 4*x6^2".asTerm, ode)(1))
-
-    println(pr)
   }
 
   "time dependent" should "model time dependency" in withMathematica { _ =>
@@ -859,7 +811,6 @@ class SwitchedSystemsTests extends TacticTestBase {
       topt = Some(Variable("t_")),
     )
 
-    println(tt)
     tt shouldBe
       ("{s_:=0;{u_:=0;++u_:=1;}}" + "{" + " {?u_=0;{{?s_>=5;u_:=1;}s_:=0;++u_:=0;}++" +
         "  ?u_=1;{{?s_>=5;u_:=0;}s_:=0;++u_:=1;}" + " }" + " {?u_=0;{t_'=1,s_'=1,x'=x&true&s_<=5}++" +
@@ -871,8 +822,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode2 = "{x'=-x}".asProgram.asInstanceOf[ODESystem]
 
     val tt = slowSwitch(List(ode1, ode2), Number(5))
-
-    println(tt)
 
     tt shouldBe
       ("{s_:=0;{u_:=0;++u_:=1;}}" + "{" + "   {?u_=0;{{?s_>=5;u_:=1;}s_:=0;++u_:=0;}++" +
@@ -1027,7 +976,6 @@ class SwitchedSystemsTests extends TacticTestBase {
         ),
     )
 
-    println(pr)
     pr shouldBe Symbol("proved")
   }
 

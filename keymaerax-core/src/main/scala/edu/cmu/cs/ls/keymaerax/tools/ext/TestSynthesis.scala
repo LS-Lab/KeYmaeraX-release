@@ -45,7 +45,6 @@ class TestSynthesis(mathematicaTool: Mathematica)
     }
 
     val cmd = findInstance(And(fml, safetyMetric), amount, timeout)
-    println("Execute in Mathematica to search for sunshine test case values (initial+expected): " + cmd)
 
     def toConfigMap(fml: Formula): Map[Term, Term] = FormulaTools
       .conjuncts(fml)
@@ -86,7 +85,6 @@ class TestSynthesis(mathematicaTool: Mathematica)
     // minimize for compliant test cases
     // @todo second argument would give values for "safest" test case
     val cmd = ExtMathematicaOpSpec.first(ExtMathematicaOpSpec.nmaximize(metricExpr, symbolsExpr))
-    println("Execute in Mathematica to compute safety range: " + cmd)
     run(cmd) match {
       case (_, Left(upper: Number)) => (Number(0), upper)
       case (_, Left(Divide(Number(a), Number(b)))) => (Number(0), Number(a / b))

@@ -315,11 +315,9 @@ class NonlinearExamplesTester(
 ) extends TacticTestBase with AppendedClues {
 
   private val entries = {
-    println("Reading " + url)
     try { DatabasePopulator.readKyx(url) }
     catch {
       case ex: Throwable =>
-        println("Failed reading: " + ex.getMessage)
         ex.printStackTrace()
         Nil
     }

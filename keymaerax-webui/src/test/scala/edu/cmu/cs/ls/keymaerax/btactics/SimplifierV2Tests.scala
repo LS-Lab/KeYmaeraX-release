@@ -223,14 +223,12 @@ class SimplifierV2Tests extends TacticTestBase {
     val succ = IndexedSeq("z>3".asFormula)
     val result = proveBy(Sequent(ante, succ), SimplifierV2.fullSimpTac)
 
-    println(result)
     result.subgoals.head.succ should contain only "5>3".asFormula
   }
 
   it should "(attempt to) simplify ground terms" in withQE { _ =>
     val succ = "(1+2+3+4+5+6)^2/6-5-4-3-2*5 = 7".asFormula
     val result = proveBy(succ, SimplifierV2.simpTac(1))
-    println(result)
   }
 
   it should "rewrite simple equalities" in withQE { _ =>
@@ -278,7 +276,6 @@ class SimplifierV2Tests extends TacticTestBase {
     val succ = IndexedSeq("P()".asFormula, "Z()".asFormula)
 
     val result = proveBy(Sequent(ante, succ), SimplifierV2.safeFullSimpTac(1))
-    println(result)
   }
 
 }

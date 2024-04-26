@@ -27,7 +27,7 @@ object IntervalArithmeticV2Tests {
     val tic = System.nanoTime()
     val res = f()
     val toc = System.nanoTime()
-    System.out.println("Timing for " + s + ": " + (toc - tic) / 1000000000.0 + "s")
+//    System.out.println("Timing for " + s + ": " + (toc - tic) / 1000000000.0 + "s")
     res
   }
 }
@@ -99,8 +99,6 @@ class IntervalArithmeticV2Tests extends TacticTestBase {
     val ssa = new StaticSingleAssignmentExpression("(a*b + a*b)*(a*b + a*b)+a*b*b+a*(a*b)".asTerm)
     val (lowers, uppers) =
       proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), ssa.unfoldMap)(List(ssa.expression))
-    println(lowers)
-    println(uppers)
   }
 
   val xyz_bounds = IndexedSeq("(-10) <= f(x)", "f(x) <= 1", "(-3) <= x", "x <= (-1)", "2 <= c()", "c() <= 4")

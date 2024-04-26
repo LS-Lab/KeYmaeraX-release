@@ -496,7 +496,6 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "60")) {
       forEvery(list) { (formula, requiredTool) =>
         whenever(qeTool.isInitialized) {
-          println("Proving " + formula)
           if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
             TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe Symbol("proved")
           }

@@ -69,7 +69,6 @@ class CexSearchTests extends TacticTestBase {
     algos.foreach({ case algo =>
       easyFalseFmls.foreach({ case fml =>
         val result = algo(ProgramSearchNode(fml))
-        print("Testing algo " + algo.getClass.getSimpleName + " for falseness of " + fml + "\n")
         result.isDefined shouldBe true
       })
     })
@@ -79,7 +78,6 @@ class CexSearchTests extends TacticTestBase {
     algos.foreach({ case algo =>
       loopFalseFmls.foreach({ case fml =>
         val result = algo(ProgramSearchNode(fml))
-        print("Testing algo " + algo.getClass.getSimpleName + " for falseness of " + fml + "\n")
         result.isDefined shouldBe true
       })
     })
@@ -89,7 +87,6 @@ class CexSearchTests extends TacticTestBase {
     algos.foreach({ case algo =>
       loopTrueFmls.foreach({ case fml =>
         val result = algo(ProgramSearchNode(fml))
-        print("Testing algo " + algo.getClass.getSimpleName + " for falseness of " + fml + "\n")
         result.isDefined shouldBe true
       })
     })

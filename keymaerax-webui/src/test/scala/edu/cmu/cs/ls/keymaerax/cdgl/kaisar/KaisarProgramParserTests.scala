@@ -227,10 +227,7 @@ class KaisarProgramParserTests extends TacticTestBase {
     )
   }
 
-  it should "parse existses" in {
-    val x = p("\\forall z2 (\\forall z3 1 < z3*40)'", ep.formula(_))
-    println(x)
-  }
+  it should "parse existses" in { p("\\forall z2 (\\forall z3 1 < z3*40)'", ep.formula(_)) }
 
   // Kaisar proof script language parsers
   // identifier pattern parser
@@ -516,15 +513,15 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   "formula error messages" should "exist" in {
     parse("(x <=2 ", ep.formula(_)) match {
-      case (s: Success[Formula]) => println("success: " + s)
-      case (f: Failure) => println(f.extra.trace())
+      case (s: Success[Formula]) => ()
+      case (f: Failure) => ()
     }
   }
 
   "program error messages" should "exist" in {
     parse("x'=2 & x >= ;", ep.program(_)) match {
-      case (s: Success[Program]) => println("success: " + s)
-      case (f: Failure) => println(f.extra.trace())
+      case (s: Success[Program]) => ()
+      case (f: Failure) => ()
     }
   }
 }

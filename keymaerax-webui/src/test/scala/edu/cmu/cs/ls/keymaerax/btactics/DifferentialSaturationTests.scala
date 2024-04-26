@@ -100,7 +100,6 @@ class DifferentialSaturationTests extends TacticTestBase {
   "foo" should "fix weird pqe" in withMathematica { qeTool =>
     val fml = "\\forall x \\forall v \\forall t (v>=0->a__5+2*a__6*t+v*(a__11+a__7+a__8*t+a__12*v)=0)".asFormula
     val pr1 = proveBy(fml, partialQE)
-    println(pr1)
   }
 
 }

@@ -29,19 +29,10 @@ class LinearMatcherTest extends SystemTestBase {
 
   private def should(e1: Expression, e2: Expression, us: Option[Subst]): Unit = {
     if (us.isDefined) {
-      println("Expression: " + e1)
-      println("Expression: " + e2)
       val s = matcher(e1, e2)
-      println("Unified:  " + s)
-      println("Expected: " + us.get)
       s(e1) shouldBe e2
       s shouldBe us.get
-    } else {
-      println("Expression: " + e1)
-      println("Expression: " + e2)
-      println("Expected: " + "<ununifiable>")
-      a[UnificationException] should be thrownBy matcher(e1, e2)
-    }
+    } else { a[UnificationException] should be thrownBy matcher(e1, e2) }
   }
 
   private def shouldUnify(e1: Expression, e2: Expression, us: Option[USubst]): Unit = should(
@@ -131,25 +122,12 @@ class LinearMatcherTest extends SystemTestBase {
 
   private def shouldMatch(e1: Expression, e2: Expression, us: Option[RenUSubst]): Unit = {
     if (us.isDefined) {
-      println("Expression1: " + e1)
-      println("Expression2: " + e2)
       val s = UnificationMatch(e1, e2)
-      println("Unified:     " + s)
-      println("Expected:    " + us.get + "\t" + (if (s == us.get) "identical" else "different"))
-      print("Expectation unifies?")
       // check expectation whether it even unifies
       us.get(e1) shouldBe (e2)
-      println("!")
-      println("hence1:      " + s(e1))
-      println("Expression2: " + e2)
       s(e1) shouldBe (e2)
       s shouldBe (us.get)
-    } else {
-      println("Expression: " + e1)
-      println("Expression: " + e2)
-      println("Expected: " + "<ununifiable>")
-      a[UnificationException] should be thrownBy UnificationMatch(e1, e2)
-    }
+    } else { a[UnificationException] should be thrownBy UnificationMatch(e1, e2) }
   }
 
   private def shouldMatch(e1: Expression, e2: Expression, us: RenUSubst): Unit = shouldMatch(e1, e2, Some(us))

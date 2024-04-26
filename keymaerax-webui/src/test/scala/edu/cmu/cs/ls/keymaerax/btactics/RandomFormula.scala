@@ -46,7 +46,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   private val progNames = "aa" :: "bb" :: "cc" :: "dd" :: Nil
 
   /** next RandomFormula episode */
-  def nextFormulaEpisode(): RandomFormula = { print("episode "); new RandomFormula(rand.nextLong()) }
+  def nextFormulaEpisode(): RandomFormula = { new RandomFormula(rand.nextLong()) }
 
   // expression generators
 

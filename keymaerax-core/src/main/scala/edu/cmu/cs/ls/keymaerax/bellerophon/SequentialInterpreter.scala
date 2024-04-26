@@ -582,9 +582,7 @@ abstract class BelleBaseInterpreter(
               val remaining: BelleProvable = BelleProvable(provable(backsubst, 0), lbl2)
               apply(continuation, remaining) match {
                 // return upon success of tactic
-                case pr: BelleProvable =>
-                  println("SearchAndRescueAgain committed " + us)
-                  return pr
+                case pr: BelleProvable => return pr
                 case e: BelleThrowable => lastProblem = e
                 case e => ???
               }
