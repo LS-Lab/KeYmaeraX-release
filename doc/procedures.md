@@ -132,57 +132,68 @@ sbt --mem 2048 compile Test/compile
 
 ## Run tests
 
-To run a quick smoke test suite, run:
+To run tests, the `sbt testOnly` command is used.
+Its syntax is `sbt testOnly [<test>...] -- [-n <tag>...] [-l <tag>...]`.
+Zero or more tests can be specified before the `--`,
+either by their full path or using wildcards.
+After the `--`, tests can be included (`-n`) and excluded (`-l`) by their tags.
+The `-n` and `-l` options can be repeated as necessary.
+If no options are specified, the `--` is optional.
+For more details on running tests, see the ScalaTest documentation on
+[Using ScalaTest with sbt](https://www.scalatest.org/user_guide/using_scalatest_with_sbt).
 
 ```shell
-sbt "testOnly -- \
-  -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest \
-  -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest \
-  -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
-```
-
-To run the full but lengthy test suite, run:
-
-```shell
-sbt "test -- \
-  -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest \
-  -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
-```
-
-To leave out slower tests, run:
-
-```shell
-
-sbt "test -- \
-  -l edu.cmu.cs.ls.keymaerax.tags.SlowTest \
-  -l edu.cmu.cs.ls.keymaerax.tags.ExtremeTest \
-  -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest \
-  -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
-```
-
-To run a single test (e.g. `BenchmarkTests`), run:
-
-```shell
+# Run a specific test
 sbt "testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests"
-```
 
-You can also use wildcards:
-
-```shell
+# Run all tests whose name contains "USubst"
 sbt "testOnly *USubst*"
+
+# Run all tests tagged "CheckinTest" except those tagged "TodoTest"
+sbt "testOnly -- -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
 ```
 
-Of course, you can also use all these commands in the interactive sbt shell:
+The following tags can usually be safely ignored:
+
+- `edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest`
+- `edu.cmu.cs.ls.keymaerax.tags.CaseStudyTest`
+- `edu.cmu.cs.ls.keymaerax.tags.CoverageTest`
+- `edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest`
+- `edu.cmu.cs.ls.keymaerax.tags.NotfixedTest`
+- `edu.cmu.cs.ls.keymaerax.tags.OptimisticTest`
+- `edu.cmu.cs.ls.keymaerax.tags.TodoTest`
+
+You may also wish to ignore these tags if you're short on time:
+
+- `edu.cmu.cs.ls.keymaerax.tags.SlowTest`
+- `edu.cmu.cs.ls.keymaerax.tags.ExtremeTest`
+
+For a quick smoke test suite that only takes a minute or two,
+use the tag `edu.cmu.cs.ls.keymaerax.tags.CheckinTest`:
 
 ```shell
-testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests
-testOnly *USubst*
+sbt "testOnly --
+-n edu.cmu.cs.ls.keymaerax.tags.CheckinTest
+-l edu.cmu.cs.ls.keymaerax.tags.TodoTest
+"
 ```
 
-In general, `-n` specifies tags to include while `-l` specifies tags to exclude.
-If no `-n` is specified, all tests are included by default.
-For more details on running tests, see the ScalaTest documentation
-on [using scalatest with sbt](https://www.scalatest.org/user_guide/using_scalatest_with_sbt).
+For a more exhaustive but longer test suite,
+run all tests except the slow ones and those that can safely be ignored:
+
+```shell
+sbt "testOnly --
+-l edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
+-l edu.cmu.cs.ls.keymaerax.tags.CaseStudyTest
+-l edu.cmu.cs.ls.keymaerax.tags.CoverageTest
+-l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
+-l edu.cmu.cs.ls.keymaerax.tags.NotfixedTest
+-l edu.cmu.cs.ls.keymaerax.tags.OptimisticTest
+-l edu.cmu.cs.ls.keymaerax.tags.TodoTest
+-l edu.cmu.cs.ls.keymaerax.tags.SlowTest
+-l edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
+"
+```
 
 ## Format source files
 
