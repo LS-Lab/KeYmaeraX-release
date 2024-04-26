@@ -183,9 +183,6 @@ lazy val webui = project
     // multithreaded setups (see ScalaTest documentation)
     Test / fork := false,
 
-    // set HTML test report output directory
-    Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports"),
-
     // record and report test durations
     Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
 

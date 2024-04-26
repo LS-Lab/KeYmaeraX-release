@@ -133,7 +133,7 @@ sbt --mem 2048 compile Test/compile
 ## Run tests
 
 To run tests, the `sbt testOnly` command is used.
-Its syntax is `sbt testOnly [<test>...] -- [-n <tag>...] [-l <tag>...]`.
+Its syntax is `sbt testOnly [<test>...] -- [-n <tag>...] [-l <tag>...] [-h <path>]`.
 Zero or more tests can be specified before the `--`,
 either by their full path or using wildcards.
 After the `--`, tests can be included (`-n`) and excluded (`-l`) by their tags.
@@ -152,6 +152,17 @@ sbt "testOnly *USubst*"
 # Run all tests tagged "CheckinTest" except those tagged "TodoTest"
 sbt "testOnly -- -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
 ```
+
+To generate an HTML report of the results, the `-h` option can be used.
+The following command generates a report
+viewable by opening `target/test-reports/index.html` in your browser:
+
+```shell
+sbt "testOnly [...] -- [...] -h target/test-reports"
+```
+
+After running tests, an HTML report of the results can be found
+in the target directory at `target/test-reports/index.html`.
 
 The following tags can usually be safely ignored:
 
