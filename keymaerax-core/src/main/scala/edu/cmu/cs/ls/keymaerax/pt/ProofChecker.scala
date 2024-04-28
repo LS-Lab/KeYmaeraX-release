@@ -5,14 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.pt
 
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{US, _}
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.{ASTNode, Statement, Triv}
 
 import scala.collection.immutable
+
+class ProofCheckException(message: String) extends Exception(message)
 
 /**
  * ProofChecker maps a proof term to the Provable it proves.
@@ -75,7 +75,7 @@ object ProofChecker {
       case StartProof(goal) => ProvableSig.startPlainProof(goal)
       case UsubstProvableTerm(child, sub) => apply(child)(sub)
       case URenameTerm(child, ren) => apply(child)(ren)
-      case NoProof => throw ProofCheckException("Tried to check proof of " + phi + ", but it has NoProof")
+      case NoProof => throw new ProofCheckException(s"Tried to check proof of $phi but it has NoProof")
     }
 
     result
