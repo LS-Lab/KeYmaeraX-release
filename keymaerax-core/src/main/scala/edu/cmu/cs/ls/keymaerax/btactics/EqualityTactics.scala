@@ -564,43 +564,50 @@ private object EqualityTactics extends TacticProvider {
     val sequent = provable.subgoals.head
     sequent.at(pos) match {
       case (_, _: Formula) =>
-        val positions = mapSubpositions(
+        // Find all positions where the min or max functions are used
+        case class PositionInfo(term: FuncOf, termPos: Position)
+        val infos = mapSubpositions(
           pos,
           sequent,
           {
-            case (t @ FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), _), pp) =>
-              if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name)
-                Some((t, (pp, (minmax(pp).computeResult _)(_))))
-              else None
+            case (t @ FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), _), tPos)
+                if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
+              Some(PositionInfo(t, tPos))
             case _ => None
           },
         )
-        // @note take only the first position, because minmax itself abbreviates before expanding and so expands other positions with it; then reverse-sort by "posInExpr" length to work inside out
-        positions
-          .groupBy(_._1)
-          .map(_._2.head._2)
+
+        // Take only the first position,
+        // because minmax itself abbreviates before expanding and so expands other positions with it;
+        // then reverse-sort by "posInExpr" length to work inside out.
+        infos
+          .groupBy(_.term)
+          .map { case (_, infos) => infos.head }
           .toList
-          .sortBy(_._1.inExpr.pos.length)
+          .sortBy(_.termPos.inExpr.pos.length)
           .reverseIterator
-          .map(_._2)
-          .foldLeft(provable)({ (pr, r) => pr(r, 0) })
+          .foldLeft(provable)({ (pr, info) =>
+            val forwardTactic: ProvableSig => ProvableSig = pr => minmax(info.termPos).computeResult(pr)(pr)
+            pr(forwardTactic, 0)
+          })
+
       case (ctx, minmax @ FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), t: Pair))
           if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
         if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
           val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
           val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
-          (provable(abbrv(minmax, Some(minmaxVar)).result _, 0)(
-            useAt(Ax.equalCommute)(Symbol("L"), Equal(minmaxVar, minmax)).computeResult _,
-            0,
-          )(
-            fn match {
-              case InterpretedSymbols.minF.name => useAt(Ax.min)(Symbol("L"), Equal(minmax, minmaxVar)).computeResult _
-              case InterpretedSymbols.maxF.name => useAt(Ax.max)(Symbol("L"), Equal(minmax, minmaxVar)).computeResult _
-              case _ => throw new AssertionError("Cannot happen")
-            },
-            0,
-          ))
+
+          val ax = fn match {
+            case InterpretedSymbols.minF.name => Ax.min
+            case InterpretedSymbols.maxF.name => Ax.max
+            case _ => throw new AssertionError("Cannot happen")
+          }
+
+          provable(abbrv(minmax, Some(minmaxVar)).result _, 0)
+            .apply(useAt(Ax.equalCommute)(Symbol("L"), Equal(minmaxVar, minmax)).computeResult _, 0)
+            .apply(useAt(ax)(Symbol("L"), Equal(minmax, minmaxVar)).computeResult _, 0)
         } else { minmaxAt(pos).computeResult(provable) }
+
       case (_, e) => throw new TacticInapplicableFailure("minmax only applicable to min/max, but got " + e.prettyString)
     }
   }
