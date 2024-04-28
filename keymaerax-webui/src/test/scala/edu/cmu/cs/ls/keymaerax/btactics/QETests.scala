@@ -375,9 +375,9 @@ class QETests extends TacticTestBase {
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe Symbol("proved")
   }
 
-  "QE with timeout" should "reset timeout when done" in withTactics {
-    withDatabase { db =>
-      withQE { _ =>
+  "QE with timeout" should "reset timeout when done" in withQE { _ =>
+    withTactics {
+      withDatabase { db =>
         val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>1 -> x>0 End. End."""
         val proofId = db.createProof(modelContent)
         val interpreter = registerInterpreter(SpoonFeedingInterpreter(
@@ -401,8 +401,8 @@ class QETests extends TacticTestBase {
     }
   }
 
-  it should "omit timeout reset when no timeout" in withDatabase { db =>
-    withQE { _ =>
+  it should "omit timeout reset when no timeout" in withQE { _ =>
+    withDatabase { db =>
       val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>1 -> x>0 End. End."""
       val proofId = db.createProof(modelContent)
       val interpreter = registerInterpreter(SpoonFeedingInterpreter(
@@ -422,9 +422,9 @@ class QETests extends TacticTestBase {
     }
   }
 
-  it should "use the right tool" in withTactics {
-    withDatabase { db =>
-      withQE { tool: Tool =>
+  it should "use the right tool" in withQE { tool: Tool =>
+    withTactics {
+      withDatabase { db =>
         val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>1 -> x>0 End. End."""
         val proofId = db.createProof(modelContent)
         val interpreter = registerInterpreter(SpoonFeedingInterpreter(
