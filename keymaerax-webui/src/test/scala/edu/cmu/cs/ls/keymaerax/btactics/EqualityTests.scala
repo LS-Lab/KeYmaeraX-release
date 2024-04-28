@@ -471,8 +471,8 @@ class EqualityTests extends TacticTestBase {
         |min__0+min_<=2*max_""".stripMargin.asSequent
     proveBy("min(x,max(y,z)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
       """y>=z&max_=y|y < z&max_=z,
-        |y>=y^2&max__0=y|y < y^2&max__0=y^2,
         |x<=max_&min_=x|x>max_&min_=max_,
+        |y>=y^2&max__0=y|y < y^2&max__0=y^2,
         |x<=y^2&min__0=x|x>y^2&min__0=y^2
         |==>
         |min_+min__0<=2*max__0""".stripMargin.asSequent
