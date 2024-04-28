@@ -14,8 +14,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.KaisarTest
 
 /** Test synthesized Angel strategies against handwritten do-nothing Demon strategies */
+@KaisarTest
 class ProofPlexShimTests extends TacticTestBase {
   val check: String => Statement = Kaisar.statementProved
 

@@ -13,12 +13,10 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.cdgl.TermTactics._
-import edu.cmu.cs.ls.keymaerax.tags.UsualTest
+import edu.cmu.cs.ls.keymaerax.tags.{KaisarTest, UsualTest}
 import fastparse._
 
-@UsualTest
+@KaisarTest @UsualTest
 class KaisarKeywordParserTests extends TacticTestBase {
   val whitespaces = List("", " ", "   ", " \n ")
 

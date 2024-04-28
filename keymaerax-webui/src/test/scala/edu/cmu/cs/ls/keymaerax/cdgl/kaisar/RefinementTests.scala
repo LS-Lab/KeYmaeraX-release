@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => _, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+import edu.cmu.cs.ls.keymaerax.tags.KaisarTest
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
@@ -41,6 +42,7 @@ object RefinementTestCase {
   }
 }
 
+@KaisarTest
 class RefinementTests extends TacticTestBase {
   val trivAssign: RefinementTestCase = RefinementTestCase("Trivial assignment", "x:= 0;", "x:=0;")
   val ghostODE: RefinementTestCase =

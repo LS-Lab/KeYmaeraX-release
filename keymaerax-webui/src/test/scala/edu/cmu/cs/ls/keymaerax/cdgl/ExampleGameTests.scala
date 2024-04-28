@@ -10,11 +10,11 @@
 package edu.cmu.cs.ls.keymaerax.cdgl
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.TermTactics._
-import edu.cmu.cs.ls.keymaerax.tags.UsualTest
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tags.{KaisarTest, UsualTest}
 
-@UsualTest
+@KaisarTest @UsualTest
 class ExampleGameTests extends TacticTestBase {
   val (va, vd, vx, vy, vk) = (Variable("a"), Variable("d"), Variable("x"), Variable("y"), Variable("k"))
   val cakeTest: Formula = And(LessEqual(Number(0), vx), LessEqual(vx, Number(1)))

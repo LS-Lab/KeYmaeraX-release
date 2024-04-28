@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+import edu.cmu.cs.ls.keymaerax.tags.KaisarTest
 import fastparse.Parsed.{Failure, Success}
 import fastparse._
 
@@ -30,6 +31,7 @@ import fastparse._
 //   and which hides old irrelevant max, min, abs to reduce branching factor.
 // @TODO: Discuss whether any compelling need for domain constraints at times other than initial and final
 
+@KaisarTest
 class EndToEndTests extends TacticTestBase {
   val check: String => Formula = Kaisar.single(_)._2
 

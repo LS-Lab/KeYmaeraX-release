@@ -170,6 +170,7 @@ The following tags can usually be safely ignored:
 - `edu.cmu.cs.ls.keymaerax.tags.CaseStudyTest`
 - `edu.cmu.cs.ls.keymaerax.tags.CoverageTest`
 - `edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest`
+- `edu.cmu.cs.ls.keymaerax.tags.KaisarTest`
 - `edu.cmu.cs.ls.keymaerax.tags.NotfixedTest`
 - `edu.cmu.cs.ls.keymaerax.tags.OptimisticTest`
 - `edu.cmu.cs.ls.keymaerax.tags.TodoTest`
@@ -198,6 +199,7 @@ sbt "testOnly --
 -l edu.cmu.cs.ls.keymaerax.tags.CaseStudyTest
 -l edu.cmu.cs.ls.keymaerax.tags.CoverageTest
 -l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
+-l edu.cmu.cs.ls.keymaerax.tags.KaisarTest
 -l edu.cmu.cs.ls.keymaerax.tags.NotfixedTest
 -l edu.cmu.cs.ls.keymaerax.tags.OptimisticTest
 -l edu.cmu.cs.ls.keymaerax.tags.TodoTest

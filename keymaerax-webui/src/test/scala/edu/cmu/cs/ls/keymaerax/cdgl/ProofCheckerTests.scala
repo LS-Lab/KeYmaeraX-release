@@ -12,9 +12,9 @@ package edu.cmu.cs.ls.keymaerax.cdgl
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tags.UsualTest
+import edu.cmu.cs.ls.keymaerax.tags.{KaisarTest, UsualTest}
 
-@UsualTest
+@KaisarTest @UsualTest
 class ProofCheckerTests extends TacticTestBase {
   "hyp" should "check" in withMathematica { _ =>
     val G = Context(List(False))

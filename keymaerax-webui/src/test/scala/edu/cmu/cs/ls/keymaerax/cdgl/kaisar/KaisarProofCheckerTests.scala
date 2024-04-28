@@ -5,14 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.KaisarTest
 import fastparse.Parsed.{Failure, Success}
 import fastparse._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt
 
+@KaisarTest
 class KaisarProofCheckerTests extends TacticTestBase {
   import KaisarProof._
   val pc = ParserCommon

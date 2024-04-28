@@ -8,11 +8,12 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.KaisarTest
 import fastparse.Parsed._
 import fastparse._
 
+@KaisarTest
 class SSAPassTests extends TacticTestBase {
-  import KaisarProof._
   val pc = ParserCommon
   val ep = ExpressionParser
   val pp = ProofParser

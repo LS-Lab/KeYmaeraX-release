@@ -12,6 +12,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => _}
+import edu.cmu.cs.ls.keymaerax.tags.KaisarTest
 import org.scalactic.Equality
 import org.scalatest.matchers.should.Matchers
 
@@ -35,6 +36,7 @@ object TotalizerTest {
   }
 }
 
+@KaisarTest
 class TotalizerTests extends TacticTestBase with Matchers {
   val pldiStreamlined: TotalizerTestCase =
     TotalizerTest("Streamlined PLDI model", SharedModels.pldiStreamlined, SharedModels.pldiStreamlinedSandbox)
