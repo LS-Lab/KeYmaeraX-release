@@ -59,7 +59,13 @@ class ArithmeticTests extends TacticTestBase {
 
   // @todo AdvocatusTest that inserts a broken tool by reflection.
 
-  "fullQE" should "apply equalities, transform to implication, and compute universal closure" in withTactics {
+  // MockTool tries to make the kernel trust itself using reflection.
+  // However, this reflection was broken by a scala update, so these first four tests are now broken.
+  // Ideally, no reflection should be necessary anywhere.
+  // Either we redesign the core's trust model so this kind of test is possible,
+  // or we don't write this kind of test in the first place.
+
+  "fullQE" should "apply equalities, transform to implication, and compute universal closure" ignore withTactics {
     val tool = new MockTool(
       "\\forall x_0 \\forall v_0 \\forall t \\forall s (v_0>0&x_0 < s&-1*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0->1/2*(-1*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+(-1*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)"
         .asFormula
@@ -74,7 +80,7 @@ class ArithmeticTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
-  it should "prove after apply equalities, transform to implication, and universal closure" in withQE { _ =>
+  it should "prove after apply equalities, transform to implication, and universal closure" ignore withQE { _ =>
     proveBy(
       "v_0>0&x_0<s, a=v_0^2/(2*(s-x_0)), t_0=0 ==> v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s"
         .asSequent,
@@ -82,14 +88,14 @@ class ArithmeticTests extends TacticTestBase {
     ) shouldBe Symbol("proved")
   }
 
-  it should "only apply equalities for variables" in withTactics {
+  it should "only apply equalities for variables" ignore withTactics {
     val tool = new MockTool("\\forall y \\forall x \\forall r (x^2+y^2=r^2&r>0->y<=r)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool :: Nil))
     val result = proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE)
     result.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
-  it should "prove after only apply equalities for variables" in withQE { _ =>
+  it should "prove after only apply equalities for variables" ignore withQE { _ =>
     proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE) shouldBe Symbol("proved")
   }
 
