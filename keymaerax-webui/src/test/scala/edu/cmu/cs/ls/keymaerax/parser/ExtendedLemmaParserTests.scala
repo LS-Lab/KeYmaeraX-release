@@ -236,7 +236,12 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
   it should "add to file db" in { addTo(LemmaDBFactory.lemmaDB) }
 
-  it should "not create a lemma without evidence in strict mode" in {
+  // This test is ignored because reinitialization of Lemma.LEMMA_COMPAT_MODE using reflection no longer works.
+  // Once config handling is changed, we can fix this without performance impact
+  // by looking up Lemma.LEMMA_COMPAT_MODE in the config every time.
+  // Alternatively, we break backwards compatibility for KeYmaera X 6.0.0
+  // and get rid of the whole compatibility mode stuff.
+  it should "not create a lemma without evidence in strict mode" ignore {
     val name = "blah"
     val p = ProvableSig.startPlainProof("1=1".asFormula)
     val c = Lemma.getClass.getDeclaredConstructor()
