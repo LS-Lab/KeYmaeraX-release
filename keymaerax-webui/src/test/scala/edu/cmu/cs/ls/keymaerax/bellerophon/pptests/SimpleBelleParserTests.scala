@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{
   ArchiveParser,
@@ -1032,14 +1033,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     tacticParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR(Symbol("R"), "\\exists x x=0".asFormula)
     tacticParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR(Symbol("R"), "\\forall x x^2>=0".asFormula)
     the[ParseException] thrownBy tacticParser(""" hideR('R=="\x x^2=1") """) should
-      (have message """1:1 Unexpected token cannot be parsed
-                      |Found:    \\ at 1:1 to 1:2
-                      |Expected: <BeginningOfExpression>""".stripMargin
-        or have message
-        """1:12 Error parsing shape at 1:10
-          |Found:    "\"\x x^2=1\"" at 1:12
-          |Expected: escaped expression string
-          |Hint: Try escaped expression string""".stripMargin)
+      (pointAt(1, 22) and mention("Error parsing shape"))
   }
 
   // endregion

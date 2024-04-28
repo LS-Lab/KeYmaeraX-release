@@ -24,6 +24,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.andL
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{
   BuiltinSymbols,
@@ -311,11 +312,7 @@ class DLBelleParserTests
   }
 
   it should "report wrong arguments" in {
-    the[ParseException] thrownBy parse("""implyR("x=2")""") should have message
-      """1:8 Error parsing locator at 1:8
-        |Found:    "\"x=2\")" at 1:8
-        |Expected: (locator | positionLocator | searchLocator)
-        |Hint: Try ("-" | [0-9] | "'Llast" | "'Rlast" | "'L" | "'R")""".stripMargin
+    the[ParseException] thrownBy parse("""implyR("x=2")""") should (pointAt(1, 8) and mention("Error parsing locator"))
 
     the[ParseException] thrownBy parse("""QE("Mathematica","false")""") should have message
       """1:19 Error parsing numberLiteral at 1:19

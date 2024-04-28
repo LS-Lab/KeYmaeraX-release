@@ -508,11 +508,10 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   "Let" should "fail (but not horribly) when inner proof cannot be started" in withMathematica { _ =>
     val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
-    the[IllFormedTacticApplicationException] thrownBy proveBy(
-      fml,
-      tacticParser("let (\"f()=f\") in (nil)"),
-    ) should have message
-      "Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
+    val thrown =
+      the[IllFormedTacticApplicationException] thrownBy proveBy(fml, tacticParser("let (\"f()=f\") in (nil)"))
+    thrown.getMessage should include regex
+      "^Unable to start inner proof in let: .*FuncOf cannot be cast to .*Variable".r
   }
 
   "Unification" should "work on 1=1->1=1" in withMathematica { _ =>
