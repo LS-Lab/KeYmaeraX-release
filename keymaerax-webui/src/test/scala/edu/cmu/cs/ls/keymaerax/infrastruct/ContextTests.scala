@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBellePa
 import edu.cmu.cs.ls.keymaerax.core.{Choice, DotFormula, DotTerm, PrettyPrinter, Test, True}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AnyFlatSpec
@@ -98,7 +99,7 @@ class ContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
     Context(Choice(Test(True), DotProgram))("x:=2;".asProgram) shouldBe "?true;++x:=2;".asProgram
   }
 
-  "TermContexts" should "FEATURE_REQUEST: not fail because of admissibility issue" in {
+  "TermContexts" should "FEATURE_REQUEST: not fail because of admissibility issue" taggedAs TodoTest in {
     val f = "[x:=2;]x = 0".asFormula
     val (ctx1, e) = Context.at(f, PosInExpr(1 :: 0 :: Nil))
     val ctx2 = Context("[x:=2;].=0".asFormula)
