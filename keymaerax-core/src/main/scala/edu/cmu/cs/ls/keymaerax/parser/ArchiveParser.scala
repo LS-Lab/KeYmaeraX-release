@@ -313,11 +313,13 @@ case class Declaration(decls: Map[Name, Signature]) {
 
     // @note ._0 is output of interpreted functions
     val undeclaredDots = Declaration.dotsOf(repl) /*- DotTerm(Real, Some(0))*/ -- Declaration.dotsOf(dottedArg)
-    if (undeclaredDots.nonEmpty) throw ParseException(
-      "Function/predicate " + what.prettyString + " defined using undeclared " +
-        undeclaredDots.map(_.prettyString).mkString(","),
-      UnknownLocation,
-    )
+    if (undeclaredDots.nonEmpty) {
+      val undeclaredDotsStr = undeclaredDots.map(_.prettyString).mkString(",")
+      throw ParseException(
+        s"Function/predicate ${what.prettyString} uses undeclared dot(s) $undeclaredDotsStr",
+        UnknownLocation,
+      )
+    }
 
     SubstitutionPair(what, repl)
   }

@@ -22,6 +22,7 @@ import edu.cmu.cs.ls.keymaerax.core.{
   Variable,
 }
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import org.scalatest.Inside._
@@ -637,10 +638,8 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
                   | ProgramVariables. R x. R y. End.
                   | Problem. f(x)>g(x,y) & h(x)>5 End.
                   |End.""".stripMargin
-    the[ParseException] thrownBy parse(input) should have message
-      """2:33 Definition h uses unsupported anonymous (dot) arguments; please use named arguments (e.g., Real x) instead
-        |Found:    <unknown> at 2:33 to 2:47
-        |Expected: <unknown>""".stripMargin
+    the[ParseException] thrownBy parse(input) should
+      mention("Function/predicate h(._0) uses undeclared dot(s)")
   }
 
   it should "parse definitions without parentheses" in {
