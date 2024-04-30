@@ -258,7 +258,7 @@ class ToolTacticsTests extends TacticTestBase {
     proveBy("2*g()*x=37".asFormula, edit("abbrv(2*g())*x=37".asFormula)(1)).subgoals.loneElement shouldBe
       "abbrv=2*g() ==> abbrv*x=37".asSequent
     proveBy("2*g()*x=37+4".asFormula, edit("abbrv(2*g())*x=abbrv(37+4)".asFormula)(1)).subgoals.loneElement shouldBe
-      "abbrv=2*g(), abbrv_0=37+4 ==> abbrv*x=abbrv_0".asSequent
+      "abbrv_0=37+4, abbrv=2*g() ==> abbrv*x=abbrv_0".asSequent
     proveBy("2*g()*x=37".asFormula, edit("abbrv(2*g(),foo)*x=37".asFormula)(1)).subgoals.loneElement shouldBe
       "foo=2*g() ==> foo*x=37".asSequent
     // does not unify
@@ -368,7 +368,7 @@ class ToolTacticsTests extends TacticTestBase {
   }
 
   it should "expand definitions" in withMathematica { _ =>
-    val defs = "safe(x) ~> .>=0".asDeclaration
+    val defs = "safe(x) ~> x>=0".asDeclaration
     val s = "safe(x) ==> safe(x+1)".asSequent
     proveBy(s, ToolTactics.assertNoCex, defs).subgoals.loneElement shouldBe s
     a[BelleCEX] should be thrownBy proveBy("safe(x) ==> safe(x-1)".asSequent, ToolTactics.assertNoCex, defs)
