@@ -86,12 +86,20 @@ lazy val core = project
     libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
 
     // Logging
+    //
+    // KeYmaera X and some of its dependencies use slf4j for logging.
+    // Slf4j is a facade for various logging frameworks called "providers".
+    // Forcing slf4j 2 usually works fine for dependencies that create logs,
+    // but forcing an slf4j 1 provider to use slf4j 2 will break things.
+    // Since some dependencies updated to slf4j 2 already, we have to use an slf4j 2 provider
+    // and force all other dependencies to use slf4j 2 as well via sbt's default version conflict resolution.
+    //
     // https://github.com/jokade/slogging?tab=readme-ov-file#getting-started
     // https://www.baeldung.com/slf4j-with-log4j2-logback#Log4j2
     libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.23.1",
     libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.23.1",
-    libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.23.1",
+    libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j2-impl" % "2.23.1",
 
     // A published version of scala-smtlib that works with Scala 2.13
     // https://github.com/regb/scala-smtlib/issues/46#issuecomment-955691728
