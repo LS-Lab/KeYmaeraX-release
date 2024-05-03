@@ -110,7 +110,7 @@ object Usage {
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
-      |Copyright (c) Carnegie Mellon University.
+      |Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
       |Use option -license to show the license conditions.""".stripMargin
 
   /** Command-line interface usage. */

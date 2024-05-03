@@ -208,7 +208,7 @@ Copyright (C) 2014-2024 Carnegie Mellon University, Karlsruhe Institute of Techn
 
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer,
 Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell,
-Joscha Mennicken, Tobias Erthal.
+Enguerrand Prebet, Joscha Mennicken, Tobias Erthal.
 With previous contributions by Nathan Fulton, Jan-David Quesel,
 Marcus Voelp, Ran Ji.
 See [COPYRIGHT.txt](COPYRIGHT.txt) for details.
