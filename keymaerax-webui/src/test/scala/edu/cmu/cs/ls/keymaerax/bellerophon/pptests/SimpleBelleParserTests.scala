@@ -51,6 +51,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
       t
     }
     def roundTrip(t: BelleExpr): BelleExpr = tacticParser(BellePrettyPrinter(t))
+    def trip(t: BelleExpr, defs: Declaration): BelleExpr = {
+      roundTrip(t, defs) shouldBe t
+      t
+    }
+    def roundTrip(t: BelleExpr, defs: Declaration): BelleExpr = tacticParser(BellePrettyPrinter(t), defs)
   }
 
   private object print {
@@ -979,7 +984,12 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse predicates in locators" in {
-    tacticParser("hideL(1==\"p(x)\")") shouldBe (round trip TactixLibrary.hideL(Fixed(1, Nil, Some("p(x)".asFormula))))
+    val defs = Declaration(
+      Map(Name("p", None) -> Signature(Some(Real), Bool, Some(List((Name("x"), Real))), Right(None), UnknownLocation))
+    )
+    tacticParser("hideL(1==\"p(x)\")", defs) shouldBe (
+      round trip (TactixLibrary.hideL(Fixed(1, Nil, Some("p(x)".asFormula))), defs)
+    )
   }
 
   it should "expand definitions when parsing arguments only when asked to" in {
