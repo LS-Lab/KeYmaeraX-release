@@ -5,10 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.KyxConfigResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, ReadRequest, Response}
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.Version
 
 import scala.collection.immutable.{List, Nil}
 
@@ -21,7 +21,7 @@ class KyxConfigRequest extends LocalhostOnlyRequest with ReadRequest {
     val linkName = Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME)
     val jlinkLibDir = Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
 
-    val kyxConfig = s"""KeYmaera X version: ${VersionNumber.CURRENT}
+    val kyxConfig = s"""KeYmaera X version: $Version
                        |Java version: $javaVersion with $javaBits bits
                        |OS: $osName $osVersion
                        |LinkName: $linkName

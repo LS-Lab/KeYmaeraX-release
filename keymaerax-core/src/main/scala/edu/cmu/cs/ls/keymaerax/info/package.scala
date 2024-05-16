@@ -12,4 +12,8 @@ package edu.cmu.cs.ls.keymaerax
  * needed, the corresponding field of this object should be used. This helps prevent inconsistencies and makes it easier
  * to change the information.
  */
-package object info {}
+package object info {
+
+  /** The current project version. */
+  val Version: VersionNumber = VersionNumber.parse(BuildInfo.version)
+}

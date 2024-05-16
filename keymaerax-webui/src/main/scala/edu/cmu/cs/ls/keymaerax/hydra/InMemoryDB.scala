@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -31,7 +31,7 @@ class InMemoryDB extends DBAbstraction {
     .collection
     .mutable
     .Map(
-      "version" -> new ConfigurationPOJO("version", Map("version" -> VersionNumber.CURRENT.toString)),
+      "version" -> new ConfigurationPOJO("version", Map("version" -> Version.toString)),
       "tool" -> new ConfigurationPOJO("tool", Map("qe" -> "mathematica")),
       "mathematica" -> new ConfigurationPOJO(
         "mathematica",

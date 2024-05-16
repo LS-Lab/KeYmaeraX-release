@@ -5,18 +5,18 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.Ax._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, StorableInfo}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tagobjects.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 
 import java.io.{File, FileWriter, FilenameFilter}
 import java.lang.reflect.InvocationTargetException
@@ -534,7 +534,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
           }
           assert(versionFile.exists())
           val fw = new FileWriter(versionFile)
-          fw.write(VersionNumber.CURRENT.toString)
+          fw.write(Version.toString)
           fw.close()
         }
       }

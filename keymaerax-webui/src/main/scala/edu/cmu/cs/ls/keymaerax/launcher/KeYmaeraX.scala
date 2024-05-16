@@ -20,10 +20,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   VerbatimTraceToTacticConverter,
   VerboseTraceToTacticConverter,
 }
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.{PrettyPrinter, _}
+import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -112,7 +112,7 @@ object KeYmaeraX {
       println(help)
       exit(1)
     }
-    println(s"KeYmaera X Prover ${VersionNumber.CURRENT}")
+    println(s"KeYmaera X Prover $Version")
     println("Use option -help for usage and license information")
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(

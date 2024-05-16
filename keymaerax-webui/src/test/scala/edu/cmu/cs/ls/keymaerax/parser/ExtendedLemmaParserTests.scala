@@ -5,15 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite
+import edu.cmu.cs.ls.keymaerax.info.{Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 
@@ -24,7 +24,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq("2=2".asFormula, "5=5".asFormula))
     val storedProvable = Provable.toStorageString(Provable.startProof(sequent))
     val tool = ToolEvidence(List("input" -> "", "output" -> ""))
-    val kyxversion = ToolEvidence(List("kyxversion" -> VersionNumber.CURRENT.toString))
+    val kyxversion = ToolEvidence(List("kyxversion" -> Version.toString))
 
     val lemmaFile = {
       s"""Lemma "MyLemma".
@@ -46,7 +46,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq("2=2".asFormula, "5=5".asFormula))
     val storedProvable = Provable.toStorageString(Provable.startProof(sequent))
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
-    val kyxversion = "kyxversion \"\"\"\"" + VersionNumber.CURRENT.toString + "\"\"\"\""
+    val kyxversion = "kyxversion \"\"\"\"" + Version.toString + "\"\"\"\""
 
     val lemmaFile = {
       s"""Lemma "MyLemma".
@@ -69,7 +69,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val storedProvable = Provable.toStorageString(Provable.startProof(sequent))
     val toolValue = "  this h a d   awkward space s"
     val tool = "input \"\"\"\"" + toolValue + "\"\"\"\""
-    val kyxversion = "kyxversion \"\"\"\"" + VersionNumber.CURRENT.toString + "\"\"\"\""
+    val kyxversion = "kyxversion \"\"\"\"" + Version.toString + "\"\"\"\""
 
     val lemmaFile = {
       s"""Lemma "MyLemma".
@@ -93,7 +93,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
   it should "work with no subgoals" in {
     val sequent = Sequent(IndexedSeq("p()".asFormula), IndexedSeq("p()".asFormula))
     val closedProvable = ProvableSig.startPlainProof(sequent).apply(Close(AntePos(0), SuccPos(0)), 0)
-    val kyxversion = ToolEvidence(List("kyxversion" -> VersionNumber.CURRENT.toString))
+    val kyxversion = ToolEvidence(List("kyxversion" -> Version.toString))
     val lemmaFile = {
       s"""Lemma "MyLemma".
          |"${Provable.toStorageString(closedProvable.underlyingProvable)}"
@@ -113,7 +113,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val sequent = Sequent(IndexedSeq(), IndexedSeq("2=2".asFormula, "5=5".asFormula))
     val provable = ProvableSig.startPlainProof(sequent)
     val tool = ToolEvidence(List("input" -> "", "output" -> ""))
-    val kyxversion = ToolEvidence(List("kyxversion" -> VersionNumber.CURRENT.toString))
+    val kyxversion = ToolEvidence(List("kyxversion" -> Version.toString))
 
     val lemmaFile = {
       s"""Lemma "MyLemma".
@@ -135,7 +135,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq())
     val provable = ProvableSig.startPlainProof(sequent)
     val tool = ToolEvidence(List("input" -> "", "output" -> ""))
-    val kyxversion = ToolEvidence(List("kyxversion" -> VersionNumber.CURRENT.toString))
+    val kyxversion = ToolEvidence(List("kyxversion" -> Version.toString))
 
     val lemmaFile = {
       s"""Lemma "MyLemma".
@@ -320,7 +320,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
           case ToolEvidence(("kyxversion", _) :: Nil) => true
           case _ => false
         }) match {
-        case Some(ToolEvidence((_, version) :: Nil)) => VersionNumber.parse(version) shouldBe VersionNumber.CURRENT
+        case Some(ToolEvidence((_, version) :: Nil)) => VersionNumber.parse(version) shouldBe Version
         case None => throw new Exception(s"Expected some version evidence in ${db.get(name).get.toString}")
       }
       db.remove(name)
