@@ -19,8 +19,8 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
     val ss = StateDependent(List(ode1, ode2, ode3))
 
-    ss.cvars shouldBe List(Variable("x"), Variable("z"))
-    ss.vars shouldBe List(Variable("z"), Variable("y"), Variable("x"), Variable("a"), Variable("b"))
+    ss.cvars shouldBe Set(Variable("x"), Variable("z"))
+    ss.vars shouldBe Set(Variable("z"), Variable("y"), Variable("x"), Variable("a"), Variable("b"))
 
     ss.asProgram shouldBe "{{x'=-x+y,z'=a+b}++{x'=-x^3}++{x'=-x^5}}*".asProgram
     ss.asClockedProgram(Variable("t_")) shouldBe "{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*".asProgram
@@ -53,8 +53,8 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val cs = Controlled(None, List(mode1, mode2, mode3), Variable("u"))
 
-    cs.cvars shouldBe List(Variable("x"))
-    cs.vars shouldBe List(Variable("u"), Variable("x"), Variable("a"), Variable("y"))
+    cs.cvars shouldBe Set(Variable("x"))
+    cs.vars shouldBe Set(Variable("u"), Variable("x"), Variable("a"), Variable("y"))
 
     cs.asProgram shouldBe
       "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{{?x>a;x:=0;y:=0;}u:=mode2();++?x<=0;u:=mode2();++{?x=0;x:=0;}u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{{?x<=0;x:=0;}u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*"
@@ -81,8 +81,8 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val cs = Controlled(Some("t:=0;".asProgram), List(mode1, mode2), Variable("mode"))
 
-    cs.cvars shouldBe List(Variable("x"), Variable("t"))
-    cs.vars shouldBe List(Variable("mode"), Variable("t"), Variable("x"), Variable("a"), Variable("y"))
+    cs.cvars shouldBe Set(Variable("x"), Variable("t"))
+    cs.vars shouldBe Set(Variable("mode"), Variable("t"), Variable("x"), Variable("a"), Variable("y"))
 
     cs.asProgram shouldBe
       "{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{x'=-x,t'=1}++?mode=mode2();{x'=-x^3,t'=1}}}*"
@@ -113,8 +113,8 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val cs = Guarded(List(mode1, mode2, mode3), Variable("u"))
 
-    cs.cvars shouldBe List(Variable("x"))
-    cs.vars shouldBe List(Variable("u"), Variable("x"), Variable("a"))
+    cs.cvars shouldBe Set(Variable("x"))
+    cs.vars shouldBe Set(Variable("u"), Variable("x"), Variable("a"))
 
     cs.asProgram shouldBe
       "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{?x>a;u:=mode2();++?x<=0;u:=mode2();++?x=0;u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{?x<=0;u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*"
@@ -142,8 +142,8 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val cs = Timed(List(mode1, mode2), Variable("u"), Variable("timer"))
 
-    cs.cvars shouldBe List(Variable("x"))
-    cs.vars shouldBe List(Variable("u"), Variable("timer"), Variable("x"))
+    cs.cvars shouldBe Set(Variable("x"))
+    cs.vars shouldBe Set(Variable("u"), Variable("timer"), Variable("x"))
 
     cs.asProgram shouldBe
       "{{u:=mode1();++u:=mode2();}timer:=0;}{{?u=mode1();{{?timer>=1;timer:=0;}u:=mode2();++{?true;timer:=0;}u:=mode2();++u:=u;}++?u=mode2();u:=u;}{?u=mode1();{timer'=1,x'=-x}++?u=mode2();{timer'=1,x'=-x^3&timer<=5}}}*"
@@ -759,13 +759,13 @@ class SwitchedSystemsTests extends TacticTestBase {
     val stab3 = stableOrigin(ode, varsopt = None, restr = Some("a > 0".asFormula))
 
     stab1 shouldBe
-      "\\forall eps (eps>0->\\exists del (del>0&\\forall z \\forall y \\forall x (z^2+y^2+x^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]z^2+y^2+x^2 < eps^2)))"
+      "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall y \\forall z (x^2+y^2+z^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]x^2+y^2+z^2 < eps^2)))"
         .asFormula
     stab2 shouldBe
       "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall y \\forall z ((x-0)^2+(y-0)^2+(z-0)^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}](x-0)^2+(y-0)^2+(z-0)^2 < eps^2)))"
         .asFormula
     stab3 shouldBe
-      "\\forall eps (eps>0->\\exists del (del>0&\\forall z \\forall y \\forall x (a>0&z^2+y^2+x^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]z^2+y^2+x^2 < eps^2)))"
+      "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall y \\forall z (a>0&x^2+y^2+z^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]x^2+y^2+z^2 < eps^2)))"
         .asFormula
   }
 

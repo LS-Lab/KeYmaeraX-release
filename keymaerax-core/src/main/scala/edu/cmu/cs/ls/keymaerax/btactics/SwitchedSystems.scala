@@ -42,8 +42,8 @@ object SwitchedSystems extends TacticProvider {
     def asProgram: Program
     def asClockedProgram(t: Variable): Program
 
-    val cvars: List[Variable] // the default continuous state variables
-    val vars: List[Variable] // any variable appearing anywhere in the system
+    val cvars: Set[Variable] // the default continuous state variables
+    val vars: Set[Variable] // any variable appearing anywhere in the system
 
     val odes: List[ODESystem] // the underlying ODEs
 
@@ -92,14 +92,14 @@ object SwitchedSystems extends TacticProvider {
       Loop(body)
     }
 
-    override val cvars: List[Variable] = odes
-      .map(ode => StaticSemantics.boundVars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_)))
-      .flatten
-      .distinct
-    override val vars: List[Variable] = odes
-      .map(ode => StaticSemantics.vars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_)))
-      .flatten
-      .distinct
+    override val cvars: Set[Variable] = odes
+      .flatMap(ode => StaticSemantics.boundVars(ode).toSet.filterNot(StaticSemantics.isDifferential(_)))
+      .toSet
+
+    override val vars: Set[Variable] = odes
+      .flatMap(ode => StaticSemantics.vars(ode).toSet.filterNot(StaticSemantics.isDifferential(_)))
+      .toSet
+
     override val modeNames: Set[String] = Set.empty
   }
 
@@ -171,23 +171,22 @@ object SwitchedSystems extends TacticProvider {
     val transitions: List[List[(String, Program)]] = modes.map(_._3)
 
     // Default approximation of the continuous state variables
-    override val cvars: List[Variable] = odes
-      .flatMap(ode => StaticSemantics.boundVars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_)))
-      .distinct
+    override val cvars: Set[Variable] = odes
+      .flatMap(ode => StaticSemantics.boundVars(ode).toSet.filterNot(StaticSemantics.isDifferential(_)))
+      .toSet
 
     // All variables used in the program (except u)
-    private val varsPre = (
+    private val varsPre =
       // Init
+      // @note allow u in initialization code
       (StaticSemantics.vars(initopt.getOrElse(Test(True))).toSet -- Set(u))
-        .toList ++ // @note allow u in initialization code
         // Control
-        transitions.flatten.flatMap(p => StaticSemantics.vars(p._2).toSet.toList) ++
+        .union(transitions.flatten.flatMap(p => StaticSemantics.vars(p._2).toSet).toSet)
         // Plant
-        odes.flatMap(ode => StaticSemantics.vars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_)))
-    ).distinct
+        .union(odes.flatMap(ode => StaticSemantics.vars(ode).toSet.filterNot(StaticSemantics.isDifferential(_))).toSet)
 
     require(!varsPre.contains(u), "Control variable " + u + " must be fresh")
-    override val vars: List[Variable] = u :: varsPre
+    override val vars: Set[Variable] = varsPre + u
     override val modeNames: Set[String] = names.toSet
 
     // Some basic consistency checks
@@ -323,8 +322,8 @@ object SwitchedSystems extends TacticProvider {
     override def asProgram: Program = underlyingControlled.asProgram
     override def asClockedProgram(t: Variable): Program = underlyingControlled.asClockedProgram(t)
 
-    override val cvars: List[Variable] = underlyingControlled.cvars
-    override val vars: List[Variable] = underlyingControlled.vars
+    override val cvars: Set[Variable] = underlyingControlled.cvars
+    override val vars: Set[Variable] = underlyingControlled.vars
     override val odes: List[ODESystem] = underlyingControlled.odes
     override val modeNames: Set[String] = underlyingControlled.modeNames
   }
@@ -397,8 +396,8 @@ object SwitchedSystems extends TacticProvider {
     override def asProgram: Program = underlyingControlled.asProgram
     override def asClockedProgram(t: Variable): Program = underlyingControlled.asClockedProgram(t)
 
-    override val cvars: List[Variable] = underlyingControlled.cvars.filterNot(p => p == timer)
-    override val vars: List[Variable] = underlyingControlled.vars
+    override val cvars: Set[Variable] = underlyingControlled.cvars.filterNot(p => p == timer)
+    override val vars: Set[Variable] = underlyingControlled.vars
     override val odes: List[ODESystem] = underlyingControlled.odes
     override val modeNames: Set[String] = underlyingControlled.modeNames
 
@@ -471,7 +470,7 @@ object SwitchedSystems extends TacticProvider {
     // Fixed names for now
     val eps = Variable("eps")
     val del = Variable("del")
-    val freshVars = List(eps, del)
+    val freshVars = Set[Variable](eps, del)
 
     if (ss.vars.intersect(freshVars).nonEmpty) throw new IllegalArgumentException(
       "Switched system must not mention variables " + freshVars + " for stability specification"
@@ -508,7 +507,7 @@ object SwitchedSystems extends TacticProvider {
     val del = Variable("del")
     val tVar = Variable("t_")
     val TVar = Variable("T_")
-    val freshVars = List(eps, del, tVar, TVar)
+    val freshVars = Set[Variable](eps, del, tVar, TVar)
 
     if (ss.vars.intersect(freshVars).nonEmpty) throw new IllegalArgumentException(
       "Switched system must not mention variables " + freshVars + " for attractivity specification"
@@ -616,7 +615,7 @@ object SwitchedSystems extends TacticProvider {
 
     val w = Variable("w_")
 
-    val cvars: List[Variable] = ss.cvars
+    val cvars: List[Variable] = ss.cvars.toList.sorted
     val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
@@ -779,7 +778,7 @@ object SwitchedSystems extends TacticProvider {
     val kName = "k_"
     val k = Variable(kName)
 
-    val cvars: List[Variable] = ss.cvars
+    val cvars: List[Variable] = ss.cvars.toList.sorted
     val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
@@ -1058,7 +1057,7 @@ object SwitchedSystems extends TacticProvider {
     val wis = (0 to lyaps.length - 1).map(i => Variable(wName, Some(i))).toList
     val delis = (0 to lyaps.length - 1).map(i => Variable(delName, Some(i))).toList
 
-    val cvars: List[Variable] = ss.cvars
+    val cvars: List[Variable] = ss.cvars.toList.sorted
     val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
@@ -1330,7 +1329,7 @@ object SwitchedSystems extends TacticProvider {
     val wis = (0 to lyaps.length - 1).map(i => Variable(wName, Some(i))).toList
     val delis = (0 to lyaps.length - 1).map(i => Variable(delName, Some(i))).toList
 
-    val cvars: List[Variable] = ss.cvars
+    val cvars: List[Variable] = ss.cvars.toList.sorted
     val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
 
     val init = Less(normsq, Power(del, Number(2)))
@@ -1677,7 +1676,7 @@ object SwitchedSystems extends TacticProvider {
 
     val wis = (0 to lyaps.length - 1).map(i => Variable(wName, Some(i))).toList
 
-    val cvars: List[Variable] = ss.cvars
+    val cvars: List[Variable] = ss.cvars.toList.sorted
     val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
 
     // Each V_i < W_i < W
@@ -2092,7 +2091,7 @@ object SwitchedSystems extends TacticProvider {
 
     val wis = (0 to lyaps.length - 1).map(i => Variable(wName, Some(i))).toList
 
-    val cvars: List[Variable] = ss.cvars
+    val cvars: List[Variable] = ss.cvars.toList.sorted
     val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
 
     // The loop invariant uses the following bounds based on lambda:
