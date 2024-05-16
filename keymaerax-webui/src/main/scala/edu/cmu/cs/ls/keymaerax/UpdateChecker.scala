@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax
 
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 

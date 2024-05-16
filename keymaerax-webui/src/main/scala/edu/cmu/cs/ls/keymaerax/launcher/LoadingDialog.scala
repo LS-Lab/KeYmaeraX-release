@@ -5,7 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.{Logging, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 
 import java.awt.GridLayout
 import javax.swing.{JLabel, JProgressBar, JWindow}

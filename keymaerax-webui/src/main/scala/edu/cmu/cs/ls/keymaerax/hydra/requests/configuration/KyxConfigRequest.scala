@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.KyxConfigResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, ReadRequest, Response}
-import edu.cmu.cs.ls.keymaerax.{Configuration, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 
 import scala.collection.immutable.{List, Nil}
 

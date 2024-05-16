@@ -13,10 +13,11 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.{lemma, Configuration, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.{lemma, Configuration}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
 

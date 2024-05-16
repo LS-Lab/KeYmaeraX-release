@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   VerbatimTraceToTacticConverter,
   VerboseTraceToTacticConverter,
 }
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{PrettyPrinter, _}
@@ -27,7 +28,7 @@ import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig,
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.apache.commons.lang3.StringUtils
 
 import java.io.PrintWriter

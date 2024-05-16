@@ -3,7 +3,7 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-package edu.cmu.cs.ls.keymaerax
+package edu.cmu.cs.ls.keymaerax.info
 
 /** A version parsed into its constituent components. */
 case class VersionNumber(major: Int, minor: Int, patch: Int) extends Ordered[VersionNumber] {

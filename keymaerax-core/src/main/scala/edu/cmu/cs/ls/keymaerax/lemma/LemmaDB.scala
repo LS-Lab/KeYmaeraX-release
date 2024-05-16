@@ -6,8 +6,8 @@
 /** @note Code Review 2016-08-16 */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.VersionNumber
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 
 /**
  * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get

@@ -15,7 +15,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tagobjects.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.{Configuration, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 
 import java.io.{File, FileWriter, FilenameFilter}
 import java.lang.reflect.InvocationTargetException

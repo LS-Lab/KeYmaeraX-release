@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.ExhaustiveSequentialInterpreter
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 
