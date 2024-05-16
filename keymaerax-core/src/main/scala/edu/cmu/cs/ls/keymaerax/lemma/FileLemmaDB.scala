@@ -11,7 +11,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.{Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import java.io.{File, IOException, PrintWriter}
@@ -115,7 +115,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
     lemmadbpath.delete()
     // @note make paths again to make sure subsequent additions to database work
     lemmadbpath.mkdirs()
-    write(new File(cachePath + File.separator + "VERSION"), VersionNumber.CURRENT.toString)
+    write(new File(cachePath + File.separator + "VERSION"), Version.toString)
   }
 
   /** @inheritdoc */

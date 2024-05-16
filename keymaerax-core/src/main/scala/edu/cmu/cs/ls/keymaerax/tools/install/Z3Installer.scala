@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.install
 
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.{Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import java.io.{File, FileOutputStream, InputStream, PrintWriter}
@@ -36,7 +36,7 @@ object Z3Installer extends Logging {
       else new File(z3Path + File.separator + "z3")
     if (!z3File.getParentFile.exists) z3File.mkdirs
 
-    val needsUpdate = !installedFromKyxVersion(defaultZ3Path).contains(VersionNumber.CURRENT)
+    val needsUpdate = !installedFromKyxVersion(defaultZ3Path).contains(Version)
     val z3AbsPath =
       if (z3ConfigPath == defaultZ3Path && needsUpdate) {
         logger.debug("Updating default Z3 binary...")
@@ -76,7 +76,7 @@ object Z3Installer extends Logging {
   /** Copies Z3 to the disk. Returns the path to the binary. */
   def copyToDisk(osName: String, z3TempDir: String): String = {
     // Update the version number.
-    new PrintWriter(versionFile(z3TempDir)) { write(VersionNumber.CURRENT.toString); close() }
+    new PrintWriter(versionFile(z3TempDir)) { write(Version.toString); close() }
     // Copy z3 binary to disk.
     val osArch = System.getProperty("os.arch")
     var resource: InputStream = null

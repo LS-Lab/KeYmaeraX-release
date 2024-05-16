@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.{Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
@@ -56,7 +56,7 @@ object Main {
     // prelaunch help without launching an extra JVM
     Configuration.setConfiguration(FileConfiguration)
     if (args.length > 0 && HELP_FLAGS.contains(args(0))) {
-      println(s"KeYmaera X Prover ${VersionNumber.CURRENT}")
+      println(s"KeYmaera X Prover $Version")
       println(KeYmaeraX.help)
       sys.exit(1)
     }
@@ -138,7 +138,7 @@ object Main {
       val cacheVersion = source.mkString.replace("\n", "")
       source.reader().close() // Ensure that the associated reader is closed so that we can delete the file if need to.
       try {
-        if (VersionNumber.parse(cacheVersion) != VersionNumber.CURRENT) {
+        if (VersionNumber.parse(cacheVersion) != Version) {
           assert(
             cacheVersionFile.delete(),
             s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath}",
@@ -171,7 +171,7 @@ object Main {
     }
     assert(versionFile.exists())
     val fw = new FileWriter(versionFile)
-    fw.write(VersionNumber.CURRENT.toString)
+    fw.write(Version.toString)
     fw.flush()
     fw.close()
   }

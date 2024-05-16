@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 
@@ -26,7 +26,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
       Map.empty,
     )
     new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments = true)(entry) shouldBe
-      s"""/* Exported from KeYmaera X v${VersionNumber.CURRENT} */
+      s"""/* Exported from KeYmaera X v$Version */
          #
          #Theorem "Entry 1"
          #
@@ -58,7 +58,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
     ).head
     val printed = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments = false)(entry)
     printed shouldBe
-      s"""/* Exported from KeYmaera X v${VersionNumber.CURRENT} */
+      s"""/* Exported from KeYmaera X v$Version */
          |
          |Theorem "exp"
          |Definitions
@@ -95,7 +95,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
     ).head
     val printed = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments = false)(entry)
     printed should equal(
-      s"""/* Exported from KeYmaera X v${VersionNumber.CURRENT} */
+      s"""/* Exported from KeYmaera X v$Version */
          |Theorem "arctan"
          |Definitions
          |  import kyx.math.cos;

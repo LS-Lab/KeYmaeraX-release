@@ -17,14 +17,9 @@ case class VersionNumber(major: Int, minor: Int, patch: Int) extends Ordered[Ver
 
 object VersionNumber {
 
-  /** This KeYmaera X instance's version, parsed from [[BuildInfo.version]]. */
-  val CURRENT: VersionNumber = VersionNumber.parse(BuildInfo.version)
-
   /**
    * Parse a version from a string with the format `<major>.<minor>.<patch>`. The fields `major`, `minor`, `patch` are
    * positive integers with at least one digit and no additional leading zeroes.
-   *
-   * Use [[CURRENT]] instead of manually parsing [[BuildInfo.version]].
    *
    * @throws IllegalArgumentException
    *   invalid version string

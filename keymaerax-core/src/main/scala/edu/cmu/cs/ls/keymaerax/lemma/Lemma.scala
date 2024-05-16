@@ -13,7 +13,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -89,8 +89,7 @@ object Lemma {
 
   /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: ProvableSig, evidence: List[Evidence] = Nil): List[Evidence] = {
-    if (!containsVersionEvidence(evidence)) evidence :+
-      ToolEvidence(("kyxversion", VersionNumber.CURRENT.toString) :: Nil)
+    if (!containsVersionEvidence(evidence)) evidence :+ ToolEvidence(("kyxversion", Version.toString) :: Nil)
     else evidence
   }
 }
