@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker, Version}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker, VersionNumber}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
@@ -55,7 +55,7 @@ object Main {
     // prelaunch help without launching an extra JVM
     Configuration.setConfiguration(FileConfiguration)
     if (args.length > 0 && HELP_FLAGS.contains(args(0))) {
-      println(s"KeYmaera X Prover ${Version.CURRENT}")
+      println(s"KeYmaera X Prover ${VersionNumber.CURRENT}")
       println(KeYmaeraX.help)
       sys.exit(1)
     }
@@ -137,7 +137,7 @@ object Main {
       val cacheVersion = source.mkString.replace("\n", "")
       source.reader().close() // Ensure that the associated reader is closed so that we can delete the file if need to.
       try {
-        if (Version.parse(cacheVersion) != Version.CURRENT) {
+        if (VersionNumber.parse(cacheVersion) != VersionNumber.CURRENT) {
           assert(
             cacheVersionFile.delete(),
             s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath}",
@@ -170,7 +170,7 @@ object Main {
     }
     assert(versionFile.exists())
     val fw = new FileWriter(versionFile)
-    fw.write(Version.CURRENT.toString)
+    fw.write(VersionNumber.CURRENT.toString)
     fw.flush()
     fw.close()
   }
@@ -259,7 +259,7 @@ object Main {
   }
 
   /** Stores a backup of the database, identifies the backup with `currentVersion` and the current system time. */
-  private def backupDatabase(dbVersion: Version): Unit = {
+  private def backupDatabase(dbVersion: VersionNumber): Unit = {
     val src = new File(SQLite.ProdDB.dblocation)
     val dest = new File(s"${src.getAbsolutePath}-$dbVersion-${System.currentTimeMillis()}")
     new FileOutputStream(dest).getChannel.transferFrom(new FileInputStream(src).getChannel, 0, Long.MaxValue)
@@ -289,7 +289,7 @@ object Main {
   }
 
   /** Runs auto-upgrades from the current version, returns the version after upgrade */
-  private def upgradeDatabase(dbVersion: Version): Version = {
+  private def upgradeDatabase(dbVersion: VersionNumber): VersionNumber = {
     backupDatabase(dbVersion)
 
     val upgrades = Source
@@ -301,7 +301,7 @@ object Main {
       .convertTo[List[JsObject]]
       .filter(e => {
         val versionString = e.fields("upgradeFrom").convertTo[String]
-        val version = Version.parse(versionString)
+        val version = VersionNumber.parse(versionString)
         version == dbVersion
       })
 

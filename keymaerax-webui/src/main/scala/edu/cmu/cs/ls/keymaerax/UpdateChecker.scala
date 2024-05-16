@@ -24,10 +24,10 @@ object UpdateChecker extends Logging {
    * If this KeYmaera X instance's version number is newer than the latest version, it is also considered up-to-date.
    * This may happen during development or testing of a new version.
    */
-  lazy val upToDate: Option[Boolean] = latestVersion.map(_ >= Version.CURRENT)
+  lazy val upToDate: Option[Boolean] = latestVersion.map(_ >= VersionNumber.CURRENT)
 
   /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
-  lazy val latestVersion: Option[Version] = fetchLatestVersion()
+  lazy val latestVersion: Option[VersionNumber] = fetchLatestVersion()
 
   /**
    * Queries the [[https://github.com/LS-Lab/KeYmaeraX-release/releases GitHub releases]] and returns the latest
@@ -40,7 +40,7 @@ object UpdateChecker extends Logging {
    * @return
    *   Version number of the latest release, or [[None]] if anything went wrong.
    */
-  private def fetchLatestVersion(): Option[Version] =
+  private def fetchLatestVersion(): Option[VersionNumber] =
     try {
       // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
       val owner = "LS-Lab"
@@ -55,7 +55,7 @@ object UpdateChecker extends Logging {
         .filter(r => !r.fields("draft").convertTo[Boolean])
         .filter(r => !r.fields("prerelease").convertTo[Boolean])
         .map(r => r.fields("tag_name").convertTo[String])
-        .flatMap(Version.parseOption)
+        .flatMap(VersionNumber.parseOption)
         .maxOption
     } catch { case _: Throwable => None }
 
@@ -78,9 +78,9 @@ object UpdateChecker extends Logging {
   }
 
   /** Indicates whether `dbVersion` is outdated (i.e. older than expected by this KeYmaera X) and needs upgrading. */
-  def dbUpgradeRequired(dbVersion: Version): Option[Boolean] = { oldestAcceptableDbVersion.map(dbVersion < _) }
+  def dbUpgradeRequired(dbVersion: VersionNumber): Option[Boolean] = { oldestAcceptableDbVersion.map(dbVersion < _) }
 
-  private lazy val oldestAcceptableDbVersion: Option[Version] =
+  private lazy val oldestAcceptableDbVersion: Option[VersionNumber] =
     try {
       val versionString = Source
         .fromResource("/sql/upgradescripts.json")(Codec.UTF8)
@@ -90,6 +90,6 @@ object UpdateChecker extends Logging {
         .fields("minVersion")
         .convertTo[String]
 
-      Some(Version.parse(versionString))
+      Some(VersionNumber.parse(versionString))
     } catch { case _: Throwable => None }
 }
