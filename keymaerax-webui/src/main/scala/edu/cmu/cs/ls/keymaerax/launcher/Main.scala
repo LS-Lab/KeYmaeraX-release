@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 

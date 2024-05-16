@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.KeymaeraXVersionResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{ReadRequest, Request, Response}
-import edu.cmu.cs.ls.keymaerax.{UpdateChecker, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.UpdateChecker
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 
 import scala.collection.immutable.{List, Nil}
 

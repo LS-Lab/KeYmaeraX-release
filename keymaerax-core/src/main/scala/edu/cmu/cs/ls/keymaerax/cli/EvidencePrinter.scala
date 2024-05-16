@@ -5,8 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.VersionNumber
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 
 /** Light-weight evidence header for file artifacts produced by KeYmaera X. */
 object EvidencePrinter {

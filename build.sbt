@@ -16,6 +16,9 @@ ThisBuild / scalacOptions ++= {
     // Never silence warnings in the core
     "site=edu.cmu.cs.ls.keymaerax.core.*:w",
 
+    // Never silence warnings in newly written code
+    "site=edu.cmu.cs.ls.keymaerax.info.*:w",
+
     // Silence all deprecation warnings originating from @deprecated annotations inside keymaerax itself
     "cat=deprecation&origin=edu.cmu.cs.ls.keymaerax.*:s",
 
@@ -113,7 +116,8 @@ lazy val core = project
 
     // Include version number as constant in source code
     buildInfoKeys := Seq[BuildInfoKey](version),
-    buildInfoPackage := "edu.cmu.cs.ls.keymaerax",
+    buildInfoPackage := "edu.cmu.cs.ls.keymaerax.info",
+    buildInfoOptions += BuildInfoOption.PackagePrivate,
 
     // Use Mathematica's JLink.jar as unmanaged dependency
     // The path is read from the property mathematica.jlink.path in the file local.properties

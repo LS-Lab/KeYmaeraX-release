@@ -11,7 +11,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import java.io.{File, IOException, PrintWriter}
 import scala.reflect.io.Directory

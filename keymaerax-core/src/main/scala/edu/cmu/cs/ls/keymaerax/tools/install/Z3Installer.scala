@@ -5,7 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.install
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import java.io.{File, FileOutputStream, InputStream, PrintWriter}
 import java.nio.channels.Channels

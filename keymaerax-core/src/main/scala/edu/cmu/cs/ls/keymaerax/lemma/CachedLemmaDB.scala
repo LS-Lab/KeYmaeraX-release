@@ -6,7 +6,8 @@
 /** @note Code Review 2016-08-16 */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.{Logging, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.info.VersionNumber
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.mutable
