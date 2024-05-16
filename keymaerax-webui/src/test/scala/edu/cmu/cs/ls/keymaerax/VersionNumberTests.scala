@@ -16,21 +16,23 @@ import org.scalatest.matchers.should.Matchers
  *   Stefan Mitsch
  * @author
  *   Nathan Fulton
+ * @author
+ *   Joscha Mennicken
  */
 @CheckinTest
-class VersionTests extends AnyFlatSpec with Matchers {
+class VersionNumberTests extends AnyFlatSpec with Matchers {
 
   /** Valid versions in ascending order. */
   private val versionStrings = List(
-    ("0.0.0", Version(0, 0, 0)),
-    ("0.0.1", Version(0, 0, 1)),
-    ("0.1.0", Version(0, 1, 0)),
-    ("0.1.1", Version(0, 1, 1)),
-    ("1.0.0", Version(1, 0, 0)),
-    ("1.0.1", Version(1, 0, 1)),
-    ("1.1.0", Version(1, 1, 0)),
-    ("1.1.1", Version(1, 1, 1)),
-    ("123.456.7890", Version(123, 456, 7890)),
+    ("0.0.0", VersionNumber(0, 0, 0)),
+    ("0.0.1", VersionNumber(0, 0, 1)),
+    ("0.1.0", VersionNumber(0, 1, 0)),
+    ("0.1.1", VersionNumber(0, 1, 1)),
+    ("1.0.0", VersionNumber(1, 0, 0)),
+    ("1.0.1", VersionNumber(1, 0, 1)),
+    ("1.1.0", VersionNumber(1, 1, 0)),
+    ("1.1.1", VersionNumber(1, 1, 1)),
+    ("123.456.7890", VersionNumber(123, 456, 7890)),
   )
 
   private val invalidVersionStrings = List(
@@ -71,15 +73,15 @@ class VersionTests extends AnyFlatSpec with Matchers {
 
   it should "correctly parse valid version strings" in {
     for ((s, v) <- versionStrings) {
-      Version.parse(s) shouldBe v
-      Version.parseOption(s) shouldBe Some(v)
+      VersionNumber.parse(s) shouldBe v
+      VersionNumber.parseOption(s) shouldBe Some(v)
     }
   }
 
   it should "throw exception on invalid version strings" in {
     for (s <- invalidVersionStrings) {
-      assertThrows[IllegalArgumentException] { Version.parse(s) }
-      Version.parseOption(s) shouldBe None
+      assertThrows[IllegalArgumentException] { VersionNumber.parse(s) }
+      VersionNumber.parseOption(s) shouldBe None
     }
   }
 
@@ -90,8 +92,8 @@ class VersionTests extends AnyFlatSpec with Matchers {
 
   it should "preserve version through parsing and formatting" in {
     for ((s, v) <- versionStrings) {
-      Version.parse(s).toString shouldBe s
-      Version.parse(v.toString) shouldBe v
+      VersionNumber.parse(s).toString shouldBe s
+      VersionNumber.parse(v.toString) shouldBe v
     }
   }
 }

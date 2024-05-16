@@ -6,8 +6,8 @@
 package edu.cmu.cs.ls.keymaerax
 
 /** A version parsed into its constituent components. */
-case class Version(major: Int, minor: Int, patch: Int) extends Ordered[Version] {
-  override def compare(that: Version): Int = {
+case class VersionNumber(major: Int, minor: Int, patch: Int) extends Ordered[VersionNumber] {
+  override def compare(that: VersionNumber): Int = {
     import scala.math.Ordered.orderingToOrdered
     (this.major, this.minor, this.patch) compare (that.major, that.minor, that.patch)
   }
@@ -15,10 +15,10 @@ case class Version(major: Int, minor: Int, patch: Int) extends Ordered[Version] 
   override def toString: String = s"$major.$minor.$patch"
 }
 
-object Version {
+object VersionNumber {
 
   /** This KeYmaera X instance's version, parsed from [[BuildInfo.version]]. */
-  val CURRENT: Version = Version.parse(BuildInfo.version)
+  val CURRENT: VersionNumber = VersionNumber.parse(BuildInfo.version)
 
   /**
    * Parse a version from a string with the format `<major>.<minor>.<patch>`. The fields `major`, `minor`, `patch` are
@@ -29,7 +29,7 @@ object Version {
    * @throws IllegalArgumentException
    *   invalid version string
    */
-  def parse(s: String): Version = {
+  def parse(s: String): VersionNumber = {
     val versionFormat = """^(?<major>0|[1-9][0-9]*)\.(?<minor>0|[1-9][0-9]*)\.(?<patch>0|[1-9][0-9]*)$""".r
     val matched = versionFormat.findFirstMatchIn(s) match {
       case Some(m) => m
@@ -41,12 +41,12 @@ object Version {
       val major = matched.group("major").toInt
       val minor = matched.group("minor").toInt
       val patch = matched.group("patch").toInt
-      Version(major, minor, patch)
+      VersionNumber(major, minor, patch)
     } catch { case _: NumberFormatException => throw new IllegalArgumentException(s"Invalid version string $s") }
   }
 
   /** Like [[parse]] but return [[None]] if version is invalid. */
-  def parseOption(s: String): Option[Version] =
+  def parseOption(s: String): Option[VersionNumber] =
     try { Some(parse(s)) }
     catch { case _: IllegalArgumentException => None }
 }

@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.{lemma, Configuration, Version}
+import edu.cmu.cs.ls.keymaerax.{lemma, Configuration, VersionNumber}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
 
@@ -88,7 +88,8 @@ object Lemma {
 
   /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: ProvableSig, evidence: List[Evidence] = Nil): List[Evidence] = {
-    if (!containsVersionEvidence(evidence)) evidence :+ ToolEvidence(("kyxversion", Version.CURRENT.toString) :: Nil)
+    if (!containsVersionEvidence(evidence)) evidence :+
+      ToolEvidence(("kyxversion", VersionNumber.CURRENT.toString) :: Nil)
     else evidence
   }
 }

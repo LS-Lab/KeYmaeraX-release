@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.Version
+import edu.cmu.cs.ls.keymaerax.VersionNumber
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
@@ -105,7 +105,7 @@ class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, wit
         }
       } else printed
 
-    s"/* Exported from KeYmaera X v${Version.CURRENT} */\n\n$finalPrint"
+    s"/* Exported from KeYmaera X v${VersionNumber.CURRENT} */\n\n$finalPrint"
   }
 
 }

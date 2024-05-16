@@ -11,7 +11,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, Version}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, VersionNumber}
 
 import java.io.{File, IOException, PrintWriter}
 import scala.reflect.io.Directory
@@ -114,14 +114,14 @@ class FileLemmaDB extends LemmaDBBase with Logging {
     lemmadbpath.delete()
     // @note make paths again to make sure subsequent additions to database work
     lemmadbpath.mkdirs()
-    write(new File(cachePath + File.separator + "VERSION"), Version.CURRENT.toString)
+    write(new File(cachePath + File.separator + "VERSION"), VersionNumber.CURRENT.toString)
   }
 
   /** @inheritdoc */
-  final override def version(): Version = {
+  final override def version(): VersionNumber = {
     val file = new File(cachePath + File.separator + "VERSION")
-    if (!file.exists()) return Version(0, 0, 0)
+    if (!file.exists()) return VersionNumber(0, 0, 0)
     assert(file.canRead, s"Cache VERSION file exists but is not readable: ${file.getAbsolutePath}")
-    Version.parse(read(file))
+    VersionNumber.parse(read(file))
   }
 }

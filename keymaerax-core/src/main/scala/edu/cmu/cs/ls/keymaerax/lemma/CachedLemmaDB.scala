@@ -6,7 +6,7 @@
 /** @note Code Review 2016-08-16 */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.{Logging, Version}
+import edu.cmu.cs.ls.keymaerax.{Logging, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.mutable
@@ -78,5 +78,5 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
   }
 
   /** @inheritdoc */
-  final override def version(): Version = db.version()
+  final override def version(): VersionNumber = db.version()
 }

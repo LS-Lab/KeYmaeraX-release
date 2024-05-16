@@ -6,7 +6,7 @@
 /** @note Code Review 2016-08-16 */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.Version
+import edu.cmu.cs.ls.keymaerax.VersionNumber
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -101,6 +101,6 @@ trait LemmaDB {
   def deleteDatabase(): Unit
 
   /** Returns the version of this lemma database. */
-  def version(): Version
+  def version(): VersionNumber
 
 }

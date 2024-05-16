@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig,
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, Version}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, VersionNumber}
 import org.apache.commons.lang3.StringUtils
 
 import java.io.PrintWriter
@@ -111,7 +111,7 @@ object KeYmaeraX {
       println(help)
       exit(1)
     }
-    println(s"KeYmaera X Prover ${Version.CURRENT}")
+    println(s"KeYmaera X Prover ${VersionNumber.CURRENT}")
     println("Use option -help for usage and license information")
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(
