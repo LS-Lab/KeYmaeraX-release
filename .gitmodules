@@ -1,0 +1,3 @@
+[submodule "KeYmaeraX-projects"]
+	path = keymaerax-webui/src/main/resources/keymaerax-projects
+	url = https://github.com/LS-Lab/KeYmaeraX-projects.git

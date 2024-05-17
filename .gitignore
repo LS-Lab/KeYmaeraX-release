@@ -14,4 +14,3 @@ target/
 
 # Files required for building that should not be committed
 /local.properties
-/keymaerax-webui/src/main/resources/keymaerax-projects/

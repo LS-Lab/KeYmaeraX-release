@@ -10,12 +10,8 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-
-      - name: Checkout example projects
-        uses: actions/checkout@v4
         with:
-          repository: LS-Lab/KeYmaeraX-projects
-          path: keymaerax-webui/src/main/resources/keymaerax-projects
+          submodules: recursive
 
       - name: Set up java and sbt
         uses: actions/setup-java@v4

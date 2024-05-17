@@ -18,7 +18,12 @@ Install the following tools:
 
 ### 2. Clone this repo
 
-Assuming you have not already done so, clone this repo to a path of your choice.
+Assuming you have not already done so, clone this repo with `--recurse-submodules`:
+
+```shell
+git clone https://github.com/LS-Lab/KeYmaeraX-release.git --recurse-submodules
+```
+
 Any commands in this guide assume they're being executed in the root of the repository unless specified otherwise.
 
 Some commits should be omitted from `git blame` by default
@@ -29,16 +34,7 @@ To configure your local repository to ignore them, use the following command:
 git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
-### 3. Clone example projects
-
-Clone the [KeYmaeraX-projects](https://github.com/LS-Lab/KeYmaeraX-projects) repo
-to `keymaerax-webui/src/main/resources/keymaerax-projects` using the following command:
-
-```shell
-git clone https://github.com/LS-Lab/KeYmaeraX-projects keymaerax-webui/src/main/resources/keymaerax-projects
-```
-
-### 4. Prepare `local.properties`
+### 3. Prepare `local.properties`
 
 KeYmaera X has optional support of Wolfram Mathematica or Wolfram Engine at runtime.
 However, during compilation, Mathematica's `JLink.jar` file is required.
