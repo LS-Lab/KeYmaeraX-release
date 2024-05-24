@@ -5,8 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.ProverSetupException
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.btactics.{
   FixedGenerator,
   MathematicaToolProvider,
@@ -111,10 +111,7 @@ object KeYmaeraX {
 
     initializeBackend(options, usage)
 
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-    ))
+    KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
 
     // @note just in case the user shuts down the prover from the command line
     Runtime

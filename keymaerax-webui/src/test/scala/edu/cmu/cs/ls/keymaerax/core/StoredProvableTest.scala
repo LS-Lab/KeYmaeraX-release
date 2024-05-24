@@ -27,7 +27,7 @@ import scala.collection.immutable._
 class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTester with TimeLimits {
   Configuration.setConfiguration(FileConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  KeYmaeraXTool.init(Map())
+  KeYmaeraXTool.init()
   val randomTrials = 1000
   val randomComplexity = 20
   val tamperComplexity = 4

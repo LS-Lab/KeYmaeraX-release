@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.{
@@ -101,10 +100,7 @@ class LauncherTests extends TacticTestBase {
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
     val conjectureFileName = File.createTempFile("bouncing-ball-notac", ".kyx").getAbsolutePath
 
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-    ))
+    KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
     val sourceEntries = List
       .fill(3)(ArchiveParser.parseFromFile(sourceFileName).head)
       .zipWithIndex

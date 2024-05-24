@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
@@ -35,10 +34,7 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   private val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7", true))
 
   override def beforeAll(): Unit = {
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-    ))
+    KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
   }
 
   override def afterAll(): Unit = { KeYmaeraXTool.shutdown() }

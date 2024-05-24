@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.ExhaustiveSequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
@@ -22,10 +21,8 @@ object KeYmaeraXStartup {
       // Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
       val cacheVersion = LemmaDBFactory.lemmaDB.version()
       if (cacheVersion < Version) LemmaDBFactory.lemmaDB.deleteDatabase()
-      KeYmaeraXTool.init(Map(
-        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-        KeYmaeraXTool.INTERPRETER -> ExhaustiveSequentialInterpreter.getClass.getSimpleName,
-      ))
+      KeYmaeraXTool
+        .init(interpreter = KeYmaeraXTool.InterpreterChoice.ExhaustiveSequential, initDerivationInfoRegistry = true)
     } catch {
       case e: Exception =>
         val msg =

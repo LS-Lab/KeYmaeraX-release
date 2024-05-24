@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{
   InputTactic,
   LastAnte,
   LastSucc,
-  LazySequentialInterpreter,
   PartialTactic,
   ReflectiveExpressionBuilder,
   SaturateTactic,
@@ -55,10 +54,7 @@ class DLBelleParserTests
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-    ))
+    KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
     parser = new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invSupplier), _))
   }
 

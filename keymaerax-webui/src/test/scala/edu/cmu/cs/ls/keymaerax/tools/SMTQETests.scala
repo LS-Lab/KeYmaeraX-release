@@ -23,7 +23,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
  *   Stefan Mitsch
  */
 class SMTQETests extends TacticTestBase {
-  KeYmaeraXTool.init(Map())
+  KeYmaeraXTool.init()
 
   // ---------------------------
   // Simplify

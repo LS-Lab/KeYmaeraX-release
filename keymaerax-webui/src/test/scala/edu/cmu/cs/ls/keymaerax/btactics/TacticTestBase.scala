@@ -154,10 +154,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
-      KeYmaeraXTool.init(Map(
-        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-      ))
+      KeYmaeraXTool
+        .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
       tool.cancel()
       tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
       mathematicaProvider.synchronized {
@@ -198,10 +196,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
         }
         // @note KeYmaeraXTool.init overwrites the interpreter that we set up in beforeEach!
         val i = theInterpreter
-        KeYmaeraXTool.init(Map(
-          KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
-          KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-        ))
+        KeYmaeraXTool
+          .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = initLibrary)
         BelleInterpreter.setInterpreter(i)
         withTemporaryConfig(uninterp) {
           val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
@@ -237,10 +233,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
       ToolProvider.init()
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
-      KeYmaeraXTool.init(Map(
-        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
-        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-      ))
+      KeYmaeraXTool
+        .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = initLibrary)
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
         implicit val signaler: Signaler = { t: Thread =>
@@ -371,10 +365,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
     registerAxTactics match {
       case Some("mathematica") => withMathematica(initLibrary = true, testcode = { _ => })
       case Some("z3") => withZ3(initLibrary = true, testcode = { _ => })
-      case None => KeYmaeraXTool.init(Map(
-          KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-          KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-        ))
+      case None => KeYmaeraXTool
+          .init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
     }
   }
 

@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter => CorePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -28,10 +27,7 @@ class ParsePrintParseTests extends AnyFlatSpec with Matchers with BeforeAndAfter
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-    ))
+    KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
   }
 
   override protected def beforeEach(): Unit = CorePrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)

@@ -12,12 +12,12 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.tools.ext.{CounterExampleTool, Goal, QETacticTool}
-import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool}
 import edu.cmu.cs.ls.keymaerax.tools.qe.KeYmaeraToMathematica
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool}
+import org.scalatest.Inside._
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
-import org.scalatest.LoneElement._
-import org.scalatest.Inside._
 
 class ArithmeticTests extends TacticTestBase {
 
@@ -51,7 +51,6 @@ class ArithmeticTests extends TacticTestBase {
     }
 
     override def shutdown(): Unit = {}
-    override def init(config: Map[String, String]): Unit = {}
     override def restart(): Unit = {}
     override def isInitialized: Boolean = true
     override def cancel(): Boolean = true

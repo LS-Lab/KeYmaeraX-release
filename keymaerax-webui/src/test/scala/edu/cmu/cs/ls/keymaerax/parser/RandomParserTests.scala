@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tagobjects.{CheckinTest, SlowTest, SummaryTest, UsualTest}
@@ -15,8 +14,6 @@ import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-
-import scala.collection.immutable._
 
 /**
  * Instantiate generic tester for KeYmaera X formula parser
@@ -57,10 +54,7 @@ class RandomParserTests(parser: String => Formula, rand: RandomFormula)
   private val pp = KeYmaeraXPrettyPrinter
 
   override def beforeAll(): Unit = {
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-    ))
+    KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
   }
 
   override def afterAll(): Unit = { KeYmaeraXTool.shutdown() }

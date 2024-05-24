@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
@@ -22,10 +21,7 @@ class AxiomFileParserTest extends AnyFlatSpec with Matchers with PrivateMethodTe
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName,
-    ))
+    KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
   }
 
   "KeYmaeraXAxiomParser" should "parse the axiom file" in {

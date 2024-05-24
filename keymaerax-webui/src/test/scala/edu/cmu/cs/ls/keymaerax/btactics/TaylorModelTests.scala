@@ -6,15 +6,14 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import org.scalatest.LoneElement._
 import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.tools.ext.BigDecimalTool
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
 
@@ -317,7 +316,6 @@ class TaylorModelTests extends TacticTestBase {
           "(-1 <= r0() & r0() <= 1) & (-1 <= r1() & r1() <= 1) & (-1 <= r2() & r2() <= 1)").asFormula
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
       val bgtool = new BigDecimalTool()
-      bgtool.init(Map.empty)
       val res1 = IntervalArithmeticV2Tests
         .timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1)))
       val res2 = IntervalArithmeticV2Tests
@@ -397,7 +395,6 @@ class TaylorModelTests extends TacticTestBase {
           "(-1 <= r0() & r0() <= 1) & (-1 <= r1() & r1() <= 1)").asFormula
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
       val bgtool = new BigDecimalTool()
-      bgtool.init(Map.empty)
       val res1 = IntervalArithmeticV2Tests
         .timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1)))
       val res2 = IntervalArithmeticV2Tests

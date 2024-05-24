@@ -27,12 +27,12 @@ import scala.annotation.tailrec
  *   Stefan Mitsch
  */
 object KeYmaeraXTool extends Tool {
-
-  /** Configuration option: whether or not to initialize the axiom and tactic library (default: true) */
-  val INIT_DERIVATION_INFO_REGISTRY: String = "INIT_DERIVATION_INFO_REGISTRY"
-
-  /** Interpreter, one of "LazySequentialInterpreter" | "ExhaustiveSequentialInterpreter" */
-  val INTERPRETER: String = "INTERPRETER"
+  // TODO Convert to Scala 3 enum
+  sealed trait InterpreterChoice
+  object InterpreterChoice {
+    object LazySequential extends InterpreterChoice
+    object ExhaustiveSequential extends InterpreterChoice
+  }
 
   /** Default timeout if not set in config */
   val DEFAULT_LEMMA_DERIVE_TIMEOUT = 120
@@ -43,8 +43,16 @@ object KeYmaeraXTool extends Tool {
   /** Indicates whether the tool is initialized. */
   private var initialized = false
 
-  // TODO Use more specific arguments
-  def init(config: Map[String, String]): Unit = {
+  /**
+   * Initialize KeYmaera X global state.
+   *
+   * @param initDerivationInfoRegistry
+   *   whether to initialize the axiom and tactic library
+   */
+  def init(
+      interpreter: InterpreterChoice = InterpreterChoice.LazySequential,
+      initDerivationInfoRegistry: Boolean = true,
+  ): Unit = {
     // @note allow re-initialization since we do not know how (Mathematica, Z3, not at all) the tactic registry was initialized
     if (initialized) shutdown()
     if (Configuration.getBoolean(Configuration.Keys.LAX).getOrElse(false))
@@ -114,18 +122,11 @@ object KeYmaeraXTool extends Tool {
       (if (LOG_EARLIEST_QE) allPotentialQEListener :: Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener :: Nil else Nil) ++ (if (LOG_QE_STDOUT) qeStdOutListener :: Nil else Nil)
 
-    val interpreter = config.getOrElse(INTERPRETER, LazySequentialInterpreter.getClass.getSimpleName)
-    BelleInterpreter.setInterpreter(
-      if (interpreter == LazySequentialInterpreter.getClass.getSimpleName) LazySequentialInterpreter(listeners)
-      else if (interpreter == ExhaustiveSequentialInterpreter.getClass.getSimpleName)
-        ExhaustiveSequentialInterpreter(listeners)
-      else throw new IllegalArgumentException(
-        "Unknown interpreter: " + interpreter + "; please use one of " +
-          LazySequentialInterpreter.getClass.getSimpleName + " | " +
-          ExhaustiveSequentialInterpreter.getClass.getSimpleName
-      )
-    )
-    val shouldInitLibrary = config.getOrElse(INIT_DERIVATION_INFO_REGISTRY, "true").toBoolean
+    BelleInterpreter.setInterpreter(interpreter match {
+      case InterpreterChoice.LazySequential => LazySequentialInterpreter(listeners)
+      case InterpreterChoice.ExhaustiveSequential => ExhaustiveSequentialInterpreter(listeners)
+    })
+
     Configuration.withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       // set timeout and return old for later restore
       val oldTimeout = ToolProvider.qeTool() match {
@@ -142,7 +143,7 @@ object KeYmaeraXTool extends Tool {
         case _ => None
       }
 
-      try { DerivationInfoRegistry.init(shouldInitLibrary) }
+      try { DerivationInfoRegistry.init(initDerivationInfoRegistry) }
       catch {
         case t: Throwable =>
           /* During initialization, lemma derivation happens via reflective method access
