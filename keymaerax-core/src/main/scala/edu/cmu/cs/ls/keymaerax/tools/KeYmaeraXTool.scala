@@ -8,8 +8,8 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
@@ -43,8 +43,8 @@ object KeYmaeraXTool extends Tool {
   /** Indicates whether the tool is initialized. */
   private var initialized = false
 
-  /** @inheritdoc */
-  override def init(config: Map[String, String]): Unit = {
+  // TODO Use more specific arguments
+  def init(config: Map[String, String]): Unit = {
     // @note allow re-initialization since we do not know how (Mathematica, Z3, not at all) the tactic registry was initialized
     if (initialized) shutdown()
     if (Configuration.getBoolean(Configuration.Keys.LAX).getOrElse(false))

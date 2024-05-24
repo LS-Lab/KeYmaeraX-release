@@ -11,8 +11,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3QETool, Z3Solver}
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool, ToolExecutionException, ToolOperationManagement}
 
-import scala.collection.immutable.Map
-
 /**
  * Z3 quantifier elimination tool for tactics.
  *
@@ -33,8 +31,8 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   /** Untrusted access to Z3 directly. */
   private var z3: Z3Solver = _
 
-  /** @inheritdoc */
-  override def init(config: Map[String, String]): Unit = {
+  // TODO Use more specific arguments
+  def init(config: Map[String, String]): Unit = {
     z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter)
     z3qe.init(config)
   }

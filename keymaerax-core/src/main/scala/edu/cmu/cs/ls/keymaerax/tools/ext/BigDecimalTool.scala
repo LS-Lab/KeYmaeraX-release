@@ -11,8 +11,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolExecutionException, ToolOperationManagement}
 
-import scala.collection.immutable.Map
-
 /**
  * Big decimal quantifier elimination tool for tactics, forwards to [[BigDecimalQETool]].
  * @author
@@ -22,9 +20,6 @@ final class BigDecimalTool extends Tool with QETacticTool with ToolOperationMana
 
   /** @inheritdoc */
   override val name: String = "BigDecimalTool"
-
-  /** @inheritdoc */
-  override def init(config: Map[String, String]): Unit = {}
 
   /** @inheritdoc */
   override def restart(): Unit = {}

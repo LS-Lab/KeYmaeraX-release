@@ -13,10 +13,8 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.Tool
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
-
-import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 /**
  * Proves quantifier- and variable-free arithmetic formulas by exact arithmetic evaluation using
@@ -142,9 +140,6 @@ object BigDecimalQETool extends Tool with QETool {
 
   /** @inheritdoc */
   override def quantifierElimination(formula: Formula): Formula = if (eval(formula)) True else False
-
-  /** @inheritdoc */
-  final override def init(config: Map[String, String]): Unit = {}
 
   /** @inheritdoc */
   final override def restart(): Unit = {}

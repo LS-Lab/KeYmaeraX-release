@@ -9,8 +9,6 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
 
-import scala.collection.immutable.Map
-
 /**
  * Z3 trusted quantifier elimination tool.
  * @see
@@ -30,8 +28,8 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   /* The solver instance */
   private var z3: Z3Solver = _
 
-  /** @inheritdoc */
-  override def init(config: Map[String, String]): Unit = { z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter) }
+  // TODO Use more specific arguments
+  def init(config: Map[String, String]): Unit = { z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter) }
 
   /** @inheritdoc */
   override def restart(): Unit = cancel()

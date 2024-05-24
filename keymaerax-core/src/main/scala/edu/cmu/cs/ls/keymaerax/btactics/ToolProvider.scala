@@ -289,17 +289,20 @@ case class MultiToolProvider(providers: List[ToolProvider])
 }
 
 /** Base class for Wolfram tools with alternative names. */
-abstract class WolframToolProvider[T <: Tool](val tool: T, config: Configuration, alternativeNames: List[String])
+abstract class WolframToolProvider(val tool: Mathematica, config: Map[String, String], alternativeNames: List[String])
     extends PreferredToolProvider(tool :: Nil) {
-  protected def alternativeTool[S](name: Option[String], factory: Option[String] => Option[S]): Option[S] =
-    factory(name) match {
-      case None => name match {
-          case Some(t) if alternativeNames.contains(t) =>
-            defaultTool().filter(_.isInstanceOf[S]).map(_.asInstanceOf[Tool with S])
-          case _ => None
-        }
-      case t => t
-    }
+  protected def alternativeTool[S](nameOpt: Option[String], factory: Option[String] => Option[S]): Option[S] = {
+    // First, try the factory
+    factory(nameOpt).foreach(it => return Some(it))
+
+    // Require the name to be in our alternativeNames
+    val name = nameOpt.getOrElse(return None)
+    if (!alternativeNames.contains(name)) return None
+
+    // Use the default tool if it has type S
+    defaultTool().collect { case s: S => s }
+  }
+
   override def qeTool(name: Option[String] = None): Option[QETacticTool] = alternativeTool(name, super.qeTool)
   override def invGenTool(name: Option[String] = None): Option[InvGenTool] = alternativeTool(name, super.invGenTool)
   override def init(): Boolean = {
@@ -358,10 +361,8 @@ case class Z3ToolProvider(config: Configuration = Map("z3Path" -> Z3Installer.z3
   /** Returns the main Z3 tool. */
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
   override def init(): Boolean = {
-    val z3 :: algebra :: ode :: Nil = tools()
+    val (z3: Z3) :: (algebra: RingsAlgebraTool) :: (ode: IntegratorODESolverTool) :: Nil = tools()
     z3.init(config)
-    algebra.init(Map.empty)
-    ode.init(Map.empty)
     z3.isInitialized && algebra.isInitialized && ode.isInitialized
   }
 }

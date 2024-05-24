@@ -72,7 +72,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
 
   private val memoryLimit: Long = Configuration.getLong(Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).getOrElse(-1)
 
-  override def init(config: Map[String, String]): Unit = {
+  // TODO Use more specific arguments
+  def init(config: Map[String, String]): Unit = {
     mQE.memoryLimit = memoryLimit
     mPegasus.memoryLimit = memoryLimit
     mSOSsolve.memoryLimit = memoryLimit

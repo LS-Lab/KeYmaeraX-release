@@ -5,11 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
-import StaticSemantics.freeVars
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
+import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.freeVars
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import edu.cmu.cs.ls.keymaerax.tools.ext.ODESolverTool
@@ -176,9 +176,6 @@ class IntegratorODESolverTool extends Tool with ODESolverTool {
       diffArg: Variable,
       iv: Map[Variable, Variable],
   ): Option[Formula] = { Some(Integrator(iv, diffArg, ODESystem(diffSys, True)).reduce[Formula]((l, r) => And(l, r))) }
-
-  /** @inheritdoc */
-  override def init(config: Map[String, String]): Unit = {}
 
   /** @inheritdoc */
   override def restart(): Unit = {}

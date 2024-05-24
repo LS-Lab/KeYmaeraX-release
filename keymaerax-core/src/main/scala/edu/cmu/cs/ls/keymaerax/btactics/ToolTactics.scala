@@ -51,8 +51,8 @@ private object ToolTactics extends TacticProvider {
   def switchSolver(tool: String): InputTactic = inputanon { _: Sequent =>
     {
       def isWolframProvider(p: ToolProvider): Boolean = p match {
-        case MultiToolProvider(providers) => providers.exists(_.isInstanceOf[WolframToolProvider[_]])
-        case _: WolframToolProvider[_] => true
+        case MultiToolProvider(providers) => providers.exists(_.isInstanceOf[WolframToolProvider])
+        case _: WolframToolProvider => true
         case _ => false
       }
       def isZ3Provider(p: ToolProvider): Boolean = p.isInstanceOf[Z3ToolProvider]

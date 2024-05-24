@@ -8,15 +8,15 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import cc.redberry.rings.bigint.BigInteger
 import cc.redberry.rings.scaladsl._
 import cc.redberry.rings.scaladsl.syntax._
-import edu.cmu.cs.ls.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith, SequentCalculus}
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith, SequentCalculus}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolExecutionException}
 
 import scala.jdk.CollectionConverters._
 
@@ -347,9 +347,6 @@ class RingsAlgebraTool extends Tool with AlgebraTool {
 
   /** @inheritdoc */
   override val name: String = "RingsAlgebra"
-
-  /** @inheritdoc */
-  final override def init(config: Map[String, String]): Unit = {}
 
   /** @inheritdoc */
   final override def shutdown(): Unit = {}
