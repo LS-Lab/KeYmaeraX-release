@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.install
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.info.{ArchType, Os, OsType}
+import edu.cmu.cs.ls.keymaerax.info.{Os, OsType}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
@@ -131,7 +131,6 @@ object ToolConfiguration {
       case OsType.MacOs => "MacOS"
       case OsType.Unknown => "Unknown"
     }
-    val jvmBits = Os.JvmArchType
     val osPathGuesses =
       source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
         case Some(opg) => opg.asJsObject.getFields("paths").head.convertTo[List[JsObject]]
@@ -144,11 +143,7 @@ object ToolConfiguration {
           osPath.getFields("version").head.convertTo[String],
           osPath.getFields("kernelPath").head.convertTo[List[String]],
           osPath.getFields("kernelName").head.convertTo[String],
-          osPath
-            .getFields("jlinkPath")
-            .head
-            .convertTo[List[String]]
-            .map(p => p + (if (jvmBits == ArchType.Bit64) "-64" else "") + File.separator),
+          osPath.getFields("jlinkPath").head.convertTo[List[String]].map(p => p + File.separator),
           osPath.getFields("jlinkName").head.convertTo[String],
         )
       )

@@ -6,13 +6,11 @@
 package edu.cmu.cs.ls.keymaerax.hydra.responses.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.Response
-import edu.cmu.cs.ls.keymaerax.info.ArchType
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import spray.json.{JsArray, JsBoolean, JsObject, JsString, JsValue}
 
 class MathematicaConfigSuggestionResponse(
     os: String,
-    jvmBits: ArchType,
     suggestionFound: Boolean,
     suggestion: ToolConfiguration.ConfigSuggestion,
     allSuggestions: List[ToolConfiguration.ConfigSuggestion],
@@ -28,11 +26,7 @@ class MathematicaConfigSuggestionResponse(
 
   def getJson: JsValue = JsObject(
     "os" -> JsString(os),
-    "jvmArchitecture" -> JsString(jvmBits match {
-      case ArchType.Bit32 => "32"
-      case ArchType.Bit64 => "64"
-      case ArchType.Unknown => "unknown"
-    }),
+    "jvmArchitecture" -> JsString("64"),
     "suggestionFound" -> JsBoolean(suggestionFound),
     "suggestion" -> convertSuggestion(suggestion),
     "allSuggestions" -> JsArray(allSuggestions.map(convertSuggestion): _*),

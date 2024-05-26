@@ -19,7 +19,6 @@ class SystemInfoRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Rea
       System.getProperty("java.home"),
       System.getProperty("java.vendor"),
       System.getProperty("java.version"),
-      Os.JvmArchType,
     ) :: Nil
   }
 }
