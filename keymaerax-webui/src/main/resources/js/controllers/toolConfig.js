@@ -29,7 +29,6 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
       if (systemInfo.isLocal) {
         $http.get("/config/systeminfo").then(function(response) {
           systemInfo.info = response.data;
-          systemInfo.error = response.data.jvmArchitecture.includes("32");
         });
       }
     });

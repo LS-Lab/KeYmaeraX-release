@@ -16,6 +16,5 @@ class SystemInfoResponse(os: String, osVersion: String, jvmHome: String, jvmVend
     "jvmHome" -> JsString(jvmHome),
     "jvmVendor" -> JsString(jvmVendor),
     "jvmVersion" -> JsString(jvmVersion),
-    "jvmArchitecture" -> JsString("64"),
   )
 }
