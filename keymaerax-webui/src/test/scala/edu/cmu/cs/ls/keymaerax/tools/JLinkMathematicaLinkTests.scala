@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleLabel
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.info.{Os, OsType}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, SlowTest, TodoTest}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{
@@ -238,9 +239,10 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     Thread.sleep(5000)
     println("Killing Mathematica...")
     val rt = Runtime.getRuntime
-    if (System.getProperty("os.name").toLowerCase.indexOf("mac os x") > -1) {
-      rt.exec(Array("pkill", "-9", "MathKernel"))
-    } else { ??? }
+    Os.Type match {
+      case OsType.MacOs => rt.exec(Array("pkill", "-9", "MathKernel"))
+      case _ => ???
+    }
     t.join()
     compAfterRestart shouldBe Some("5".asTerm)
   }

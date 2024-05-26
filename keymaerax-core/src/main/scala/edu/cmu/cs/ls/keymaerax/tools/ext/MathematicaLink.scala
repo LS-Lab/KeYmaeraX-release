@@ -7,6 +7,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink._
+import edu.cmu.cs.ls.keymaerax.info.{ArchType, Os}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe._
@@ -282,13 +283,19 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
       }
     } catch {
       case e: UnsatisfiedLinkError =>
+        val jvmArch = Os.JvmArchType match {
+          case ArchType.Bit32 => "32-bit"
+          case ArchType.Bit64 => "64-bit"
+          case ArchType.Unknown => "???-bit"
+        }
+        val configFile = Configuration.KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf"
         logger.error(
-          "Shutting down since " + engineName + " J/Link native library was not found in:\n" + jlinkLibDir +
-            "\nOr this path did not contain the native library compatible with " +
-            System.getProperties.getProperty("sun.arch.data.model") + "-bit " +
-            System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
-            diagnostic + "\nPlease provide paths to the J/Link native library in " + Configuration.KEYMAERAX_HOME_PATH +
-            File.separator + "keymaerax.conf and restart KeYmaera X.",
+          s"""Shutting down since $engineName J/Link native library was not found in:
+             |$jlinkLibDir
+             |Or this path did not contain the native library compatible with $jvmArch ${Os.Name} ${Os.Version}
+             |$diagnostic
+             |Please provide paths to the J/Link native library in $configFile and restart KeYmaera X.
+             |""".stripMargin,
           e,
         )
         shutdown()

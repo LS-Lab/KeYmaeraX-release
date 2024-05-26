@@ -6,11 +6,11 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.info.{Os, OsType}
 
-import javax.swing.{JLabel, JOptionPane}
-import java.awt.GraphicsEnvironment._
 import java.awt.Desktop._
-import java.util.Locale
+import java.awt.GraphicsEnvironment._
+import javax.swing.{JLabel, JOptionPane}
 
 /** Opens the default web browser pointed to the KeYmaera X URL. Created by nfulton on 9/17/15. */
 object SystemWebBrowser {
@@ -19,10 +19,9 @@ object SystemWebBrowser {
   def apply(location: String): Unit = {
     // Try opening the web browser appropriately
     try {
-      val os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
-      if (os != "linux" && !isHeadless && isDesktopSupported && getDesktop.isSupported(Action.BROWSE)) {
+      if (Os.Type != OsType.Linux && !isHeadless && isDesktopSupported && getDesktop.isSupported(Action.BROWSE)) {
         getDesktop.browse(new java.net.URI(location))
-      } else if (os == "linux" && !isHeadless) {
+      } else if (Os.Type == OsType.Linux && !isHeadless) {
         // @todo Runtime.exec open default browser
         JOptionPane.showMessageDialog(
           null,

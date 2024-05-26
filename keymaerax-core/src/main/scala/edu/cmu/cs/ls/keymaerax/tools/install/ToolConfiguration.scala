@@ -5,12 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.install
 
-import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.Configuration
-import spray.json._
+import edu.cmu.cs.ls.keymaerax.info.{ArchType, Os, OsType}
 import spray.json.DefaultJsonProtocol._
+import spray.json._
 
+import java.io.File
 import scala.collection.immutable.{List, Map}
 import scala.io.Source
 import scala.util.Try
@@ -118,14 +118,6 @@ object ToolConfiguration {
   /** Returns suggestions for Wolfram Engine configuration */
   def wolframEngineSuggestion(): List[ConfigSuggestion] = parseSuggestions("/config/potentialWolframEnginePaths.json")
 
-  /** Returns readable names for Java OS names. */
-  private def osKeyOf(osName: String): String = {
-    if (osName.contains("win")) "Windows"
-    else if (osName.contains("mac")) "MacOS"
-    else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "Unix"
-    else "Unknown"
-  }
-
   /** Parses a suggestions JSON file. */
   private def parseSuggestions(suggestionsFile: String): List[ConfigSuggestion] = {
     val reader = this.getClass.getResourceAsStream(suggestionsFile)
@@ -133,9 +125,13 @@ object ToolConfiguration {
     val source: JsArray = contents.parseJson.asInstanceOf[JsArray]
 
     // TODO provide classes and spray JSON protocol to convert
-    val os = System.getProperty("os.name")
-    val osKey = osKeyOf(os.toLowerCase)
-    val jvmBits = System.getProperty("sun.arch.data.model")
+    val osKey = Os.Type match {
+      case OsType.Windows => "Windows"
+      case OsType.Linux => "Unix"
+      case OsType.MacOs => "MacOS"
+      case OsType.Unknown => "Unknown"
+    }
+    val jvmBits = Os.JvmArchType
     val osPathGuesses =
       source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
         case Some(opg) => opg.asJsObject.getFields("paths").head.convertTo[List[JsObject]]
@@ -152,7 +148,7 @@ object ToolConfiguration {
             .getFields("jlinkPath")
             .head
             .convertTo[List[String]]
-            .map(p => p + (if (jvmBits == "64") "-" + jvmBits else "") + File.separator),
+            .map(p => p + (if (jvmBits == ArchType.Bit64) "-64" else "") + File.separator),
           osPath.getFields("jlinkName").head.convertTo[String],
         )
       )
