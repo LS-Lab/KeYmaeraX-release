@@ -3,7 +3,7 @@
 <p>A WolframScript backend needs minimal configuration, but executes slower than Mathematica or Wolfram Engine.</p>
 
 <p ng-if="wolframScriptConfigSuggestion.suggestionFound" ng-cloak>
-Found WolframScript {{wolframScriptConfigSuggestion.suggestion.version}} on {{wolframScriptConfigSuggestion.os}}.
+Found WolframScript on {{wolframScriptConfigSuggestion.os}}.
 </p>
 <div ng-if="wolframScriptConfigSuggestion.os && !wolframScriptConfigSuggestion.suggestionFound" ng-cloak>
 <p>Your system looks like {{wolframScriptConfigSuggestion.os}}, but WolframScript may not be installed or may not be activated.

@@ -8,20 +8,21 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.MathematicaConfigSuggestionResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, LocalhostOnlyRequest, ReadRequest, Response}
 import edu.cmu.cs.ls.keymaerax.info.Os
-import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.ToolPathFinder
 
+import java.nio.file.Paths
 import scala.collection.immutable.{List, Nil}
 
 class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val allSuggestions = ToolConfiguration.wolframEngineSuggestion()
-    val (suggestionFound, suggestion) = allSuggestions.find(s =>
-      new java.io.File(s.kernelPath + s.kernelName).exists && new java.io.File(s.jlinkPath + s.jlinkName).exists
-    ) match {
-      case Some(s) => (true, s)
-      case None => (false, allSuggestions.head) // use the first configuration as suggestion when nothing else matches
-    }
+    val paths = ToolPathFinder.findMathematicaInstallDir().flatMap(ToolPathFinder.findMathematicaPaths)
 
-    new MathematicaConfigSuggestionResponse(Os.Name, suggestionFound, suggestion, allSuggestions) :: Nil
+    val suggestionFound = paths.isDefined
+    val suggestion = paths.getOrElse(
+      ToolPathFinder
+        .MathematicaPaths(mathKernel = Paths.get("path/to/MathKernel"), jlinkLib = Paths.get("path/to/jlinkLib"))
+    )
+
+    new MathematicaConfigSuggestionResponse(Os.Name, suggestionFound, suggestion) :: Nil
   }
 }

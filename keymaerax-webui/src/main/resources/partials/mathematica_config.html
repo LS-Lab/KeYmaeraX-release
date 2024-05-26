@@ -8,13 +8,13 @@
                 <span ng-if="linkName !== origLinkName || jlinkLibPath !== origJlinkLibPath || jlinkTcpip.machine !== origJlinkTcpip.machine || jlinkTcpip.port !== origJlinkTcpip.port">*</span>
                 <span>Save</span>
             </button>
-            <button ng-click="defaultMathematicaPaths()" class="btn btn-default">Reset to Default</button>
-            <button ng-click="resetMathematicaPaths()" class="btn btn-default">Discard Changes</button>
+            <button ng-click="defaultMathematicaPaths()" class="btn btn-default">Reset to detected values</button>
+            <button ng-click="resetMathematicaPaths()" class="btn btn-default">Discard changes</button>
         </span>
     </h2>
 
     <p ng-if="mathematicaConfigSuggestion.suggestionFound" ng-cloak>
-        Your system looks as if you have installed Mathematica {{mathematicaConfigSuggestion.suggestion.version}} on {{mathematicaConfigSuggestion.os}}.
+        Your system looks as if you have installed Mathematica on {{mathematicaConfigSuggestion.os}}.
     </p>
     <p ng-if="!mathematicaConfigSuggestion.suggestionFound" ng-cloak>
         Your system looks like {{mathematicaConfigSuggestion.os}}, but Mathematica may not be installed, or not be installed in the default location.
@@ -30,28 +30,6 @@
         <a href="http://support.wolfram.com/kb/topic/mathematica/activation-mathematica">activation quick answers</a>.
     </p>
 
-    <script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">
-        <div style="text-align: left;">
-            Other locations where you might find Mathematica:
-            <ul>
-                <li ng-repeat="suggestion in mathematicaConfigSuggestion.allSuggestions">
-                    {{suggestion.version}}: {{suggestion.kernelPath}}
-                </li>
-            </ul>
-        </div>
-    </script>
-
-    <script type="text/ng-template" id="jlinkSuggestionTooltipTemplate.html">
-        <div style="text-align: left;">
-            Other locations where you might find the J/Link native library:
-            <ul>
-                <li ng-repeat="suggestion in mathematicaConfigSuggestion.allSuggestions">
-                    {{suggestion.version}}: {{suggestion.jlinkPath}}
-                </li>
-            </ul>
-        </div>
-    </script>
-
     <div class="form-group">
         <div class="input-group"
              data-intro="Configure the path to the Mathematica kernel executable, corresponding to your operating system. Look for an executable file named <code>{{mathematicaConfigSuggestion.suggestion.kernelName}}</code>. You might find it at <br/>{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}."
@@ -66,7 +44,7 @@
                         data-placement="bottom"
                         aria-expanded="false" ng-click="setDefaultMathKernel()"
                         title="{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}">
-                    <span ng-if="linkName">Reset to </span><span ng-if="linkName === undefined">Use </span> {{mathematicaConfigSuggestion.os}} Default
+                    <span ng-if="linkName">Reset to</span><span ng-if="linkName === undefined">Use</span> detected value
                 </button>
             </span>
         </div>
@@ -94,7 +72,7 @@
                         data-placement="bottom"
                         aria-expanded="false" ng-click="setDefaultJLinkLibPath()"
                         title="{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}">
-                    <span ng-if="jlinkLibPath">Reset to </span><span ng-if="jlinkLibPath === undefined">Use </span> {{mathematicaConfigSuggestion.os}} Default
+                    <span ng-if="jlinkLibPath">Reset to</span><span ng-if="jlinkLibPath === undefined">Use</span> detected value
                 </button>
             </span>
         </div>
