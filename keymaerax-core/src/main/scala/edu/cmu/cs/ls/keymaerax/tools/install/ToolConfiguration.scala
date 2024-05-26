@@ -41,28 +41,24 @@ object ToolConfiguration {
         .getOrElse("false")
     }
 
-    if (preferred.contains("mathkernel") && preferred.contains("jlink")) {
-      Map(
-        "mathkernel" -> preferred("mathkernel"),
-        "linkName" -> preferred("mathkernel"),
-        "jlink" -> preferred("jlink"),
-        "libDir" -> preferred("jlink"),
-        "tcpip" -> preferred.getOrElse("tcpip", tcpip),
-      )
-    } else {
-      Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
-        case Some(l) => Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
-            // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-            case Some(libDir) =>
-              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-            case None =>
-              val libDir = DefaultConfiguration.defaultMathLinkPath._2
-              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-          }
-        case None => DefaultConfiguration.defaultMathematicaConfig
+    if (preferred.contains("mathkernel") && preferred.contains("jlink")) return Map(
+      "mathkernel" -> preferred("mathkernel"),
+      "linkName" -> preferred("mathkernel"),
+      "jlink" -> preferred("jlink"),
+      "libDir" -> preferred("jlink"),
+      "tcpip" -> preferred.getOrElse("tcpip", tcpip),
+    )
 
-      }
-    }
+    val defaultConfig = DefaultConfiguration.defaultMathematicaConfig
+
+    val linkName = Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME).getOrElse(return defaultConfig)
+
+    val libDir = Configuration
+      .getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+      .getOrElse(defaultConfig("libDir"))
+
+    // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+    Map("mathkernel" -> linkName, "linkName" -> linkName, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
   }
 
   /** Returns the Wolfram Engine configuration. */
@@ -74,27 +70,24 @@ object ToolConfiguration {
         .getOrElse("true")
     }
 
-    if (preferred.contains("mathkernel") && preferred.contains("jlink")) {
-      Map(
-        "mathkernel" -> preferred("mathkernel"),
-        "linkName" -> preferred("mathkernel"),
-        "jlink" -> preferred("jlink"),
-        "libDir" -> preferred("jlink"),
-        "tcpip" -> preferred.getOrElse("tcpip", tcpip),
-      )
-    } else {
-      Configuration.getString(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
-        case Some(l) => Configuration.getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
-            // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-            case Some(libDir) =>
-              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-            case None =>
-              val libDir = DefaultConfiguration.defaultWolframEnginePath._2
-              Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-          }
-        case None => DefaultConfiguration.defaultWolframEngineConfig
-      }
-    }
+    if (preferred.contains("mathkernel") && preferred.contains("jlink")) return Map(
+      "mathkernel" -> preferred("mathkernel"),
+      "linkName" -> preferred("mathkernel"),
+      "jlink" -> preferred("jlink"),
+      "libDir" -> preferred("jlink"),
+      "tcpip" -> preferred.getOrElse("tcpip", tcpip),
+    )
+
+    val defaultConfig = DefaultConfiguration.defaultWolframEngineConfig
+
+    val linkName = Configuration.getString(Configuration.Keys.WOLFRAMENGINE_LINK_NAME).getOrElse(return defaultConfig)
+
+    val libDir = Configuration
+      .getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)
+      .getOrElse(defaultConfig("libDir"))
+
+    // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+    Map("mathkernel" -> linkName, "linkName" -> linkName, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
   }
 
   /** Returns the Wolfram Engine configuration. */

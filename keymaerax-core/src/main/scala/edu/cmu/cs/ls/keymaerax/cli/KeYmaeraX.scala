@@ -5,11 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{File, FileReader, PrintWriter}
-import java.util.concurrent.TimeUnit
-import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException}
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.btactics.{
   FixedGenerator,
   MathematicaToolProvider,
@@ -30,13 +27,16 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   ParsedArchiveEntry,
   PrettierPrintFormatProvider,
 }
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.ext.SmtLibReader
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolPathFinder}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 
+import java.io.{File, FileReader, PrintWriter}
+import java.nio.file.{Files, Paths}
+import java.util.concurrent.TimeUnit
 import scala.annotation.tailrec
-import scala.collection.immutable.Nil
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -354,12 +354,8 @@ object KeYmaeraX {
    */
   private def mathematicaConfig(options: OptionMap, usage: String): Map[String, String] = {
     assert(
-      (options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) ||
-        (!options.contains(Symbol("mathkernel")) && !options.contains(Symbol("jlink"))),
-      "\n[Error] Please always use command line option -mathkernel and -jlink together," +
-        "and specify the Mathematica link paths with:\n" + " -mathkernel PATH_TO_" +
-        DefaultConfiguration.defaultMathLinkName._1 + "_FILE" + " -jlink PATH_TO_DIRECTORY_CONTAINS_" +
-        DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage,
+      options.contains(Symbol("mathkernel")) != options.contains(Symbol("jlink")),
+      "[Error] Please always use the command line options -mathkernel and -jlink together.",
     )
 
     val mathematicaConfig =
@@ -380,40 +376,20 @@ object KeYmaeraX {
     }
     assert(
       linkNamePath != "" && libDirPath != "",
-      "\n[Error] The paths to MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 +
-        " and jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " are not specified! " +
-        "(On your system, they could look like: " + {
-          if (DefaultConfiguration.defaultMathLinkPath._1 != "") DefaultConfiguration.defaultMathLinkPath._1
-          else DefaultConfiguration.exemplaryMathLinkPath._1
-        } + " and " + {
-          if (DefaultConfiguration.defaultMathLinkPath._2 != "") DefaultConfiguration.defaultMathLinkPath._2
-          else DefaultConfiguration.exemplaryMathLinkPath._2
-        } + ")\n" + "Please specify the paths to " + DefaultConfiguration.defaultMathLinkName._1 + " and " +
-        DefaultConfiguration.defaultMathLinkName._2 + " with command line option:" + " -mathkernel PATH_TO_" +
-        DefaultConfiguration.defaultMathLinkName._1 + "_FILE" + " -jlink PATH_TO_DIRECTORY_CONTAINS_" +
-        DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage,
+      """[Error] Could not locate math kernel and jlink library.
+        |Please specify them using the -mathkernel and -jlink command line options.""".stripMargin,
     )
     assert(
-      linkNamePath.endsWith(DefaultConfiguration.defaultMathLinkName._1) && new java.io.File(linkNamePath).exists(),
-      "\n[Error] Cannot find MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " in path: " +
-        linkNamePath + "! " + "(On your system, it could look like: " + {
-          if (DefaultConfiguration.defaultMathLinkPath._1 != "") DefaultConfiguration.defaultMathLinkPath._1
-          else DefaultConfiguration.exemplaryMathLinkPath._1
-        } + ")\n" + "Please specify the correct path that points to " + DefaultConfiguration.defaultMathLinkName._1 +
-        " file with command line option:" + " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 +
-        "_FILE\n" + "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage,
+      Files.exists(Paths.get(linkNamePath)),
+      s"""[Error] Can't find math kernel at this path:
+         |$linkNamePath
+         |Please specify the correct path using the -mathkernel command line option.""".stripMargin,
     )
     assert(
-      new java.io.File(libDirPath + File.separator + DefaultConfiguration.defaultMathLinkName._2).exists(),
-      "\n[Error] Cannot find jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " in path " +
-        libDirPath + "! " + "(On your system, it could look like: " + {
-          if (DefaultConfiguration.defaultMathLinkPath._2 != "") DefaultConfiguration.defaultMathLinkPath._2
-          else DefaultConfiguration.exemplaryMathLinkPath._2
-        } + ")\n" + "Please specify the correct path that points to the directory contains " +
-        DefaultConfiguration.defaultMathLinkName._2 + " file with command line option:" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" + DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage,
+      Files.exists(Paths.get(libDirPath).resolve(ToolPathFinder.jlinkLibFileName)),
+      s"""[Error] Can't find jlink library in this directory:
+         |$libDirPath
+         |Please specify the correct path using the -jlink command line option.""".stripMargin,
     )
 
     mathematicaConfig

@@ -5,8 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
-
 /** Provides usages information. */
 object Usage {
 
@@ -25,14 +23,8 @@ object Usage {
       case "-conjecture" => println(noValueMessage + "Please use: -conjecture FILENAME.kyx\n\n" + usage)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage)
       case "-tactic" => println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage)
-      case "-mathkernel" => println(
-          noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 +
-            "_FILE\n\n" + usage
-        )
-      case "-jlink" => println(
-          noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +
-            DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage
-        )
+      case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_MATH_KERNEL\n\n" + usage)
+      case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINING_JLINK_LIB\n\n" + usage)
       case "-jlinktcpip" => println(noValueMessage + "Please use: -jlinktcpip [true|false]\n\n" + usage)
       case "-jlinkinterface" => println(noValueMessage + "Please use: -jlinkinterface [string|expr]\n\n" + usage)
       case "-parallelqe" => println(noValueMessage + "Please use: -parallelqe [true|false]\n\n" + usage)
