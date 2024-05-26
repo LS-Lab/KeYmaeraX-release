@@ -8,13 +8,13 @@
                     <span ng-if="linkName !== origLinkName || jlinkLibPath !== origJlinkLibPath || jlinkTcpip.machine !== origJlinkTcpip.machine || jlinkTcpip.port !== origJlinkTcpip.port">*</span>
                     <span>Save</span>
                 </button>
-                <button ng-click="defaultWolframEnginePaths()" class="btn btn-default">Reset to Default</button>
-                <button ng-click="resetWolframEnginePaths()" class="btn btn-default">Discard Changes</button>
+                <button ng-click="defaultWolframEnginePaths()" class="btn btn-default">Reset to detected values</button>
+                <button ng-click="resetWolframEnginePaths()" class="btn btn-default">Discard changes</button>
             </span>
     </h2>
 
     <p ng-if="wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
-        Your system looks as if you have installed Wolfram Engine {{wolframEngineConfigSuggestion.suggestion.version}} on {{wolframEngineConfigSuggestion.os}}.
+        Your system looks as if you have installed Wolfram Engine on {{wolframEngineConfigSuggestion.os}}.
     </p>
     <p ng-if="!wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
         Your system looks like {{wolframEngineConfigSuggestion.os}}, but Wolfram Engine may not be installed or may not be activated.
@@ -30,28 +30,6 @@
         <strong>Important:</strong> If Wolfram Engine is not activated prior to starting KeYmaera X, it is likely to fail and/or even crash the KeYmaera X server.
     </p>
 
-    <script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">
-        <div style="text-align: left;">
-            Other locations where you might find the Wolfram Engine Kernel:
-            <ul>
-                <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
-                    {{suggestion.version}}: {{suggestion.kernelPath}}
-                </li>
-            </ul>
-        </div>
-    </script>
-
-    <script type="text/ng-template" id="jlinkSuggestionTooltipTemplate.html">
-        <div style="text-align: left;">
-            Other locations where you might find the J/Link native library:
-            <ul>
-                <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
-                    {{suggestion.version}}: {{suggestion.jlinkPath}}
-                </li>
-            </ul>
-        </div>
-    </script>
-
     <div class="form-group">
         <div class="input-group"
              data-intro="Configure the path to the Wolfram Engine kernel executable, corresponding to your operating system. Look for an executable file named <code>{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>. You might find it at <br/>{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}."
@@ -66,7 +44,7 @@
                         data-placement="bottom"
                         aria-expanded="false" ng-click="setDefaultMathKernel()"
                         title="{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}">
-                    <span ng-if="linkName">Reset to </span><span ng-if="linkName === undefined">Use </span> {{wolframEngineConfigSuggestion.os}} Default
+                    <span ng-if="linkName">Reset to</span><span ng-if="linkName === undefined">Use</span> detected value
                 </button>
             </span>
         </div>
@@ -94,7 +72,7 @@
                         data-placement="bottom"
                         aria-expanded="false" ng-click="setDefaultJLinkLibPath()"
                         title="{{wolframEngineConfigSuggestion.suggestion.jlinkPath}}{{wolframEngineConfigSuggestion.suggestion.jlinkName}}">
-                    <span ng-if="jlinkLibPath">Reset to </span><span ng-if="jlinkLibPath === undefined">Use </span> {{wolframEngineConfigSuggestion.os}} Default
+                    <span ng-if="jlinkLibPath">Reset to</span><span ng-if="jlinkLibPath === undefined">Use</span> detected value
                 </button>
             </span>
         </div>
