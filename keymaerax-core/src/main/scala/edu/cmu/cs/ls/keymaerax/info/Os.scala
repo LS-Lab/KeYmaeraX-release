@@ -16,19 +16,9 @@ object OsType {
   case object Unknown extends OsType
 }
 
-// TODO Convert to Scala 3 enum
-// TODO Get rid of this if possible since everything is 64 bit now anyways?
-sealed trait ArchType
-object ArchType {
-  case object Bit32 extends ArchType
-  case object Bit64 extends ArchType
-  case object Unknown extends ArchType
-}
-
 object Os {
   val Name: String = System.getProperty("os.name")
   val Version: String = System.getProperty("os.version")
-  val Arch: String = System.getProperty("os.arch")
 
   // Detect OS based on os.name.
   //
@@ -54,13 +44,4 @@ object Os {
     case name if name.startsWith("mac") => OsType.MacOs
     case _ => OsType.Unknown
   }
-
-  val JvmArchType: ArchType =
-    System.getProperty("sun.arch.data.model", System.getProperty("com.ibm.vm.bitmode")) match {
-      case "32" => ArchType.Bit32
-      case "64" => ArchType.Bit64
-      case _ if Arch.contains("32") => ArchType.Bit32
-      case _ if Arch.contains("64") => ArchType.Bit64
-      case _ => ArchType.Unknown
-    }
 }

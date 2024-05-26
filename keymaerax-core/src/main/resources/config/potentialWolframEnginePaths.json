@@ -6,7 +6,7 @@
         "version" : "12.x or later",
         "kernelPath" : ["/Applications/Wolfram Engine.app/Contents/Resources/Wolfram Player.app/Contents/MacOS/"],
         "kernelName" : "MathKernel",
-        "jlinkPath" : ["/Applications/Wolfram Engine.app/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86"],
+        "jlinkPath" : ["/Applications/Wolfram Engine.app/Contents/Resources/Wolfram Player.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64"],
         "jlinkName" : "libJLinkNativeLibrary.jnilib"
       }
     ]
@@ -18,7 +18,7 @@
         "version" : "12.x or later",
         "kernelPath" : ["/usr/local/Wolfram/WolframEngine/12.0/Executables/"],
         "kernelName": "MathKernel",
-        "jlinkPath" : ["/usr/local/Wolfram/WolframEngine/12.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86"],
+        "jlinkPath" : ["/usr/local/Wolfram/WolframEngine/12.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"],
         "jlinkName" : "libJLinkNativeLibrary.so"
       }
     ]
@@ -30,7 +30,7 @@
         "version" : "12.x or later",
         "kernelPath" : ["C:\\Program Files\\Wolfram Research\\Wolfram Engine\\12.0\\"],
         "kernelName" : "MathKernel.exe",
-        "jlinkPath" : ["C:\\Program Files\\Wolfram Research\\Wolfram Engine\\12.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86"],
+        "jlinkPath" : ["C:\\Program Files\\Wolfram Research\\Wolfram Engine\\12.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64"],
         "jlinkName" : "JLinkNativeLibrary.dll"
       }
     ]

@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.install
 
-import edu.cmu.cs.ls.keymaerax.info.{ArchType, Os, OsType, Version, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.info.{Os, OsType, Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import java.io.{File, FileOutputStream, InputStream, PrintWriter}
@@ -73,12 +73,11 @@ object Z3Installer extends Logging {
     // Update the version number.
     new PrintWriter(versionFile(z3TempDir)) { write(Version.toString); close() }
     // Copy z3 binary to disk.
-    val resource: InputStream = (Os.Type, Os.JvmArchType) match {
-      case (OsType.Windows, ArchType.Bit32) => this.getClass.getResourceAsStream("/z3/windows32/z3.exe")
-      case (OsType.Windows, ArchType.Bit64) => this.getClass.getResourceAsStream("/z3/windows64/z3.exe")
-      case (OsType.Linux, ArchType.Bit64) => this.getClass.getResourceAsStream("/z3/ubuntu64/z3")
-      case (OsType.MacOs, ArchType.Bit64) => this.getClass.getResourceAsStream("/z3/mac64/z3")
-      case (OsType.Unknown, _) => throw new Exception("Z3 solver is currently not supported in your operating system.")
+    val resource: InputStream = Os.Type match {
+      case OsType.Windows => this.getClass.getResourceAsStream("/z3/windows64/z3.exe")
+      case OsType.Linux => this.getClass.getResourceAsStream("/z3/ubuntu64/z3")
+      case OsType.MacOs => this.getClass.getResourceAsStream("/z3/mac64/z3")
+      case OsType.Unknown => throw new Exception("Z3 solver is currently not supported in your operating system.")
       case _ => null
     }
     if (resource == null) {

@@ -21,7 +21,6 @@ class GetWolframScriptConfigSuggestionRequest extends LocalhostOnlyRequest with 
       we.shutdown()
       new MathematicaConfigSuggestionResponse(
         Os.Name,
-        Os.JvmArchType,
         true,
         ToolConfiguration
           .ConfigSuggestion(version.major + "." + version.minor + "." + version.revision, "", "", "", ""),
@@ -31,7 +30,6 @@ class GetWolframScriptConfigSuggestionRequest extends LocalhostOnlyRequest with 
       case _: Throwable =>
         new MathematicaConfigSuggestionResponse(
           Os.Name,
-          Os.JvmArchType,
           false,
           ToolConfiguration.ConfigSuggestion("", "", "", "", ""),
           Nil,
