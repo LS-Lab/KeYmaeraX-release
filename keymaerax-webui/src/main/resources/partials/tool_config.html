@@ -121,14 +121,11 @@
                 <h3 class="panel-title">System Information</h3>
             </div>
             <div class="panel-body">
-                <div ng-if="systemInfo.error" class="alert alert-warning">
-                    Detected Java JVM 32bit. Unless your operating system is 32bit, tool connection is likely to fail.
-                </div>
                 <dl class="dl-horizontal">
                     <dt>Operating System:</dt>
                     <dd>{{systemInfo.info.os}} {{systemInfo.info.osVersion}}</dd>
                     <dt>Java JVM:</dt>
-                    <dd>{{systemInfo.info.jvmVendor}} {{systemInfo.info.jvmVersion}} with <b>{{systemInfo.info.jvmArchitecture}} bits</b></dd>
+                    <dd>{{systemInfo.info.jvmVendor}} {{systemInfo.info.jvmVersion}}</dd>
                     <dt>Java Home:</dt>
                     <dd>{{systemInfo.info.jvmHome}}</dd>
                 </dl>

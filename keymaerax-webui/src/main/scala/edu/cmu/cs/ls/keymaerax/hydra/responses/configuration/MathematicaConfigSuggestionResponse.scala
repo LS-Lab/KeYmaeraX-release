@@ -26,7 +26,6 @@ class MathematicaConfigSuggestionResponse(
 
   def getJson: JsValue = JsObject(
     "os" -> JsString(os),
-    "jvmArchitecture" -> JsString("64"),
     "suggestionFound" -> JsBoolean(suggestionFound),
     "suggestion" -> convertSuggestion(suggestion),
     "allSuggestions" -> JsArray(allSuggestions.map(convertSuggestion): _*),
