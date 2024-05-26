@@ -8,20 +8,19 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.MathematicaConfigurationResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, LocalhostOnlyRequest, ReadRequest, Response}
+import edu.cmu.cs.ls.keymaerax.info.{Os, OsType}
 
 import java.io.File
-import java.util.Locale
 import scala.collection.immutable.{List, Nil}
 
 class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String)
     extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
-    val jlinkLibFile = {
-      if (osName.contains("win")) "JLinkNativeLibrary.dll"
-      else if (osName.contains("mac")) "libJLinkNativeLibrary.jnilib"
-      else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "libJLinkNativeLibrary.so"
-      else "Unknown"
+    val jlinkLibFile = Os.Type match {
+      case OsType.Windows => "JLinkNativeLibrary.dll"
+      case OsType.Linux => "libJLinkNativeLibrary.so"
+      case OsType.MacOs => "libJLinkNativeLibrary.jnilib"
+      case OsType.Unknown => "Unknown"
     }
     toolName match {
       case "mathematica"

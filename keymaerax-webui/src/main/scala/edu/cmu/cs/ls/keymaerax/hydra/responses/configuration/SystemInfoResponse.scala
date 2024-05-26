@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra.responses.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.Response
+import edu.cmu.cs.ls.keymaerax.info.ArchType
 import spray.json.{JsObject, JsString, JsValue}
 
 class SystemInfoResponse(
@@ -14,7 +15,7 @@ class SystemInfoResponse(
     jvmHome: String,
     jvmVendor: String,
     jvmVersion: String,
-    jvmBits: String,
+    jvmBits: ArchType,
 ) extends Response {
   def getJson: JsValue = JsObject(
     "os" -> JsString(os),
@@ -22,6 +23,10 @@ class SystemInfoResponse(
     "jvmHome" -> JsString(jvmHome),
     "jvmVendor" -> JsString(jvmVendor),
     "jvmVersion" -> JsString(jvmVersion),
-    "jvmArchitecture" -> JsString(jvmBits),
+    "jvmArchitecture" -> JsString(jvmBits match {
+      case ArchType.Bit32 => "32"
+      case ArchType.Bit64 => "64"
+      case ArchType.Unknown => "unknown"
+    }),
   )
 }

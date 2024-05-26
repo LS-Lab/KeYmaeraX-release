@@ -5,9 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.install
 
-import java.util.Locale
-
-import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.info.{Os, OsType}
 
 /**
  * Created by smitsch on 7/14/15.
@@ -23,20 +21,12 @@ object DefaultConfiguration {
   var currentMathematicaConfig: Map[String, String] = defaultMathematicaConfig
 
   def defaultMathLinkName: (String, String) = {
-    var kernelName = ""
-    var jlinkFileName = ""
-    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
-    if (osName.contains("mac")) {
-      kernelName = "MathKernel"
-      jlinkFileName = "libJLinkNativeLibrary.jnilib"
-    } else if (osName.contains("windows")) {
-      kernelName = "MathKernel.exe"
-      jlinkFileName = "JLinkNativeLibrary.dll"
-    } else if (osName.contains("linux")) {
-      kernelName = "MathKernel"
-      jlinkFileName = "libJLinkNativeLibrary.so"
+    Os.Type match {
+      case OsType.Windows => ("MathKernel.exe", "JLinkNativeLibrary.dll")
+      case OsType.Linux => ("MathKernel", "libJLinkNativeLibrary.so")
+      case OsType.MacOs => ("MathKernel", "libJLinkNativeLibrary.jnilib")
+      case OsType.Unknown => ("", "")
     }
-    (kernelName, jlinkFileName)
   }
 
   def defaultMathematicaConfig: Map[String, String] = {

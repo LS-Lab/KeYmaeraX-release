@@ -5,6 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax
 
+import edu.cmu.cs.ls.keymaerax.info.{ArchType, Os}
+
 /**
  * Arithmetic back-ends and arithmetic utilities for tactics, including an SMT interface.
  *
@@ -19,16 +21,23 @@ package edu.cmu.cs.ls.keymaerax
 package object tools {
 
   /** Gather diagnostic information about the system configuration relevant to KeYmaera X and its tool integrations. */
-  def diagnostic: String =
-    ("Java Virtual Machine: " + System.getProperties.getProperty("sun.arch.data.model") + "-bit Java " +
-      System.getProperties.getProperty("java.runtime.version")) +
-      ("\nJava home:            " + System.getProperties.getProperty("java.home")) +
-      ("\nOperating system:     " + System.getProperties.getProperty("os.name") + " " +
-        System.getProperties.getProperty("os.version")) +
-      ("\nQE tool:              " + Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse("undefined")) +
-      ("\nMathematica J/Link:   " +
-        Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR).getOrElse("undefined")) +
-      ("\nWolfram Engine J/Link:" +
-        Configuration.getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR).getOrElse("undefined")) +
-      ("\nZ3:                   " + Configuration.getString(Configuration.Keys.Z3_PATH).getOrElse("undefined"))
+  def diagnostic: String = {
+    val jvmArch = Os.JvmArchType match {
+      case ArchType.Bit32 => "32-bit"
+      case ArchType.Bit64 => "64-bit"
+      case ArchType.Unknown => "???-bit"
+    }
+    val qeTool = Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse("undefined")
+    val mathematicaLibDir = Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR).getOrElse("undefined")
+    val wolframLibDir = Configuration.getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR).getOrElse("undefined")
+    val z3path = Configuration.getString(Configuration.Keys.Z3_PATH).getOrElse("undefined")
+    s"""Java Virtual Machine: $jvmArch Java ${System.getProperty("java.runtime.version")}
+       |Java home:            ${System.getProperty("java.home")}
+       |Operating system:     ${Os.Name} ${Os.Version}
+       |QE tool:              $qeTool
+       |Mathematica J/Link:   $mathematicaLibDir
+       |Wolfram Engine J/Link:$wolframLibDir
+       |Z3:                   $z3path
+       |""".stripMargin
+  }
 }

@@ -5,46 +5,41 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.install
 
-import edu.cmu.cs.ls.keymaerax.info.{Version, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.info.{ArchType, Os, OsType, Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import java.io.{File, FileOutputStream, InputStream, PrintWriter}
 import java.nio.channels.Channels
-import java.util.Locale
 
 /** Installs and/or updates the Z3 binary in the KeYmaera X directory. */
 object Z3Installer extends Logging {
+  val z3FileName: String = Os.Type match {
+    case OsType.Windows => "z3.exe"
+    case _ => "z3"
+  }
 
   /** The default z3 installation path. */
-  val defaultZ3Path: String = {
-    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
-    if (osName.contains("windows")) Configuration.KEYMAERAX_HOME_PATH + File.separator + "z3.exe"
-    else Configuration.KEYMAERAX_HOME_PATH + File.separator + "z3"
-  }
+  val defaultZ3Path: String = { Configuration.KEYMAERAX_HOME_PATH + File.separator + z3FileName }
 
   /**
    * Get the absolute path to the Z3 binary. Installs Z3 from the JAR if not installed yet, or if the KeYmaera X version
    * has updated.
    */
   val z3Path: String = {
-    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
     val z3ConfigPath = Configuration.path(Configuration.Keys.Z3_PATH)
     val z3Path = if (new File(z3ConfigPath).exists) z3ConfigPath else defaultZ3Path
-    val z3File =
-      if (new File(z3Path).isFile) new File(z3Path)
-      else if (osName.contains("windows")) new File(z3Path + File.separator + "z3.exe")
-      else new File(z3Path + File.separator + "z3")
+    val z3File = if (new File(z3Path).isFile) new File(z3Path) else new File(z3Path + File.separator + z3FileName)
     if (!z3File.getParentFile.exists) z3File.mkdirs
 
     val needsUpdate = !installedFromKyxVersion(defaultZ3Path).contains(Version)
     val z3AbsPath =
       if (z3ConfigPath == defaultZ3Path && needsUpdate) {
         logger.debug("Updating default Z3 binary...")
-        new File(copyToDisk(osName, new File(defaultZ3Path).getParent))
+        new File(copyToDisk(new File(defaultZ3Path).getParent))
       } else if (z3File.exists()) { z3File }
       else {
         logger.debug("Installing Z3 binary...")
-        new File(copyToDisk(osName, z3File.getParent))
+        new File(copyToDisk(z3File.getParent))
       }
 
     assert(z3AbsPath.exists())
@@ -74,23 +69,18 @@ object Z3Installer extends Logging {
   }
 
   /** Copies Z3 to the disk. Returns the path to the binary. */
-  def copyToDisk(osName: String, z3TempDir: String): String = {
+  def copyToDisk(z3TempDir: String): String = {
     // Update the version number.
     new PrintWriter(versionFile(z3TempDir)) { write(Version.toString); close() }
     // Copy z3 binary to disk.
-    val osArch = System.getProperty("os.arch")
-    var resource: InputStream = null
-    if (osName.contains("mac")) {
-      if (osArch.contains("64")) { resource = this.getClass.getResourceAsStream("/z3/mac64/z3") }
-    } else if (osName.contains("windows")) {
-      if (osArch.contains("64")) { resource = this.getClass.getResourceAsStream("/z3/windows64/z3.exe") }
-      else { resource = this.getClass.getResourceAsStream("/z3/windows32/z3.exe") }
-    } else if (osName.contains("linux")) {
-      if (osArch.contains("64")) { resource = this.getClass.getResourceAsStream("/z3/ubuntu64/z3") }
-      else { resource = this.getClass.getResourceAsStream("/z3/ubuntu32/z3") }
-    } else if (osName.contains("freebsd")) {
-      if (osArch.contains("64")) { resource = this.getClass.getResourceAsStream("/z3/freebsd64/z3") }
-    } else { throw new Exception("Z3 solver is currently not supported in your operating system.") }
+    val resource: InputStream = (Os.Type, Os.JvmArchType) match {
+      case (OsType.Windows, ArchType.Bit32) => this.getClass.getResourceAsStream("/z3/windows32/z3.exe")
+      case (OsType.Windows, ArchType.Bit64) => this.getClass.getResourceAsStream("/z3/windows64/z3.exe")
+      case (OsType.Linux, ArchType.Bit64) => this.getClass.getResourceAsStream("/z3/ubuntu64/z3")
+      case (OsType.MacOs, ArchType.Bit64) => this.getClass.getResourceAsStream("/z3/mac64/z3")
+      case (OsType.Unknown, _) => throw new Exception("Z3 solver is currently not supported in your operating system.")
+      case _ => null
+    }
     if (resource == null) {
       val z3 = new File(z3TempDir + File.separator + "z3")
       if (!z3.exists)
@@ -98,19 +88,17 @@ object Z3Installer extends Logging {
       else {
         val z3AbsPath = z3.getAbsolutePath
 
-        val permissionCmd =
-          if (osName.contains("windows")) { Array("icacls", z3AbsPath, "/e", "/p", "Everyone:F") }
-          else { Array("chmod", "u+x", z3AbsPath) }
+        val permissionCmd = Os.Type match {
+          case OsType.Windows => Array("icacls", z3AbsPath, "/e", "/p", "Everyone:F")
+          case _ => Array("chmod", "u+x", z3AbsPath)
+        }
         Runtime.getRuntime.exec(permissionCmd)
 
         return z3AbsPath
       }
     }
     val z3Source = Channels.newChannel(resource)
-    val z3Temp = {
-      if (osName.contains("windows")) { new File(z3TempDir, "z3.exe") }
-      else { new File(z3TempDir, "z3") }
-    }
+    val z3Temp = new File(z3TempDir, z3FileName)
 
     // Get a stream to the script in the resources dir
     val z3Dest = new FileOutputStream(z3Temp)
@@ -118,9 +106,10 @@ object Z3Installer extends Logging {
     z3Dest.getChannel.transferFrom(z3Source, 0, Long.MaxValue)
     val z3AbsPath = z3Temp.getAbsolutePath
 
-    val permissionCmd =
-      if (osName.contains("windows")) { Array("icacls", z3AbsPath, "/e", "/p", "Everyone:F") }
-      else { Array("chmod", "u+x", z3AbsPath) }
+    val permissionCmd = Os.Type match {
+      case OsType.Windows => Array("icacls", z3AbsPath, "/e", "/p", "Everyone:F")
+      case _ => Array("chmod", "u+x", z3AbsPath)
+    }
     // @todo Could change to only modify permissions of freshly extracted files not from others that happen to preexist. It's in KeYmaera's internal folders, though.
     Runtime.getRuntime.exec(permissionCmd)
 
