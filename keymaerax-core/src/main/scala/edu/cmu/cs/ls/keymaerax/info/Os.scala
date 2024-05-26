@@ -16,6 +16,19 @@ object OsType {
   case object Unknown extends OsType
 }
 
+// TODO Convert to Scala 3 enum
+sealed trait ArchType
+object ArchType {
+
+  /** x86, 64 bit */
+  case object Amd64 extends ArchType
+
+  /** ARM, 64 bit */
+  case object Aarch64 extends ArchType
+
+  case object Unknown extends ArchType
+}
+
 object Os {
   val Name: String = System.getProperty("os.name")
   val Version: String = System.getProperty("os.version")
@@ -43,5 +56,11 @@ object Os {
     case name if name.startsWith("linux") => OsType.Linux
     case name if name.startsWith("mac") => OsType.MacOs
     case _ => OsType.Unknown
+  }
+
+  val Arch: ArchType = System.getProperty("os.arch") match {
+    case "amd64" => ArchType.Amd64
+    case "aarch64" => ArchType.Aarch64
+    case _ => ArchType.Unknown
   }
 }
