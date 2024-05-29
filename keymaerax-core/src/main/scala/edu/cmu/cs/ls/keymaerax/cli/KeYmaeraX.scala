@@ -28,7 +28,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   PrettierPrintFormatProvider,
 }
 import edu.cmu.cs.ls.keymaerax.tools.ext.SmtLibReader
-import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolPathFinder}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
@@ -364,7 +364,7 @@ object KeYmaeraX {
         "libDir" -> options(Symbol("jlink")).toString,
         "tcpip" -> options.getOrElse(Symbol("tcpip"), "true").toString,
       )
-      else DefaultConfiguration.defaultMathematicaConfig
+      else ToolConfiguration.defaultMathematicaConfig
 
     val linkNamePath = mathematicaConfig.get("linkName") match {
       case Some(path) => path

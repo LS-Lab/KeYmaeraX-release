@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.install
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.tools.ToolPathFinder
 
 import scala.util.Try
 
@@ -16,6 +17,20 @@ import scala.util.Try
  *   Stefan Mitsch
  */
 object ToolConfiguration {
+  def defaultMathematicaConfig: Map[String, String] = {
+    val paths = ToolPathFinder
+      .findMathematicaInstallDir()
+      .flatMap(ToolPathFinder.findMathematicaPaths)
+      .getOrElse(return Map.empty)
+
+    Map(
+      "mathkernel" -> paths.mathKernel.toString,
+      "linkName" -> paths.mathKernel.toString,
+      "jlink" -> paths.jlinkLib.getParent.toString,
+      "libDir" -> paths.jlinkLib.getParent.toString,
+      "tcpip" -> "false",
+    )
+  }
 
   /** Returns the Mathematica configuration. */
   def mathematicaConfig(preferred: Map[String, String]): Map[String, String] = {
@@ -34,7 +49,7 @@ object ToolConfiguration {
       "tcpip" -> preferred.getOrElse("tcpip", tcpip),
     )
 
-    val defaultConfig = DefaultConfiguration.defaultMathematicaConfig
+    val defaultConfig = defaultMathematicaConfig
 
     val linkName = Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME).getOrElse(return defaultConfig)
 
@@ -44,6 +59,21 @@ object ToolConfiguration {
 
     // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
     Map("mathkernel" -> linkName, "linkName" -> linkName, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+  }
+
+  def defaultWolframEngineConfig: Map[String, String] = {
+    val paths = ToolPathFinder
+      .findMathematicaInstallDir()
+      .flatMap(ToolPathFinder.findMathematicaPaths)
+      .getOrElse(return Map.empty)
+
+    Map(
+      "mathkernel" -> paths.mathKernel.toString,
+      "linkName" -> paths.mathKernel.toString,
+      "jlink" -> paths.jlinkLib.getParent.toString,
+      "libDir" -> paths.jlinkLib.getParent.toString,
+      "tcpip" -> "true",
+    )
   }
 
   /** Returns the Wolfram Engine configuration. */
@@ -63,7 +93,7 @@ object ToolConfiguration {
       "tcpip" -> preferred.getOrElse("tcpip", tcpip),
     )
 
-    val defaultConfig = DefaultConfiguration.defaultWolframEngineConfig
+    val defaultConfig = defaultWolframEngineConfig
 
     val linkName = Configuration.getString(Configuration.Keys.WOLFRAMENGINE_LINK_NAME).getOrElse(return defaultConfig)
 
