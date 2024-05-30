@@ -101,7 +101,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
 
     initialized = link match {
       case l: JLinkMathematicaLink =>
-        val linkName = config.linkName match {
+        val linkName = config.mathKernel match {
           case Some(ln) => ln
           case None => throw new IllegalArgumentException(
               """Mathematica not configured. Missing configuration parameter 'linkName'
@@ -111,7 +111,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
               """.stripMargin
             )
         }
-        val libDir = config.libDir // doesn't need to be defined
+        val libDir = config.jlinkLibDir // doesn't need to be defined
         l.init(linkName, libDir, config.tcpip.getOrElse("true"))
       case l: WolframScript => l.init()
     }

@@ -302,10 +302,8 @@ object KeYmaeraX {
   def combineToolConfigs(primary: ToolConfiguration, secondary: ToolConfiguration): ToolConfiguration =
     ToolConfiguration(
       tool = primary.tool.orElse(secondary.tool),
-      mathkernel = primary.mathkernel.orElse(secondary.mathkernel),
-      linkName = primary.linkName.orElse(secondary.linkName),
-      jlink = primary.jlink.orElse(secondary.jlink),
-      libDir = primary.libDir.orElse(secondary.libDir),
+      mathKernel = primary.mathKernel.orElse(secondary.mathKernel),
+      jlinkLibDir = primary.jlinkLibDir.orElse(secondary.jlinkLibDir),
       tcpip = primary.tcpip.orElse(secondary.tcpip),
       z3Path = primary.z3Path.orElse(secondary.z3Path),
     )
@@ -352,20 +350,17 @@ object KeYmaeraX {
    */
   private def mathematicaConfig(options: ToolConfiguration, usage: String): ToolConfiguration = {
     assert(
-      options.mathkernel.isDefined != options.jlink.isDefined,
+      options.mathKernel.isDefined != options.jlinkLibDir.isDefined,
       "[Error] Please always use the command line options -mathkernel and -jlink together.",
     )
 
     val mathematicaConfig =
-      if (options.mathkernel.isDefined && options.jlink.isDefined) ToolConfiguration(
-        linkName = Some(options.mathkernel.get),
-        libDir = Some(options.jlink.get),
-        tcpip = Some(options.tcpip.getOrElse("true")),
-      )
-      else ToolConfiguration.defaultMathematicaConfig
+      if (options.mathKernel.isDefined && options.jlinkLibDir.isDefined) {
+        options.copy(tcpip = options.tcpip.orElse(Some("true")))
+      } else ToolConfiguration.defaultMathematicaConfig
 
-    val linkNamePath = mathematicaConfig.linkName.getOrElse("")
-    val libDirPath = mathematicaConfig.libDir.getOrElse("")
+    val linkNamePath = mathematicaConfig.mathKernel.getOrElse("")
+    val libDirPath = mathematicaConfig.jlinkLibDir.getOrElse("")
     assert(
       linkNamePath != "" && libDirPath != "",
       """[Error] Could not locate math kernel and jlink library.

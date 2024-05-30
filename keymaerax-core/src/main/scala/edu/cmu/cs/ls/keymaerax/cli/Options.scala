@@ -43,10 +43,8 @@ case class Options(
 ) {
   def toToolConfig: ToolConfiguration = ToolConfiguration(
     tool = this.tool,
-    mathkernel = this.mathkernel,
-    linkName = None,
-    jlink = this.jlink,
-    libDir = None,
+    mathKernel = this.mathkernel,
+    jlinkLibDir = this.jlink,
     tcpip = None,
     z3Path = this.z3Path,
   )

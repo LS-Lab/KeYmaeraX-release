@@ -37,8 +37,8 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
         val (provider: Option[ToolProvider], saveToConfig: Boolean) = tool match {
           case "mathematica" =>
             if (
-              new java.io.File(config.linkName.getOrElse("")).exists &&
-              new java.io.File(config.libDir.getOrElse("")).exists
+              new java.io.File(config.mathKernel.getOrElse("")).exists &&
+              new java.io.File(config.jlinkLibDir.getOrElse("")).exists
             ) {
               if (
                 Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
@@ -48,8 +48,8 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
             } else { (Some(Z3ToolProvider()), false) }
           case "wolframengine" =>
             if (
-              new java.io.File(config.linkName.getOrElse("")).exists &&
-              new java.io.File(config.libDir.getOrElse("")).exists
+              new java.io.File(config.mathKernel.getOrElse("")).exists &&
+              new java.io.File(config.jlinkLibDir.getOrElse("")).exists
             ) {
               if (
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&

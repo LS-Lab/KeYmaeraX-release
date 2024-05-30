@@ -12,10 +12,8 @@ import scala.util.Try
 
 case class ToolConfiguration(
     tool: Option[String] = None,
-    mathkernel: Option[String] = None,
-    linkName: Option[String] = None,
-    jlink: Option[String] = None,
-    libDir: Option[String] = None,
+    mathKernel: Option[String] = None,
+    jlinkLibDir: Option[String] = None,
     tcpip: Option[String] = None,
     z3Path: Option[String] = None,
 )
@@ -34,30 +32,21 @@ object ToolConfiguration {
       .getOrElse(return ToolConfiguration())
 
     ToolConfiguration(
-      mathkernel = Some(paths.mathKernel.toString),
-      linkName = Some(paths.mathKernel.toString),
-      jlink = Some(paths.jlinkLib.getParent.toString),
-      libDir = Some(paths.jlinkLib.getParent.toString),
+      mathKernel = Some(paths.mathKernel.toString),
+      jlinkLibDir = Some(paths.jlinkLib.getParent.toString),
       tcpip = Some("false"),
     )
   }
 
   /** Returns the Mathematica configuration. */
   def mathematicaConfig(preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration = {
-    def tcpip: String = {
-      Configuration
-        .getString(Configuration.Keys.MATH_LINK_TCPIP)
-        .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
-        .getOrElse("false")
-    }
+    def tcpip: String = Configuration
+      .getString(Configuration.Keys.MATH_LINK_TCPIP)
+      .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
+      .getOrElse("false")
 
-    if (preferred.mathkernel.isDefined && preferred.jlink.isDefined) return ToolConfiguration(
-      mathkernel = Some(preferred.mathkernel.get),
-      linkName = Some(preferred.mathkernel.get),
-      jlink = Some(preferred.jlink.get),
-      libDir = Some(preferred.jlink.get),
-      tcpip = Some(preferred.tcpip.getOrElse(tcpip)),
-    )
+    if (preferred.mathKernel.isDefined && preferred.jlinkLibDir.isDefined)
+      return preferred.copy(tcpip = preferred.tcpip.orElse(Some(tcpip)))
 
     val defaultConfig = defaultMathematicaConfig
 
@@ -65,16 +54,9 @@ object ToolConfiguration {
 
     val libDir = Configuration
       .getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
-      .getOrElse(defaultConfig.libDir.get)
+      .getOrElse(defaultConfig.jlinkLibDir.get)
 
-    // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-    ToolConfiguration(
-      mathkernel = Some(linkName),
-      linkName = Some(linkName),
-      libDir = Some(libDir),
-      jlink = Some(libDir),
-      tcpip = Some(tcpip),
-    )
+    ToolConfiguration(mathKernel = Some(linkName), jlinkLibDir = Some(libDir), tcpip = Some(tcpip))
   }
 
   def defaultWolframEngineConfig: ToolConfiguration = {
@@ -84,30 +66,21 @@ object ToolConfiguration {
       .getOrElse(return ToolConfiguration())
 
     ToolConfiguration(
-      mathkernel = Some(paths.mathKernel.toString),
-      linkName = Some(paths.mathKernel.toString),
-      jlink = Some(paths.jlinkLib.getParent.toString),
-      libDir = Some(paths.jlinkLib.getParent.toString),
+      mathKernel = Some(paths.mathKernel.toString),
+      jlinkLibDir = Some(paths.jlinkLib.getParent.toString),
       tcpip = Some("true"),
     )
   }
 
   /** Returns the Wolfram Engine configuration. */
   def wolframEngineConfig(preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration = {
-    def tcpip: String = {
-      Configuration
-        .getString(Configuration.Keys.WOLFRAMENGINE_TCPIP)
-        .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
-        .getOrElse("true")
-    }
+    def tcpip: String = Configuration
+      .getString(Configuration.Keys.WOLFRAMENGINE_TCPIP)
+      .map(s => Try(Integer.parseInt(s)).getOrElse(s).toString)
+      .getOrElse("true")
 
-    if (preferred.mathkernel.isDefined && preferred.jlink.isDefined) return ToolConfiguration(
-      mathkernel = Some(preferred.mathkernel.get),
-      linkName = Some(preferred.mathkernel.get),
-      jlink = Some(preferred.jlink.get),
-      libDir = Some(preferred.jlink.get),
-      tcpip = Some(preferred.tcpip.getOrElse(tcpip)),
-    )
+    if (preferred.mathKernel.isDefined && preferred.jlinkLibDir.isDefined)
+      return preferred.copy(tcpip = preferred.tcpip.orElse(Some(tcpip)))
 
     val defaultConfig = defaultWolframEngineConfig
 
@@ -115,16 +88,9 @@ object ToolConfiguration {
 
     val libDir = Configuration
       .getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)
-      .getOrElse(defaultConfig.libDir.get)
+      .getOrElse(defaultConfig.jlinkLibDir.get)
 
-    // @todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-    ToolConfiguration(
-      mathkernel = Some(linkName),
-      linkName = Some(linkName),
-      libDir = Some(libDir),
-      jlink = Some(libDir),
-      tcpip = Some(tcpip),
-    )
+    ToolConfiguration(mathKernel = Some(linkName), jlinkLibDir = Some(libDir), tcpip = Some(tcpip))
   }
 
   /** Returns the Wolfram Engine configuration. */
