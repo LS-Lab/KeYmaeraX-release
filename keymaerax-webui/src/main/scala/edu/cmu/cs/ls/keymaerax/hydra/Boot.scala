@@ -86,8 +86,8 @@ object HyDRAInitializer extends Logging {
 
     try {
       val preferredTool = preferredToolFromConfig
-      val config = toolConfig(options.toOptionMap, preferredTool)
-      createTool(options.toOptionMap, config, preferredTool)
+      val config = toolConfig(options, preferredTool)
+      createTool(options, config, preferredTool)
     } catch {
       case e: Throwable =>
         val msg = s"""===> WARNING: Failed to initialize Mathematica.
@@ -140,8 +140,8 @@ object HyDRAInitializer extends Logging {
     }
   }
 
-  private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
-    val tool: String = options.getOrElse(Symbol("tool"), preferredTool).toString
+  private def createTool(options: Options, config: ToolProvider.Configuration, preferredTool: String): Unit = {
+    val tool: String = options.tool.getOrElse(preferredTool)
     val provider = tool.toLowerCase() match {
       case "mathematica" => ToolProvider.initFallbackZ3(MathematicaToolProvider(config), "Mathematica")
       case "wolframengine" => ToolProvider.initFallbackZ3(WolframEngineToolProvider(config), "Wolfram Engine")
@@ -153,10 +153,9 @@ object HyDRAInitializer extends Logging {
     assert(provider.tools().forall(_.isInitialized), "Tools should be initialized after init()")
   }
 
-  private def toolConfig(options: OptionMap, preferredTool: String): ToolProvider.Configuration = {
-    val tool: String = options.getOrElse(Symbol("tool"), preferredTool).toString
-    ToolConfiguration
-      .config(tool.toLowerCase, options.map({ case (k, v) => k.toString.stripPrefix("'") -> v.toString }))
+  private def toolConfig(options: Options, preferredTool: String): ToolProvider.Configuration = {
+    val tool: String = options.tool.getOrElse(preferredTool)
+    ToolConfiguration.config(tool.toLowerCase, options.toOptionMap.map({ case (k, v) => k.name -> v.toString }))
   }
 
   private def preferredToolFromConfig: String = {
