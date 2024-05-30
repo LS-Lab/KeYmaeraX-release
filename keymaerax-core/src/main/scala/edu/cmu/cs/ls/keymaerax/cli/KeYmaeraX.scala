@@ -102,7 +102,7 @@ object KeYmaeraX {
         println("...done")
       case Some(Modes.CONVERT) =>
         initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
-        convert(options.toOptionMap, usage)
+        convert(options, usage)
       case command => println("WARNING: Unknown command " + command)
     }
   }
@@ -431,9 +431,9 @@ object KeYmaeraX {
   }
 
   /** Converts input files. */
-  def convert(options: OptionMap, usage: String): Unit = {
-    require(options.contains(Symbol("in")) && options.contains(Symbol("conversion")), usage)
-    options(Symbol("conversion")) match {
+  def convert(options: Options, usage: String): Unit = {
+    require(options.in.isDefined && options.conversion.isDefined, usage)
+    options.conversion.get match {
       case Conversions.STRIPHINTS => stripHints(options, usage)
       case Conversions.KYX2SMT => kyx2smt(options, usage)
       case Conversions.KYX2MAT => kyx2mat(options, usage)
@@ -444,7 +444,7 @@ object KeYmaeraX {
   }
 
   /** Strips proof hints from the model. */
-  private def stripHints(options: OptionMap, usage: String): Unit = {
+  private def stripHints(options: Options, usage: String): Unit = {
     val converter = (kyxFile: String) => {
       val archiveContent = ArchiveParser.parseFromFile(kyxFile)
 
@@ -477,7 +477,7 @@ object KeYmaeraX {
   }
 
   /** Converts KeYmaera X to SMT-Lib format. */
-  private def kyx2smt(options: OptionMap, usage: String): Unit = {
+  private def kyx2smt(options: Options, usage: String): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
       archiveContent
@@ -493,7 +493,7 @@ object KeYmaeraX {
   }
 
   /** Converts KeYmaera X to Mathematica. */
-  private def kyx2mat(options: OptionMap, usage: String): Unit = {
+  private def kyx2mat(options: Options, usage: String): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
       archiveContent
@@ -507,14 +507,14 @@ object KeYmaeraX {
   }
 
   /** Converts SMT-Lib format to KeYmaera X. */
-  private def smt2kyx(options: OptionMap, usage: String): Unit = {
+  private def smt2kyx(options: Options, usage: String): Unit = {
     val converter =
       (fileName: String) => { SmtLibReader.read(new FileReader(fileName))._1.map(_.prettyString).mkString("\n") }
     convert(options, converter, usage)
   }
 
   /** Converts SMT-Lib format to Mathematica. */
-  private def smt2mat(options: OptionMap, usage: String): Unit = {
+  private def smt2mat(options: Options, usage: String): Unit = {
     val converter = (fileName: String) => {
       val (kyx, _) = SmtLibReader.read(new FileReader(fileName))
       kyx.map(KeYmaeraToMathematica).mkString("\n")
@@ -523,11 +523,11 @@ object KeYmaeraX {
   }
 
   /** Converts the content of a file using the `converter` fileName => content. */
-  private def convert(options: OptionMap, converter: String => String, usage: String): Unit = {
-    require(options.contains(Symbol("in")), usage)
-    val kyxFile = options(Symbol("in")).toString
+  private def convert(options: Options, converter: String => String, usage: String): Unit = {
+    require(options.in.isDefined, usage)
+    val kyxFile = options.in.get
     val converted = converter(kyxFile)
-    options.get(Symbol("out")).map(_.toString) match {
+    options.out match {
       case Some(outFile) =>
         val pw = new PrintWriter(outFile)
         pw.write(converted)
