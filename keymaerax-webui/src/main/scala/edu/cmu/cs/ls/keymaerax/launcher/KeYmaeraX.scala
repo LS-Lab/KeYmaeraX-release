@@ -227,6 +227,9 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(timeout = Some(value.toLong)), tail)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case "-verify" :: tail => require(map.verify.isEmpty); nextOption(map.copy(verify = Some(true)), tail)
+      case "-open" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(open = Some(value)), tail)
+        else { Usage.optionErrorReporter("-open", usage); exit(1) }
       case _ =>
         val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
         if (unprocessedArgs == list) {

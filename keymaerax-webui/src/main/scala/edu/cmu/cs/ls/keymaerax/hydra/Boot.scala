@@ -80,14 +80,14 @@ object HyDRAInitializer extends Logging {
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
   def apply(args: Array[String], database: DBAbstraction): String = {
-    val options = KeYmaeraX.nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList).toOptionMap
+    val options = KeYmaeraX.nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList)
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 
     try {
       val preferredTool = preferredToolFromConfig
-      val config = toolConfig(options, preferredTool)
-      createTool(options, config, preferredTool)
+      val config = toolConfig(options.toOptionMap, preferredTool)
+      createTool(options.toOptionMap, config, preferredTool)
     } catch {
       case e: Throwable =>
         val msg = s"""===> WARNING: Failed to initialize Mathematica.
@@ -117,7 +117,7 @@ object HyDRAInitializer extends Logging {
       }
     }
 
-    options.get(Symbol("open")) match {
+    options.open match {
       case None => "" // @note start with model list
       case Some(archive) =>
         if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
