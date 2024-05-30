@@ -132,7 +132,7 @@ object KeYmaeraX {
           modelplex(options)
         case Some(Modes.REPL) =>
           initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
-          repl(options.toOptionMap)
+          repl(options)
         case Some(Modes.UI) => launchUI(args) // @note prover initialized in web UI launcher
         case Some(Modes.CONVERT) => options.conversion match {
             case Some("verboseTactics") | Some("verbatimTactics") =>
@@ -407,11 +407,11 @@ object KeYmaeraX {
     }
   }
 
-  def repl(options: OptionMap): Unit = {
-    require(options.contains(Symbol("model")), usage)
-    val modelFileNameDotKyx = options(Symbol("model")).toString
-    val tacticFileNameDotKyt = options.get(Symbol("tactic")).map(_.toString)
-    val scaladefsFilename = options.get(Symbol("scaladefs")).map(_.toString)
+  def repl(options: Options): Unit = {
+    require(options.model.isDefined, usage)
+    val modelFileNameDotKyx = options.model.get
+    val tacticFileNameDotKyt = options.tactic
+    val scaladefsFilename = options.scaladefs
     assert(
       modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx +
