@@ -38,6 +38,7 @@ case class Options(
     interactive: Option[Boolean] = None,
     interval: Option[Boolean] = None,
     dnf: Option[Boolean] = None,
+    verify: Option[Boolean] = None,
 ) {
   def toOptionMap: OptionMap = List(
     this.commandLine.map(Symbol("commandLine") -> _),
@@ -69,5 +70,6 @@ case class Options(
     this.interactive.map(Symbol("interactive") -> _),
     this.interval.map(Symbol("interval") -> _),
     this.dnf.map(Symbol("dnf") -> _),
+    this.verify.map(Symbol("verify") -> _),
   ).flatten.toMap
 }

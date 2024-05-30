@@ -12,7 +12,14 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Options, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{DBTools, DbProofTree, LabelledTraceToTacticConverter, TempDBTools, VerbatimTraceToTacticConverter, VerboseTraceToTacticConverter}
+import edu.cmu.cs.ls.keymaerax.hydra.{
+  DBTools,
+  DbProofTree,
+  LabelledTraceToTacticConverter,
+  TempDBTools,
+  VerbatimTraceToTacticConverter,
+  VerboseTraceToTacticConverter,
+}
 import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -122,7 +129,7 @@ object KeYmaeraX {
           CodeGen.codegen(options, usage)
         case Some(Modes.MODELPLEX) =>
           initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
-          modelplex(options.toOptionMap)
+          modelplex(options)
         case Some(Modes.REPL) =>
           initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
           repl(options.toOptionMap)
@@ -219,6 +226,7 @@ object KeYmaeraX {
       case "-timeout" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(timeout = Some(value.toLong)), tail)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
+      case "-verify" :: tail => require(map.verify.isEmpty); nextOption(map.copy(verify = Some(true)), tail)
       case _ =>
         val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
         if (unprocessedArgs == list) {
@@ -235,44 +243,43 @@ object KeYmaeraX {
    * @param options
    *   in describes input file name, vars describes the list of variables, out describes the output file name.
    */
-  def modelplex(options: OptionMap): Unit = {
+  def modelplex(options: Options): Unit = {
     // @TODO remove option, hol config no longer necessary
-    if (options.contains(Symbol("ptOut"))) {
+    if (options.ptOut.isDefined) {
       // @TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
       ProvableSig.PROOF_TERMS_ENABLED = false
     } else { ProvableSig.PROOF_TERMS_ENABLED = false }
-    require(options.contains(Symbol("in")), usage)
+    require(options.in.isDefined, usage)
 
-    val in = options(Symbol("in")).toString
+    val in = options.in.get
     val inputEntry = ArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
 
     val verifyOption: Option[ProvableSig => Unit] =
-      if (options.getOrElse(Symbol("verify"), false).asInstanceOf[Boolean]) {
+      if (options.verify.getOrElse(false)) {
         Some({
           case ptp: TermProvable =>
             val conv = new IsabelleConverter(ptp.pt)
             val source = conv.sexp
-            val pwPt = new PrintWriter(options(Symbol("ptOut")).asInstanceOf[String] + ".pt")
+            val pwPt = new PrintWriter(options.ptOut.get + ".pt")
             pwPt.write(source)
             pwPt.close()
           case _: ProvableSig => ()
         })
-      } else Some { case _ => () }
+      } else Some(_ => ())
     // val isarOption = options.getOrElse('isar,false).asInstanceOf[Boolean]
 
     val inputFileName = in.split('#')(0).dropRight(4)
 
-    val outputFileName =
-      if (options.contains(Symbol("out"))) options(Symbol("out")).toString else inputFileName + ".kym"
+    val outputFileName = options.out.getOrElse(inputFileName + ".kym")
 
     val kind =
-      if (options.contains(Symbol("sandbox"))) Symbol("sandbox")
-      else if (options.contains(Symbol("monitor"))) options(Symbol("monitor")).asInstanceOf[Symbol]
+      if (options.sandbox.isDefined) Symbol("sandbox")
+      else if (options.monitor.isDefined) options.monitor.get
       else Symbol("model")
 
-    if (options.contains(Symbol("sandbox"))) {
-      val fallback = options.get(Symbol("fallback")) match {
+    if (options.sandbox.isDefined) {
+      val fallback = options.fallback match {
         case Some(fallbackPrgString: String) => fallbackPrgString.asProgram
         case _ => inputEntry.model match {
             case Imply(_, Box(Loop(Compose(ctrl, _)), _)) => ctrl
@@ -362,9 +369,8 @@ object KeYmaeraX {
       pw.write(archive)
       pw.close()
       println(s"Sandbox synthesis successful: $outputFileName")
-    } else if (options.contains(Symbol("vars"))) {
-      val result =
-        ModelPlex(options(Symbol("vars")).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
+    } else if (options.vars.isDefined) {
+      val result = ModelPlex(options.vars.get.toList, kind, verifyOption)(inputModel)
       printModelplexResult(inputModel, result, outputFileName, options)
     } else {
       val result = ModelPlex(inputModel, kind, verifyOption)
@@ -372,12 +378,12 @@ object KeYmaeraX {
     }
   }
 
-  private def printModelplexResult(model: Formula, fml: Formula, outputFileName: String, options: OptionMap): Unit = {
+  private def printModelplexResult(model: Formula, fml: Formula, outputFileName: String, options: Options): Unit = {
     val output = PrettyPrinter(fml)
     val reparse = Parser(output)
     assert(reparse == fml, "parse of print is identity")
     val pw = new PrintWriter(outputFileName)
-    pw.write(EvidencePrinter.stampHead(options))
+    pw.write(EvidencePrinter.stampHead(options.toOptionMap))
     pw.write("/* @evidence: parse of print of ModelPlex proof output */\n\n")
     pw.write(
       "/************************************\n * Generated by KeYmaera X ModelPlex\n ************************************/\n\n"
@@ -388,16 +394,13 @@ object KeYmaeraX {
     pw.write(output)
     pw.close()
 
-    options.get(Symbol("ptOut")) match {
+    options.ptOut match {
       case Some(path: String) =>
         val pwHOL = new PrintWriter(outputFileName + ".holconfiggen")
         // @TODO: Robustify
         val Imply(init, Box(Compose(Test(bounds), Loop(Compose(ctrl, plant))), safe)) = model
         val consts = StaticSemantics.signature(model)
-        pwHOL.write(
-          HOLConverter
-            .configFile(consts, options(Symbol("vars")).asInstanceOf[Array[Variable]].toList, bounds, init, fml)
-        )
+        pwHOL.write(HOLConverter.configFile(consts, options.vars.get.toList, bounds, init, fml))
         pwHOL.close()
 
       case None => ()
