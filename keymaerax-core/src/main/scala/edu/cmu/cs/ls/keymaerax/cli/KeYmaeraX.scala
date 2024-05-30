@@ -91,7 +91,7 @@ object KeYmaeraX {
     options.mode match {
       case Some(Modes.GRADE) =>
         initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
-        AssessmentProver.grade(options.toOptionMap, System.out, System.out, usage)
+        AssessmentProver.grade(options, System.out, System.out, usage)
       case Some(Modes.PROVE) =>
         initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
         KeYmaeraXProofChecker.prove(options.toOptionMap, usage)

@@ -5,20 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{
-  BufferedOutputStream,
-  BufferedWriter,
-  File,
-  FileOutputStream,
-  FileReader,
-  FileWriter,
-  IOException,
-  OutputStream,
-  PrintStream,
-  PrintWriter,
-}
-import java.util.Properties
-import java.util.concurrent.TimeoutException
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{
   BelleExpr,
@@ -32,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{
   TacticInapplicableFailure,
 }
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{
   Ax,
   ConfigurableGenerator,
@@ -43,15 +30,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.{
   TactixInit,
   ToolProvider,
 }
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
-import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.AskQuestion.extractSolfinAnswers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{
   ArchiveParser,
   Declaration,
@@ -61,11 +47,13 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   Parser,
   PrettierPrintFormatProvider,
 }
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import spray.json._
 
+import java.io.{BufferedWriter, File, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
+import java.util.Properties
+import java.util.concurrent.TimeoutException
 import scala.annotation.tailrec
 import scala.collection.immutable.{HashSet, IndexedSeq, Nil}
 import scala.collection.mutable.ListBuffer
@@ -1531,44 +1519,13 @@ object AssessmentProver {
    * @param options
    *   The prover options:
    *   - 'in (mandatory) identifies the file to grade
-   *   - 'res (optional) result file
-   *   - 'msg (optional) message file
-   */
-  def grade(options: OptionMap, usage: String): Unit = {
-    val inputFileName = options(Symbol("in")).toString
-    val resultFileName = options.getOrElse(Symbol("res"), inputFileName + ".res.json").toString
-    val msgFileName = options.getOrElse(Symbol("msg"), inputFileName + ".log").toString
-    val resultOut = new BufferedOutputStream(new FileOutputStream(resultFileName))
-    val msgOut = new BufferedOutputStream(new FileOutputStream(msgFileName))
-    try { grade(options, msgOut, resultOut, usage) }
-    catch {
-      case ex: Throwable =>
-        msgOut.flush()
-        val writer = new PrintWriter(msgOut)
-        ex.printStackTrace(writer)
-        writer.flush()
-        writer.close()
-    } finally {
-      msgOut.flush()
-      msgOut.close()
-      resultOut.flush()
-      resultOut.close()
-    }
-  }
-
-  /**
-   * Grades a submission.
-   *
-   * @param options
-   *   The prover options:
-   *   - 'in (mandatory) identifies the file to grade
    *   - 'exportanswers (optional) exports answers to text files instead of grading
    *   - 'skiponparseerror (optional) skips grading on parse errors
    */
-  def grade(options: OptionMap, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
-    require(options.contains(Symbol("in")), usage)
+  def grade(options: Options, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
+    require(options.in.isDefined, usage)
 
-    val inputFileName = options(Symbol("in")).toString
+    val inputFileName = options.in.get
     val src = Source.fromFile(inputFileName, "UTF-8")
     val input =
       try { src.mkString.parseJson }
@@ -1578,10 +1535,9 @@ object AssessmentProver {
       input.convertTo[Submission.Chapter]
     }
 
-    if (options.getOrElse(Symbol("exportanswers"), "false").toString.toBoolean) {
-      exportAnswers(chapter, options.getOrElse(Symbol("out"), ".").toString)
-    } else {
-      val skipGradingOnParseError = options.get(Symbol("skiponparseerror")).exists(_.toString.toBoolean)
+    if (options.exportanswers.getOrElse(false)) { exportAnswers(chapter, options.out.getOrElse(".")) }
+    else {
+      val skipGradingOnParseError = options.skiponparseerror.getOrElse(false)
       grade(chapter, msgOut, resultOut, skipGradingOnParseError)
     }
   }

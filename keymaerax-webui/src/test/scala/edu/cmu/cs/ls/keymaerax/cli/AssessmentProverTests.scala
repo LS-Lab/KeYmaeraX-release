@@ -1660,7 +1660,7 @@ class AssessmentProverTests extends TacticTestBase {
     w.flush()
     w.close()
 
-    val options = Map(Symbol("in") -> f.getAbsolutePath)
+    val options = Options(in = Some(f.getAbsolutePath))
     val msgsStream = new ByteArrayOutputStream()
     val resultsStream = new ByteArrayOutputStream()
     AssessmentProver.grade(options, msgsStream, resultsStream, "")
