@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
-import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Usage}
+import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Options, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{
   DBTools,
@@ -116,7 +116,7 @@ object KeYmaeraX {
     println("Use option -help for usage and license information")
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(
-      nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList),
+      nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList).toOptionMap,
       Map(Symbol("mode") -> Modes.UI),
     )
 
@@ -177,57 +177,57 @@ object KeYmaeraX {
   }
 
   @tailrec
-  def nextOption(map: OptionMap, list: List[String]): OptionMap = {
+  def nextOption(map: Options, list: List[String]): Options = {
     list match {
       case Nil => map
       case "-help" :: _ => println(usage); exit(1)
       // actions
-      case "-sandbox" :: tail => nextOption(map ++ Map(Symbol("sandbox") -> true), tail)
+      case "-sandbox" :: tail => nextOption(map.copy(sandbox = Some(true)), tail)
       case "-modelplex" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map ++ Map(Symbol("mode") -> Modes.MODELPLEX, Symbol("in") -> value), tail)
+          nextOption(map.copy(mode = Some(Modes.MODELPLEX), in = Some(value)), tail)
         else { Usage.optionErrorReporter("-modelPlex", usage); exit(1) }
-      case "-isar" :: tail => nextOption(map ++ Map(Symbol("isar") -> true), tail)
+      case "-isar" :: tail => nextOption(map.copy(isar = Some(true)), tail)
       case "-codegen" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map ++ Map(Symbol("mode") -> Modes.CODEGEN, Symbol("in") -> value), tail)
+          nextOption(map.copy(mode = Some(Modes.CODEGEN), in = Some(value)), tail)
         else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
-      case "-quantitative" :: tail => nextOption(map ++ Map(Symbol("quantitative") -> true), tail)
+      case "-quantitative" :: tail => nextOption(map.copy(quantitative = Some(true)), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
-        val newMap = List(Symbol("tactic"), Symbol("scaladefs"))
-          .zip(posArgs)
-          .foldLeft(map) { case (acc, (k, v)) => acc ++ Map(k -> v) }
+        val newMap = posArgs match {
+          case Nil => map
+          case tactic :: Nil => map.copy(tactic = Some(tactic))
+          case tactic :: scaladefs :: _ => map.copy(tactic = Some(tactic), scaladefs = Some(scaladefs))
+        }
         if (model.nonEmpty && !model.toString.startsWith("-"))
-          nextOption(newMap ++ Map(Symbol("mode") -> Modes.REPL, Symbol("model") -> model), restArgs)
+          nextOption(newMap.copy(mode = Some(Modes.REPL), model = Some(model)), restArgs)
         else { Usage.optionErrorReporter("-repl", usage); exit(1) }
-      case "-ui" :: tail => /*launchUI(tail.toArray);*/ nextOption(map ++ Map(Symbol("mode") -> Modes.UI), tail)
+      case "-ui" :: tail => /*launchUI(tail.toArray);*/ nextOption(map.copy(mode = Some(Modes.UI)), tail)
       // action options
       case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("out") -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(out = Some(value)), tail)
         else { Usage.optionErrorReporter("-out", usage); exit(1) }
       case "-fallback" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("fallback") -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(fallback = Some(value)), tail)
         else { Usage.optionErrorReporter("-fallback", usage); exit(1) }
       case "-vars" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map ++ Map(Symbol("vars") -> makeVariables(value.split(","))), tail)
+          nextOption(map.copy(vars = Some(makeVariables(value.split(",")))), tail)
         else { Usage.optionErrorReporter("-vars", usage); exit(1) }
       case "-monitor" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("monitor") -> Symbol(value)), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(monitor = Some(Symbol(value))), tail)
         else { Usage.optionErrorReporter("-monitor", usage); exit(1) }
-      case "-interactive" :: tail => nextOption(map ++ Map(Symbol("interactive") -> true), tail)
+      case "-interactive" :: tail => nextOption(map.copy(interactive = Some(true)), tail)
       // aditional options
-      case "-interval" :: tail =>
-        require(!map.contains(Symbol("interval"))); nextOption(map ++ Map(Symbol("interval") -> true), tail)
-      case "-nointerval" :: tail =>
-        require(!map.contains(Symbol("interval"))); nextOption(map ++ Map(Symbol("interval") -> false), tail)
-      case "-dnf" :: tail => require(!map.contains(Symbol("dnf"))); nextOption(map ++ Map(Symbol("dnf") -> true), tail)
+      case "-interval" :: tail => require(map.interval.isEmpty); nextOption(map.copy(interval = Some(true)), tail)
+      case "-nointerval" :: tail => require(map.interval.isEmpty); nextOption(map.copy(interval = Some(false)), tail)
+      case "-dnf" :: tail => require(map.dnf.isEmpty); nextOption(map.copy(dnf = Some(true)), tail)
       // global options
       case "-launch" :: tail => launched(); nextOption(map, tail)
       case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map(Symbol("timeout") -> value.toLong), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(timeout = Some(value.toLong)), tail)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ =>
         val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)

@@ -79,9 +79,9 @@ object KeYmaeraX {
     // @note 'commandLine is passed in to preserve evidence of what generated the output.
     Configuration.setConfiguration(FileConfiguration)
     val (options, unprocessedArgs) =
-      nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList, Usage.cliUsage)
+      nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
-    try { runCommand(options, Usage.cliUsage) }
+    try { runCommand(options.toOptionMap, Usage.cliUsage) }
     finally { shutdownProver() }
   }
 
@@ -152,70 +152,68 @@ object KeYmaeraX {
 
   /** Fills `options` from `args`, printing `usage` on error. */
   @tailrec
-  def nextOption(options: OptionMap, args: List[String], usage: String): (OptionMap, List[String]) = {
+  def nextOption(options: Options, args: List[String], usage: String): (Options, List[String]) = {
     args match {
       case Nil => (options, args)
       case "-help" :: _ => println(usage); exit(1)
       case "-license" :: _ => println(License.license); exit(1)
       // actions and their options
       case "-bparse" :: value :: _ =>
-        initializeProver(options, usage) // @note parsing a tactic requires prover (AxiomInfo)
+        initializeProver(options.toOptionMap, usage) // @note parsing a tactic requires prover (AxiomInfo)
         if (parseBelleTactic(value)) exit(0) else exit(-1)
       case "-conjecture" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options ++ Map(Symbol("conjecture") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(conjecture = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
       case "-parse" :: value :: _ =>
         // @note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
-        initializeProver(options, usage)
+        initializeProver(options.toOptionMap, usage)
         if (parseProblemFile(value)) exit(0) else exit(-1)
       case "-parserClass" :: value :: tail =>
         Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
         nextOption(options, tail, usage)
       case "-prove" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options ++ Map(Symbol("mode") -> Modes.PROVE, Symbol("in") -> value), tail, usage)
+          nextOption(options.copy(mode = Some(Modes.PROVE), in = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-prove", usage); exit(1) }
       case "-grade" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options ++ Map(Symbol("mode") -> Modes.GRADE, Symbol("in") -> value), tail, usage)
+          nextOption(options.copy(mode = Some(Modes.GRADE), in = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
-      case "-exportanswers" :: tail => nextOption(options ++ Map(Symbol("exportanswers") -> true), tail, usage)
-      case "-skiponparseerror" :: tail => nextOption(options ++ Map(Symbol("skiponparseerror") -> true), tail, usage)
+      case "-exportanswers" :: tail => nextOption(options.copy(exportanswers = Some(true)), tail, usage)
+      case "-skiponparseerror" :: tail => nextOption(options.copy(skiponparseerror = Some(true)), tail, usage)
       case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("out") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(out = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
       case "-savept" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("ptOut") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(ptOut = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-savept", usage); exit(1) }
-      case "-setup" :: tail => nextOption(options ++ Map(Symbol("mode") -> Modes.SETUP), tail, usage)
+      case "-setup" :: tail => nextOption(options.copy(mode = Some(Modes.SETUP)), tail, usage)
       case "-convert" :: conversion :: kyx :: tail =>
         if (conversion.nonEmpty && !conversion.startsWith("-") && kyx.nonEmpty && !kyx.startsWith("-")) nextOption(
-          options ++ Map(Symbol("mode") -> Modes.CONVERT, Symbol("conversion") -> conversion, Symbol("in") -> kyx),
+          options.copy(mode = Some(Modes.CONVERT), conversion = Some(conversion), in = Some(kyx)),
           tail,
           usage,
         )
         else { Usage.optionErrorReporter("-convert", usage); exit(1) }
       case "-tactic" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map(Symbol("tactic") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(tactic = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-tactic", usage); exit(1) }
       case "-tacticName" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options ++ Map(Symbol("tacticName") -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(tacticName = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-tacticName", usage); exit(1) }
       case "-tool" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options ++ Map(Symbol("tool") -> value.toLowerCase), tail, usage)
+          nextOption(options.copy(tool = Some(value.toLowerCase)), tail, usage)
         else { Usage.optionErrorReporter("-tool", usage); exit(1) }
-      case "-verbose" :: tail => nextOption(options ++ Map(Symbol("verbose") -> true), tail, usage)
+      case "-verbose" :: tail => nextOption(options.copy(verbose = Some(true)), tail, usage)
       case "-proofStatistics" :: value :: tail =>
-        nextOption(options ++ Map(Symbol("proofStatisticsPrinter") -> value), tail, usage)
+        nextOption(options.copy(proofStatisticsPrinter = Some(value)), tail, usage)
       // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) {
           if (new File(value).exists) {
             Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
-            nextOption(options ++ Map(Symbol("mathkernel") -> value), tail, usage)
+            nextOption(options.copy(mathkernel = Some(value)), tail, usage)
           } else {
             println("[Error -mathkernel] Mathematica kernel file does not exist: " + value)
             exit(2)
@@ -228,7 +226,7 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) {
           if (new File(value).exists) {
             Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
-            nextOption(options ++ Map(Symbol("jlink") -> value), tail, usage)
+            nextOption(options.copy(jlink = Some(value)), tail, usage)
           } else {
             println("[Error -jlink] Path to JLink native library does not exist: " + value)
             exit(2)
@@ -274,7 +272,7 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) {
           if (new File(value).exists) {
             Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false)
-            nextOption(options ++ Map(Symbol("z3Path") -> value), tail, usage)
+            nextOption(options.copy(z3Path = Some(value)), tail, usage)
           } else {
             println("[Error -z3path] Z3 executable does not exist: " + value)
             exit(2)
@@ -294,7 +292,7 @@ object KeYmaeraX {
         Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(options, tail, usage)
       case "-timeout" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options ++ Map(Symbol("timeout") -> value.toLong), tail, usage)
+          nextOption(options.copy(timeout = Some(value.toLong)), tail, usage)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ => (options, args)
     }

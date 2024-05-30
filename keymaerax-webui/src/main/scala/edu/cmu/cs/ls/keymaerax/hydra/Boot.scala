@@ -6,19 +6,18 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
-import akka.stream.ActorMaterializer
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.cli.Options
 import edu.cmu.cs.ls.keymaerax.launcher.{KeYmaeraX, LoadingDialogFactory, SystemWebBrowser}
-
-import scala.concurrent.duration._
-import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
 import scala.language.postfixOps
 
 /**
@@ -81,7 +80,7 @@ object HyDRAInitializer extends Logging {
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
   def apply(args: Array[String], database: DBAbstraction): String = {
-    val options = KeYmaeraX.nextOption(Map(Symbol("commandLine") -> args.mkString(" ")), args.toList)
+    val options = KeYmaeraX.nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList).toOptionMap
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 
