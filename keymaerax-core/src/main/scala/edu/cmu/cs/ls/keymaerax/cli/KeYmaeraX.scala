@@ -320,7 +320,7 @@ object KeYmaeraX {
   /** Initializes Mathematica from command line options, if present; else from default config */
   private def initMathematica(options: ToolConfiguration, usage: String): Unit = {
     ToolProvider.setProvider(MultiToolProvider(
-      MathematicaToolProvider(mathematicaConfig(options, usage).toMap) :: Z3ToolProvider() :: Nil
+      MathematicaToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
     ))
     if (!ToolProvider.isInitialized)
       throw new ProverSetupException("Failed to initialize Mathematica; the license may be expired")
@@ -330,7 +330,7 @@ object KeYmaeraX {
   private def initWolframEngine(options: ToolConfiguration, usage: String): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
     ToolProvider.setProvider(MultiToolProvider(
-      WolframEngineToolProvider(mathematicaConfig(options, usage).toMap) :: Z3ToolProvider() :: Nil
+      WolframEngineToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
     ))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Engine; the license may be expired (try starting Wolfram Engine from the command line to renew the license)"
@@ -340,7 +340,7 @@ object KeYmaeraX {
   /** Initializes Wolfram Script from command line options. */
   private def initWolframScript(options: ToolConfiguration, usage: String): Unit = {
     ToolProvider.setProvider(MultiToolProvider(
-      WolframScriptToolProvider(mathematicaConfig(options, usage).toMap) :: Z3ToolProvider() :: Nil
+      WolframScriptToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
     ))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Script; the license may be expired (try starting Wolfram Script from the command line to renew the license)"

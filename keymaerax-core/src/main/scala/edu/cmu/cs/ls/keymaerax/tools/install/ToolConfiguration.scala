@@ -18,17 +18,7 @@ case class ToolConfiguration(
     libDir: Option[String] = None,
     tcpip: Option[String] = None,
     z3Path: Option[String] = None,
-) {
-  def toMap: Map[String, String] = Seq(
-    this.tool.map("tool" -> _),
-    this.mathkernel.map("mathkernel" -> _),
-    this.linkName.map("linkName" -> _),
-    this.jlink.map("jlink" -> _),
-    this.libDir.map("libDir" -> _),
-    this.tcpip.map("tcpip" -> _),
-    this.z3Path.map("z3Path" -> _),
-  ).flatten.toMap
-}
+)
 
 /**
  * Tool configuration from config file/default configuration.

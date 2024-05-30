@@ -66,13 +66,12 @@ class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFi
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider
-            .initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName).toMap), "Wolfram Engine")
+          ToolProvider.initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
         case "mathematica" =>
           Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName).toMap), "Mathematica")
+          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
       }
       ToolProvider.setProvider(provider)
       new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil

@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ToolConfigStatusRes
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ErrorResponse, LocalhostOnlyRequest, Response, WriteRequest}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
-import scala.collection.immutable.{List, Map, Nil}
+import scala.collection.immutable.{List, Nil}
 
 class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest with WriteRequest {
   override def resultingResponses(): List[Response] = {
@@ -43,7 +43,7 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
               if (
                 Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
-              ) { (Some(MultiToolProvider(MathematicaToolProvider(config.toMap) :: Z3ToolProvider() :: Nil)), true) }
+              ) { (Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil)), true) }
               else (None, false)
             } else { (Some(Z3ToolProvider()), false) }
           case "wolframengine" =>
@@ -55,11 +55,11 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
-              ) { (Some(MultiToolProvider(WolframEngineToolProvider(config.toMap) :: Z3ToolProvider() :: Nil)), true) }
+              ) { (Some(MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil)), true) }
               else (None, false)
             } else { (Some(Z3ToolProvider()), false) }
           case "wolframscript" =>
-            (Some(MultiToolProvider(WolframScriptToolProvider(Map.empty) :: Z3ToolProvider() :: Nil)), true)
+            (Some(MultiToolProvider(WolframScriptToolProvider(ToolConfiguration()) :: Z3ToolProvider() :: Nil)), true)
           case "z3" => (Some(Z3ToolProvider()), true)
           case _ => (Some(new NoneToolProvider), false)
         }

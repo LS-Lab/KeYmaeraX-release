@@ -9,8 +9,9 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{ToolProvider, Z3ToolProvider}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ConfigureZ3Response
 import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, Response, WriteRequest}
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
-import scala.collection.immutable.{List, Map, Nil}
+import scala.collection.immutable.{List, Nil}
 
 class ConfigureZ3Request(z3Path: String) extends LocalhostOnlyRequest with WriteRequest {
   private def isZ3PathCorrect(z3Path: java.io.File): Boolean = z3Path.getName == "z3" || z3Path.getName == "z3.exe"
@@ -25,7 +26,7 @@ class ConfigureZ3Request(z3Path: String) extends LocalhostOnlyRequest with Write
       ToolProvider.shutdown()
       Configuration.set(Configuration.Keys.QE_TOOL, "z3")
       Configuration.set(Configuration.Keys.Z3_PATH, z3Path)
-      ToolProvider.setProvider(Z3ToolProvider(Map("z3Path" -> z3Path)))
+      ToolProvider.setProvider(Z3ToolProvider(ToolConfiguration(z3Path = Some(z3Path))))
       new ConfigureZ3Response(z3File.getAbsolutePath, true) :: Nil
     }
   }

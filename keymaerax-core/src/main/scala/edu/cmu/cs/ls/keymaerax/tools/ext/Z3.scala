@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3QETool, Z3Solver}
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool, ToolExecutionException, ToolOperationManagement}
 
@@ -31,9 +32,8 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   /** Untrusted access to Z3 directly. */
   private var z3: Z3Solver = _
 
-  // TODO Use more specific arguments
-  def init(config: Map[String, String]): Unit = {
-    z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter)
+  def init(config: ToolConfiguration): Unit = {
+    z3 = new Z3Solver(config.z3Path.get, DefaultSMTConverter)
     z3qe.init(config)
   }
 

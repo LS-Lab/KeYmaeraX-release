@@ -6,10 +6,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
-import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext._
-import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
+import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 
 /**
  * Central repository providing access to arithmetic tools.
@@ -26,9 +25,6 @@ import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
  *   [[edu.cmu.cs.ls.keymaerax.tools.ToolInterface]]
  */
 object ToolProvider extends ToolProvider with Logging {
-
-  /** Configuration options for tools. */
-  type Configuration = Map[String, String]
 
   /* @note mutable state for switching out default tool providers, which defaults to just returning None */
   private[this] var f: ToolProvider = new NoneToolProvider()
@@ -289,7 +285,7 @@ case class MultiToolProvider(providers: List[ToolProvider])
 }
 
 /** Base class for Wolfram tools with alternative names. */
-abstract class WolframToolProvider(val tool: Mathematica, config: Map[String, String], alternativeNames: List[String])
+abstract class WolframToolProvider(val tool: Mathematica, config: ToolConfiguration, alternativeNames: List[String])
     extends PreferredToolProvider(tool :: Nil) {
   protected def alternativeTool[S](nameOpt: Option[String], factory: Option[String] => Option[S]): Option[S] = {
     // First, try the factory
@@ -318,7 +314,7 @@ abstract class WolframToolProvider(val tool: Mathematica, config: Map[String, St
  * @author
  *   Stefan Mitsch
  */
-case class MathematicaToolProvider(config: Configuration)
+case class MathematicaToolProvider(config: ToolConfiguration)
     extends WolframToolProvider(
       new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"),
       config,
@@ -330,7 +326,7 @@ case class MathematicaToolProvider(config: Configuration)
  * @author
  *   Stefan Mitsch
  */
-case class WolframEngineToolProvider(config: Configuration)
+case class WolframEngineToolProvider(config: ToolConfiguration)
     extends WolframToolProvider(
       new Mathematica(new JLinkMathematicaLink("WolframEngine"), "WolframEngine"),
       config,
@@ -342,7 +338,7 @@ case class WolframEngineToolProvider(config: Configuration)
  * @author
  *   Stefan Mitsch
  */
-case class WolframScriptToolProvider(config: Configuration)
+case class WolframScriptToolProvider(config: ToolConfiguration)
     extends WolframToolProvider(
       new Mathematica(new WolframScript, "WolframScript"),
       config,
@@ -355,7 +351,7 @@ case class WolframScriptToolProvider(config: Configuration)
  * @author
  *   Stefan Mitsch
  */
-case class Z3ToolProvider(config: Configuration = Map("z3Path" -> Z3Installer.z3Path))
+case class Z3ToolProvider(config: ToolConfiguration = ToolConfiguration(z3Path = Some(Z3Installer.z3Path)))
     extends PreferredToolProvider[Tool](new Z3 :: new RingsAlgebraTool() :: new IntegratorODESolverTool :: Nil) {
 
   /** Returns the main Z3 tool. */

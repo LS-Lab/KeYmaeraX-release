@@ -7,6 +7,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
 
 /**
@@ -28,8 +29,7 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   /* The solver instance */
   private var z3: Z3Solver = _
 
-  // TODO Use more specific arguments
-  def init(config: Map[String, String]): Unit = { z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter) }
+  def init(config: ToolConfiguration): Unit = { z3 = new Z3Solver(config.z3Path.get, DefaultSMTConverter) }
 
   /** @inheritdoc */
   override def restart(): Unit = cancel()

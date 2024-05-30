@@ -301,9 +301,8 @@ class QETests extends TacticTestBase {
 
   it should "switch between tools" in withTactics {
     withDatabase { db =>
-      val provider = MultiToolProvider(
-        new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica").toMap) :: Nil
-      )
+      val provider =
+        MultiToolProvider(new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
       ToolProvider.setProvider(provider)
       val modelContent =
         """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>=0&\exists s x*s^2>0 End. End."""
@@ -337,9 +336,8 @@ class QETests extends TacticTestBase {
 
   it should "use the default tool" in withTactics {
     withDatabase { db =>
-      val provider = MultiToolProvider(
-        new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica").toMap) :: Nil
-      )
+      val provider =
+        MultiToolProvider(new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
       ToolProvider.setProvider(provider)
       val modelContent = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> x>=0&x>=(-1) End. End."""
       val proofId = db.createProof(modelContent)
@@ -370,9 +368,8 @@ class QETests extends TacticTestBase {
   }
 
   it should "switch between tools from parsed tactic" in withTactics {
-    val provider = MultiToolProvider(
-      new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica").toMap) :: Nil
-    )
+    val provider =
+      MultiToolProvider(new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
     val tactic = BelleParser("andR(1); <(QE(\"Z3\"), andR(1) ; <(QE(\"Mathematica\"), QE))")
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe Symbol("proved")

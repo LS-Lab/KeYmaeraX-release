@@ -105,7 +105,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   if (new java.io.File("/Applications/Mathematica9.app").exists) {
     "Mathematica 9" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in {
       val mathematica = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica")
-      mathematica.init(Map("linkName" -> "/Applications/Mathematica9.app/Contents/MacOS/MathKernel"))
+      mathematica.init(ToolConfiguration(linkName = Some("/Applications/Mathematica9.app/Contents/MacOS/MathKernel")))
       mathematica shouldBe Symbol("initialized")
       mathematica.shutdown()
     }
@@ -113,7 +113,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
   "Mathematica 10" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in {
     val mathematica = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica")
-    mathematica.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
+    mathematica.init(ToolConfiguration(linkName = Some("/Applications/Mathematica.app/Contents/MacOS/MathKernel")))
     mathematica shouldBe Symbol("initialized")
     mathematica.shutdown()
   }
@@ -250,7 +250,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   it should "shutdown and init repeatably" in withMathematica { tool =>
     tool.shutdown()
     for (_ <- 0 to 10) {
-      tool.init(ToolConfiguration.config("mathematica").toMap)
+      tool.init(ToolConfiguration.config("mathematica"))
       tool shouldBe Symbol("initialized")
       tool.qe("1>0".asFormula).fact shouldBe Symbol("proved")
       tool.shutdown()

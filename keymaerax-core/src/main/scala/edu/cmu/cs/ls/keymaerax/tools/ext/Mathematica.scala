@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec.{mwhile, part}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Result
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 
@@ -72,8 +73,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
 
   private val memoryLimit: Long = Configuration.getLong(Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).getOrElse(-1)
 
-  // TODO Use more specific arguments
-  def init(config: Map[String, String]): Unit = {
+  def init(config: ToolConfiguration): Unit = {
     mQE.memoryLimit = memoryLimit
     mPegasus.memoryLimit = memoryLimit
     mSOSsolve.memoryLimit = memoryLimit
@@ -101,7 +101,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
 
     initialized = link match {
       case l: JLinkMathematicaLink =>
-        val linkName = config.get("linkName") match {
+        val linkName = config.linkName match {
           case Some(ln) => ln
           case None => throw new IllegalArgumentException(
               """Mathematica not configured. Missing configuration parameter 'linkName'
@@ -111,8 +111,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
               """.stripMargin
             )
         }
-        val libDir = config.get("libDir") // doesn't need to be defined
-        l.init(linkName, libDir, config.getOrElse("tcpip", "true"))
+        val libDir = config.libDir // doesn't need to be defined
+        l.init(linkName, libDir, config.tcpip.getOrElse("true"))
       case l: WolframScript => l.init()
     }
   }

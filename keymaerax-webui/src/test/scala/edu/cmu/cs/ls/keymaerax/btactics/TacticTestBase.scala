@@ -162,7 +162,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
         mathematicaProvider().doShutdown() // @note see [[afterAll]]
         provider.shutdown()
         mathematicaProvider = new Lazy(
-          new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase).toMap))
+          new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase)))
         )
       }
       ToolProvider.setProvider(oldProvider)
@@ -209,7 +209,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
               mathematicaProvider().doShutdown() // @note see [[afterAll]]
               provider.shutdown()
               mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(
-                ToolConfiguration.config(WOLFRAM.toLowerCase).toMap
+                ToolConfiguration.config(WOLFRAM.toLowerCase)
               )))
             }
           }
@@ -353,11 +353,11 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   override def beforeAll(): Unit = {
     mathematicaProvider =
       if (WOLFRAM.equalsIgnoreCase("mathematica"))
-        new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM).toMap)))
+        new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM))))
       else if (WOLFRAM.equalsIgnoreCase("wolframengine"))
-        new Lazy(new DelayedShutdownToolProvider(WolframEngineToolProvider(ToolConfiguration.config(WOLFRAM).toMap)))
+        new Lazy(new DelayedShutdownToolProvider(WolframEngineToolProvider(ToolConfiguration.config(WOLFRAM))))
       else if (WOLFRAM.equalsIgnoreCase("wolframscript"))
-        new Lazy(new DelayedShutdownToolProvider(WolframScriptToolProvider(ToolConfiguration.config(WOLFRAM).toMap)))
+        new Lazy(new DelayedShutdownToolProvider(WolframScriptToolProvider(ToolConfiguration.config(WOLFRAM))))
       else throw new IllegalArgumentException(
         "Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'"
       )
