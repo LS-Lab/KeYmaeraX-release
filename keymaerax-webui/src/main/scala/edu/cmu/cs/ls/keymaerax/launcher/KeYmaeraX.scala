@@ -12,14 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Options, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{
-  DBTools,
-  DbProofTree,
-  LabelledTraceToTacticConverter,
-  TempDBTools,
-  VerbatimTraceToTacticConverter,
-  VerboseTraceToTacticConverter,
-}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBTools, DbProofTree, LabelledTraceToTacticConverter, TempDBTools, VerbatimTraceToTacticConverter, VerboseTraceToTacticConverter}
 import edu.cmu.cs.ls.keymaerax.info.Version
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -126,7 +119,7 @@ object KeYmaeraX {
               configFromFile(Tools.MATHEMATICA) // @note quantitative ModelPlex uses Mathematica to simplify formulas
             } else { configFromFile("z3") }
           initializeProver(combineConfigs(options.toOptionMap, toolConfig), usage)
-          CodeGen.codegen(options.toOptionMap, usage)
+          CodeGen.codegen(options, usage)
         case Some(Modes.MODELPLEX) =>
           initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
           modelplex(options.toOptionMap)

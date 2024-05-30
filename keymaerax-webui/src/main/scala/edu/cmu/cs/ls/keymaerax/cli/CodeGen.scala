@@ -5,17 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.PrintWriter
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{exit, OptionMap}
+import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.exit
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator, CodeGenerator}
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, Imply, StaticSemantics, True}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
-import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 
-import scala.compat.Platform
+import java.io.PrintWriter
 import scala.reflect.io.File
 
 /** Code generator command-line interface. */
@@ -33,25 +31,23 @@ object CodeGen {
    * @param usage
    *   Usage information to print on wrong usage.
    */
-  def codegen(options: OptionMap, usage: String): Unit = {
-    require(options.contains(Symbol("in")), usage)
+  def codegen(options: Options, usage: String): Unit = {
+    require(options.in.isDefined, usage)
 
-    val inputFileName = options(Symbol("in")).toString
+    val inputFileName = options.in.get
     val inputFile =
       if (inputFileName.contains("#")) File(inputFileName.substring(0, inputFileName.lastIndexOf("#")))
       else File(inputFileName)
 
     val inputFormulas = ArchiveParser.parseFromFile(inputFileName)
     var outputFile = inputFile.changeExtension("c")
-    if (options.contains(Symbol("out"))) outputFile = File(options(Symbol("out")).toString)
+    if (options.out.isDefined) outputFile = File(options.out.get)
 
-    val vars: Option[Set[BaseVariable]] =
-      if (options.contains(Symbol("vars"))) Some(options(Symbol("vars")).asInstanceOf[Array[BaseVariable]].toSet)
-      else None
+    val vars: Option[Set[BaseVariable]] = options.vars.map(_.toSet)
 
-    val interval = options.getOrElse(Symbol("interval"), true).asInstanceOf[Boolean]
-    val head = EvidencePrinter.stampHead(options)
-    val quantitative = options.getOrElse(Symbol("quantitative"), false).asInstanceOf[Boolean]
+    val interval = options.interval.getOrElse(true)
+    val head = EvidencePrinter.stampHead(options.toOptionMap)
+    val quantitative = options.quantitative.getOrElse(false)
     val written = inputFormulas.map(e => {
       val outputFileName =
         if (inputFormulas.size <= 1) outputFile.toString()
