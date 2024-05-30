@@ -27,7 +27,6 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.apache.commons.lang3.StringUtils
 
@@ -153,15 +152,6 @@ object KeYmaeraX {
 
   /** KeYmaera X -help string. */
   def help: String = stats + "\n" + usage
-
-  private def toolConfigFromFile(defaultTool: String): ToolConfiguration = {
-    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
-      case Tools.MATHEMATICA => ToolConfiguration.mathematicaConfig().copy(tool = Some(Tools.MATHEMATICA))
-      case Tools.WOLFRAMENGINE => ToolConfiguration.wolframEngineConfig().copy(tool = Some(Tools.WOLFRAMENGINE))
-      case Tools.Z3 => ToolConfiguration.z3Config().copy(tool = Some(Tools.Z3))
-      case t => throw new Exception("Unknown tool '" + t + "'")
-    }
-  }
 
   private def makeVariables(varNames: Array[String]): Array[BaseVariable] = {
     varNames.map(vn =>
