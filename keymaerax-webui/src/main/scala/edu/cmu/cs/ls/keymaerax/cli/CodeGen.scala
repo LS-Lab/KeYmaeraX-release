@@ -46,7 +46,7 @@ object CodeGen {
     val vars: Option[Set[BaseVariable]] = options.vars.map(_.toSet)
 
     val interval = options.interval.getOrElse(true)
-    val head = EvidencePrinter.stampHead(options.toOptionMap)
+    val head = EvidencePrinter.stampHead(options)
     val quantitative = options.quantitative.getOrElse(false)
     val written = inputFormulas.map(e => {
       val outputFileName =
