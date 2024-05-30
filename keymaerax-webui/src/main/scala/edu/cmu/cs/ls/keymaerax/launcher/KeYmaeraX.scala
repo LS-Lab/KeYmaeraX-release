@@ -115,32 +115,29 @@ object KeYmaeraX {
     println(s"KeYmaera X Prover $Version")
     println("Use option -help for usage and license information")
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
-    val options = combineConfigs(
-      nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList).toOptionMap,
-      Map(Symbol("mode") -> Modes.UI),
-    )
+    val options = nextOption(Options(commandLine = Some(args.mkString(" ")), mode = Some(Modes.UI)), args.toList)
 
     try {
       // @todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
-      options.get(Symbol("mode")) match {
+      options.mode match {
         case Some(Modes.CODEGEN) =>
           val toolConfig =
-            if (options.contains(Symbol("quantitative"))) {
+            if (options.quantitative.isDefined) {
               configFromFile(Tools.MATHEMATICA) // @note quantitative ModelPlex uses Mathematica to simplify formulas
             } else { configFromFile("z3") }
-          initializeProver(combineConfigs(options, toolConfig), usage)
-          CodeGen.codegen(options, usage)
+          initializeProver(combineConfigs(options.toOptionMap, toolConfig), usage)
+          CodeGen.codegen(options.toOptionMap, usage)
         case Some(Modes.MODELPLEX) =>
-          initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-          modelplex(options)
+          initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+          modelplex(options.toOptionMap)
         case Some(Modes.REPL) =>
-          initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-          repl(options)
+          initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+          repl(options.toOptionMap)
         case Some(Modes.UI) => launchUI(args) // @note prover initialized in web UI launcher
-        case Some(Modes.CONVERT) => options.get(Symbol("conversion")) match {
+        case Some(Modes.CONVERT) => options.conversion match {
             case Some("verboseTactics") | Some("verbatimTactics") =>
-              initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-              convertTactics(options, usage)
+              initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+              convertTactics(options.toOptionMap, usage)
             case _ => runCommand(options, usage)
           }
 

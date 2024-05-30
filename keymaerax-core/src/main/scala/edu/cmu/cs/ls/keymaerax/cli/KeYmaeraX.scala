@@ -81,28 +81,28 @@ object KeYmaeraX {
     val (options, unprocessedArgs) =
       nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
-    try { runCommand(options.toOptionMap, Usage.cliUsage) }
+    try { runCommand(options, Usage.cliUsage) }
     finally { shutdownProver() }
   }
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
-  def runCommand(options: OptionMap, usage: String): Unit = {
+  def runCommand(options: Options, usage: String): Unit = {
     // @todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scala -modelplex -codegen
-    options.get(Symbol("mode")) match {
+    options.mode match {
       case Some(Modes.GRADE) =>
-        initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-        AssessmentProver.grade(options, System.out, System.out, usage)
+        initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+        AssessmentProver.grade(options.toOptionMap, System.out, System.out, usage)
       case Some(Modes.PROVE) =>
-        initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-        KeYmaeraXProofChecker.prove(options, usage)
+        initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+        KeYmaeraXProofChecker.prove(options.toOptionMap, usage)
       case Some(Modes.SETUP) =>
         println("Initializing lemma cache...")
-        initializeBackend(options, usage)
+        initializeBackend(options.toOptionMap, usage)
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
       case Some(Modes.CONVERT) =>
-        initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-        convert(options, usage)
+        initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+        convert(options.toOptionMap, usage)
       case command => println("WARNING: Unknown command " + command)
     }
   }
