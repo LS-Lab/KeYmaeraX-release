@@ -7,8 +7,8 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{MathematicaToolProvider, ToolProvider, WolframEngineToolProvider}
-import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, Response, WriteRequest}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ConfigureMathematicaResponse
+import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, Response, WriteRequest}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.collection.immutable.{List, Nil}
@@ -66,12 +66,13 @@ class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFi
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
+          ToolProvider
+            .initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName).toMap), "Wolfram Engine")
         case "mathematica" =>
           Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
+          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName).toMap), "Mathematica")
       }
       ToolProvider.setProvider(provider)
       new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil

@@ -123,20 +123,22 @@ object KeYmaeraX {
         case Some(Modes.CODEGEN) =>
           val toolConfig =
             if (options.quantitative.isDefined) {
-              configFromFile(Tools.MATHEMATICA) // @note quantitative ModelPlex uses Mathematica to simplify formulas
-            } else { configFromFile("z3") }
-          initializeProver(combineConfigs(options.toOptionMap, toolConfig), usage)
+              toolConfigFromFile(
+                Tools.MATHEMATICA
+              ) // @note quantitative ModelPlex uses Mathematica to simplify formulas
+            } else { toolConfigFromFile("z3") }
+          initializeProver(combineToolConfigs(options.toToolConfig, toolConfig), usage)
           CodeGen.codegen(options, usage)
         case Some(Modes.MODELPLEX) =>
-          initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+          initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
           modelplex(options)
         case Some(Modes.REPL) =>
-          initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+          initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
           repl(options)
         case Some(Modes.UI) => launchUI(args) // @note prover initialized in web UI launcher
         case Some(Modes.CONVERT) => options.conversion match {
             case Some("verboseTactics") | Some("verbatimTactics") =>
-              initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+              initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
               convertTactics(options, usage)
             case _ => runCommand(options, usage)
           }
@@ -152,14 +154,11 @@ object KeYmaeraX {
   /** KeYmaera X -help string. */
   def help: String = stats + "\n" + usage
 
-  private def configFromFile(defaultTool: String): OptionMap = {
+  private def toolConfigFromFile(defaultTool: String): ToolConfiguration = {
     Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
-      case Tools.MATHEMATICA => Map(Symbol("tool") -> Tools.MATHEMATICA) ++
-          ToolConfiguration.mathematicaConfig(Map.empty).map({ case (k, v) => Symbol(k) -> v })
-      case Tools.WOLFRAMENGINE => Map(Symbol("tool") -> Tools.WOLFRAMENGINE) ++
-          ToolConfiguration.wolframEngineConfig(Map.empty).map({ case (k, v) => Symbol(k) -> v })
-      case Tools.Z3 => Map(Symbol("tool") -> Tools.Z3) ++
-          ToolConfiguration.z3Config(Map.empty).map({ case (k, v) => Symbol(k) -> v })
+      case Tools.MATHEMATICA => ToolConfiguration.mathematicaConfig().copy(tool = Some(Tools.MATHEMATICA))
+      case Tools.WOLFRAMENGINE => ToolConfiguration.wolframEngineConfig().copy(tool = Some(Tools.WOLFRAMENGINE))
+      case Tools.Z3 => ToolConfiguration.z3Config().copy(tool = Some(Tools.Z3))
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }

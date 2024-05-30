@@ -20,10 +20,10 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec
-import edu.cmu.cs.ls.keymaerax.tools._
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
@@ -81,8 +81,8 @@ private object ToolTactics extends TacticProvider {
         case "mathematica" => if (!isWolframProvider(ToolProvider.provider)) {
             setFirstSuccessfulProvider(
               List(
-                MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil),
-                MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil),
+                MultiToolProvider(MathematicaToolProvider(config.toMap) :: Z3ToolProvider() :: Nil),
+                MultiToolProvider(WolframEngineToolProvider(config.toMap) :: Z3ToolProvider() :: Nil),
               ),
               "Failed to switch to Mathematica: unable to initialize the connection; the license may be expired.",
             )
@@ -90,8 +90,8 @@ private object ToolTactics extends TacticProvider {
         case "wolframengine" => if (!isWolframProvider(ToolProvider.provider)) {
             setFirstSuccessfulProvider(
               List(
-                MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil),
-                MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil),
+                MultiToolProvider(WolframEngineToolProvider(config.toMap) :: Z3ToolProvider() :: Nil),
+                MultiToolProvider(MathematicaToolProvider(config.toMap) :: Z3ToolProvider() :: Nil),
               ),
               "Failed to switch to Wolfram Engine: unable to initialize the connection; the license may be expired.",
             )

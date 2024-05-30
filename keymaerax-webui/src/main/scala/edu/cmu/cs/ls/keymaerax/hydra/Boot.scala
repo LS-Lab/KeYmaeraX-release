@@ -140,12 +140,12 @@ object HyDRAInitializer extends Logging {
     }
   }
 
-  private def createTool(options: Options, config: ToolProvider.Configuration, preferredTool: String): Unit = {
+  private def createTool(options: Options, config: ToolConfiguration, preferredTool: String): Unit = {
     val tool: String = options.tool.getOrElse(preferredTool)
     val provider = tool.toLowerCase() match {
-      case "mathematica" => ToolProvider.initFallbackZ3(MathematicaToolProvider(config), "Mathematica")
-      case "wolframengine" => ToolProvider.initFallbackZ3(WolframEngineToolProvider(config), "Wolfram Engine")
-      case "wolframscript" => ToolProvider.initFallbackZ3(WolframScriptToolProvider(config), "Wolfram Script")
+      case "mathematica" => ToolProvider.initFallbackZ3(MathematicaToolProvider(config.toMap), "Mathematica")
+      case "wolframengine" => ToolProvider.initFallbackZ3(WolframEngineToolProvider(config.toMap), "Wolfram Engine")
+      case "wolframscript" => ToolProvider.initFallbackZ3(WolframScriptToolProvider(config.toMap), "Wolfram Script")
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
@@ -153,9 +153,9 @@ object HyDRAInitializer extends Logging {
     assert(provider.tools().forall(_.isInitialized), "Tools should be initialized after init()")
   }
 
-  private def toolConfig(options: Options, preferredTool: String): ToolProvider.Configuration = {
+  private def toolConfig(options: Options, preferredTool: String): ToolConfiguration = {
     val tool: String = options.tool.getOrElse(preferredTool)
-    ToolConfiguration.config(tool.toLowerCase, options.toOptionMap.map({ case (k, v) => k.name -> v.toString }))
+    ToolConfiguration.config(tool.toLowerCase, options.toToolConfig)
   }
 
   private def preferredToolFromConfig: String = {

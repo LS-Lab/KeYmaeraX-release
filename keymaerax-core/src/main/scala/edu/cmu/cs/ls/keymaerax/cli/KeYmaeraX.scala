@@ -43,8 +43,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 /** KeYmaera X basic command line interface. */
 object KeYmaeraX {
 
-  type OptionMap = Map[Symbol, Any]
-
   /** Names of actions that KeYmaera X command line interface supports. */
   object Modes {
     val CODEGEN: String = "codegen"
@@ -90,25 +88,25 @@ object KeYmaeraX {
     // @todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scala -modelplex -codegen
     options.mode match {
       case Some(Modes.GRADE) =>
-        initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         AssessmentProver.grade(options, System.out, System.out, usage)
       case Some(Modes.PROVE) =>
-        initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         KeYmaeraXProofChecker.prove(options, usage)
       case Some(Modes.SETUP) =>
         println("Initializing lemma cache...")
-        initializeBackend(options.toOptionMap, usage)
+        initializeBackend(options.toToolConfig, usage)
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
       case Some(Modes.CONVERT) =>
-        initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         convert(options, usage)
       case command => println("WARNING: Unknown command " + command)
     }
   }
 
   /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
-  def initializeProver(options: OptionMap, usage: String): Unit = {
+  def initializeProver(options: ToolConfiguration, usage: String): Unit = {
     Configuration.setConfiguration(FileConfiguration)
 
     initializeBackend(options, usage)
@@ -127,8 +125,8 @@ object KeYmaeraX {
   }
 
   /** Initializes the backend solvers. */
-  def initializeBackend(options: OptionMap, usage: String): Unit = {
-    options.getOrElse(Symbol("tool"), "z3") match {
+  def initializeBackend(options: ToolConfiguration, usage: String): Unit = {
+    options.tool.getOrElse("z3") match {
       case Tools.MATHEMATICA => initMathematica(options, usage)
       case Tools.WOLFRAMENGINE => initWolframEngine(options, usage)
       case Tools.WOLFRAMSCRIPT => initWolframScript(options, usage)
@@ -159,14 +157,14 @@ object KeYmaeraX {
       case "-license" :: _ => println(License.license); exit(1)
       // actions and their options
       case "-bparse" :: value :: _ =>
-        initializeProver(options.toOptionMap, usage) // @note parsing a tactic requires prover (AxiomInfo)
+        initializeProver(options.toToolConfig, usage) // @note parsing a tactic requires prover (AxiomInfo)
         if (parseBelleTactic(value)) exit(0) else exit(-1)
       case "-conjecture" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(conjecture = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
       case "-parse" :: value :: _ =>
         // @note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
-        initializeProver(options.toOptionMap, usage)
+        initializeProver(options.toToolConfig, usage)
         if (parseProblemFile(value)) exit(0) else exit(-1)
       case "-parserClass" :: value :: tail =>
         Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
@@ -299,38 +297,43 @@ object KeYmaeraX {
   }
 
   /** Reads configuration from keymaerax.conf. */
-  def configFromFile(defaultTool: String): OptionMap = {
-    ToolConfiguration
-      .config(Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool))
-      .map({ case (k, v) => Symbol(k) -> v })
+  def toolConfigFromFile(defaultTool: String): ToolConfiguration = {
+    ToolConfiguration.config(Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool))
   }
 
   /** Combines tool configurations, favoring primary configuration over secondary configuration. */
-  def combineConfigs(primary: OptionMap, secondary: OptionMap): OptionMap = {
-    primary ++ secondary.view.filterKeys(!primary.keySet.contains(_))
-  }
+  def combineToolConfigs(primary: ToolConfiguration, secondary: ToolConfiguration): ToolConfiguration =
+    ToolConfiguration(
+      tool = primary.tool.orElse(secondary.tool),
+      mathkernel = primary.mathkernel.orElse(secondary.mathkernel),
+      linkName = primary.linkName.orElse(secondary.linkName),
+      jlink = primary.jlink.orElse(secondary.jlink),
+      libDir = primary.libDir.orElse(secondary.libDir),
+      tcpip = primary.tcpip.orElse(secondary.tcpip),
+      z3Path = primary.z3Path.orElse(secondary.z3Path),
+    )
 
   /** Initializes Z3 from command line options. */
-  private def initZ3(options: OptionMap): Unit = {
+  private def initZ3(options: ToolConfiguration): Unit = {
     ToolProvider.setProvider(Z3ToolProvider())
     if (!ToolProvider.isInitialized)
       throw new ProverSetupException("Failed to initialize Z3; please check the configured path")
   }
 
   /** Initializes Mathematica from command line options, if present; else from default config */
-  private def initMathematica(options: OptionMap, usage: String): Unit = {
+  private def initMathematica(options: ToolConfiguration, usage: String): Unit = {
     ToolProvider.setProvider(MultiToolProvider(
-      MathematicaToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
+      MathematicaToolProvider(mathematicaConfig(options, usage).toMap) :: Z3ToolProvider() :: Nil
     ))
     if (!ToolProvider.isInitialized)
       throw new ProverSetupException("Failed to initialize Mathematica; the license may be expired")
   }
 
   /** Initializes Wolfram Engine from command line options. */
-  private def initWolframEngine(options: OptionMap, usage: String): Unit = {
+  private def initWolframEngine(options: ToolConfiguration, usage: String): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
     ToolProvider.setProvider(MultiToolProvider(
-      WolframEngineToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
+      WolframEngineToolProvider(mathematicaConfig(options, usage).toMap) :: Z3ToolProvider() :: Nil
     ))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Engine; the license may be expired (try starting Wolfram Engine from the command line to renew the license)"
@@ -338,9 +341,9 @@ object KeYmaeraX {
   }
 
   /** Initializes Wolfram Script from command line options. */
-  private def initWolframScript(options: OptionMap, usage: String): Unit = {
+  private def initWolframScript(options: ToolConfiguration, usage: String): Unit = {
     ToolProvider.setProvider(MultiToolProvider(
-      WolframScriptToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
+      WolframScriptToolProvider(mathematicaConfig(options, usage).toMap) :: Z3ToolProvider() :: Nil
     ))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Script; the license may be expired (try starting Wolfram Script from the command line to renew the license)"
@@ -350,28 +353,22 @@ object KeYmaeraX {
   /**
    * Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.
    */
-  private def mathematicaConfig(options: OptionMap, usage: String): Map[String, String] = {
+  private def mathematicaConfig(options: ToolConfiguration, usage: String): ToolConfiguration = {
     assert(
-      options.contains(Symbol("mathkernel")) != options.contains(Symbol("jlink")),
+      options.mathkernel.isDefined != options.jlink.isDefined,
       "[Error] Please always use the command line options -mathkernel and -jlink together.",
     )
 
     val mathematicaConfig =
-      if (options.contains(Symbol("mathkernel")) && options.contains(Symbol("jlink"))) Map(
-        "linkName" -> options(Symbol("mathkernel")).toString,
-        "libDir" -> options(Symbol("jlink")).toString,
-        "tcpip" -> options.getOrElse(Symbol("tcpip"), "true").toString,
+      if (options.mathkernel.isDefined && options.jlink.isDefined) ToolConfiguration(
+        linkName = Some(options.mathkernel.get),
+        libDir = Some(options.jlink.get),
+        tcpip = Some(options.tcpip.getOrElse("true")),
       )
       else ToolConfiguration.defaultMathematicaConfig
 
-    val linkNamePath = mathematicaConfig.get("linkName") match {
-      case Some(path) => path
-      case _ => ""
-    }
-    val libDirPath = mathematicaConfig.get("libDir") match {
-      case Some(path) => path
-      case _ => ""
-    }
+    val linkNamePath = mathematicaConfig.linkName.getOrElse("")
+    val libDirPath = mathematicaConfig.libDir.getOrElse("")
     assert(
       linkNamePath != "" && libDirPath != "",
       """[Error] Could not locate math kernel and jlink library.

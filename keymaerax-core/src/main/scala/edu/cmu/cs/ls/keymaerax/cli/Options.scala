@@ -5,8 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
 import edu.cmu.cs.ls.keymaerax.core.BaseVariable
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 case class Options(
     commandLine: Option[String] = None,
@@ -41,37 +41,13 @@ case class Options(
     verify: Option[Boolean] = None,
     open: Option[String] = None,
 ) {
-  def toOptionMap: OptionMap = List(
-    this.commandLine.map(Symbol("commandLine") -> _),
-    this.mode.map(Symbol("mode") -> _),
-    this.conjecture.map(Symbol("conjecture") -> _),
-    this.in.map(Symbol("in") -> _),
-    this.exportanswers.map(Symbol("exportanswers") -> _),
-    this.skiponparseerror.map(Symbol("skiponparseerror") -> _),
-    this.out.map(Symbol("out") -> _),
-    this.ptOut.map(Symbol("ptOut") -> _),
-    this.conversion.map(Symbol("conversion") -> _),
-    this.tactic.map(Symbol("tactic") -> _),
-    this.tacticName.map(Symbol("tacticName") -> _),
-    this.tool.map(Symbol("tool") -> _),
-    this.verbose.map(Symbol("verbose") -> _),
-    this.proofStatisticsPrinter.map(Symbol("proofStatisticsPrinter") -> _),
-    this.mathkernel.map(Symbol("mathkernel") -> _),
-    this.jlink.map(Symbol("jlink") -> _),
-    this.z3Path.map(Symbol("z3Path") -> _),
-    this.timeout.map(Symbol("timeout") -> _),
-    this.sandbox.map(Symbol("sandbox") -> _),
-    this.isar.map(Symbol("isar") -> _),
-    this.quantitative.map(Symbol("quantitative") -> _),
-    this.scaladefs.map(Symbol("scaladefs") -> _),
-    this.model.map(Symbol("model") -> _),
-    this.fallback.map(Symbol("fallback") -> _),
-    this.vars.map(Symbol("vars") -> _),
-    this.monitor.map(Symbol("monitor") -> _),
-    this.interactive.map(Symbol("interactive") -> _),
-    this.interval.map(Symbol("interval") -> _),
-    this.dnf.map(Symbol("dnf") -> _),
-    this.verify.map(Symbol("verify") -> _),
-    this.open.map(Symbol("open") -> _),
-  ).flatten.toMap
+  def toToolConfig: ToolConfiguration = ToolConfiguration(
+    tool = this.tool,
+    mathkernel = this.mathkernel,
+    linkName = None,
+    jlink = this.jlink,
+    libDir = None,
+    tcpip = None,
+    z3Path = this.z3Path,
+  )
 }

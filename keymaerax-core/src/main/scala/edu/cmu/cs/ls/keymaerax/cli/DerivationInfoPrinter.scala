@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 
 object DerivationInfoPrinter {
@@ -13,7 +14,7 @@ object DerivationInfoPrinter {
   def main(args: Array[String]): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     try {
-      KeYmaeraX.initializeProver(Map.empty, "")
+      KeYmaeraX.initializeProver(ToolConfiguration(), "")
       val out = DerivationInfo
         .allInfo
         .map({ case (k, v) => (k, v.persistentInputs, v.numPositionArgs) })

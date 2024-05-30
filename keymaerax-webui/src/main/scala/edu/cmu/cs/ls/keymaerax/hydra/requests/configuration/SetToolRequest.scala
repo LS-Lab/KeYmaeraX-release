@@ -37,25 +37,25 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
         val (provider: Option[ToolProvider], saveToConfig: Boolean) = tool match {
           case "mathematica" =>
             if (
-              new java.io.File(config.getOrElse("linkName", "")).exists &&
-              new java.io.File(config.getOrElse("libDir", "")).exists
+              new java.io.File(config.linkName.getOrElse("")).exists &&
+              new java.io.File(config.libDir.getOrElse("")).exists
             ) {
               if (
                 Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
-              ) { (Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil)), true) }
+              ) { (Some(MultiToolProvider(MathematicaToolProvider(config.toMap) :: Z3ToolProvider() :: Nil)), true) }
               else (None, false)
             } else { (Some(Z3ToolProvider()), false) }
           case "wolframengine" =>
             if (
-              new java.io.File(config.getOrElse("linkName", "")).exists &&
-              new java.io.File(config.getOrElse("libDir", "")).exists
+              new java.io.File(config.linkName.getOrElse("")).exists &&
+              new java.io.File(config.libDir.getOrElse("")).exists
             ) {
               if (
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
-              ) { (Some(MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil)), true) }
+              ) { (Some(MultiToolProvider(WolframEngineToolProvider(config.toMap) :: Z3ToolProvider() :: Nil)), true) }
               else (None, false)
             } else { (Some(Z3ToolProvider()), false) }
           case "wolframscript" =>

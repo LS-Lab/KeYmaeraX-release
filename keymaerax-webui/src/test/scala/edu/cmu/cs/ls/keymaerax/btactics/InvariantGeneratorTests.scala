@@ -151,7 +151,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     }
 
     val requestedInvs: ListBuffer[ODESystem] = ListBuffer.empty
-    ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")) {
+    ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica").toMap) {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen(requestedInvs))
     })
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
