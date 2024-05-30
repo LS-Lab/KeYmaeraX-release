@@ -137,7 +137,7 @@ object KeYmaeraX {
         case Some(Modes.CONVERT) => options.conversion match {
             case Some("verboseTactics") | Some("verbatimTactics") =>
               initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
-              convertTactics(options.toOptionMap, usage)
+              convertTactics(options, usage)
             case _ => runCommand(options, usage)
           }
 
@@ -454,14 +454,11 @@ object KeYmaeraX {
    * Executes all entries in `options('in)` to convert their tactics into `options('conversion)` format. Prints the
    * result to `options('out)`.
    */
-  def convertTactics(options: OptionMap, usage: String): Unit = {
-    require(
-      options.contains(Symbol("in")) && options.contains(Symbol("out")) && options.contains(Symbol("conversion")),
-      usage,
-    )
+  def convertTactics(options: Options, usage: String): Unit = {
+    require(options.in.isDefined && options.out.isDefined && options.conversion.isDefined, usage)
 
-    val kyxFile = options(Symbol("in")).toString
-    val how = options(Symbol("conversion")).toString
+    val kyxFile = options.in.get
+    val how = options.conversion.get
 
     val src = scala.io.Source.fromFile(kyxFile.split("#")(0))
     val fileContent =
@@ -519,7 +516,7 @@ object KeYmaeraX {
         content.replace(entryOnwards, entryOnwardsConverted)
       })
 
-    val outFile = options(Symbol("out")).toString
+    val outFile = options.out.get
     val pw = new PrintWriter(outFile)
     pw.write(convertedContent)
     pw.close()
