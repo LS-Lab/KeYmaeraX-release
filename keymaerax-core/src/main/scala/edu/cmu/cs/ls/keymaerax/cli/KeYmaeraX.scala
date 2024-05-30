@@ -94,7 +94,7 @@ object KeYmaeraX {
         AssessmentProver.grade(options, System.out, System.out, usage)
       case Some(Modes.PROVE) =>
         initializeProver(combineConfigs(options.toOptionMap, configFromFile("z3")), usage)
-        KeYmaeraXProofChecker.prove(options.toOptionMap, usage)
+        KeYmaeraXProofChecker.prove(options, usage)
       case Some(Modes.SETUP) =>
         println("Initializing lemma cache...")
         initializeBackend(options.toOptionMap, usage)
