@@ -85,7 +85,6 @@ object KeYmaeraX {
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
   def runCommand(options: Options, usage: String): Unit = {
-    // @todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scala -modelplex -codegen
     options.mode match {
       case Some(Modes.GRADE) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)

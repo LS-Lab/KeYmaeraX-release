@@ -114,34 +114,28 @@ object KeYmaeraX {
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = nextOption(Options(commandLine = Some(args.mkString(" ")), mode = Some(Modes.UI)), args.toList)
 
-    try {
-      // @todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
-      options.mode match {
-        case Some(Modes.CODEGEN) =>
-          val toolConfig =
-            if (options.quantitative.isDefined) {
-              toolConfigFromFile(
-                Tools.MATHEMATICA
-              ) // @note quantitative ModelPlex uses Mathematica to simplify formulas
-            } else { toolConfigFromFile("z3") }
-          initializeProver(combineToolConfigs(options.toToolConfig, toolConfig), usage)
-          CodeGen.codegen(options, usage)
-        case Some(Modes.MODELPLEX) =>
-          initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-          modelplex(options)
-        case Some(Modes.REPL) =>
-          initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-          repl(options)
-        case Some(Modes.CONVERT) => options.conversion match {
-            case Some("verboseTactics") | Some("verbatimTactics") =>
-              initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-              convertTactics(options, usage)
-            case _ => runCommand(options, usage)
-          }
+    try { runCommand(options, usage) }
+    finally { shutdownProver() }
+  }
 
-        case _ => runCommand(options, usage)
-      }
-    } finally { shutdownProver() }
+  def runCommand(options: Options, usage: String): Unit = options.mode match {
+    case Some(Modes.CODEGEN) =>
+      // Quantitative ModelPlex uses Mathematica to simplify formulas
+      val tool = if (options.quantitative.isDefined) Tools.MATHEMATICA else "z3"
+      val toolConfig = toolConfigFromFile(tool)
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfig), usage)
+      CodeGen.codegen(options, usage)
+    case Some(Modes.MODELPLEX) =>
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
+      modelplex(options)
+    case Some(Modes.REPL) =>
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
+      repl(options)
+    case Some(Modes.CONVERT)
+        if options.conversion.contains("verboseTactics") || options.conversion.contains("verbatimTactics") =>
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
+      convertTactics(options, usage)
+    case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options, usage)
   }
 
   /** Statistics about size of prover kernel. */
