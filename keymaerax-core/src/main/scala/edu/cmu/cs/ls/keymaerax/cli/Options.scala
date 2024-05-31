@@ -71,6 +71,11 @@ case class Options(
     verify: Option[Boolean] = None,
     z3Path: Option[String] = None,
 ) {
+
+  /** Helper function to make updating command-specific options easier. */
+  private def updateCommand[C <: Command](update: C => C): Options = this
+    .copy(command = Some(update(this.command.get.asInstanceOf[C])))
+
   def toToolConfig: ToolConfiguration = ToolConfiguration(
     tool = this.tool,
     mathKernel = this.mathkernel,
@@ -221,18 +226,12 @@ object Options {
       cmd("parse")
         .action((_, o) => o.copy(command = Some(Command.Parse())))
         .text("return error code 0 if the given model file parses")
-        .children(arg[String]("<value>").action((x, o) => {
-          val command = o.command.get.asInstanceOf[Command.Parse]
-          o.copy(command = Some(command.copy(value = x)))
-        })),
+        .children(arg[String]("<value>").action((x, o) => o.updateCommand[Command.Parse](_.copy(value = x)))),
       note(""),
       cmd("bparse")
         .action((_, o) => o.copy(command = Some(Command.BParse())))
         .text("return error code 0 if given bellerophon tactic file parses")
-        .children(arg[String]("<value>").action((x, o) => {
-          val command = o.command.get.asInstanceOf[Command.BParse]
-          o.copy(command = Some(command.copy(value = x)))
-        })),
+        .children(arg[String]("<value>").action((x, o) => o.updateCommand[Command.BParse](_.copy(value = x)))),
       note(""),
       cmd("convert")
         .action((_, o) => o.copy(command = Some(Command.Convert)))
