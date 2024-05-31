@@ -25,7 +25,6 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
-import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.apache.commons.lang3.StringUtils
@@ -34,7 +33,6 @@ import java.io.PrintWriter
 import scala.annotation.tailrec
 import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
-import scala.util.Random
 
 /**
  * Command-line interface launcher for [[http://keymaeraX.org/ KeYmaera X]], the aXiomatic Tactical Theorem Prover for
@@ -513,109 +511,4 @@ object KeYmaeraX {
     pw.write(convertedContent)
     pw.close()
   }
-
-  // helpers
-
-  /** Print brief information about all open goals in the proof tree under node */
-  def printOpenGoals(node: ProvableSig): Unit = node.subgoals.foreach(g => printNode(g))
-
-  def printNode(node: Sequent): Unit = node.toString + "\n"
-
-  private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
-    "skip - ignore the current goal for now and skip to the next goal.\n" + "goals - list all open goals.\n" +
-    "goal i - switch to goal number i\n" + "exit - quit the prover (or hit Ctrl-C any time).\n" +
-    "help - will display this usage information.\n" +
-    "Tactics will be reported back when a branch closes but may need cleanup.\n"
-
-  /** KeYmaera C: A simple interactive command-line prover */
-  @deprecated("Use web UI instead")
-  private def interactiveProver(root: ProvableSig): ProvableSig = {
-    val commands = io.Source.stdin.getLines()
-    println(
-      "KeYmaera X Interactive Command-line Prover\n" +
-        "If you are looking for the more convenient web user interface,\nrestart with option -ui\n\n"
-    )
-    println(interactiveUsage)
-
-    while (!root.isProved) {
-      assert(root.subgoals.nonEmpty, "proofs that are not closed must have open goals")
-      println("Open Goals: " + root.subgoals.size)
-      var node = root.subgoals.head
-      var current = root
-      // println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n")
-      var tacticLog = ""
-      assert(!current.isProved, "open goals are not closed")
-      while (!current.isProved) {
-        printNode(node)
-        System.out.flush()
-        commands.next().trim match {
-          case "" =>
-          case "help" => println(interactiveUsage)
-          case "exit" => exit(5)
-          case "goals" =>
-            val open = root.subgoals
-            (1 to open.length).foreach(g => { println("Goal " + g); printNode(open(g - 1)) })
-          case it if it.startsWith("goal ") =>
-            try {
-              val g = it.substring("goal ".length).toInt
-              if (1 <= g && g <= root.subgoals.size) node = root.subgoals(g - 1) else println("No such goal: " + g)
-            } catch { case e: NumberFormatException => println(e) }
-          case "skip" =>
-            if (root.subgoals.size >= 2) {
-              // @todo skip to the next goal somewhere on the right of node, not to a random goal
-              // @todo track this level skipping by closing and opening parentheses in the log
-              var nextGoal = new Random().nextInt(root.subgoals.length)
-              assert(0 <= nextGoal && nextGoal < root.subgoals.size, "random in range")
-              node =
-                if (root.subgoals(nextGoal) != node) root.subgoals(nextGoal)
-                else {
-                  val otherGoals = root.subgoals diff List(node)
-                  assert(
-                    otherGoals.length == root.subgoals.length - 1,
-                    "removing one open goal decreases open goal count by 1",
-                  )
-                  nextGoal = new Random().nextInt(otherGoals.length)
-                  assert(0 <= nextGoal && nextGoal < otherGoals.size, "random in range")
-                  otherGoals(nextGoal)
-                }
-            } else { println("No other open goals to skip to") }
-          case command: String =>
-            // @note security issue since executing arbitrary input unsanitized
-            val tacticGenerator = new ScalaTacticCompiler()
-              .compile(tacticParsePrefix + command + tacticParseSuffix)
-              .head
-              .newInstance()
-              .asInstanceOf[() => BelleExpr]
-            val tactic = tacticGenerator()
-            tacticLog += "& " + command + "\n"
-            current = TactixLibrary.proveBy(node, tactic)
-            // walk to the next open subgoal
-            // continue walking if it has leaves
-            while (!current.isProved && current.subgoals.nonEmpty) node = current.subgoals.head
-          // @todo make sure to walk to siblings ultimately
-        }
-      }
-      assert(current.isProved)
-//      println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
-      println(tacticLog)
-    }
-    root
-  }
-
-  // @todo import namespace of the user tactic *object* passed in -tactic
-  private val tacticParsePrefix = """
-                                    |import edu.cmu.cs.ls.keymaerax.bellerophon._
-                                    |import edu.cmu.cs.ls.keymaerax.btactics._
-                                    |import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-                                    |import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
-                                    |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-                                    |class InteractiveLocalTactic extends (() => BelleExpr) {
-                                    |  def apply(): BelleExpr = {
-                                    |
-    """.stripMargin
-
-  private val tacticParseSuffix = """
-                                    |  }
-                                    |}
-    """.stripMargin
 }
