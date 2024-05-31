@@ -42,19 +42,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** KeYmaera X basic command line interface. */
 object KeYmaeraX {
-
-  /** Names of actions that KeYmaera X command line interface supports. */
-  object Modes {
-    val CODEGEN: String = "codegen"
-    val GRADE: String = "grade"
-    val MODELPLEX: String = "modelplex"
-    val PROVE: String = "prove"
-    val REPL: String = "repl"
-    val SETUP: String = "setup"
-    val CONVERT: String = "convert"
-    val modes: Set[String] = Set(CODEGEN, CONVERT, GRADE, MODELPLEX, PROVE, REPL, SETUP)
-  }
-
   object Conversions {
     val STRIPHINTS: String = "stripHints"
     val KYX2MAT: String = "kyx2mat"
@@ -85,22 +72,23 @@ object KeYmaeraX {
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
   def runCommand(options: Options, usage: String): Unit = {
-    options.mode match {
-      case Some(Modes.GRADE) =>
+    options.command match {
+      case Some(Command.Grade) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         AssessmentProver.grade(options, System.out, System.out, usage)
-      case Some(Modes.PROVE) =>
+      case Some(Command.Prove) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         KeYmaeraXProofChecker.prove(options, usage)
-      case Some(Modes.SETUP) =>
+      case Some(Command.Setup) =>
         println("Initializing lemma cache...")
         initializeBackend(options.toToolConfig, usage)
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
-      case Some(Modes.CONVERT) =>
+      case Some(Command.Convert) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         convert(options, usage)
-      case command => println("WARNING: Unknown command " + command)
+      case Some(command) => println("WARNING: Unknown command " + command)
+      case None => println(usage)
     }
   }
 
@@ -167,11 +155,11 @@ object KeYmaeraX {
         nextOption(options, tail, usage)
       case "-prove" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options.copy(mode = Some(Modes.PROVE), in = Some(value)), tail, usage)
+          nextOption(options.copy(command = Some(Command.Prove), in = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-prove", usage); exit(1) }
       case "-grade" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options.copy(mode = Some(Modes.GRADE), in = Some(value)), tail, usage)
+          nextOption(options.copy(command = Some(Command.Grade), in = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
       case "-exportanswers" :: tail => nextOption(options.copy(exportanswers = Some(true)), tail, usage)
       case "-skiponparseerror" :: tail => nextOption(options.copy(skiponparseerror = Some(true)), tail, usage)
@@ -181,10 +169,10 @@ object KeYmaeraX {
       case "-savept" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(ptOut = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-savept", usage); exit(1) }
-      case "-setup" :: tail => nextOption(options.copy(mode = Some(Modes.SETUP)), tail, usage)
+      case "-setup" :: tail => nextOption(options.copy(command = Some(Command.Setup)), tail, usage)
       case "-convert" :: conversion :: kyx :: tail =>
         if (conversion.nonEmpty && !conversion.startsWith("-") && kyx.nonEmpty && !kyx.startsWith("-")) nextOption(
-          options.copy(mode = Some(Modes.CONVERT), conversion = Some(conversion), in = Some(kyx)),
+          options.copy(command = Some(Command.Convert), conversion = Some(conversion), in = Some(kyx)),
           tail,
           usage,
         )

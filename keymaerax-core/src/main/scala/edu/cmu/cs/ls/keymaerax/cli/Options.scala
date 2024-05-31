@@ -8,9 +8,26 @@ package edu.cmu.cs.ls.keymaerax.cli
 import edu.cmu.cs.ls.keymaerax.core.BaseVariable
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
+// TODO Convert to Scala 3 enum
+sealed trait Command
+object Command {
+  case object Codegen extends Command
+  case object Convert extends Command
+  case object Grade extends Command
+  case object Modelplex extends Command
+  case object Prove extends Command
+  case object Repl extends Command
+  case object Setup extends Command
+  case object Ui extends Command
+
+  // TODO Remove these
+  val UiFlag = "-ui"
+  val FlagNames: Seq[String] = Seq("codegen", "convert", "grade", "modelplex", "prove", "repl", "setup", "ui")
+}
+
 case class Options(
+    command: Option[Command] = None,
     commandLine: Option[String] = None,
-    mode: Option[String] = None,
     conjecture: Option[String] = None,
     in: Option[String] = None,
     exportanswers: Option[Boolean] = None,

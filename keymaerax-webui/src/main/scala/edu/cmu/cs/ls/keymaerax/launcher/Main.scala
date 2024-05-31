@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
+import edu.cmu.cs.ls.keymaerax.cli.Command
 import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.info.{Version, VersionNumber}
@@ -49,9 +50,6 @@ object Main {
   /** Command line flags to display help. */
   private val HELP_FLAGS = List("-help", "--help", "-h", "-?")
 
-  /** Command line flag to start with UI. */
-  private val UI_FLAG = "-ui"
-
   def main(args: Array[String]): Unit = {
     // prelaunch help without launching an extra JVM
     Configuration.setConfiguration(FileConfiguration)
@@ -87,11 +85,11 @@ object Main {
         val cmd =
           (java :: "-Xss20M" :: (if (assertsEnabled) "-ea" else "-da") :: "-jar" :: keymaeraxjar :: LAUNCH_FLAG ::
             Nil) ++ args ++
-            (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) UI_FLAG :: Nil else Nil)
+            (if (args.map(_.stripPrefix("-")).intersect(Command.FlagNames).isEmpty) Command.UiFlag :: Nil else Nil)
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
-    } else if (args.contains(UI_FLAG)) {
+    } else if (args.contains(Command.UiFlag)) {
       // Initialize the loading dialog splash screen.
       LoadingDialogFactory()
 

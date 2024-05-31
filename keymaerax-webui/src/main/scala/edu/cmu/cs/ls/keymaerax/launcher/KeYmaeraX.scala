@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
-import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Options, Usage}
+import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, Command, EvidencePrinter, Options, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{
   DBTools,
@@ -78,18 +78,6 @@ import scala.reflect.io.File
  */
 object KeYmaeraX {
 
-  /** Names of actions that full KeYmaera X supports. */
-  object Modes {
-    val CODEGEN: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.CODEGEN
-    val MODELPLEX: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.MODELPLEX
-    val PROVE: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.PROVE
-    val REPL: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.REPL
-    val CONVERT: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.CONVERT
-    val SETUP: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.SETUP
-    val UI: String = "ui"
-    val modes: Set[String] = Set(CODEGEN, CONVERT, MODELPLEX, PROVE, REPL, UI, SETUP)
-  }
-
   /** Usage -help information. */
   val usage: String = Usage.fullUsage
 
@@ -112,26 +100,26 @@ object KeYmaeraX {
     println(s"KeYmaera X Prover $Version")
     println("Use option -help for usage and license information")
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
-    val options = nextOption(Options(commandLine = Some(args.mkString(" ")), mode = Some(Modes.UI)), args.toList)
+    val options = nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList)
 
     try { runCommand(options, usage) }
     finally { shutdownProver() }
   }
 
-  def runCommand(options: Options, usage: String): Unit = options.mode match {
-    case Some(Modes.CODEGEN) =>
+  def runCommand(options: Options, usage: String): Unit = options.command match {
+    case Some(Command.Codegen) =>
       // Quantitative ModelPlex uses Mathematica to simplify formulas
       val tool = if (options.quantitative.isDefined) Tools.MATHEMATICA else "z3"
       val toolConfig = toolConfigFromFile(tool)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig), usage)
       CodeGen.codegen(options, usage)
-    case Some(Modes.MODELPLEX) =>
+    case Some(Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
       modelplex(options)
-    case Some(Modes.REPL) =>
+    case Some(Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
       repl(options)
-    case Some(Modes.CONVERT)
+    case Some(Command.Convert)
         if options.conversion.contains("verboseTactics") || options.conversion.contains("verbatimTactics") =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
       convertTactics(options, usage)
@@ -162,12 +150,12 @@ object KeYmaeraX {
       case "-sandbox" :: tail => nextOption(map.copy(sandbox = Some(true)), tail)
       case "-modelplex" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map.copy(mode = Some(Modes.MODELPLEX), in = Some(value)), tail)
+          nextOption(map.copy(command = Some(Command.Modelplex), in = Some(value)), tail)
         else { Usage.optionErrorReporter("-modelPlex", usage); exit(1) }
       case "-isar" :: tail => nextOption(map.copy(isar = Some(true)), tail)
       case "-codegen" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map.copy(mode = Some(Modes.CODEGEN), in = Some(value)), tail)
+          nextOption(map.copy(command = Some(Command.Codegen), in = Some(value)), tail)
         else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
       case "-quantitative" :: tail => nextOption(map.copy(quantitative = Some(true)), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
@@ -179,9 +167,9 @@ object KeYmaeraX {
           case tactic :: scaladefs :: _ => map.copy(tactic = Some(tactic), scaladefs = Some(scaladefs))
         }
         if (model.nonEmpty && !model.toString.startsWith("-"))
-          nextOption(newMap.copy(mode = Some(Modes.REPL), model = Some(model)), restArgs)
+          nextOption(newMap.copy(command = Some(Command.Repl), model = Some(model)), restArgs)
         else { Usage.optionErrorReporter("-repl", usage); exit(1) }
-      case "-ui" :: tail => /*launchUI(tail.toArray);*/ nextOption(map.copy(mode = Some(Modes.UI)), tail)
+      case "-ui" :: tail => nextOption(map.copy(command = Some(Command.Ui)), tail)
       // action options
       case "-out" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(out = Some(value)), tail)
