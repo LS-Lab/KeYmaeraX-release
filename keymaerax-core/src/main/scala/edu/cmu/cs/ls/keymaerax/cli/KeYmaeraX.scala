@@ -73,20 +73,25 @@ object KeYmaeraX {
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
   def runCommand(options: Options, usage: String): Unit = {
     options.command match {
-      case Some(Command.Grade) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-        AssessmentProver.grade(options, System.out, System.out, usage)
-      case Some(Command.Prove) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-        KeYmaeraXProofChecker.prove(options, usage)
+      // General commands
+      case Some(Command.Help) => println(usage); exit(1)
+      case Some(Command.License) => println(License.license); exit(1)
+      // Core commands
       case Some(Command.Setup) =>
         println("Initializing lemma cache...")
         initializeBackend(options.toToolConfig, usage)
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
+      case Some(Command.Prove) =>
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
+        KeYmaeraXProofChecker.prove(options, usage)
       case Some(Command.Convert) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         convert(options, usage)
+      case Some(Command.Grade) =>
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
+        AssessmentProver.grade(options, System.out, System.out, usage)
+      // Unknown or no commands
       case Some(command) => println("WARNING: Unknown command " + command)
       case None => println(usage)
     }
@@ -137,8 +142,8 @@ object KeYmaeraX {
   def nextOption(options: Options, args: List[String], usage: String): (Options, List[String]) = {
     args match {
       case Nil => (options, args)
-      case "-help" :: _ => println(usage); exit(1)
-      case "-license" :: _ => println(License.license); exit(1)
+      case "-help" :: tail => nextOption(options.copy(command = Some(Command.Help)), tail, usage)
+      case "-license" :: tail => nextOption(options.copy(command = Some(Command.License)), tail, usage)
       // actions and their options
       case "-bparse" :: value :: _ =>
         initializeProver(options.toToolConfig, usage) // @note parsing a tactic requires prover (AxiomInfo)

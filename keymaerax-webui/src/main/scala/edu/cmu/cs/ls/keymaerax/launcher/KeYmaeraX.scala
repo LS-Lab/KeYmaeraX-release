@@ -145,7 +145,6 @@ object KeYmaeraX {
   def nextOption(map: Options, list: List[String]): Options = {
     list match {
       case Nil => map
-      case "-help" :: _ => println(usage); exit(1)
       // actions
       case "-sandbox" :: tail => nextOption(map.copy(sandbox = Some(true)), tail)
       case "-modelplex" :: value :: tail =>
