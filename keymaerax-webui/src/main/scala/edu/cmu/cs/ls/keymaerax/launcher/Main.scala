@@ -5,10 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.cli.Command
+import edu.cmu.cs.ls.keymaerax.cli.{Command, Options}
 import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
 import edu.cmu.cs.ls.keymaerax.hydra._
-import edu.cmu.cs.ls.keymaerax.info.{Version, VersionNumber}
+import edu.cmu.cs.ls.keymaerax.info.{TechnicalName, Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
@@ -44,23 +44,13 @@ object Main {
   // @todo set via -log command line option
   private val logFile = false
 
-  /** Command line flag to launch the prover in this JVM (if not set, spawns another JVM). */
-  private val LAUNCH_FLAG = "-launch"
-
-  /** Command line flags to display help. */
-  private val HELP_FLAGS = List("-help", "--help", "-h", "-?")
-
   def main(args: Array[String]): Unit = {
-    // prelaunch help without launching an extra JVM
+    val options = Options.parseArgs(s"$TechnicalName-webui", args)
+
     Configuration.setConfiguration(FileConfiguration)
-    if (args.length > 0 && HELP_FLAGS.contains(args(0))) {
-      println(s"KeYmaera X Prover $Version")
-      println(KeYmaeraX.help)
-      sys.exit(1)
-    }
 
     // isFirstLaunch indicates that an extra big-stack JVM still has to be launched
-    val isFirstLaunch = !args.contains(LAUNCH_FLAG)
+    val isFirstLaunch = !options.launch
 
     if (isFirstLaunch) {
       IS_RELAUNCH_PROCESS = true
@@ -82,14 +72,12 @@ object Main {
           assertsEnabled = true; assertsEnabled
         }) // intentional lazy side-effect of setting assertsEnabled to true if -ea
         // now assertsEnabled is set to the correct value (true if -ea, false if -da)
-        val cmd =
-          (java :: "-Xss20M" :: (if (assertsEnabled) "-ea" else "-da") :: "-jar" :: keymaeraxjar :: LAUNCH_FLAG ::
-            Nil) ++ args ++
-            (if (args.map(_.stripPrefix("-")).intersect(Command.FlagNames).isEmpty) Command.UiFlag :: Nil else Nil)
+        val cmd = List(java, "-Xss20M", if (assertsEnabled) "-ea" else "-da", "-jar", keymaeraxjar) ++ args :+
+          Options.LaunchFlag
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
-    } else if (args.contains(Command.UiFlag)) {
+    } else if (options.command.getOrElse(Command.Ui) == Command.Ui) {
       // Initialize the loading dialog splash screen.
       LoadingDialogFactory()
 
@@ -98,18 +86,18 @@ object Main {
       LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
       clearCacheIfDeprecated()
 
-      assert(args.contains(LAUNCH_FLAG))
-      startServer(args.filter(_ != LAUNCH_FLAG))
+      assert(options.launch)
+      startServer(options)
       // @todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     } else { KeYmaeraX.main(args) }
   }
 
-  def startServer(args: Array[String]): Unit = {
+  def startServer(options: Options): Unit = {
     LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
-    launcherDebug(LAUNCH_FLAG + " -- starting KeYmaera X Web UI server HyDRA.")
-    edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.run(args)
+    launcherDebug(Options.LaunchFlag + " -- starting KeYmaera X Web UI server HyDRA.")
+    edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.run(options)
   }
 
   /** Clears the cache if the cache was created by a previous version of KeYmaera X */
@@ -502,7 +490,7 @@ object Main {
           println("Java does not reveal its version: " + e); return (None, "<unknown>")
         case e: NullPointerException => println("Java does not reveal its version: " + e); return (None, "<unknown>")
         case e: SecurityException =>
-          println("Java does not reveal its version because a SecurityManager interfered: " + e);
+          println("Java does not reveal its version because a SecurityManager interfered: " + e)
           return (None, "<unknown>")
       }
     try {

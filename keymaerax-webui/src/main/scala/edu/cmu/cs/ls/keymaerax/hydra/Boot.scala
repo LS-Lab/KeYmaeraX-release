@@ -10,7 +10,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.Options
-import edu.cmu.cs.ls.keymaerax.info.TechnicalName
 import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, SystemWebBrowser}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
@@ -26,11 +25,11 @@ import scala.language.postfixOps
  *   Nathan Fulton
  */
 object NonSSLBoot extends Logging {
-  def run(args: Array[String]) = {
+  def run(options: Options) = {
     Configuration.setConfiguration(FileConfiguration)
 
     // Initialize all tools.
-    val url = HyDRAInitializer.run(args, HyDRAServerConfig.database)
+    val url = HyDRAInitializer.run(options, HyDRAServerConfig.database)
 
     // Some boilerplate code that I don't understand.
     implicit val system: ActorSystem = ActorSystem("hydraloader") // Not sure what the significance of this name is?
@@ -62,9 +61,7 @@ object NonSSLBoot extends Logging {
 object HyDRAInitializer extends Logging {
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
-  def run(args: Array[String], database: DBAbstraction): String = {
-    val options = Options.parseArgs(s"$TechnicalName-webui", args)
-
+  def run(options: Options, database: DBAbstraction): String = {
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 
     try {

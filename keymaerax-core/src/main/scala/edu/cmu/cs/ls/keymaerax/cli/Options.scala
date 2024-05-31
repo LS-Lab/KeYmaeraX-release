@@ -24,26 +24,6 @@ object Command {
   case object Modelplex extends Command
   case object Repl extends Command
   case object Ui extends Command
-
-  // TODO Remove these
-  val UiFlag = "-ui"
-  val FlagNames: Seq[String] = Seq(
-    // General commands
-    "help",
-    "license",
-    // Core commands
-    "setup",
-    "prove",
-    "parse",
-    "bparse",
-    "convert",
-    "grade",
-    // Webui commands
-    "codegen",
-    "modelplex",
-    "repl",
-    "ui",
-  )
 }
 
 case class Options(
