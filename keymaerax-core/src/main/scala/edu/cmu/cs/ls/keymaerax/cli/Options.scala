@@ -50,7 +50,7 @@ object Command {
 
 case class Options(
     // Special options
-    commandLine: Option[String] = None,
+    args: Seq[String],
     command: Option[Command] = None,
     // Options specified using flags
     conjecture: Option[String] = None,

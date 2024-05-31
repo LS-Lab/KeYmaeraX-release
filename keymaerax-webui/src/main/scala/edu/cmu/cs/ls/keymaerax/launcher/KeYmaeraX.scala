@@ -100,7 +100,7 @@ object KeYmaeraX {
     println(s"KeYmaera X Prover $Version")
     println("Use option -help for usage and license information")
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
-    val options = nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList)
+    val options = nextOption(Options(args = args), args.toList)
 
     try {
       initializeConfig(options)

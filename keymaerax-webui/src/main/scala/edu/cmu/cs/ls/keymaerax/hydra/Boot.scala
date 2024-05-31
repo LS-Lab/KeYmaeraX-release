@@ -62,7 +62,7 @@ object HyDRAInitializer extends Logging {
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
   def run(args: Array[String], database: DBAbstraction): String = {
-    val options = KeYmaeraX.nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList)
+    val options = KeYmaeraX.nextOption(Options(args = args), args.toList)
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 

@@ -63,8 +63,7 @@ object KeYmaeraX {
   def main(args: Array[String]): Unit = {
     // @note 'commandLine is passed in to preserve evidence of what generated the output.
     Configuration.setConfiguration(FileConfiguration)
-    val (options, unprocessedArgs) =
-      nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList, Usage.cliUsage)
+    val (options, unprocessedArgs) = nextOption(Options(args = args), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
     try {
       initializeConfig(options)
