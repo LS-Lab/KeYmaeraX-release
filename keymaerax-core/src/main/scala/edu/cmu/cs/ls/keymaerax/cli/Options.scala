@@ -37,13 +37,10 @@ case class Options(
     conjecture: Option[String] = None,
     conversion: Option[String] = None,
     debug: Option[Boolean] = None,
-    dnf: Option[Boolean] = None,
     exportanswers: Option[Boolean] = None,
     fallback: Option[String] = None,
     in: Option[String] = None,
-    interactive: Option[Boolean] = None,
     interval: Option[Boolean] = None,
-    isar: Option[Boolean] = None,
     jlink: Option[String] = None,
     jlinkinterface: Option[String] = None,
     jlinktcpip: Option[String] = None,
@@ -109,10 +106,8 @@ object Options {
       opt[Boolean]("debug")
         .action((x, o) => o.copy(debug = Some(x)))
         .text("enable/disable debug mode with exhaustive messages"),
-      opt[Unit]("dnf").action((_, o) => o.copy(dnf = Some(true))),
       opt[Unit]("exportanswers").action((_, o) => o.copy(exportanswers = Some(true))),
       opt[String]("fallback").action((x, o) => o.copy(fallback = Some(x))),
-      opt[Unit]("interactive").action((_, o) => o.copy(interactive = Some(true))),
       opt[Boolean]("interval")
         .action((x, o) => o.copy(interval = Some(x)))
         .text(
@@ -120,7 +115,6 @@ object Options {
             |false: skip interval arithmetic presuming no floating point errors
             |""".stripMargin
         ),
-      opt[Unit]("isar").action((_, o) => o.copy(isar = Some(true))),
       opt[String]("jlink")
         .action((x, o) => o.copy(jlink = Some(x)))
         .valueName("path/to/jlinkNativeLib")
