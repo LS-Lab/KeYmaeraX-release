@@ -132,7 +132,6 @@ object KeYmaeraX {
         case Some(Modes.REPL) =>
           initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
           repl(options)
-        case Some(Modes.UI) => launchUI(args) // @note prover initialized in web UI launcher
         case Some(Modes.CONVERT) => options.conversion match {
             case Some("verboseTactics") | Some("verbatimTactics") =>
               initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
@@ -431,13 +430,6 @@ object KeYmaeraX {
     })
     val inputFormula: Formula = ArchiveParser.parseAsFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
-  }
-
-  /** Launch the web user interface */
-  def launchUI(args: Array[String]): Unit = {
-    val augmentedArgs =
-      if (args.map(_.stripPrefix("-")).intersect(Modes.modes.toList).isEmpty) ("-" + Modes.UI) +: args else args
-    if (LAUNCH) Main.main("-launch" +: augmentedArgs) else Main.main(augmentedArgs)
   }
 
   /**

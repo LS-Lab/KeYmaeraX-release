@@ -111,7 +111,7 @@ object Main {
     KeYmaeraXLock.obtainLockOrExit()
 
     launcherDebug(LAUNCH_FLAG + " -- starting KeYmaera X Web UI server HyDRA.")
-    edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
+    edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.run(args)
   }
 
   /** Clears the cache if the cache was created by a previous version of KeYmaera X */

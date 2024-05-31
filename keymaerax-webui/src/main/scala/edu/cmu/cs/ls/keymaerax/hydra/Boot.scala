@@ -8,8 +8,6 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import akka.util.Timeout
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.Options
 import edu.cmu.cs.ls.keymaerax.launcher.{KeYmaeraX, LoadingDialogFactory, SystemWebBrowser}
@@ -17,7 +15,6 @@ import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 
 import scala.concurrent.ExecutionContextExecutor
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 /**
@@ -27,46 +24,32 @@ import scala.language.postfixOps
  * @author
  *   Nathan Fulton
  */
-object NonSSLBoot extends App with Logging {
-  Configuration.setConfiguration(FileConfiguration)
+object NonSSLBoot extends Logging {
+  def run(args: Array[String]) = {
+    Configuration.setConfiguration(FileConfiguration)
 
-  // Initialize all tools.
-  val url = HyDRAInitializer(args, HyDRAServerConfig.database)
+    // Initialize all tools.
+    val url = HyDRAInitializer.run(args, HyDRAServerConfig.database)
 
-  // Some boilerplate code that I don't understand.
-  implicit val system: ActorSystem = ActorSystem("hydraloader") // Not sure what the significance of this name is?
-  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-  implicit val timeout: Timeout = Timeout(10 seconds) // @note this might need to be much higher.
-  val config = ConfigFactory
-    .load()
-    .withValue("akka.loglevel", ConfigValueFactory.fromAnyRef("OFF"))
-    .withValue("akka.stdout-loglevel", ConfigValueFactory.fromAnyRef("OFF"))
+    // Some boilerplate code that I don't understand.
+    implicit val system: ActorSystem = ActorSystem("hydraloader") // Not sure what the significance of this name is?
+    implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  val api = routes
+    def routes: Route = RestApi.api
+    val api = routes
 
-  def routes: Route = RestApi.api
-
-  // Do the KeYmaera X initialization GUI stuff...
-  LoadingDialogFactory() // @note show if not already started through Main.scala
-  Http().newServerAt(interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port).bindFlow(api) map { _ =>
-    {
+    // Do the KeYmaera X initialization GUI stuff...
+    LoadingDialogFactory() // @note show if not already started through Main.scala
+    Http().newServerAt(interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port).bindFlow(api) map { _ =>
       // Finally, print a message indicating that the server was started.
       LoadingDialogFactory().addToStatus(10, Some("Finished loading"))
-      logger.info(
-        "\n**********************************************************\n" +
-          "****                   KeYmaera X                     ****\n" +
-          "****                                                  ****\n" + "**** OPEN YOUR WEB BROWSER AT  http://" +
-          HyDRAServerConfig.host + ":" + HyDRAServerConfig.port + "/ ****\n" +
-          "****                                                  ****\n" +
-          "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
-          "**********************************************************\n"
-      )
+      logger.info(s"Open your web browser at http://${HyDRAServerConfig.host}:${HyDRAServerConfig.port}/")
       LoadingDialogFactory().close()
       SystemWebBrowser(s"http://${HyDRAServerConfig.host}:${HyDRAServerConfig.port}/" + url)
+    } recover { _ =>
+      LoadingDialogFactory().addToStatus(0, Some("Loading failed..."))
+      System.exit(1)
     }
-  } recover { case _ =>
-    LoadingDialogFactory().addToStatus(0, Some("Loading failed..."))
-    System.exit(1)
   }
 }
 
@@ -76,10 +59,9 @@ object NonSSLBoot extends App with Logging {
  *   Nathan Fulton
  */
 object HyDRAInitializer extends Logging {
-  private type OptionMap = Map[Symbol, Any]
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
-  def apply(args: Array[String], database: DBAbstraction): String = {
+  def run(args: Array[String], database: DBAbstraction): String = {
     val options = KeYmaeraX.nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList)
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
