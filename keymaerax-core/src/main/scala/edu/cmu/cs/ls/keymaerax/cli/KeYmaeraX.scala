@@ -85,6 +85,14 @@ object KeYmaeraX {
       case Some(Command.Prove) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         KeYmaeraXProofChecker.prove(options, usage)
+      case Some(Command.Parse(value)) =>
+        // Parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
+        initializeProver(options.toToolConfig, usage)
+        if (parseProblemFile(value)) exit(0) else exit(-1)
+      case Some(Command.BParse(value)) =>
+        // Parsing a tactic requires prover (AxiomInfo)
+        initializeProver(options.toToolConfig, usage)
+        if (parseBelleTactic(value)) exit(0) else exit(-1)
       case Some(Command.Convert) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
         convert(options, usage)
@@ -145,16 +153,11 @@ object KeYmaeraX {
       case "-help" :: tail => nextOption(options.copy(command = Some(Command.Help)), tail, usage)
       case "-license" :: tail => nextOption(options.copy(command = Some(Command.License)), tail, usage)
       // actions and their options
-      case "-bparse" :: value :: _ =>
-        initializeProver(options.toToolConfig, usage) // @note parsing a tactic requires prover (AxiomInfo)
-        if (parseBelleTactic(value)) exit(0) else exit(-1)
+      case "-bparse" :: value :: tail => nextOption(options.copy(command = Some(Command.BParse(value))), tail, usage)
       case "-conjecture" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(conjecture = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
-      case "-parse" :: value :: _ =>
-        // @note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
-        initializeProver(options.toToolConfig, usage)
-        if (parseProblemFile(value)) exit(0) else exit(-1)
+      case "-parse" :: value :: tail => nextOption(options.copy(command = Some(Command.Parse(value))), tail, usage)
       case "-parserClass" :: value :: tail =>
         Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
         nextOption(options, tail, usage)

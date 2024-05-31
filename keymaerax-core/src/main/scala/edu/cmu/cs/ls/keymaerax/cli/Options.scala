@@ -17,6 +17,8 @@ object Command {
   // Core commands
   case object Setup extends Command
   case object Prove extends Command
+  case class Parse(value: String) extends Command
+  case class BParse(value: String) extends Command
   case object Convert extends Command
   case object Grade extends Command
   // Webui commands
@@ -34,6 +36,8 @@ object Command {
     // Core commands
     "setup",
     "prove",
+    "parse",
+    "bparse",
     "convert",
     "grade",
     // Webui commands
