@@ -228,13 +228,16 @@ object Options {
         .text("path to Z3 executable"),
 
       // Core commands
+      note(""),
       cmd("setup")
         .action((_, o) => o.copy(command = Some(Command.Setup)))
         .text("initialize the configuration and lemma cache"),
+      note(""),
       cmd("prove")
         .action((_, o) => o.copy(command = Some(Command.Prove)))
         .text("run prover on given archive of models or proofs")
         .children(arg[String]("file.kyx").action((x, o) => o.copy(in = Some(x)))),
+      note(""),
       cmd("parse")
         .action((_, o) => o.copy(command = Some(Command.Parse())))
         .text("return error code 0 if the given model file parses")
@@ -242,6 +245,7 @@ object Options {
           val command = o.command.get.asInstanceOf[Command.Parse]
           o.copy(command = Some(command.copy(value = x)))
         })),
+      note(""),
       cmd("bparse")
         .action((_, o) => o.copy(command = Some(Command.BParse())))
         .text("return error code 0 if given bellerophon tactic file parses")
@@ -249,6 +253,7 @@ object Options {
           val command = o.command.get.asInstanceOf[Command.BParse]
           o.copy(command = Some(command.copy(value = x)))
         })),
+      note(""),
       cmd("convert")
         .action((_, o) => o.copy(command = Some(Command.Convert)))
         .text("model and tactic conversions")
@@ -257,19 +262,23 @@ object Options {
             .action((x, o) => o.copy(conversion = Some(x))),
           arg[String]("file.kyx").action((x, o) => o.copy(in = Some(x))),
         ),
+      note(""),
       cmd("grade")
         .action((_, o) => o.copy(command = Some(Command.Grade)))
         .children(arg[String]("<in>").action((x, o) => o.copy(in = Some(x)))),
 
       // Webui commands
+      note(""),
       cmd("codegen")
         .action((_, o) => o.copy(command = Some(Command.Codegen)))
         .text("generate executable C code from a model file")
         .children(arg[String]("file.kym").action((x, o) => o.copy(in = Some(x)))),
+      note(""),
       cmd("modelplex")
         .action((_, o) => o.copy(command = Some(Command.Modelplex)))
         .text("synthesize a monitor from a model by proof with the ModelPlex tactic")
         .children(arg[String]("file.kyx").action((x, o) => o.copy(in = Some(x)))),
+      note(""),
       cmd("repl")
         .action((_, o) => o.copy(command = Some(Command.Repl)))
         .text("prove a model interactively from a command line REPL")
@@ -278,6 +287,7 @@ object Options {
           arg[String]("<tactic>").optional().action((x, o) => o.copy(tactic = Some(x))),
           arg[String]("<scaladefs>").optional().action((x, o) => o.copy(scaladefs = Some(x))),
         ),
+      note(""),
       cmd("ui").action((_, o) => o.copy(command = Some(Command.Ui))).text("start web user interface"),
     )
 
