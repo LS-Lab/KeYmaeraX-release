@@ -106,20 +106,20 @@ object Options {
 
       // Options specified using flags
       opt[String]("conjecture").action((x, o) => o.copy(conjecture = Some(x))),
-      opt[Unit]("debug").action((_, o) => o.copy(debug = Some(true))).text("use debug mode with exhaustive messages"),
-      opt[Unit]("nodebug")
-        .action((_, o) => o.copy(debug = Some(false)))
-        .text("disable debug mode to suppress intermediate messages"),
+      opt[Boolean]("debug")
+        .action((x, o) => o.copy(debug = Some(x)))
+        .text("enable/disable debug mode with exhaustive messages"),
       opt[Unit]("dnf").action((_, o) => o.copy(dnf = Some(true))),
       opt[Unit]("exportanswers").action((_, o) => o.copy(exportanswers = Some(true))),
       opt[String]("fallback").action((x, o) => o.copy(fallback = Some(x))),
       opt[Unit]("interactive").action((_, o) => o.copy(interactive = Some(true))),
-      opt[Unit]("interval")
-        .action((_, o) => o.copy(interval = Some(true)))
-        .text("guard reals by interval arithmetic in floating point (recommended)"),
-      opt[Unit]("nointerval")
-        .action((_, o) => o.copy(interval = Some(false)))
-        .text("skip interval arithmetic presuming no floating point errors"),
+      opt[Boolean]("interval")
+        .action((x, o) => o.copy(interval = Some(x)))
+        .text(
+          """true: guard reals by interval arithmetic in floating point (recommended)
+            |false: skip interval arithmetic presuming no floating point errors
+            |""".stripMargin
+        ),
       opt[Unit]("isar").action((_, o) => o.copy(isar = Some(true))),
       opt[String]("jlink")
         .action((x, o) => o.copy(jlink = Some(x)))
@@ -147,9 +147,13 @@ object Options {
             |Default: false (unless configured in keymaerax.conf)
             |""".stripMargin
         ),
-      opt[Unit]("lax")
-        .action((_, o) => o.copy(lax = Some(true)))
-        .text("use lax mode with more flexible parser, printer, prover etc."),
+      opt[Boolean]("lax")
+        .action((x, o) => o.copy(lax = Some(x)))
+        .text(
+          """true: use lax mode with more flexible parser, printer, prover etc.
+            |false: use strict mode with no flexibility in prover
+            |""".stripMargin
+        ),
       opt[String]("mathkernel")
         .action((x, o) => o.copy(mathkernel = Some(x)))
         .valueName("MathKernel(.exe)")
@@ -189,9 +193,6 @@ object Options {
         .valueName("path")
         .text("export proof term s-expression from -prove to given path"),
       opt[Unit]("skiponparseerror").action((_, o) => o.copy(skiponparseerror = Some(true))),
-      opt[Unit]("strict")
-        .action((_, o) => o.copy(lax = Some(false)))
-        .text("use strict mode with no flexibility in prover"),
       opt[String]("tactic").action((x, o) => o.copy(tactic = Some(x))),
       opt[String]("tacticName").action((x, o) => o.copy(tacticName = Some(x))),
       opt[Long]("timeout")
