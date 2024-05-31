@@ -10,7 +10,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.Options
-import edu.cmu.cs.ls.keymaerax.launcher.{KeYmaeraX, LoadingDialogFactory, SystemWebBrowser}
+import edu.cmu.cs.ls.keymaerax.info.TechnicalName
+import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, SystemWebBrowser}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 
@@ -62,7 +63,7 @@ object HyDRAInitializer extends Logging {
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
   def run(args: Array[String], database: DBAbstraction): String = {
-    val options = KeYmaeraX.nextOption(Options(args = args), args.toList)
+    val options = Options.parseArgs(s"$TechnicalName-webui", args)
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 

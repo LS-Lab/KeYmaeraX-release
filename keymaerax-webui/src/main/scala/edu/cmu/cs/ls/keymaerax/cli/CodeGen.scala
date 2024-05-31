@@ -31,7 +31,7 @@ object CodeGen {
    * @param usage
    *   Usage information to print on wrong usage.
    */
-  def codegen(options: Options, usage: String): Unit = {
+  def codegen(options: Options, usage: String, vars: Option[Set[BaseVariable]]): Unit = {
     require(options.in.isDefined, usage)
 
     val inputFileName = options.in.get
@@ -42,8 +42,6 @@ object CodeGen {
     val inputFormulas = ArchiveParser.parseFromFile(inputFileName)
     var outputFile = inputFile.changeExtension("c")
     if (options.out.isDefined) outputFile = File(options.out.get)
-
-    val vars: Option[Set[BaseVariable]] = options.vars.map(_.toSet)
 
     val interval = options.interval.getOrElse(true)
     val head = EvidencePrinter.stampHead(options)

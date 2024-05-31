@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{
   Z3ToolProvider,
 }
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, StaticSemantics}
+import edu.cmu.cs.ls.keymaerax.info.TechnicalName
 import edu.cmu.cs.ls.keymaerax.parser.{
   ArchiveParser,
   Declaration,
@@ -36,7 +37,6 @@ import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStart
 import java.io.{FileReader, PrintWriter}
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
-import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -61,11 +61,10 @@ object KeYmaeraX {
   }
 
   def main(args: Array[String]): Unit = {
-    // @note 'commandLine is passed in to preserve evidence of what generated the output.
-    Configuration.setConfiguration(FileConfiguration)
-    val (options, unprocessedArgs) = nextOption(Options(args = args), args.toList, Usage.cliUsage)
-    if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
+    val options = Options.parseArgs(s"$TechnicalName-core", args)
+
     try {
+      Configuration.setConfiguration(FileConfiguration)
       initializeConfig(options)
       runCommand(options, Usage.cliUsage)
     } finally { shutdownProver() }
@@ -125,9 +124,6 @@ object KeYmaeraX {
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
   def runCommand(options: Options, usage: String): Unit = {
     options.command match {
-      // General commands
-      case Some(Command.Help) => println(usage); exit(1)
-      case Some(Command.License) => println(License.license); exit(1)
       // Core commands
       case Some(Command.Setup) =>
         println("Initializing lemma cache...")
@@ -196,97 +192,6 @@ object KeYmaeraX {
 
   /** Exit gracefully */
   def exit(status: Int): Nothing = { shutdownProver(); sys.exit(status) }
-
-  /** Fills `options` from `args`, printing `usage` on error. */
-  @tailrec
-  def nextOption(options: Options, args: List[String], usage: String): (Options, List[String]) = {
-    args match {
-      case Nil => (options, args)
-      case "-help" :: tail => nextOption(options.copy(command = Some(Command.Help)), tail, usage)
-      case "-license" :: tail => nextOption(options.copy(command = Some(Command.License)), tail, usage)
-      // actions and their options
-      case "-bparse" :: value :: tail => nextOption(options.copy(command = Some(Command.BParse(value))), tail, usage)
-      case "-conjecture" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(conjecture = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
-      case "-parse" :: value :: tail => nextOption(options.copy(command = Some(Command.Parse(value))), tail, usage)
-      case "-parserClass" :: value :: tail => nextOption(options.copy(parserClass = Some(value)), tail, usage)
-      case "-prove" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options.copy(command = Some(Command.Prove), in = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-prove", usage); exit(1) }
-      case "-grade" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options.copy(command = Some(Command.Grade), in = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-grade", usage); exit(1) }
-      case "-exportanswers" :: tail => nextOption(options.copy(exportanswers = Some(true)), tail, usage)
-      case "-skiponparseerror" :: tail => nextOption(options.copy(skiponparseerror = Some(true)), tail, usage)
-      case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(out = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-grade", usage); exit(1) }
-      case "-savept" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(ptOut = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-savept", usage); exit(1) }
-      case "-setup" :: tail => nextOption(options.copy(command = Some(Command.Setup)), tail, usage)
-      case "-convert" :: conversion :: kyx :: tail =>
-        if (conversion.nonEmpty && !conversion.startsWith("-") && kyx.nonEmpty && !kyx.startsWith("-")) nextOption(
-          options.copy(command = Some(Command.Convert), conversion = Some(conversion), in = Some(kyx)),
-          tail,
-          usage,
-        )
-        else { Usage.optionErrorReporter("-convert", usage); exit(1) }
-      case "-tactic" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(tactic = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-tactic", usage); exit(1) }
-      case "-tacticName" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(tacticName = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-tacticName", usage); exit(1) }
-      case "-tool" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options.copy(tool = Some(value.toLowerCase)), tail, usage)
-        else { Usage.optionErrorReporter("-tool", usage); exit(1) }
-      case "-verbose" :: tail => nextOption(options.copy(verbose = Some(true)), tail, usage)
-      case "-proofStatistics" :: value :: tail =>
-        nextOption(options.copy(proofStatisticsPrinter = Some(value)), tail, usage)
-      // Wolfram JLink path options
-      case "-mathkernel" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(mathkernel = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-mathkernel", usage); exit(1) }
-      case "-jlink" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(jlink = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-jlink", usage); exit(1) }
-      case "-jlinkinterface" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "string" || value == "expr"))
-          nextOption(options.copy(jlinkinterface = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-jlinkinterface", usage); exit(1) }
-      case "-qemethod" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "Reduce" || value == "Resolve"))
-          nextOption(options.copy(qemethod = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-qemethod", usage); exit(1) }
-      case "-jlinktcpip" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false"))
-          nextOption(options.copy(jlinktcpip = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-jlinktcpip", usage); exit(1) }
-      case "-parallelqe" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false"))
-          nextOption(options.copy(parallelqe = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-parallelqe", usage); exit(1) }
-      // Z3 path options
-      case "-z3path" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(z3Path = Some(value)), tail, usage)
-        else { Usage.optionErrorReporter("-z3path", usage); exit(1) }
-      // global options
-      case "-lax" :: tail => nextOption(options.copy(lax = Some(true)), tail, usage)
-      case "-strict" :: tail => nextOption(options.copy(lax = Some(false)), tail, usage)
-      case "-debug" :: tail => nextOption(options.copy(debug = Some(true)), tail, usage)
-      case "-nodebug" :: tail => nextOption(options.copy(debug = Some(false)), tail, usage)
-      case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(options.copy(timeout = Some(value.toLong)), tail, usage)
-        else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
-      case _ => (options, args)
-    }
-  }
 
   /** Reads configuration from keymaerax.conf. */
   def toolConfigFromFile(defaultTool: String): ToolConfiguration = {

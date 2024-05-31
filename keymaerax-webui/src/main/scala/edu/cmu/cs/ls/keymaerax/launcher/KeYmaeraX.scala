@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   VerbatimTraceToTacticConverter,
   VerboseTraceToTacticConverter,
 }
-import edu.cmu.cs.ls.keymaerax.info.Version
+import edu.cmu.cs.ls.keymaerax.info.TechnicalName
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -30,7 +30,6 @@ import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.apache.commons.lang3.StringUtils
 
 import java.io.PrintWriter
-import scala.annotation.tailrec
 import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
 
@@ -81,28 +80,15 @@ object KeYmaeraX {
   /** Usage -help information. */
   val usage: String = Usage.fullUsage
 
-  private def launched(): Unit = {
-    LAUNCH = true
-    // println("Launching KeYmaera X")
-  }
-  var LAUNCH: Boolean = false
-
   /**
    * main function to start KeYmaera X from command line. Other entry points exist but this one is best for command line
    * interfaces.
    */
   def main(args: Array[String]): Unit = {
-    Configuration.setConfiguration(FileConfiguration)
-    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
-      println(help)
-      exit(1)
-    }
-    println(s"KeYmaera X Prover $Version")
-    println("Use option -help for usage and license information")
-    // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
-    val options = nextOption(Options(args = args), args.toList)
+    val options = Options.parseArgs(s"$TechnicalName-webui", args)
 
     try {
+      Configuration.setConfiguration(FileConfiguration)
       initializeConfig(options)
       runCommand(options, usage)
     } finally { shutdownProver() }
@@ -113,8 +99,9 @@ object KeYmaeraX {
       // Quantitative ModelPlex uses Mathematica to simplify formulas
       val tool = if (options.quantitative.isDefined) Tools.MATHEMATICA else "z3"
       val toolConfig = toolConfigFromFile(tool)
+      val vars = options.vars.map(makeVariables(_).toSet)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig), usage)
-      CodeGen.codegen(options, usage)
+      CodeGen.codegen(options, usage, vars)
     case Some(Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
       modelplex(options)
@@ -134,78 +121,13 @@ object KeYmaeraX {
   /** KeYmaera X -help string. */
   def help: String = stats + "\n" + usage
 
-  private def makeVariables(varNames: Array[String]): Array[BaseVariable] = {
+  private def makeVariables(varNames: Seq[String]): Seq[BaseVariable] = {
     varNames.map(vn =>
       Parser.parser(vn) match {
         case v: BaseVariable => v
         case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
       }
     )
-  }
-
-  @tailrec
-  def nextOption(map: Options, list: List[String]): Options = {
-    list match {
-      case Nil => map
-      // actions
-      case "-sandbox" :: tail => nextOption(map.copy(sandbox = Some(true)), tail)
-      case "-modelplex" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map.copy(command = Some(Command.Modelplex), in = Some(value)), tail)
-        else { Usage.optionErrorReporter("-modelPlex", usage); exit(1) }
-      case "-isar" :: tail => nextOption(map.copy(isar = Some(true)), tail)
-      case "-codegen" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map.copy(command = Some(Command.Codegen), in = Some(value)), tail)
-        else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
-      case "-quantitative" :: tail => nextOption(map.copy(quantitative = Some(true)), tail)
-      case "-repl" :: model :: tactic_and_scala_and_tail =>
-        val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
-        val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
-        val newMap = posArgs match {
-          case Nil => map
-          case tactic :: Nil => map.copy(tactic = Some(tactic))
-          case tactic :: scaladefs :: _ => map.copy(tactic = Some(tactic), scaladefs = Some(scaladefs))
-        }
-        if (model.nonEmpty && !model.toString.startsWith("-"))
-          nextOption(newMap.copy(command = Some(Command.Repl), model = Some(model)), restArgs)
-        else { Usage.optionErrorReporter("-repl", usage); exit(1) }
-      case "-ui" :: tail => nextOption(map.copy(command = Some(Command.Ui)), tail)
-      // action options
-      case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(out = Some(value)), tail)
-        else { Usage.optionErrorReporter("-out", usage); exit(1) }
-      case "-fallback" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(fallback = Some(value)), tail)
-        else { Usage.optionErrorReporter("-fallback", usage); exit(1) }
-      case "-vars" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-"))
-          nextOption(map.copy(vars = Some(makeVariables(value.split(",")))), tail)
-        else { Usage.optionErrorReporter("-vars", usage); exit(1) }
-      case "-monitor" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(monitor = Some(Symbol(value))), tail)
-        else { Usage.optionErrorReporter("-monitor", usage); exit(1) }
-      case "-interactive" :: tail => nextOption(map.copy(interactive = Some(true)), tail)
-      // aditional options
-      case "-interval" :: tail => require(map.interval.isEmpty); nextOption(map.copy(interval = Some(true)), tail)
-      case "-nointerval" :: tail => require(map.interval.isEmpty); nextOption(map.copy(interval = Some(false)), tail)
-      case "-dnf" :: tail => require(map.dnf.isEmpty); nextOption(map.copy(dnf = Some(true)), tail)
-      // global options
-      case "-launch" :: tail => launched(); nextOption(map, tail)
-      case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(timeout = Some(value.toLong)), tail)
-        else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
-      case "-verify" :: tail => require(map.verify.isEmpty); nextOption(map.copy(verify = Some(true)), tail)
-      case "-open" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) nextOption(map.copy(open = Some(value)), tail)
-        else { Usage.optionErrorReporter("-open", usage); exit(1) }
-      case _ =>
-        val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
-        if (unprocessedArgs == list) {
-          Usage.optionErrorReporter(unprocessedArgs.head, usage)
-          exit(1)
-        } else nextOption(options, unprocessedArgs)
-    }
   }
 
   /**
@@ -342,7 +264,8 @@ object KeYmaeraX {
       pw.close()
       println(s"Sandbox synthesis successful: $outputFileName")
     } else if (options.vars.isDefined) {
-      val result = ModelPlex(options.vars.get.toList, kind, verifyOption)(inputModel)
+      val vars = makeVariables(options.vars.get)
+      val result = ModelPlex(vars.toList, kind, verifyOption)(inputModel)
       printModelplexResult(inputModel, result, outputFileName, options)
     } else {
       val result = ModelPlex(inputModel, kind, verifyOption)
@@ -372,7 +295,8 @@ object KeYmaeraX {
         // @TODO: Robustify
         val Imply(init, Box(Compose(Test(bounds), Loop(Compose(ctrl, plant))), safe)) = model
         val consts = StaticSemantics.signature(model)
-        pwHOL.write(HOLConverter.configFile(consts, options.vars.get.toList, bounds, init, fml))
+        val vars = makeVariables(options.vars.get)
+        pwHOL.write(HOLConverter.configFile(consts, vars.toList, bounds, init, fml))
         pwHOL.close()
 
       case None => ()
