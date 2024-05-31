@@ -102,8 +102,10 @@ object KeYmaeraX {
     // @note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList)
 
-    try { runCommand(options, usage) }
-    finally { shutdownProver() }
+    try {
+      initializeConfig(options)
+      runCommand(options, usage)
+    } finally { shutdownProver() }
   }
 
   def runCommand(options: Options, usage: String): Unit = options.command match {

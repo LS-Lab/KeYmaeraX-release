@@ -80,6 +80,13 @@ case class Options(
     dnf: Option[Boolean] = None,
     verify: Option[Boolean] = None,
     open: Option[String] = None,
+    parserClass: Option[String] = None,
+    jlinkinterface: Option[String] = None,
+    qemethod: Option[String] = None,
+    jlinktcpip: Option[String] = None,
+    parallelqe: Option[String] = None,
+    lax: Option[Boolean] = None,
+    debug: Option[Boolean] = None,
 ) {
   def toToolConfig: ToolConfiguration = ToolConfiguration(
     tool = this.tool,

@@ -33,7 +33,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathemat
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolPathFinder}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 
-import java.io.{File, FileReader, PrintWriter}
+import java.io.{FileReader, PrintWriter}
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
 import scala.annotation.tailrec
@@ -66,8 +66,61 @@ object KeYmaeraX {
     val (options, unprocessedArgs) =
       nextOption(Options(commandLine = Some(args.mkString(" "))), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
-    try { runCommand(options, Usage.cliUsage) }
-    finally { shutdownProver() }
+    try {
+      initializeConfig(options)
+      runCommand(options, Usage.cliUsage)
+    } finally { shutdownProver() }
+  }
+
+  /** Set up values in the global config based on command-line options. */
+  def initializeConfig(options: Options): Unit = {
+    for (value <- options.parserClass) { Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false) }
+
+    for (value <- options.mathkernel) {
+      if (Files.exists(Paths.get(value))) {
+        Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
+      } else {
+        println("[Error -mathkernel] Mathematica kernel file does not exist: " + value)
+        exit(2)
+      }
+    }
+
+    for (value <- options.jlink) {
+      if (Files.exists(Paths.get(value))) {
+        Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
+      } else {
+        println("[Error -jlink] Path to JLink native library does not exist: " + value)
+        exit(2)
+      }
+    }
+
+    for (value <- options.jlinkinterface) {
+      Configuration.set(Configuration.Keys.JLINK_USE_EXPR_INTERFACE, (value == "expr").toString, saveToFile = false)
+    }
+
+    for (value <- options.qemethod) {
+      Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, value, saveToFile = false)
+    }
+
+    for (value <- options.jlinktcpip) {
+      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, value, saveToFile = false)
+    }
+
+    for (value <- options.parallelqe) {
+      Configuration.set(Configuration.Keys.MATHEMATICA_PARALLEL_QE, value, saveToFile = false)
+    }
+
+    for (value <- options.z3Path) {
+      if (Files.exists(Paths.get(value))) { Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false) }
+      else {
+        println("[Error -z3path] Z3 executable does not exist: " + value)
+        exit(2)
+      }
+    }
+
+    for (value <- options.lax) { Configuration.set(Configuration.Keys.LAX, value.toString, saveToFile = false) }
+
+    for (value <- options.debug) { Configuration.set(Configuration.Keys.DEBUG, value.toString, saveToFile = false) }
   }
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
@@ -158,9 +211,7 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(conjecture = Some(value)), tail, usage)
         else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
       case "-parse" :: value :: tail => nextOption(options.copy(command = Some(Command.Parse(value))), tail, usage)
-      case "-parserClass" :: value :: tail =>
-        Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
-        nextOption(options, tail, usage)
+      case "-parserClass" :: value :: tail => nextOption(options.copy(parserClass = Some(value)), tail, usage)
       case "-prove" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
           nextOption(options.copy(command = Some(Command.Prove), in = Some(value)), tail, usage)
@@ -200,86 +251,36 @@ object KeYmaeraX {
         nextOption(options.copy(proofStatisticsPrinter = Some(value)), tail, usage)
       // Wolfram JLink path options
       case "-mathkernel" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) {
-          if (new File(value).exists) {
-            Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
-            nextOption(options.copy(mathkernel = Some(value)), tail, usage)
-          } else {
-            println("[Error -mathkernel] Mathematica kernel file does not exist: " + value)
-            exit(2)
-          }
-        } else {
-          Usage.optionErrorReporter("-mathkernel", usage)
-          exit(1)
-        }
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(mathkernel = Some(value)), tail, usage)
+        else { Usage.optionErrorReporter("-mathkernel", usage); exit(1) }
       case "-jlink" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) {
-          if (new File(value).exists) {
-            Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, value, saveToFile = false)
-            nextOption(options.copy(jlink = Some(value)), tail, usage)
-          } else {
-            println("[Error -jlink] Path to JLink native library does not exist: " + value)
-            exit(2)
-          }
-        } else {
-          Usage.optionErrorReporter("-jlink", usage)
-          exit(1)
-        }
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(jlink = Some(value)), tail, usage)
+        else { Usage.optionErrorReporter("-jlink", usage); exit(1) }
       case "-jlinkinterface" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "string" || value == "expr")) {
-          Configuration.set(Configuration.Keys.JLINK_USE_EXPR_INTERFACE, (value == "expr").toString, saveToFile = false)
-          nextOption(options, tail, usage)
-        } else {
-          Usage.optionErrorReporter("-jlinkinterface", usage)
-          exit(1)
-        }
+        if (value.nonEmpty && !value.startsWith("-") && (value == "string" || value == "expr"))
+          nextOption(options.copy(jlinkinterface = Some(value)), tail, usage)
+        else { Usage.optionErrorReporter("-jlinkinterface", usage); exit(1) }
       case "-qemethod" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "Reduce" || value == "Resolve")) {
-          Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, value, saveToFile = false)
-          nextOption(options, tail, usage)
-        } else {
-          Usage.optionErrorReporter("-qemethod", usage)
-          exit(1)
-        }
+        if (value.nonEmpty && !value.startsWith("-") && (value == "Reduce" || value == "Resolve"))
+          nextOption(options.copy(qemethod = Some(value)), tail, usage)
+        else { Usage.optionErrorReporter("-qemethod", usage); exit(1) }
       case "-jlinktcpip" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false")) {
-          Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, value, saveToFile = false)
-          nextOption(options, tail, usage)
-        } else {
-          Usage.optionErrorReporter("-jlinktcpip", usage)
-          exit(1)
-        }
+        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false"))
+          nextOption(options.copy(jlinktcpip = Some(value)), tail, usage)
+        else { Usage.optionErrorReporter("-jlinktcpip", usage); exit(1) }
       case "-parallelqe" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false")) {
-          Configuration.set(Configuration.Keys.MATHEMATICA_PARALLEL_QE, value, saveToFile = false)
-          nextOption(options, tail, usage)
-        } else {
-          Usage.optionErrorReporter("-parallelqe", usage)
-          exit(1)
-        }
+        if (value.nonEmpty && !value.startsWith("-") && (value == "true" || value == "false"))
+          nextOption(options.copy(parallelqe = Some(value)), tail, usage)
+        else { Usage.optionErrorReporter("-parallelqe", usage); exit(1) }
       // Z3 path options
       case "-z3path" :: value :: tail =>
-        if (value.nonEmpty && !value.startsWith("-")) {
-          if (new File(value).exists) {
-            Configuration.set(Configuration.Keys.Z3_PATH, value, saveToFile = false)
-            nextOption(options.copy(z3Path = Some(value)), tail, usage)
-          } else {
-            println("[Error -z3path] Z3 executable does not exist: " + value)
-            exit(2)
-          }
-        } else {
-          Usage.optionErrorReporter("-z3path", usage)
-          exit(1)
-        }
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options.copy(z3Path = Some(value)), tail, usage)
+        else { Usage.optionErrorReporter("-z3path", usage); exit(1) }
       // global options
-      case "-lax" :: tail =>
-        Configuration.set(Configuration.Keys.LAX, "true", saveToFile = false); nextOption(options, tail, usage)
-      case "-strict" :: tail =>
-        Configuration.set(Configuration.Keys.LAX, "false", saveToFile = false); nextOption(options, tail, usage)
-      case "-debug" :: tail =>
-        Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(options, tail, usage)
-      case "-nodebug" :: tail =>
-        Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(options, tail, usage)
+      case "-lax" :: tail => nextOption(options.copy(lax = Some(true)), tail, usage)
+      case "-strict" :: tail => nextOption(options.copy(lax = Some(false)), tail, usage)
+      case "-debug" :: tail => nextOption(options.copy(debug = Some(true)), tail, usage)
+      case "-nodebug" :: tail => nextOption(options.copy(debug = Some(false)), tail, usage)
       case "-timeout" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-"))
           nextOption(options.copy(timeout = Some(value.toLong)), tail, usage)
