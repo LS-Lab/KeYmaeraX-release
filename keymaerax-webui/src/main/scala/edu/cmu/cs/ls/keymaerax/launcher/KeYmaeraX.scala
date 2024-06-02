@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
-import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, Command, EvidencePrinter, Options, Usage}
+import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, Command, EvidencePrinter, Options}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{
   DBTools,
@@ -77,9 +77,6 @@ import scala.reflect.io.File
  */
 object KeYmaeraX {
 
-  /** Usage -help information. */
-  val usage: String = Usage.fullUsage
-
   /**
    * main function to start KeYmaera X from command line. Other entry points exist but this one is best for command line
    * interfaces.
@@ -90,36 +87,33 @@ object KeYmaeraX {
     try {
       Configuration.setConfiguration(FileConfiguration)
       initializeConfig(options)
-      runCommand(options, usage)
+      runCommand(options)
     } finally { shutdownProver() }
   }
 
-  def runCommand(options: Options, usage: String): Unit = options.command match {
+  def runCommand(options: Options): Unit = options.command match {
     case Some(Command.Codegen) =>
       // Quantitative ModelPlex uses Mathematica to simplify formulas
       val tool = if (options.quantitative.isDefined) Tools.MATHEMATICA else "z3"
       val toolConfig = toolConfigFromFile(tool)
       val vars = options.vars.map(makeVariables(_).toSet)
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfig), usage)
-      CodeGen.codegen(options, usage, vars)
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
+      CodeGen.codegen(options, vars)
     case Some(Command.Modelplex) =>
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       modelplex(options)
     case Some(Command.Repl) =>
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       repl(options)
     case Some(Command.Convert)
         if options.conversion.contains("verboseTactics") || options.conversion.contains("verbatimTactics") =>
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-      convertTactics(options, usage)
-    case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options, usage)
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+      convertTactics(options)
+    case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
   }
 
   /** Statistics about size of prover kernel. */
   def stats: String = { "    with " + Provable.rules.size + " axiomatic rules and " + Provable.axiom.size + " axioms" }
-
-  /** KeYmaera X -help string. */
-  def help: String = stats + "\n" + usage
 
   private def makeVariables(varNames: Seq[String]): Seq[BaseVariable] = {
     varNames.map(vn =>
@@ -143,8 +137,8 @@ object KeYmaeraX {
       // @TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
       ProvableSig.PROOF_TERMS_ENABLED = false
     } else { ProvableSig.PROOF_TERMS_ENABLED = false }
-    require(options.in.isDefined, usage)
 
+    if (options.in.isEmpty) options.printUsageAndExitWithError()
     val in = options.in.get
     val inputEntry = ArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
@@ -304,7 +298,7 @@ object KeYmaeraX {
   }
 
   def repl(options: Options): Unit = {
-    require(options.model.isDefined, usage)
+    if (options.model.isEmpty) options.printUsageAndExitWithError()
     val modelFileNameDotKyx = options.model.get
     val tacticFileNameDotKyt = options.tactic
     val scaladefsFilename = options.scaladefs
@@ -343,8 +337,10 @@ object KeYmaeraX {
    * Executes all entries in `options('in)` to convert their tactics into `options('conversion)` format. Prints the
    * result to `options('out)`.
    */
-  def convertTactics(options: Options, usage: String): Unit = {
-    require(options.in.isDefined && options.out.isDefined && options.conversion.isDefined, usage)
+  def convertTactics(options: Options): Unit = {
+    if (options.in.isEmpty) options.printUsageAndExitWithError()
+    if (options.out.isEmpty) options.printUsageAndExitWithError()
+    if (options.conversion.isEmpty) options.printUsageAndExitWithError()
 
     val kyxFile = options.in.get
     val how = options.conversion.get

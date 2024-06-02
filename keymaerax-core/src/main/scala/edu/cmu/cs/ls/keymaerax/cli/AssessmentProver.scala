@@ -1522,8 +1522,8 @@ object AssessmentProver {
    *   - 'exportanswers (optional) exports answers to text files instead of grading
    *   - 'skiponparseerror (optional) skips grading on parse errors
    */
-  def grade(options: Options, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
-    require(options.in.isDefined, usage)
+  def grade(options: Options, msgOut: OutputStream, resultOut: OutputStream): Unit = {
+    if (options.in.isEmpty) options.printUsageAndExitWithError()
 
     val inputFileName = options.in.get
     val src = Source.fromFile(inputFileName, "UTF-8")

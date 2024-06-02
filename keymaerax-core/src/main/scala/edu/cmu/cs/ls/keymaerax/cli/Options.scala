@@ -28,6 +28,7 @@ object Command {
 
 case class Options(
     // Special options
+    name: String,
     args: Seq[String],
     help: Boolean = false,
     license: Boolean = false,
@@ -80,6 +81,11 @@ case class Options(
     tcpip = None,
     z3Path = this.z3Path,
   )
+
+  def printUsageAndExitWithError(): Unit = {
+    println(OParser.usage(Options.parser(name)))
+    sys.exit(1)
+  }
 }
 
 object Options {
@@ -91,11 +97,11 @@ object Options {
     TextWrapper.wrap(text, maxWidth = 80 - 27)
   }
 
-  def parseArgs(name: String, args: Seq[String]): Options = {
+  private def parser(name: String): OParser[Unit, Options] = {
     val builder = OParser.builder[Options]
     import builder._
 
-    val parser = OParser.sequence(
+    OParser.sequence(
       programName(name),
       head(FullNameAndVersion),
       opt[Unit]('h', "help").action((_, o) => o.copy(help = true)).text(wrap("Show this usage information.")),
@@ -269,10 +275,14 @@ object Options {
       note(""),
       cmd("ui").action((_, o) => o.copy(command = Some(Command.Ui))).text(wrap("Start web user interface.")),
     )
+  }
+
+  def parseArgs(name: String, args: Seq[String]): Options = {
+    val parser = this.parser(name)
 
     // When parse() returns None, it failed to parse the arguments
     // and will have already printed some sort of error message.
-    val options = OParser.parse(parser, args, Options(args = args)).getOrElse(sys.exit(1))
+    val options = OParser.parse(parser, args, Options(name = name, args = args)).getOrElse(sys.exit(1))
 
     if (options.help) {
       println(OParser.usage(parser))

@@ -28,11 +28,9 @@ object CodeGen {
    *   - 'vars (optional)
    *   - 'interval (optional) Whether to use interval arithmetic or floating point arithmetic (default: interval)
    *   - 'quantitative (optional) Whether to generate a quantitative or boolean monitor (default: true)
-   * @param usage
-   *   Usage information to print on wrong usage.
    */
-  def codegen(options: Options, usage: String, vars: Option[Set[BaseVariable]]): Unit = {
-    require(options.in.isDefined, usage)
+  def codegen(options: Options, vars: Option[Set[BaseVariable]]): Unit = {
+    if (options.in.isEmpty) options.printUsageAndExitWithError()
 
     val inputFileName = options.in.get
     val inputFile =

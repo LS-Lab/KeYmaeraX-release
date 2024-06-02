@@ -306,11 +306,6 @@ class LauncherTests extends TacticTestBase {
     outputFile should not(exist)
   }
 
-  it should "have usage information, formatted to 80 characters width" in {
-    val usage = KeYmaeraX.usage
-    (usage: StringOps).linesIterator.foreach(l => withClue(l) { l.length should be <= 80 })
-  }
-
   it should "report a parsable model with exit value 0" in {
     val (output, _, exitVal) =
       runKeYmaeraX("-parse", "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyx")

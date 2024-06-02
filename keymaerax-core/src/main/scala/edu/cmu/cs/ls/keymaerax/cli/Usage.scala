@@ -9,105 +9,32 @@ package edu.cmu.cs.ls.keymaerax.cli
 object Usage {
 
   /** Prints help messages for command line options. */
-  def optionErrorReporter(option: String, usage: String): Unit = {
-    val noValueMessage = "[Error] No value specified for " + option + " option. "
+  def optionErrorReporter(option: String): Unit = {
+    val noValueMessage = s"[Error] No value specified for option $option."
     option match {
-      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage)
-      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage)
-      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage)
-      case "-convert" => println(
-          noValueMessage + "Please use: -convert [stripHints|verboseTactics|verbatimTactics] FILENAME.kyx\n\n" + usage
-        )
+      case "-prove" => println(s"$noValueMessage Please use: -prove FILENAME.[key/kyx]")
+      case "-modelPlex" => println(s"$noValueMessage Please use: -modelPlex FILENAME.[key/kyx]")
+      case "-codegen" => println(s"$noValueMessage Please use: -codegen FILENAME.kym")
+      case "-convert" =>
+        println(s"$noValueMessage Please use: -convert [stripHints|verboseTactics|verbatimTactics] FILENAME.kyx")
       case "-out" =>
-        println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage)
-      case "-conjecture" => println(noValueMessage + "Please use: -conjecture FILENAME.kyx\n\n" + usage)
-      case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage)
-      case "-tactic" => println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage)
-      case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_MATH_KERNEL\n\n" + usage)
-      case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINING_JLINK_LIB\n\n" + usage)
-      case "-jlinktcpip" => println(noValueMessage + "Please use: -jlinktcpip [true|false]\n\n" + usage)
-      case "-jlinkinterface" => println(noValueMessage + "Please use: -jlinkinterface [string|expr]\n\n" + usage)
-      case "-parallelqe" => println(noValueMessage + "Please use: -parallelqe [true|false]\n\n" + usage)
-      case "-qemethod" => println(noValueMessage + "Please use: -qemethod [Reduce|Resolve]\n\n" + usage)
-      case "-z3path" => println(noValueMessage + "Please use: -z3path PATH_TO_z3_FILE\n\n" + usage)
-      case "-tool" => println(noValueMessage + "Please use: -tool mathematica|wolframengine|z3\n\n" + usage)
-      case "-grade" => println(
-          noValueMessage + "Please use: -grade FILENAME.json [-exportanswers [-out DIR]] [-skiponparseerror]\n\n" +
-            usage
-        )
+        println(s"$noValueMessage Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g")
+      case "-conjecture" => println(s"$noValueMessage Please use: -conjecture FILENAME.kyx")
+      case "-vars" => println(s"$noValueMessage Please use: -vars VARIABLE_1,VARIABLE_2,...")
+      case "-tactic" => println(s"$noValueMessage Please use: -tactic FILENAME.[scala|kyt]")
+      case "-mathkernel" => println(s"$noValueMessage Please use: -mathkernel PATH_TO_MATH_KERNEL")
+      case "-jlink" => println(s"$noValueMessage Please use: -jlink PATH_TO_DIRECTORY_CONTAINING_JLINK_LIB")
+      case "-jlinktcpip" => println(s"$noValueMessage Please use: -jlinktcpip [true|false]")
+      case "-jlinkinterface" => println(s"$noValueMessage Please use: -jlinkinterface [string|expr]")
+      case "-parallelqe" => println(s"$noValueMessage Please use: -parallelqe [true|false]")
+      case "-qemethod" => println(s"noValueMessage Please use: -qemethod [Reduce|Resolve]")
+      case "-z3path" => println(s"noValueMessage Please use: -z3path PATH_TO_z3_FILE")
+      case "-tool" => println(s"noValueMessage Please use: -tool mathematica|wolframengine|z3")
+      case "-grade" =>
+        println(s"noValueMessage Please use: -grade FILENAME.json [-exportanswers [-out DIR]] [-skiponparseerror]")
       case "-proofStatisticsPrinter" =>
-        println(noValueMessage + "Please use: -proofStatisticsPrinter [default|arch-nln|arch-hstp]\n\n" + usage)
-      case _ => println("[Error] Unknown option " + option + "\n\n" + usage)
+        println(s"noValueMessage Please use: -proofStatisticsPrinter [default|arch-nln|arch-hstp]")
+      case _ => println(s"[Error] Unknown option $option.")
     }
   }
-
-  /**
-   * Usage -help information.
-   * @note
-   *   Formatted to 80 characters terminal width.
-   */
-  private val usage: String =
-    """Usage: java -jar keymaerax.jar
-      |  -ui [web server options] |
-      |  -prove file.kyx [-conjecture file2.kyx] [-out file.kyp]
-      |     [-timeout seconds] [-verbose] |
-      |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
-      |     [-sandbox] [-fallback prg] |
-      |  -codegen file.kym [-vars var1,var2,..,varn] [-out file.c]
-      |     [-quantitative] |
-      |  -convert [stripHints|kyx2mat|kyx2smt|mat2kyx|mat2smt|smt2kyx|smt2mat] file.kyx [-out fileout.kyx]
-      |  -setup
-      |
-      |Actions:
-      |  -ui        start web user interface with optional server arguments (default)
-      |  -prove     run prover on given archive of models or proofs
-      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
-      |  -codegen   generate executable C code from given model file
-      |  -convert   model and tactic conversions
-      |  -parse     return error code 0 if the given model file parses
-      |  -bparse    return error code 0 if given bellerophon tactic file parses
-      |  -repl      prove given model interactively from REPL command line
-      |  -setup     initializes the configuration and lemma cache
-      |
-      |Additional options:
-      |  -tool mathematica|z3 choose which tool to use for real arithmetic
-      |  -mathkernel MathKernel(.exe) path to Mathematica kernel executable
-      |  -jlink path/to/jlinkNativeLib path to Mathematica J/Link library directory
-      |  -jlinkinterface string|expr whether to send Mathematica commands as
-      |                              strings (more robust) or as
-      |                              expr (supports larger queries)
-      |                              Default: string (unless configured in keymaerax.conf)
-      |  -jlinktcpip true|false whether to connect to Mathematica with
-      |                         process communication or
-      |                         over TCP/IP (more robust)
-      |                         Default: false (unless configured in keymaerax.conf)
-      |  -qemethod Reduce|Resolve whether to use
-      |                           Reduce (solves equations and eliminates quantifiers) or
-      |                           Resolve (eliminates quantifiers)
-      |                           Default: Reduce (unless configured in keymaerax.conf)
-      |  -parallelqe true|false whether to attempt multiple QE alternatives in parallel
-      |                         Default: false (unless configured in keymaerax.conf)
-      |  -z3path path/to/z3 path to Z3 executable
-      |  -timeout  how many seconds to try proving before giving up, forever if <=0
-      |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
-      |  -vars     use ordered list of variables, treating others as constant functions
-      |  -interval guard reals by interval arithmetic in floating point (recommended)
-      |  -nointerval skip interval arithmetic presuming no floating point errors
-      |  -savept path export proof term s-expression from -prove to given path
-      |  -launch   use present JVM instead of launching one with a bigger stack
-      |  -lax      use lax mode with more flexible parser, printer, prover etc.
-      |  -strict   use strict mode with no flexibility in prover
-      |  -debug    use debug mode with exhaustive messages
-      |  -nodebug  disable debug mode to suppress intermediate messages
-      |  -help     Display this usage information
-      |  -license  Show license agreement for using this software
-      |
-      |Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
-      |Use option -license to show the license conditions.""".stripMargin
-
-  /** Command-line interface usage. */
-  val cliUsage: String = usage.linesWithSeparators.filter(_ != "  -ui [web server options] |\n").mkString
-
-  /** Full usage. */
-  val fullUsage: String = usage
 }

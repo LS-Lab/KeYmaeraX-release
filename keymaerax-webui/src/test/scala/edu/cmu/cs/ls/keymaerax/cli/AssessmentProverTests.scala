@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{ByteArrayOutputStream, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{
   IllFormedTacticApplicationException,
@@ -42,13 +41,14 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, SubstitutionParser}
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
-import org.scalatest.Inside.inside
-import org.scalatest.prop.TableDrivenPropertyChecks._
-import org.scalatest.LoneElement._
 import org.scalatest.EitherValues._
+import org.scalatest.Inside.inside
+import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
+import org.scalatest.prop.TableDrivenPropertyChecks._
 import spray.json._
 
+import java.io.{ByteArrayOutputStream, PrintWriter}
 import scala.annotation.tailrec
 import scala.collection.immutable.StringOps
 import scala.io.Source
@@ -1660,10 +1660,10 @@ class AssessmentProverTests extends TacticTestBase {
     w.flush()
     w.close()
 
-    val options = Options(args = Nil, in = Some(f.getAbsolutePath))
+    val options = Options(name = "", args = Nil, in = Some(f.getAbsolutePath))
     val msgsStream = new ByteArrayOutputStream()
     val resultsStream = new ByteArrayOutputStream()
-    AssessmentProver.grade(options, msgsStream, resultsStream, "")
+    AssessmentProver.grade(options, msgsStream, resultsStream)
     val msgs = msgsStream.toString
     print(msgs)
     val msgLines = (msgs: StringOps).linesIterator.toList

@@ -66,7 +66,7 @@ object KeYmaeraX {
     try {
       Configuration.setConfiguration(FileConfiguration)
       initializeConfig(options)
-      runCommand(options, Usage.cliUsage)
+      runCommand(options)
     } finally { shutdownProver() }
   }
 
@@ -122,42 +122,42 @@ object KeYmaeraX {
   }
 
   /** Runs the command 'mode in `options` with command options from `options`, prints `usage` on usage error. */
-  def runCommand(options: Options, usage: String): Unit = {
+  def runCommand(options: Options): Unit = {
     options.command match {
       // Core commands
       case Some(Command.Setup) =>
         println("Initializing lemma cache...")
-        initializeBackend(options.toToolConfig, usage)
+        initializeBackend(options.toToolConfig)
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
       case Some(Command.Prove) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-        KeYmaeraXProofChecker.prove(options, usage)
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+        KeYmaeraXProofChecker.prove(options)
       case Some(Command.Parse(value)) =>
         // Parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
-        initializeProver(options.toToolConfig, usage)
+        initializeProver(options.toToolConfig)
         if (parseProblemFile(value)) exit(0) else exit(-1)
       case Some(Command.BParse(value)) =>
         // Parsing a tactic requires prover (AxiomInfo)
-        initializeProver(options.toToolConfig, usage)
+        initializeProver(options.toToolConfig)
         if (parseBelleTactic(value)) exit(0) else exit(-1)
       case Some(Command.Convert) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-        convert(options, usage)
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+        convert(options)
       case Some(Command.Grade) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")), usage)
-        AssessmentProver.grade(options, System.out, System.out, usage)
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+        AssessmentProver.grade(options, System.out, System.out)
       // Unknown or no commands
       case Some(command) => println("WARNING: Unknown command " + command)
-      case None => println(usage)
+      case None => options.printUsageAndExitWithError()
     }
   }
 
   /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
-  def initializeProver(options: ToolConfiguration, usage: String): Unit = {
+  def initializeProver(options: ToolConfiguration): Unit = {
     Configuration.setConfiguration(FileConfiguration)
 
-    initializeBackend(options, usage)
+    initializeBackend(options)
 
     KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
 
@@ -170,11 +170,11 @@ object KeYmaeraX {
   }
 
   /** Initializes the backend solvers. */
-  def initializeBackend(options: ToolConfiguration, usage: String): Unit = {
+  def initializeBackend(options: ToolConfiguration): Unit = {
     options.tool.getOrElse("z3") match {
-      case Tools.MATHEMATICA => initMathematica(options, usage)
-      case Tools.WOLFRAMENGINE => initWolframEngine(options, usage)
-      case Tools.WOLFRAMSCRIPT => initWolframScript(options, usage)
+      case Tools.MATHEMATICA => initMathematica(options)
+      case Tools.WOLFRAMENGINE => initWolframEngine(options)
+      case Tools.WOLFRAMSCRIPT => initWolframScript(options)
       case Tools.Z3 => initZ3(options)
       case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
     }
@@ -216,30 +216,27 @@ object KeYmaeraX {
   }
 
   /** Initializes Mathematica from command line options, if present; else from default config */
-  private def initMathematica(options: ToolConfiguration, usage: String): Unit = {
-    ToolProvider.setProvider(MultiToolProvider(
-      MathematicaToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
-    ))
+  private def initMathematica(options: ToolConfiguration): Unit = {
+    ToolProvider
+      .setProvider(MultiToolProvider(MathematicaToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil))
     if (!ToolProvider.isInitialized)
       throw new ProverSetupException("Failed to initialize Mathematica; the license may be expired")
   }
 
   /** Initializes Wolfram Engine from command line options. */
-  private def initWolframEngine(options: ToolConfiguration, usage: String): Unit = {
+  private def initWolframEngine(options: ToolConfiguration): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-    ToolProvider.setProvider(MultiToolProvider(
-      WolframEngineToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
-    ))
+    ToolProvider
+      .setProvider(MultiToolProvider(WolframEngineToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Engine; the license may be expired (try starting Wolfram Engine from the command line to renew the license)"
     )
   }
 
   /** Initializes Wolfram Script from command line options. */
-  private def initWolframScript(options: ToolConfiguration, usage: String): Unit = {
-    ToolProvider.setProvider(MultiToolProvider(
-      WolframScriptToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil
-    ))
+  private def initWolframScript(options: ToolConfiguration): Unit = {
+    ToolProvider
+      .setProvider(MultiToolProvider(WolframScriptToolProvider(mathematicaConfig(options)) :: Z3ToolProvider() :: Nil))
     if (!ToolProvider.isInitialized) throw new ProverSetupException(
       "Failed to initialize Wolfram Script; the license may be expired (try starting Wolfram Script from the command line to renew the license)"
     )
@@ -248,7 +245,7 @@ object KeYmaeraX {
   /**
    * Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.
    */
-  private def mathematicaConfig(options: ToolConfiguration, usage: String): ToolConfiguration = {
+  private def mathematicaConfig(options: ToolConfiguration): ToolConfiguration = {
     assert(
       options.mathKernel.isDefined == options.jlinkLibDir.isDefined,
       "[Error] Please always use the command line options -mathkernel and -jlink together.",
@@ -320,20 +317,21 @@ object KeYmaeraX {
   }
 
   /** Converts input files. */
-  def convert(options: Options, usage: String): Unit = {
-    require(options.in.isDefined && options.conversion.isDefined, usage)
+  def convert(options: Options): Unit = {
+    if (!(options.in.isDefined && options.conversion.isDefined)) options.printUsageAndExitWithError()
+
     options.conversion.get match {
-      case Conversions.STRIPHINTS => stripHints(options, usage)
-      case Conversions.KYX2SMT => kyx2smt(options, usage)
-      case Conversions.KYX2MAT => kyx2mat(options, usage)
-      case Conversions.SMT2KYX => smt2kyx(options, usage)
-      case Conversions.SMT2MAT => smt2mat(options, usage)
-      case _ => Usage.optionErrorReporter("-convert", usage); exit(1)
+      case Conversions.STRIPHINTS => stripHints(options)
+      case Conversions.KYX2SMT => kyx2smt(options)
+      case Conversions.KYX2MAT => kyx2mat(options)
+      case Conversions.SMT2KYX => smt2kyx(options)
+      case Conversions.SMT2MAT => smt2mat(options)
+      case _ => Usage.optionErrorReporter("-convert"); exit(1)
     }
   }
 
   /** Strips proof hints from the model. */
-  private def stripHints(options: Options, usage: String): Unit = {
+  private def stripHints(options: Options): Unit = {
     val converter = (kyxFile: String) => {
       val archiveContent = ArchiveParser.parseFromFile(kyxFile)
 
@@ -362,11 +360,11 @@ object KeYmaeraX {
       archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
     }
 
-    convert(options, converter, usage)
+    convert(options, converter)
   }
 
   /** Converts KeYmaera X to SMT-Lib format. */
-  private def kyx2smt(options: Options, usage: String): Unit = {
+  private def kyx2smt(options: Options): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
       archiveContent
@@ -378,11 +376,11 @@ object KeYmaeraX {
         })
         .mkString("\n")
     }
-    convert(options, converter, usage)
+    convert(options, converter)
   }
 
   /** Converts KeYmaera X to Mathematica. */
-  private def kyx2mat(options: Options, usage: String): Unit = {
+  private def kyx2mat(options: Options): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
       archiveContent
@@ -392,28 +390,28 @@ object KeYmaeraX {
         })
         .mkString("\n")
     }
-    convert(options, converter, usage)
+    convert(options, converter)
   }
 
   /** Converts SMT-Lib format to KeYmaera X. */
-  private def smt2kyx(options: Options, usage: String): Unit = {
+  private def smt2kyx(options: Options): Unit = {
     val converter =
       (fileName: String) => { SmtLibReader.read(new FileReader(fileName))._1.map(_.prettyString).mkString("\n") }
-    convert(options, converter, usage)
+    convert(options, converter)
   }
 
   /** Converts SMT-Lib format to Mathematica. */
-  private def smt2mat(options: Options, usage: String): Unit = {
+  private def smt2mat(options: Options): Unit = {
     val converter = (fileName: String) => {
       val (kyx, _) = SmtLibReader.read(new FileReader(fileName))
       kyx.map(KeYmaeraToMathematica).mkString("\n")
     }
-    convert(options, converter, usage)
+    convert(options, converter)
   }
 
   /** Converts the content of a file using the `converter` fileName => content. */
-  private def convert(options: Options, converter: String => String, usage: String): Unit = {
-    require(options.in.isDefined, usage)
+  private def convert(options: Options, converter: String => String): Unit = {
+    if (options.in.isEmpty) options.printUsageAndExitWithError()
     val kyxFile = options.in.get
     val converted = converter(kyxFile)
     options.out match {

@@ -14,7 +14,7 @@ object DerivationInfoPrinter {
   def main(args: Array[String]): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     try {
-      KeYmaeraX.initializeProver(ToolConfiguration(), "")
+      KeYmaeraX.initializeProver(ToolConfiguration())
       val out = DerivationInfo
         .allInfo
         .map({ case (k, v) => (k, v.persistentInputs, v.numPositionArgs) })

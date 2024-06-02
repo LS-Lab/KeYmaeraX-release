@@ -227,14 +227,12 @@ object KeYmaeraXProofChecker {
    *   - 'timeout (optional)
    *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
    *   - 'ptOut (optional) whether or not to prove with proof terms enabled (default: false)
-   * @param usage
-   *   Prints usage information on option errors.
    */
-  def prove(options: Options, usage: String): Unit = {
+  def prove(options: Options): Unit = {
     if (options.ptOut.isDefined) { ProvableSig.PROOF_TERMS_ENABLED = true }
     else { ProvableSig.PROOF_TERMS_ENABLED = false }
 
-    require(options.in.isDefined, usage)
+    if (options.in.isEmpty) options.printUsageAndExitWithError()
     val inputFileName = options.in.get
     val inFiles = findFiles(inputFileName)
     val archiveContent = inFiles
