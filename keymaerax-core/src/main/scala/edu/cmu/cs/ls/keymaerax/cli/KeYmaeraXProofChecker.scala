@@ -225,9 +225,11 @@ object KeYmaeraXProofChecker {
    *   Output proof term s-expression into a file
    * @param conjecture
    *   Conjecture file to replace the model in the input file with (either a specific file or a wildcard, e.g. *.kyx)
+   * @param tactic
+   *   Either a file containing a tactic, or a parseable tactic. Used to prove the entry/entries in the input or
+   *   conjecture file.
    * @param options
    *   The prover options:
-   *   - 'tactic (optional) name of tactic file or a parseable tactic to use to prove the entry(ies) in 'in/'conjecture
    *   - 'tacticName (optional, used only if 'tactic is not defined) identifies which of the tactics in 'in to use
    *     (default: check all; if 'in lists no tactics, uses auto)
    *   - 'timeout (optional)
@@ -238,6 +240,7 @@ object KeYmaeraXProofChecker {
       out: Option[String],
       ptOut: Option[String],
       conjecture: Option[String],
+      tactic: Option[String],
       options: Options,
   ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
@@ -308,6 +311,7 @@ object KeYmaeraXProofChecker {
           ),
           outputFileNames(path)(entry),
           ptOut,
+          tactic,
           options,
         )
       )
@@ -341,6 +345,7 @@ object KeYmaeraXProofChecker {
       entry: ParsedArchiveEntry,
       outputFileName: String,
       ptOut: Option[String],
+      tactic: Option[String],
       options: Options,
   ): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
@@ -357,7 +362,7 @@ object KeYmaeraXProofChecker {
       }
     }
 
-    val tacticString = readTactic(options, entry.defs)
+    val tacticString = tactic.map(readTactic(_, entry.defs))
     val reqTacticName = options.tacticName
     val timeout = options.timeout.getOrElse(0L)
 
@@ -428,19 +433,15 @@ object KeYmaeraXProofChecker {
   }
 
   /**
-   * Reads the value of 'tactic from the `options` (either a file name or a tactic expression). Default
-   * [[TactixLibrary.autoClose]] if `options` does not contain 'tactic.
+   * Interprets the tactic argument as a file path and reads that file, if it exists. Otherwise, tries to parse the
+   * tactic argument as a tactic.
    */
-  private def readTactic(options: Options, defs: Declaration): Option[BelleExpr] = {
-    options.tactic match {
-      case Some(t) if File(t).exists =>
-        val fileName = t
-        val source = scala.io.Source.fromFile(fileName, edu.cmu.cs.ls.keymaerax.core.ENCODING)
-        try { Some(BelleParser(source.mkString)) }
-        finally { source.close() }
-      case Some(t) if !File(t).exists => Some(BelleParser.parseWithInvGen(t, None, defs, expandAll = false))
-      case None => None
-    }
+  private def readTactic(tactic: String, defs: Declaration): BelleExpr = {
+    val tacticPath = Paths.get(tactic)
+    if (Files.exists(tacticPath)) {
+      val source = Files.readString(tacticPath)
+      BelleParser(source)
+    } else { BelleParser.parseWithInvGen(tactic, None, defs, expandAll = false) }
   }
 
   /** Finds files matching the pattern in fileName (specific file or using glob wildcards). */

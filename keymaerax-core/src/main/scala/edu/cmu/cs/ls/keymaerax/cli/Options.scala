@@ -19,6 +19,7 @@ object Command {
       out: Option[String] = None,
       ptOut: Option[String] = None,
       conjecture: Option[String] = None,
+      tactic: Option[String] = None,
   ) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
@@ -27,7 +28,7 @@ object Command {
   // Webui commands
   case class Codegen(in: String = null, out: Option[String] = None) extends Command
   case class Modelplex(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
-  case object Repl extends Command
+  case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
 }
 
@@ -61,7 +62,6 @@ case class Options(
     sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
     skiponparseerror: Option[Boolean] = None,
-    tactic: Option[String] = None,
     tacticName: Option[String] = None,
     timeout: Option[Long] = None,
     tool: Option[String] = None,
@@ -193,7 +193,6 @@ object Options {
       opt[Unit]("quantitative").action((_, o) => o.copy(quantitative = Some(true))),
       opt[Unit]("sandbox").action((_, o) => o.copy(sandbox = Some(true))),
       opt[Unit]("skiponparseerror").action((_, o) => o.copy(skiponparseerror = Some(true))),
-      opt[String]("tactic").action((x, o) => o.copy(tactic = Some(x))),
       opt[String]("tacticName").action((x, o) => o.copy(tacticName = Some(x))),
       opt[Long]("timeout")
         .action((x, o) => o.copy(timeout = Some(x)))
@@ -240,6 +239,14 @@ object Options {
             .text(wrap(
               """Conjecture file to replace the model in the input file with
                 |(either a specific file or a wildcard, e.g. *.kyx).
+                |""".stripMargin
+            )),
+          opt[String]("tactic")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(tactic = Some(x))))
+            .valueName("<file|tactic>")
+            .text(wrap(
+              """Either a file containing a tactic, or a parseable tactic.
+                |Used to prove the entry/entries in the input or conjecture file.
                 |""".stripMargin
             )),
         ),
@@ -313,11 +320,11 @@ object Options {
         ),
       note(""),
       cmd("repl")
-        .action((_, o) => o.copy(command = Some(Command.Repl)))
+        .action((_, o) => o.copy(command = Some(Command.Repl())))
         .text(wrap("Prove a model interactively from a command line REPL."))
         .children(
           arg[String]("<model>").action((x, o) => o.copy(model = Some(x))),
-          arg[String]("<tactic>").optional().action((x, o) => o.copy(tactic = Some(x))),
+          arg[String]("<tactic>").optional().action((x, o) => o.updateCommand[Command.Repl](_.copy(tactic = Some(x)))),
           arg[String]("<scaladefs>").optional().action((x, o) => o.copy(scaladefs = Some(x))),
         ),
       note(""),

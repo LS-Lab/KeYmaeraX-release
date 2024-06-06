@@ -102,9 +102,9 @@ object KeYmaeraX {
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, options)
-    case Some(Command.Repl) =>
+    case Some(cmd: Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      repl(options)
+      repl(tactic = cmd.tactic, options)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
     case Some(cmd: Command.Convert)
         if options.conversion.contains("verboseTactics") || options.conversion.contains("verbatimTactics") =>
@@ -307,10 +307,10 @@ object KeYmaeraX {
     }
   }
 
-  def repl(options: Options): Unit = {
+  def repl(tactic: Option[String], options: Options): Unit = {
     if (options.model.isEmpty) options.printUsageAndExitWithError()
     val modelFileNameDotKyx = options.model.get
-    val tacticFileNameDotKyt = options.tactic
+    val tacticFileNameDotKyt = tactic
     val scaladefsFilename = options.scaladefs
     assert(
       modelFileNameDotKyx.endsWith(".kyx"),
@@ -320,8 +320,7 @@ object KeYmaeraX {
     tacticFileNameDotKyt.foreach(name =>
       assert(
         name.endsWith(".kyt"),
-        "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt +
-          " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt",
+        "\n[Error] Wrong tactic file name " + name + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt",
       )
     )
     val modelInput = {

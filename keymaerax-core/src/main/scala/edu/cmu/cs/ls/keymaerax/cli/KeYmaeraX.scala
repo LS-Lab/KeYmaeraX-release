@@ -132,7 +132,14 @@ object KeYmaeraX {
         println("...done")
       case Some(cmd: Command.Prove) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-        KeYmaeraXProofChecker.prove(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, conjecture = cmd.conjecture, options)
+        KeYmaeraXProofChecker.prove(
+          in = cmd.in,
+          out = cmd.out,
+          ptOut = cmd.ptOut,
+          conjecture = cmd.conjecture,
+          tactic = cmd.tactic,
+          options,
+        )
       case Some(Command.Parse(value)) =>
         // Parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
         initializeProver(options.toToolConfig)
