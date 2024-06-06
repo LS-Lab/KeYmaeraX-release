@@ -235,6 +235,8 @@ object KeYmaeraXProofChecker {
    *   How many seconds to try proving before giving up, forever if 0 or less.
    * @param verbose
    *   Print verbose proof information.
+   * @param statistics
+   *   How to print proof statistics.
    */
   def prove(
       in: String,
@@ -245,6 +247,7 @@ object KeYmaeraXProofChecker {
       tacticName: Option[String],
       timeout: Long,
       verbose: Boolean,
+      statistics: Option[String],
       options: Options,
   ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
@@ -302,7 +305,7 @@ object KeYmaeraXProofChecker {
       conjecture.copy(tactics = entry.tactics)
     }
 
-    val statistics = archiveContent.flatMap({ case (path: Path, entries) =>
+    val archiveStatistics = archiveContent.flatMap({ case (path: Path, entries) =>
       entries.flatMap(entry =>
         proveEntry(
           path,
@@ -324,22 +327,22 @@ object KeYmaeraXProofChecker {
       )
     })
 
-    statistics.foreach(println)
+    archiveStatistics.foreach(println)
 
-    val printer = options.proofStatisticsPrinter match {
+    val printer = statistics match {
       case Some("arch-nln") => ArchNLNCsvProofStatisticsPrinter
       case Some("arch-hstp") => ArchHSTPCsvProofStatisticsPrinter
       case _ => CsvProofStatisticsPrinter
     }
 
-    val csvStatistics = printer.print(statistics)
+    val csvStatistics = printer.print(archiveStatistics)
     val statisticsLogger = LoggerFactory.getLogger(getClass)
     statisticsLogger.info(MarkerFactory.getMarker("PROOF_STATISTICS"), csvStatistics)
 
-    if (statistics.exists(_.status == "disproved")) sys.exit(-3)
-    if (statistics.exists(_.status == "failed")) sys.exit(-2)
-    if (statistics.exists(_.status == "unfinished (cex)")) sys.exit(-1)
-    if (statistics.exists(_.status == "unfinished")) sys.exit(-1)
+    if (archiveStatistics.exists(_.status == "disproved")) sys.exit(-3)
+    if (archiveStatistics.exists(_.status == "failed")) sys.exit(-2)
+    if (archiveStatistics.exists(_.status == "unfinished (cex)")) sys.exit(-1)
+    if (archiveStatistics.exists(_.status == "unfinished")) sys.exit(-1)
   }
 
   /** Replaces illegal characters in file names. */

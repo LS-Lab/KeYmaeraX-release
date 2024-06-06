@@ -141,6 +141,7 @@ object KeYmaeraX {
           tacticName = cmd.tacticName,
           timeout = cmd.timeout,
           verbose = cmd.verbose,
+          statistics = cmd.statistics,
           options,
         )
       case Some(Command.Parse(value)) =>

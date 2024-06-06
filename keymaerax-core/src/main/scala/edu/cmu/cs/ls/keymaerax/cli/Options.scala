@@ -23,6 +23,7 @@ object Command {
       tacticName: Option[String] = None,
       timeout: Long = 0,
       verbose: Boolean = false,
+      statistics: Option[String] = None,
   ) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
@@ -59,7 +60,6 @@ case class Options(
     open: Option[String] = None,
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
-    proofStatisticsPrinter: Option[String] = None,
     qemethod: Option[String] = None,
     quantitative: Option[Boolean] = None,
     sandbox: Option[Boolean] = None,
@@ -178,7 +178,6 @@ object Options {
             |""".stripMargin
         )),
       opt[String]("parserClass").action((x, o) => o.copy(parserClass = Some(x))),
-      opt[String]("proofStatistics").action((x, o) => o.copy(proofStatisticsPrinter = Some(x))),
       opt[String]("qemethod")
         .validate(it => if (it == "Reduce" || it == "Resolve") success else failure("must be 'Reduce' or 'Resolve'"))
         .action((x, o) => o.copy(qemethod = Some(x)))
@@ -260,6 +259,10 @@ object Options {
           opt[Unit]("verbose")
             .action((_, o) => o.updateCommand[Command.Prove](_.copy(verbose = true)))
             .text(wrap("Print verbose proof information.")),
+          opt[String]("statistics")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(statistics = Some(x))))
+            .valueName("<printer>")
+            .text(wrap("How to print proof statistics.")),
         ),
       note(""),
       cmd("parse")
