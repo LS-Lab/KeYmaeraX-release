@@ -138,6 +138,7 @@ object KeYmaeraX {
           ptOut = cmd.ptOut,
           conjecture = cmd.conjecture,
           tactic = cmd.tactic,
+          tacticName = cmd.tacticName,
           options,
         )
       case Some(Command.Parse(value)) =>

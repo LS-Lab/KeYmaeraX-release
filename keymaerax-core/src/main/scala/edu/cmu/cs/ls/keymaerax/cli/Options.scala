@@ -20,6 +20,7 @@ object Command {
       ptOut: Option[String] = None,
       conjecture: Option[String] = None,
       tactic: Option[String] = None,
+      tacticName: Option[String] = None,
   ) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
@@ -62,7 +63,6 @@ case class Options(
     sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
     skiponparseerror: Option[Boolean] = None,
-    tacticName: Option[String] = None,
     timeout: Option[Long] = None,
     tool: Option[String] = None,
     vars: Option[Seq[String]] = None,
@@ -193,7 +193,6 @@ object Options {
       opt[Unit]("quantitative").action((_, o) => o.copy(quantitative = Some(true))),
       opt[Unit]("sandbox").action((_, o) => o.copy(sandbox = Some(true))),
       opt[Unit]("skiponparseerror").action((_, o) => o.copy(skiponparseerror = Some(true))),
-      opt[String]("tacticName").action((x, o) => o.copy(tacticName = Some(x))),
       opt[Long]("timeout")
         .action((x, o) => o.copy(timeout = Some(x)))
         .text(wrap("How many seconds to try proving before giving up, forever if negative.")),
@@ -247,6 +246,15 @@ object Options {
             .text(wrap(
               """Either a file containing a tactic, or a parseable tactic.
                 |Used to prove the entry/entries in the input or conjecture file.
+                |""".stripMargin
+            )),
+          opt[String]("tactic-name")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(tacticName = Some(x))))
+            .valueName("<name>")
+            .text(wrap(
+              """Which of the tactics in the input file to use
+                |(default: check all, falling back to auto if no tactic is listed).
+                |Only used if no tactic is specified.
                 |""".stripMargin
             )),
         ),

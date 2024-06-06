@@ -228,10 +228,11 @@ object KeYmaeraXProofChecker {
    * @param tactic
    *   Either a file containing a tactic, or a parseable tactic. Used to prove the entry/entries in the input or
    *   conjecture file.
+   * @param tacticName
+   *   Which of the tactics in the input file to use (default: check all, falling back to auto if no tactic is listed).
+   *   Only used if no tactic is specified.
    * @param options
    *   The prover options:
-   *   - 'tacticName (optional, used only if 'tactic is not defined) identifies which of the tactics in 'in to use
-   *     (default: check all; if 'in lists no tactics, uses auto)
    *   - 'timeout (optional)
    *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
    */
@@ -241,6 +242,7 @@ object KeYmaeraXProofChecker {
       ptOut: Option[String],
       conjecture: Option[String],
       tactic: Option[String],
+      tacticName: Option[String],
       options: Options,
   ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
@@ -310,8 +312,9 @@ object KeYmaeraXProofChecker {
               ._1,
           ),
           outputFileNames(path)(entry),
-          ptOut,
-          tactic,
+          ptOut = ptOut,
+          tactic = tactic,
+          tacticName = tacticName,
           options,
         )
       )
@@ -346,6 +349,7 @@ object KeYmaeraXProofChecker {
       outputFileName: String,
       ptOut: Option[String],
       tactic: Option[String],
+      tacticName: Option[String],
       options: Options,
   ): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
@@ -363,28 +367,27 @@ object KeYmaeraXProofChecker {
     }
 
     val tacticString = tactic.map(readTactic(_, entry.defs))
-    val reqTacticName = options.tacticName
     val timeout = options.timeout.getOrElse(0L)
 
     // @note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
     val proofEvidence = File(sanitize(outputFileName))
     if (proofEvidence.exists) proofEvidence.delete()
 
-    val t = (tacticString, reqTacticName) match {
+    val t = (tacticString, tacticName) match {
       case (Some(tac), None) => ("user", "user", tac) :: Nil
       case (Some(tac), Some(req)) => (entry.tactics.filter(_._1 == req) :+ ("user", "user", tac)).head :: Nil
       case (None, _) =>
-        if (reqTacticName.isDefined) entry.tactics.filter(_._1 == reqTacticName.get)
+        if (tacticName.isDefined) entry.tactics.filter(_._1 == tacticName.get)
         else if (entry.tactics.isEmpty) ("auto", "auto", TactixLibrary.autoClose) :: Nil
         else entry.tactics
     }
 
     println("Proving " + path + "#" + entry.name + " ...")
     if (t.isEmpty) {
-      println("Unknown tactic " + reqTacticName + ", skipping entry")
+      println("Unknown tactic " + tacticName + ", skipping entry")
       ProofStatistics(
         entry.name,
-        reqTacticName.getOrElse("auto").toString,
+        tacticName.getOrElse("auto").toString,
         "skipped",
         None,
         timeout,
