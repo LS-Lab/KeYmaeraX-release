@@ -50,6 +50,7 @@ object Command {
       verify: Boolean = false,
       sandbox: Boolean = false,
       monitor: Option[Symbol] = None,
+      fallback: Option[String] = None,
   ) extends Command
   case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
@@ -65,7 +66,6 @@ case class Options(
     command: Option[Command] = None,
     // Options specified using flags
     debug: Option[Boolean] = None,
-    fallback: Option[String] = None,
     jlink: Option[String] = None,
     jlinkinterface: Option[String] = None,
     jlinktcpip: Option[String] = None,
@@ -127,7 +127,6 @@ object Options {
       opt[Boolean]("debug")
         .action((x, o) => o.copy(debug = Some(x)))
         .text(wrap("Enable/disable debug mode with exhaustive messages.")),
-      opt[String]("fallback").action((x, o) => o.copy(fallback = Some(x))),
       opt[String]("jlink")
         .action((x, o) => o.copy(jlink = Some(x)))
         .valueName("path/to/jlinkNativeLib")
@@ -367,6 +366,7 @@ object Options {
                 |Possible values: ctrl, model
                 |""".stripMargin
             )),
+          opt[String]("fallback").action((x, o) => o.updateCommand[Command.Modelplex](_.copy(fallback = Some(x)))),
         ),
       note(""),
       cmd("repl")

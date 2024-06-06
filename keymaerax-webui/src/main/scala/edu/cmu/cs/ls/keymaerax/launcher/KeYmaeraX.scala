@@ -116,6 +116,7 @@ object KeYmaeraX {
         verify = cmd.verify,
         sandbox = cmd.sandbox,
         monitor = cmd.monitor,
+        fallback = cmd.fallback,
         options,
       )
     case Some(cmd: Command.Repl) =>
@@ -161,6 +162,7 @@ object KeYmaeraX {
       verify: Boolean,
       sandbox: Boolean,
       monitor: Option[Symbol],
+      fallback: Option[String],
       options: Options,
   ): Unit = {
     // @TODO remove option, hol config no longer necessary
@@ -193,7 +195,7 @@ object KeYmaeraX {
     val kind = Option.when(sandbox)(Symbol("sandbox")).orElse(monitor).getOrElse(Symbol("model"))
 
     if (sandbox) {
-      val fallback = options.fallback match {
+      val fallbackProgram = fallback match {
         case Some(fallbackPrgString: String) => fallbackPrgString.asProgram
         case _ => inputEntry.model match {
             case Imply(_, Box(Loop(Compose(ctrl, _)), _)) => ctrl
@@ -216,7 +218,7 @@ object KeYmaeraX {
       val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(
         inputEntry.name,
         inputEntry.tactics.head._3,
-        Some(fallback),
+        Some(fallbackProgram),
         kind = Symbol("ctrl"),
         checkProvable = None,
         synthesizeProofs = false,
