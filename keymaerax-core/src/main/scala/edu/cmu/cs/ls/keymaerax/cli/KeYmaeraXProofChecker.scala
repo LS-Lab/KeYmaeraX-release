@@ -221,6 +221,8 @@ object KeYmaeraXProofChecker {
    *   Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx)
    * @param out
    *   Output proof file (defaults to input file with .kyp suffix)
+   * @param ptOut
+   *   Output proof term s-expression into a file
    * @param options
    *   The prover options:
    *   - 'conjecture (optional) conjecture to replace the model listed in 'in
@@ -229,11 +231,9 @@ object KeYmaeraXProofChecker {
    *     (default: check all; if 'in lists no tactics, uses auto)
    *   - 'timeout (optional)
    *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
-   *   - 'ptOut (optional) whether or not to prove with proof terms enabled (default: false)
    */
-  def prove(in: String, out: Option[String], options: Options): Unit = {
-    if (options.ptOut.isDefined) { ProvableSig.PROOF_TERMS_ENABLED = true }
-    else { ProvableSig.PROOF_TERMS_ENABLED = false }
+  def prove(in: String, out: Option[String], ptOut: Option[String], options: Options): Unit = {
+    ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
 
     val inFiles = findFiles(in)
     val archiveContent = inFiles
@@ -301,6 +301,7 @@ object KeYmaeraXProofChecker {
               ._1,
           ),
           outputFileNames(path)(entry),
+          ptOut,
           options,
         )
       )
@@ -333,10 +334,11 @@ object KeYmaeraXProofChecker {
       path: Path,
       entry: ParsedArchiveEntry,
       outputFileName: String,
+      ptOut: Option[String],
       options: Options,
   ): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
-      (pt, options.ptOut) match {
+      (pt, ptOut) match {
         case (ptp: TermProvable, Some(path: String)) =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp

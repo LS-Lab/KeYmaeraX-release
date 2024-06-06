@@ -101,7 +101,7 @@ object KeYmaeraX {
       CodeGen.codegen(in = cmd.in, out = cmd.out, options, vars)
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      modelplex(in = cmd.in, out = cmd.out, options)
+      modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, options)
     case Some(Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       repl(options)
@@ -137,9 +137,9 @@ object KeYmaeraX {
    * @param options
    *   vars describes the list of variables
    */
-  def modelplex(in: String, out: Option[String], options: Options): Unit = {
+  def modelplex(in: String, out: Option[String], ptOut: Option[String], options: Options): Unit = {
     // @TODO remove option, hol config no longer necessary
-    if (options.ptOut.isDefined) {
+    if (ptOut.isDefined) {
       // @TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
       ProvableSig.PROOF_TERMS_ENABLED = false
     } else { ProvableSig.PROOF_TERMS_ENABLED = false }
@@ -153,7 +153,7 @@ object KeYmaeraX {
           case ptp: TermProvable =>
             val conv = new IsabelleConverter(ptp.pt)
             val source = conv.sexp
-            val pwPt = new PrintWriter(options.ptOut.get + ".pt")
+            val pwPt = new PrintWriter(ptOut.get + ".pt")
             pwPt.write(source)
             pwPt.close()
           case _: ProvableSig => ()
@@ -264,14 +264,20 @@ object KeYmaeraX {
     } else if (options.vars.isDefined) {
       val vars = makeVariables(options.vars.get)
       val result = ModelPlex(vars.toList, kind, verifyOption)(inputModel)
-      printModelplexResult(inputModel, result, outputFileName, options)
+      printModelplexResult(inputModel, result, outputFileName, ptOut, options)
     } else {
       val result = ModelPlex(inputModel, kind, verifyOption)
-      printModelplexResult(inputModel, result, outputFileName, options)
+      printModelplexResult(inputModel, result, outputFileName, ptOut, options)
     }
   }
 
-  private def printModelplexResult(model: Formula, fml: Formula, outputFileName: String, options: Options): Unit = {
+  private def printModelplexResult(
+      model: Formula,
+      fml: Formula,
+      outputFileName: String,
+      ptOut: Option[String],
+      options: Options,
+  ): Unit = {
     val output = PrettyPrinter(fml)
     val reparse = Parser(output)
     assert(reparse == fml, "parse of print is identity")
@@ -287,7 +293,7 @@ object KeYmaeraX {
     pw.write(output)
     pw.close()
 
-    options.ptOut match {
+    ptOut match {
       case Some(path: String) =>
         val pwHOL = new PrintWriter(outputFileName + ".holconfiggen")
         // @TODO: Robustify

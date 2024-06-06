@@ -14,14 +14,14 @@ sealed trait Command
 object Command {
   // Core commands
   case object Setup extends Command
-  case class Prove(in: String = null, out: Option[String] = None) extends Command
+  case class Prove(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
   case class Convert(in: String = null, out: Option[String] = None) extends Command
   case class Grade(in: String = null, out: Option[String] = None) extends Command
   // Webui commands
   case class Codegen(in: String = null, out: Option[String] = None) extends Command
-  case class Modelplex(in: String = null, out: Option[String] = None) extends Command
+  case class Modelplex(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
   case object Repl extends Command
   case object Ui extends Command
 }
@@ -52,7 +52,6 @@ case class Options(
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
     proofStatisticsPrinter: Option[String] = None,
-    ptOut: Option[String] = None,
     qemethod: Option[String] = None,
     quantitative: Option[Boolean] = None,
     sandbox: Option[Boolean] = None,
@@ -190,10 +189,6 @@ object Options {
         )),
       opt[Unit]("quantitative").action((_, o) => o.copy(quantitative = Some(true))),
       opt[Unit]("sandbox").action((_, o) => o.copy(sandbox = Some(true))),
-      opt[String]("savept")
-        .action((x, o) => o.copy(ptOut = Some(x)))
-        .valueName("path")
-        .text(wrap("Export proof term s-expression from -prove to given path.")),
       opt[Unit]("skiponparseerror").action((_, o) => o.copy(skiponparseerror = Some(true))),
       opt[String]("tactic").action((x, o) => o.copy(tactic = Some(x))),
       opt[String]("tacticName").action((x, o) => o.copy(tacticName = Some(x))),
@@ -232,6 +227,10 @@ object Options {
             .optional()
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(out = Some(x))))
             .text(wrap("Output proof file (defaults to input file with .kyp suffix).")),
+          opt[String]("pt-out")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(ptOut = Some(x))))
+            .valueName("<file>")
+            .text(wrap("Output proof term s-expression into a file.")),
         ),
       note(""),
       cmd("parse")
@@ -297,6 +296,9 @@ object Options {
             .optional()
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(out = Some(x))))
             .text(wrap("Output file.")),
+          opt[String]("pt-out")
+            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(ptOut = Some(x))))
+            .valueName("<file>"),
         ),
       note(""),
       cmd("repl")
