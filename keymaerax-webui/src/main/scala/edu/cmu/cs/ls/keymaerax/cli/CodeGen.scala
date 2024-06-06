@@ -30,17 +30,14 @@ object CodeGen {
    *   Generate a quantitative instead of a boolean monitor
    * @param interval
    *   Use interval arithmetic instead of floating point arithmetic
-   * @param options
-   *   Options to steer the code generator:
-   *   - 'vars (optional)
    */
   def codegen(
       in: String,
       out: Option[String],
       quantitative: Boolean,
       interval: Boolean,
-      options: Options,
       vars: Option[Set[BaseVariable]],
+      args: Seq[String],
   ): Unit = {
     val inputFile = if (in.contains("#")) File(in.substring(0, in.lastIndexOf("#"))) else File(in)
 
@@ -48,7 +45,7 @@ object CodeGen {
     var outputFile = inputFile.changeExtension("c")
     if (out.isDefined) outputFile = File(out.get)
 
-    val head = EvidencePrinter.stampHead(options.args)
+    val head = EvidencePrinter.stampHead(args)
     val written = inputFormulas.map(e => {
       val outputFileName =
         if (inputFormulas.size <= 1) outputFile.toString()
