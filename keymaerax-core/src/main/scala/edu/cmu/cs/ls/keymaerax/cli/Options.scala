@@ -47,6 +47,7 @@ object Command {
       out: Option[String] = None,
       ptOut: Option[String] = None,
       vars: Option[Seq[String]] = None,
+      verify: Boolean = false,
   ) extends Command
   case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
@@ -77,7 +78,6 @@ case class Options(
     sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
     tool: Option[String] = None,
-    verify: Option[Boolean] = None,
     z3Path: Option[String] = None,
 ) {
 
@@ -196,7 +196,6 @@ object Options {
         .action((x, o) => o.copy(tool = Some(x)))
         .valueName("mathematica|z3")
         .text(wrap("Choose which tool to use for real arithmetic.")),
-      opt[Unit]("verify").action((_, o) => o.copy(verify = Some(true))),
       opt[String]("z3path")
         .action((x, o) => o.copy(z3Path = Some(x)))
         .valueName("path/to/z3")
@@ -363,6 +362,7 @@ object Options {
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(vars = Some(x))))
             .valueName("<vars>")
             .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
+          opt[Unit]("verify").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(verify = true))),
         ),
       note(""),
       cmd("repl")

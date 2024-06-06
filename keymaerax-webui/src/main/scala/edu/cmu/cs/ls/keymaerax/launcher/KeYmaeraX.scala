@@ -108,7 +108,7 @@ object KeYmaeraX {
       )
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, vars = cmd.vars, options)
+      modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, vars = cmd.vars, verify = cmd.verify, options)
     case Some(cmd: Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       repl(tactic = cmd.tactic, options)
@@ -149,6 +149,7 @@ object KeYmaeraX {
       out: Option[String],
       ptOut: Option[String],
       vars: Option[Seq[String]],
+      verify: Boolean,
       options: Options,
   ): Unit = {
     // @TODO remove option, hol config no longer necessary
@@ -161,7 +162,7 @@ object KeYmaeraX {
     val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
 
     val verifyOption: Option[ProvableSig => Unit] =
-      if (options.verify.getOrElse(false)) {
+      if (verify) {
         Some({
           case ptp: TermProvable =>
             val conv = new IsabelleConverter(ptp.pt)
