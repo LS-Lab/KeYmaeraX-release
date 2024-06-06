@@ -154,7 +154,7 @@ object KeYmaeraX {
         if (parseBelleTactic(cmd.in)) exit(0) else exit(-1)
       case Some(cmd: Command.Convert) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-        convert(in = cmd.in, out = cmd.out, options)
+        convert(in = cmd.in, out = cmd.out, conversion = cmd.conversion)
       case Some(cmd: Command.Grade) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
         AssessmentProver.grade(in = cmd.in, out = cmd.out, options, System.out, System.out)
@@ -328,10 +328,9 @@ object KeYmaeraX {
   }
 
   /** Converts input files. */
-  def convert(in: String, out: Option[String], options: Options): Unit = {
-    if (options.conversion.isEmpty) options.printUsageAndExitWithError()
+  def convert(in: String, out: Option[String], conversion: String): Unit = {
 
-    options.conversion.get match {
+    conversion match {
       case Conversions.STRIPHINTS => stripHints(in, out)
       case Conversions.KYX2SMT => kyx2smt(in, out)
       case Conversions.KYX2MAT => kyx2mat(in, out)

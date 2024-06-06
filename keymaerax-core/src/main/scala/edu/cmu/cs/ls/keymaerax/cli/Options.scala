@@ -27,7 +27,7 @@ object Command {
   ) extends Command
   case class Parse(in: String = null) extends Command
   case class BParse(in: String = null) extends Command
-  case class Convert(in: String = null, out: Option[String] = None) extends Command
+  case class Convert(conversion: String = null, in: String = null, out: Option[String] = None) extends Command
   case class Grade(in: String = null, out: Option[String] = None) extends Command
   // Webui commands
   case class Codegen(in: String = null, out: Option[String] = None) extends Command
@@ -45,7 +45,6 @@ case class Options(
     launch: Boolean = false,
     command: Option[Command] = None,
     // Options specified using flags
-    conversion: Option[String] = None,
     debug: Option[Boolean] = None,
     exportanswers: Option[Boolean] = None,
     fallback: Option[String] = None,
@@ -285,8 +284,13 @@ object Options {
         .action((_, o) => o.copy(command = Some(Command.Convert())))
         .text(wrap("Model and tactic conversions."))
         .children(
-          arg[String]("stripHints|kyx2mat|kyx2smt|mat2kyx|mat2smt|smt2kyx|smt2mat")
-            .action((x, o) => o.copy(conversion = Some(x))),
+          arg[String]("<conversion>")
+            .action((x, o) => o.updateCommand[Command.Convert](_.copy(conversion = x)))
+            .text(wrap(
+              """Conversion to perform.
+                |Possible values: stripHints, kyx2mat, kyx2smt, smt2kyx, smt2mat, verboseTactics, verbatimTactics
+                |""".stripMargin
+            )),
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Convert](_.copy(in = x)))
             .text(wrap("Input file.")),

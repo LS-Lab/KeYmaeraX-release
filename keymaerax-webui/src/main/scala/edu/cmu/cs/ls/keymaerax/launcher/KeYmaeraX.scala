@@ -107,10 +107,10 @@ object KeYmaeraX {
       repl(tactic = cmd.tactic, options)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
     case Some(cmd: Command.Convert)
-        if options.conversion.contains("verboseTactics") || options.conversion.contains("verbatimTactics") =>
+        if cmd.conversion.contains("verboseTactics") || cmd.conversion.contains("verbatimTactics") =>
       if (cmd.out.isEmpty) options.printUsageAndExitWithError()
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      convertTactics(in = cmd.in, out = cmd.out.get, options)
+      convertTactics(in = cmd.in, out = cmd.out.get, conversion = cmd.conversion)
     case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
   }
 
@@ -351,11 +351,7 @@ object KeYmaeraX {
    * @param out
    *   Output file
    */
-  def convertTactics(in: String, out: String, options: Options): Unit = {
-    if (options.conversion.isEmpty) options.printUsageAndExitWithError()
-
-    val how = options.conversion.get
-
+  def convertTactics(in: String, out: String, conversion: String): Unit = {
     val src = scala.io.Source.fromFile(in.split("#")(0))
     val fileContent =
       try { src.mkString }
@@ -401,7 +397,7 @@ object KeYmaeraX {
     )
 
     val convertedContent = archiveContent
-      .map(e => e -> convertTactic(e, how))
+      .map(e => e -> convertTactic(e, conversion))
       .foldLeft(fileContent)({ case (content, (orig, conv)) =>
         val entryOnwards = content.substring(content.indexOf(orig.name))
         val entryOnwardsConverted = orig
