@@ -98,7 +98,8 @@ object KeYmaeraX {
       val toolConfig = toolConfigFromFile(tool)
       val vars = options.vars.map(makeVariables(_).toSet)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
-      CodeGen.codegen(in = cmd.in, out = cmd.out, quantitative = cmd.quantitative, options, vars)
+      CodeGen
+        .codegen(in = cmd.in, out = cmd.out, quantitative = cmd.quantitative, interval = cmd.interval, options, vars)
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, options)

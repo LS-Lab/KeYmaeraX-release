@@ -28,15 +28,17 @@ object CodeGen {
    *   Output file (default: input file name with .c suffix)
    * @param quantitative
    *   Generate a quantitative instead of a boolean monitor
+   * @param interval
+   *   Use interval arithmetic instead of floating point arithmetic
    * @param options
    *   Options to steer the code generator:
    *   - 'vars (optional)
-   *   - 'interval (optional) Whether to use interval arithmetic or floating point arithmetic (default: interval)
    */
   def codegen(
       in: String,
       out: Option[String],
       quantitative: Boolean,
+      interval: Boolean,
       options: Options,
       vars: Option[Set[BaseVariable]],
   ): Unit = {
@@ -46,7 +48,6 @@ object CodeGen {
     var outputFile = inputFile.changeExtension("c")
     if (out.isDefined) outputFile = File(out.get)
 
-    val interval = options.interval.getOrElse(true)
     val head = EvidencePrinter.stampHead(options.args)
     val written = inputFormulas.map(e => {
       val outputFileName =

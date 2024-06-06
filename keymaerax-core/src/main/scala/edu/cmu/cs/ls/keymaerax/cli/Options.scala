@@ -35,7 +35,12 @@ object Command {
       skipOnParseError: Boolean = false,
   ) extends Command
   // Webui commands
-  case class Codegen(in: String = null, out: Option[String] = None, quantitative: Boolean = false) extends Command
+  case class Codegen(
+      in: String = null,
+      out: Option[String] = None,
+      quantitative: Boolean = false,
+      interval: Boolean = true,
+  ) extends Command
   case class Modelplex(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
   case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
@@ -52,7 +57,6 @@ case class Options(
     // Options specified using flags
     debug: Option[Boolean] = None,
     fallback: Option[String] = None,
-    interval: Option[Boolean] = None,
     jlink: Option[String] = None,
     jlinkinterface: Option[String] = None,
     jlinktcpip: Option[String] = None,
@@ -119,13 +123,6 @@ object Options {
         .action((x, o) => o.copy(debug = Some(x)))
         .text(wrap("Enable/disable debug mode with exhaustive messages.")),
       opt[String]("fallback").action((x, o) => o.copy(fallback = Some(x))),
-      opt[Boolean]("interval")
-        .action((x, o) => o.copy(interval = Some(x)))
-        .text(wrap(
-          """true: Guard reals by interval arithmetic in floating point (recommended).
-            |false: Skip interval arithmetic presuming no floating point errors.
-            |""".stripMargin
-        )),
       opt[String]("jlink")
         .action((x, o) => o.copy(jlink = Some(x)))
         .valueName("path/to/jlinkNativeLib")
@@ -333,6 +330,14 @@ object Options {
           opt[Unit]("quantitative")
             .action((_, o) => o.updateCommand[Command.Codegen](_.copy(quantitative = true)))
             .text(wrap("Generate a quantitative instead of a boolean monitor.")),
+          opt[Boolean]("interval")
+            .action((x, o) => o.updateCommand[Command.Codegen](_.copy(interval = x)))
+            .valueName("<bool>")
+            .text(wrap(
+              """true: Guard reals by interval arithmetic in floating point (recommended).
+                |false: Skip interval arithmetic presuming no floating point errors.
+                |""".stripMargin
+            )),
         ),
       note(""),
       cmd("modelplex")
