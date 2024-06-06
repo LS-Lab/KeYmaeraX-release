@@ -223,16 +223,23 @@ object KeYmaeraXProofChecker {
    *   Output proof file (defaults to input file with .kyp suffix)
    * @param ptOut
    *   Output proof term s-expression into a file
+   * @param conjecture
+   *   Conjecture file to replace the model in the input file with (either a specific file or a wildcard, e.g. *.kyx)
    * @param options
    *   The prover options:
-   *   - 'conjecture (optional) conjecture to replace the model listed in 'in
    *   - 'tactic (optional) name of tactic file or a parseable tactic to use to prove the entry(ies) in 'in/'conjecture
    *   - 'tacticName (optional, used only if 'tactic is not defined) identifies which of the tactics in 'in to use
    *     (default: check all; if 'in lists no tactics, uses auto)
    *   - 'timeout (optional)
    *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
    */
-  def prove(in: String, out: Option[String], ptOut: Option[String], options: Options): Unit = {
+  def prove(
+      in: String,
+      out: Option[String],
+      ptOut: Option[String],
+      conjecture: Option[String],
+      options: Options,
+  ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
 
     val inFiles = findFiles(in)
@@ -240,8 +247,7 @@ object KeYmaeraXProofChecker {
       .map(p => p -> ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
     println("Proving entries from " + archiveContent.size + " files")
 
-    val conjectureFileName = options.conjecture
-    val conjectureFiles = conjectureFileName.map(findFiles).getOrElse(List.empty)
+    val conjectureFiles = conjecture.map(findFiles).getOrElse(List.empty)
     val conjectureContent = conjectureFiles
       .flatMap(p =>
         ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise).map(_ -> p).groupBy(_._1.name)

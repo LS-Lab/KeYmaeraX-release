@@ -14,7 +14,12 @@ sealed trait Command
 object Command {
   // Core commands
   case object Setup extends Command
-  case class Prove(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
+  case class Prove(
+      in: String = null,
+      out: Option[String] = None,
+      ptOut: Option[String] = None,
+      conjecture: Option[String] = None,
+  ) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
   case class Convert(in: String = null, out: Option[String] = None) extends Command
@@ -35,7 +40,6 @@ case class Options(
     launch: Boolean = false,
     command: Option[Command] = None,
     // Options specified using flags
-    conjecture: Option[String] = None,
     conversion: Option[String] = None,
     debug: Option[Boolean] = None,
     exportanswers: Option[Boolean] = None,
@@ -110,7 +114,6 @@ object Options {
         .text(wrap("Use present JVM instead of launching one with a bigger stack.")),
 
       // Options specified using flags
-      opt[String]("conjecture").action((x, o) => o.copy(conjecture = Some(x))),
       opt[Boolean]("debug")
         .action((x, o) => o.copy(debug = Some(x)))
         .text(wrap("Enable/disable debug mode with exhaustive messages.")),
@@ -231,6 +234,14 @@ object Options {
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(ptOut = Some(x))))
             .valueName("<file>")
             .text(wrap("Output proof term s-expression into a file.")),
+          opt[String]("conjecture")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(ptOut = Some(x))))
+            .valueName("<file>")
+            .text(wrap(
+              """Conjecture file to replace the model in the input file with
+                |(either a specific file or a wildcard, e.g. *.kyx).
+                |""".stripMargin
+            )),
         ),
       note(""),
       cmd("parse")
