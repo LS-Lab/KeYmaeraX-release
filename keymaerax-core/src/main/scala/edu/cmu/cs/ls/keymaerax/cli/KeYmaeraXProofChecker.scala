@@ -216,9 +216,11 @@ object KeYmaeraXProofChecker {
 
   /**
    * Proves all entries in the given archive file.
+   *
+   * @param in
+   *   Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx)
    * @param options
    *   The prover options:
-   *   - 'in (mandatory) identifies archive files (either specific file name or with wildcards, e.g., *.kyx)
    *   - 'out (optional) identifies the proof output file (defaults to 'in.kyp)
    *   - 'conjecture (optional) conjecture to replace the model listed in 'in
    *   - 'tactic (optional) name of tactic file or a parseable tactic to use to prove the entry(ies) in 'in/'conjecture
@@ -228,13 +230,11 @@ object KeYmaeraXProofChecker {
    *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
    *   - 'ptOut (optional) whether or not to prove with proof terms enabled (default: false)
    */
-  def prove(options: Options): Unit = {
+  def prove(in: String, options: Options): Unit = {
     if (options.ptOut.isDefined) { ProvableSig.PROOF_TERMS_ENABLED = true }
     else { ProvableSig.PROOF_TERMS_ENABLED = false }
 
-    if (options.in.isEmpty) options.printUsageAndExitWithError()
-    val inputFileName = options.in.get
-    val inFiles = findFiles(inputFileName)
+    val inFiles = findFiles(in)
     val archiveContent = inFiles
       .map(p => p -> ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
     println("Proving entries from " + archiveContent.size + " files")
@@ -262,7 +262,7 @@ object KeYmaeraXProofChecker {
     )
     assert(conjectureContent.values.flatMap(_.flatMap(_._1.tactics)).isEmpty, "Conjectures must not list tactics")
 
-    val outputFilePrefix = options.out.getOrElse(inputFileName).stripSuffix(".kyp")
+    val outputFilePrefix = options.out.getOrElse(in).stripSuffix(".kyp")
     val outputFileSuffix = ".kyp"
 
     // @note same archive entry name might be present in several .kyx files

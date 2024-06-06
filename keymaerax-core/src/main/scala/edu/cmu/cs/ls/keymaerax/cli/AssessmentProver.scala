@@ -1516,17 +1516,15 @@ object AssessmentProver {
   /**
    * Grades a submission.
    *
+   * @param in
+   *   The file to grade
    * @param options
    *   The prover options:
-   *   - 'in (mandatory) identifies the file to grade
    *   - 'exportanswers (optional) exports answers to text files instead of grading
    *   - 'skiponparseerror (optional) skips grading on parse errors
    */
-  def grade(options: Options, msgOut: OutputStream, resultOut: OutputStream): Unit = {
-    if (options.in.isEmpty) options.printUsageAndExitWithError()
-
-    val inputFileName = options.in.get
-    val src = Source.fromFile(inputFileName, "UTF-8")
+  def grade(in: String, options: Options, msgOut: OutputStream, resultOut: OutputStream): Unit = {
+    val src = Source.fromFile(in, "UTF-8")
     val input =
       try { src.mkString.parseJson }
       finally { src.close() }

@@ -14,14 +14,14 @@ sealed trait Command
 object Command {
   // Core commands
   case object Setup extends Command
-  case object Prove extends Command
+  case class Prove(in: String = null) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
-  case object Convert extends Command
-  case object Grade extends Command
+  case class Convert(in: String = null) extends Command
+  case class Grade(in: String = null) extends Command
   // Webui commands
-  case object Codegen extends Command
-  case object Modelplex extends Command
+  case class Codegen(in: String = null) extends Command
+  case class Modelplex(in: String = null) extends Command
   case object Repl extends Command
   case object Ui extends Command
 }
@@ -40,7 +40,6 @@ case class Options(
     debug: Option[Boolean] = None,
     exportanswers: Option[Boolean] = None,
     fallback: Option[String] = None,
-    in: Option[String] = None,
     interval: Option[Boolean] = None,
     jlink: Option[String] = None,
     jlinkinterface: Option[String] = None,
@@ -225,9 +224,13 @@ object Options {
         .text(wrap("Initialize the configuration and lemma cache.")),
       note(""),
       cmd("prove")
-        .action((_, o) => o.copy(command = Some(Command.Prove)))
+        .action((_, o) => o.copy(command = Some(Command.Prove())))
         .text(wrap("Run prover on given archive of models or proofs."))
-        .children(arg[String]("file.kyx").action((x, o) => o.copy(in = Some(x)))),
+        .children(
+          arg[String]("<in>")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(in = x)))
+            .text(wrap("Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx)."))
+        ),
       note(""),
       cmd("parse")
         .action((_, o) => o.copy(command = Some(Command.Parse())))
@@ -240,29 +243,43 @@ object Options {
         .children(arg[String]("<value>").action((x, o) => o.updateCommand[Command.BParse](_.copy(value = x)))),
       note(""),
       cmd("convert")
-        .action((_, o) => o.copy(command = Some(Command.Convert)))
+        .action((_, o) => o.copy(command = Some(Command.Convert())))
         .text(wrap("Model and tactic conversions."))
         .children(
           arg[String]("stripHints|kyx2mat|kyx2smt|mat2kyx|mat2smt|smt2kyx|smt2mat")
             .action((x, o) => o.copy(conversion = Some(x))),
-          arg[String]("file.kyx").action((x, o) => o.copy(in = Some(x))),
+          arg[String]("<in>")
+            .action((x, o) => o.updateCommand[Command.Convert](_.copy(in = x)))
+            .text(wrap("Input file.")),
         ),
       note(""),
       cmd("grade")
-        .action((_, o) => o.copy(command = Some(Command.Grade)))
-        .children(arg[String]("<in>").action((x, o) => o.copy(in = Some(x)))),
+        .action((_, o) => o.copy(command = Some(Command.Grade())))
+        .children(
+          arg[String]("<in>")
+            .action((x, o) => o.updateCommand[Command.Grade](_.copy(in = x)))
+            .text(wrap("File to grade."))
+        ),
 
       // Webui commands
       note(""),
       cmd("codegen")
-        .action((_, o) => o.copy(command = Some(Command.Codegen)))
+        .action((_, o) => o.copy(command = Some(Command.Codegen())))
         .text(wrap("Generate executable C code from a model file."))
-        .children(arg[String]("file.kym").action((x, o) => o.copy(in = Some(x)))),
+        .children(
+          arg[String]("<in>")
+            .action((x, o) => o.updateCommand[Command.Codegen](_.copy(in = x)))
+            .text(wrap("Input archive file, can be of the form file.kyx#entry."))
+        ),
       note(""),
       cmd("modelplex")
-        .action((_, o) => o.copy(command = Some(Command.Modelplex)))
+        .action((_, o) => o.copy(command = Some(Command.Modelplex())))
         .text(wrap("Synthesize a monitor from a model by proof with the ModelPlex tactic."))
-        .children(arg[String]("file.kyx").action((x, o) => o.copy(in = Some(x)))),
+        .children(
+          arg[String]("<in>")
+            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(in = x)))
+            .text(wrap("Input file."))
+        ),
       note(""),
       cmd("repl")
         .action((_, o) => o.copy(command = Some(Command.Repl)))

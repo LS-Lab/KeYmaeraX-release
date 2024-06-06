@@ -92,23 +92,23 @@ object KeYmaeraX {
   }
 
   def runCommand(options: Options): Unit = options.command match {
-    case Some(Command.Codegen) =>
+    case Some(cmd: Command.Codegen) =>
       // Quantitative ModelPlex uses Mathematica to simplify formulas
       val tool = if (options.quantitative.isDefined) Tools.MATHEMATICA else "z3"
       val toolConfig = toolConfigFromFile(tool)
       val vars = options.vars.map(makeVariables(_).toSet)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
-      CodeGen.codegen(options, vars)
-    case Some(Command.Modelplex) =>
+      CodeGen.codegen(in = cmd.in, options, vars)
+    case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      modelplex(options)
+      modelplex(in = cmd.in, options)
     case Some(Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       repl(options)
-    case Some(Command.Convert)
+    case Some(cmd: Command.Convert)
         if options.conversion.contains("verboseTactics") || options.conversion.contains("verbatimTactics") =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      convertTactics(options)
+      convertTactics(in = cmd.in, options)
     case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
   }
 
@@ -128,18 +128,18 @@ object KeYmaeraX {
    * ModelPlex monitor synthesis for the given input files
    * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
    *
+   * @param in
+   *   Input file
    * @param options
    *   in describes input file name, vars describes the list of variables, out describes the output file name.
    */
-  def modelplex(options: Options): Unit = {
+  def modelplex(in: String, options: Options): Unit = {
     // @TODO remove option, hol config no longer necessary
     if (options.ptOut.isDefined) {
       // @TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
       ProvableSig.PROOF_TERMS_ENABLED = false
     } else { ProvableSig.PROOF_TERMS_ENABLED = false }
 
-    if (options.in.isEmpty) options.printUsageAndExitWithError()
-    val in = options.in.get
     val inputEntry = ArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
 
@@ -334,22 +334,23 @@ object KeYmaeraX {
   }
 
   /**
-   * Executes all entries in `options('in)` to convert their tactics into `options('conversion)` format. Prints the
+   * Executes all entries in the input file to convert their tactics into `options('conversion)` format. Prints the
    * result to `options('out)`.
+   *
+   * @param in
+   *   Input file
    */
-  def convertTactics(options: Options): Unit = {
-    if (options.in.isEmpty) options.printUsageAndExitWithError()
+  def convertTactics(in: String, options: Options): Unit = {
     if (options.out.isEmpty) options.printUsageAndExitWithError()
     if (options.conversion.isEmpty) options.printUsageAndExitWithError()
 
-    val kyxFile = options.in.get
     val how = options.conversion.get
 
-    val src = scala.io.Source.fromFile(kyxFile.split("#")(0))
+    val src = scala.io.Source.fromFile(in.split("#")(0))
     val fileContent =
       try { src.mkString }
       finally { src.close() }
-    val archiveContent = ArchiveParser.parseFromFile(kyxFile)
+    val archiveContent = ArchiveParser.parseFromFile(in)
 
     def convertTactic(e: ParsedArchiveEntry, how: String): ParsedArchiveEntry = e.copy(tactics =
       e.tactics
