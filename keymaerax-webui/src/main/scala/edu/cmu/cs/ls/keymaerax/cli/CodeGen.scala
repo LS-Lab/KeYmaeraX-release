@@ -40,7 +40,7 @@ object CodeGen {
     if (out.isDefined) outputFile = File(out.get)
 
     val interval = options.interval.getOrElse(true)
-    val head = EvidencePrinter.stampHead(options)
+    val head = EvidencePrinter.stampHead(options.args)
     val quantitative = options.quantitative.getOrElse(false)
     val written = inputFormulas.map(e => {
       val outputFileName =

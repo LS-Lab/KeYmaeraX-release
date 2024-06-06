@@ -143,7 +143,7 @@ object KeYmaeraXProofChecker {
           pw match {
             case Some(w) =>
               assert(lemma.isDefined, "Lemma undefined even though writer is present")
-              w.write(EvidencePrinter.stampHead(options))
+              w.write(EvidencePrinter.stampHead(options.args))
               w.write("/* @evidence: parse of print of result of a proof */\n\n")
               w.write(lemma.get.toString)
               w.close()
