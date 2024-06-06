@@ -25,8 +25,8 @@ object Command {
       verbose: Boolean = false,
       statistics: Option[String] = None,
   ) extends Command
-  case class Parse(value: String = null) extends Command
-  case class BParse(value: String = null) extends Command
+  case class Parse(in: String = null) extends Command
+  case class BParse(in: String = null) extends Command
   case class Convert(in: String = null, out: Option[String] = None) extends Command
   case class Grade(in: String = null, out: Option[String] = None) extends Command
   // Webui commands
@@ -268,12 +268,18 @@ object Options {
       cmd("parse")
         .action((_, o) => o.copy(command = Some(Command.Parse())))
         .text(wrap("Return error code 0 if the given model file parses."))
-        .children(arg[String]("<value>").action((x, o) => o.updateCommand[Command.Parse](_.copy(value = x)))),
+        .children(
+          arg[String]("<in>").action((x, o) => o.updateCommand[Command.Parse](_.copy(in = x))).text(wrap("Input file."))
+        ),
       note(""),
       cmd("bparse")
         .action((_, o) => o.copy(command = Some(Command.BParse())))
         .text(wrap("Return error code 0 if given bellerophon tactic file parses."))
-        .children(arg[String]("<value>").action((x, o) => o.updateCommand[Command.BParse](_.copy(value = x)))),
+        .children(
+          arg[String]("<in>")
+            .action((x, o) => o.updateCommand[Command.BParse](_.copy(in = x)))
+            .text(wrap("Input file."))
+        ),
       note(""),
       cmd("convert")
         .action((_, o) => o.copy(command = Some(Command.Convert())))

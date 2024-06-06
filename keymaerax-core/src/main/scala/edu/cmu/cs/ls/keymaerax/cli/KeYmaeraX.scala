@@ -144,14 +144,14 @@ object KeYmaeraX {
           statistics = cmd.statistics,
           args = options.args,
         )
-      case Some(Command.Parse(value)) =>
+      case Some(cmd: Command.Parse) =>
         // Parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
         initializeProver(options.toToolConfig)
-        if (parseProblemFile(value)) exit(0) else exit(-1)
-      case Some(Command.BParse(value)) =>
+        if (parseProblemFile(cmd.in)) exit(0) else exit(-1)
+      case Some(cmd: Command.BParse) =>
         // Parsing a tactic requires prover (AxiomInfo)
         initializeProver(options.toToolConfig)
-        if (parseBelleTactic(value)) exit(0) else exit(-1)
+        if (parseBelleTactic(cmd.in)) exit(0) else exit(-1)
       case Some(cmd: Command.Convert) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
         convert(in = cmd.in, out = cmd.out, options)
