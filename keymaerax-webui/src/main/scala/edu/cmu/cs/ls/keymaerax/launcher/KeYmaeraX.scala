@@ -108,7 +108,15 @@ object KeYmaeraX {
       )
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, vars = cmd.vars, verify = cmd.verify, options)
+      modelplex(
+        in = cmd.in,
+        out = cmd.out,
+        ptOut = cmd.ptOut,
+        vars = cmd.vars,
+        verify = cmd.verify,
+        sandbox = cmd.sandbox,
+        options,
+      )
     case Some(cmd: Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       repl(tactic = cmd.tactic, options)
@@ -150,6 +158,7 @@ object KeYmaeraX {
       ptOut: Option[String],
       vars: Option[Seq[String]],
       verify: Boolean,
+      sandbox: Boolean,
       options: Options,
   ): Unit = {
     // @TODO remove option, hol config no longer necessary
@@ -179,12 +188,9 @@ object KeYmaeraX {
 
     val outputFileName = out.getOrElse(inputFileName + ".kym")
 
-    val kind =
-      if (options.sandbox.isDefined) Symbol("sandbox")
-      else if (options.monitor.isDefined) options.monitor.get
-      else Symbol("model")
+    val kind = Option.when(sandbox)(Symbol("sandbox")).orElse(options.monitor).getOrElse(Symbol("model"))
 
-    if (options.sandbox.isDefined) {
+    if (sandbox) {
       val fallback = options.fallback match {
         case Some(fallbackPrgString: String) => fallbackPrgString.asProgram
         case _ => inputEntry.model match {

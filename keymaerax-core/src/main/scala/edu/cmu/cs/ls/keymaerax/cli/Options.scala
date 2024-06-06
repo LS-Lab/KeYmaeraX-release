@@ -48,6 +48,7 @@ object Command {
       ptOut: Option[String] = None,
       vars: Option[Seq[String]] = None,
       verify: Boolean = false,
+      sandbox: Boolean = false,
   ) extends Command
   case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
@@ -75,7 +76,6 @@ case class Options(
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
     qemethod: Option[String] = None,
-    sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
     tool: Option[String] = None,
     z3Path: Option[String] = None,
@@ -191,7 +191,6 @@ object Options {
             |Default: Reduce (unless configured in keymaerax.conf)
             |""".stripMargin
         )),
-      opt[Unit]("sandbox").action((_, o) => o.copy(sandbox = Some(true))),
       opt[String]("tool")
         .action((x, o) => o.copy(tool = Some(x)))
         .valueName("mathematica|z3")
@@ -363,6 +362,7 @@ object Options {
             .valueName("<vars>")
             .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
           opt[Unit]("verify").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(verify = true))),
+          opt[Unit]("sandbox").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(sandbox = true))),
         ),
       note(""),
       cmd("repl")
