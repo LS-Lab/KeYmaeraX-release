@@ -28,7 +28,7 @@ object Command {
   case class Parse(in: String = null) extends Command
   case class BParse(in: String = null) extends Command
   case class Convert(conversion: String = null, in: String = null, out: Option[String] = None) extends Command
-  case class Grade(in: String = null, out: Option[String] = None) extends Command
+  case class Grade(in: String = null, out: Option[String] = None, exportAnswers: Boolean = false) extends Command
   // Webui commands
   case class Codegen(in: String = null, out: Option[String] = None) extends Command
   case class Modelplex(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
@@ -46,7 +46,6 @@ case class Options(
     command: Option[Command] = None,
     // Options specified using flags
     debug: Option[Boolean] = None,
-    exportanswers: Option[Boolean] = None,
     fallback: Option[String] = None,
     interval: Option[Boolean] = None,
     jlink: Option[String] = None,
@@ -116,7 +115,6 @@ object Options {
       opt[Boolean]("debug")
         .action((x, o) => o.copy(debug = Some(x)))
         .text(wrap("Enable/disable debug mode with exhaustive messages.")),
-      opt[Unit]("exportanswers").action((_, o) => o.copy(exportanswers = Some(true))),
       opt[String]("fallback").action((x, o) => o.copy(fallback = Some(x))),
       opt[Boolean]("interval")
         .action((x, o) => o.copy(interval = Some(x)))
@@ -310,6 +308,9 @@ object Options {
             .optional()
             .action((x, o) => o.updateCommand[Command.Grade](_.copy(out = Some(x))))
             .text(wrap("Output directory for answer files.")),
+          opt[Unit]("export-answers")
+            .action((_, o) => o.updateCommand[Command.Grade](_.copy(exportAnswers = true)))
+            .text(wrap("Export answers to text files instead of grading.")),
         ),
 
       // Webui commands
