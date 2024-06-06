@@ -157,8 +157,14 @@ object KeYmaeraX {
         convert(in = cmd.in, out = cmd.out, conversion = cmd.conversion)
       case Some(cmd: Command.Grade) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-        AssessmentProver
-          .grade(in = cmd.in, out = cmd.out, exportAnswers = cmd.exportAnswers, options, System.out, System.out)
+        AssessmentProver.grade(
+          in = cmd.in,
+          out = cmd.out,
+          exportAnswers = cmd.exportAnswers,
+          skipGradingOnParseError = cmd.skipOnParseError,
+          msgOut = System.out,
+          resultOut = System.out,
+        )
       // Unknown or no commands
       case Some(command) => println("WARNING: Unknown command " + command)
       case None => options.printUsageAndExitWithError()

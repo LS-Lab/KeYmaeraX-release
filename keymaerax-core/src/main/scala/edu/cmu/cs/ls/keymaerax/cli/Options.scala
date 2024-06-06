@@ -28,7 +28,12 @@ object Command {
   case class Parse(in: String = null) extends Command
   case class BParse(in: String = null) extends Command
   case class Convert(conversion: String = null, in: String = null, out: Option[String] = None) extends Command
-  case class Grade(in: String = null, out: Option[String] = None, exportAnswers: Boolean = false) extends Command
+  case class Grade(
+      in: String = null,
+      out: Option[String] = None,
+      exportAnswers: Boolean = false,
+      skipOnParseError: Boolean = false,
+  ) extends Command
   // Webui commands
   case class Codegen(in: String = null, out: Option[String] = None) extends Command
   case class Modelplex(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
@@ -62,7 +67,6 @@ case class Options(
     quantitative: Option[Boolean] = None,
     sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
-    skiponparseerror: Option[Boolean] = None,
     tool: Option[String] = None,
     vars: Option[Seq[String]] = None,
     verify: Option[Boolean] = None,
@@ -188,7 +192,6 @@ object Options {
         )),
       opt[Unit]("quantitative").action((_, o) => o.copy(quantitative = Some(true))),
       opt[Unit]("sandbox").action((_, o) => o.copy(sandbox = Some(true))),
-      opt[Unit]("skiponparseerror").action((_, o) => o.copy(skiponparseerror = Some(true))),
       opt[String]("tool")
         .action((x, o) => o.copy(tool = Some(x)))
         .valueName("mathematica|z3")
@@ -311,6 +314,9 @@ object Options {
           opt[Unit]("export-answers")
             .action((_, o) => o.updateCommand[Command.Grade](_.copy(exportAnswers = true)))
             .text(wrap("Export answers to text files instead of grading.")),
+          opt[Unit]("skip-on-parse-error")
+            .action((_, o) => o.updateCommand[Command.Grade](_.copy(skipOnParseError = true)))
+            .text(wrap("Skip grading on parse errors.")),
         ),
 
       // Webui commands
