@@ -21,6 +21,7 @@ object Command {
       conjecture: Option[String] = None,
       tactic: Option[String] = None,
       tacticName: Option[String] = None,
+      timeout: Long = 0,
   ) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
@@ -63,7 +64,6 @@ case class Options(
     sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
     skiponparseerror: Option[Boolean] = None,
-    timeout: Option[Long] = None,
     tool: Option[String] = None,
     vars: Option[Seq[String]] = None,
     verbose: Option[Boolean] = None,
@@ -193,9 +193,6 @@ object Options {
       opt[Unit]("quantitative").action((_, o) => o.copy(quantitative = Some(true))),
       opt[Unit]("sandbox").action((_, o) => o.copy(sandbox = Some(true))),
       opt[Unit]("skiponparseerror").action((_, o) => o.copy(skiponparseerror = Some(true))),
-      opt[Long]("timeout")
-        .action((x, o) => o.copy(timeout = Some(x)))
-        .text(wrap("How many seconds to try proving before giving up, forever if negative.")),
       opt[String]("tool")
         .action((x, o) => o.copy(tool = Some(x)))
         .valueName("mathematica|z3")
@@ -257,6 +254,10 @@ object Options {
                 |Only used if no tactic is specified.
                 |""".stripMargin
             )),
+          opt[Long]("timeout")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(timeout = x)))
+            .valueName("<number>")
+            .text(wrap("How many seconds to try proving before giving up, forever if 0 or less.")),
         ),
       note(""),
       cmd("parse")

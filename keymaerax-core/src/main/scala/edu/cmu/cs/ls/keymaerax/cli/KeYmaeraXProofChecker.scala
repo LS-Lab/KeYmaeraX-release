@@ -231,9 +231,10 @@ object KeYmaeraXProofChecker {
    * @param tacticName
    *   Which of the tactics in the input file to use (default: check all, falling back to auto if no tactic is listed).
    *   Only used if no tactic is specified.
+   * @param timeout
+   *   How many seconds to try proving before giving up, forever if 0 or less.
    * @param options
    *   The prover options:
-   *   - 'timeout (optional)
    *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
    */
   def prove(
@@ -243,6 +244,7 @@ object KeYmaeraXProofChecker {
       conjecture: Option[String],
       tactic: Option[String],
       tacticName: Option[String],
+      timeout: Long,
       options: Options,
   ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
@@ -315,6 +317,7 @@ object KeYmaeraXProofChecker {
           ptOut = ptOut,
           tactic = tactic,
           tacticName = tacticName,
+          timeout = timeout,
           options,
         )
       )
@@ -350,6 +353,7 @@ object KeYmaeraXProofChecker {
       ptOut: Option[String],
       tactic: Option[String],
       tacticName: Option[String],
+      timeout: Long,
       options: Options,
   ): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
@@ -367,7 +371,6 @@ object KeYmaeraXProofChecker {
     }
 
     val tacticString = tactic.map(readTactic(_, entry.defs))
-    val timeout = options.timeout.getOrElse(0L)
 
     // @note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
     val proofEvidence = File(sanitize(outputFileName))

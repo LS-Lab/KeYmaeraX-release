@@ -139,6 +139,7 @@ object KeYmaeraX {
           conjecture = cmd.conjecture,
           tactic = cmd.tactic,
           tacticName = cmd.tacticName,
+          timeout = cmd.timeout,
           options,
         )
       case Some(Command.Parse(value)) =>
