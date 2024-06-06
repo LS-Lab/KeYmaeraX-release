@@ -52,7 +52,7 @@ object Command {
       monitor: Option[Symbol] = None,
       fallback: Option[String] = None,
   ) extends Command
-  case class Repl(tactic: Option[String] = None) extends Command
+  case class Repl(model: String = null, tactic: Option[String] = None) extends Command
   case object Ui extends Command
 }
 
@@ -71,7 +71,6 @@ case class Options(
     jlinktcpip: Option[String] = None,
     lax: Option[Boolean] = None,
     mathkernel: Option[String] = None,
-    model: Option[String] = None,
     open: Option[String] = None,
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
@@ -373,7 +372,7 @@ object Options {
         .action((_, o) => o.copy(command = Some(Command.Repl())))
         .text(wrap("Prove a model interactively from a command line REPL."))
         .children(
-          arg[String]("<model>").action((x, o) => o.copy(model = Some(x))),
+          arg[String]("<model>").action((x, o) => o.updateCommand[Command.Repl](_.copy(model = x))),
           arg[String]("<tactic>").optional().action((x, o) => o.updateCommand[Command.Repl](_.copy(tactic = Some(x)))),
           arg[String]("<scaladefs>").optional().action((x, o) => o.copy(scaladefs = Some(x))),
         ),
