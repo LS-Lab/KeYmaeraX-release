@@ -121,7 +121,7 @@ object KeYmaeraX {
       )
     case Some(cmd: Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      repl(model = cmd.model, tactic = cmd.tactic, options)
+      repl(model = cmd.model, tactic = cmd.tactic, scaladefs = cmd.scaladefs)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
     case Some(cmd: Command.Convert)
         if cmd.conversion.contains("verboseTactics") || cmd.conversion.contains("verbatimTactics") =>
@@ -332,10 +332,10 @@ object KeYmaeraX {
     }
   }
 
-  def repl(model: String, tactic: Option[String], options: Options): Unit = {
+  def repl(model: String, tactic: Option[String], scaladefs: Option[String]): Unit = {
     val modelFileNameDotKyx = model
     val tacticFileNameDotKyt = tactic
-    val scaladefsFilename = options.scaladefs
+    val scaladefsFilename = scaladefs
     assert(
       modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx +

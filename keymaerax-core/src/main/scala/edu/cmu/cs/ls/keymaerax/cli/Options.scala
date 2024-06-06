@@ -52,7 +52,7 @@ object Command {
       monitor: Option[Symbol] = None,
       fallback: Option[String] = None,
   ) extends Command
-  case class Repl(model: String = null, tactic: Option[String] = None) extends Command
+  case class Repl(model: String = null, tactic: Option[String] = None, scaladefs: Option[String] = None) extends Command
   case object Ui extends Command
 }
 
@@ -75,7 +75,6 @@ case class Options(
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
     qemethod: Option[String] = None,
-    scaladefs: Option[String] = None,
     tool: Option[String] = None,
     z3Path: Option[String] = None,
 ) {
@@ -374,7 +373,9 @@ object Options {
         .children(
           arg[String]("<model>").action((x, o) => o.updateCommand[Command.Repl](_.copy(model = x))),
           arg[String]("<tactic>").optional().action((x, o) => o.updateCommand[Command.Repl](_.copy(tactic = Some(x)))),
-          arg[String]("<scaladefs>").optional().action((x, o) => o.copy(scaladefs = Some(x))),
+          arg[String]("<scaladefs>")
+            .optional()
+            .action((x, o) => o.updateCommand[Command.Repl](_.copy(scaladefs = Some(x)))),
         ),
       note(""),
       cmd("ui").action((_, o) => o.copy(command = Some(Command.Ui))).text(wrap("Start web user interface.")),
