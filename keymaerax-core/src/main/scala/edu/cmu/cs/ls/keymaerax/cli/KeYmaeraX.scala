@@ -132,7 +132,7 @@ object KeYmaeraX {
         println("...done")
       case Some(cmd: Command.Prove) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-        KeYmaeraXProofChecker.prove(in = cmd.in, options)
+        KeYmaeraXProofChecker.prove(in = cmd.in, out = cmd.out, options)
       case Some(Command.Parse(value)) =>
         // Parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
         initializeProver(options.toToolConfig)
@@ -143,10 +143,10 @@ object KeYmaeraX {
         if (parseBelleTactic(value)) exit(0) else exit(-1)
       case Some(cmd: Command.Convert) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-        convert(in = cmd.in, options)
+        convert(in = cmd.in, out = cmd.out, options)
       case Some(cmd: Command.Grade) =>
         initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-        AssessmentProver.grade(in = cmd.in, options, System.out, System.out)
+        AssessmentProver.grade(in = cmd.in, out = cmd.out, options, System.out, System.out)
       // Unknown or no commands
       case Some(command) => println("WARNING: Unknown command " + command)
       case None => options.printUsageAndExitWithError()
@@ -317,21 +317,21 @@ object KeYmaeraX {
   }
 
   /** Converts input files. */
-  def convert(in: String, options: Options): Unit = {
+  def convert(in: String, out: Option[String], options: Options): Unit = {
     if (options.conversion.isEmpty) options.printUsageAndExitWithError()
 
     options.conversion.get match {
-      case Conversions.STRIPHINTS => stripHints(in = in, options)
-      case Conversions.KYX2SMT => kyx2smt(in = in, options)
-      case Conversions.KYX2MAT => kyx2mat(in = in, options)
-      case Conversions.SMT2KYX => smt2kyx(in = in, options)
-      case Conversions.SMT2MAT => smt2mat(in = in, options)
+      case Conversions.STRIPHINTS => stripHints(in, out)
+      case Conversions.KYX2SMT => kyx2smt(in, out)
+      case Conversions.KYX2MAT => kyx2mat(in, out)
+      case Conversions.SMT2KYX => smt2kyx(in, out)
+      case Conversions.SMT2MAT => smt2mat(in, out)
       case _ => Usage.optionErrorReporter("-convert"); exit(1)
     }
   }
 
   /** Strips proof hints from the model. */
-  private def stripHints(in: String, options: Options): Unit = {
+  private def stripHints(in: String, out: Option[String]): Unit = {
     val converter = (kyxFile: String) => {
       val archiveContent = ArchiveParser.parseFromFile(kyxFile)
 
@@ -360,11 +360,11 @@ object KeYmaeraX {
       archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
     }
 
-    convert(in = in, options, converter)
+    convert(in, out, converter)
   }
 
   /** Converts KeYmaera X to SMT-Lib format. */
-  private def kyx2smt(in: String, options: Options): Unit = {
+  private def kyx2smt(in: String, out: Option[String]): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
       archiveContent
@@ -376,11 +376,11 @@ object KeYmaeraX {
         })
         .mkString("\n")
     }
-    convert(in = in, options, converter)
+    convert(in, out, converter)
   }
 
   /** Converts KeYmaera X to Mathematica. */
-  private def kyx2mat(in: String, options: Options): Unit = {
+  private def kyx2mat(in: String, out: Option[String]): Unit = {
     val converter = (fileName: String) => {
       val archiveContent = ArchiveParser.parseFromFile(fileName)
       archiveContent
@@ -390,29 +390,29 @@ object KeYmaeraX {
         })
         .mkString("\n")
     }
-    convert(in = in, options, converter)
+    convert(in, out, converter)
   }
 
   /** Converts SMT-Lib format to KeYmaera X. */
-  private def smt2kyx(in: String, options: Options): Unit = {
+  private def smt2kyx(in: String, out: Option[String]): Unit = {
     val converter =
       (fileName: String) => { SmtLibReader.read(new FileReader(fileName))._1.map(_.prettyString).mkString("\n") }
-    convert(in = in, options, converter)
+    convert(in, out, converter)
   }
 
   /** Converts SMT-Lib format to Mathematica. */
-  private def smt2mat(in: String, options: Options): Unit = {
+  private def smt2mat(in: String, out: Option[String]): Unit = {
     val converter = (fileName: String) => {
       val (kyx, _) = SmtLibReader.read(new FileReader(fileName))
       kyx.map(KeYmaeraToMathematica).mkString("\n")
     }
-    convert(in = in, options, converter)
+    convert(in, out, converter)
   }
 
   /** Converts the content of a file using the `converter` fileName => content. */
-  private def convert(in: String, options: Options, converter: String => String): Unit = {
+  private def convert(in: String, out: Option[String], converter: String => String): Unit = {
     val converted = converter(in)
-    options.out match {
+    out match {
       case Some(outFile) =>
         val pw = new PrintWriter(outFile)
         pw.write(converted)

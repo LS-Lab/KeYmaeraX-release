@@ -98,17 +98,19 @@ object KeYmaeraX {
       val toolConfig = toolConfigFromFile(tool)
       val vars = options.vars.map(makeVariables(_).toSet)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
-      CodeGen.codegen(in = cmd.in, options, vars)
+      CodeGen.codegen(in = cmd.in, out = cmd.out, options, vars)
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      modelplex(in = cmd.in, options)
+      modelplex(in = cmd.in, out = cmd.out, options)
     case Some(Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       repl(options)
+    // TODO Turn this into separate webui-only command (maybe named "convertTactics")
     case Some(cmd: Command.Convert)
         if options.conversion.contains("verboseTactics") || options.conversion.contains("verbatimTactics") =>
+      if (cmd.out.isEmpty) options.printUsageAndExitWithError()
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      convertTactics(in = cmd.in, options)
+      convertTactics(in = cmd.in, out = cmd.out.get, options)
     case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
   }
 
@@ -130,10 +132,12 @@ object KeYmaeraX {
    *
    * @param in
    *   Input file
+   * @param out
+   *   Output file
    * @param options
-   *   in describes input file name, vars describes the list of variables, out describes the output file name.
+   *   vars describes the list of variables
    */
-  def modelplex(in: String, options: Options): Unit = {
+  def modelplex(in: String, out: Option[String], options: Options): Unit = {
     // @TODO remove option, hol config no longer necessary
     if (options.ptOut.isDefined) {
       // @TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
@@ -159,7 +163,7 @@ object KeYmaeraX {
 
     val inputFileName = in.split('#')(0).dropRight(4)
 
-    val outputFileName = options.out.getOrElse(inputFileName + ".kym")
+    val outputFileName = out.getOrElse(inputFileName + ".kym")
 
     val kind =
       if (options.sandbox.isDefined) Symbol("sandbox")
@@ -335,13 +339,14 @@ object KeYmaeraX {
 
   /**
    * Executes all entries in the input file to convert their tactics into `options('conversion)` format. Prints the
-   * result to `options('out)`.
+   * result to the output file.
    *
    * @param in
    *   Input file
+   * @param out
+   *   Output file
    */
-  def convertTactics(in: String, options: Options): Unit = {
-    if (options.out.isEmpty) options.printUsageAndExitWithError()
+  def convertTactics(in: String, out: String, options: Options): Unit = {
     if (options.conversion.isEmpty) options.printUsageAndExitWithError()
 
     val how = options.conversion.get
@@ -402,8 +407,7 @@ object KeYmaeraX {
         content.replace(entryOnwards, entryOnwardsConverted)
       })
 
-    val outFile = options.out.get
-    val pw = new PrintWriter(outFile)
+    val pw = new PrintWriter(out)
     pw.write(convertedContent)
     pw.close()
   }

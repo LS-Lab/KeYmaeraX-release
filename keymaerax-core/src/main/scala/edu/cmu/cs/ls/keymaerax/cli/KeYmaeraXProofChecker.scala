@@ -219,9 +219,10 @@ object KeYmaeraXProofChecker {
    *
    * @param in
    *   Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx)
+   * @param out
+   *   Output proof file (defaults to input file with .kyp suffix)
    * @param options
    *   The prover options:
-   *   - 'out (optional) identifies the proof output file (defaults to 'in.kyp)
    *   - 'conjecture (optional) conjecture to replace the model listed in 'in
    *   - 'tactic (optional) name of tactic file or a parseable tactic to use to prove the entry(ies) in 'in/'conjecture
    *   - 'tacticName (optional, used only if 'tactic is not defined) identifies which of the tactics in 'in to use
@@ -230,7 +231,7 @@ object KeYmaeraXProofChecker {
    *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
    *   - 'ptOut (optional) whether or not to prove with proof terms enabled (default: false)
    */
-  def prove(in: String, options: Options): Unit = {
+  def prove(in: String, out: Option[String], options: Options): Unit = {
     if (options.ptOut.isDefined) { ProvableSig.PROOF_TERMS_ENABLED = true }
     else { ProvableSig.PROOF_TERMS_ENABLED = false }
 
@@ -262,7 +263,7 @@ object KeYmaeraXProofChecker {
     )
     assert(conjectureContent.values.flatMap(_.flatMap(_._1.tactics)).isEmpty, "Conjectures must not list tactics")
 
-    val outputFilePrefix = options.out.getOrElse(in).stripSuffix(".kyp")
+    val outputFilePrefix = out.getOrElse(in).stripSuffix(".kyp")
     val outputFileSuffix = ".kyp"
 
     // @note same archive entry name might be present in several .kyx files

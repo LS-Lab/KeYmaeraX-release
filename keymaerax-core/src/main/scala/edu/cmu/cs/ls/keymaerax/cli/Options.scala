@@ -14,14 +14,14 @@ sealed trait Command
 object Command {
   // Core commands
   case object Setup extends Command
-  case class Prove(in: String = null) extends Command
+  case class Prove(in: String = null, out: Option[String] = None) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
-  case class Convert(in: String = null) extends Command
-  case class Grade(in: String = null) extends Command
+  case class Convert(in: String = null, out: Option[String] = None) extends Command
+  case class Grade(in: String = null, out: Option[String] = None) extends Command
   // Webui commands
-  case class Codegen(in: String = null) extends Command
-  case class Modelplex(in: String = null) extends Command
+  case class Codegen(in: String = null, out: Option[String] = None) extends Command
+  case class Modelplex(in: String = null, out: Option[String] = None) extends Command
   case object Repl extends Command
   case object Ui extends Command
 }
@@ -49,7 +49,6 @@ case class Options(
     model: Option[String] = None,
     monitor: Option[Symbol] = None,
     open: Option[String] = None,
-    out: Option[String] = None,
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
     proofStatisticsPrinter: Option[String] = None,
@@ -167,7 +166,6 @@ object Options {
         .valueName("ctrl|model")
         .text(wrap("What kind of monitor to generate with ModelPlex.")),
       opt[String]("open").action((x, o) => o.copy(open = Some(x))),
-      opt[String]("out").action((x, o) => o.copy(out = Some(x))),
       opt[String]("parallelqe")
         .validate(it => if (it == "true" || it == "false") success else failure("must be 'true' or 'false'"))
         .action((x, o) => o.copy(parallelqe = Some(x)))
@@ -229,7 +227,11 @@ object Options {
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(in = x)))
-            .text(wrap("Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx)."))
+            .text(wrap("Input archive file(s) (either a specific file or a wildcard, e.g. *.kyx).")),
+          arg[String]("<out>")
+            .optional()
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(out = Some(x))))
+            .text(wrap("Output proof file (defaults to input file with .kyp suffix).")),
         ),
       note(""),
       cmd("parse")
@@ -251,6 +253,10 @@ object Options {
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Convert](_.copy(in = x)))
             .text(wrap("Input file.")),
+          arg[String]("<out>")
+            .optional()
+            .action((x, o) => o.updateCommand[Command.Convert](_.copy(out = Some(x))))
+            .text(wrap("Output file.")),
         ),
       note(""),
       cmd("grade")
@@ -258,7 +264,11 @@ object Options {
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Grade](_.copy(in = x)))
-            .text(wrap("File to grade."))
+            .text(wrap("File to grade.")),
+          arg[String]("<out>")
+            .optional()
+            .action((x, o) => o.updateCommand[Command.Grade](_.copy(out = Some(x))))
+            .text(wrap("Output directory for answer files.")),
         ),
 
       // Webui commands
@@ -269,7 +279,11 @@ object Options {
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Codegen](_.copy(in = x)))
-            .text(wrap("Input archive file, can be of the form file.kyx#entry."))
+            .text(wrap("Input archive file, can be of the form file.kyx#entry.")),
+          arg[String]("<out>")
+            .optional()
+            .action((x, o) => o.updateCommand[Command.Codegen](_.copy(out = Some(x))))
+            .text(wrap("Output file (default: input file name with .c suffix).")),
         ),
       note(""),
       cmd("modelplex")
@@ -278,7 +292,11 @@ object Options {
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(in = x)))
-            .text(wrap("Input file."))
+            .text(wrap("Input file.")),
+          arg[String]("<out>")
+            .optional()
+            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(out = Some(x))))
+            .text(wrap("Output file.")),
         ),
       note(""),
       cmd("repl")

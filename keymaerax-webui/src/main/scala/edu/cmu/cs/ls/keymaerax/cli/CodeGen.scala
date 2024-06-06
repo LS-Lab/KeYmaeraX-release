@@ -24,19 +24,20 @@ object CodeGen {
    *
    * @param in
    *   Input archive file, can be of the form file.kyx#entry
+   * @param out
+   *   Output file (default: input file name with .c suffix)
    * @param options
    *   Options to steer the code generator:
-   *   - 'out (optional) output file (default: 'in.c)
    *   - 'vars (optional)
    *   - 'interval (optional) Whether to use interval arithmetic or floating point arithmetic (default: interval)
    *   - 'quantitative (optional) Whether to generate a quantitative or boolean monitor (default: true)
    */
-  def codegen(in: String, options: Options, vars: Option[Set[BaseVariable]]): Unit = {
+  def codegen(in: String, out: Option[String], options: Options, vars: Option[Set[BaseVariable]]): Unit = {
     val inputFile = if (in.contains("#")) File(in.substring(0, in.lastIndexOf("#"))) else File(in)
 
     val inputFormulas = ArchiveParser.parseFromFile(in)
     var outputFile = inputFile.changeExtension("c")
-    if (options.out.isDefined) outputFile = File(options.out.get)
+    if (out.isDefined) outputFile = File(out.get)
 
     val interval = options.interval.getOrElse(true)
     val head = EvidencePrinter.stampHead(options)

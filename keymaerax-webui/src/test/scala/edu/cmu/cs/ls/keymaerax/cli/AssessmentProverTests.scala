@@ -1663,7 +1663,7 @@ class AssessmentProverTests extends TacticTestBase {
     val options = Options(name = "", args = Nil)
     val msgsStream = new ByteArrayOutputStream()
     val resultsStream = new ByteArrayOutputStream()
-    AssessmentProver.grade(in = f.getAbsolutePath, options, msgsStream, resultsStream)
+    AssessmentProver.grade(in = f.getAbsolutePath, out = None, options, msgsStream, resultsStream)
     val msgs = msgsStream.toString
     print(msgs)
     val msgLines = (msgs: StringOps).linesIterator.toList

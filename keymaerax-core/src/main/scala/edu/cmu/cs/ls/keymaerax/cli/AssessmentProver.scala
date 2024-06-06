@@ -1518,12 +1518,14 @@ object AssessmentProver {
    *
    * @param in
    *   The file to grade
+   * @param out
+   *   Output directory for answer files
    * @param options
    *   The prover options:
    *   - 'exportanswers (optional) exports answers to text files instead of grading
    *   - 'skiponparseerror (optional) skips grading on parse errors
    */
-  def grade(in: String, options: Options, msgOut: OutputStream, resultOut: OutputStream): Unit = {
+  def grade(in: String, out: Option[String], options: Options, msgOut: OutputStream, resultOut: OutputStream): Unit = {
     val src = Source.fromFile(in, "UTF-8")
     val input =
       try { src.mkString.parseJson }
@@ -1533,7 +1535,7 @@ object AssessmentProver {
       input.convertTo[Submission.Chapter]
     }
 
-    if (options.exportanswers.getOrElse(false)) { exportAnswers(chapter, options.out.getOrElse(".")) }
+    if (options.exportanswers.getOrElse(false)) { exportAnswers(chapter, out.getOrElse(".")) }
     else {
       val skipGradingOnParseError = options.skiponparseerror.getOrElse(false)
       grade(chapter, msgOut, resultOut, skipGradingOnParseError)
