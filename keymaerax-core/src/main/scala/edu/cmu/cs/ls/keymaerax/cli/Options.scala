@@ -40,8 +40,14 @@ object Command {
       out: Option[String] = None,
       quantitative: Boolean = false,
       interval: Boolean = true,
+      vars: Option[Seq[String]] = None,
   ) extends Command
-  case class Modelplex(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
+  case class Modelplex(
+      in: String = null,
+      out: Option[String] = None,
+      ptOut: Option[String] = None,
+      vars: Option[Seq[String]] = None,
+  ) extends Command
   case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
 }
@@ -71,7 +77,6 @@ case class Options(
     sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
     tool: Option[String] = None,
-    vars: Option[Seq[String]] = None,
     verify: Option[Boolean] = None,
     z3Path: Option[String] = None,
 ) {
@@ -191,10 +196,6 @@ object Options {
         .action((x, o) => o.copy(tool = Some(x)))
         .valueName("mathematica|z3")
         .text(wrap("Choose which tool to use for real arithmetic.")),
-      opt[Seq[String]]("vars")
-        .action((x, o) => o.copy(vars = Some(x)))
-        .valueName("var1,var2,..,varn")
-        .text(wrap("Use ordered list of variables, treating others as constant functions.")),
       opt[Unit]("verify").action((_, o) => o.copy(verify = Some(true))),
       opt[String]("z3path")
         .action((x, o) => o.copy(z3Path = Some(x)))
@@ -338,6 +339,10 @@ object Options {
                 |false: Skip interval arithmetic presuming no floating point errors.
                 |""".stripMargin
             )),
+          opt[Seq[String]]("vars")
+            .action((x, o) => o.updateCommand[Command.Codegen](_.copy(vars = Some(x))))
+            .valueName("<vars>")
+            .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
         ),
       note(""),
       cmd("modelplex")
@@ -354,6 +359,10 @@ object Options {
           opt[String]("pt-out")
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(ptOut = Some(x))))
             .valueName("<file>"),
+          opt[Seq[String]]("vars")
+            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(vars = Some(x))))
+            .valueName("<vars>")
+            .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
         ),
       note(""),
       cmd("repl")

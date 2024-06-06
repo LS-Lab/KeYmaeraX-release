@@ -96,7 +96,7 @@ object KeYmaeraX {
       // Quantitative ModelPlex uses Mathematica to simplify formulas
       val tool = if (cmd.quantitative) Tools.MATHEMATICA else "z3"
       val toolConfig = toolConfigFromFile(tool)
-      val vars = options.vars.map(makeVariables(_).toSet)
+      val vars = cmd.vars.map(makeVariables(_).toSet)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
       CodeGen.codegen(
         in = cmd.in,
@@ -108,7 +108,7 @@ object KeYmaeraX {
       )
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
-      modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, options)
+      modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, vars = cmd.vars, options)
     case Some(cmd: Command.Repl) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       repl(tactic = cmd.tactic, options)
@@ -141,10 +141,16 @@ object KeYmaeraX {
    *   Input file
    * @param out
    *   Output file
-   * @param options
-   *   vars describes the list of variables
+   * @param vars
+   *   The list of variables
    */
-  def modelplex(in: String, out: Option[String], ptOut: Option[String], options: Options): Unit = {
+  def modelplex(
+      in: String,
+      out: Option[String],
+      ptOut: Option[String],
+      vars: Option[Seq[String]],
+      options: Options,
+  ): Unit = {
     // @TODO remove option, hol config no longer necessary
     if (ptOut.isDefined) {
       // @TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
@@ -268,13 +274,13 @@ object KeYmaeraX {
       pw.write(archive)
       pw.close()
       println(s"Sandbox synthesis successful: $outputFileName")
-    } else if (options.vars.isDefined) {
-      val vars = makeVariables(options.vars.get)
-      val result = ModelPlex(vars.toList, kind, verifyOption)(inputModel)
-      printModelplexResult(inputModel, result, outputFileName, ptOut, options)
+    } else if (vars.isDefined) {
+      val parsedVars = makeVariables(vars.get).toList
+      val result = ModelPlex(parsedVars, kind, verifyOption)(inputModel)
+      printModelplexResult(inputModel, result, outputFileName, ptOut, vars = vars, options)
     } else {
       val result = ModelPlex(inputModel, kind, verifyOption)
-      printModelplexResult(inputModel, result, outputFileName, ptOut, options)
+      printModelplexResult(inputModel, result, outputFileName, ptOut, vars = vars, options)
     }
   }
 
@@ -283,6 +289,7 @@ object KeYmaeraX {
       fml: Formula,
       outputFileName: String,
       ptOut: Option[String],
+      vars: Option[Seq[String]],
       options: Options,
   ): Unit = {
     val output = PrettyPrinter(fml)
@@ -306,8 +313,8 @@ object KeYmaeraX {
         // @TODO: Robustify
         val Imply(init, Box(Compose(Test(bounds), Loop(Compose(ctrl, plant))), safe)) = model
         val consts = StaticSemantics.signature(model)
-        val vars = makeVariables(options.vars.get)
-        pwHOL.write(HOLConverter.configFile(consts, vars.toList, bounds, init, fml))
+        val parsedVars = makeVariables(vars.get).toList
+        pwHOL.write(HOLConverter.configFile(consts, parsedVars, bounds, init, fml))
         pwHOL.close()
 
       case None => ()
