@@ -94,11 +94,11 @@ object KeYmaeraX {
   def runCommand(options: Options): Unit = options.command match {
     case Some(cmd: Command.Codegen) =>
       // Quantitative ModelPlex uses Mathematica to simplify formulas
-      val tool = if (options.quantitative.isDefined) Tools.MATHEMATICA else "z3"
+      val tool = if (cmd.quantitative) Tools.MATHEMATICA else "z3"
       val toolConfig = toolConfigFromFile(tool)
       val vars = options.vars.map(makeVariables(_).toSet)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
-      CodeGen.codegen(in = cmd.in, out = cmd.out, options, vars)
+      CodeGen.codegen(in = cmd.in, out = cmd.out, quantitative = cmd.quantitative, options, vars)
     case Some(cmd: Command.Modelplex) =>
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
       modelplex(in = cmd.in, out = cmd.out, ptOut = cmd.ptOut, options)

@@ -35,7 +35,7 @@ object Command {
       skipOnParseError: Boolean = false,
   ) extends Command
   // Webui commands
-  case class Codegen(in: String = null, out: Option[String] = None) extends Command
+  case class Codegen(in: String = null, out: Option[String] = None, quantitative: Boolean = false) extends Command
   case class Modelplex(in: String = null, out: Option[String] = None, ptOut: Option[String] = None) extends Command
   case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
@@ -64,7 +64,6 @@ case class Options(
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
     qemethod: Option[String] = None,
-    quantitative: Option[Boolean] = None,
     sandbox: Option[Boolean] = None,
     scaladefs: Option[String] = None,
     tool: Option[String] = None,
@@ -190,7 +189,6 @@ object Options {
             |Default: Reduce (unless configured in keymaerax.conf)
             |""".stripMargin
         )),
-      opt[Unit]("quantitative").action((_, o) => o.copy(quantitative = Some(true))),
       opt[Unit]("sandbox").action((_, o) => o.copy(sandbox = Some(true))),
       opt[String]("tool")
         .action((x, o) => o.copy(tool = Some(x)))
@@ -332,6 +330,9 @@ object Options {
             .optional()
             .action((x, o) => o.updateCommand[Command.Codegen](_.copy(out = Some(x))))
             .text(wrap("Output file (default: input file name with .c suffix).")),
+          opt[Unit]("quantitative")
+            .action((_, o) => o.updateCommand[Command.Codegen](_.copy(quantitative = true)))
+            .text(wrap("Generate a quantitative instead of a boolean monitor.")),
         ),
       note(""),
       cmd("modelplex")
