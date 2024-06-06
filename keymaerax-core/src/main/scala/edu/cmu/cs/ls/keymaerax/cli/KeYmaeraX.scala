@@ -140,6 +140,7 @@ object KeYmaeraX {
           tactic = cmd.tactic,
           tacticName = cmd.tacticName,
           timeout = cmd.timeout,
+          verbose = cmd.verbose,
           options,
         )
       case Some(Command.Parse(value)) =>

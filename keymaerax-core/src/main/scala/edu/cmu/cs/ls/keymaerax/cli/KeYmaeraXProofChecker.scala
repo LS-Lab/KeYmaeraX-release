@@ -46,7 +46,7 @@ import scala.reflect.io.File
 object KeYmaeraXProofChecker {
 
   /** Proves a single entry */
-  def prove(
+  def proveEntryWithTactic(
       name: String,
       input: Formula,
       fileContent: String,
@@ -55,6 +55,7 @@ object KeYmaeraXProofChecker {
       tactic: BelleExpr,
       timeout: Long,
       outputFileName: Option[String],
+      verbose: Boolean,
       options: Options,
   ): ProofStatistics = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
@@ -78,7 +79,6 @@ object KeYmaeraXProofChecker {
       }
     )
 
-    val verbose = options.verbose.getOrElse(false)
     val origInterpreter = BelleInterpreter.interpreter
     val listeners =
       if (verbose) qeDurationListener :: rcfDurationListener :: new PrintProgressListener(tactic) :: Nil
@@ -233,9 +233,8 @@ object KeYmaeraXProofChecker {
    *   Only used if no tactic is specified.
    * @param timeout
    *   How many seconds to try proving before giving up, forever if 0 or less.
-   * @param options
-   *   The prover options:
-   *   - 'verbose (optional) whether or not to print verbose proof information (default: false)
+   * @param verbose
+   *   Print verbose proof information.
    */
   def prove(
       in: String,
@@ -245,6 +244,7 @@ object KeYmaeraXProofChecker {
       tactic: Option[String],
       tacticName: Option[String],
       timeout: Long,
+      verbose: Boolean,
       options: Options,
   ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
@@ -318,6 +318,7 @@ object KeYmaeraXProofChecker {
           tactic = tactic,
           tacticName = tacticName,
           timeout = timeout,
+          verbose = verbose,
           options,
         )
       )
@@ -354,6 +355,7 @@ object KeYmaeraXProofChecker {
       tactic: Option[String],
       tacticName: Option[String],
       timeout: Long,
+      verbose: Boolean,
       options: Options,
   ): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
@@ -403,7 +405,7 @@ object KeYmaeraXProofChecker {
     } else {
       t.zipWithIndex
         .map({ case ((tacticName, _, tactic), i) =>
-          val proofStat = prove(
+          val proofStat = proveEntryWithTactic(
             entry.name,
             entry.model.asInstanceOf[Formula],
             entry.fileContent,
@@ -412,6 +414,7 @@ object KeYmaeraXProofChecker {
             tactic,
             timeout,
             if (i == 0) Some(outputFileName) else None,
+            verbose = verbose,
             options,
           )
 

@@ -22,6 +22,7 @@ object Command {
       tactic: Option[String] = None,
       tacticName: Option[String] = None,
       timeout: Long = 0,
+      verbose: Boolean = false,
   ) extends Command
   case class Parse(value: String = null) extends Command
   case class BParse(value: String = null) extends Command
@@ -66,7 +67,6 @@ case class Options(
     skiponparseerror: Option[Boolean] = None,
     tool: Option[String] = None,
     vars: Option[Seq[String]] = None,
-    verbose: Option[Boolean] = None,
     verify: Option[Boolean] = None,
     z3Path: Option[String] = None,
 ) {
@@ -201,7 +201,6 @@ object Options {
         .action((x, o) => o.copy(vars = Some(x)))
         .valueName("var1,var2,..,varn")
         .text(wrap("Use ordered list of variables, treating others as constant functions.")),
-      opt[Unit]("verbose").action((_, o) => o.copy(verbose = Some(true))),
       opt[Unit]("verify").action((_, o) => o.copy(verify = Some(true))),
       opt[String]("z3path")
         .action((x, o) => o.copy(z3Path = Some(x)))
@@ -258,6 +257,9 @@ object Options {
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(timeout = x)))
             .valueName("<number>")
             .text(wrap("How many seconds to try proving before giving up, forever if 0 or less.")),
+          opt[Unit]("verbose")
+            .action((_, o) => o.updateCommand[Command.Prove](_.copy(verbose = true)))
+            .text(wrap("Print verbose proof information.")),
         ),
       note(""),
       cmd("parse")
