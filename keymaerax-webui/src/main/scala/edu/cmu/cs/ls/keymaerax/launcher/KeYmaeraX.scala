@@ -115,6 +115,7 @@ object KeYmaeraX {
         vars = cmd.vars,
         verify = cmd.verify,
         sandbox = cmd.sandbox,
+        monitor = cmd.monitor,
         options,
       )
     case Some(cmd: Command.Repl) =>
@@ -159,6 +160,7 @@ object KeYmaeraX {
       vars: Option[Seq[String]],
       verify: Boolean,
       sandbox: Boolean,
+      monitor: Option[Symbol],
       options: Options,
   ): Unit = {
     // @TODO remove option, hol config no longer necessary
@@ -188,7 +190,7 @@ object KeYmaeraX {
 
     val outputFileName = out.getOrElse(inputFileName + ".kym")
 
-    val kind = Option.when(sandbox)(Symbol("sandbox")).orElse(options.monitor).getOrElse(Symbol("model"))
+    val kind = Option.when(sandbox)(Symbol("sandbox")).orElse(monitor).getOrElse(Symbol("model"))
 
     if (sandbox) {
       val fallback = options.fallback match {

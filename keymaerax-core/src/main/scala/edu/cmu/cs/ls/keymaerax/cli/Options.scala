@@ -49,6 +49,7 @@ object Command {
       vars: Option[Seq[String]] = None,
       verify: Boolean = false,
       sandbox: Boolean = false,
+      monitor: Option[Symbol] = None,
   ) extends Command
   case class Repl(tactic: Option[String] = None) extends Command
   case object Ui extends Command
@@ -71,7 +72,6 @@ case class Options(
     lax: Option[Boolean] = None,
     mathkernel: Option[String] = None,
     model: Option[String] = None,
-    monitor: Option[Symbol] = None,
     open: Option[String] = None,
     parallelqe: Option[String] = None,
     parserClass: Option[String] = None,
@@ -165,10 +165,6 @@ object Options {
         .action((x, o) => o.copy(mathkernel = Some(x)))
         .valueName("MathKernel(.exe)")
         .text(wrap("Path to Mathematica kernel executable.")),
-      opt[String]("monitor")
-        .action((x, o) => o.copy(monitor = Some(Symbol(x))))
-        .valueName("ctrl|model")
-        .text(wrap("What kind of monitor to generate with ModelPlex.")),
       opt[String]("open").action((x, o) => o.copy(open = Some(x))),
       opt[String]("parallelqe")
         .validate(it => if (it == "true" || it == "false") success else failure("must be 'true' or 'false'"))
@@ -363,6 +359,14 @@ object Options {
             .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
           opt[Unit]("verify").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(verify = true))),
           opt[Unit]("sandbox").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(sandbox = true))),
+          opt[String]("monitor")
+            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(monitor = Some(Symbol(x)))))
+            .valueName("<monitor>")
+            .text(wrap(
+              """What kind of monitor to generate with ModelPlex.
+                |Possible values: ctrl, model
+                |""".stripMargin
+            )),
         ),
       note(""),
       cmd("repl")
