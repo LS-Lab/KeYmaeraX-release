@@ -56,7 +56,7 @@ object KeYmaeraXProofChecker {
       timeout: Long,
       outputFileName: Option[String],
       verbose: Boolean,
-      options: Options,
+      args: Seq[String],
   ): ProofStatistics = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
@@ -143,7 +143,7 @@ object KeYmaeraXProofChecker {
           pw match {
             case Some(w) =>
               assert(lemma.isDefined, "Lemma undefined even though writer is present")
-              w.write(EvidencePrinter.stampHead(options.args))
+              w.write(EvidencePrinter.stampHead(args))
               w.write("/* @evidence: parse of print of result of a proof */\n\n")
               w.write(lemma.get.toString)
               w.close()
@@ -237,6 +237,8 @@ object KeYmaeraXProofChecker {
    *   Print verbose proof information.
    * @param statistics
    *   How to print proof statistics.
+   * @param args
+   *   Command line arguments, included when printing evidence.
    */
   def prove(
       in: String,
@@ -248,7 +250,7 @@ object KeYmaeraXProofChecker {
       timeout: Long,
       verbose: Boolean,
       statistics: Option[String],
-      options: Options,
+      args: Seq[String],
   ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
 
@@ -322,7 +324,7 @@ object KeYmaeraXProofChecker {
           tacticName = tacticName,
           timeout = timeout,
           verbose = verbose,
-          options,
+          args = args,
         )
       )
     })
@@ -359,7 +361,7 @@ object KeYmaeraXProofChecker {
       tacticName: Option[String],
       timeout: Long,
       verbose: Boolean,
-      options: Options,
+      args: Seq[String],
   ): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
       (pt, ptOut) match {
@@ -418,7 +420,7 @@ object KeYmaeraXProofChecker {
             timeout,
             if (i == 0) Some(outputFileName) else None,
             verbose = verbose,
-            options,
+            args,
           )
 
           println("Done " + path + "#" + entry.name + " (" + proofStat.status + ")")

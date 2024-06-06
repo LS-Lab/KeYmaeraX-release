@@ -142,7 +142,7 @@ object KeYmaeraX {
           timeout = cmd.timeout,
           verbose = cmd.verbose,
           statistics = cmd.statistics,
-          options,
+          args = options.args,
         )
       case Some(Command.Parse(value)) =>
         // Parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
