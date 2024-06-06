@@ -101,6 +101,8 @@ object Options {
   private val LaunchFlagName = "launch"
   val LaunchFlag = s"--$LaunchFlagName"
 
+  private def wrapWide(text: String): String = TextWrapper.wrap(text, maxWidth = 80)
+
   private def wrap(text: String): String = {
     // The left column of the help output (including the space separating the columns) has a width of 27 characters.
     TextWrapper.wrap(text, maxWidth = 80 - 27)
@@ -197,11 +199,11 @@ object Options {
       note(""),
       cmd("setup")
         .action((_, o) => o.copy(command = Some(Command.Setup)))
-        .text(wrap("Initialize the configuration and lemma cache.")),
+        .text(wrapWide("Initialize the configuration and lemma cache.")),
       note(""),
       cmd("prove")
         .action((_, o) => o.copy(command = Some(Command.Prove())))
-        .text(wrap("Run prover on given archive of models or proofs."))
+        .text(wrapWide("Run prover on given archive of models or proofs."))
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(in = x)))
@@ -254,14 +256,14 @@ object Options {
       note(""),
       cmd("parse")
         .action((_, o) => o.copy(command = Some(Command.Parse())))
-        .text(wrap("Return error code 0 if the given model file parses."))
+        .text(wrapWide("Return error code 0 if the given model file parses."))
         .children(
           arg[String]("<in>").action((x, o) => o.updateCommand[Command.Parse](_.copy(in = x))).text(wrap("Input file."))
         ),
       note(""),
       cmd("bparse")
         .action((_, o) => o.copy(command = Some(Command.BParse())))
-        .text(wrap("Return error code 0 if given bellerophon tactic file parses."))
+        .text(wrapWide("Return error code 0 if given bellerophon tactic file parses."))
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.BParse](_.copy(in = x)))
@@ -270,7 +272,7 @@ object Options {
       note(""),
       cmd("convert")
         .action((_, o) => o.copy(command = Some(Command.Convert())))
-        .text(wrap("Model and tactic conversions."))
+        .text(wrapWide("Model and tactic conversions."))
         .children(
           arg[String]("<conversion>")
             .action((x, o) => o.updateCommand[Command.Convert](_.copy(conversion = x)))
@@ -310,7 +312,7 @@ object Options {
       note(""),
       cmd("codegen")
         .action((_, o) => o.copy(command = Some(Command.Codegen())))
-        .text(wrap("Generate executable C code from a model file."))
+        .text(wrapWide("Generate executable C code from a model file."))
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Codegen](_.copy(in = x)))
@@ -338,7 +340,7 @@ object Options {
       note(""),
       cmd("modelplex")
         .action((_, o) => o.copy(command = Some(Command.Modelplex())))
-        .text(wrap("Synthesize a monitor from a model by proof with the ModelPlex tactic."))
+        .text(wrapWide("Synthesize a monitor from a model by proof with the ModelPlex tactic."))
         .children(
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(in = x)))
@@ -369,7 +371,7 @@ object Options {
       note(""),
       cmd("repl")
         .action((_, o) => o.copy(command = Some(Command.Repl())))
-        .text(wrap("Prove a model interactively from a command line REPL."))
+        .text(wrapWide("Prove a model interactively from a command line REPL."))
         .children(
           arg[String]("<model>").action((x, o) => o.updateCommand[Command.Repl](_.copy(model = x))),
           arg[String]("<tactic>").optional().action((x, o) => o.updateCommand[Command.Repl](_.copy(tactic = Some(x)))),
@@ -378,7 +380,7 @@ object Options {
             .action((x, o) => o.updateCommand[Command.Repl](_.copy(scaladefs = Some(x)))),
         ),
       note(""),
-      cmd("ui").action((_, o) => o.copy(command = Some(Command.Ui))).text(wrap("Start web user interface.")),
+      cmd("ui").action((_, o) => o.copy(command = Some(Command.Ui))).text(wrapWide("Start web user interface.")),
     )
   }
 
