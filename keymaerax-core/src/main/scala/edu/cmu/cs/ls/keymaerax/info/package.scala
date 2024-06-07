@@ -28,8 +28,6 @@ package object info {
   /** The full name and version of the project. */
   val FullNameAndVersion = s"$FullName $Version"
 
-  val Copyright = "Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology"
-
   val Website = new URI("https://keymaerax.org/")
 
   /** Domain used to uniquely identify the project. */
@@ -37,4 +35,13 @@ package object info {
   val Domain = "keymaerax.ls.cs.cmu.edu"
 
   val DomainReversed = Domain.split('.').reverseIterator.mkString(".")
+
+  /** The full copyright text, taken from the `COPYRIGHT.txt` file. */
+  val FullCopyright = BuildInfo.copyright.stripLineEnd
+
+  /** A single line of copyright information. */
+  val ShortCopyright = BuildInfo.copyright.linesIterator.find(line => line.startsWith("Copyright")).get
+
+  /** The full license, taken from the `LICENSE.txt` file. */
+  val License = BuildInfo.license.stripLineEnd
 }
