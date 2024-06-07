@@ -1,5 +1,6 @@
 import java.io.{FileInputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
 import java.util.Properties
 
 ThisBuild / scalaVersion := "2.13.13"
@@ -112,7 +113,11 @@ lazy val core = project
     assembly / assemblyJarName := s"${normalizedName.value}-${version.value}.jar",
 
     // Include version number as constant in source code
-    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoKeys := Seq[BuildInfoKey](
+      version,
+      "copyright" -> Files.readString(Paths.get("COPYRIGHT.txt")),
+      "license" -> Files.readString(Paths.get("LICENSE.txt")),
+    ),
     buildInfoPackage := "edu.cmu.cs.ls.keymaerax.info",
     buildInfoOptions += BuildInfoOption.PackagePrivate,
 
