@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.info.FullNameAndVersion
+import edu.cmu.cs.ls.keymaerax.info.{FullNameAndVersion, License}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import scopt.OParser
 
@@ -397,7 +397,7 @@ object Options {
     }
 
     if (options.license) {
-      println(License.license)
+      println(License)
       sys.exit(0)
     }
 
