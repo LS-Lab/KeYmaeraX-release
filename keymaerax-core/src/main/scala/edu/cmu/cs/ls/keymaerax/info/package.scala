@@ -44,4 +44,7 @@ package object info {
 
   /** The full license, taken from the `LICENSE.txt` file. */
   val License = BuildInfo.license.stripLineEnd
+
+  /** Third party licenses, taken from the `LICENSES_THIRD_PARTY.txt` file. */
+  val ThirdPartyLicenses = BuildInfo.licensesThirdParty.stripLineEnd
 }

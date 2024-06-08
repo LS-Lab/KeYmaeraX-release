@@ -215,8 +215,8 @@ See [COPYRIGHT.txt](COPYRIGHT.txt) for details.
 
 See [LICENSE.txt](LICENSE.txt) for the conditions of using this software.
 
-The KeYmaera X distribution contains external tools. A list of tools and their licenses can be found
-[in this file](keymaerax-webui/src/main/resources/license/tools_licenses).
+The KeYmaera X distribution contains external tools.
+A list of tools and their licenses can be found in [LICENSES_THIRD_PARTY.txt](LICENSES_THIRD_PARTY.txt).
 
 ## Contact
 

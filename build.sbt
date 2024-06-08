@@ -117,6 +117,7 @@ lazy val core = project
       version,
       "copyright" -> Files.readString(Paths.get("COPYRIGHT.txt")),
       "license" -> Files.readString(Paths.get("LICENSE.txt")),
+      "licensesThirdParty" -> Files.readString(Paths.get("LICENSES_THIRD_PARTY.txt")),
     ),
     buildInfoPackage := "edu.cmu.cs.ls.keymaerax.info",
     buildInfoOptions += BuildInfoOption.PackagePrivate,
