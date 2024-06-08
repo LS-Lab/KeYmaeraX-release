@@ -93,7 +93,7 @@
                         <li><a href="dashboard.html?#/syntax"><i class="fa fa-info-circle"></i> Syntax and Semantics</a></li>
                         <li><a target="_blank" href="https://keymaerax.org/KeYmaeraX-sheet.pdf"><i class="fa fa-info-circle"></i> Cheat Sheet</a></li>
                         <li class="divider"></li>
-                        <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
+                        <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> Copyright and Licenses</a></li>
                         <li class="divider"></li>
                         <li><a ng-click="extractdb()" ng-show="systemInfo.isLocal"><i class="fa fa-archive"></i> Extract Database</a></li>
                         <li><a target="_blank" href="https://keymaeraX.org/"><i class="fa fa-download"></i> Download KeYmaera&#160;X</a></li>
@@ -154,7 +154,7 @@
             <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a target="_blank" class="text-danger" target="blank_" href="https://keymaeraX.org/">KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(no network).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest).</span>
-            <i class="fa fa-copyright"></i> Carnegie Mellon University, Karlsruhe Institute of Technology, <a href="https://logic.kastel.kit.edu/" target="_blank">Logical Systems Lab</a> 2014-2024</p>
+            {{copyrightShort}}
     </div>
 </div>
 

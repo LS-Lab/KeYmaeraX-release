@@ -2,23 +2,13 @@
     <h3 class="modal-title">KeYmaera X License</h3>
 </div>
 <div class="modal-body" ng-controller="ServerInfoCtrl">
-    <p>
-    KeYmaera X version {{keymaeraXVersion}}, Copyright (C) 2014-2024 Carnegie Mellon University, Karlsruhe Institute of Technology<br/>
-    Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Katherine Cordwell, Enguerrand Prebet, Joscha Mennicken, Tobias Erthal.<br/>
-    With previous contributions by Nathan Fulton, Jan-David Quesel, Marcus Voelp, Ran Ji.<br/>
-    KeYmaera X comes with ABSOLUTELY NO WARRANTY. A full software license agreement follows.<br/>
-    SOFTWARE LICENSE AGREEMENT
-    </p>
-    <p>
-        If you want to use KeYmaera X under another license, contact the
-        <a href="https://www.cmu.edu/cttec/contact-us/index.html">Center for Technology Transfer and Enterprise Creation</a>.
-    </p>
+    <pre>{{copyright}}</pre>
+
+    <pre>{{license}}</pre>
+
     <p>
     <font color="blue">BY CLICKING THE <kbd>I Agree</kbd> BUTTON OR BY USING THE SOFTWARE, YOU ARE AGREEING TO THE TERMS OF THIS LICENSE AGREEMENT.  IF YOU DO NOT AGREE WITH THESE TERMS, YOU MUST CLICK <kbd>Reject</kbd> AND YOU MAY NOT USE OR DOWNLOAD THE SOFTWARE.</font>
     </p>
-
-
-    <div class="k4-vertical-fill-flex" ng-include="'/partials/license_academic.html'"></div>
 </div>
 
 <div class="modal-footer">

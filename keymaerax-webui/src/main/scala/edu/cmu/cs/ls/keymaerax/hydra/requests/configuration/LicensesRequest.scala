@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.{PlainResponse, ReadRequest, Request, Response}
+import edu.cmu.cs.ls.keymaerax.info.{FullCopyright, License, ShortCopyright}
 import spray.json.{JsArray, JsObject, JsString}
 
 import scala.collection.immutable.StringOps
@@ -23,6 +24,11 @@ class LicensesRequest() extends Request with ReadRequest {
       .tail
       .map(l => l.splitAt(licenseStartPos))
       .map({ case (tool, license) => JsObject("tool" -> JsString(tool.trim), "license" -> JsString(license.trim)) })
-    new PlainResponse("licenses" -> JsArray(licenses: _*))
+    new PlainResponse(
+      "copyright" -> JsString(FullCopyright),
+      "copyrightShort" -> JsString(ShortCopyright),
+      "license" -> JsString(License),
+      "licenses" -> JsArray(licenses: _*),
+    )
   }
 }
