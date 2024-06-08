@@ -33,9 +33,15 @@ angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', 
   $http.get('/licenses')
     .success(function(data) {
       if(data.errorThrown) {
+        $scope.copyright = "Unable to retrieve copyright"
+        $scope.copyrightShort = "Unable to retrieve copyright"
+        $scope.license = "Unable to retrieve license"
         $scope.licenses = [];
-        showCaughtErrorMessage($uibModal, data, "Unable to retrieve third-party licenses")
+        showCaughtErrorMessage($uibModal, data, "Unable to retrieve copyright and licenses")
       }
+      $scope.copyright = data.copyright
+      $scope.copyrightShort = data.copyrightShort
+      $scope.license = data.license
       $scope.licenses = data.licenses;
     });
 
