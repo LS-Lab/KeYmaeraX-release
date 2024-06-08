@@ -17,16 +17,16 @@ import java.net.URI
 package object info {
 
   /** The full project name, including correct case and whitespace. */
-  val FullName = "KeYmaera X"
+  val FullName: String = "KeYmaera X"
 
   /** A version of the name that is safe to use in technical contexts (e.g. file names). */
-  val TechnicalName = "keymaerax"
+  val TechnicalName: String = "keymaerax"
 
   /** The current project version. */
   val Version: VersionNumber = VersionNumber.parse(BuildInfo.version)
 
   /** The full name and version of the project. */
-  val FullNameAndVersion = s"$FullName $Version"
+  val FullNameAndVersion: String = s"$FullName $Version"
 
   val Website = new URI("https://keymaerax.org/")
 
@@ -34,17 +34,17 @@ package object info {
   // TODO Switch to keymaerax.org and move all source files as well
   val Domain = "keymaerax.ls.cs.cmu.edu"
 
-  val DomainReversed = Domain.split('.').reverseIterator.mkString(".")
+  val DomainReversed: String = Domain.split('.').reverseIterator.mkString(".")
 
   /** The full copyright text, taken from the `COPYRIGHT.txt` file. */
-  val FullCopyright = BuildInfo.copyright.stripLineEnd
+  val FullCopyright: String = BuildInfo.copyright.stripLineEnd
 
   /** A single line of copyright information. */
-  val ShortCopyright = BuildInfo.copyright.linesIterator.find(line => line.startsWith("Copyright")).get
+  val ShortCopyright: String = BuildInfo.copyright.linesIterator.find(line => line.startsWith("Copyright")).get
 
   /** The full license, taken from the `LICENSE.txt` file. */
-  val License = BuildInfo.license.stripLineEnd
+  val License: String = BuildInfo.license.stripLineEnd
 
   /** Third party licenses, taken from the `LICENSES_THIRD_PARTY.txt` file. */
-  val ThirdPartyLicenses = BuildInfo.licensesThirdParty.stripLineEnd
+  val ThirdPartyLicenses: String = BuildInfo.licensesThirdParty.stripLineEnd
 }
