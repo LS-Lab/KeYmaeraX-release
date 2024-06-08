@@ -15,19 +15,11 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
         size: 'md'
       })
       modeModalInstance.result.then(function(selectedMode) {
-        var modalInstance = $uibModal.open({
-          templateUrl: 'partials/license_dialog.html',
-          controller: 'LicenseDialogCtrl',
-          backdrop: "static",
-          size: 'lg'
-        });
-        modalInstance.result.then(function() {
-          $http.post("/user/" + $scope.username + "/" + $scope.password + "/mode/" + selectedMode)
-            .then(function(response) {
-              if (response.data.success === true) { $scope.login($scope.username, $scope.password, true); }
-              else { showMessage($uibModal, "Registration failed", "Sorry, user name is already taken. Please choose a different name."); }
-            });
-        });
+        $http.post("/user/" + $scope.username + "/" + $scope.password + "/mode/" + selectedMode)
+          .then(function(response) {
+            if (response.data.success === true) { $scope.login($scope.username, $scope.password, true); }
+            else { showMessage($uibModal, "Registration failed", "Sorry, user name is already taken. Please choose a different name."); }
+          });
       })
     }
 
@@ -96,19 +88,11 @@ angular.module('keymaerax.controllers').controller('AutoLoginCtrl',
         size: 'md'
       })
       modeModalInstance.result.then(function(selectedMode) {
-        var modalInstance = $uibModal.open({
-          templateUrl: 'partials/license_dialog.html',
-          controller: 'LicenseDialogCtrl',
-          backdrop: "static",
-          size: 'lg'
-        });
-        modalInstance.result.then(function() {
-          $http.post("/user/" + $scope.username + "/" + $scope.password + "/mode/" + selectedMode)
-            .then(function(response) {
-              if (response.data.success === true) { $scope.login($scope.username, $scope.password); }
-              else { showMessage($uibModal, "Mode selection failed", "Please restart KeYmaera X and try again."); }
-            });
-        });
+        $http.post("/user/" + $scope.username + "/" + $scope.password + "/mode/" + selectedMode)
+          .then(function(response) {
+            if (response.data.success === true) { $scope.login($scope.username, $scope.password); }
+            else { showMessage($uibModal, "Mode selection failed", "Please restart KeYmaera X and try again."); }
+          });
       })
     }
 

@@ -326,28 +326,19 @@ angular.module('keymaerax.controllers').controller('LoginDialogCtrl', ['$scope',
 
   login = function(username, password) {
     if (username === "guest") {
-      // guests have to accept the license every time
-      var modalInstance = $uibModal.open({
-        templateUrl: 'partials/license_dialog.html',
-        controller: 'LicenseDialogCtrl',
-        backdrop: "static",
-        size: 'lg'
-      });
-      modalInstance.result.then(function() {
-        $http.get("/user/" + username + "/" + password + "/mode/0").then(function(response) {
-          if(response.data.type == "LoginResponse") {
-            if(response.data.success) {
-              sessionService.setToken(response.data.sessionToken);
-              sessionService.setUser(response.data.value);
-              sessionService.setUserAuthLevel(response.data.userAuthLevel);
-              $uibModalInstance.close("Login success");
-            } else {
-              $uibModalInstance.dismiss("Please check user name and/or password");
-              showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
-            }
+      $http.get("/user/" + username + "/" + password + "/mode/0").then(function(response) {
+        if(response.data.type == "LoginResponse") {
+          if(response.data.success) {
+            sessionService.setToken(response.data.sessionToken);
+            sessionService.setUser(response.data.value);
+            sessionService.setUserAuthLevel(response.data.userAuthLevel);
+            $uibModalInstance.close("Login success");
+          } else {
+            $uibModalInstance.dismiss("Please check user name and/or password");
+            showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
           }
-        });
-      })
+        }
+      });
     } else {
       $http.get("/user/" + username + "/" + password + "/mode/0")
       .then(function(response) {
