@@ -36,13 +36,13 @@ angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', 
         $scope.copyright = "Unable to retrieve copyright"
         $scope.copyrightShort = "Unable to retrieve copyright"
         $scope.license = "Unable to retrieve license"
-        $scope.licenses = [];
+        $scope.licensesThirdParty = "Unable to retrieve third-party licenses";
         showCaughtErrorMessage($uibModal, data, "Unable to retrieve copyright and licenses")
       }
       $scope.copyright = data.copyright
       $scope.copyrightShort = data.copyrightShort
       $scope.license = data.license
-      $scope.licenses = data.licenses;
+      $scope.licensesThirdParty = data.licensesThirdParty;
     });
 
   $scope.$emit('routeLoaded', {theview: 'dashboard'});
