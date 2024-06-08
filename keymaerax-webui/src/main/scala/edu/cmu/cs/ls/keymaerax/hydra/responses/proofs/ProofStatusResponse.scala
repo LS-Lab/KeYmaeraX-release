@@ -18,9 +18,6 @@ class ProofStatusResponse(proofId: String, status: String, error: Option[String]
     "errorThrown" -> JsString(error.getOrElse("")),
   )
 }
-class ProofIsLoadingResponse(proofId: String) extends ProofStatusResponse(proofId, "loading")
-class ProofNotLoadedResponse(proofId: String) extends ProofStatusResponse(proofId, "notloaded")
-class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId, "loaded")
 // progress "open": open goals
 // progress "closed": no open goals but not checked for isProved
 class ProofProgressResponse(proofId: String, isClosed: Boolean)
