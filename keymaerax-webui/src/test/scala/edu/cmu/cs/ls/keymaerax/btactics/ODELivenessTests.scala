@@ -176,7 +176,7 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(
       seq,
-      odeReduce(true, "a*a+b*b<=10".asFormula :: "2*(y*(-x^2)+x*y^2) <= 0*(y*y+x*x) + c() ".asFormula :: Nil)(1),
+      odeReduce(true, "2*(x*y^2+y*(-x^2)) <= 0*(x*x+y*y) + c() ".asFormula :: "a*a+b*b<=10".asFormula :: Nil)(1),
     )
 
     pr.subgoals.length shouldBe 1
@@ -192,7 +192,7 @@ class ODELivenessTests extends TacticTestBase {
     val pr = proveBy(seq, odeReduce(strict = true, Nil)(2))
 
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "d>0, 1+1=2  ==> 1+1=3, <{c'=d+e_(),x'=x+1,v'=2&c<=5}>x+v<=5, 2+2=1".asSequent
+    pr.subgoals(0) shouldBe "d>0, 1+1=2  ==> 1+1=3, <{c'=d+e_(),v'=2,x'=x+1&c<=5}>x+v<=5, 2+2=1".asSequent
   }
 
   it should "throw a helpful error when it gets stuck" in withQE { _ =>
