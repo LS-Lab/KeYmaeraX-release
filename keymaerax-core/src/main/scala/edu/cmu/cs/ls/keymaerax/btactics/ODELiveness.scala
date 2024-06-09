@@ -646,7 +646,8 @@ object ODELiveness extends TacticProvider {
           cohideOnlyR(Symbol("Rlast")) &
             useAt(finalrw, PosInExpr(1 :: Nil))(1) &
             odeUnify(1) &
-            hideNonFOLLeft & ODE(1) & done
+            hideNonFOLLeft &
+            ODE(1) & done
         )
       }
       case None => skip
@@ -703,6 +704,7 @@ object ODELiveness extends TacticProvider {
 
       val ode = sys.ode
 
+      // ODEs in order of appearance
       val odels = DifferentialProduct
         .listify(ode)
         .map {
@@ -718,6 +720,7 @@ object ODELiveness extends TacticProvider {
       val unremovable = analyseODE(ODESystem(ode, True), basefvs, ignoreTest = true, checkLinear = false)._1.toList
 
       val adjs = analyseODEVars(ODESystem(ode, True), ignoreTest = true, checkLinear = false)
+
       // The remaining removable ODEs
       val ls = scc(adjs).map(_.toList)
 
@@ -779,7 +782,8 @@ object ODELiveness extends TacticProvider {
 
       val extravars = extra.map(_.asInstanceOf[AtomicODE].xp.x)
 
-      if (!StaticSemantics.freeVars(And(dom, post)).intersect(extravars.toSet).isEmpty) return None
+      // sound? was: StaticSemantics.freeVars(And(dom, post))
+      if (!StaticSemantics.freeVars(post).intersect(extravars.toSet).isEmpty) return None
 
       val vars = extravars ++ (ode1ls.map(_.asInstanceOf[AtomicODE].xp.x))
 
@@ -839,6 +843,7 @@ object ODELiveness extends TacticProvider {
       val asm = seq.ante(i)
       asm match {
         case Box(asmsys: ODESystem, asmpost) => if (!curdomls.contains(asmpost)) {
+
             compatODE(asmsys.ode, tarsys.ode, curdom, asmpost) match {
               case None => ()
               case Some(tac) => {

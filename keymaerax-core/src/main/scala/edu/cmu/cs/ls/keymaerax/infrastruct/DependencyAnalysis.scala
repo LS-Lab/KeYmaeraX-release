@@ -215,7 +215,7 @@ object DependencyAnalysis {
       checkLinear: Boolean = true,
   ): Map[BaseVariable, Set[BaseVariable]] = {
     val vars = odevars(p)
-    vars.map(v => (v, analyseODE(p, Set(v), ignoreTest, checkLinear)._1.intersect(vars))).toMap
+    vars.toList.sorted.map(v => (v, analyseODE(p, Set(v), ignoreTest, checkLinear)._1.intersect(vars))).to(ListMap)
   }
 
   // Naive DFS starting from a variable
