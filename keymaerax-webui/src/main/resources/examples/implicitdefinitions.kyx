@@ -330,6 +330,7 @@ End.
 Theorem "IJCAR22/Khalil Exercise 2.28 and 3.14"
 
 Definitions
+  import kyx.math.exp;
   implicit Real tanh(Real t) =
      {{tanh:=0;}; {tanh'=1-tanh^2}};
 
