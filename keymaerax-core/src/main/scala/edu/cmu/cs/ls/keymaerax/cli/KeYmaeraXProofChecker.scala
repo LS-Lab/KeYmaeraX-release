@@ -43,6 +43,12 @@ import scala.reflect.io.File
 
 /** Proof checker command-line interface implementation. */
 object KeYmaeraXProofChecker {
+  // TODO Convert to Scala 3 enum
+  object StatisticsPrinter extends Enumeration {
+    val Csv: Value = Value
+    val ArchNlnCsv: Value = Value
+    val ArchHstpCsv: Value = Value
+  }
 
   /** Proves a single entry */
   def proveEntryWithTactic(
@@ -248,7 +254,7 @@ object KeYmaeraXProofChecker {
       tacticName: Option[String],
       timeout: Duration,
       verbose: Boolean,
-      statistics: Option[String],
+      statistics: StatisticsPrinter.Value,
       args: Seq[String],
   ): Unit = {
     ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
@@ -331,9 +337,9 @@ object KeYmaeraXProofChecker {
     archiveStatistics.foreach(println)
 
     val printer = statistics match {
-      case Some("arch-nln") => ArchNLNCsvProofStatisticsPrinter
-      case Some("arch-hstp") => ArchHSTPCsvProofStatisticsPrinter
-      case _ => CsvProofStatisticsPrinter
+      case StatisticsPrinter.Csv => CsvProofStatisticsPrinter
+      case StatisticsPrinter.ArchNlnCsv => ArchNLNCsvProofStatisticsPrinter
+      case StatisticsPrinter.ArchHstpCsv => ArchHSTPCsvProofStatisticsPrinter
     }
 
     val csvStatistics = printer.print(archiveStatistics)

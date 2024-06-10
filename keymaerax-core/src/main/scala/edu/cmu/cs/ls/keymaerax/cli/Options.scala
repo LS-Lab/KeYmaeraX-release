@@ -25,7 +25,7 @@ object Command {
       tacticName: Option[String] = None,
       timeout: Duration = Duration.Inf,
       verbose: Boolean = false,
-      statistics: Option[String] = None,
+      statistics: KeYmaeraXProofChecker.StatisticsPrinter.Value = KeYmaeraXProofChecker.StatisticsPrinter.Csv,
   ) extends Command
   case class Parse(in: String = null) extends Command
   case class BParse(in: String = null) extends Command
@@ -115,19 +115,24 @@ object Options {
     TextWrapper.wrap(text, maxWidth = 80 - 27)
   }
 
-  private def defaultValue[T](value: T) = {
-    val valueStr = value match {
-      // Without this special case, Duration.Inf would be printed as "Default: Duration.Inf".
-      // This does not match the duration help text, which suggests "Inf".
-      case Duration.Inf => "Inf"
-      case v => v.toString
-    }
-    s"Default: $valueStr."
+  private def valueToString[T](value: T): String = value match {
+    // Without this special case, Duration.Inf would be printed as "Default: Duration.Inf".
+    // This does not match the duration help text, which suggests "Inf".
+    case Duration.Inf => "Inf"
+    case v => v.toString
   }
+
+  private def possibleValues[T](values: Iterable[T]): String =
+    s"Possible values: ${values.map(valueToString).mkString(", ")}."
+
+  private def defaultValue[T](value: T): String = s"Default: ${valueToString(value)}."
 
   private def parser(name: String): OParser[Unit, Options] = {
     val builder = OParser.builder[Options]
     import builder._
+
+    implicit val keYmaeraXProofCheckerStatisticsPrinterRead: scopt.Read[KeYmaeraXProofChecker.StatisticsPrinter.Value] =
+      scopt.Read.reads(KeYmaeraXProofChecker.StatisticsPrinter.withName)
 
     OParser.sequence(
       programName(name),
@@ -277,10 +282,15 @@ object Options {
           opt[Unit]("verbose")
             .action((_, o) => o.updateCommand[Command.Prove](_.copy(verbose = true)))
             .text(wrap("Print verbose proof information.")),
-          opt[String]("statistics")
-            .action((x, o) => o.updateCommand[Command.Prove](_.copy(statistics = Some(x))))
-            .valueName("<printer>")
-            .text(wrap("How to print proof statistics.")),
+          opt[KeYmaeraXProofChecker.StatisticsPrinter.Value]("statistics")
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(statistics = x)))
+            .valueName("<format>")
+            .text(wrap(
+              s"""How to print proof statistics.
+                 |${possibleValues(KeYmaeraXProofChecker.StatisticsPrinter.values)}
+                 |${defaultValue(Command.Prove().statistics)}
+                 |""".stripMargin
+            )),
         ),
       note(""),
       cmd("parse")
