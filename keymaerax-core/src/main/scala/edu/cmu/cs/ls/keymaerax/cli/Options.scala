@@ -58,6 +58,16 @@ object Command {
   case object Ui extends Command
 }
 
+// TODO Turn into Scala 3 enum
+object JlinkInterface extends Enumeration {
+  val String, Expr = Value
+
+  def description(value: Value): String = value match {
+    case String => "more robust"
+    case Expr => "supports larger queries"
+  }
+}
+
 case class Options(
     // Special options
     name: String,
@@ -71,7 +81,7 @@ case class Options(
     // Options specified using flags
     debug: Option[Boolean] = None,
     jlink: Option[String] = None,
-    jlinkinterface: Option[String] = None,
+    jlinkinterface: Option[JlinkInterface.Value] = None,
     jlinktcpip: Option[Boolean] = None,
     lax: Option[Boolean] = None,
     mathkernel: Option[String] = None,
@@ -125,11 +135,18 @@ object Options {
   private def possibleValues[T](values: Iterable[T]): String =
     s"Possible values: ${values.map(valueToString).mkString(", ")}."
 
+  private def possibleValuesWithDescriptions[T](values: Iterable[T], description: T => String): String = {
+    val describedValues = values.map(v => s"${valueToString(v)} (${description(v)})")
+    s"Possible values: ${describedValues.mkString(", ")}."
+  }
+
   private def defaultValue[T](value: T): String = s"Default: ${valueToString(value)}."
 
   private def parser(name: String): OParser[Unit, Options] = {
     val builder = OParser.builder[Options]
     import builder._
+
+    implicit val jlinkInterfaceRead: scopt.Read[JlinkInterface.Value] = scopt.Read.reads(JlinkInterface.withName)
 
     implicit val keYmaeraXProofCheckerStatisticsPrinterRead: scopt.Read[KeYmaeraXProofChecker.StatisticsPrinter.Value] =
       scopt.Read.reads(KeYmaeraXProofChecker.StatisticsPrinter.withName)
@@ -158,16 +175,13 @@ object Options {
         .action((x, o) => o.copy(jlink = Some(x)))
         .valueName("path/to/jlinkNativeLib")
         .text(wrap("Path to Mathematica J/Link library directory.")),
-      opt[String]("jlinkinterface")
-        .validate(it => if (it == "string" || it == "expr") success else failure("must be 'string' or 'expr'"))
+      opt[JlinkInterface.Value]("jlinkinterface")
         .action((x, o) => o.copy(jlinkinterface = Some(x)))
-        .valueName("string|expr")
+        .valueName("<format>")
         .text(wrap(
-          """Whether to send Mathematica commands as
-            |strings (more robust) or as
-            |expr (supports larger queries).
-            |Default: string (unless configured in keymaerax.conf)
-            |""".stripMargin
+          s"""Format for sending commands to Mathematica.
+             |${possibleValuesWithDescriptions(JlinkInterface.values, JlinkInterface.description)}
+             |""".stripMargin
         )),
       opt[Boolean]("jlinktcpip")
         .action((x, o) => o.copy(jlinktcpip = Some(x)))

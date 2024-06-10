@@ -93,7 +93,8 @@ object KeYmaeraX {
     }
 
     for (value <- options.jlinkinterface) {
-      Configuration.set(Configuration.Keys.JLINK_USE_EXPR_INTERFACE, (value == "expr").toString, saveToFile = false)
+      Configuration
+        .set(Configuration.Keys.JLINK_USE_EXPR_INTERFACE, (value == JlinkInterface.Expr).toString, saveToFile = false)
     }
 
     for (value <- options.qemethod) {
