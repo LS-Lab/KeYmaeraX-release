@@ -68,7 +68,7 @@ class CLILoadingDialog() extends LoadingDialog with Logging {
 
 /** GUI version of splash screen indicator that the user interface is in the process of loading. */
 class GraphicalLoadingDialog() extends LoadingDialog {
-  private val titleMsg: String = s"KeYmaera X s$Version"
+  private val titleMsg: String = s"KeYmaera X $Version"
   override val initialMsg: String = "Loading..."
 
   private val progressBar = new JProgressBar()

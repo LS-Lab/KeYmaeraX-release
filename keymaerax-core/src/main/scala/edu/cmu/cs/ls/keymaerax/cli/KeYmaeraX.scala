@@ -354,7 +354,7 @@ object KeYmaeraX {
    */
   private def mathematicaConfig(options: OptionMap, usage: String): Map[String, String] = {
     assert(
-      options.contains(Symbol("mathkernel")) != options.contains(Symbol("jlink")),
+      options.contains(Symbol("mathkernel")) == options.contains(Symbol("jlink")),
       "[Error] Please always use the command line options -mathkernel and -jlink together.",
     )
 
