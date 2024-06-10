@@ -72,11 +72,11 @@ case class Options(
     debug: Option[Boolean] = None,
     jlink: Option[String] = None,
     jlinkinterface: Option[String] = None,
-    jlinktcpip: Option[String] = None,
+    jlinktcpip: Option[Boolean] = None,
     lax: Option[Boolean] = None,
     mathkernel: Option[String] = None,
     open: Option[String] = None,
-    parallelqe: Option[String] = None,
+    parallelqe: Option[Boolean] = None,
     parserClass: Option[String] = None,
     qemethod: Option[String] = None,
     tool: Option[String] = None,
@@ -169,10 +169,9 @@ object Options {
             |Default: string (unless configured in keymaerax.conf)
             |""".stripMargin
         )),
-      opt[String]("jlinktcpip")
-        .validate(it => if (it == "true" || it == "false") success else failure("must be 'true' or 'false'"))
+      opt[Boolean]("jlinktcpip")
         .action((x, o) => o.copy(jlinktcpip = Some(x)))
-        .valueName("true|false")
+        .valueName("<bool>")
         .text(wrap(
           """Whether to connect to Mathematica with
             |process communication or
@@ -192,10 +191,9 @@ object Options {
         .valueName("MathKernel(.exe)")
         .text(wrap("Path to Mathematica kernel executable.")),
       opt[String]("open").action((x, o) => o.copy(open = Some(x))),
-      opt[String]("parallelqe")
-        .validate(it => if (it == "true" || it == "false") success else failure("must be 'true' or 'false'"))
+      opt[Boolean]("parallelqe")
         .action((x, o) => o.copy(parallelqe = Some(x)))
-        .valueName("true|false")
+        .valueName("<bool>")
         .text(wrap(
           """Whether to attempt multiple QE alternatives in parallel.
             |Default: false (unless configured in keymaerax.conf)

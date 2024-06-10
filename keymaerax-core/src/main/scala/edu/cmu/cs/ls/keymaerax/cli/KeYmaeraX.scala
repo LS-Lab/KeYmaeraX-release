@@ -101,11 +101,11 @@ object KeYmaeraX {
     }
 
     for (value <- options.jlinktcpip) {
-      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, value, saveToFile = false)
+      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, value.toString, saveToFile = false)
     }
 
     for (value <- options.parallelqe) {
-      Configuration.set(Configuration.Keys.MATHEMATICA_PARALLEL_QE, value, saveToFile = false)
+      Configuration.set(Configuration.Keys.MATHEMATICA_PARALLEL_QE, value.toString, saveToFile = false)
     }
 
     for (value <- options.z3Path) {
