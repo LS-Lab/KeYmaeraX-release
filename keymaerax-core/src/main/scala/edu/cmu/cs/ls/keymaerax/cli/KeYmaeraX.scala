@@ -350,7 +350,7 @@ object KeYmaeraX {
    */
   private def mathematicaConfig(options: ToolConfiguration, usage: String): ToolConfiguration = {
     assert(
-      options.mathKernel.isDefined != options.jlinkLibDir.isDefined,
+      options.mathKernel.isDefined == options.jlinkLibDir.isDefined,
       "[Error] Please always use the command line options -mathkernel and -jlink together.",
     )
 
