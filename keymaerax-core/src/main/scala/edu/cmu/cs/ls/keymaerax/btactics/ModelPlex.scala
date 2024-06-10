@@ -7,28 +7,27 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.mapSubpositions
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper.timed
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper.timed
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Atom, OneOf, QETacticTool, SimplificationTool}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, ProvableInfo, Tactic}
-import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 
 import scala.collection.immutable.{List, ListMap, Nil}
 import scala.collection.mutable.ListBuffer
 import scala.collection.{immutable, mutable}
-import scala.compat.Platform
 import scala.language.reflectiveCalls
 import scala.reflect.runtime.universe
 
@@ -69,9 +68,9 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   )
 
   /** Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable. */
-  def apply(
+  override def apply(
       formula: Formula,
-      kind: Symbol,
+      kind: ModelPlexKind.Value,
       checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
       unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty,
   ): Formula = {
@@ -93,53 +92,48 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @param checkProvable
    *   true to check the Provable proof certificates (recommended).
    */
-  def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula =
-    formula => {
-      require(
-        kind == Symbol("ctrl") || kind == Symbol("model"),
-        "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model",
-      )
-      val ModelPlexConjecture(_, mxInputFml, assumptions) =
-        createMonitorSpecificationConjecture(formula, vars, ListMap.empty)
-      val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
-      // @note SimplifierV2 disabled as precaution in case Z3 cannot prove one of its lemmas
-      val tactic = (kind, ToolProvider.simplifierTool()) match {
-        case (Symbol("ctrl"), tool) => controllerMonitorByChase(1) & SaturateTactic(
-            optimizationOneWithSearch(tool, assumptions, Nil, Some(mxSimplify))(1)
-          ) &
-            (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
-        case (Symbol("model"), tool) => modelMonitorByChase(1) & SaturateTactic(
-            optimizationOneWithSearch(tool, assumptions, Nil, Some(mxSimplify))(1)
-          ) &
-            (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
-        case _ => throw new IllegalArgumentException(
-            "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model; both require a simplification tool"
-          )
-      }
-
-      val proofStart = System.currentTimeMillis()
-      val result = TactixLibrary.proveBy(ProvableSig.startPlainProof(mxInputSequent), tactic)
-      val proofDuration = System.currentTimeMillis() - proofStart
-      logger.info("[proof time " + proofDuration + "ms]")
-
-      assert(
-        result.subgoals.size == 1 && result.subgoals.head.ante.isEmpty &&
-          result.subgoals.head.succ.size == 1,
-        "ModelPlex tactic expected to provide a single formula (in place version)",
-      )
-      assert(result.conclusion == mxInputSequent, "Proof was a proof of the ModelPlex specification")
-      // @todo conjunction with phi|_cnst when monitor should also check the conditions on constants
-      val mxOutputProofTree = result.subgoals.head.succ.head
-      checkProvable match {
-        case Some(report) =>
-          report(result)
-          logger.info("ModelPlex Proof certificate: Produced")
-          mxOutputProofTree
-        case None =>
-          logger.info("ModelPlex Proof certificate: Skipped")
-          mxOutputProofTree
-      }
+  override def apply(
+      vars: List[Variable],
+      kind: ModelPlexKind.Value,
+      checkProvable: Option[ProvableSig => Unit],
+  ): Formula => Formula = formula => {
+    val ModelPlexConjecture(_, mxInputFml, assumptions) =
+      createMonitorSpecificationConjecture(formula, vars, ListMap.empty)
+    val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
+    // @note SimplifierV2 disabled as precaution in case Z3 cannot prove one of its lemmas
+    val tool = ToolProvider.simplifierTool()
+    val tactic = kind match {
+      case ModelPlexKind.Ctrl => controllerMonitorByChase(1) & SaturateTactic(
+          optimizationOneWithSearch(tool, assumptions, Nil, Some(mxSimplify))(1)
+        ) & (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
+      case ModelPlexKind.Model => modelMonitorByChase(1) & SaturateTactic(
+          optimizationOneWithSearch(tool, assumptions, Nil, Some(mxSimplify))(1)
+        ) & (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
     }
+
+    val proofStart = System.currentTimeMillis()
+    val result = TactixLibrary.proveBy(ProvableSig.startPlainProof(mxInputSequent), tactic)
+    val proofDuration = System.currentTimeMillis() - proofStart
+    logger.info("[proof time " + proofDuration + "ms]")
+
+    assert(
+      result.subgoals.size == 1 && result.subgoals.head.ante.isEmpty &&
+        result.subgoals.head.succ.size == 1,
+      "ModelPlex tactic expected to provide a single formula (in place version)",
+    )
+    assert(result.conclusion == mxInputSequent, "Proof was a proof of the ModelPlex specification")
+    // @todo conjunction with phi|_cnst when monitor should also check the conditions on constants
+    val mxOutputProofTree = result.subgoals.head.succ.head
+    checkProvable match {
+      case Some(report) =>
+        report(result)
+        logger.info("ModelPlex Proof certificate: Produced")
+        mxOutputProofTree
+      case None =>
+        logger.info("ModelPlex Proof certificate: Skipped")
+        mxOutputProofTree
+    }
+  }
 
   @Tactic(name = "mxSynthesize", displayNameLong = Some("ModelPlex Monitor Synthesis"))
   def mxSynthesize(kind: String): InputTactic = inputanon {
@@ -236,7 +230,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @see
    *   Mitsch, Platzer: ModelPlex (Definition 3, Lemma 4, Corollary 1).
    */
-  def createMonitorSpecificationConjecture(
+  override def createMonitorSpecificationConjecture(
       fml: Formula,
       vars: List[Variable],
       unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
@@ -382,7 +376,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   /** Conjecture for double-checking a monitor formula for correctness: assumptions -> (monitor -> < prg; >Upsilon). */
   def createMonitorCorrectnessConjecture(
       vars: List[Variable],
-      kind: Symbol,
+      kind: ModelPlexKind.Value,
       checkProvable: Option[ProvableSig => Unit],
       unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
   ): (Formula => Formula) = formula => {
@@ -669,7 +663,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       name: String,
       tactic: BelleExpr,
       fallback: Option[Program],
-      kind: Symbol,
+      kind: ModelPlexKind.Value,
       checkProvable: Option[(ProvableSig => Unit)],
       synthesizeProofs: Boolean,
       defs: Declaration,
@@ -1127,7 +1121,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @return
    *   The tactic.
    */
-  def controllerMonitorByChase: BuiltInPositionTactic = chase(
+  override def controllerMonitorByChase: BuiltInPositionTactic = chase(
     3,
     3,
     (e: Expression) =>
@@ -1361,7 +1355,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @return
    *   The tactic.
    */
-  def modelplexSequentStyle: DependentPositionTactic = ???
+  override def modelplexSequentStyle: DependentPositionTactic = ???
 
   /**
    * ModelPlex backward proof tactic for axiomatic-style monitor synthesis, i.e., avoids proof branching as occuring in
@@ -1379,7 +1373,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @see
    *   [[modelMonitorT]]
    */
-  def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic =
+  override def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) => {
       // was "Modelplex In-Place"
       sequent.sub(pos) match {
@@ -1407,12 +1401,12 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   )
 
   /** Returns a backward tactic for deriving controller monitors. */
-  def controllerMonitorT: DependentPositionTactic = anon((pos: Position) =>
+  override def controllerMonitorT: DependentPositionTactic = anon((pos: Position) =>
     locateT(List(useAt(Ax.loopApproxd, PosInExpr(1 :: Nil)), useAt(Ax.dDX, PosInExpr(1 :: Nil))) ++ monitorAxioms)(pos)
   )
 
   /** Returns a backward tactic for deriving model monitors. */
-  def modelMonitorT: DependentPositionTactic = anon((pos: Position) =>
+  override def modelMonitorT: DependentPositionTactic = anon((pos: Position) =>
     locateT(List(useAt(Ax.loopApproxd, PosInExpr(1 :: Nil)), AxiomaticODESolver.axiomaticSolve()) ++ monitorAxioms)(pos)
   )
 
@@ -1424,7 +1418,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    *   The tactic.
    */
   // was "<','> differential solution"
-  def diamondDiffSolve2DT: DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
+  override def diamondDiffSolve2DT: DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
     ??? // (diffIntroduceConstantT & ODETactics.diamondDiffSolve2DT)(p)
   })
 
@@ -1442,7 +1436,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @note
    *   Unused so far, for deriving prediction monitors where DI is going to rely on knowledge from prior tests.
    */
-  def diamondTestRetainConditionT: DependentPositionTactic = ???
+  override def diamondTestRetainConditionT: DependentPositionTactic = ???
 
   /**
    * Performs a tactic from the list of tactics that is applicable somewhere underneath position p in sequent s, taking
@@ -1459,7 +1453,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @return
    *   The tactic.
    */
-  def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic =
+  override def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic =
     anon((pos: Position, sequent: Sequent) => {
       require(tactics.nonEmpty, "At least 1 tactic required")
       val here = tactics.map(_(pos)).reduceRight[BelleExpr](_ | _)

@@ -161,7 +161,7 @@ object KeYmaeraX {
       vars: Option[Seq[String]],
       verify: Boolean,
       sandbox: Boolean,
-      monitor: Option[Symbol],
+      monitor: Option[ModelPlexKind.Value],
       fallback: Option[String],
       args: Seq[String],
   ): Unit = {
@@ -192,8 +192,6 @@ object KeYmaeraX {
 
     val outputFileName = out.getOrElse(inputFileName + ".kym")
 
-    val kind = Option.when(sandbox)(Symbol("sandbox")).orElse(monitor).getOrElse(Symbol("model"))
-
     if (sandbox) {
       val fallbackProgram = fallback match {
         case Some(fallbackPrgString: String) => fallbackPrgString.asProgram
@@ -219,7 +217,7 @@ object KeYmaeraX {
         inputEntry.name,
         inputEntry.tactics.head._3,
         Some(fallbackProgram),
-        kind = Symbol("ctrl"),
+        kind = ModelPlexKind.Ctrl,
         checkProvable = None,
         synthesizeProofs = false,
         defs = inputEntry.defs,
@@ -287,9 +285,11 @@ object KeYmaeraX {
       println(s"Sandbox synthesis successful: $outputFileName")
     } else if (vars.isDefined) {
       val parsedVars = makeVariables(vars.get).toList
+      val kind = monitor.getOrElse(ModelPlexKind.Model)
       val result = ModelPlex(parsedVars, kind, verifyOption)(inputModel)
       printModelplexResult(inputModel, result, outputFileName, ptOut, vars = vars, args = args)
     } else {
+      val kind = monitor.getOrElse(ModelPlexKind.Model)
       val result = ModelPlex(inputModel, kind, verifyOption)
       printModelplexResult(inputModel, result, outputFileName, ptOut, vars = vars, args = args)
     }

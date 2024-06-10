@@ -5,9 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.codegen
 
-import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.{ModelPlex, ModelPlexKind}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
@@ -60,7 +60,7 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean,
       val fallbackCode = new CControllerGenerator(defs)(ctrl, vars, inputVars)
 
       val inputModel = Imply(True, Box(ctrl, True))
-      val monitorFml = ModelPlex(inputModel, Symbol("ctrl"))
+      val monitorFml = ModelPlex(inputModel, ModelPlexKind.Ctrl)
       val monitor = monitorKind match {
         case "boolean" => monitorFml
         case "metric" => ModelPlex.toMetric(monitorFml)

@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlexKind
 import edu.cmu.cs.ls.keymaerax.info.{FullCopyright, FullNameAndVersion, License, ShortCopyright, ThirdPartyLicenses}
 import edu.cmu.cs.ls.keymaerax.tools.ToolName
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
@@ -52,7 +53,7 @@ object Command {
       vars: Option[Seq[String]] = None,
       verify: Boolean = false,
       sandbox: Boolean = false,
-      monitor: Option[Symbol] = None,
+      monitor: Option[ModelPlexKind.Value] = None,
       fallback: Option[String] = None,
   ) extends Command
   case class Repl(model: String = null, tactic: Option[String] = None, scaladefs: Option[String] = None) extends Command
@@ -161,6 +162,8 @@ object Options {
 
     implicit val keYmaeraXProofCheckerStatisticsPrinterRead: scopt.Read[KeYmaeraXProofChecker.StatisticsPrinter.Value] =
       scopt.Read.reads(KeYmaeraXProofChecker.StatisticsPrinter.withName)
+
+    implicit val modelPlexKindRead: scopt.Read[ModelPlexKind.Value] = scopt.Read.reads(ModelPlexKind.withName)
 
     implicit val qeMethodRead: scopt.Read[QeMethod.Value] = scopt.Read.reads(QeMethod.withName)
 
@@ -425,13 +428,13 @@ object Options {
             .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
           opt[Unit]("verify").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(verify = true))),
           opt[Unit]("sandbox").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(sandbox = true))),
-          opt[String]("monitor")
-            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(monitor = Some(Symbol(x)))))
+          opt[ModelPlexKind.Value]("monitor")
+            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(monitor = Some(x))))
             .valueName("<monitor>")
             .text(wrap(
-              """What kind of monitor to generate with ModelPlex.
-                |Possible values: ctrl, model
-                |""".stripMargin
+              s"""What kind of monitor to generate with ModelPlex.
+                 |${possibleValues(ModelPlexKind.values)}
+                 |""".stripMargin
             )),
           opt[String]("fallback").action((x, o) => o.updateCommand[Command.Modelplex](_.copy(fallback = Some(x)))),
         ),

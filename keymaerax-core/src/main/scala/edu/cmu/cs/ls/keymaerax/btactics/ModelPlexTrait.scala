@@ -6,12 +6,16 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AtPosition, BelleExpr, BuiltInPositionTactic, DependentPositionTactic}
-import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.NAMED_POST_VAR
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Formula, NamedSymbol, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Formula, NamedSymbol, Variable}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 
 import scala.collection.immutable.ListMap
+
+// TODO Replace with Scala 3 enum
+object ModelPlexKind extends Enumeration {
+  val Ctrl, Model = Value
+}
 
 /**
  * A ModelPlex conjecture. The `constAssumptions` are a subset of `init` for variables/function symbols not bound in the
@@ -35,7 +39,7 @@ case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumpti
  *   In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014,
  *   Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014.
  */
-trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) {
+trait ModelPlexTrait extends ((List[Variable], ModelPlexKind.Value) => (Formula => Formula)) {
 
   /** Returns the post variable of `v` identified by name postfix `post`. */
   val NAMED_POST_VAR: Variable => Variable = (v: Variable) =>
@@ -47,12 +51,17 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
 
   def apply(
       formula: Formula,
-      kind: Symbol,
+      kind: ModelPlexKind.Value,
       checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
       unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty,
   ): Formula
-  def apply(vars: List[Variable], kind: Symbol): Formula => Formula = apply(vars, kind, checkProvable = Some(_ => ()))
-  def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula
+  def apply(vars: List[Variable], kind: ModelPlexKind.Value): Formula => Formula =
+    apply(vars, kind, checkProvable = Some(_ => ()))
+  def apply(
+      vars: List[Variable],
+      kind: ModelPlexKind.Value,
+      checkProvable: Option[ProvableSig => Unit],
+  ): Formula => Formula
   def createMonitorSpecificationConjecture(
       fml: Formula,
       vars: List[Variable],
