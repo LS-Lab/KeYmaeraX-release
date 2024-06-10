@@ -68,6 +68,16 @@ object JlinkInterface extends Enumeration {
   }
 }
 
+// TODO Turn into Scala 3 enum
+object QeMethod extends Enumeration {
+  val Reduce, Resolve = Value
+
+  def description(value: Value): String = value match {
+    case Reduce => "solves equations and eliminates quantifiers"
+    case Resolve => "eliminates quantifiers"
+  }
+}
+
 case class Options(
     // Special options
     name: String,
@@ -88,7 +98,7 @@ case class Options(
     open: Option[String] = None,
     parallelqe: Option[Boolean] = None,
     parserClass: Option[String] = None,
-    qemethod: Option[String] = None,
+    qemethod: Option[QeMethod.Value] = None,
     tool: Option[String] = None,
     z3Path: Option[String] = None,
 ) {
@@ -150,6 +160,8 @@ object Options {
 
     implicit val keYmaeraXProofCheckerStatisticsPrinterRead: scopt.Read[KeYmaeraXProofChecker.StatisticsPrinter.Value] =
       scopt.Read.reads(KeYmaeraXProofChecker.StatisticsPrinter.withName)
+
+    implicit val qeMethodRead: scopt.Read[QeMethod.Value] = scopt.Read.reads(QeMethod.withName)
 
     OParser.sequence(
       programName(name),
@@ -214,16 +226,13 @@ object Options {
             |""".stripMargin
         )),
       opt[String]("parserClass").action((x, o) => o.copy(parserClass = Some(x))),
-      opt[String]("qemethod")
-        .validate(it => if (it == "Reduce" || it == "Resolve") success else failure("must be 'Reduce' or 'Resolve'"))
+      opt[QeMethod.Value]("qemethod")
         .action((x, o) => o.copy(qemethod = Some(x)))
-        .valueName("Reduce|Resolve")
+        .valueName("<method>")
         .text(wrap(
-          """Whether to use
-            |Reduce (solves equations and eliminates quantifiers) or
-            |Resolve (eliminates quantifiers).
-            |Default: Reduce (unless configured in keymaerax.conf)
-            |""".stripMargin
+          s"""Quantifier elimination method to use.
+             |${possibleValuesWithDescriptions(QeMethod.values, QeMethod.description)}
+             |""".stripMargin
         )),
       opt[String]("tool")
         .action((x, o) => o.copy(tool = Some(x)))

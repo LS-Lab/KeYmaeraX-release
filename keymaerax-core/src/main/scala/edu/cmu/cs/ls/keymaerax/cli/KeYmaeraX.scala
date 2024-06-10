@@ -98,7 +98,7 @@ object KeYmaeraX {
     }
 
     for (value <- options.qemethod) {
-      Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, value, saveToFile = false)
+      Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, value.toString, saveToFile = false)
     }
 
     for (value <- options.jlinktcpip) {
