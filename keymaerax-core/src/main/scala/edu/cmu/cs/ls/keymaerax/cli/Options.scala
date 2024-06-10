@@ -9,6 +9,8 @@ import edu.cmu.cs.ls.keymaerax.info.{FullCopyright, FullNameAndVersion, License,
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import scopt.OParser
 
+import scala.concurrent.duration.Duration
+
 // TODO Convert to Scala 3 enum
 sealed trait Command
 object Command {
@@ -21,7 +23,7 @@ object Command {
       conjecture: Option[String] = None,
       tactic: Option[String] = None,
       tacticName: Option[String] = None,
-      timeout: Long = 0,
+      timeout: Duration = Duration.Inf,
       verbose: Boolean = false,
       statistics: Option[String] = None,
   ) extends Command
@@ -111,6 +113,16 @@ object Options {
   private def wrap(text: String): String = {
     // The left column of the help output (including the space separating the columns) has a width of 27 characters.
     TextWrapper.wrap(text, maxWidth = 80 - 27)
+  }
+
+  private def defaultValue[T](value: T) = {
+    val valueStr = value match {
+      // Without this special case, Duration.Inf would be printed as "Default: Duration.Inf".
+      // This does not match the duration help text, which suggests "Inf".
+      case Duration.Inf => "Inf"
+      case v => v.toString
+    }
+    s"Default: $valueStr."
   }
 
   private def parser(name: String): OParser[Unit, Options] = {
@@ -251,10 +263,17 @@ object Options {
                 |Only used if no tactic is specified.
                 |""".stripMargin
             )),
-          opt[Long]("timeout")
+          opt[Duration]("timeout")
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(timeout = x)))
-            .valueName("<number>")
-            .text(wrap("How many seconds to try proving before giving up, forever if 0 or less.")),
+            .validate(d => if (d > Duration.Zero) success else failure("timeout must be positive"))
+            .valueName("<duration>")
+            .text(wrap(
+              s"""How long to try proving before giving up.
+                 |Format: "<length><unit>" or "Inf".
+                 |Available units: d (day), h (hour), m (minute), s (second), ms (millisecond).
+                 |${defaultValue(Command.Prove().timeout)}
+                 |""".stripMargin
+            )),
           opt[Unit]("verbose")
             .action((_, o) => o.updateCommand[Command.Prove](_.copy(verbose = true)))
             .text(wrap("Print verbose proof information.")),

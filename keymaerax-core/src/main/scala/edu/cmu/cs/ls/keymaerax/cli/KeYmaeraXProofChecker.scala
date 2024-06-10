@@ -34,7 +34,6 @@ import java.io.PrintWriter
 import java.net.URLEncoder
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
-import java.util.concurrent.TimeUnit
 import scala.collection.immutable
 import scala.collection.immutable.{List, Nil}
 import scala.collection.mutable.ListBuffer
@@ -53,7 +52,7 @@ object KeYmaeraXProofChecker {
       defs: Declaration,
       tacticName: String,
       tactic: BelleExpr,
-      timeout: Long,
+      timeout: Duration,
       outputFileName: Option[String],
       verbose: Boolean,
       args: Seq[String],
@@ -232,7 +231,7 @@ object KeYmaeraXProofChecker {
    *   Which of the tactics in the input file to use (default: check all, falling back to auto if no tactic is listed).
    *   Only used if no tactic is specified.
    * @param timeout
-   *   How many seconds to try proving before giving up, forever if 0 or less.
+   *   How long to try proving before giving up.
    * @param verbose
    *   Print verbose proof information.
    * @param statistics
@@ -247,7 +246,7 @@ object KeYmaeraXProofChecker {
       conjecture: Option[String],
       tactic: Option[String],
       tacticName: Option[String],
-      timeout: Long,
+      timeout: Duration,
       verbose: Boolean,
       statistics: Option[String],
       args: Seq[String],
@@ -359,7 +358,7 @@ object KeYmaeraXProofChecker {
       ptOut: Option[String],
       tactic: Option[String],
       tacticName: Option[String],
-      timeout: Long,
+      timeout: Duration,
       verbose: Boolean,
       args: Seq[String],
   ): List[ProofStatistics] = {
@@ -491,18 +490,15 @@ object KeYmaeraXProofChecker {
   }
 }
 
-/** Checks proves (aborting after timeout seconds) and returns the [[ProvableSig]] as a witness. */
-case class KeYmaeraXProofChecker(timeout: Long, defs: Declaration) extends (BelleExpr => Sequent => ProvableSig) {
+/** Checks proofs (aborting after timeout) and returns the [[ProvableSig]] as a witness. */
+case class KeYmaeraXProofChecker(timeout: Duration, defs: Declaration) extends (BelleExpr => Sequent => ProvableSig) {
 
   /** Checker that uses tactic `t`. */
   override def apply(t: BelleExpr): Sequent => ProvableSig = (s: Sequent) => {
     implicit val ec: ExecutionContext = ExecutionContext.global
     try {
       BelleInterpreter.interpreter.start()
-      Await.result(
-        Future { TactixLibrary.proveBy(ProvableSig.startProof(s, defs), t) },
-        if (timeout > 0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf,
-      )
+      Await.result(Future { TactixLibrary.proveBy(ProvableSig.startProof(s, defs), t) }, timeout)
     } catch {
       case ex: TimeoutException =>
         BelleInterpreter.interpreter.kill()
@@ -510,5 +506,4 @@ case class KeYmaeraXProofChecker(timeout: Long, defs: Declaration) extends (Bell
         throw ex
     }
   }
-
 }

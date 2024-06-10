@@ -7,13 +7,15 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.concurrent.duration.Duration
+
 /** Collects proof statistics. */
 case class ProofStatistics(
     name: String,
     tacticName: String,
     status: String,
     witness: Option[ProvableSig],
-    timeout: Long,
+    timeout: Duration,
     duration: Long,
     qeDuration: Long,
     rcfDuration: Long,
@@ -21,14 +23,7 @@ case class ProofStatistics(
     tacticSize: Int,
 ) {
 
-  /** Prints a statistics summary string. */
-  def summary: String = s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
-                           |Duration [ms]: $duration
-                           |QE [ms]: $qeDuration, RCF [ms]: $rcfDuration
-                           |Proof steps: $proofSteps
-                           |Tactic size: $tacticSize""".stripMargin
-
   /** Short single-line summary. */
   override def toString: String =
-    s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout[s],duration=$duration[ms],qe=$qeDuration[ms],rcf=$rcfDuration,steps=$proofSteps"
+    s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout,duration=$duration[ms],qe=$qeDuration[ms],rcf=$rcfDuration,steps=$proofSteps"
 }
