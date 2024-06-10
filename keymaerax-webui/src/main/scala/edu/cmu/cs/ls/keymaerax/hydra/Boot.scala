@@ -11,6 +11,7 @@ import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.Options
 import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, SystemWebBrowser}
+import edu.cmu.cs.ls.keymaerax.tools.ToolName
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 
@@ -120,27 +121,26 @@ object HyDRAInitializer extends Logging {
     }
   }
 
-  private def createTool(options: Options, config: ToolConfiguration, preferredTool: String): Unit = {
-    val tool: String = options.tool.getOrElse(preferredTool)
-    val provider = tool.toLowerCase() match {
-      case "mathematica" => ToolProvider.initFallbackZ3(MathematicaToolProvider(config), "Mathematica")
-      case "wolframengine" => ToolProvider.initFallbackZ3(WolframEngineToolProvider(config), "Wolfram Engine")
-      case "wolframscript" => ToolProvider.initFallbackZ3(WolframScriptToolProvider(config), "Wolfram Script")
-      case "z3" => new Z3ToolProvider
-      case t => throw new Exception("Unknown tool '" + t + "'")
+  private def createTool(options: Options, config: ToolConfiguration, preferredTool: ToolName.Value): Unit = {
+    val provider = options.tool.getOrElse(preferredTool) match {
+      case ToolName.Mathematica => ToolProvider.initFallbackZ3(MathematicaToolProvider(config), "Mathematica")
+      case ToolName.WolframEngine => ToolProvider.initFallbackZ3(WolframEngineToolProvider(config), "Wolfram Engine")
+      case ToolName.WolframScript => ToolProvider.initFallbackZ3(WolframScriptToolProvider(config), "Wolfram Script")
+      case ToolName.Z3 => new Z3ToolProvider
     }
     ToolProvider.setProvider(provider)
     assert(provider.tools().forall(_.isInitialized), "Tools should be initialized after init()")
   }
 
-  private def toolConfig(options: Options, preferredTool: String): ToolConfiguration = {
-    val tool: String = options.tool.getOrElse(preferredTool)
-    ToolConfiguration.config(tool.toLowerCase, options.toToolConfig)
+  private def toolConfig(options: Options, preferredTool: ToolName.Value): ToolConfiguration = {
+    val tool = options.tool.getOrElse(preferredTool)
+    ToolConfiguration.config(tool, options.toToolConfig)
   }
 
-  private def preferredToolFromConfig: String = {
-    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
-  }
+  private def preferredToolFromConfig: ToolName.Value = Configuration
+    .getString(Configuration.Keys.QE_TOOL)
+    .map(ToolName.parse)
+    .getOrElse(throw new Exception("No preferred tool"))
 }
 
 /** Config vars needed for server setup. */

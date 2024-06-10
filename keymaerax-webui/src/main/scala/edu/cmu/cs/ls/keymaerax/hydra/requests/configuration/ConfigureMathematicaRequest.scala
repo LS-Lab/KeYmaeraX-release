@@ -9,10 +9,12 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{MathematicaToolProvider, ToolProvider, WolframEngineToolProvider}
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ConfigureMathematicaResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, Response, WriteRequest}
+import edu.cmu.cs.ls.keymaerax.tools.ToolName
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
-class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFileName: String, jlinkTcpip: String)
+class ConfigureMathematicaRequest(tool: ToolName.Value, linkName: String, jlinkLibFileName: String, jlinkTcpip: String)
     extends LocalhostOnlyRequest with WriteRequest {
+
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
   }
@@ -52,24 +54,24 @@ class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFi
       )
     } else {
       ToolProvider.shutdown()
-      Configuration.set(Configuration.Keys.QE_TOOL, toolName)
+      Configuration.set(Configuration.Keys.QE_TOOL, tool.toString)
       // prefer TCPIP=false if no specific port/machine is configured
       val tcpip = jlinkTcpip match {
         case "true" | "false" =>
           "false" // not user-configurable with this request (but configurable with Advanced options, which then takes precedence)
         case x => x
       }
-      val provider = toolName match {
-        case "wolframengine" =>
+      val provider = tool match {
+        case ToolName.WolframEngine =>
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
-        case "mathematica" =>
+          ToolProvider.initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(tool)), "Wolfram Engine")
+        case ToolName.Mathematica =>
           Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
+          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(tool)), "Mathematica")
       }
       ToolProvider.setProvider(provider)
       new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true)

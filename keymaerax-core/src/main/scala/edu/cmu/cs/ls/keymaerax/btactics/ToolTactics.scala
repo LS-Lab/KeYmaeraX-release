@@ -48,8 +48,10 @@ private object ToolTactics extends TacticProvider {
   @Tactic(name = "useSolver")
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
-  def switchSolver(tool: String): InputTactic = inputanon { _: Sequent =>
+  def switchSolver(toolStr: String): InputTactic = inputanon { _: Sequent =>
     {
+      val tool = ToolName.parse(toolStr)
+
       def isWolframProvider(p: ToolProvider): Boolean = p match {
         case MultiToolProvider(providers) => providers.exists(_.isInstanceOf[WolframToolProvider])
         case _: WolframToolProvider => true
@@ -77,8 +79,8 @@ private object ToolTactics extends TacticProvider {
         }
       }
       val config = ToolConfiguration.config(tool)
-      tool.toLowerCase match {
-        case "mathematica" => if (!isWolframProvider(ToolProvider.provider)) {
+      tool match {
+        case ToolName.Mathematica => if (!isWolframProvider(ToolProvider.provider)) {
             setFirstSuccessfulProvider(
               List(
                 MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil),
@@ -87,7 +89,7 @@ private object ToolTactics extends TacticProvider {
               "Failed to switch to Mathematica: unable to initialize the connection; the license may be expired.",
             )
           }
-        case "wolframengine" => if (!isWolframProvider(ToolProvider.provider)) {
+        case ToolName.WolframEngine => if (!isWolframProvider(ToolProvider.provider)) {
             setFirstSuccessfulProvider(
               List(
                 MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil),
@@ -96,13 +98,14 @@ private object ToolTactics extends TacticProvider {
               "Failed to switch to Wolfram Engine: unable to initialize the connection; the license may be expired.",
             )
           }
-        case "z3" => if (!isZ3Provider(ToolProvider.provider)) {
+        case ToolName.Z3 => if (!isZ3Provider(ToolProvider.provider)) {
             setFirstSuccessfulProvider(
               List(new Z3ToolProvider),
               "Failed to switch to Z3: unable to initialize the connection; please check the configured path to Z3",
             )
           }
         case _ =>
+          // TODO Support wolframscript and get rid of this case
           throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
       }
       Idioms.nil

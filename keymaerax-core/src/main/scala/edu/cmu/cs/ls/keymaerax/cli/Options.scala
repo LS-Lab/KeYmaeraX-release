@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.info.{FullCopyright, FullNameAndVersion, License, ShortCopyright, ThirdPartyLicenses}
+import edu.cmu.cs.ls.keymaerax.tools.ToolName
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import scopt.OParser
 
@@ -99,7 +100,7 @@ case class Options(
     parallelqe: Option[Boolean] = None,
     parserClass: Option[String] = None,
     qemethod: Option[QeMethod.Value] = None,
-    tool: Option[String] = None,
+    tool: Option[ToolName.Value] = None,
     z3Path: Option[String] = None,
 ) {
 
@@ -162,6 +163,8 @@ object Options {
       scopt.Read.reads(KeYmaeraXProofChecker.StatisticsPrinter.withName)
 
     implicit val qeMethodRead: scopt.Read[QeMethod.Value] = scopt.Read.reads(QeMethod.withName)
+
+    implicit val toolNameRead: scopt.Read[ToolName.Value] = scopt.Read.reads(ToolName.withName)
 
     OParser.sequence(
       programName(name),
@@ -234,10 +237,14 @@ object Options {
              |${possibleValuesWithDescriptions(QeMethod.values, QeMethod.description)}
              |""".stripMargin
         )),
-      opt[String]("tool")
+      opt[ToolName.Value]("tool")
         .action((x, o) => o.copy(tool = Some(x)))
-        .valueName("mathematica|z3")
-        .text(wrap("Choose which tool to use for real arithmetic.")),
+        .valueName("<name>")
+        .text(wrap(
+          s"""Choose which tool to use for real arithmetic.
+             |${possibleValues(ToolName.values)}
+             |""".stripMargin
+        )),
       opt[String]("z3path")
         .action((x, o) => o.copy(z3Path = Some(x)))
         .valueName("path/to/z3")

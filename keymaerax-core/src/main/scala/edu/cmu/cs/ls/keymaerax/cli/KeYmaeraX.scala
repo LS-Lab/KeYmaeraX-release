@@ -31,7 +31,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{
 import edu.cmu.cs.ls.keymaerax.tools.ext.SmtLibReader
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
-import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolPathFinder}
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolName, ToolPathFinder}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 
 import java.io.{FileReader, PrintWriter}
@@ -49,15 +49,6 @@ object KeYmaeraX {
     val SMT2KYX: String = "smt2kyx"
     val SMT2MAT: String = "smt2mat"
     val conversions: Set[String] = Set(STRIPHINTS, KYX2MAT, KYX2SMT, SMT2KYX, SMT2MAT)
-  }
-
-  /** Backend tools. */
-  object Tools {
-    val MATHEMATICA: String = "mathematica"
-    val WOLFRAMENGINE: String = "wolframengine"
-    val WOLFRAMSCRIPT: String = "wolframscript"
-    val Z3: String = "z3"
-    val tools: Set[String] = Set(MATHEMATICA, WOLFRAMENGINE, WOLFRAMSCRIPT, Z3)
   }
 
   def main(args: Array[String]): Unit = {
@@ -132,7 +123,7 @@ object KeYmaeraX {
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
       case Some(cmd: Command.Prove) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
         KeYmaeraXProofChecker.prove(
           in = cmd.in,
           out = cmd.out,
@@ -154,10 +145,10 @@ object KeYmaeraX {
         initializeProver(options.toToolConfig)
         if (parseBelleTactic(cmd.in)) exit(0) else exit(-1)
       case Some(cmd: Command.Convert) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
         convert(in = cmd.in, out = cmd.out, conversion = cmd.conversion)
       case Some(cmd: Command.Grade) =>
-        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+        initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
         AssessmentProver.grade(
           in = cmd.in,
           out = cmd.out,
@@ -190,12 +181,11 @@ object KeYmaeraX {
 
   /** Initializes the backend solvers. */
   def initializeBackend(options: ToolConfiguration): Unit = {
-    options.tool.getOrElse("z3") match {
-      case Tools.MATHEMATICA => initMathematica(options)
-      case Tools.WOLFRAMENGINE => initWolframEngine(options)
-      case Tools.WOLFRAMSCRIPT => initWolframScript(options)
-      case Tools.Z3 => initZ3(options)
-      case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
+    options.tool.getOrElse(ToolName.Z3) match {
+      case ToolName.Mathematica => initMathematica(options)
+      case ToolName.WolframEngine => initWolframEngine(options)
+      case ToolName.WolframScript => initWolframScript(options)
+      case ToolName.Z3 => initZ3(options)
     }
   }
 
@@ -213,9 +203,8 @@ object KeYmaeraX {
   def exit(status: Int): Nothing = { shutdownProver(); sys.exit(status) }
 
   /** Reads configuration from keymaerax.conf. */
-  def toolConfigFromFile(defaultTool: String): ToolConfiguration = {
-    ToolConfiguration.config(Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool))
-  }
+  def toolConfigFromFile(defaultTool: ToolName.Value): ToolConfiguration = ToolConfiguration
+    .config(Configuration.getString(Configuration.Keys.QE_TOOL).map(ToolName.parse).getOrElse(defaultTool))
 
   /** Combines tool configurations, favoring primary configuration over secondary configuration. */
   def combineToolConfigs(primary: ToolConfiguration, secondary: ToolConfiguration): ToolConfiguration =

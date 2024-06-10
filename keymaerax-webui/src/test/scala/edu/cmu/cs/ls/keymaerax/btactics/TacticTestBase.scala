@@ -98,8 +98,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
     def doShutdown(): Unit = super.shutdown()
   }
 
-  // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
-  private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
+  // start test with -DWOLFRAM=... to select the Wolfram backend.
+  private val WOLFRAM = ToolName.parse(System.getProperty("WOLFRAM", "mathematica"))
 
   // @note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
   private var mathematicaProvider: Lazy[DelayedShutdownToolProvider] = _
@@ -161,9 +161,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
       mathematicaProvider.synchronized {
         mathematicaProvider().doShutdown() // @note see [[afterAll]]
         provider.shutdown()
-        mathematicaProvider = new Lazy(
-          new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase)))
-        )
+        mathematicaProvider =
+          new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM))))
       }
       ToolProvider.setProvider(oldProvider)
     }
@@ -183,7 +182,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
         Configuration.Keys.MATH_LINK_TCPIP,
         Configuration(Configuration.Keys.MATH_LINK_TCPIP),
       ) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-      val common = Map(Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp, Configuration.Keys.QE_TOOL -> WOLFRAM)
+      val common =
+        Map(Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp, Configuration.Keys.QE_TOOL -> WOLFRAM.toString)
       val uninterp = common +
         (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS ->
           Configuration.getString(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false"))
@@ -208,9 +208,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
             mathematicaProvider.synchronized {
               mathematicaProvider().doShutdown() // @note see [[afterAll]]
               provider.shutdown()
-              mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(
-                ToolConfiguration.config(WOLFRAM.toLowerCase)
-              )))
+              mathematicaProvider =
+                new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM))))
             }
           }
           failAfter(to) { testcode(tool) }
@@ -352,15 +351,13 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   /** Test suite setup */
   override def beforeAll(): Unit = {
     mathematicaProvider =
-      if (WOLFRAM.equalsIgnoreCase("mathematica"))
+      if (WOLFRAM == ToolName.Mathematica)
         new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM))))
-      else if (WOLFRAM.equalsIgnoreCase("wolframengine"))
+      else if (WOLFRAM == ToolName.WolframEngine)
         new Lazy(new DelayedShutdownToolProvider(WolframEngineToolProvider(ToolConfiguration.config(WOLFRAM))))
-      else if (WOLFRAM.equalsIgnoreCase("wolframscript"))
+      else if (WOLFRAM == ToolName.WolframScript)
         new Lazy(new DelayedShutdownToolProvider(WolframScriptToolProvider(ToolConfiguration.config(WOLFRAM))))
-      else throw new IllegalArgumentException(
-        "Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'"
-      )
+      else throw new IllegalArgumentException("Unknown Wolfram backend")
 
     registerAxTactics match {
       case Some("mathematica") => withMathematica(initLibrary = true, testcode = { _ => })

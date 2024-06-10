@@ -5,12 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
 
-import akka.http.scaladsl.server.Route
-import spray.json._
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.hydra.RestApi.{completeRequest, database}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.hydra.requests.configuration._
+import edu.cmu.cs.ls.keymaerax.tools.ToolName
+import spray.json._
 
 import scala.language.postfixOps
 
@@ -68,11 +69,12 @@ object Configuration {
   val tool: Route = path("config" / "tool") {
     pathEnd {
       get {
-        edu.cmu.cs.ls.keymaerax.Configuration(edu.cmu.cs.ls.keymaerax.Configuration.Keys.QE_TOOL) match {
-          case "mathematica" => completeRequest(new MathematicaConfigStatusRequest(database), EmptyToken())
-          case "wolframengine" => completeRequest(new WolframEngineConfigStatusRequest(database), EmptyToken())
-          case "wolframscript" => completeRequest(new WolframScriptConfigStatusRequest, EmptyToken())
-          case "z3" => completeRequest(new Z3ConfigStatusRequest, EmptyToken())
+        val toolName = edu.cmu.cs.ls.keymaerax.Configuration(edu.cmu.cs.ls.keymaerax.Configuration.Keys.QE_TOOL)
+        ToolName.parse(toolName) match {
+          case ToolName.Mathematica => completeRequest(new MathematicaConfigStatusRequest(database), EmptyToken())
+          case ToolName.WolframEngine => completeRequest(new WolframEngineConfigStatusRequest(database), EmptyToken())
+          case ToolName.WolframScript => completeRequest(new WolframScriptConfigStatusRequest, EmptyToken())
+          case ToolName.Z3 => completeRequest(new Z3ConfigStatusRequest, EmptyToken())
         }
       } ~ post {
         entity(as[String]) { tool =>
@@ -83,7 +85,7 @@ object Configuration {
     }
   }
 
-  private def completeWolframMathematicaRequest(params: String, toolName: String) = {
+  private def completeWolframMathematicaRequest(params: String, toolName: ToolName.Value) = {
     val p = JsonParser(params).asJsObject.fields.map(param => param._1 -> param._2.asInstanceOf[JsString].value)
     assert(p.contains("linkName"), "linkName not in: " + p.keys.toString())
     assert(
@@ -101,18 +103,18 @@ object Configuration {
   val mathematicaConfig: Route = path("config" / "mathematica") {
     pathEnd {
       get {
-        val request = new GetMathematicaConfigurationRequest(database, "mathematica")
+        val request = new GetMathematicaConfigurationRequest(database, ToolName.Mathematica)
         completeRequest(request, EmptyToken())
-      } ~ post { entity(as[String]) { completeWolframMathematicaRequest(_, "mathematica") } }
+      } ~ post { entity(as[String]) { completeWolframMathematicaRequest(_, ToolName.Mathematica) } }
     }
   }
 
   val wolframEngineConfig: Route = path("config" / "wolframengine") {
     pathEnd {
       get {
-        val request = new GetMathematicaConfigurationRequest(database, "wolframengine")
+        val request = new GetMathematicaConfigurationRequest(database, ToolName.WolframEngine)
         completeRequest(request, EmptyToken())
-      } ~ post { entity(as[String]) { completeWolframMathematicaRequest(_, "wolframengine") } }
+      } ~ post { entity(as[String]) { completeWolframMathematicaRequest(_, ToolName.WolframEngine) } }
     }
   }
 

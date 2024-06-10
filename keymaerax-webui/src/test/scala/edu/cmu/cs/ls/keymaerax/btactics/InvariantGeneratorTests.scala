@@ -17,9 +17,9 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.tools.ext.{MathematicaInvGenTool, PlotConverter}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.{ToolName, ToolOperationManagement}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{Seconds, Span}
@@ -151,7 +151,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     }
 
     val requestedInvs: ListBuffer[ODESystem] = ListBuffer.empty
-    ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")) {
+    ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config(ToolName.Mathematica)) {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen(requestedInvs))
     })
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")

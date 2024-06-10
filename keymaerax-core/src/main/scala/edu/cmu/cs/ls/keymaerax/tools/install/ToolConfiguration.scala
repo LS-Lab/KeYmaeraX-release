@@ -6,12 +6,12 @@
 package edu.cmu.cs.ls.keymaerax.tools.install
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.tools.ToolPathFinder
+import edu.cmu.cs.ls.keymaerax.tools.{ToolName, ToolPathFinder}
 
 import scala.util.Try
 
 case class ToolConfiguration(
-    tool: Option[String] = None,
+    tool: Option[ToolName.Value] = None,
     mathKernel: Option[String] = None,
     jlinkLibDir: Option[String] = None,
     tcpip: Option[String] = None,
@@ -100,12 +100,11 @@ object ToolConfiguration {
   def z3Config(preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration = preferred
 
   /** Returns the tool configuration for the name `tool`. */
-  def config(tool: String, preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration =
-    tool.toLowerCase() match {
-      case "mathematica" => mathematicaConfig(preferred).copy(tool = Some("mathematica"))
-      case "wolframengine" => wolframEngineConfig(preferred).copy(tool = Some("wolframengine"))
-      case "wolframscript" => wolframScriptConfig(preferred).copy(tool = Some("wolframscript"))
-      case "z3" => z3Config(preferred).copy(tool = Some("z3"))
-      case t => throw new Exception("Unknown tool '" + t + "'")
-    }
+  def config(tool: ToolName.Value, preferred: ToolConfiguration = ToolConfiguration()): ToolConfiguration =
+    (tool match {
+      case ToolName.Mathematica => mathematicaConfig(preferred)
+      case ToolName.WolframEngine => wolframEngineConfig(preferred)
+      case ToolName.WolframScript => wolframScriptConfig(preferred)
+      case ToolName.Z3 => z3Config(preferred)
+    }).copy(tool = Some(tool))
 }

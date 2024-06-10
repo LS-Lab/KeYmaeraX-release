@@ -250,7 +250,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   it should "shutdown and init repeatably" in withMathematica { tool =>
     tool.shutdown()
     for (_ <- 0 to 10) {
-      tool.init(ToolConfiguration.config("mathematica"))
+      tool.init(ToolConfiguration.config(ToolName.Mathematica))
       tool shouldBe Symbol("initialized")
       tool.qe("1>0".asFormula).fact shouldBe Symbol("proved")
       tool.shutdown()

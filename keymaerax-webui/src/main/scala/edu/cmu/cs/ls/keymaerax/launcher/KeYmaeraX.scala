@@ -25,7 +25,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolName}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import org.apache.commons.lang3.StringUtils
 
@@ -94,7 +94,7 @@ object KeYmaeraX {
   def runCommand(options: Options): Unit = options.command match {
     case Some(cmd: Command.Codegen) =>
       // Quantitative ModelPlex uses Mathematica to simplify formulas
-      val tool = if (cmd.quantitative) Tools.MATHEMATICA else "z3"
+      val tool = if (cmd.quantitative) ToolName.Mathematica else ToolName.Z3
       val toolConfig = toolConfigFromFile(tool)
       val vars = cmd.vars.map(makeVariables(_).toSet)
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
@@ -107,7 +107,7 @@ object KeYmaeraX {
         args = options.args,
       )
     case Some(cmd: Command.Modelplex) =>
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
       modelplex(
         in = cmd.in,
         out = cmd.out,
@@ -120,13 +120,13 @@ object KeYmaeraX {
         args = options.args,
       )
     case Some(cmd: Command.Repl) =>
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
       repl(model = cmd.model, tactic = cmd.tactic, scaladefs = cmd.scaladefs)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
     case Some(cmd: Command.Convert)
         if cmd.conversion.contains("verboseTactics") || cmd.conversion.contains("verbatimTactics") =>
       if (cmd.out.isEmpty) options.printUsageAndExitWithError()
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile("z3")))
+      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
       convertTactics(in = cmd.in, out = cmd.out.get, conversion = cmd.conversion)
     case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
   }

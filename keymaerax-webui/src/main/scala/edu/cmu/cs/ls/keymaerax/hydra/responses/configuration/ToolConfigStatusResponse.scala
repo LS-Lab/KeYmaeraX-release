@@ -6,8 +6,15 @@
 package edu.cmu.cs.ls.keymaerax.hydra.responses.configuration
 
 import edu.cmu.cs.ls.keymaerax.hydra.Response
-import spray.json.{JsFalse, JsObject, JsString, JsTrue, JsValue}
+import edu.cmu.cs.ls.keymaerax.tools.ToolName
+import spray.json.{JsBoolean, JsObject, JsString, JsValue}
 
-class ToolConfigStatusResponse(tool: String, configured: Boolean) extends Response {
-  def getJson: JsValue = JsObject("tool" -> JsString(tool), "configured" -> { if (configured) JsTrue else JsFalse })
+import java.util.Locale
+
+class ToolConfigStatusResponse(tool: ToolName.Value, configured: Boolean) extends Response {
+  def getJson: JsValue = JsObject(
+    // The webui expects this to be lowercase
+    "tool" -> JsString(tool.toString.toLowerCase(Locale.ROOT)),
+    "configured" -> JsBoolean(configured),
+  )
 }

@@ -9,10 +9,11 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.MathematicaConfigurationResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, LocalhostOnlyRequest, ReadRequest, Response}
 import edu.cmu.cs.ls.keymaerax.info.{Os, OsType}
+import edu.cmu.cs.ls.keymaerax.tools.ToolName
 
 import java.io.File
 
-class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String)
+class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: ToolName.Value)
     extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponse(): Response = {
     val jlinkLibFile = Os.Type match {
@@ -22,7 +23,7 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String)
       case OsType.Unknown => "Unknown"
     }
     toolName match {
-      case "mathematica"
+      case ToolName.Mathematica
           if Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
             Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) =>
         new MathematicaConfigurationResponse(
@@ -30,7 +31,7 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String)
           Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
           Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).getOrElse(""),
         )
-      case "wolframengine"
+      case ToolName.WolframEngine
           if Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
             Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) =>
         new MathematicaConfigurationResponse(

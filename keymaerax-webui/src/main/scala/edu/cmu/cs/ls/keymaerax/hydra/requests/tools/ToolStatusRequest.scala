@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ToolConfigErrorResponse
 import edu.cmu.cs.ls.keymaerax.hydra.responses.tools.ToolStatusResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ReadRequest, Request, Response}
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import edu.cmu.cs.ls.keymaerax.tools.{ToolName, ToolOperationManagement}
 
 class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with ReadRequest {
   override def resultingResponse(): Response = {
@@ -18,7 +18,7 @@ class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with 
       case Some(t: ToolOperationManagement) => new ToolStatusResponse(toolId, t.getAvailableWorkers)
       case Some(_) => new ToolStatusResponse(toolId, -1)
       case None => new ToolConfigErrorResponse(
-          toolId,
+          ToolName.parse(toolId),
           "Tool could not be started; please check KeYmaera X -> Preferences. Temporarily using " +
             ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.",
         )
