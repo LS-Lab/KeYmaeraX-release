@@ -16,6 +16,7 @@ import spray.json._
 import java.io._
 import javax.swing.JOptionPane
 import scala.io.{Codec, Source}
+import scala.sys.ShutdownHookThread
 
 /**
  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]], the
@@ -96,7 +97,8 @@ object Main {
 
   def startServer(options: Options): Unit = {
     LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
-    KeYmaeraXLock.obtainLockOrExit()
+    GlobalLaunchChecks.acquireGlobalLockFileOrExit()
+    GlobalLaunchChecks.ensureWebuiPortCanBeBoundOrExit()
 
     launcherDebug(Options.LaunchFlag + " -- starting KeYmaera X Web UI server HyDRA.")
     edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.run(options)
@@ -392,14 +394,7 @@ object Main {
     }
     val proc = pb.start()
 
-    Runtime
-      .getRuntime
-      .addShutdownHook(new Thread() {
-        override def run(): Unit = {
-          if (!IS_RELAUNCH_PROCESS) KeYmaeraXLock.deleteLock()
-          proc.destroy()
-        }
-      })
+    ShutdownHookThread { proc.destroy() }
 
     if (pollOnStd) {
       val errReaderThread = new Thread() {
@@ -527,135 +522,5 @@ object Main {
   def launcherDebug(s: String): Unit = if (Configuration.getString(Configuration.Keys.DEBUG).contains("true")) {
     val prefix = "[launcherDebug] "
     println(prefix + s)
-  }
-
-  /**
-   * A robust locking mechanism for ensures that there's only ever one instance of KeYmaera X running. Also displays GUI
-   * messages when the lock cannot be obtained so that confused users don't have to wonder why KeYmaera X won't start.
-   *
-   * @todo
-   *   decide if java.nio lock files are a better solution. Definitely keep port-based stale checking, though
-   * @author
-   *   Nathan Fulton
-   */
-  private object KeYmaeraXLock {
-
-    /** Set to true when a lock is obtained. Determines if the lock file is deleted on shutdown. */
-    private var lockObtained = false
-
-    /**
-     * Obtains a lock if the lock file does not exist and the desired port is not bound. Otherwise, shows a relevant
-     * error message on GUI and STDOUT then exits with error code.
-     */
-    def obtainLockOrExit(): Unit = {
-      require(!lockObtained, "ERROR: obtainLockOrExit was run more than once!")
-
-      val bound = portIsBound()
-
-      if (lockFile.exists() && bound) {
-        val msg =
-          "ERROR: There is already an instance of KeYmaera X running on this machine. Open your browser to http://127.0.0.1:8090"
-        launcherLog(msg)
-        JOptionPane.showMessageDialog(null, msg)
-        SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
-        lockObtained = false
-        sys.exit(-1)
-      } else if (lockFile.exists() && !bound) {
-        if (!lockIsNewborn) {
-          // lock file exists, but there's no new instance of KeYmaera X and the port isn't bound. Proceed, but show message to the user just in case.
-          val msg =
-            "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all\ninstances of KeYmaera X from your system's task manager."
-          forceDeleteLock()
-          launcherLog(msg)
-          if (!java.awt.GraphicsEnvironment.isHeadless) JOptionPane.showMessageDialog(null, msg)
-        } else {
-          // lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
-          launcherLog(
-            s"ERROR: Another instance of KeYmaera X just obtained a lock.\nIf the problem persists, kill all running versions of KeYmaera X and delete the following file if it exists:\n  ${lockFile.getAbsolutePath}"
-          )
-          lockObtained = false
-          SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
-          sys.exit(-1)
-        }
-      } else if (!lockFile.exists() && bound) {
-        val msg =
-          s"WARNING: The KeYmaera X lock file does not exist.\nHowever, some service is running on the KeYmaera X port (${keymaeraxPort()}).\nPerhaps you're running another service on this port?\nExiting."
-        launcherLog(msg)
-        JOptionPane.showMessageDialog(null, msg)
-        lockObtained = false
-        SystemWebBrowser(s"http://127.0.0.1:${keymaeraxPort()}/")
-        sys.exit(-1)
-      }
-
-      // This file is later destroyed in the shutdown hook.
-      launcherDebug("Obtaining lock.")
-      obtainLock()
-    } ensures (_ => lockObtained && lockFile.exists())
-
-    /** Obtains a KeYmaera X startup lock by creating a lock file that is automatically deleted on exit. */
-    def obtainLock(): Unit = {
-      require(!lockFile.exists(), "Cannot obtain a lock if the lock file exists.")
-      lockObtained = true
-      assert(
-        lockFile.createNewFile(),
-        "could not obtain lock file even though we just checked that the file does not exist.",
-      )
-      lockFile.deleteOnExit()
-    } ensures (_ => lockObtained && lockFile.exists())
-
-    /** Deletes the lock file regardless of whether this is the process that created the lock file. */
-    private def forceDeleteLock(): Boolean = { lockFile.delete() } ensures (!lockFile.exists())
-
-    /**
-     * Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
-     * @note
-     *   not strictly necessary as lont as File.deleteOnExit works properly.
-     */
-    def deleteLock(): Unit = {
-      if (lockObtained) lockFile.delete()
-      else launcherLog("refusing to delete lock because this process's most recent attempt to obtain a lock failed.")
-    }
-
-    /** Returns true iff the lock file is less than 30s old. */
-    private def lockIsNewborn: Boolean = {
-      val current = System.currentTimeMillis()
-      val lastModified = lockFile.lastModified()
-      val threshold = 30000
-
-      current - lastModified < threshold
-    }
-
-    /**
-     * Location of the KeYmaera X lock file. Choose a non-. file so that students can find it easily if they need to
-     * delete it.
-     */
-    private def lockFile: java.io.File =
-      new java.io.File(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lockfile")
-
-    /** Returns the assigned port from the database, or the default port if the database or config key DNE. */
-    private def keymaeraxPort(): String = Configuration(Configuration.Keys.PORT)
-
-    /**
-     * Returns true iff the port is bound.
-     * @note
-     *   The port is a canary for determining whether there's an instance of KeYmaera X currently running. Running two
-     *   instances can result in weird behavior, even during initialization. Merely checking and failing when we try to
-     *   bind to the port for real is insufficient, because we need to run some initialization code before attempting to
-     *   bind. That's why we perform this check instead of just catching exceptions when the actual binding fails.
-     */
-    private def portIsBound(): Boolean = {
-      // Check if this port is bound by trying to bind to it and catching the SocketException.
-      try {
-        new java.net.ServerSocket(Integer.parseInt(keymaeraxPort())).close()
-        false
-      } catch {
-        case e: java.net.BindException =>
-          e.printStackTrace()
-          true
-        case t: Throwable =>
-          t.printStackTrace()
-          true // Probably other things could happen here as well, but we'll catch all errors and assume something's fishy.
-      }
-    }
   }
 }
