@@ -123,11 +123,10 @@ object KeYmaeraX {
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
       repl(model = cmd.model, tactic = cmd.tactic, scaladefs = cmd.scaladefs)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
-    case Some(cmd: Command.Convert)
-        if cmd.conversion.contains("verboseTactics") || cmd.conversion.contains("verbatimTactics") =>
+    case Some(cmd: Command.ConvertTactics) =>
       if (cmd.out.isEmpty) options.printUsageAndExitWithError()
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
-      convertTactics(in = cmd.in, out = cmd.out.get, conversion = cmd.conversion)
+      convertTactics(in = cmd.in, out = cmd.out, conversion = cmd.conversion)
     case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
   }
 

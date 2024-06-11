@@ -46,6 +46,7 @@ object Command {
       interval: Boolean = true,
       vars: Option[Seq[String]] = None,
   ) extends Command
+  case class ConvertTactics(conversion: String = null, in: String = null, out: String = null) extends Command
   case class Modelplex(
       in: String = null,
       out: Option[String] = None,
@@ -342,13 +343,13 @@ object Options {
       note(""),
       cmd("convert")
         .action((_, o) => o.copy(command = Some(Command.Convert())))
-        .text(wrapWide("Model and tactic conversions."))
+        .text(wrapWide("Model conversions."))
         .children(
           arg[String]("<conversion>")
             .action((x, o) => o.updateCommand[Command.Convert](_.copy(conversion = x)))
             .text(wrap(
               """Conversion to perform.
-                |Possible values: stripHints, kyx2mat, kyx2smt, smt2kyx, smt2mat, verboseTactics, verbatimTactics
+                |Possible values: stripHints, kyx2mat, kyx2smt, smt2kyx, smt2mat
                 |""".stripMargin
             )),
           arg[String]("<in>")
@@ -406,6 +407,25 @@ object Options {
             .action((x, o) => o.updateCommand[Command.Codegen](_.copy(vars = Some(x))))
             .valueName("<vars>")
             .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
+        ),
+      note(""),
+      cmd("convert-tactics")
+        .action((_, o) => o.copy(command = Some(Command.ConvertTactics())))
+        .text(wrapWide("Tactic conversions."))
+        .children(
+          arg[String]("<conversion>")
+            .action((x, o) => o.updateCommand[Command.ConvertTactics](_.copy(conversion = x)))
+            .text(wrap(
+              """Conversion to perform.
+                |Possible values: verboseTactics, verbatimTactics
+                |""".stripMargin
+            )),
+          arg[String]("<in>")
+            .action((x, o) => o.updateCommand[Command.ConvertTactics](_.copy(in = x)))
+            .text(wrap("Input file.")),
+          arg[String]("<out>")
+            .action((x, o) => o.updateCommand[Command.ConvertTactics](_.copy(out = x)))
+            .text(wrap("Output file.")),
         ),
       note(""),
       cmd("modelplex")
