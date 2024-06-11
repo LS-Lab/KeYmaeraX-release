@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.info.{FullNameAndVersion, License}
+import edu.cmu.cs.ls.keymaerax.info.{FullCopyright, FullNameAndVersion, License, ShortCopyright, ThirdPartyLicenses}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import scopt.OParser
 
@@ -61,7 +61,9 @@ case class Options(
     name: String,
     args: Seq[String],
     help: Boolean = false,
+    copyright: Boolean = false,
     license: Boolean = false,
+    thirdPartyLicenses: Boolean = false,
     launch: Boolean = false,
     command: Option[Command] = None,
     // Options specified using flags
@@ -98,6 +100,9 @@ case class Options(
 }
 
 object Options {
+  private val CopyrightFlagName = "copyright"
+  private val LicenseFlagName = "license"
+  private val ThirdPartyLicensesFlagName = "third-party-licenses"
   private val LaunchFlagName = "launch"
   val LaunchFlag = s"--$LaunchFlagName"
 
@@ -114,11 +119,16 @@ object Options {
 
     OParser.sequence(
       programName(name),
-      head(FullNameAndVersion),
+      head(
+        s"""$FullNameAndVersion
+           |$ShortCopyright
+           |See --$CopyrightFlagName, --$LicenseFlagName, and --$ThirdPartyLicensesFlagName for more details.
+           |""".stripMargin
+      ),
       opt[Unit]('h', "help").action((_, o) => o.copy(help = true)).text(wrap("Show this usage information.")),
-      opt[Unit]("license")
-        .action((_, o) => o.copy(license = true))
-        .text(wrap("Show license agreement for using this software.")),
+      opt[Unit](CopyrightFlagName).hidden().action((_, o) => o.copy(copyright = true)),
+      opt[Unit](LicenseFlagName).hidden().action((_, o) => o.copy(license = true)),
+      opt[Unit](ThirdPartyLicensesFlagName).hidden().action((_, o) => o.copy(thirdPartyLicenses = true)),
       opt[Unit](LaunchFlagName)
         .action((_, o) => o.copy(launch = true))
         .text(wrap("Use present JVM instead of launching one with a bigger stack.")),
@@ -393,12 +403,22 @@ object Options {
 
     if (options.help) {
       println(OParser.usage(parser))
-      sys.exit(0)
+      sys.exit()
+    }
+
+    if (options.copyright) {
+      println(FullCopyright)
+      sys.exit()
     }
 
     if (options.license) {
       println(License)
-      sys.exit(0)
+      sys.exit()
+    }
+
+    if (options.thirdPartyLicenses) {
+      println(ThirdPartyLicenses)
+      sys.exit()
     }
 
     options
