@@ -10,8 +10,6 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.LemmasResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ReadRequest, Response, UserProofRequest}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
-import scala.collection.immutable.{List, Nil}
-
 class GetLemmasRequest(
     db: DBAbstraction,
     userId: String,
@@ -20,7 +18,7 @@ class GetLemmasRequest(
     pos: Position,
     partialLemmaName: String,
 ) extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val infos = ProvableInfo
       .allInfo
       .filter({ case (name, i) =>
@@ -29,6 +27,6 @@ class GetLemmasRequest(
       })
       .toList
       .map(_._2)
-    LemmasResponse(infos) :: Nil
+    LemmasResponse(infos)
   }
 }

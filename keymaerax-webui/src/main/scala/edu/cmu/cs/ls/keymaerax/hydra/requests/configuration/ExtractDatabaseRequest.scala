@@ -6,6 +6,8 @@
 package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
+import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ExtractDatabaseResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{
   ConfigurationPOJO,
   ErrorResponse,
@@ -14,18 +16,15 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   RegisteredOnlyRequest,
   Response,
 }
-import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ExtractDatabaseResponse
 
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import scala.collection.immutable.{List, Map, Nil}
+import scala.collection.immutable.Map
 
 class ExtractDatabaseRequest() extends LocalhostOnlyRequest with RegisteredOnlyRequest {
-  override def resultingResponses(): List[Response] = {
-    if (HyDRAServerConfig.isHosted)
-      new ErrorResponse("Cannot extract the database on a hosted instance of KeYmaera X") :: Nil
+  override def resultingResponse(): Response = {
+    if (HyDRAServerConfig.isHosted) new ErrorResponse("Cannot extract the database on a hosted instance of KeYmaera X")
     else {
       val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
       productionDatabase.syncDatabase()
@@ -46,7 +45,7 @@ class ExtractDatabaseRequest() extends LocalhostOnlyRequest with RegisteredOnlyR
       extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
       extractedDatabase.syncDatabase()
 
-      new ExtractDatabaseResponse(extractionPath) :: Nil
+      new ExtractDatabaseResponse(extractionPath)
     }
   }
 }

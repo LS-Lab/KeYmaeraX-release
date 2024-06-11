@@ -20,10 +20,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
   UserProofRequest,
 }
-
-import scala.collection.immutable.{::, List, Nil}
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
+
+import scala.collection.immutable.{::, Nil}
 
 class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
@@ -34,7 +34,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
     pn.children.size == pn.localProvable.subgoals.size &&
       pn.children.zip(pn.localProvable.subgoals).forall({ case (c, sg) => c.localProvable.conclusion == sg })
 
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     val marginLeft :: marginRight :: Nil = db
       .getConfiguration(userId)
@@ -72,7 +72,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
       }
       // @note may have been cancelled in the meantime
       executor.tryRemove(taskId)
-      response :: Nil
+      response
     }
   }
 }

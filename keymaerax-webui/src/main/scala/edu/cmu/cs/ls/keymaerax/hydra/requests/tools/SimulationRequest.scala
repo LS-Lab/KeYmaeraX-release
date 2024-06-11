@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 
-import scala.collection.immutable.{List, Nil}
+import scala.collection.immutable.List
 
 class SimulationRequest(
     db: DBAbstraction,
@@ -40,7 +40,7 @@ class SimulationRequest(
     n: Int,
     stepDuration: Number,
 ) extends UserProofRequest(db, userId, proofId) with RegisteredOnlyRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     def replaceFuncs(fml: Formula) = ExpressionTraversal.traverse(
       new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
@@ -77,8 +77,8 @@ class SimulationRequest(
           if (ratio > 1) s.grouped(ratio).map(_.head).toList else s
         })
 
-        new SimulationResponse(visualize, steps / samples, stepDuration) :: Nil
-      case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
+        new SimulationResponse(visualize, steps / samples, stepDuration)
+      case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica")
     }
   }
 }

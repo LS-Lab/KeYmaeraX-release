@@ -14,10 +14,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
   UserProofRequest,
 }
-
-import scala.collection.immutable.{::, List, Nil}
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
+
+import scala.collection.immutable.{::, Nil}
 
 /**
  * Gets the children of a proof node (browse a proof from root to leaves).
@@ -34,10 +34,10 @@ import spray.json.DefaultJsonProtocol._
 class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
 
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
-      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case None => new ErrorResponse("Unknown node " + nodeId)
       case Some(node) =>
         val marginLeft :: marginRight :: Nil = db
           .getConfiguration(userId)
@@ -46,7 +46,7 @@ class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: St
           .parseJson
           .convertTo[Array[Int]]
           .toList
-        NodeChildrenResponse(proofId, node, marginLeft, marginRight) :: Nil
+        NodeChildrenResponse(proofId, node, marginLeft, marginRight)
     }
   }
 }

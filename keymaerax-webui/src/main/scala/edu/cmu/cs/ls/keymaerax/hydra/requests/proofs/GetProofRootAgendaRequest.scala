@@ -15,10 +15,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
   UserProofRequest,
 }
+import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 import scala.collection.immutable.{::, List, Nil}
-import spray.json._
-import spray.json.DefaultJsonProtocol._
 
 /**
  * Gets the proof root as agenda item (browse a proof from root to leaves).
@@ -32,7 +32,7 @@ import spray.json.DefaultJsonProtocol._
  */
 class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree: ProofTree = DbProofTree(db, proofId)
     val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, AgendaItem.nameOf(tree.root), proofId) :: Nil
     val marginLeft :: marginRight :: Nil = db
@@ -51,6 +51,6 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
       closed = false,
       marginLeft,
       marginRight,
-    ) :: Nil
+    )
   }
 }

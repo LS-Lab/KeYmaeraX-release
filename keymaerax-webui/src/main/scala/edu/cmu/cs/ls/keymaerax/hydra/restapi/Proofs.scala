@@ -5,15 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
 
-import akka.http.scaladsl.server.Route
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
-import spray.json._
-import edu.cmu.cs.ls.keymaerax.core.Formula
 import akka.http.scaladsl.server.Directives._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position
-
+import akka.http.scaladsl.server.Route
+import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.hydra.RestApi.{
   completeRequest,
   completeResponse,
@@ -23,6 +19,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.RestApi.{
 }
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.hydra.requests.proofs._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import spray.json._
 
 import scala.language.postfixOps
 
@@ -1008,14 +1007,12 @@ object Proofs {
           {
             val entries = ArchiveParser.parse(archiveFileContents)
 
-            if (entries.length != 1) complete(completeResponse(
-              new ErrorResponse(s"Expected exactly one model in the archive but found ${entries.length}") :: Nil
-            ))
-            else if (entries.head.tactics.length != 1) complete(completeResponse(
-              new ErrorResponse(
-                s"Expected exactly one proof in the archive but found ${entries.head.tactics.length} proofs. Make sure you export from the Proofs page, not the Models page."
-              ) :: Nil
-            ))
+            if (entries.length != 1) complete(completeResponse(new ErrorResponse(
+              s"Expected exactly one model in the archive but found ${entries.length}"
+            )))
+            else if (entries.head.tactics.length != 1) complete(completeResponse(new ErrorResponse(
+              s"Expected exactly one proof in the archive but found ${entries.head.tactics.length} proofs. Make sure you export from the Proofs page, not the Models page."
+            )))
             else {
               val entry = entries.head
               val model = entry.model.asInstanceOf[Formula]

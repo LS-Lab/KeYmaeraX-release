@@ -10,14 +10,8 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.KeymaeraXVersionRes
 import edu.cmu.cs.ls.keymaerax.hydra.{ReadRequest, Request, Response}
 import edu.cmu.cs.ls.keymaerax.info.Version
 
-import scala.collection.immutable.{List, Nil}
-
 class KeymaeraXVersionRequest extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = {
-    new KeymaeraXVersionResponse(
-      Version.toString,
-      UpdateChecker.upToDate,
-      UpdateChecker.latestVersion.map(_.toString),
-    ) :: Nil
+  override def resultingResponse(): Response = {
+    new KeymaeraXVersionResponse(Version.toString, UpdateChecker.upToDate, UpdateChecker.latestVersion.map(_.toString))
   }
 }

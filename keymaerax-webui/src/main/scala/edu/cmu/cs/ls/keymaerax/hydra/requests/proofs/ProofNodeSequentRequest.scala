@@ -7,14 +7,14 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 
 import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.ProofNodeSequentResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, ReadRequest, Response, UserProofRequest}
-
-import scala.collection.immutable.{::, List, Nil}
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
+
+import scala.collection.immutable.{::, Nil}
 
 class ProofNodeSequentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
@@ -26,7 +26,7 @@ class ProofNodeSequentRequest(db: DBAbstraction, userId: String, proofId: String
           .parseJson
           .convertTo[Array[Int]]
           .toList
-        ProofNodeSequentResponse(proofId, node, marginLeft, marginRight) :: Nil
+        ProofNodeSequentResponse(proofId, node, marginLeft, marginRight)
     }
   }
 }

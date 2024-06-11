@@ -24,7 +24,7 @@ import scala.collection.immutable.{List, Nil}
 
 class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     val proofName = tree.info.name
     val tactic =
@@ -79,6 +79,6 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
     })
     val modelContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic) :: Nil, withComments = true)
     val archiveContent = printedLemmas.mkString("\n\n") ++ modelContent
-    new ExtractProblemSolutionResponse(archiveContent) :: Nil
+    new ExtractProblemSolutionResponse(archiveContent)
   }
 }

@@ -16,21 +16,19 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   WriteRequest,
 }
 
-import scala.collection.immutable.{List, Nil}
-
 /** Prunes a node and everything below */
 class PruneBelowRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with WriteRequest {
-  override protected def doResultingResponses(): List[Response] = {
-    if (db.getProofInfo(proofId).closed) new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
+  override protected def doResultingResponse(): Response = {
+    if (db.getProofInfo(proofId).closed) new ErrorResponse("Pruning not allowed on closed proofs")
     else {
       val tree = DbProofTree(db, proofId)
       tree.locate(nodeId) match {
-        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+        case None => new ErrorResponse("Unknown node " + nodeId)
         case Some(node) =>
           node.pruneBelow()
           val item = AgendaItem(node.id.toString, AgendaItem.nameOf(node), proofId)
-          new PruneBelowResponse(item) :: Nil
+          new PruneBelowResponse(item)
       }
     }
   }

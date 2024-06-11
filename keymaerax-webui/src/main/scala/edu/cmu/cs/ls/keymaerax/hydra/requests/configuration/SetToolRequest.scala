@@ -19,13 +19,11 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ToolConfigStatusRes
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ErrorResponse, LocalhostOnlyRequest, Response, WriteRequest}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
-import scala.collection.immutable.{List, Nil}
-
 class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest with WriteRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     // @todo more/different tools
     if (tool != "mathematica" && tool != "z3" && tool != "wolframengine" && tool != "wolframscript")
-      new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3' or 'wolframengine'") :: Nil
+      new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3' or 'wolframengine'")
     else {
       assert(
         tool == "mathematica" || tool == "z3" || tool == "wolframengine" || tool == "wolframscript",
@@ -69,22 +67,22 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
             ToolProvider.setProvider(p)
           case _ => // nothing to do
         }
-        new ToolConfigStatusResponse(tool, provider.isDefined) :: Nil
+        new ToolConfigStatusResponse(tool, provider.isDefined)
       } catch {
         case ex: Throwable if tool == "mathematica" =>
           new ErrorResponse(
             "Error initializing " + tool +
               ". Please double-check the configuration paths and that the license is valid (e.g., start Mathematica and type $LicenseExpirationDate, check that license server is reachable, if used).",
             ex,
-          ) :: Nil
+          )
         case ex: Throwable if tool == "wolframengine" =>
           new ErrorResponse(
             "Error initializing " + tool +
               ". Please double-check the configuration paths, that the license is valid and the computer is online for license checking. If Wolfram Engine remains unavailable and/or keeps crashing KeYmaera X, please run Wolfram Engine to update the license information (check by running $LicenseExpirationDate in Wolfram Engine) prior to starting KeYmaera X.",
             ex,
-          ) :: Nil
+          )
         case ex: Throwable =>
-          new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths.", ex) :: Nil
+          new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths.", ex)
       }
     }
   }

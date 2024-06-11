@@ -28,9 +28,9 @@ import edu.cmu.cs.ls.keymaerax.core.{
   Unit,
   Variable,
 }
+import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.hydra.responses.models.ParseErrorResponse
 import edu.cmu.cs.ls.keymaerax.hydra.responses.tools.CounterExampleResponse
-import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.{ExpressionAugmentor, FormulaAugmentor, SequentAugmentor}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
@@ -45,7 +45,7 @@ import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 import scala.annotation.tailrec
-import scala.collection.immutable.{List, Map, Nil}
+import scala.collection.immutable.{List, Map}
 import scala.util.Try
 
 class CounterExampleRequest(
@@ -91,7 +91,7 @@ class CounterExampleRequest(
     }
   }
 
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val assumptionsJson = assumptions.parseJson.asJsObject.fields.get("additional")
     val additionalAssumptions: Option[Formula] =
       try { assumptionsJson.map(_.convertTo[String].asFormula) }
@@ -103,20 +103,20 @@ class CounterExampleRequest(
             ex.getDetails,
             ex.loc,
             ex,
-          ) :: Nil
+          )
       }
 
     val useFmlIndices = fmlIndices.parseJson.convertTo[List[String]].map(_.toInt)
 
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
-      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case None => new ErrorResponse("Unknown node " + nodeId)
       case Some(node) =>
         // @note not a tactic because we don't want to change the proof tree just by looking for counterexamples
         def nonfoError(sequent: Sequent) = {
           val nonFOAnte = sequent.ante.filterNot(_.isFOL)
           val nonFOSucc = sequent.succ.filterNot(_.isFOL)
-          new CounterExampleResponse("cex.nonfo", additionalAssumptions, (nonFOSucc ++ nonFOAnte).head) :: Nil
+          new CounterExampleResponse("cex.nonfo", additionalAssumptions, (nonFOSucc ++ nonFOAnte).head)
         }
 
         def filterSequent(s: Sequent): Sequent = s.copy(
@@ -125,7 +125,7 @@ class CounterExampleRequest(
         )
 
         @tailrec
-        def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): List[Response] = {
+        def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): Response = {
           val nodeGoal = node.goal.get
           val sequent = filterSequent(nodeGoal)
           if (sequent.isFOL) {
@@ -133,7 +133,7 @@ class CounterExampleRequest(
               // @note counterexample on false (e.g., after QE on invalid formula)
               node.parent match {
                 case Some(parent) => getCex(parent, cexTool)
-                case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
+                case None => new CounterExampleResponse("cex.none", additionalAssumptions)
               }
             } else {
               val skolemized = TactixLibrary.proveBy(
@@ -150,15 +150,15 @@ class CounterExampleRequest(
               try {
                 findCounterExample(withAssumptions, cexTool) match {
                   // @todo return actual sequent, use collapsiblesequentview to display counterexample
-                  case Some(cex) => new CounterExampleResponse("cex.found", additionalAssumptions, fml, cex) :: Nil
-                  case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
+                  case Some(cex) => new CounterExampleResponse("cex.found", additionalAssumptions, fml, cex)
+                  case None => new CounterExampleResponse("cex.none", additionalAssumptions)
                 }
               } catch {
                 case _: MathematicaComputationAbortedException =>
-                  new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
+                  new CounterExampleResponse("cex.timeout", additionalAssumptions)
                 case _: MathematicaComputationTimedOutException =>
-                  new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
-                case ex: ToolException => new ErrorResponse("Error executing counterexample tool", ex) :: Nil
+                  new CounterExampleResponse("cex.timeout", additionalAssumptions)
+                case ex: ToolException => new ErrorResponse("Error executing counterexample tool", ex)
               }
             }
           } else {
@@ -172,8 +172,7 @@ class CounterExampleRequest(
                         val search = new BoundedDFS(10)
                         search(snode) match {
                           case None => nonfoError(sequent)
-                          case Some(cex) =>
-                            new CounterExampleResponse("cex.found", additionalAssumptions, fml, cex.map) :: Nil
+                          case Some(cex) => new CounterExampleResponse("cex.found", additionalAssumptions, fml, cex.map)
                         }
                       } catch {
                         // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
@@ -184,9 +183,9 @@ class CounterExampleRequest(
                       // no automated counterexamples for games yet
                       nonfoError(sequent)
                     }
-                  case None => new CounterExampleResponse("cex.wrongshape", additionalAssumptions) :: Nil
+                  case None => new CounterExampleResponse("cex.wrongshape", additionalAssumptions)
                 }
-              case None => new CounterExampleResponse("cex.notool", additionalAssumptions) :: Nil
+              case None => new CounterExampleResponse("cex.notool", additionalAssumptions)
             }
           }
         }
@@ -197,7 +196,7 @@ class CounterExampleRequest(
               case Some(unfiltered) if filterSequent(unfiltered).isFOL =>
                 ToolProvider.cexTool() match {
                   case Some(cexTool) => getCex(node, cexTool)
-                  case None => new CounterExampleResponse("cex.notool", additionalAssumptions) :: Nil
+                  case None => new CounterExampleResponse("cex.notool", additionalAssumptions)
                 }
               case Some(unfiltered) =>
                 val sequent = filterSequent(unfiltered)
@@ -209,24 +208,23 @@ class CounterExampleRequest(
                   }) match {
                   case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
                       case Some(tool) => tool.refuteODE(ode, sequent.ante, post) match {
-                          case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
+                          case None => new CounterExampleResponse("cex.none", additionalAssumptions)
                           case Some(cex) =>
-                            new CounterExampleResponse("cex.found", additionalAssumptions, sequent.toFormula, cex) ::
-                              Nil
+                            new CounterExampleResponse("cex.found", additionalAssumptions, sequent.toFormula, cex)
                         }
-                      case None => new CounterExampleResponse("cex.notool", additionalAssumptions) :: Nil
+                      case None => new CounterExampleResponse("cex.notool", additionalAssumptions)
                     }
                   case None => nonfoError(sequent)
                 }
-              case None => new CounterExampleResponse("cex.none", additionalAssumptions) :: Nil
+              case None => new CounterExampleResponse("cex.none", additionalAssumptions)
             }
           } catch {
             case _: MathematicaComputationAbortedException =>
-              new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
+              new CounterExampleResponse("cex.timeout", additionalAssumptions)
             case _: MathematicaComputationTimedOutException =>
-              new CounterExampleResponse("cex.timeout", additionalAssumptions) :: Nil
+              new CounterExampleResponse("cex.timeout", additionalAssumptions)
           }
-        else new CounterExampleResponse("cex.emptysequent", additionalAssumptions) :: Nil
+        else new CounterExampleResponse("cex.emptysequent", additionalAssumptions)
     }
   }
 }

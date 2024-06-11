@@ -16,7 +16,7 @@ import scala.collection.immutable.{IndexedSeq, List, Nil}
 
 class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     def collectLemmaNames(tactic: String): List[String] = {
       """useLemma(At)?\("(?<lemmaName>[^"]+)"""".r.findAllMatchIn(tactic).map(m => m.group("lemmaName")).toList
     }
@@ -55,6 +55,6 @@ class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String)
     }
 
     val lemmaNames = recCollectRequiredLemmaNames(proofId.toInt, Nil)
-    ProofLemmasResponse(lemmaNames) :: Nil
+    ProofLemmasResponse(lemmaNames)
   }
 }

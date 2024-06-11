@@ -11,11 +11,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.{JSResponse, LocalhostOnlyRequest, Response
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import scala.collection.immutable.List
 import scala.io.Source
 
 class HotkeysRequest extends LocalhostOnlyRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val f = new File(Configuration.KEYMAERAX_HOME_PATH + File.separator + "hotkeys.js")
     if (!f.exists) {
       val s = Source.fromURL("https://raw.githubusercontent.com/samysweb/KeymaeraX-Hotkeys/main/keymaerax-hotkeys.js")
@@ -25,7 +24,7 @@ class HotkeysRequest extends LocalhostOnlyRequest {
       } finally { s.close }
     }
     val hotkeys = Source.fromFile(f)
-    try { List(JSResponse(hotkeys.mkString)) }
+    try { JSResponse(hotkeys.mkString) }
     finally { hotkeys.close }
   }
 }

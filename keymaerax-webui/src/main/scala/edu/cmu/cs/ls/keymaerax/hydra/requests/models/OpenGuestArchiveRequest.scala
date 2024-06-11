@@ -9,10 +9,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DatabasePopulator, HtmlResp
 
 import java.io.{PrintWriter, StringWriter}
 import java.net.URLEncoder
-import scala.collection.immutable.{List, Nil}
 
 class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: String) extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     try {
       val userId = uri
       val sanitizedUserId = URLEncoder.encode(uri, "UTF-8")
@@ -63,7 +62,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
           </body>
         </html>
       }
-      HtmlResponse(html) :: Nil
+      HtmlResponse(html)
     } catch {
       // Return a user-friendly message, since there's no user interface running yet to render a JSON error response
       case ex: Throwable =>
@@ -102,7 +101,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
             </body>
           </html>
         }
-        HtmlResponse(html) :: Nil
+        HtmlResponse(html)
     }
   }
 }

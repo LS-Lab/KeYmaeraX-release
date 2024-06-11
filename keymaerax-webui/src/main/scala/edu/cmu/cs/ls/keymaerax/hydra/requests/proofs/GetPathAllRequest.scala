@@ -14,14 +14,14 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
   UserProofRequest,
 }
+import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 import scala.collection.immutable.{::, List, Nil}
-import spray.json._
-import spray.json.DefaultJsonProtocol._
 
 case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.load()
     var node: Option[ProofTreeNode] = tree.locate(nodeId)
@@ -38,6 +38,6 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
       .parseJson
       .convertTo[Array[Int]]
       .toList
-    new GetPathAllResponse(path.reverse, parentsRemaining, marginLeft, marginRight) :: Nil
+    new GetPathAllResponse(path.reverse, parentsRemaining, marginLeft, marginRight)
   }
 }

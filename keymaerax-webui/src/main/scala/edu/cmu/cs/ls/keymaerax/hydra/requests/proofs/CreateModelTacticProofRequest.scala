@@ -14,11 +14,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   WriteRequest,
 }
 
-import scala.collection.immutable.{List, Nil}
-
 class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: String)
     extends UserRequest(userId, _ => true) with WriteRequest {
-  def resultingResponses(): List[Response] = {
+  def resultingResponse(): Response = {
     val model = db.getModel(modelId)
     model.tactic match {
       case Some(tacticText) =>
@@ -29,8 +27,8 @@ class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: 
           currentDate(),
           Some(tacticText),
         )
-        CreatedIdResponse(proofId.toString) :: Nil
-      case None => new ErrorResponse("Model " + modelId + " does not have a tactic associated") :: Nil
+        CreatedIdResponse(proofId.toString)
+      case None => new ErrorResponse("Model " + modelId + " does not have a tactic associated")
     }
   }
 }

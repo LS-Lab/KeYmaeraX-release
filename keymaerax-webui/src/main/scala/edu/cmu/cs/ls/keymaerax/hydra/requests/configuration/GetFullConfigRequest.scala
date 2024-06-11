@@ -10,12 +10,11 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.FullConfigurationRe
 import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, ReadRequest, Response}
 
 import java.io.{PrintWriter, StringWriter}
-import scala.collection.immutable.{List, Nil}
 
 class GetFullConfigRequest extends LocalhostOnlyRequest with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val w = new StringWriter()
     Configuration.printConfig(new PrintWriter(w))
-    new FullConfigurationResponse(w.toString) :: Nil
+    new FullConfigurationResponse(w.toString)
   }
 }

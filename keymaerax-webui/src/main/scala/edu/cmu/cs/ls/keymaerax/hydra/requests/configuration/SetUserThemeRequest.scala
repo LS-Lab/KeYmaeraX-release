@@ -13,10 +13,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
   UserRequest,
 }
-
 import spray.json._
-
-import scala.collection.immutable.{List, Nil}
 
 /** Sets the UI theme. @note ReadRequest allows changing theme in guest mode for presentation purposes. */
 class SetUserThemeRequest(
@@ -26,7 +23,7 @@ class SetUserThemeRequest(
     themeFontSize: String,
     renderMargins: String,
 ) extends UserRequest(userId, _ => true) with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val config = db.getConfiguration(userId)
     db.updateConfiguration(new ConfigurationPOJO(
       userId,
@@ -40,6 +37,6 @@ class SetUserThemeRequest(
       "themeCss" -> themeCss.parseJson,
       "themeFontSize" -> themeFontSize.parseJson,
       "renderMargins" -> renderMargins.parseJson,
-    ) :: Nil
+    )
   }
 }

@@ -14,14 +14,14 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
   UserProofRequest,
 }
-
-import scala.collection.immutable.{::, List, Nil}
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
+
+import scala.collection.immutable.{::, Nil}
 
 case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     var currNode = tree.locate(nodeId)
     var done = false
@@ -32,7 +32,7 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
       done = currNode.get.children.size > 1
     }
     currNode match {
-      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case None => new ErrorResponse("Unknown node " + nodeId)
       case Some(n) =>
         val marginLeft :: marginRight :: Nil = db
           .getConfiguration(userId)
@@ -41,7 +41,7 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
           .parseJson
           .convertTo[Array[Int]]
           .toList
-        new GetBranchRootResponse(n, marginLeft, marginRight) :: Nil
+        new GetBranchRootResponse(n, marginLeft, marginRight)
     }
 
   }

@@ -24,21 +24,21 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
+import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 import scala.collection.immutable.{::, List, Nil}
-import spray.json._
-import spray.json.DefaultJsonProtocol._
 
 class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, strict: Boolean)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
       case Some(node) if node.maker.isEmpty =>
         new ErrorResponse(
           "Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic"
-        ) :: Nil
+        )
       case Some(node) if node.maker.isDefined =>
         assert(node.maker.isDefined, "Unable to expand node without tactics")
         val (conjecture, parentStep, parentRule) =
@@ -74,9 +74,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
           DerivationInfoRegistry.locate(parentTactic) match {
             case Some(ptInfo) =>
-              ExpandTacticResponse(localProofId, Nil, Nil, ptInfo.codeName, "", Nil, Nil, marginLeft, marginRight) ::
-                Nil
-            case None => new ErrorResponse("No further details available") :: Nil
+              ExpandTacticResponse(localProofId, Nil, Nil, ptInfo.codeName, "", Nil, Nil, marginLeft, marginRight)
+            case None => new ErrorResponse("No further details available")
           }
         } else {
           val innerTree = DbProofTree(db, localProofId.toString).load()
@@ -105,7 +104,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
             agendaItems,
             marginLeft,
             marginRight,
-          ) :: Nil
+          )
         }
     }
   }

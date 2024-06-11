@@ -34,9 +34,9 @@ import scala.collection.immutable.{::, List, Map, Nil, Set}
 /** Gets the definitions that can be expanded at node `nodeId`. */
 class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
-    if (tree.done) return ApplicableDefinitionsResponse(Nil) :: Nil
+    if (tree.done) return ApplicableDefinitionsResponse(Nil)
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
       case Some(symbols) =>
@@ -114,8 +114,8 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
             case (s: SystemConst, Signature(_, _, _, Right(repl), loc)) => (s, s, repl, loc == UnknownLocation)
           })
           .filter(e => e._4 || e._3.isDefined)
-        ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
-      case None => ApplicableDefinitionsResponse(Nil) :: Nil
+        ApplicableDefinitionsResponse(expansions.sortBy(_._1))
+      case None => ApplicableDefinitionsResponse(Nil)
     }
   }
 }

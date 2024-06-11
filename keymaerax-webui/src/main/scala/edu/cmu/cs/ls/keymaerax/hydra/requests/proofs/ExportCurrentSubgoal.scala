@@ -19,13 +19,11 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
-import scala.collection.immutable.{List, Nil}
-
 class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
-      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case None => new ErrorResponse("Unknown node " + nodeId)
       case Some(goal) =>
         val provable = ProvableSig.startPlainProof(goal)
         val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
@@ -33,7 +31,7 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
           "sequent",
           "Sequent: \n" + goal.toString + "\n\nFormula: \n" + goal.toFormula.prettyString + "\n\nProvable: \n" +
             provable.prettyString + "\n\nLemma:\n" + lemma.toString,
-        ) :: Nil
+        )
     }
   }
 }

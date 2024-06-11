@@ -5,22 +5,20 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.{Directive, ExceptionHandler, Route, StandardRoute}
-import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.model.headers.CacheDirectives.`max-age`
-import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.headers.CacheDirectives.{`max-age`, `no-cache`}
+import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.{Directive, ExceptionHandler, Route, StandardRoute}
 import edu.cmu.cs.ls.keymaerax.hydra.restapi.Configuration._
-import edu.cmu.cs.ls.keymaerax.hydra.restapi.Models._
 import edu.cmu.cs.ls.keymaerax.hydra.restapi.ModelPlex._
+import edu.cmu.cs.ls.keymaerax.hydra.restapi.Models._
 import edu.cmu.cs.ls.keymaerax.hydra.restapi.Proofs._
 import edu.cmu.cs.ls.keymaerax.hydra.restapi.Tools._
 import edu.cmu.cs.ls.keymaerax.hydra.restapi.Users._
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.language.postfixOps
 
@@ -48,11 +46,10 @@ object RestApi extends Logging {
       complete(Unauthorized, Nil, s"Session $t expired")
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
-      else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(
-        new ErrorResponse(
+      else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true"))
+        complete(completeResponse(new ErrorResponse(
           "KeYmaera X may have restarted or may not have finished starting yet; please try to refresh the page (may need to refresh several times). If the error persists, try to reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register a local login name."
-        ) :: Nil
-      ))
+        )))
       else complete(
         Forbidden,
         Nil,
@@ -63,25 +60,19 @@ object RestApi extends Logging {
   def standardCompletion(r: Request, t: SessionToken): ToResponseMarshallable = t match {
     case NewlyExpiredToken(_) =>
       throw new AssertionError("Expired tokens are not standard request completions, use completeRequest instead")
-    case _ =>
-      val responses = r.getResultingResponses(t)
-      completeResponse(responses)
+    case _ => completeResponse(r.getResultingResponse(t))
   }
 
   /** @note you probably don't actually want to use this. Use standardCompletion instead. */
-  def completeResponse(responses: List[Response]): ToResponseMarshallable = {
+  def completeResponse(response: Response): ToResponseMarshallable = {
     // @note log all error responses
-    responses.foreach({
+    response match {
       case e: ErrorResponse => logger.warn("Error response details: " + e.msg, e.exn)
       case _ => /* nothing to do */
-    })
+    }
 
-    try {
-      responses match {
-        case hd :: Nil => hd.print
-        case _ => JsArray(responses.map(_.getJson): _*).compactPrint
-      }
-    } catch {
+    try { response.print }
+    catch {
       case ex: Throwable =>
         ex.printStackTrace()
         new ErrorResponse("Error generating response: " + ex.getMessage, ex).print

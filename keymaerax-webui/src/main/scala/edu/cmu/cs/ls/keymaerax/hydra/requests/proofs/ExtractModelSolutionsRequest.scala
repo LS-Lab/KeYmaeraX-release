@@ -18,7 +18,7 @@ class ExtractModelSolutionsRequest(
     withProofs: Boolean,
     exportEmptyProof: Boolean,
 ) extends UserRequest(userId, _ => true) with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     def printProof(tree: ProofTree, model: ModelPOJO): String =
       try { tree.tacticString(new VerboseTraceToTacticConverter(model.defs))._1 }
       catch { case _: ParseException => RequestHelper.tacticString(tree.info) }
@@ -38,6 +38,6 @@ class ExtractModelSolutionsRequest(
     val archiveContent = models
       .map({ case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs, withComments = true) })
       .mkString("\n\n")
-    new ExtractProblemSolutionResponse(archiveContent + "\n") :: Nil
+    new ExtractProblemSolutionResponse(archiveContent + "\n")
   }
 }

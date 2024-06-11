@@ -21,7 +21,7 @@ import scala.collection.immutable.{List, Nil}
 
 class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
@@ -31,6 +31,6 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String)
       provable,
       ToolEvidence(List("tool" -> "KeYmaera X", "model" -> model.keyFile, "tactic" -> tactic)) :: Nil,
     )
-    new ExtractProblemSolutionResponse(new Lemma(provable, evidence, Some(tree.info.name)).toString) :: Nil
+    new ExtractProblemSolutionResponse(new Lemma(provable, evidence, Some(tree.info.name)).toString)
   }
 }

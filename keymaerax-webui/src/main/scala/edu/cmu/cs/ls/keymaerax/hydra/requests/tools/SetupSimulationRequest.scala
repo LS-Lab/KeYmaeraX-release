@@ -5,8 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.requests.tools
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, AxIndex, TacticHelper, TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, AxIndex, TacticHelper, TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core.{
   And,
   Assign,
@@ -45,14 +45,14 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, P
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import edu.cmu.cs.ls.keymaerax.utils.EulerIntegrationCompiler
 
-import scala.collection.immutable.{List, Map, Nil, Set}
+import scala.collection.immutable.{Map, Nil, Set}
 
 class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with RegisteredOnlyRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
-      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case None => new ErrorResponse("Unknown node " + nodeId)
       case Some(node) =>
         // @note not a tactic because we don't want to change the proof tree just by simulating
         val sequent = node.goal.get
@@ -70,11 +70,10 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
               .reduceRightOption(And)
               .getOrElse(True)
             val simSpec = Diamond(solveODEs(prgPre), stateRelEqs)
-            new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec)) :: Nil
-          case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") ::
-              Nil
+            new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec))
+          case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe")
         }
-        else new ErrorResponse("No simulation tool available, please configure Mathematica") :: Nil
+        else new ErrorResponse("No simulation tool available, please configure Mathematica")
     }
   }
 

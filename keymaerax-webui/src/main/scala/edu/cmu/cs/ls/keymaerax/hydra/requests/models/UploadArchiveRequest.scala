@@ -21,7 +21,7 @@ import scala.collection.immutable.{List, Nil}
 
 class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: String, modelName: Option[String])
     extends UserRequest(userId, _ => true) with WriteRequest {
-  def resultingResponses(): List[Response] = {
+  def resultingResponse(): Response = {
     try {
       val parsedArchiveEntries = ArchiveParser.parse(archiveText)
 
@@ -37,8 +37,8 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
           (failedImports ++ result.toSeq, succeededImports ++ result.left.toSeq)
         })
       if (failedModels.isEmpty) {
-        if (archiveEntries.size == 1) { ModelUploadResponse(Some(succeededModels.head._2.toString), None) :: Nil }
-        else BooleanResponse(flag = true) :: Nil
+        if (archiveEntries.size == 1) { ModelUploadResponse(Some(succeededModels.head._2.toString), None) }
+        else BooleanResponse(flag = true)
       } else throw new Exception(
         "Failed to import the following models\n" + failedModels.mkString("\n") + "\nSucceeded importing:\n" +
           succeededModels.mkString("\n") +
@@ -55,8 +55,8 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
 
         val entry = TutorialEntry(entryName, archiveText, None, None, None, List.empty)
         DatabasePopulator.importModel(db, userId)(entry) match {
-          case Left((_, id)) => ModelUploadResponse(Some(id.toString), Some(e.getMessage)) :: Nil
-          case _ => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+          case Left((_, id)) => ModelUploadResponse(Some(id.toString), Some(e.getMessage))
+          case _ => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e)
         }
     }
   }

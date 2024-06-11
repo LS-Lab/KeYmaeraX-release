@@ -9,10 +9,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.models.GetTemplatesResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ErrorResponse, ReadRequest, Response, TemplatePOJO, UserRequest}
 import edu.cmu.cs.ls.keymaerax.parser.Region
 
-import scala.collection.immutable.{List, Nil}
+import scala.collection.immutable.List
 
 class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val templates = List(
       TemplatePOJO(
         "Plain",
@@ -90,8 +90,8 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
     )
 
     db.getUser(userId) match {
-      case Some(_) => new GetTemplatesResponse(templates) :: Nil
-      case None => new ErrorResponse("Unable to retrieve templates. Unknown user " + userId) :: Nil
+      case Some(_) => new GetTemplatesResponse(templates)
+      case None => new ErrorResponse("Unable to retrieve templates. Unknown user " + userId)
     }
 
   }

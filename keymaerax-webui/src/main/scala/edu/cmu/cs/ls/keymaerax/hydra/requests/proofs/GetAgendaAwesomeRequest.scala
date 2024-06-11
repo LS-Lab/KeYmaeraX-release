@@ -18,8 +18,8 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   UserProofRequest,
 }
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 import scala.collection.immutable.{::, List, Nil}
 import scala.util.Try
@@ -27,7 +27,7 @@ import scala.util.Try
 /** Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task! */
 class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     // reapply lemmas (may have proved in the mean time)
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     val tree = DbProofTree(db, proofId)
@@ -72,6 +72,6 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
       isProved,
       marginLeft,
       marginRight,
-    ) :: Nil
+    )
   }
 }

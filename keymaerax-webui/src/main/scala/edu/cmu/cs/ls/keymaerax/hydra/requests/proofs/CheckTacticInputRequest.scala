@@ -158,7 +158,7 @@ class CheckTacticInputRequest(
     BooleanResponse(flag = true)
   }
 
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val info = DerivationInfo(tacticId)
     val expectedInputs = info.inputs
     val paramInfo = expectedInputs.find(_.name == paramName)
@@ -168,20 +168,20 @@ class CheckTacticInputRequest(
 
       val tree: ProofTree = DbProofTree(db, proofId)
       tree.locate(nodeId) match {
-        case None => BooleanResponse(flag = false, Some("Unknown node " + nodeId + " in proof " + proofId)) :: Nil
+        case None => BooleanResponse(flag = false, Some("Unknown node " + nodeId + " in proof " + proofId))
         case Some(node) if node.goal.isEmpty =>
-          BooleanResponse(flag = false, Some("Node " + nodeId + " does not have a goal")) :: Nil
+          BooleanResponse(flag = false, Some("Node " + nodeId + " does not have a goal"))
         case Some(node) if node.goal.isDefined =>
           val sequent = node.goal.get
           val proofSession = session(proofId).asInstanceOf[ProofSession]
-          checkInput(sequent, input, proofSession.defs) :: Nil
+          checkInput(sequent, input, proofSession.defs)
       }
     } else {
       val msg =
         if (paramValue.isEmpty) "Missing value of parameter " + paramName
         else "Parameter " + paramName + " not a valid argument of tactic " + tacticId + ", expected one of " +
           expectedInputs.map(_.name).mkString(",")
-      BooleanResponse(flag = false, Some(msg)) :: Nil
+      BooleanResponse(flag = false, Some(msg))
     }
   }
 

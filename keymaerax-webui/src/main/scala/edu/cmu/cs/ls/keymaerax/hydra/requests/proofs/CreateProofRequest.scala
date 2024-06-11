@@ -14,15 +14,13 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   WriteRequest,
 }
 
-import scala.collection.immutable.{List, Nil}
-
 class CreateProofRequest(db: DBAbstraction, userId: String, modelId: String, name: String, description: String)
     extends UserRequest(userId, _ => true) with WriteRequest {
-  def resultingResponses(): List[Response] = {
+  def resultingResponse(): Response = {
     if (modelId != "undefined") {
       val proofName = if (name.isEmpty) db.getModel(modelId).name + ": Proof" else name
       val proofId = db.createProofForModel(modelId, proofName, description, currentDate(), None)
-      CreatedIdResponse(proofId) :: Nil
-    } else { new ErrorResponse("Unable to create proof for unknown model") :: Nil }
+      CreatedIdResponse(proofId)
+    } else { new ErrorResponse("Unable to create proof for unknown model") }
   }
 }

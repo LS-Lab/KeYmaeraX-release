@@ -8,8 +8,6 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ToolConfigStatusResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{ReadRequest, Request, Response}
 
-import scala.collection.immutable.{List, Nil}
-
 class Z3ConfigStatusRequest extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("z3", true) :: Nil
+  override def resultingResponse(): Response = new ToolConfigStatusResponse("z3", true)
 }

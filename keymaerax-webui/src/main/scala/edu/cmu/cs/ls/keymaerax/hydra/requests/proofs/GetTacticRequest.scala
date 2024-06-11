@@ -13,11 +13,11 @@ import edu.cmu.cs.ls.keymaerax.parser.Location
 import spray.json.JsonParser.ParsingException
 import spray.json._
 
-import scala.collection.immutable.{List, Map, Nil}
+import scala.collection.immutable.Map
 
 class GetTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String)
     extends UserProofRequest(db, userId, proofIdStr) with ReadRequest {
-  override def doResultingResponses(): List[Response] = {
+  override def doResultingResponse(): Response = {
     val proofInfo = db.getProofInfo(proofIdStr)
     val (tactic: String, proofStateInfo: Map[Location, String]) = proofInfo.tactic match {
       case Some(t) =>
@@ -30,6 +30,6 @@ class GetTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String)
         }
       case None => (BellePrettyPrinter(Idioms.nil), Map.empty)
     }
-    GetTacticResponse(tactic, proofStateInfo) :: Nil
+    GetTacticResponse(tactic, proofStateInfo)
   }
 }

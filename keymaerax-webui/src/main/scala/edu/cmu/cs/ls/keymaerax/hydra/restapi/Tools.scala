@@ -5,15 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
 
-import spray.json._
-
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
-
+import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.hydra.RestApi.{completeRequest, completeResponse, database}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.hydra.requests.tools._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import spray.json._
 
 import scala.language.postfixOps
 
@@ -92,9 +90,9 @@ object Tools {
                     val request =
                       new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, dt)
                     completeRequest(request, t)
-                  case t => complete(completeResponse(
-                      new ErrorResponse("Expected a number as step duration, but got " + t.prettyString) :: Nil
-                    ))
+                  case t => complete(completeResponse(new ErrorResponse(
+                      "Expected a number as step duration, but got " + t.prettyString
+                    )))
                 }
               }
             }

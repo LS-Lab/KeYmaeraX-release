@@ -20,13 +20,13 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
 }
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Parser}
 
-import scala.collection.immutable.{List, Map, Nil, Seq}
+import scala.collection.immutable.{Map, Nil, Seq}
 import scala.util.Try
 
 class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait: Boolean = false)
 //@note do not extend UserProofRequest since we are opening a proof which may not exist and we want a better error message
     extends UserRequest(userId, (id: String) => Try(proofId.toInt).toOption.isDefined) with ReadRequest {
-  override final def resultingResponses(): List[Response] = {
+  override final def resultingResponse(): Response = {
     if (db.proofExists(proofId.toInt)) {
       assert(db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(userId, proofId))
       val proofInfo = db.getProofInfo(proofId)
@@ -34,7 +34,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
       if (modelId.isEmpty) throw new Exception(
         "Database consistency error: unable to open proof " + proofId + ", because it does not refer to a model"
       )
-      else if (db.getModel(modelId.get).userId != userId) new PossibleAttackResponse("Permission denied") :: Nil
+      else if (db.getModel(modelId.get).userId != userId) new PossibleAttackResponse("Permission denied")
       else {
         insist(
           db.getModel(
@@ -48,8 +48,8 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
 
         proofInfo.modelId match {
           case None =>
-            new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model") ::
-              Nil // duplicate check to above
+            // duplicate check to above
+            new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")
           case Some(mId) =>
             var products: Map[Expression, Seq[GenProduct]] = Map[Expression, Seq[GenProduct]]()
             Parser
@@ -62,10 +62,9 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             val generator = ConfigurableGenerator.create(products, problem.defs)
             session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
             TactixInit.invSupplier = generator
-            OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/ ) ::
-              Nil
+            OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/ )
         }
       }
-    } else { new ErrorResponse("Proof does not exist") :: Nil }
+    } else { new ErrorResponse("Proof does not exist") }
   }
 }

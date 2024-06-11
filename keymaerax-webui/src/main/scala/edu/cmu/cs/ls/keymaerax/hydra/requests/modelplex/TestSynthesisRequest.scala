@@ -41,7 +41,7 @@ class TestSynthesisRequest(
     amount: Int,
     timeout: Option[Int],
 ) extends UserRequest(userId, _ => true) with RegisteredOnlyRequest {
-  def resultingResponses(): List[Response] = {
+  def resultingResponse(): Response = {
     logger.debug("Got Test Synthesis Request")
     val model = db.getModel(modelId)
     val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
@@ -117,8 +117,8 @@ class TestSynthesisRequest(
                 )
               )
         )
-        new TestSynthesisResponse(model, metric, tcSmVar) :: Nil
-      case None => new ErrorResponse("Test case synthesis failed, missing Mathematica") :: Nil
+        new TestSynthesisResponse(model, metric, tcSmVar)
+      case None => new ErrorResponse("Test case synthesis failed, missing Mathematica")
     }
   }
 }

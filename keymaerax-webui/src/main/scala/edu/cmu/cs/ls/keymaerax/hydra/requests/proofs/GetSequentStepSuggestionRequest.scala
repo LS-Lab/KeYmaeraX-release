@@ -12,22 +12,22 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, ReadRequest, R
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 
-import scala.collection.immutable.{List, Map, Nil}
+import scala.collection.immutable.{Map, Nil}
 
 class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
-      case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel = true) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel = true)
       case Some(node) => node.goal match {
-          case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel = true) :: Nil // @note node closed
+          case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel = true) // @note node closed
           case Some(seq) =>
             if (seq.isFOL) {
               val folSuggestions = "QE" :: "abbrv" :: "hideL" :: Nil
               // todo: counterexample, find assumptions + general help
               val tactics = folSuggestions.map(s => (DerivationInfo(s), None))
-              ApplicableAxiomsResponse(tactics, Map.empty, topLevel = true) :: Nil
+              ApplicableAxiomsResponse(tactics, Map.empty, topLevel = true)
             } else {
               // find "largest" succedent formula with programs and suggest top-level popup content
               val pos = SuccPosition(1)
@@ -36,7 +36,7 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
                 node.tacticInputSuggestions(pos),
                 topLevel = true,
                 Some(Fixed(1)),
-              ) :: Nil
+              )
             }
         }
     }

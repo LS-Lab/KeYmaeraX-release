@@ -8,8 +8,6 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.configuration
 import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ToolConfigStatusResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{ReadRequest, Request, Response}
 
-import scala.collection.immutable.{List, Nil}
-
 class WolframScriptConfigStatusRequest extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("wolframscript", true) :: Nil
+  override def resultingResponse(): Response = new ToolConfigStatusResponse("wolframscript", true)
 }

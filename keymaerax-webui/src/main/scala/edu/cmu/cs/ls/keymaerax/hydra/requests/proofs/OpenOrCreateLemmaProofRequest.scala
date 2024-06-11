@@ -26,7 +26,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   PrettierPrintFormatProvider,
 }
 
-import scala.collection.immutable.{::, List, Map, Nil}
+import scala.collection.immutable.{::, Map, Nil}
 
 class OpenOrCreateLemmaProofRequest(
     db: DBAbstraction,
@@ -35,15 +35,15 @@ class OpenOrCreateLemmaProofRequest(
     parentProofId: String,
     parentTaskId: String,
 ) extends UserRequest(userId, _ => true) with WriteRequest {
-  def resultingResponses(): List[Response] = {
+  def resultingResponse(): Response = {
     val modelId: Int = db.getModelList(userId).find(_.name == lemmaName) match {
       case Some(model) => model.modelId
       case None =>
         val tree: ProofTree = DbProofTree(db, parentProofId)
         tree.locate(parentTaskId) match {
-          case None => return new ErrorResponse("Unknown node " + parentTaskId + " in proof " + parentProofId) :: Nil
+          case None => return new ErrorResponse("Unknown node " + parentTaskId + " in proof " + parentProofId)
           case Some(node) if node.goal.isEmpty =>
-            return new ErrorResponse("Node " + parentTaskId + " does not have a goal") :: Nil
+            return new ErrorResponse("Node " + parentTaskId + " does not have a goal")
           case Some(node) if node.goal.isDefined =>
             val goal = node.goal.get.toFormula
             val proofSession = session(parentProofId).asInstanceOf[ProofSession]
@@ -66,6 +66,6 @@ class OpenOrCreateLemmaProofRequest(
           case Nil => db.createProofForModel(modelId, "Proof of " + lemmaName, "", currentDate(), None)
         }
     }
-    CreatedIdResponse(proofId.toString) :: Nil
+    CreatedIdResponse(proofId.toString)
   }
 }

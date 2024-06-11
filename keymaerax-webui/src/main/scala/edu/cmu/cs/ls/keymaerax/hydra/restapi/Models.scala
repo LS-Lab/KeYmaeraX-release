@@ -5,15 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.restapi
 
-import akka.http.scaladsl.server.Route
-import spray.json._
-import spray.json.DefaultJsonProtocol._
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.hydra.RestApi.{completeRequest, completeResponse, database, userPrefix}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.hydra.requests.models._
 import edu.cmu.cs.ls.keymaerax.hydra.requests.proofs.ExtractModelSolutionsRequest
+import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 import scala.language.postfixOps
 
@@ -93,14 +93,11 @@ object Models extends Logging {
                   val r = new UploadArchiveRequest(database, userId, content, None)
                   completeRequest(r, t)
                 } catch {
-                  case ex: java.net.UnknownHostException => complete(completeResponse(
-                      new ErrorResponse(
-                        "Example repository is unreachable, please check that your computer is online.",
-                        ex,
-                      ) :: Nil
-                    ))
+                  case ex: java.net.UnknownHostException => complete(completeResponse(new ErrorResponse(
+                      "Example repository is unreachable, please check that your computer is online.",
+                      ex,
+                    )))
                 }
-
               }
             }
           }

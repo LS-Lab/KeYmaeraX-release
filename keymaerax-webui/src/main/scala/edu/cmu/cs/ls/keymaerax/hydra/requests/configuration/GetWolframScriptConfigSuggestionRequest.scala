@@ -12,10 +12,9 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolPathFinder
 import edu.cmu.cs.ls.keymaerax.tools.ext.WolframScript
 
 import java.nio.file.Paths
-import scala.collection.immutable.{List, Nil}
 
 class GetWolframScriptConfigSuggestionRequest extends LocalhostOnlyRequest with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     try {
       val we = new WolframScript()
       we.shutdown()
@@ -23,14 +22,13 @@ class GetWolframScriptConfigSuggestionRequest extends LocalhostOnlyRequest with 
         Os.Name,
         true,
         ToolPathFinder.MathematicaPaths(mathKernel = Paths.get(""), jlinkLib = Paths.get("")),
-      ) :: Nil
+      )
     } catch {
-      case _: Throwable =>
-        new MathematicaConfigSuggestionResponse(
+      case _: Throwable => new MathematicaConfigSuggestionResponse(
           Os.Name,
           false,
           ToolPathFinder.MathematicaPaths(mathKernel = Paths.get(""), jlinkLib = Paths.get("")),
-        ) :: Nil
+        )
     }
   }
 }

@@ -5,8 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra.requests.modelplex
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, TacticAssertionError, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, TacticAssertionError, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, ModelPlex, ModelPlexConjecture, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.codegen.{
   CControllerGenerator,
@@ -49,6 +49,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
 }
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{
   ArchiveParser,
   Declaration,
@@ -56,7 +57,6 @@ import edu.cmu.cs.ls.keymaerax.parser.{
   ParsedArchiveEntry,
   PrettierPrintFormatProvider,
 }
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.{List, ListMap, Map, Nil, Set}
 
@@ -70,7 +70,7 @@ class ModelPlexRequest(
     conditionKind: String,
     additionalVars: List[String],
 ) extends UserRequest(userId, _ => true) with RegisteredOnlyRequest {
-  def resultingResponses(): List[Response] = {
+  def resultingResponse(): Response = {
     val model = db.getModel(modelId)
     val modelFml = ModelPlex.normalizeInputFormula(ArchiveParser.parseAsExpandedFormula(model.keyFile))
     val vars: Set[BaseVariable] = (StaticSemantics.boundVars(modelFml).symbols ++ additionalVars.map(_.asVariable))
@@ -98,10 +98,10 @@ class ModelPlexRequest(
       .get
   }
 
-  private def createController(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] =
+  private def createController(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): Response =
     modelFml match {
       case Imply(init, Box(prg, _)) => conditionKind match {
-          case "dL" => new ModelPlexArtifactResponse(model, extractController(prg)) :: Nil
+          case "dL" => new ModelPlexArtifactResponse(model, extractController(prg))
           case "C" =>
             val controller = (
               new CGenerator(new CControllerGenerator(model.defs), init, model.defs)
@@ -122,16 +122,15 @@ class ModelPlexRequest(
                           |}
                           |""".stripMargin
 
-            new ModelPlexCCodeResponse(model, code) :: Nil
-          case c => new ErrorResponse("Unknown output format '" + c + "'; please use one of ['dL'|'C']") :: Nil
+            new ModelPlexCCodeResponse(model, code)
+          case c => new ErrorResponse("Unknown output format '" + c + "'; please use one of ['dL'|'C']")
         }
-      case _ =>
-        new ErrorResponse(
+      case _ => new ErrorResponse(
           "Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString
-        ) :: Nil
+        )
     }
 
-  private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] =
+  private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): Response =
     modelFml match {
       case Imply(init, Box(prg, _)) => createMonitorCondition(modelFml, stateVars, ListMap.empty) match {
           case Left((monitorConjecture, monitorCond, _)) =>
@@ -146,7 +145,7 @@ class ModelPlexRequest(
                   .reduceRightOption(Compose)
                   .getOrElse(Test(True))
                 val sandbox = Compose(ctrl, Choice(Test(monitorCond), Compose(Test(Not(monitorCond)), fallback)))
-                new ModelPlexSandboxResponse(model, monitorConjecture, sandbox) :: Nil
+                new ModelPlexSandboxResponse(model, monitorConjecture, sandbox)
               case "C" =>
                 val ctrlInputs = CodeGenerator.getInputs(monitorCond)
                 val ctrlMonitorCode = (new CGenerator(
@@ -184,15 +183,14 @@ class ModelPlexRequest(
                      |""".stripMargin
                 }
 
-                new ModelPlexCCodeResponse(model, sandbox) :: Nil
-              case c => new ErrorResponse("Unknown output format '" + c + "'; please use one of ['dL'|'C']") :: Nil
+                new ModelPlexCCodeResponse(model, sandbox)
+              case c => new ErrorResponse("Unknown output format '" + c + "'; please use one of ['dL'|'C']")
             }
-          case Right(e) => e :: Nil
+          case Right(e) => e
         }
-      case _ =>
-        new ErrorResponse(
+      case _ => new ErrorResponse(
           "Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString
-        ) :: Nil
+        )
     }
 
   /**
@@ -224,7 +222,7 @@ class ModelPlexRequest(
     Left(modelplexInput, monitorCond.subgoals.head.succ.head, mx)
   }
 
-  private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
+  private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): Response = {
     val Imply(init, Box(prg, _)) = modelFml
     createMonitorCondition(modelFml, vars, ListMap.empty) match {
       case Left((modelplexConjecture, monitorFml, synthesizeTactic)) => conditionKind match {
@@ -247,7 +245,7 @@ class ModelPlexRequest(
               model,
               monitorFml,
               new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry),
-            ) :: Nil
+            )
           case "C" =>
             val inputs = CodeGenerator.getInputs(prg)
             val monitor = (
@@ -270,7 +268,7 @@ class ModelPlexRequest(
                  |}
                  |""".stripMargin
 
-            new ModelPlexCCodeResponse(model, code) :: Nil
+            new ModelPlexCCodeResponse(model, code)
           case "Python" =>
             val inputs = CodeGenerator.getInputs(prg)
             val monitor = (new PythonGenerator(
@@ -281,9 +279,9 @@ class ModelPlexRequest(
             val code = s"""${monitor._1}
                           |${monitor._2}""".stripMargin
 
-            new ModelPlexCCodeResponse(model, code) :: Nil
+            new ModelPlexCCodeResponse(model, code)
         }
-      case Right(e) => e :: Nil
+      case Right(e) => e
     }
   }
 }

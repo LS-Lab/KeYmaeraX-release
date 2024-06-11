@@ -8,11 +8,11 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.models
 import edu.cmu.cs.ls.keymaerax.hydra.responses.models.ListExamplesResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ErrorResponse, ExamplePOJO, ReadRequest, Response, UserRequest}
 
-import scala.collection.immutable.{List, Nil}
+import scala.collection.immutable.List
 
 /** List of all predefined tutorials that can directly be imported from the KeYmaera X web UI, in order of display. */
 class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     // @todo read from the database/some web page?
     // @note Learner's mode Level=0, Industry mode Level=1
     val examples = List(
@@ -109,8 +109,8 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
     )
 
     db.getUser(userId) match {
-      case Some(user) => new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
-      case None => new ErrorResponse("Unable to retrieve examples. Unknown user " + userId) :: Nil
+      case Some(user) => new ListExamplesResponse(examples.filter(_.level <= user.level))
+      case None => new ErrorResponse("Unable to retrieve examples. Unknown user " + userId)
     }
 
   }

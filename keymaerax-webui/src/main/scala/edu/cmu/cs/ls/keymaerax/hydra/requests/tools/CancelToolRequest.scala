@@ -8,12 +8,10 @@ package edu.cmu.cs.ls.keymaerax.hydra.requests.tools
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider
 import edu.cmu.cs.ls.keymaerax.hydra.{BooleanResponse, ReadRequest, Request, Response}
 
-import scala.collection.immutable.{List, Nil}
-
 //@todo Detect closed connections and request timeouts server-side
 class CancelToolRequest() extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val allCancelled = ToolProvider.tools().map(_.cancel()).reduce(_ && _)
-    BooleanResponse(flag = allCancelled) :: Nil
+    BooleanResponse(flag = allCancelled)
   }
 }

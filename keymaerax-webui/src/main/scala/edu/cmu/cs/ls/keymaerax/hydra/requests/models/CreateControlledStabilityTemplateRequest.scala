@@ -27,8 +27,8 @@ import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.hydra.responses.models.GetControlledStabilityTemplateResponse
 import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
-import spray.json.JsArray
 import spray.json.DefaultJsonProtocol._
+import spray.json.JsArray
 
 import scala.collection.immutable.{::, List, Nil}
 
@@ -41,7 +41,7 @@ class CreateControlledStabilityTemplateRequest(
     subGraphs: JsArray,
     transitions: JsArray,
 ) extends UserRequest(userId, _ => true) with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val mode = "mode".asVariable
     def modeOf(s: String): Term = FuncOf(Function(s, None, Unit, Real), Nothing)
 
@@ -143,9 +143,9 @@ class CreateControlledStabilityTemplateRequest(
           }
         case "controlled" => Controlled(initPrg, odes.map({ case (n, o: ODESystem, t) => (n, o, t) }), mode)
       }
-      List(new GetControlledStabilityTemplateResponse(code, c, specKind))
+      new GetControlledStabilityTemplateResponse(code, c, specKind)
     } else {
-      List(new ErrorResponse("At most 1 initialization node expected, but got nodes " + init.map(_._1).mkString(",")))
+      new ErrorResponse("At most 1 initialization node expected, but got nodes " + init.map(_._1).mkString(","))
     }
   }
 }

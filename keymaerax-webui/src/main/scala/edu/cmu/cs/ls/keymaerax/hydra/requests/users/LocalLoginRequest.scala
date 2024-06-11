@@ -16,31 +16,28 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   SessionManager,
 }
 
-import scala.collection.immutable.{List, Nil}
-
 class LocalLoginRequest(db: DBAbstraction, userId: String, password: String)
     extends LocalhostOnlyRequest with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") && userId == "local") {
       Configuration.getString(Configuration.Keys.DEFAULT_USER) match {
         case Some(userId) => db.getUser(userId) match {
             case Some(user) =>
               val sessionToken = Some(SessionManager.add(user))
-              new LoginResponse(true, user, sessionToken) :: Nil
-            case None => DefaultLoginResponse(triggerRegistration = true) :: Nil
+              new LoginResponse(true, user, sessionToken)
+            case None => DefaultLoginResponse(triggerRegistration = true)
           }
-        case None => DefaultLoginResponse(triggerRegistration = true) :: Nil
+        case None => DefaultLoginResponse(triggerRegistration = true)
       }
     } else {
       val check = db.checkPassword(userId, password)
       db.getUser(userId) match {
         case Some(user) =>
           val sessionToken = if (check) Some(SessionManager.add(user)) else None
-          new LoginResponse(check, user, sessionToken) :: Nil
-        case None =>
-          new ErrorResponse(
+          new LoginResponse(check, user, sessionToken)
+        case None => new ErrorResponse(
             "Unable to login user " + userId + ". Please double-check user name and password, or register a new user."
-          ) :: Nil
+          )
       }
     }
   }

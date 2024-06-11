@@ -11,8 +11,6 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.ValidateProofResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ReadRequest, Request, Response}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
-import scala.collection.immutable.{List, Nil}
-
 /**
  * Returns a UUID whose status can be queried at a later time ({complete: true/false[, proves: true/false]}.
  *
@@ -21,7 +19,7 @@ import scala.collection.immutable.{List, Nil}
  */
 class ValidateProofRequest(db: DBAbstraction, model: Formula, proof: BelleExpr, defs: Declaration)
     extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] =
+  override def resultingResponse(): Response =
     // Spawn an async validation request and return the resulting UUID.
-    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof, defs), None) :: Nil
+    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof, defs), None)
 }

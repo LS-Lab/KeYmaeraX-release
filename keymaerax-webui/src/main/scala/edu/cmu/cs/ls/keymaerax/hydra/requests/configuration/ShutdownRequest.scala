@@ -14,10 +14,8 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
 }
 
-import scala.collection.immutable.{List, Nil}
-
 class ShutdownRequest() extends LocalhostOnlyRequest with RegisteredOnlyRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     new Thread() {
       override def run(): Unit = {
         try {
@@ -40,6 +38,6 @@ class ShutdownRequest() extends LocalhostOnlyRequest with RegisteredOnlyRequest 
       }
     }.start()
 
-    BooleanResponse(flag = true) :: Nil
+    BooleanResponse(flag = true)
   }
 }

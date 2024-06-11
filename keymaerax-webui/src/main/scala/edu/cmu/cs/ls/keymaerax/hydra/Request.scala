@@ -5,25 +5,22 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.{Name, Signature}
-
-import spray.json._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.parser._
 import spray.json.JsonParser.ParsingException
+import spray.json._
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-
 import scala.collection.immutable._
 import scala.util.Try
 
@@ -47,22 +44,21 @@ trait Request extends Logging {
   /** Override to provide additional permission checks. */
   protected def doPermission(t: SessionToken): Boolean = true
 
-  final def getResultingResponses(t: SessionToken): List[Response] = {
-    if (!permission(t)) new PossibleAttackResponse("Permission denied") :: Nil
+  final def getResultingResponse(t: SessionToken): Response = {
+    if (!permission(t)) new PossibleAttackResponse("Permission denied")
     else {
       assert(permission(t), "Permission denied but still responses queried (see completeRequest)")
       try {
         theSession = SessionManager.session(t)
-        resultingResponses()
+        resultingResponse()
       } catch {
-        case e: ParseException => new ErrorResponse(e.getMessage, e) :: Nil
-        case e: Throwable =>
-          new ErrorResponse(
+        case e: ParseException => new ErrorResponse(e.getMessage, e)
+        case e: Throwable => new ErrorResponse(
             "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " +
               e.getMessage,
             e,
             severity = "uncaught",
-          ) :: Nil
+          )
       }
     }
   }
@@ -70,7 +66,7 @@ trait Request extends Logging {
   private var theSession: SessionManager.Session = _
   def session: SessionManager.Session = theSession
 
-  def resultingResponses(): List[Response]
+  def resultingResponse(): Response
 
   def currentDate(): String = {
     val format = new SimpleDateFormat("d-M-y")
@@ -98,8 +94,8 @@ case class ProofSession(
 abstract class UserModelRequest(db: DBAbstraction, userId: String, modelId: String)
 //@todo faster query for model user
     extends UserRequest(userId, (id: String) => db.getModel(modelId).userId == id) {
-  override final def resultingResponses(): List[Response] = doResultingResponses()
-  protected def doResultingResponses(): List[Response]
+  override final def resultingResponse(): Response = doResultingResponse()
+  protected def doResultingResponse(): Response
 }
 
 abstract class UserProofRequest(db: DBAbstraction, userId: String, proofId: String)
@@ -110,15 +106,17 @@ abstract class UserProofRequest(db: DBAbstraction, userId: String, proofId: Stri
         Try(proofId.toInt).toOption.isDefined &&
           (db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(id, proofId)),
     ) {
-  override final def resultingResponses(): List[Response] = {
+  override final def resultingResponse(): Response = {
     Try(proofId.toInt).toOption match {
-      case Some(_) => doResultingResponses()
-      case None => new ErrorResponse("The user interface lost track of the proof, please try reloading the page.") ::
-          Nil // @note Web UI bug)
+      case Some(_) => doResultingResponse()
+      case None =>
+        new ErrorResponse(
+          "The user interface lost track of the proof, please try reloading the page."
+        ) // @note Web UI bug)
     }
   }
 
-  protected def doResultingResponses(): List[Response]
+  protected def doResultingResponse(): Response
 }
 
 abstract class LocalhostOnlyRequest() extends Request {
@@ -127,7 +125,7 @@ abstract class LocalhostOnlyRequest() extends Request {
 }
 
 class FailedRequest(userId: String, msg: String, cause: Throwable = null) extends UserRequest(userId, _ => true) {
-  def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
+  def resultingResponse(): Response = new ErrorResponse(msg, cause)
 }
 
 object RequestHelper {

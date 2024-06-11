@@ -6,8 +6,8 @@
 package edu.cmu.cs.ls.keymaerax.hydra.requests.proofs
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.HackyInlineErrorMsgPrinter
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.HackyInlineErrorMsgPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.{TactixInit, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, Sequent}
@@ -156,15 +156,15 @@ class RunBelleTermRequest(
       case _ => ""
     })
 
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     if (backendAvailable) {
       val proof = db.getProofInfo(proofId)
-      if (proof.closed) new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
+      if (proof.closed) new ErrorResponse("Can't execute tactics on a closed proof")
       else {
         val tree: ProofTree = DbProofTree(db, proofId)
         tree.locate(nodeId) match {
-          case None => new ErrorResponse("Unknown node " + nodeId + " in proof " + proofId) :: Nil
-          case Some(node) if node.goal.isEmpty => new ErrorResponse("Node " + nodeId + " does not have a goal") :: Nil
+          case None => new ErrorResponse("Unknown node " + nodeId + " in proof " + proofId)
+          case Some(node) if node.goal.isEmpty => new ErrorResponse("Node " + nodeId + " does not have a goal")
           case Some(node) if node.goal.isDefined =>
             val sequent = node.goal.get
 
@@ -236,7 +236,7 @@ class RunBelleTermRequest(
                       )
                   }
                   val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), expr)
-                  RunBelleTermResponse(proofId, node.id.toString, taskId, "Executing custom tactic") :: Nil
+                  RunBelleTermResponse(proofId, node.id.toString, taskId, "Executing custom tactic")
                 } else {
                   val localProvable = ProvableSig.startProof(sequent, tree.info.defs(db))
                   val localProofId = db.createProof(localProvable)
@@ -252,36 +252,33 @@ class RunBelleTermRequest(
                     "()",
                     taskId,
                     "Executing internal steps of " + executionInfo(belleTerm),
-                  ) :: Nil
+                  )
                 }
               } else {
                 // @note execute clicked single-step tactics on sequential interpreter right away
                 val taskId = node
                   .runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), expr, ruleName)
                 val info = "Executing " + executionInfo(belleTerm)
-                RunBelleTermResponse(proofId, node.id.toString, taskId, info) :: Nil
+                RunBelleTermResponse(proofId, node.id.toString, taskId, info)
               }
             } catch {
-              case e: ProverException if e.getMessage == "No step possible" =>
-                new ErrorResponse("No step possible") :: Nil
+              case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible")
               case e: TacticPositionError =>
-                new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
-              case e: BelleThrowable =>
-                new TacticErrorResponse(
+                new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e)
+              case e: BelleThrowable => new TacticErrorResponse(
                   e.getMessage,
                   HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage),
                   e,
-                ) :: Nil
+                )
               case e: ParseException =>
-                new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, e.loc, e.getMessage), e) ::
-                  Nil
+                new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, e.loc, e.getMessage), e)
             }
         }
       }
     } else {
       new ErrorResponse(
         "Backend tool unavailable or busy. If the tool remains unavailable, please restart KeYmaera X and/or configure a different tool"
-      ) :: Nil
+      )
     }
   }
 }

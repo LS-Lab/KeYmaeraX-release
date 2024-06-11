@@ -11,11 +11,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, LocalhostOnlyRequest, ReadR
 import edu.cmu.cs.ls.keymaerax.info.{Os, OsType}
 
 import java.io.File
-import scala.collection.immutable.{List, Nil}
 
 class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String)
     extends LocalhostOnlyRequest with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val jlinkLibFile = Os.Type match {
       case OsType.Windows => "JLinkNativeLibrary.dll"
       case OsType.Linux => "libJLinkNativeLibrary.so"
@@ -30,7 +29,7 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String)
           Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
           Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
           Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).getOrElse(""),
-        ) :: Nil
+        )
       case "wolframengine"
           if Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
             Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) =>
@@ -38,8 +37,8 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String)
           Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
           Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
           Configuration.getString(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse(""),
-        ) :: Nil
-      case _ => new MathematicaConfigurationResponse("", "", "") :: Nil
+        )
+      case _ => new MathematicaConfigurationResponse("", "", "")
     }
   }
 }

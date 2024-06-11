@@ -17,11 +17,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   WriteRequest,
 }
 
-import scala.collection.immutable.{List, Nil}
-
 class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String, verbose: Boolean)
     extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
-  override def doResultingResponses(): List[Response] = {
+  override def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofIdStr)
     val (tactic, locInfoSrc) = tree.tacticString(
       if (verbose) new VerboseTraceToTacticConverter(tree.info.defs(db))
@@ -42,6 +40,6 @@ class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String
       Some(GetTacticResponse(tactic, locInfo).getJson.compactPrint),
     )
     db.updateProofInfo(newInfo)
-    GetTacticResponse(tactic, locInfo) :: Nil
+    GetTacticResponse(tactic, locInfo)
   }
 }

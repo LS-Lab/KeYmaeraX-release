@@ -11,8 +11,6 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.configuration.ConfigureMathematic
 import edu.cmu.cs.ls.keymaerax.hydra.{LocalhostOnlyRequest, Response, WriteRequest}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
-import scala.collection.immutable.{List, Nil}
-
 class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFileName: String, jlinkTcpip: String)
     extends LocalhostOnlyRequest with WriteRequest {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
@@ -24,7 +22,7 @@ class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFi
       jlinkFile.getName == "libJLinkNativeLibrary.so") && jlinkLibDir.exists() && jlinkLibDir.isDirectory
   }
 
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     // check to make sure the indicated files exist and point to the correct files.
     val linkNameFile = new java.io.File(linkName)
     val jlinkLibFile = new java.io.File(jlinkLibFileName)
@@ -51,7 +49,7 @@ class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFi
         if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "",
         false,
-      ) :: Nil
+      )
     } else {
       ToolProvider.shutdown()
       Configuration.set(Configuration.Keys.QE_TOOL, toolName)
@@ -74,7 +72,7 @@ class ConfigureMathematicaRequest(toolName: String, linkName: String, jlinkLibFi
           ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
       }
       ToolProvider.setProvider(provider)
-      new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil
+      new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true)
     }
   }
 }

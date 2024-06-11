@@ -29,20 +29,20 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.parser.{Name, Signature, UnknownLocation}
 
-import scala.collection.immutable.{List, Nil}
+import scala.collection.immutable.List
 import scala.util.Try
 
 class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, what: String, repl: String)
     extends UserProofRequest(db, userId, proofId) with WriteRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     Try(what.asExpr).toEither match {
-      case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'what': " + ex.getMessage)) :: Nil
+      case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'what': " + ex.getMessage))
       case Right(e) =>
         val ewhat = elaborate(e, proofSession.defs.asNamedSymbols)
 
         Try(repl.asExpr).toEither match {
-          case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage)) :: Nil
+          case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage))
           case Right(r) =>
             val erepl = proofSession.defs.elaborateToSystemConsts(proofSession.defs.elaborateToFunctions(r))
             if (erepl.sort == ewhat.sort) {
@@ -64,7 +64,7 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
                             Signature(Some(fnwhat.domain), fnwhat.sort, None, Right(Some(erepl)), UnknownLocation))
                       )
                   )
-                  BooleanResponse(flag = true) :: Nil
+                  BooleanResponse(flag = true)
                 case Some(Signature(_, _, args, Right(None), _)) =>
                   session(proofId) = proofSession.copy(defs =
                     proofSession
@@ -75,17 +75,16 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
                             Signature(Some(fnwhat.domain), fnwhat.sort, args, Right(Some(erepl)), UnknownLocation))
                       )
                   )
-                  BooleanResponse(flag = true) :: Nil
-                case Some(Signature(_, _, _, Right(Some(i)), _)) =>
-                  new ErrorResponse(
+                  BooleanResponse(flag = true)
+                case Some(Signature(_, _, _, Right(Some(i)), _)) => new ErrorResponse(
                     "Cannot change " + fnwhat.prettyString + ", it is already defined as " + i.prettyString
-                  ) :: Nil
+                  )
               }
 
             } else BooleanResponse(
               flag = false,
               Some("Expected a replacement of sort " + ewhat.sort + ", but got " + erepl.sort),
-            ) :: Nil
+            )
         }
     }
   }

@@ -29,10 +29,10 @@ import scala.collection.immutable.{List, Nil}
 /** Create a proof if it does not exist yet. Read request, so that guest users can check proofs. */
 class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val proofInfo = db.getProofInfo(proofId)
     proofInfo.tactic match {
-      case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
+      case None => new ErrorResponse("Proof " + proofId + " does not have a tactic")
       case Some(_) if proofInfo.modelId.isEmpty =>
         throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
@@ -53,7 +53,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
         }
 
         tactic match {
-          case n: NamedBelleExpr => RunBelleTermResponse(proofId, "()", atomic(n.name), "") :: Nil
+          case n: NamedBelleExpr => RunBelleTermResponse(proofId, "()", atomic(n.name), "")
           case _ =>
             try {
               // @note replace listener created by proof tree (we want a different tactic name for each component of the
@@ -64,12 +64,12 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
               val tree: ProofTree = DbProofTree(db, proofId)
               val executor = BellerophonTacticExecutor.defaultExecutor
               val taskId = tree.root.runTactic(userId, interpreter, tactic, "", executor)
-              RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
+              RunBelleTermResponse(proofId, "()", taskId, "")
             } catch {
               case _: Throwable =>
                 // @note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
                 //      even if browsing then shows a single step only
-                RunBelleTermResponse(proofId, "()", atomic("custom"), "") :: Nil
+                RunBelleTermResponse(proofId, "()", atomic("custom"), "")
             }
         }
     }

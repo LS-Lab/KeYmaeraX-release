@@ -62,7 +62,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     Files.write(proofbackupPath.resolve(uniqueProofName), archiveContent.getBytes())
   }
 
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
@@ -86,16 +86,14 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     val conclusionFormula = entry.model.exhaustiveSubst(USubst(substs)).asInstanceOf[Formula]
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
 
-    if (!provable.isProved)
-      new ErrorResponse(
-        "Proof verification failed: proof " + proofId +
-          " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString
-      ) :: Nil
-    else if (provable.conclusion != conclusion)
-      new ErrorResponse(
-        "Proof verification failed: proof " + proofId + " does not conclude the associated model.\n Expected " +
-          conclusion.prettyString + "\nBut got\n" + provable.conclusion.prettyString
-      ) :: Nil
+    if (!provable.isProved) new ErrorResponse(
+      "Proof verification failed: proof " + proofId +
+        " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString
+    )
+    else if (provable.conclusion != conclusion) new ErrorResponse(
+      "Proof verification failed: proof " + proofId + " does not conclude the associated model.\n Expected " +
+        conclusion.prettyString + "\nBut got\n" + provable.conclusion.prettyString
+    )
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(
@@ -121,7 +119,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
       exportLemma("user" + File.separator + model.name, model, provable, tactic)
       // backup proof to prevent data loss
       backupProof(model, tactic)
-      new ProofVerificationResponse(proofId, provable, tactic) :: Nil
+      new ProofVerificationResponse(proofId, provable, tactic)
     }
   }
 }

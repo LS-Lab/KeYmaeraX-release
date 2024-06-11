@@ -12,13 +12,12 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
 import scala.collection.immutable.{List, Nil}
 
 class RestartToolRequest(db: DBAbstraction, toolId: String) extends LocalhostOnlyRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     ToolProvider.tool(toolId) match {
       case Some(t: Tool) =>
         t.restart()
-        new GenericOKResponse :: Nil
-      case _ => new ErrorResponse(s"Restarting failed: unknown tool '$toolId'. Please check the tool configuration.") ::
-          Nil
+        new GenericOKResponse
+      case _ => new ErrorResponse(s"Restarting failed: unknown tool '$toolId'. Please check the tool configuration.")
     }
   }
 }

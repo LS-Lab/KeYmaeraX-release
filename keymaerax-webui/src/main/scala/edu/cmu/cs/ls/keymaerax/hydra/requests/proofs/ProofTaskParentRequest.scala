@@ -14,14 +14,14 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   Response,
   UserProofRequest,
 }
-
-import scala.collection.immutable.{::, List, Nil}
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
+
+import scala.collection.immutable.{::, Nil}
 
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId).flatMap(_.parent) match {
       case Some(parent) =>
@@ -32,8 +32,8 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
           .parseJson
           .convertTo[Array[Int]]
           .toList
-        new ProofTaskNodeResponse(parent, marginLeft, marginRight) :: Nil
-      case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root") :: Nil
+        new ProofTaskNodeResponse(parent, marginLeft, marginRight)
+      case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root")
     }
   }
 }

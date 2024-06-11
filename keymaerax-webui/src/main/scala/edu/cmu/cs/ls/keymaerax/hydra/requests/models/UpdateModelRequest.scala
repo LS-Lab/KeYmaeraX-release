@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.responses.models.ModelUpdateResponse
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ErrorResponse, Response, UserRequest, WriteRequest}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException}
 
-import scala.collection.immutable.{::, List, Nil}
+import scala.collection.immutable.{::, Nil}
 
 class UpdateModelRequest(
     db: DBAbstraction,
@@ -22,7 +22,7 @@ class UpdateModelRequest(
 ) extends UserRequest(userId, _ => true) with WriteRequest {
   private def emptyToOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
-  def resultingResponses(): List[Response] = {
+  def resultingResponse(): Response = {
     val modelInfo = db.getModel(modelId)
     if (db.getProofsForModel(modelId).forall(_.stepCount == 0)) {
       if (ArchiveParser.isExercise(content)) {
@@ -34,7 +34,7 @@ class UpdateModelRequest(
           emptyToOption(content),
           None,
         )
-        ModelUpdateResponse(modelId, name, content, emptyToOption(title), emptyToOption(description), None) :: Nil
+        ModelUpdateResponse(modelId, name, content, emptyToOption(title), emptyToOption(description), None)
       } else
         try {
           ArchiveParser.parse(content) match {
@@ -54,8 +54,8 @@ class UpdateModelRequest(
                 e.info.get("Title"),
                 e.info.get("Description"),
                 None,
-              ) :: Nil
-            case e => new ErrorResponse(s"Expected a single entry, but got ${e.size}") :: Nil
+              )
+            case e => new ErrorResponse(s"Expected a single entry, but got ${e.size}")
           }
         } catch {
           case e: ParseException =>
@@ -80,10 +80,9 @@ class UpdateModelRequest(
               emptyToOption(modelInfo.title),
               emptyToOption(modelInfo.description),
               Some(e.msg),
-            ) :: Nil
+            )
         }
     } else
-      new ErrorResponse(s"Unable to update model $modelId because it has ${modelInfo.numAllProofSteps} proof steps") ::
-        Nil
+      new ErrorResponse(s"Unable to update model $modelId because it has ${modelInfo.numAllProofSteps} proof steps")
   }
 }

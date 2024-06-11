@@ -11,10 +11,9 @@ import edu.cmu.cs.ls.keymaerax.info.Os
 import edu.cmu.cs.ls.keymaerax.tools.ToolPathFinder
 
 import java.nio.file.Paths
-import scala.collection.immutable.{List, Nil}
 
 class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     val paths = ToolPathFinder.findMathematicaInstallDir().flatMap(ToolPathFinder.findMathematicaPaths)
 
     val suggestionFound = paths.isDefined
@@ -23,6 +22,6 @@ class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends Localho
         .MathematicaPaths(mathKernel = Paths.get("path/to/MathKernel"), jlinkLib = Paths.get("path/to/jlinkLib"))
     )
 
-    new MathematicaConfigSuggestionResponse(Os.Name, suggestionFound, suggestion) :: Nil
+    new MathematicaConfigSuggestionResponse(Os.Name, suggestionFound, suggestion)
   }
 }

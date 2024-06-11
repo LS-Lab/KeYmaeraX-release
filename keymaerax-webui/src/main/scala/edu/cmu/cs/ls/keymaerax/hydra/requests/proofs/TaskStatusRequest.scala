@@ -18,11 +18,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.{
   VerboseTraceToTacticConverter,
 }
 
-import scala.collection.immutable.List
-
 class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
+  override protected def doResultingResponse(): Response = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, currentStep: Option[(BelleExpr, Long)]) = executor.synchronized {
       executor.getTask(taskId) match {
@@ -46,7 +44,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
     }
     val tree = DbProofTree(db, proofId)
     val (tacticProgress, _) = tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
-    List(TaskStatusResponse(
+    TaskStatusResponse(
       proofId,
       nodeId,
       taskId,
@@ -54,6 +52,6 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
       currentStep,
       tree.nodes,
       tacticProgress,
-    ))
+    )
   }
 }

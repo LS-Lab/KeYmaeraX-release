@@ -12,10 +12,9 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
-import scala.collection.immutable.{List, Nil}
 
 class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends LocalhostOnlyRequest {
-  override def resultingResponses(): List[Response] = {
+  override def resultingResponse(): Response = {
     ToolProvider.tool(toolId) match {
       case Some(t: QETool) =>
         val simpleQeTask = new FutureTask[Either[Formula, Throwable]](() =>
@@ -26,20 +25,18 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
         try {
           val result = simpleQeTask.get(1, TimeUnit.SECONDS)
           result match {
-            case Left(f) if f == "true".asFormula => new GenericOKResponse :: Nil
-            case Left(f) => new ErrorResponse(s"Testing connection failed: unexpected result $f for test 2+3=5") :: Nil
-            case Right(t) => new ErrorResponse("Testing connection failed", t) :: Nil
+            case Left(f) if f == "true".asFormula => new GenericOKResponse
+            case Left(f) => new ErrorResponse(s"Testing connection failed: unexpected result $f for test 2+3=5")
+            case Right(t) => new ErrorResponse("Testing connection failed", t)
           }
         } catch {
           case _: TimeoutException =>
-            new ErrorResponse("Testing connection failed: tool is not responding. Please restart KeYmaera X.") :: Nil
+            new ErrorResponse("Testing connection failed: tool is not responding. Please restart KeYmaera X.")
         }
       case Some(t: Tool) =>
-        new ErrorResponse(s"Testing connection failed: do not know how to test '${t.getClass}' tool") :: Nil
+        new ErrorResponse(s"Testing connection failed: do not know how to test '${t.getClass}' tool")
       case _ =>
-        new ErrorResponse(s"Testing connection failed: unknown tool '$toolId'. Please check the tool configuration.") ::
-          Nil
+        new ErrorResponse(s"Testing connection failed: unknown tool '$toolId'. Please check the tool configuration.")
     }
-
   }
 }
