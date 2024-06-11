@@ -14,6 +14,15 @@ import scopt.OParser
 import scala.concurrent.duration.Duration
 
 // TODO Convert to Scala 3 enum
+object Conversion extends Enumeration {
+  val StripHints: Value = Value
+  val KyxToMat: Value = Value
+  val KyxToSmt: Value = Value
+  val SmtToKyx: Value = Value
+  val SmtToMat: Value = Value
+}
+
+// TODO Convert to Scala 3 enum
 object TacticConversion extends Enumeration {
   val Verbose, Labelled, Verbatim = Value
 }
@@ -36,7 +45,7 @@ object Command {
   ) extends Command
   case class Parse(in: String = null) extends Command
   case class BParse(in: String = null) extends Command
-  case class Convert(conversion: String = null, in: String = null, out: Option[String] = None) extends Command
+  case class Convert(conversion: Conversion.Value = null, in: String = null, out: Option[String] = None) extends Command
   case class Grade(
       in: String = null,
       out: Option[String] = None,
@@ -164,6 +173,8 @@ object Options {
   private def parser(name: String): OParser[Unit, Options] = {
     val builder = OParser.builder[Options]
     import builder._
+
+    implicit val conversionRead: scopt.Read[Conversion.Value] = scopt.Read.reads(Conversion.withName)
 
     implicit val jlinkInterfaceRead: scopt.Read[JlinkInterface.Value] = scopt.Read.reads(JlinkInterface.withName)
 
@@ -353,12 +364,12 @@ object Options {
         .action((_, o) => o.copy(command = Some(Command.Convert())))
         .text(wrapWide("Model conversions."))
         .children(
-          arg[String]("<conversion>")
+          arg[Conversion.Value]("<conversion>")
             .action((x, o) => o.updateCommand[Command.Convert](_.copy(conversion = x)))
             .text(wrap(
-              """Conversion to perform.
-                |Possible values: stripHints, kyx2mat, kyx2smt, smt2kyx, smt2mat
-                |""".stripMargin
+              s"""Conversion to perform.
+                 |${possibleValues(Conversion.values)}
+                 |""".stripMargin
             )),
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.Convert](_.copy(in = x)))

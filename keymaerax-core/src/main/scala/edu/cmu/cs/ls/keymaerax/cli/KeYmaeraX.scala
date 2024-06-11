@@ -42,15 +42,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** KeYmaera X basic command line interface. */
 object KeYmaeraX {
-  object Conversions {
-    val STRIPHINTS: String = "stripHints"
-    val KYX2MAT: String = "kyx2mat"
-    val KYX2SMT: String = "kyx2smt"
-    val SMT2KYX: String = "smt2kyx"
-    val SMT2MAT: String = "smt2mat"
-    val conversions: Set[String] = Set(STRIPHINTS, KYX2MAT, KYX2SMT, SMT2KYX, SMT2MAT)
-  }
-
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(s"$TechnicalName-core", args)
 
@@ -325,15 +316,13 @@ object KeYmaeraX {
   }
 
   /** Converts input files. */
-  def convert(in: String, out: Option[String], conversion: String): Unit = {
-
+  def convert(in: String, out: Option[String], conversion: Conversion.Value): Unit = {
     conversion match {
-      case Conversions.STRIPHINTS => stripHints(in, out)
-      case Conversions.KYX2SMT => kyx2smt(in, out)
-      case Conversions.KYX2MAT => kyx2mat(in, out)
-      case Conversions.SMT2KYX => smt2kyx(in, out)
-      case Conversions.SMT2MAT => smt2mat(in, out)
-      case _ => Usage.optionErrorReporter("-convert"); exit(1)
+      case Conversion.StripHints => stripHints(in, out)
+      case Conversion.KyxToMat => kyx2mat(in, out)
+      case Conversion.KyxToSmt => kyx2smt(in, out)
+      case Conversion.SmtToKyx => smt2kyx(in, out)
+      case Conversion.SmtToMat => smt2mat(in, out)
     }
   }
 
