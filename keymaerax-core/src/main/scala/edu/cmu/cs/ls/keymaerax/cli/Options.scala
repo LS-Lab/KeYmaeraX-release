@@ -14,6 +14,11 @@ import scopt.OParser
 import scala.concurrent.duration.Duration
 
 // TODO Convert to Scala 3 enum
+object TacticConversion extends Enumeration {
+  val Verbose, Labelled, Verbatim = Value
+}
+
+// TODO Convert to Scala 3 enum
 sealed trait Command
 object Command {
   // Core commands
@@ -46,7 +51,8 @@ object Command {
       interval: Boolean = true,
       vars: Option[Seq[String]] = None,
   ) extends Command
-  case class ConvertTactics(conversion: String = null, in: String = null, out: String = null) extends Command
+  case class ConvertTactics(conversion: TacticConversion.Value = null, in: String = null, out: String = null)
+      extends Command
   case class Modelplex(
       in: String = null,
       out: Option[String] = None,
@@ -167,6 +173,8 @@ object Options {
     implicit val modelPlexKindRead: scopt.Read[ModelPlexKind.Value] = scopt.Read.reads(ModelPlexKind.withName)
 
     implicit val qeMethodRead: scopt.Read[QeMethod.Value] = scopt.Read.reads(QeMethod.withName)
+
+    implicit val tacticConversionRead: scopt.Read[TacticConversion.Value] = scopt.Read.reads(TacticConversion.withName)
 
     implicit val toolNameRead: scopt.Read[ToolName.Value] = scopt.Read.reads(ToolName.withName)
 
@@ -413,12 +421,12 @@ object Options {
         .action((_, o) => o.copy(command = Some(Command.ConvertTactics())))
         .text(wrapWide("Tactic conversions."))
         .children(
-          arg[String]("<conversion>")
+          arg[TacticConversion.Value]("<conversion>")
             .action((x, o) => o.updateCommand[Command.ConvertTactics](_.copy(conversion = x)))
             .text(wrap(
-              """Conversion to perform.
-                |Possible values: verboseTactics, verbatimTactics
-                |""".stripMargin
+              s"""Conversion to perform.
+                 |${possibleValues(TacticConversion.values)}
+                 |""".stripMargin
             )),
           arg[String]("<in>")
             .action((x, o) => o.updateCommand[Command.ConvertTactics](_.copy(in = x)))

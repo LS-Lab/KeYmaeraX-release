@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
-import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, Command, EvidencePrinter, Options}
+import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, Command, EvidencePrinter, Options, TacticConversion}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{
   DBTools,
@@ -374,14 +374,14 @@ object KeYmaeraX {
    * @param out
    *   Output file
    */
-  def convertTactics(in: String, out: String, conversion: String): Unit = {
+  def convertTactics(in: String, out: String, conversion: TacticConversion.Value): Unit = {
     val src = scala.io.Source.fromFile(in.split("#")(0))
     val fileContent =
       try { src.mkString }
       finally { src.close() }
     val archiveContent = ArchiveParser.parseFromFile(in)
 
-    def convertTactic(e: ParsedArchiveEntry, how: String): ParsedArchiveEntry = e.copy(tactics =
+    def convertTactic(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(tactics =
       e.tactics
         .map({ case (name, tactic, t) =>
           tactic.trim.stripPrefix("expandAllDefs").trim.stripPrefix(";").trim match {
@@ -406,11 +406,11 @@ object KeYmaeraX {
               BelleInterpreter.setInterpreter(interpreter)
               BelleInterpreter(t, BelleProvable.plain(ProvableSig.startProof(e.model.asInstanceOf[Formula], e.defs)))
               val tree = DbProofTree(tempDB.db, proofId.toString)
-              val converter = how match {
-                case "verboseTactics" => new VerboseTraceToTacticConverter(tree.info.defs(tempDB.db))
-                case "labelledTactics" => new LabelledTraceToTacticConverter(tree.info.defs(tempDB.db))
-                case "verbatimTactics" => new VerbatimTraceToTacticConverter(tree.info.defs(tempDB.db))
-                case "succinctTactics" => ??? // @todo a succinct tactic converter that prints with index positions
+              val converter = conversion match {
+                case TacticConversion.Verbose => new VerboseTraceToTacticConverter(tree.info.defs(tempDB.db))
+                case TacticConversion.Labelled => new LabelledTraceToTacticConverter(tree.info.defs(tempDB.db))
+                case TacticConversion.Verbatim => new VerbatimTraceToTacticConverter(tree.info.defs(tempDB.db))
+                // TODO A succinct tactic converter that prints with index positions
               }
               val (converted, _) = tree.tacticString(converter)
               println("==== Done tactic " + name)
@@ -420,7 +420,7 @@ object KeYmaeraX {
     )
 
     val convertedContent = archiveContent
-      .map(e => e -> convertTactic(e, conversion))
+      .map(e => e -> convertTactic(e))
       .foldLeft(fileContent)({ case (content, (orig, conv)) =>
         val entryOnwards = content.substring(content.indexOf(orig.name))
         val entryOnwardsConverted = orig
