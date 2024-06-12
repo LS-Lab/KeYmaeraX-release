@@ -215,7 +215,6 @@ object RestApi extends Logging {
     stopTask,
     extractTactic,
     getTactic,
-    tacticDiff,
     extractLemma,
     downloadProblemSolution,
     counterExample,

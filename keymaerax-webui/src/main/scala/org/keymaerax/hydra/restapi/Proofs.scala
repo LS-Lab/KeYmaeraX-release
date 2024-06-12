@@ -89,28 +89,6 @@ object Proofs {
       }
     }
 
-  val tacticDiff: SessionToken => Route = (t: SessionToken) =>
-    path("proofs" / "user" / Segment / Segment / "tacticDiff") { (_, proofId) =>
-      {
-        pathEnd {
-          post {
-            entity(as[String]) { contents =>
-              {
-                val tactics = contents.parseJson.asJsObject
-                val request = new TacticDiffRequest(
-                  database,
-                  proofId,
-                  tactics.fields("old").asInstanceOf[JsString].value,
-                  tactics.fields("new").asInstanceOf[JsString].value,
-                )
-                completeRequest(request, t)
-              }
-            }
-          }
-        }
-      }
-    }
-
   val extractLemma: SessionToken => Route = (t: SessionToken) =>
     path("proofs" / "user" / Segment / Segment / "lemma") { (userId, proofId) =>
       {

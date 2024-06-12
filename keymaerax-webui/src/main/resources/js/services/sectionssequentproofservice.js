@@ -179,16 +179,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       tacticText: "",
       lastExecutedTacticText: "",
       currentSuggestions: undefined,
-      tacticDiff: "",
-      tacticDel: "",
 
       fetch: function(userId, proofId) {
         var theTactic = this;
         $http.get('proofs/user/' + userId + '/' + proofId + '/extract').then(function (response) {
           theTactic.tacticText = response.data.tacticText;
           theTactic.lastExecutedTacticText = theTactic.tacticText;
-          theTactic.tacticDiff = "";
-          theTactic.tacticDel = "";
         })
         .catch(function(data) {
           $rootScope.$broadcast('tactic.extractError', userId, proofId);
@@ -198,8 +194,6 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       reset: function() {
         this.tacticText = "";
         this.lastExecutedTacticText = "";
-        this.tacticDiff = "";
-        this.tacticDel = "";
         this.currentSuggestions = undefined;
       }
     },
