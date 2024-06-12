@@ -582,6 +582,7 @@ object TacticMacro {
           case _: AxiomDisplayInfo | _: SimpleDisplayInfo => true
           case d: InputAxiomDisplayInfo => !d.formula.contains(name)
           case d: RuleDisplayInfo => !(sdContains(d.conclusion, name) || d.premises.exists(sd => sdContains(sd, name)))
+          case _: TacticDisplayInfo => c.abort(c.enclosingPosition, s"Unexpected tactic type")
         }
 
         if (shouldMentionInputButDoesnt) {

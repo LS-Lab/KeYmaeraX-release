@@ -158,7 +158,7 @@ object AxiomMacro {
     // Annotation must be applied to the val definition of an axiom.
     val valDef = annottees.map(_.tree).toList match {
       case List(valDef: ValDef) => valDef
-      case t: Tree => c.abort(t.pos, "@Axiom must be applied to val definition")
+      case _ => c.abort(c.enclosingPosition, "@Axiom must be applied to val definition")
     }
 
     // The val definition must be an invocation of one of the functions for defining derived axioms.
