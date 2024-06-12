@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.cli.{Command, Options}
-import edu.cmu.cs.ls.keymaerax.core.{assertion, Ensures}
+import edu.cmu.cs.ls.keymaerax.core.Ensures
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.info.{TechnicalName, Version, VersionNumber}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker}
@@ -16,17 +16,11 @@ import spray.json._
 import java.io._
 import javax.swing.JOptionPane
 import scala.io.{Codec, Source}
-import scala.sys.ShutdownHookThread
 
 /**
  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]], the
  * aXiomatic Tactical Theorem Prover for Hybrid Systems and Hybrid Games.
  *
- * Usage:
- * {{{
- *  java -jar keymaerax.jar
- *  java -Xss20M -jar keymaerax.jar -launch
- * }}}
  * @todo
  *   move functionality directly into KeYmaeraX.scala?
  * @author
@@ -38,49 +32,14 @@ import scala.sys.ShutdownHookThread
  *   [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
  */
 object Main {
-
-  /** This flag is set to true iff this process does nothing but re-launch */
-  var IS_RELAUNCH_PROCESS = false
-
-  // @todo set via -log command line option
-  private val logFile = false
-
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(s"$TechnicalName-webui", args)
+    if (!options.launch) { Relauncher.relaunchOrExit(args) }
 
     Configuration.setConfiguration(FileConfiguration)
 
-    // isFirstLaunch indicates that an extra big-stack JVM still has to be launched
-    val isFirstLaunch = !options.launch
-
-    if (isFirstLaunch) {
-      IS_RELAUNCH_PROCESS = true
-      val java: String = javaLocation
-      val keymaeraxjar: String = jarLocation
-
-      val javaVersionCompatibility = javaVersion
-      if (javaVersionCompatibility._1.contains(false)) {
-        exitWith(
-          "KeYmaera X requires at least Java Virtual Machine version 1.8.0_111. It was started with " +
-            javaVersionCompatibility._2 + ". Please install compatible Java and restart KeYmaera X."
-        )
-      } else {
-        if (javaVersionCompatibility._1.isEmpty) {
-          println("WARNING: Unexpected Java Version not known to be compatible: " + javaVersionCompatibility._2)
-        }
-        var assertsEnabled = false
-        assertion({
-          assertsEnabled = true; assertsEnabled
-        }) // intentional lazy side-effect of setting assertsEnabled to true if -ea
-        // now assertsEnabled is set to the correct value (true if -ea, false if -da)
-        val cmd = List(java, "-Xss20M", if (assertsEnabled) "-ea" else "-da", "-jar", keymaeraxjar) ++ args :+
-          Options.LaunchFlag
-        launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
-        runCmd(cmd)
-      }
-    } else if (options.command.getOrElse(Command.Ui) == Command.Ui) {
+    if (options.command.getOrElse(Command.Ui) == Command.Ui) {
       edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.initializeConfig(options);
-
       // Initialize the loading dialog splash screen.
       LoadingDialogFactory()
 
@@ -359,157 +318,6 @@ object Main {
       }
     }
     launcherDebug("done.")
-  }
-
-  /** Indicates whether the process `proc` is alive, similar to [[Process]] but catching all exceptions. */
-  def processIsAlive(proc: Process): Boolean = {
-    try {
-      proc.exitValue()
-      false
-    } catch { case _: Exception => true }
-  }
-
-  /** Runs the command `cmd` in a new process. */
-  private def runCmd(cmd: List[String]): Unit = {
-    launcherDebug("Running command:\n" + cmd.mkString(" "))
-
-    val pb = new ProcessBuilder(cmd: _*)
-    var pollOnStd = false
-    try {
-      if (logFile) {
-        // @todo not sure if it's really helpful to have separate error and output log. pb.redirectErrorStream(true)
-        val errorLog = File.createTempFile("keymaerax-error-stream", ".txt")
-        val outputLog = File.createTempFile("keymaerax-output-stream", ".txt")
-        pb.redirectError(errorLog)
-        System.err.println("Errors will be logged at " + errorLog.getPath)
-        pb.redirectOutput(outputLog)
-        System.err.println("Outputs will be logged at " + outputLog.getPath)
-      } else {
-        // @todo dump to console AND to logfile would be best
-        pb.inheritIO()
-      }
-    } catch {
-      // @note JDK<1.7
-      case _: NoSuchMethodError => pollOnStd = true
-    }
-    val proc = pb.start()
-
-    ShutdownHookThread { proc.destroy() }
-
-    if (pollOnStd) {
-      val errReaderThread = new Thread() {
-        override def run(): Unit = {
-          try {
-            val errReader = new BufferedReader(new InputStreamReader(proc.getErrorStream))
-            while (processIsAlive(proc)) {
-              val errLine = errReader.readLine()
-              if (errLine != null) System.err.println(errLine)
-            }
-            errReader.close()
-          } catch {
-            case _: EOFException => System.err.println("Done with log output")
-            case exc: IOException => System.err.println("Done with log output: " + exc)
-          }
-        }
-      }
-      val stdReaderThread = new Thread() {
-        override def run(): Unit = {
-          try {
-            val reader = new BufferedReader(new InputStreamReader(proc.getInputStream))
-            while (processIsAlive(proc)) {
-              val line = reader.readLine()
-              if (line != null) System.out.println(line)
-            }
-            reader.close()
-          } catch {
-            case _: EOFException => System.err.println("Done with log output")
-            case exc: IOException => System.err.println("Done with log input: " + exc)
-          }
-        }
-      }
-
-      stdReaderThread.start()
-      errReaderThread.start()
-    }
-
-    sys.exit(proc.waitFor())
-  }
-
-  /** Gracefully exit with an error message displayed to the user. */
-  private def exitWith(err: String): Nothing = {
-    val message =
-      "ERROR in loader :: See http://keymaeraX.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
-    launcherLog(message)
-    try { if (!java.awt.GraphicsEnvironment.isHeadless) { JOptionPane.showMessageDialog(null, message) } }
-    catch {
-      case _: java.awt.HeadlessException =>
-      case _: java.lang.ClassNotFoundException =>
-      case _: java.lang.NoSuchMethodError =>
-      case _: Exception =>
-    }
-    sys.exit(-3)
-  }
-
-  /** The location of the Java Virtual Machine interpreter `java`. */
-  lazy val javaLocation: String = {
-    val javaHome = System.getProperty("java.home") + "/bin"
-    val matchingFiles = new java.io.File(javaHome).listFiles(new FileFilter {
-      override def accept(pathname: File): Boolean = pathname.canExecute &&
-        (pathname.getName.equals("java") || pathname.getName.equals("java.exe"))
-    })
-
-    if (matchingFiles.length == 1) { matchingFiles.head.getAbsolutePath }
-    else { exitWith("Could not find a Java executable in " + javaHome) }
-  }
-
-  /**
-   * Assumes that the JAR was run from its containing directory (e.g., as happens when double-clicking). If this
-   * assumption is violated, the launcher will fail.
-   * @return
-   *   The location of the .JAR file that's currently running.
-   */
-  lazy val jarLocation: String = {
-    new File(Main.getClass.getProtectionDomain.getCodeSource.getLocation.toURI.getPath).toString
-  }
-
-  /**
-   * Identify whether the running Java Version is compatible with KeYmaera X.
-   * @return
-   *   \- Some(true) if compatible, along with the version string
-   *   - Some(false) if not compatible, along with the version string
-   *   - None if compatibility unknown, along with the best guess of a version string
-   */
-  private def javaVersion: (Option[Boolean], String) = {
-    val javaVersion: String =
-      try { System.getProperty("java.version") }
-      catch {
-        case e: IllegalArgumentException =>
-          println("Java does not reveal its version: " + e); return (None, "<unknown>")
-        case e: NullPointerException => println("Java does not reveal its version: " + e); return (None, "<unknown>")
-        case e: SecurityException =>
-          println("Java does not reveal its version because a SecurityManager interfered: " + e)
-          return (None, "<unknown>")
-      }
-    try {
-      val javaMajorMinor :: legacyUpdateVersion :: Nil =
-        if (javaVersion.contains("_")) javaVersion.split("_").toList else javaVersion :: "-1" :: Nil
-      val _ :: javaMajor :: javaMinor :: updateVersion :: Nil = {
-        val majorMinor: List[String] = javaMajorMinor.split("\\.").toList
-        if (majorMinor.length == 1) "1" +: majorMinor :+ "0" :+ legacyUpdateVersion
-        else if (majorMinor.length == 2) majorMinor :+ "0" :+ legacyUpdateVersion
-        else if (Integer.parseInt(majorMinor.head) >= 9) "1" +:
-          majorMinor // @note Java 9 onwards are of the shape 9.0.2
-        else majorMinor.take(3) :+ legacyUpdateVersion
-      }
-      if (
-        Integer.parseInt(javaMajor) < 8 ||
-        (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)
-      ) { (Some(false), javaVersion) }
-      else { (Some(true), javaVersion) }
-    } catch {
-      case _: MatchError => (None, javaVersion)
-      case _: NumberFormatException => (None, javaVersion)
-    }
   }
 
   /** Print message `s`. */
