@@ -9,8 +9,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.cli.Options
-import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, SystemWebBrowser}
+import edu.cmu.cs.ls.keymaerax.cli.{LoadingDialogFactory, Options, SystemWebBrowser}
 import edu.cmu.cs.ls.keymaerax.tools.ToolName
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}

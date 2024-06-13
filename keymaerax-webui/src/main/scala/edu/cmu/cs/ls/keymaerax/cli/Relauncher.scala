@@ -3,9 +3,8 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-package edu.cmu.cs.ls.keymaerax.launcher
+package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.cli.Options
 import edu.cmu.cs.ls.keymaerax.info.FullName
 
 import scala.sys.process.Process

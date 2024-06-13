@@ -6,12 +6,13 @@
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.cli.KeymaeraxWebui
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, NamedSymbol, Sequent, True, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.launcher.KeymaeraxWebui
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
-import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
+import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import org.scalatest.LoneElement._
 
 import java.io.File
@@ -24,7 +25,7 @@ import scala.collection.immutable.ListMap
  * @author
  *   Stefan Mitsch
  */
-@edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
+@IgnoreInBuildTest
 class CCodeGeneratorTests extends TacticTestBase {
 
   // @todo Unify Python and C code generator, fix all test cases
@@ -511,7 +512,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     ))(after being whiteSpaceRemoved)
   }
 
-  it should "generate C code for passivesafetyabs with KeYmaeraX command line interface" taggedAs IgnoreInBuildTest in {
+  it should "generate C code for passivesafetyabs with KeYmaeraX command line interface" in {
     // command line main has to initialize the prover itself, so dispose all test setup first
 //    afterEach()
 
@@ -1187,7 +1188,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     }
   }
 
-  it should "compile and run a controller with MPFR" taggedAs IgnoreInBuildTest in {
+  it should "compile and run a controller with MPFR" in {
     val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val code = (
