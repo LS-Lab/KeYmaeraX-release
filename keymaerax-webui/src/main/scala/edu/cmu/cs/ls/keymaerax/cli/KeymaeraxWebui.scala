@@ -37,8 +37,10 @@ object KeymaeraxWebui {
     val options = Options.parseArgs(s"$TechnicalName-webui", args)
     if (!options.launch) Relauncher.relaunchOrExit(args)
 
+    Configuration.setConfiguration(FileConfiguration)
+    GlobalLockChecks.acquireGlobalLockFileOrExit(graphical = true)
+
     try {
-      Configuration.setConfiguration(FileConfiguration)
       KeymaeraxCore.initializeConfig(options)
       runCommand(options)
     } finally { KeymaeraxCore.shutdownProver() }
@@ -91,9 +93,8 @@ object KeymaeraxWebui {
       DatabaseChecks.exitIfDeprecated()
       LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
       LemmaCacheChecks.clearCacheIfDeprecated()
-      LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
-      GlobalLaunchChecks.acquireGlobalLockFileOrExit()
-      GlobalLaunchChecks.ensureWebuiPortCanBeBoundOrExit()
+      LoadingDialogFactory().addToStatus(10, Some("Checking port..."))
+      PortChecks.ensureWebuiPortCanBeBoundOrExit()
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.run(options)
     case _ => edu.cmu.cs.ls.keymaerax.cli.KeymaeraxCore.runCommand(options)
   }

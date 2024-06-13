@@ -47,8 +47,10 @@ object KeymaeraxCore {
     val options = Options.parseArgs(s"$TechnicalName-core", args)
     if (!options.launch) Relauncher.relaunchOrExit(args)
 
+    Configuration.setConfiguration(FileConfiguration)
+    GlobalLockChecks.acquireGlobalLockFileOrExit()
+
     try {
-      Configuration.setConfiguration(FileConfiguration)
       initializeConfig(options)
       runCommand(options)
     } finally { shutdownProver() }

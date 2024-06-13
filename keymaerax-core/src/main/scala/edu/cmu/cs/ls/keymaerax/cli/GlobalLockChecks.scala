@@ -8,13 +8,11 @@ package edu.cmu.cs.ls.keymaerax.cli
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.info.FullName
 
-import java.io.IOException
-import java.net.ServerSocket
 import java.nio.file.{FileAlreadyExistsException, Files, Paths}
 import javax.swing.JOptionPane
 import scala.sys.ShutdownHookThread
 
-object GlobalLaunchChecks {
+object GlobalLockChecks {
 
   /**
    * Try to atomically acquire a global lock file, notifying the user and exiting on failure. Uses both CLI and GUI
@@ -23,7 +21,7 @@ object GlobalLaunchChecks {
    * Running two instances of KeYmaera X concurrently can result in weird behavior, including during initialization.
    * Thus, this function must be called very early during any KeYmaera X startup sequence.
    */
-  def acquireGlobalLockFileOrExit(): Unit = {
+  def acquireGlobalLockFileOrExit(graphical: Boolean = false): Unit = {
     val path = Paths.get(Configuration.KEYMAERAX_HOME_PATH).resolve("lockfile")
 
     try {
@@ -41,7 +39,7 @@ object GlobalLaunchChecks {
                      |$path
                      |""".stripMargin.stripLineEnd
         println(msg)
-        JOptionPane.showMessageDialog(null, msg)
+        if (graphical) JOptionPane.showMessageDialog(null, msg)
         sys.exit(1)
       case e: Throwable =>
         val msg = s"""$FullName failed to create its lock file: $e
@@ -49,30 +47,7 @@ object GlobalLaunchChecks {
                      |$path
                      |""".stripMargin.stripLineEnd
         println(msg)
-        JOptionPane.showMessageDialog(null, msg)
-        sys.exit(1)
-    }
-  }
-
-  /**
-   * Check if KeYmaera X can bind to the port that the webui will later bind to. If it can't, notify the user and exit
-   * (similar to [[acquireGlobalLockFileOrExit]]).
-   *
-   * Due to possible race conditions, this check alone is not enough and must always be combined with
-   * [[acquireGlobalLockFileOrExit]]. It should be called after [[acquireGlobalLockFileOrExit]] so the error messages
-   * make more sense to the user.
-   */
-  def ensureWebuiPortCanBeBoundOrExit(): Unit = {
-    val port = Integer.parseInt(Configuration(Configuration.Keys.PORT))
-
-    try { new ServerSocket(port).close() }
-    catch {
-      case e: IOException =>
-        val msg = s"""$FullName can't bind to port $port: $e
-                     |Please ensure no other program is currently bound to the port, then try again.
-                     |""".stripMargin.stripLineEnd
-        println(msg)
-        JOptionPane.showMessageDialog(null, msg)
+        if (graphical) JOptionPane.showMessageDialog(null, msg)
         sys.exit(1)
     }
   }
