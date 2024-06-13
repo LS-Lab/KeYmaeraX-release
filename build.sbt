@@ -146,7 +146,7 @@ lazy val webui = project
   .dependsOn(macros, core)
   .settings(
     name := "KeYmaeraX WebUI",
-    mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
+    mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX"),
 
     /// sqlite driver
     libraryDependencies += "com.typesafe.slick" %% "slick" % "3.5.1",

@@ -83,6 +83,7 @@ object KeYmaeraX {
    */
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(s"$TechnicalName-webui", args)
+    if (!options.launch) Relauncher.relaunchOrExit(args)
 
     try {
       Configuration.setConfiguration(FileConfiguration)
@@ -127,6 +128,15 @@ object KeYmaeraX {
       if (cmd.out.isEmpty) options.printUsageAndExitWithError()
       initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
       convertTactics(in = cmd.in, out = cmd.out, conversion = cmd.conversion)
+    case Some(Command.Ui) =>
+      LoadingDialogFactory()
+      DatabaseChecks.exitIfDeprecated()
+      LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
+      LemmaCacheChecks.clearCacheIfDeprecated()
+      LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
+      GlobalLaunchChecks.acquireGlobalLockFileOrExit()
+      GlobalLaunchChecks.ensureWebuiPortCanBeBoundOrExit()
+      edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.run(options)
     case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
   }
 
