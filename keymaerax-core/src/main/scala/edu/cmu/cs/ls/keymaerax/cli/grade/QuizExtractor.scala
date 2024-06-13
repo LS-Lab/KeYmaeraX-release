@@ -3,10 +3,10 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-package edu.cmu.cs.ls.keymaerax.cli
+package edu.cmu.cs.ls.keymaerax.cli.grade
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{
+import edu.cmu.cs.ls.keymaerax.cli.grade.AssessmentProver.{
   AnyOfArtifact,
   ArchiveArtifact,
   Artifact,

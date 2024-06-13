@@ -3,7 +3,7 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-package edu.cmu.cs.ls.keymaerax.cli
+package edu.cmu.cs.ls.keymaerax.cli.grade
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{
@@ -12,8 +12,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{
   TacticInapplicableFailure,
 }
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{
+import edu.cmu.cs.ls.keymaerax.cli.Options
+import edu.cmu.cs.ls.keymaerax.cli.grade.AssessmentProver.AskGrader.Modes
+import edu.cmu.cs.ls.keymaerax.cli.grade.AssessmentProver.{
   AnyChoiceGrader,
   AnyOfArtifact,
   ArchiveArtifact,
@@ -34,8 +35,16 @@ import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{
   TexExpressionArtifact,
   TextArtifact,
 }
-import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
-import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
+import edu.cmu.cs.ls.keymaerax.cli.grade.QuizExtractor.{
+  AnyChoiceQuestion,
+  AskQuestion,
+  AskTFQuestion,
+  MultiAskQuestion,
+  OneChoiceQuestion,
+  Problem,
+  Question,
+}
+import edu.cmu.cs.ls.keymaerax.cli.grade.Submission.{ChoiceAnswer, TextAnswer}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._

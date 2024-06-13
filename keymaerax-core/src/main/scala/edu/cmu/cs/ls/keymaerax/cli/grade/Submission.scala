@@ -3,9 +3,9 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-package edu.cmu.cs.ls.keymaerax.cli
+package edu.cmu.cs.ls.keymaerax.cli.grade
 
-import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.AskQuestion
+import edu.cmu.cs.ls.keymaerax.cli.grade.QuizExtractor.AskQuestion
 import spray.json._
 
 import scala.util.matching.Regex

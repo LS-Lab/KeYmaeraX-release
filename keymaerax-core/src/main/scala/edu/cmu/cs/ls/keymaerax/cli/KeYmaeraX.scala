@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{
   WolframScriptToolProvider,
   Z3ToolProvider,
 }
+import edu.cmu.cs.ls.keymaerax.cli.grade.AssessmentProver
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.info.TechnicalName
 import edu.cmu.cs.ls.keymaerax.parser.{

@@ -3,7 +3,7 @@
  * See LICENSE.txt for the conditions of this license.
  */
 
-package edu.cmu.cs.ls.keymaerax.cli
+package edu.cmu.cs.ls.keymaerax.cli.grade
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{
@@ -30,8 +30,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.{
   TactixInit,
   ToolProvider,
 }
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
-import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.AskQuestion.extractSolfinAnswers
+import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraXProofChecker
+import edu.cmu.cs.ls.keymaerax.cli.grade.AssessmentProver.AskGrader.Modes
+import edu.cmu.cs.ls.keymaerax.cli.grade.QuizExtractor.AskQuestion.extractSolfinAnswers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
