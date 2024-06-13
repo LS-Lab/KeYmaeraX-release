@@ -6,7 +6,6 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.exit
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator, CodeGenerator}
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, Imply, StaticSemantics, True}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -79,7 +78,7 @@ object CodeGen {
       System.err.println("Interval arithmetic: unfinished")
       // @todo wipe out output file PrintWriter above has already emptied the output file
       // @todo pw.close()
-      exit(-1)
+      KeymaeraxCore.exit(-1)
       // TODO what to do when proof cannot be checked?
     } else {
       println(
@@ -90,7 +89,7 @@ object CodeGen {
     val inputFormula = entry.model.asInstanceOf[Formula]
     if (!inputFormula.isFOL) {
       println("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
-      exit(-1)
+      KeymaeraxCore.exit(-1)
     }
 
     // @note codegen in C format only regardless of file extension
@@ -126,7 +125,7 @@ object CodeGen {
 
     if (!monitorFml.isFOL) {
       println("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
-      exit(-1)
+      KeymaeraxCore.exit(-1)
     }
 
     val monitorStateVars = vars match {

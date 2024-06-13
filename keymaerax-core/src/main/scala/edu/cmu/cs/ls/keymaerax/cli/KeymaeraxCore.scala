@@ -41,8 +41,8 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-/** KeYmaera X basic command line interface. */
-object KeYmaeraX {
+/** Command-line interface for the KeYmaera X core jar. */
+object KeymaeraxCore {
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(s"$TechnicalName-core", args)
 

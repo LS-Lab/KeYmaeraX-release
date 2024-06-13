@@ -15,8 +15,6 @@ import scala.jdk.CollectionConverters._
 /**
  * The KeYmaera X configuration. The purpose of this object is to have a central place for system configuration options
  * of KeYmaera X.
- * @see
- *   [[edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX]]
  */
 object FileConfiguration extends Configuration {
 

@@ -73,7 +73,7 @@ lazy val core = project
   .dependsOn(macros)
   .settings(
     name := "KeYmaeraX Core",
-    mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
+    mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeymaeraxCore"),
 
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
 
@@ -146,7 +146,7 @@ lazy val webui = project
   .dependsOn(macros, core)
   .settings(
     name := "KeYmaeraX WebUI",
-    mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX"),
+    mainClass := Some("edu.cmu.cs.ls.keymaerax.launcher.KeymaeraxWebui"),
 
     /// sqlite driver
     libraryDependencies += "com.typesafe.slick" %% "slick" % "3.5.1",

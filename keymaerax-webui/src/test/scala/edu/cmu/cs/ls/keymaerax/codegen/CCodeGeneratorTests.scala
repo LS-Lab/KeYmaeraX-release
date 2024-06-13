@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, NamedSymbol, Sequent, True, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.launcher.KeymaeraxWebui
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
@@ -518,7 +518,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val inputFileName = "./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.kym"
     val outputFileName = File.createTempFile("passivesafetyabs", ".c").getAbsolutePath
 
-    KeYmaeraX
+    KeymaeraxWebui
       .main(Array("-codegen", inputFileName, "-vars", "a,w,r,xo,yo,dxo,dyo", "-nointerval", "-out", outputFileName))
 
     val expectedCCode = scala

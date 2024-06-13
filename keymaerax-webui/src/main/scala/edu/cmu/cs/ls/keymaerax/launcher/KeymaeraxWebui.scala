@@ -9,8 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX._
-import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, Command, EvidencePrinter, Options, TacticConversion}
+import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, Command, EvidencePrinter, KeymaeraxCore, Options, TacticConversion}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{
   DBTools,
@@ -33,72 +32,26 @@ import java.io.PrintWriter
 import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
 
-/**
- * Command-line interface launcher for [[http://keymaeraX.org/ KeYmaera X]], the aXiomatic Tactical Theorem Prover for
- * Hybrid Systems and Hybrid Games.
- *
- *   - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
- *   - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Tactic language library
- *   - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
- *
- * @author
- *   Stefan Mitsch
- * @author
- *   Andre Platzer
- * @author
- *   Ran Ji
- * @author
- *   Brandon Bohrer
- * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
- * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
- *   Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin,
- *   Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
- * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
- *   Springer, 2018.
- * @see
- *   Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer.
- *   [[https://doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X: An axiomatic tactical theorem prover for hybrid systems]].
- *   In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin,
- *   Germany, Proceedings, LNCS. Springer, 2015.
- * @see
- *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
- *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see
- *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in
- *   Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
- * @see
- *   [[edu.cmu.cs.ls.keymaerax.launcher.Main]]
- */
-object KeYmaeraX {
-
-  /**
-   * main function to start KeYmaera X from command line. Other entry points exist but this one is best for command line
-   * interfaces.
-   */
+/** Command-line interface for the KeYmaera X webui jar. */
+object KeymaeraxWebui {
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(s"$TechnicalName-webui", args)
     if (!options.launch) Relauncher.relaunchOrExit(args)
 
     try {
       Configuration.setConfiguration(FileConfiguration)
-      initializeConfig(options)
+      KeymaeraxCore.initializeConfig(options)
       runCommand(options)
-    } finally { shutdownProver() }
+    } finally { KeymaeraxCore.shutdownProver() }
   }
 
   def runCommand(options: Options): Unit = options.command match {
     case Some(cmd: Command.Codegen) =>
       // Quantitative ModelPlex uses Mathematica to simplify formulas
       val tool = if (cmd.quantitative) ToolName.Mathematica else ToolName.Z3
-      val toolConfig = toolConfigFromFile(tool)
+      val toolConfig = KeymaeraxCore.toolConfigFromFile(tool)
       val vars = cmd.vars.map(makeVariables(_).toSet)
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfig))
+      KeymaeraxCore.initializeProver(KeymaeraxCore.combineToolConfigs(options.toToolConfig, toolConfig))
       CodeGen.codegen(
         in = cmd.in,
         out = cmd.out,
@@ -108,7 +61,9 @@ object KeYmaeraX {
         args = options.args,
       )
     case Some(cmd: Command.Modelplex) =>
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
+      KeymaeraxCore.initializeProver(
+        KeymaeraxCore.combineToolConfigs(options.toToolConfig, KeymaeraxCore.toolConfigFromFile(ToolName.Z3))
+      )
       modelplex(
         in = cmd.in,
         out = cmd.out,
@@ -121,12 +76,16 @@ object KeYmaeraX {
         args = options.args,
       )
     case Some(cmd: Command.Repl) =>
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
+      KeymaeraxCore.initializeProver(
+        KeymaeraxCore.combineToolConfigs(options.toToolConfig, KeymaeraxCore.toolConfigFromFile(ToolName.Z3))
+      )
       repl(model = cmd.model, tactic = cmd.tactic, scaladefs = cmd.scaladefs)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
     case Some(cmd: Command.ConvertTactics) =>
       if (cmd.out.isEmpty) options.printUsageAndExitWithError()
-      initializeProver(combineToolConfigs(options.toToolConfig, toolConfigFromFile(ToolName.Z3)))
+      KeymaeraxCore.initializeProver(
+        KeymaeraxCore.combineToolConfigs(options.toToolConfig, KeymaeraxCore.toolConfigFromFile(ToolName.Z3))
+      )
       convertTactics(in = cmd.in, out = cmd.out, conversion = cmd.conversion)
     case Some(Command.Ui) =>
       LoadingDialogFactory()
@@ -137,11 +96,8 @@ object KeYmaeraX {
       GlobalLaunchChecks.acquireGlobalLockFileOrExit()
       GlobalLaunchChecks.ensureWebuiPortCanBeBoundOrExit()
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.run(options)
-    case _ => edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.runCommand(options)
+    case _ => edu.cmu.cs.ls.keymaerax.cli.KeymaeraxCore.runCommand(options)
   }
-
-  /** Statistics about size of prover kernel. */
-  def stats: String = { "    with " + Provable.rules.size + " axiomatic rules and " + Provable.axiom.size + " axioms" }
 
   private def makeVariables(varNames: Seq[String]): Seq[BaseVariable] = {
     varNames.map(vn =>

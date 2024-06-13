@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Statistics}
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.launcher.KeymaeraxWebui
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -368,7 +368,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/modelplex/watertank/watertank.key"
     val vars = "f,l,c"
     val outputFileName = File.createTempFile("watertank", ".kym").getAbsolutePath
-    KeYmaeraX.main(Array(
+    KeymaeraxWebui.main(Array(
       "-tool",
       "mathematica",
       "-modelplex",

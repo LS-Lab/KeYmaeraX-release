@@ -11,8 +11,6 @@ import scala.util.matching.Regex
 /**
  * The KeYmaera X configuration. The purpose of this object is to have a central place for system configuration options
  * of KeYmaera X.
- * @see
- *   [[edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX]]
  */
 trait Configuration {
 

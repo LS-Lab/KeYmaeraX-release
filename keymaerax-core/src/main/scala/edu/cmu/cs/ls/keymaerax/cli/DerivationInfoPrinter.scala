@@ -14,7 +14,7 @@ object DerivationInfoPrinter {
   def main(args: Array[String]): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     try {
-      KeYmaeraX.initializeProver(ToolConfiguration())
+      KeymaeraxCore.initializeProver(ToolConfiguration())
       val out = DerivationInfo
         .allInfo
         .map({ case (k, v) => (k, v.persistentInputs, v.numPositionArgs) })
@@ -23,7 +23,7 @@ object DerivationInfoPrinter {
         })
         .mkString("\n") + "\ncase t => throw ParseException(\"Unknown tactic \" + t)"
       println(out)
-    } finally { KeYmaeraX.shutdownProver() }
+    } finally { KeymaeraxCore.shutdownProver() }
   }
 
   private def printArgInfo(i: List[ArgInfo]): String = "List(" + i.map(printArgInfo).mkString(",") + ")"
