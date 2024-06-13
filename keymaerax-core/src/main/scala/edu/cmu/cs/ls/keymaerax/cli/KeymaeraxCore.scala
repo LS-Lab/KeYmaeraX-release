@@ -45,6 +45,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 object KeymaeraxCore {
   def main(args: Array[String]): Unit = {
     val options = Options.parseArgs(s"$TechnicalName-core", args)
+    if (!options.launch) Relauncher.relaunchOrExit(args)
 
     try {
       Configuration.setConfiguration(FileConfiguration)
