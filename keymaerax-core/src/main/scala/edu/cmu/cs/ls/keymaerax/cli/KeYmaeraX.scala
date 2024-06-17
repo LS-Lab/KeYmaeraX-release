@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{
   Z3ToolProvider,
 }
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, StaticSemantics}
-import edu.cmu.cs.ls.keymaerax.info.License
+import edu.cmu.cs.ls.keymaerax.info.{FullCopyright, License, ThirdPartyLicenses}
 import edu.cmu.cs.ls.keymaerax.parser.{
   ArchiveParser,
   Declaration,
@@ -157,7 +157,9 @@ object KeYmaeraX {
     args match {
       case Nil => (options, args)
       case "-help" :: _ => println(usage); exit(1)
+      case "-copyright" :: _ => println(FullCopyright); exit(1)
       case "-license" :: _ => println(License); exit(1)
+      case "-thirdPartyLicenses" :: _ => println(ThirdPartyLicenses); exit(1)
       // actions and their options
       case "-bparse" :: value :: _ =>
         initializeProver(options, usage) // @note parsing a tactic requires prover (AxiomInfo)
