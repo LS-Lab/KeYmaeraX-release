@@ -78,6 +78,8 @@ object Main {
         runCmd(cmd)
       }
     } else if (options.command.getOrElse(Command.Ui) == Command.Ui) {
+      edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.initializeConfig(options);
+
       // Initialize the loading dialog splash screen.
       LoadingDialogFactory()
 
