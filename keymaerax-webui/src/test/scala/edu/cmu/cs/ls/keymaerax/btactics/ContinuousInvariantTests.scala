@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.tagobjects.{ExtremeTest, SlowTest}
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationTimedOutException
 import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery, whenever}
 import org.scalatest.prop.Tables._
@@ -134,7 +134,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         )
         .head
 
-      a[MathematicaComputationAbortedException] should be thrownBy tool.lzzCheck(
+      a[MathematicaComputationTimedOutException] should be thrownBy tool.lzzCheck(
         "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
         "5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula,
       )

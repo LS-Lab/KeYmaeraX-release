@@ -69,7 +69,7 @@ class DifferentialSaturationTests extends TacticTestBase {
     val ls = bfsSCC(adjs).flatten.map(l => l.toList) ++ List(odevars(p).toList)
 
     val invs = parametricInvariants(ode, List(dom), ls, 4, true, Some(qeTool))
-    invs._2.map(s => s._1) should contain only ("a__0+t".asTerm, "a__2+x^2".asTerm)
+    invs._2.map(s => s._1) should contain only ("a__0+x^2".asTerm, "a__3+t".asTerm)
   }
 
   // Note: mathematica's simplification tool is non deterministic???

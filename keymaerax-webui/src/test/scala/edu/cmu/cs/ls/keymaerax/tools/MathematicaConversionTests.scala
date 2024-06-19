@@ -64,6 +64,7 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
     link.init(mathematicaConfig("linkName"), None, "false") // @todo jlink
     ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) {}
     ml.init()
+    KeYmaeraXTool.init(initDerivationInfoRegistry = false)
   }
 
   override def afterAll(): Unit = {
@@ -71,6 +72,7 @@ class MathematicaConversionTests extends AnyFlatSpec with Matchers with BeforeAn
     link = null
     ml.shutdown()
     ml = null
+    KeYmaeraXTool.shutdown()
   }
 
   private object round {
