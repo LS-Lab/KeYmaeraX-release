@@ -14,7 +14,7 @@ import java.nio.file.Paths
 
 class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponse(): Response = {
-    val paths = ToolPathFinder.findMathematicaInstallDir().flatMap(ToolPathFinder.findMathematicaPaths)
+    val paths = ToolPathFinder.findWolframEngineInstallDir().flatMap(ToolPathFinder.findMathematicaPaths)
 
     val suggestionFound = paths.isDefined
     val suggestion = paths.getOrElse(

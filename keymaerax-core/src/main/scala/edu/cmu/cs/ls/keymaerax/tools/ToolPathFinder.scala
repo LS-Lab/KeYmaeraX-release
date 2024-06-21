@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.info.{ArchType, Os, OsType}
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 import scala.sys.process.Process
 import scala.util.Try
 
@@ -17,61 +17,76 @@ object ToolPathFinder {
   @deprecated("use findMathematicaPaths instead")
   def jlinkLibFileName: String = findMathematicaPaths(Paths.get(".")).map(_.jlinkLib.getFileName.toString).getOrElse("")
 
-  /** Find the Mathematica installation directory by asking different programs on the `PATH`. */
-  def findMathematicaInstallDir(): Option[Path] = {
-    def pathFromCommand(command: String*): Option[Path] = Try(Paths.get(Process(command).!!.stripLineEnd)).toOption
-
-    // On Windows, Mathematica/WolframEngine only adds wolframscript.exe to the PATH.
-    // On other platforms, wolframscript may also be available, but not always.
-    // For example, Mathematica on NixOS does not provide wolframscript.
-    // https://reference.wolfram.com/language/ref/$InstallationDirectory.html
-    // https://reference.wolfram.com/language/ref/program/wolframscript.html
-    def pathFromWolframscript = pathFromCommand("wolframscript", "-code", "$InstallationDirectory")
-
-    // On non-Windows platforms, Mathematica/WolframEngine may add more binaries to the PATH:
-    // wolfram, WolframKernel, math, and MathKernel.
-    // Of those, math/MathKernel are equivalent to wolfram/WolframKernel and only provided for backwards compatibility.
-    // https://mathematica.stackexchange.com/a/84038
-    //
-    // The wolfram binary is meant for command-line use while the WolframKernel binary may spawn a GUI.
-    // Because of this, we use the wolfram binary to retrieve the installation directory if wolframscript failed.
-    // https://reference.wolfram.com/language/ref/$InstallationDirectory.html
-    // https://reference.wolfram.com/language/ref/program/wolfram.html
-    // https://mathematica.stackexchange.com/q/648
-    def pathFromWolfram =
-      pathFromCommand("wolfram", "-noprompt", "-run", "WriteString[$Output,$InstallationDirectory];Exit[]")
-
-    // If necessary, we could try the default installation directory paths as additional fallbacks.
-    // Hopefully the above commands are sufficient though.
-    pathFromWolframscript.orElse(pathFromWolfram)
+  /**
+   * Search for any directories that match the default Mathematica installation directory pattern. This function does
+   * not check that the directories contain working installations. If multiple directories match the pattern (i.e. the
+   * user has multiple different versions of Mathematica installed), they are returned in arbitrary order.
+   *
+   * [[https://reference.wolfram.com/language/tutorial/WolframSystemFileOrganization.html]]
+   */
+  private def defaultMathematicaInstallDirCandidates: Seq[Path] = {
+    import scala.jdk.StreamConverters._
+    Try(Os.Type match {
+      case OsType.Windows => Files.list(Paths.get("C:\\Program Files\\Wolfram Research\\Mathematica")).toScala(Seq)
+      case OsType.Linux => Files.list(Paths.get("/usr/local/Wolfram/Mathematica")).toScala(Seq)
+      case OsType.MacOs => Paths.get("/Applications/Mathematica.app/Contents") :: Nil
+      case OsType.Unknown => Nil
+    }).getOrElse(Nil)
   }
 
   /**
-   * Find paths to specific files inside a Mathematica installation. Use [[findMathematicaInstallDir]] to find the
-   * installation itself.
+   * Search for any directories that match the default Wolfram Engine installation directory pattern. This function does
+   * not check that the directories contain working installations. If multiple directories match the pattern (i.e. the
+   * user has multiple different versions of Wolfram Engine installed), they are returned in arbitrary order.
+   *
+   * See also [[defaultMathematicaInstallDirCandidates]].
    */
-  def findMathematicaPaths(installDir: Path): Option[MathematicaPaths] = {
-    val mathKernelPath = Os.Type match {
-      case OsType.Windows => Paths.get("MathKernel.exe")
-      case OsType.Linux => Paths.get("Executables", "MathKernel")
-      case OsType.MacOs => Paths.get("MacOS", "MathKernel")
+  private def defaultWolframEngineInstallDirCandidates: Seq[Path] = {
+    import scala.jdk.StreamConverters._
+    Try(Os.Type match {
+      case OsType.Windows => Files.list(Paths.get("C:\\Program Files\\Wolfram Research\\Wolfram Engine")).toScala(Seq)
+      case OsType.Linux => Files.list(Paths.get("/usr/local/Wolfram/WolframEngine")).toScala(Seq)
+      case OsType.MacOs => Paths.get("/Applications/Wolfram Engine.app/Contents") :: Nil
+      case OsType.Unknown => Nil
+    }).getOrElse(Nil)
+  }
+
+  private def wolframscriptPath: Option[Path] = Os.Type match {
+    case OsType.Windows => Some(Paths.get("wolframscript.exe"))
+    case OsType.Linux => Some(Paths.get("Executables", "wolframscript"))
+    case OsType.MacOs => Some(Paths.get("MacOS", "wolframscript"))
+    case OsType.Unknown => None
+  }
+
+  private def wolframPath: Option[Path] = Os.Type match {
+    case OsType.Windows => Some(Paths.get("wolfram.exe"))
+    case OsType.Linux => Some(Paths.get("Executables", "wolfram"))
+    case OsType.MacOs => Some(Paths.get("MacOS", "wolfram"))
+    case OsType.Unknown => None
+  }
+
+  private def mathKernelPath: Option[Path] = Os.Type match {
+    case OsType.Windows => Some(Paths.get("MathKernel.exe"))
+    case OsType.Linux => Some(Paths.get("Executables", "MathKernel"))
+    case OsType.MacOs => Some(Paths.get("MacOS", "MathKernel"))
+    case OsType.Unknown => None
+  }
+
+  private def jlinkLibPath: Option[Path] = {
+    val osName = Os.Type match {
+      case OsType.Windows => "Windows"
+      case OsType.Linux => "Linux"
+      case OsType.MacOs => "MacOSX"
       case OsType.Unknown => return None
     }
 
-    val jlinkDirName = {
-      val base = Os.Type match {
-        case OsType.Windows => "Windows"
-        case OsType.Linux => "Linux"
-        case OsType.MacOs => "MacOSX"
-        case OsType.Unknown => return None
-      }
-      val ext = Os.Arch match {
-        case ArchType.Amd64 => "x86-64"
-        case ArchType.Aarch64 => "ARM64"
-        case ArchType.Unknown => return None
-      }
-      s"$base-$ext"
+    val osArch = Os.Arch match {
+      case ArchType.Amd64 => "x86-64"
+      case ArchType.Aarch64 => "ARM64"
+      case ArchType.Unknown => return None
     }
+
+    val jlinkDirName = s"$osName-$osArch"
 
     val jlinkLibName = Os.Type match {
       case OsType.Windows => "JLinkNativeLibrary.dll"
@@ -80,9 +95,72 @@ object ToolPathFinder {
       case OsType.Unknown => return None
     }
 
-    val jlinkLibPath = Paths
-      .get("SystemFiles", "Links", "JLink", "SystemFiles", "Libraries", jlinkDirName, jlinkLibName)
-
-    Some(MathematicaPaths(mathKernel = installDir.resolve(mathKernelPath), jlinkLib = installDir.resolve(jlinkLibPath)))
+    Some(Paths.get("SystemFiles", "Links", "JLink", "SystemFiles", "Libraries", jlinkDirName, jlinkLibName))
   }
+
+  /**
+   * Execute a command that will print only a path (and an optional trailing newline) on stdout. Returns the path if no
+   * errors occur during execution.
+   */
+  private def installDirFromCommand(command: String*): Option[Path] = Try(Paths.get(Process(command).!!.stripLineEnd))
+    .toOption
+
+  /**
+   * Obtain the installation directory from a `wolframscript` binary.
+   *
+   *   - [[https://reference.wolfram.com/language/ref/$InstallationDirectory.html]]
+   *   - [[https://reference.wolfram.com/language/ref/program/wolframscript.html]]
+   */
+  private def installDirFromWolframscript(binary: String = "wolframscript"): Option[Path] =
+    installDirFromCommand(binary, "-code", "$InstallationDirectory")
+
+  /**
+   * Obtain the installation directory from a `wolfram` kernel.
+   *
+   *   - [[https://reference.wolfram.com/language/ref/$InstallationDirectory.html]]
+   *   - [[https://reference.wolfram.com/language/ref/program/wolfram.html]]
+   *   - [[https://mathematica.stackexchange.com/q/648]]
+   */
+  private def installDirFromWolfram(binary: String = "wolfram"): Option[Path] =
+    installDirFromCommand(binary, "-noprompt", "-run", "WriteString[$Output,$InstallationDirectory];Exit[]")
+
+  private def findInstallDir(candidates: Seq[Path]): Option[Path] = {
+    // On Windows, Mathematica/WolframEngine adds wolframscript.exe to the PATH.
+    // On other platforms, wolframscript or wolfram might be on the PATH.
+    // However, we can't rely on this, so we need to check the default install dirs too.
+    //
+    // We use wolfram instead of WolframKernel because it is meant for command-line use
+    // while WolframKernel might spawn a GUI.
+    // https://mathematica.stackexchange.com/a/84038
+
+    installDirFromWolframscript().foreach(p => return Some(p))
+    installDirFromWolfram().foreach(p => return Some(p))
+
+    for (candidate <- candidates) {
+      wolframscriptPath
+        .map(candidate.resolve)
+        .flatMap(p => installDirFromWolframscript(binary = p.toString))
+        .foreach(p => return Some(p))
+
+      wolframPath
+        .map(candidate.resolve)
+        .flatMap(p => installDirFromWolfram(binary = p.toString))
+        .foreach(p => return Some(p))
+    }
+
+    None
+  }
+
+  def findMathematicaInstallDir(): Option[Path] = findInstallDir(defaultMathematicaInstallDirCandidates)
+
+  def findWolframEngineInstallDir(): Option[Path] = findInstallDir(defaultWolframEngineInstallDirCandidates)
+
+  /**
+   * Find paths to specific files inside a Mathematica installation. Use [[findMathematicaInstallDir]] or
+   * [[findWolframEngineInstallDir]] to find the installation itself.
+   */
+  def findMathematicaPaths(installDir: Path): Option[MathematicaPaths] = Some(MathematicaPaths(
+    mathKernel = installDir.resolve(this.mathKernelPath.getOrElse(return None)),
+    jlinkLib = installDir.resolve(this.jlinkLibPath.getOrElse(return None)),
+  ))
 }
