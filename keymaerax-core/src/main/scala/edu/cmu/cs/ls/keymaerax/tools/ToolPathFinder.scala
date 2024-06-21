@@ -17,18 +17,34 @@ object ToolPathFinder {
   @deprecated("use findMathematicaPaths instead")
   def jlinkLibFileName: String = findMathematicaPaths(Paths.get(".")).map(_.jlinkLib.getFileName.toString).getOrElse("")
 
+  private def parseVersion(s: String): Option[(Int, Int)] = {
+    val matched = """^(\d+)\.(\d+)$""".r.findFirstMatchIn(s).getOrElse(return None)
+    val major = Try(Integer.parseInt(matched.group(1))).getOrElse(return None)
+    val minor = Try(Integer.parseInt(matched.group(2))).getOrElse(return None)
+    Some((major, minor))
+  }
+
+  private def sortPathsByTrailingVersion(paths: Seq[Path]): Seq[Path] = paths
+    .sorted
+    .sortBy(p => parseVersion(p.getFileName.toString))
+    .reverse
+
   /**
    * Search for any directories that match the default Mathematica installation directory pattern. This function does
    * not check that the directories contain working installations. If multiple directories match the pattern (i.e. the
-   * user has multiple different versions of Mathematica installed), they are returned in arbitrary order.
+   * user has multiple different versions of Mathematica installed), they are ordered from newest to oldest.
    *
    * [[https://reference.wolfram.com/language/tutorial/WolframSystemFileOrganization.html]]
    */
   private def defaultMathematicaInstallDirCandidates: Seq[Path] = {
     import scala.jdk.StreamConverters._
     Try(Os.Type match {
-      case OsType.Windows => Files.list(Paths.get("C:\\Program Files\\Wolfram Research\\Mathematica")).toScala(Seq)
-      case OsType.Linux => Files.list(Paths.get("/usr/local/Wolfram/Mathematica")).toScala(Seq)
+      case OsType.Windows =>
+        val base = Paths.get("C:\\Program Files\\Wolfram Research\\Mathematica")
+        sortPathsByTrailingVersion(Files.list(base).toScala(Seq))
+      case OsType.Linux =>
+        val base = Paths.get("/usr/local/Wolfram/Mathematica")
+        sortPathsByTrailingVersion(Files.list(base).toScala(Seq))
       case OsType.MacOs => Paths.get("/Applications/Mathematica.app/Contents") :: Nil
       case OsType.Unknown => Nil
     }).getOrElse(Nil)
@@ -37,15 +53,19 @@ object ToolPathFinder {
   /**
    * Search for any directories that match the default Wolfram Engine installation directory pattern. This function does
    * not check that the directories contain working installations. If multiple directories match the pattern (i.e. the
-   * user has multiple different versions of Wolfram Engine installed), they are returned in arbitrary order.
+   * user has multiple different versions of Wolfram Engine installed), they are ordered from newest to oldest.
    *
    * See also [[defaultMathematicaInstallDirCandidates]].
    */
   private def defaultWolframEngineInstallDirCandidates: Seq[Path] = {
     import scala.jdk.StreamConverters._
     Try(Os.Type match {
-      case OsType.Windows => Files.list(Paths.get("C:\\Program Files\\Wolfram Research\\Wolfram Engine")).toScala(Seq)
-      case OsType.Linux => Files.list(Paths.get("/usr/local/Wolfram/WolframEngine")).toScala(Seq)
+      case OsType.Windows =>
+        val base = Paths.get("C:\\Program Files\\Wolfram Research\\Wolfram Engine")
+        sortPathsByTrailingVersion(Files.list(base).toScala(Seq))
+      case OsType.Linux =>
+        val base = Paths.get("/usr/local/Wolfram/WolframEngine")
+        sortPathsByTrailingVersion(Files.list(base).toScala(Seq))
       case OsType.MacOs => Paths.get("/Applications/Wolfram Engine.app/Contents") :: Nil
       case OsType.Unknown => Nil
     }).getOrElse(Nil)
