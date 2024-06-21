@@ -15,7 +15,7 @@ import scala.collection.immutable.{List, Nil}
 
 class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val paths = ToolPathFinder.findMathematicaInstallDir().flatMap(ToolPathFinder.findMathematicaPaths)
+    val paths = ToolPathFinder.findWolframEngineInstallDir().flatMap(ToolPathFinder.findMathematicaPaths)
 
     val suggestionFound = paths.isDefined
     val suggestion = paths.getOrElse(

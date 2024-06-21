@@ -63,7 +63,7 @@ object ToolConfiguration {
 
   def defaultWolframEngineConfig: Map[String, String] = {
     val paths = ToolPathFinder
-      .findMathematicaInstallDir()
+      .findWolframEngineInstallDir()
       .flatMap(ToolPathFinder.findMathematicaPaths)
       .getOrElse(return Map.empty)
 
