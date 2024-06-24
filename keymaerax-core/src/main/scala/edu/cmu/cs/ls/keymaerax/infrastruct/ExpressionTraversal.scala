@@ -246,7 +246,8 @@ object ExpressionTraversal {
           case Forall(v, a) => matchOne(p, Forall(v, _: Formula), f, a)
           case Exists(v, a) => matchOne(p, Exists(v, _: Formula), f, a)
           case DifferentialFormula(a) => matchOne(p, DifferentialFormula.apply, f, a)
-
+          case Refinement(a, b) => matchTwo(p, Refinement.apply(_: Program, _: Program), f, a, b)
+          case ProgramEquivalence(a, b) => matchTwo(p, ProgramEquivalence.apply(_: Program, _: Program), f, a, b)
           // Terms
           case Number(_) => matchZero(p, f, e)
           case _: BaseVariable => matchZero(p, f, e)

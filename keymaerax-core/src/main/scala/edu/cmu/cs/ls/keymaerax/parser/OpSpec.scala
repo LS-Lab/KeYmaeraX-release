@@ -408,6 +408,21 @@ object OpSpec {
     (l: Program, r: Program) => Dual(Choice(Dual(l), Dual(r))),
   )
 
+  val sRefinement = BinaryOpSpec[Formula](
+    LESSEQ,
+    90,
+    AtomicBinaryFormat,
+    binprog,
+    (_: String, a: Expression, b: Expression) => Refinement(a.asInstanceOf[Program], b.asInstanceOf[Program]),
+  )
+  val sProgramEquivalence = BinaryOpSpec[Formula](
+    PRGEQ,
+    90,
+    AtomicBinaryFormat,
+    binprog,
+    (_: String, a: Expression, b: Expression) => ProgramEquivalence(a.asInstanceOf[Program], b.asInstanceOf[Program]),
+  )
+
   // pseudo tokens
 
   /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
@@ -464,7 +479,8 @@ object OpSpec {
     case f: Imply => sImply
     case f: Equiv => sEquiv
     case f: UnitPredicational => sUnitPredicational
-
+    case _: Refinement => sRefinement
+    case _: ProgramEquivalence => sProgramEquivalence
     // programs
     case p: ProgramConst => sProgramConst
     case p: DifferentialProgramConst => sDifferentialProgramConst

@@ -183,6 +183,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case PredicationalOf(p, c) => p.asString + "{" + pp(c) + "}"
     case f: ComparisonFormula => "(" + pp(f.left) + ")" + LEXSPACE + op(formula).opcode + LEXSPACE + "(" + pp(f.right) +
         ")"
+    case f: ProgramComparison => "{" + pp(f.left) + "}" + op(formula).opcode + "{" + pp(f.right) + "}"
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
     case f: Quantified => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + " " + "(" + pp(f.child) + ")"
     case f: Box => "[" + pp(f.program) + "]" + "(" + pp(f.child) + ")"
@@ -377,6 +378,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
       case f: Less => wrapLeft(f, pp(q ++ 0, f.left)) + LEXSPACE + ppOp(formula) + LEXSPACE +
           wrapRight(f, pp(q ++ 1, f.right))
       case f: ComparisonFormula => wrapLeft(f, pp(q ++ 0, f.left)) + ppOp(formula) + wrapRight(f, pp(q ++ 1, f.right))
+      case f: ProgramComparison => pwrapLeft(f, pp(q ++ 0, f.left)) + ppOp(formula) + pwrapRight(f, pp(q ++ 1, f.right))
       case DifferentialFormula(g) => "(" + pp(q ++ 0, g) + ")" + ppOp(formula)
       // @note the q position for variables is a little weird since it identifies the quantifier not the variable
       case f: Quantified => ppOp(formula) + " " + f.vars.map(pp(q, _)).mkString(",") + " " +
