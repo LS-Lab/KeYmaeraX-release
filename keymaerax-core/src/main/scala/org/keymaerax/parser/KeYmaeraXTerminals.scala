@@ -150,6 +150,7 @@ private object EXISTS extends OPERATOR("\\exists") {
 }
 
 private object EQ extends OPERATOR("=")
+private object PRGEQ extends OPERATOR("==")
 private object NOTEQ extends OPERATOR("!=") {
   override def regexp: Regex = """\!=""".r
 }
