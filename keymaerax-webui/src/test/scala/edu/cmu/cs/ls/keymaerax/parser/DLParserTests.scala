@@ -182,4 +182,8 @@ class DLParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "parse simple dual game symbol notation" in { DLParser("game^@;") shouldBe Dual(ProgramConst("game")) }
 
+  it should "parse refinements and program equivalence" in {
+    DLParser("a; <= b;") shouldBe Refinement(ProgramConst("a"), ProgramConst("b"))
+    DLParser("a; == b;") shouldBe ProgramEquivalence(ProgramConst("a"), ProgramConst("b"))
+  }
 }
