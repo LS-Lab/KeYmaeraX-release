@@ -8,7 +8,7 @@
                 <span ng-if="linkName !== origLinkName || jlinkLibPath !== origJlinkLibPath || jlinkTcpip.machine !== origJlinkTcpip.machine || jlinkTcpip.port !== origJlinkTcpip.port">*</span>
                 <span>Save</span>
             </button>
-            <button ng-click="defaultMathematicaPaths()" class="btn btn-default">Reset to detected values</button>
+            <button ng-click="defaultMathematicaPaths()" class="btn btn-default">Autodetect</button>
             <button ng-click="resetMathematicaPaths()" class="btn btn-default">Discard changes</button>
         </span>
     </h2>
@@ -44,7 +44,7 @@
                         data-placement="bottom"
                         aria-expanded="false" ng-click="setDefaultMathKernel()"
                         title="{{mathematicaConfigSuggestion.suggestion.kernelPath}}{{mathematicaConfigSuggestion.suggestion.kernelName}}">
-                    <span ng-if="linkName">Reset to</span><span ng-if="linkName === undefined">Use</span> detected value
+                    Autodetect
                 </button>
             </span>
         </div>
@@ -72,7 +72,7 @@
                         data-placement="bottom"
                         aria-expanded="false" ng-click="setDefaultJLinkLibPath()"
                         title="{{mathematicaConfigSuggestion.suggestion.jlinkPath}}{{mathematicaConfigSuggestion.suggestion.jlinkName}}">
-                    <span ng-if="jlinkLibPath">Reset to</span><span ng-if="jlinkLibPath === undefined">Use</span> detected value
+                    Autodetect
                 </button>
             </span>
         </div>
