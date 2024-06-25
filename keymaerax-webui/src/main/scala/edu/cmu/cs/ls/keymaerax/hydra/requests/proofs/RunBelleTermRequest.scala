@@ -15,8 +15,8 @@ import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.hydra.responses.proofs.{RunBelleTermResponse, TacticErrorResponse}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException, Parser, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, Z3}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolName, ToolOperationManagement}
 
 import scala.collection.immutable.{::, List, Nil, Seq}
 
@@ -106,8 +106,8 @@ class RunBelleTermRequest(
       val inlineMsg: String,
   ) extends Exception
 
-  private def backendAvailable: Boolean = Configuration(Configuration.Keys.QE_TOOL) match {
-    case "mathematica" => ToolProvider.tool("Mathematica") match {
+  private def backendAvailable: Boolean = ToolName.parse(Configuration(Configuration.Keys.QE_TOOL)) match {
+    case ToolName.Mathematica => ToolProvider.tool("Mathematica") match {
         case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
         case None => ToolProvider.qeTool() match {
             case Some(t: ToolOperationManagement) => t.getAvailableWorkers > 0
@@ -115,7 +115,7 @@ class RunBelleTermRequest(
           }
         case _ => false
       }
-    case "wolframengine" => ToolProvider.tool("WolframEngine") match {
+    case ToolName.WolframEngine => ToolProvider.tool("WolframEngine") match {
         case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
         case None => ToolProvider.qeTool() match {
             case Some(t: ToolOperationManagement) => t.getAvailableWorkers > 0
@@ -123,7 +123,7 @@ class RunBelleTermRequest(
           }
         case _ => false
       }
-    case "wolframscript" => ToolProvider.tool("WolframScript") match {
+    case ToolName.WolframScript => ToolProvider.tool("WolframScript") match {
         case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
         case None => ToolProvider.qeTool() match {
             case Some(t: ToolOperationManagement) => t.getAvailableWorkers > 0
@@ -131,7 +131,7 @@ class RunBelleTermRequest(
           }
         case _ => false
       }
-    case "z3" => ToolProvider.tool("Z3") match {
+    case ToolName.Z3 => ToolProvider.tool("Z3") match {
         case Some(z3: Z3) => z3.getAvailableWorkers > 0
         case _ => false
       }
