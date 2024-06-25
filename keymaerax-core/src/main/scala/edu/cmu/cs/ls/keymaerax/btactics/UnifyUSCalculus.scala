@@ -3333,8 +3333,14 @@ trait UnifyUSCalculus {
         case UnifierFull => defaultMatcher
         case UnifierLinear => LinearMatcher
         case UnifierSurjective => UniformMatcher
-        case UnifierSurjectiveLinear => UniformMatcher // LinearMatcher would be okay
-        case UnifierSurjectiveLinearPretend => UniformMatcher
+        // TODO Switch to different matcher
+        // A typo in the original code meant that all axioms etc. marked "surjlinear" and "surjlinearpretend" would not
+        // use the matcher intended for the "surjlinear" and "surjlinearpretend" unifiers (UniformMatcher) but instead
+        // the default matcher (UnificationMatch).
+        // Also, before refactoring, the docs for "surjlinear" mentioned that LinearMatcher instead of UniformMatcher
+        // should also be okay.
+        case UnifierSurjectiveLinear => defaultMatcher
+        case UnifierSurjectiveLinearPretend => defaultMatcher
       }
     case _ => defaultMatcher
   }
