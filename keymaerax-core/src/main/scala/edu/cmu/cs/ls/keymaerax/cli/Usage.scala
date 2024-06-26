@@ -39,6 +39,7 @@ object Usage {
         )
       case "-proofStatisticsPrinter" =>
         println(noValueMessage + "Please use: -proofStatisticsPrinter [default|arch-nln|arch-hstp]\n\n" + usage)
+      case "-repl" => println("Please use: -repl MODEL.kyx TACTIC.kyt [DEFS.scala]\n\n")
       case _ => println("[Error] Unknown option " + option + "\n\n" + usage)
     }
   }
