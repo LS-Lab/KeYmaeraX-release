@@ -36,7 +36,7 @@ import scala.reflect.io.File
 /** Command-line interface for the KeYmaera X webui jar. */
 object KeymaeraxWebui {
   def main(args: Array[String]): Unit = {
-    val options = Options.parseArgs(s"$TechnicalName-webui", args)
+    val options = Options.parseArgs(args, name = s"$TechnicalName-webui", webui = true)
     if (!options.launch) Relauncher.relaunchOrExit(args)
 
     Configuration.setConfiguration(FileConfiguration)

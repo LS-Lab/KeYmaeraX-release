@@ -99,6 +99,7 @@ object QeMethod extends Enumeration {
 case class Options(
     // Special options
     name: String,
+    webui: Boolean,
     args: Seq[String],
     help: Boolean = false,
     copyright: Boolean = false,
@@ -134,7 +135,7 @@ case class Options(
   )
 
   def printUsageAndExitWithError(): Unit = {
-    println(OParser.usage(Options.parser(name)))
+    println(OParser.usage(Options.parser(name, webui)))
     sys.exit(1)
   }
 }
@@ -170,7 +171,7 @@ object Options {
 
   private def defaultValue[T](value: T): String = s"Default: ${valueToString(value)}."
 
-  private def parser(name: String): OParser[Unit, Options] = {
+  private def parser(name: String, webui: Boolean): OParser[Unit, Options] = {
     val builder = OParser.builder[Options]
     import builder._
 
@@ -189,8 +190,7 @@ object Options {
 
     implicit val toolNameRead: scopt.Read[ToolName.Value] = scopt.Read.reads(ToolName.withName)
 
-    OParser.sequence(
-      programName(name),
+    val headerAndSpecialOptions = Seq[OParser[_, Options]](
       head(
         s"""$FullNameAndVersion
            |$ShortCopyright
@@ -204,8 +204,9 @@ object Options {
       opt[Unit](LaunchFlagName)
         .action((_, o) => o.copy(launch = true))
         .text(wrap("Use present JVM instead of launching one with a bigger stack.")),
+    )
 
-      // Options specified using flags
+    val flagOptions = Seq[OParser[_, Options]](
       opt[Boolean]("debug")
         .action((x, o) => o.copy(debug = Some(x)))
         .text(wrap("Enable/disable debug mode with exhaustive messages.")),
@@ -272,8 +273,9 @@ object Options {
         .action((x, o) => o.copy(z3Path = Some(x)))
         .valueName("path/to/z3")
         .text(wrap("Path to Z3 executable.")),
+    )
 
-      // Core commands
+    val coreCommands = Seq[OParser[_, Options]](
       note(""),
       cmd("setup")
         .action((_, o) => o.copy(command = Some(Command.Setup)))
@@ -397,8 +399,9 @@ object Options {
             .action((_, o) => o.updateCommand[Command.Grade](_.copy(skipOnParseError = true)))
             .text(wrap("Skip grading on parse errors.")),
         ),
+    )
 
-      // Webui commands
+    val webuiCommands = Seq[OParser[_, Options]](
       note(""),
       cmd("codegen")
         .action((_, o) => o.copy(command = Some(Command.Codegen())))
@@ -491,14 +494,20 @@ object Options {
       note(""),
       cmd("ui").action((_, o) => o.copy(command = Some(Command.Ui))).text(wrapWide("Start web user interface.")),
     )
+
+    val parsers =
+      if (webui) { headerAndSpecialOptions ++ flagOptions ++ coreCommands ++ webuiCommands }
+      else { headerAndSpecialOptions ++ flagOptions ++ coreCommands }
+
+    OParser.sequence(programName(name), parsers: _*)
   }
 
-  def parseArgs(name: String, args: Seq[String]): Options = {
-    val parser = this.parser(name)
+  def parseArgs(args: Seq[String], name: String, webui: Boolean): Options = {
+    val parser = this.parser(name, webui)
 
     // When parse() returns None, it failed to parse the arguments
     // and will have already printed some sort of error message.
-    val options = OParser.parse(parser, args, Options(name = name, args = args)).getOrElse(sys.exit(1))
+    val options = OParser.parse(parser, args, Options(name = name, args = args, webui = webui)).getOrElse(sys.exit(1))
 
     if (options.help) {
       println(OParser.usage(parser))

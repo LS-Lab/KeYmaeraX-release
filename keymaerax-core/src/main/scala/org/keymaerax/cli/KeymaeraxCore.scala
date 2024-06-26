@@ -44,7 +44,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 /** Command-line interface for the KeYmaera X core jar. */
 object KeymaeraxCore {
   def main(args: Array[String]): Unit = {
-    val options = Options.parseArgs(s"$TechnicalName-core", args)
+    val options = Options.parseArgs(args, name = s"$TechnicalName-core", webui = false)
     if (!options.launch) Relauncher.relaunchOrExit(args)
 
     Configuration.setConfiguration(FileConfiguration)

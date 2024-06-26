@@ -12,7 +12,6 @@ import org.keymaerax.bellerophon.{
   TacticInapplicableFailure,
 }
 import org.keymaerax.btactics.TacticTestBase
-import org.keymaerax.cli.Options
 import org.keymaerax.cli.grade.AssessmentProver.AskGrader.Modes
 import org.keymaerax.cli.grade.AssessmentProver.{
   AnyChoiceGrader,
@@ -1669,7 +1668,6 @@ class AssessmentProverTests extends TacticTestBase {
     w.flush()
     w.close()
 
-    val options = Options(name = "", args = Nil)
     val msgsStream = new ByteArrayOutputStream()
     val resultsStream = new ByteArrayOutputStream()
     AssessmentProver.grade(
