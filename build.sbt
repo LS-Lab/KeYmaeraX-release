@@ -4,7 +4,7 @@ import java.nio.file.{Files, Paths}
 import java.util.Properties
 
 ThisBuild / scalaVersion := "2.13.13"
-ThisBuild / version := "5.0.2"
+ThisBuild / version := "5.1.0"
 
 ThisBuild / scalacOptions ++= {
   // Keymaerax has lots of warnings. Due to their volume, important warnings vanish between not-so-important ones.

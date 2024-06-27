@@ -26,7 +26,7 @@ KeYmaera X also supports the verification of _hybrid games_ in _differential gam
 
 ## Installation
 
-1. Install Java Runtime Environment version 8 or later, for example from [OpenJDK](https://openjdk.org/)
+1. Install Java Runtime Environment version 11 or later, for example from [OpenJDK](https://openjdk.org/)
 
 2. Optionally, install and set up
   [Wolfram Mathematica](https://www.wolfram.com/mathematica/) (version 10 or later)
