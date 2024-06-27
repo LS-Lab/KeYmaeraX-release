@@ -25,7 +25,7 @@ object UpdateChecker extends Logging {
    * If this KeYmaera X instance's version number is newer than the latest version, it is also considered up-to-date.
    * This may happen during development or testing of a new version.
    */
-  lazy val upToDate: Option[Boolean] = latestVersion.map(_ >= Version)
+  lazy val upToDate: Option[Boolean] = latestVersion.map(Version >= _)
 
   /** The version number of the latest KeYmaera X release, or [[None]] if version info could not be retrieved. */
   lazy val latestVersion: Option[VersionNumber] = fetchLatestVersion()
