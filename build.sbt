@@ -4,7 +4,7 @@ import java.nio.file.{Files, Paths}
 import java.util.Properties
 
 ThisBuild / scalaVersion := "2.13.13"
-ThisBuild / version := "5.1.0"
+ThisBuild / version := "5.1.1"
 
 ThisBuild / scalacOptions ++= Seq(
   // Always show all non-suppressed warnings. See `scalac -Wconf:help` for more info.
