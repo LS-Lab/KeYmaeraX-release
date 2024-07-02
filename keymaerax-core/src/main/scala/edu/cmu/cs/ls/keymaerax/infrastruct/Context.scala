@@ -285,6 +285,10 @@ object Context {
             val sp = context(f.left, pos.child); (f.reapply(sp._1, f.right), sp._2)
           case f: ComparisonFormula if pos.head == 1 =>
             val sp = context(f.right, pos.child); (f.reapply(f.left, sp._1), sp._2)
+          case f: ProgramComparison if pos.head == 0 =>
+            val sp = context(f.left, pos.child); (f.reapply(sp._1, f.right), sp._2)
+          case f: ProgramComparison if pos.head == 1 =>
+            val sp = context(f.right, pos.child); (f.reapply(f.left, sp._1), sp._2)
           // homomorphic cases
           case f: UnaryCompositeFormula if pos.head == 0 =>
             val sp = context(f.child, pos.child); (f.reapply(sp._1), sp._2)
@@ -388,6 +392,8 @@ object Context {
         // pseudo-homomorphic cases
         case f: ComparisonFormula if pos.head == 0 => part(f.left, pos.child)
         case f: ComparisonFormula if pos.head == 1 => part(f.right, pos.child)
+        case f: ProgramComparison if pos.head == 0 => part(f.left, pos.child)
+        case f: ProgramComparison if pos.head == 1 => part(f.right, pos.child)
         // homomorphic cases
         case f: UnaryCompositeFormula if pos.head == 0 => part(f.child, pos.child)
         case f: BinaryCompositeFormula if pos.head == 0 => part(f.left, pos.child)
@@ -508,6 +514,8 @@ object Context {
       // pseudo-homomorphic cases
       case f: ComparisonFormula if pos.head == 0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
       case f: ComparisonFormula if pos.head == 1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
+      case f: ProgramComparison if pos.head == 0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
+      case f: ProgramComparison if pos.head == 1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
       // homomorphic cases
       case f: UnaryCompositeFormula if pos.head == 0 => f.reapply(replaceAt(f.child, pos.child, repl))
       case f: BinaryCompositeFormula if pos.head == 0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
@@ -636,6 +644,13 @@ object Context {
           case Diamond(a, g) if pos.head == 1 => val sp = split(g, pos.child); (Diamond(a, sp._1), sp._2)
           case DifferentialFormula(f) if pos.head == 0 =>
             val sp = split(f, pos.child); (DifferentialFormula(sp._1), sp._2)
+          case Refinement(a, b) if pos.head == 0 => val sp = split(a, pos.child); (Refinement(sp._1, b), sp._2)
+          case Refinement(a, b) if pos.head == 1 => val sp = split(b, pos.child); (Refinement(a, sp._1), sp._2)
+          case ProgramEquivalence(a, b) if pos.head == 0 =>
+            val sp = split(a, pos.child); (ProgramEquivalence(sp._1, b), sp._2)
+          case ProgramEquivalence(a, b) if pos.head == 1 =>
+            val sp = split(b, pos.child); (ProgramEquivalence(a, sp._1), sp._2)
+
           case _ => throw new IllegalArgumentException(
               "split position " + pos + " of formula " + formula + " may not be defined"
             )

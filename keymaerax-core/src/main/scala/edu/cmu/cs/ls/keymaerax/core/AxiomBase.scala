@@ -589,12 +589,12 @@ private[core] object AxiomBase extends Logging {
     insist(
       axs("refinement ode") == Equiv(
         Refinement(
-          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
-          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(g, x)), PredOf(q, x)),
+          ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
+          ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), gany), ode), qany),
         ),
         Box(
-          ODESystem(AtomicODE(DifferentialSymbol(x), FuncOf(f, x)), PredOf(p, x)),
-          And(Equal(FuncOf(f, x), FuncOf(g, x)), PredOf(q, x)),
+          ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), fany), ode), pany),
+          And(Equal(fany, gany), qany),
         ),
       ),
       "refinement ode",
@@ -1080,7 +1080,7 @@ Axiom "refinement unloop"
 End.
 
 Axiom "refinement ode"
-  {x_' = f(x_) & p(x_)} <= {x_' = g(x_) & q(x_)} <-> [{x_' = f(x_) & p(x_)}](f(x_) = g(x_) & q(x_))
+  {x_' = f(||), c & p(||)} <= {x_' = g(||), c & q(||)} <-> [{x_' = f(||), c & p(||)}](f(||) = g(||) & q(||))
 End.
 
 Axiom "ode idempotent"

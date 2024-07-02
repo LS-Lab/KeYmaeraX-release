@@ -613,6 +613,16 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
         case Diamond(a2, p2) => unifies2(a, p, a2, p2)
         case _ => ununifiable(e1, e2)
       }
+
+    // refinement cases
+    case Refinement(a, b) => e2 match {
+        case Refinement(a2, b2) => unifies2(a, b, a2, b2)
+        case _ => ununifiable(e1, e2)
+      }
+    case ProgramEquivalence(a, b) => e2 match {
+        case ProgramEquivalence(a2, b2) => unifies2(a, b, a2, b2)
+        case _ => ununifiable(e1, e2)
+      }
   }
 
   /**

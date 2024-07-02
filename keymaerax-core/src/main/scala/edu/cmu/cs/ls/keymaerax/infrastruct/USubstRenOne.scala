@@ -336,6 +336,17 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
 
       case Box(p, g) => val (v, rp) = usubst(u, p); Box(rp, usubst(v, g))
       case Diamond(p, g) => val (v, rp) = usubst(u, p); Diamond(rp, usubst(v, g))
+
+      // Refinement cases
+      case Refinement(l, r) =>
+        val (_, rl) = usubst(u, l)
+        val (_, rr) = usubst(u, r)
+        Refinement(rl, rr)
+      case ProgramEquivalence(p, q) =>
+        val (_, rp) = usubst(u, p)
+        val (_, rq) = usubst(u, q)
+        ProgramEquivalence(rp, rq)
+
       case p: UnitPredicational => subsDefs.getOrElse(p, URenSubstitutionPair(p, p)).repl.asInstanceOf[Formula]
       // @todo case pred@UnitPredicational(p,sp) => subsDefs.getOrElse(pred, URenSubstitutionPair(pred,UnitPredicational(p,renSpace(sp)))).repl.asInstanceOf[Formula]
     }

@@ -38,6 +38,7 @@ import edu.cmu.cs.ls.keymaerax.core.{
   PredOf,
   PredicationalOf,
   Program,
+  ProgramComparison,
   ProgramConst,
   Quantified,
   Sequent,
@@ -144,6 +145,8 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case f: Box => (wrapDoc(docOf(f.program), f) + (Doc.lineBreak + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
     case f: Diamond =>
       (wrapDoc(docOf(f.program), f) + (Doc.lineBreak + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
+    case f: ProgramComparison => (pwrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line +
+        pwrapRightDoc(f, docOf(f.right))).grouped
     case UnitPredicational(name, space) => Doc.text(name) + encloseText("(", Doc.text(space.toString), ")")
     case t: UnaryCompositeFormula => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
     case t: BinaryCompositeFormula => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line +
