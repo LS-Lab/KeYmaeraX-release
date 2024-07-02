@@ -600,6 +600,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       },
       odemenu: {
         kind: 'box'
+      },
+      refmenu: {
+        kind: 'base'
       }
     }
 
