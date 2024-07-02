@@ -6,10 +6,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Derive.{skip, useAt}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools.dualFree
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 
@@ -230,4 +233,23 @@ trait HybridProgramCalculus {
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst
     .discreteGhost(t, ghost)
 
+  @Tactic(
+    longDisplayName = "Refinement Transitivity",
+    premises = "Γ |- C(a <= c), Δ ;; Γ |- C(c <= b), Δ",
+    conclusion = "Γ |- C(a <= b), Δ",
+    revealInternalSteps = true,
+    inputs = "c:expression",
+    displayLevel = "menu",
+  )
+  def refTrans(c: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
+    c match {
+      case c: Program =>
+        assert(dualFree(c), "Refinement for games is not supported")
+        useAt(
+          ProvableSig.axioms("refinement transitive")(USubst(SubstitutionPair(SystemConst("c"), c) :: Nil)),
+          PosInExpr(1 :: Nil),
+        )(pos)
+      case _ => assert(false, c.toString + " should be a program"); skip
+    }
+  }
 }

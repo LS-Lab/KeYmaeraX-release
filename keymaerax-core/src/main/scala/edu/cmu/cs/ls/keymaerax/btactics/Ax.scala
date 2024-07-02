@@ -735,6 +735,110 @@ object Ax extends Logging {
   @Axiom(("∀e'", "allep"), conclusion = "__∀x' P__ → P", key = "0", recursor = "*", unifier = "surjlinear")
   val alleprime: CoreAxiomInfo = coreAxiom("all eliminate prime")
 
+  /** Refinement axioms */
+  @Axiom("Refinement Antisymmetry", displayLevel = "menu", key = "0", recursor = "*", unifier = "surjective")
+  val refAntiSym: CoreAxiomInfo = coreAxiom("refinement antisymmetry")
+  @Axiom(
+    ("Ref Box", "refBox"),
+    conclusion = "a <= b -> __[a]P <- [b]P__",
+    displayLevel = "browse",
+    key = "1",
+    recursor = "*",
+    unifier = "surjlinear",
+  )
+  val refBox: CoreAxiomInfo = coreAxiom("refinement box")
+  @Axiom("Refinement Test", displayLevel = "menu", key = "0", recursor = "*", unifier = "surjective")
+  val refTest: CoreAxiomInfo = coreAxiom("refinement test")
+  @Axiom("Refinement Assign", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAssign: CoreAxiomInfo = coreAxiom("refinement assign")
+  @Axiom("Refinement Stutter", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refStutter: CoreAxiomInfo = coreAxiom("refinement stutter")
+  @Axiom("Refinement Choice Left", displayLevel = "menu", key = "0", recursor = "*", unifier = "surjective")
+  val refChoiceL: CoreAxiomInfo = coreAxiom("refinement choice left")
+  @Axiom("Refinement Choice Right", displayLevel = "menu", key = "1", recursor = "*", unifier = "surjective")
+  val refChoiceR: CoreAxiomInfo = coreAxiom("refinement choice right")
+  @Axiom("Refinement Sequence", displayLevel = "menu", key = "1", recursor = "*", unifier = "surjective")
+  val refSeq: CoreAxiomInfo = coreAxiom("refinement sequence")
+  @Axiom("Refinement Loop Left", displayLevel = "menu", key = "1", recursor = "*", unifier = "surjective")
+  val refLoopL: CoreAxiomInfo = coreAxiom("refinement loop left")
+  @Axiom("Refinement Loop Right", displayLevel = "menu", key = "1", recursor = "*", unifier = "surjective")
+  val refLoopR: CoreAxiomInfo = coreAxiom("refinement loop right")
+  @Axiom("Refinement Test Det", displayLevel = "menu", key = "0", recursor = "*", unifier = "surjective")
+  val refTestDet: CoreAxiomInfo = coreAxiom("refinement test det")
+  @Axiom("Refinement Assignment Det", displayLevel = "menu", key = "0", recursor = "*", unifier = "surjective")
+  val refAssignDet: CoreAxiomInfo = coreAxiom("refinement assign det")
+  @Axiom("Refinement :* merge", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAnyMerge: CoreAxiomInfo = coreAxiom("refinement :* merge")
+  @Axiom("Refinement :=* merge", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAnyAssignMerge: CoreAxiomInfo = coreAxiom("refinement :=* merge")
+  @Axiom("Refinement unloop", displayLevel = "menu", key = "1", recursor = "*", unifier = "surjective")
+  val refUnloop: CoreAxiomInfo = coreAxiom("refinement unloop")
+
+  /* ODE refinement axioms */
+  @Axiom("Refinement ODE", displayLevel = "menu", key = "0", recursor = "*", unifier = "surjective")
+  val refOde: CoreAxiomInfo = coreAxiom("refinement ode")
+  @Axiom("Refinement ODE idempotent", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refOdeIdemp: CoreAxiomInfo = coreAxiom("ode idempotent")
+  @Axiom("Refinement DE", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refDE: CoreAxiomInfo = coreAxiom("refinement DE")
+  @Axiom("Refinement DW", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refDW: CoreAxiomInfo = coreAxiom("refinement DW")
+  @Axiom("Refinement DX", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refDX: CoreAxiomInfo = coreAxiom("refinement DX")
+
+  /* KAT axioms */
+  @Axiom(
+    "Refinement Reflexive",
+    conclusion = "a<=a",
+    displayLevel = "menu",
+    key = "",
+    recursor = "*",
+    unifier = "surjective",
+  )
+  val refRefl: CoreAxiomInfo = coreAxiom("refinement reflexive")
+  @Axiom("Choice Identity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refChoiceId: CoreAxiomInfo = coreAxiom("choice identity")
+  @Axiom("Choice Idempotent", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refChoiceIdemp: CoreAxiomInfo = coreAxiom("choice idempotent")
+  @Axiom("Choice Commutativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refChoiceComm: CoreAxiomInfo = coreAxiom("choice commute")
+  @Axiom("Choice Associativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refChoiceAssoc: CoreAxiomInfo = coreAxiom("choice associative")
+  @Axiom("Sequence Identity Left", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refSeqIdL: CoreAxiomInfo = coreAxiom("sequence identity left")
+  @Axiom("Sequence Identity Right", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refSeqIdR: CoreAxiomInfo = coreAxiom("sequence identity right")
+  @Axiom("Sequence Associativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refSeqAssoc: CoreAxiomInfo = coreAxiom("sequence associative")
+  @Axiom("Distributivity Left", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refDistrL: CoreAxiomInfo = coreAxiom("distribute left")
+  @Axiom("Distributivity Right", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refDistrR: CoreAxiomInfo = coreAxiom("distribute right")
+  @Axiom("Annihilation Left", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAnnihL: CoreAxiomInfo = coreAxiom("annihilation left")
+  @Axiom("Annihilation Right", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAnnihR: CoreAxiomInfo = coreAxiom("annihilation right")
+  @Axiom("Unfold Left", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refUnfoldL: CoreAxiomInfo = coreAxiom("unfold left")
+  @Axiom("Unfold Right", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refUnfoldR: CoreAxiomInfo = coreAxiom("unfold right")
+
+  /* Schematic-like KAT axioms */
+  @Axiom("Assign Commutativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAssignComm: CoreAxiomInfo = coreAxiom("assign commute")
+  @Axiom("Assign Substitution", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAssignSubst: CoreAxiomInfo = coreAxiom("assign substitution")
+  @Axiom("Assign Test Commutativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAssignTest: CoreAxiomInfo = coreAxiom("assign test")
+  @Axiom("Assign Merge", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAssignMerge: CoreAxiomInfo = coreAxiom("assign merge")
+  @Axiom("AssignAny Commutativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAnyComm: CoreAxiomInfo = coreAxiom("nondet assign commute")
+  @Axiom(":=* Commutativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAssignAnyComm: CoreAxiomInfo = coreAxiom(":=* commute")
+  @Axiom("AssignAny Test Commutativity", displayLevel = "menu", key = "", recursor = "*", unifier = "surjective")
+  val refAnyTest: CoreAxiomInfo = coreAxiom("nondet assign test")
+
   // ***************
   // Derived Axioms
   // ***************
