@@ -300,10 +300,10 @@ object NoOpTactic {
 case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr
 
 /** `⎵`: Placeholder for tactics in tactic contexts. Reserved tactic expression that cannot be executed. */
-class BelleDot() extends BelleExpr {
+class BelleDot extends BelleExpr {
   override def prettyString = ">>_<<"
 }
-object BelleDot extends BelleDot()
+object BelleDot extends BelleDot
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positional tactics
