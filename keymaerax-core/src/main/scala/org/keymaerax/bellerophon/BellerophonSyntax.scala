@@ -5,16 +5,15 @@
 
 package org.keymaerax.bellerophon
 
-import org.keymaerax.{Configuration, Logging}
-import org.keymaerax.btactics.Generator.Generator
 import org.keymaerax.btactics._
-import org.keymaerax.core._
-import org.keymaerax.infrastruct._
 import org.keymaerax.btactics.macros.DerivationInfo
+import org.keymaerax.core._
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import org.keymaerax.infrastruct.PosInExpr.HereP
-import org.keymaerax.parser.{BuiltinSymbols, Declaration, Location, UnknownLocation}
+import org.keymaerax.infrastruct._
+import org.keymaerax.parser.{BuiltinSymbols, Declaration}
 import org.keymaerax.pt.ProvableSig
+import org.keymaerax.{Configuration, Logging}
 
 import scala.annotation.tailrec
 

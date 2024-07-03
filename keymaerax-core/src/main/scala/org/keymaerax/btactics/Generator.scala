@@ -5,35 +5,36 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.infrastruct.{NonSubstUnificationMatch, Position, UnificationMatch}
 import org.keymaerax.parser.Declaration
 
 import scala.util.Try
 
 /**
- * Invariant generator
+ * Invariant generator.
+ *
+ * @tparam A
+ *   The type of results that are being generated.
  * @author
  *   Stefan Mitsch
  */
-object Generator {
+trait Generator[+A] {
 
   /**
-   * Invariant generators etc, where `apply` results in an iterator over objects of type `A` to try. Results do not
-   * necessarily have to be deterministic.
-   * @tparam A
-   *   the type of results that are being generated.
+   * Generate multiple objects of type `A` to try. Results do not necessarily have to be deterministic.
+   *
    * @author
    *   Stefan Mitsch
    */
-  type Generator[A] = (Sequent, Position, Declaration) => LazyList[A]
+  def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[A]
 }
 
 /** Generator always providing a fixed list as output. */
-case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position, defs: Declaration): LazyList[A] = list.to(LazyList)
+case class FixedGenerator[A](list: List[A]) extends Generator[A] {
+  override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[A] = list.to(LazyList)
 }
 
 object ConfigurableGenerator {
@@ -70,14 +71,14 @@ object ConfigurableGenerator {
  * @author
  *   Stefan Mitsch
  */
-class ConfigurableGenerator[A](var products: Map[Expression, Seq[A]] = Map[Expression, Seq[A]]())
-    extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position, defs: Declaration): LazyList[A] = s.sub(p) match {
-    case Some(Box(prg, _)) => findPrgProducts(prg)
-    case Some(Diamond(prg, _)) => findPrgProducts(prg)
-    case Some(f) => products.getOrElse(f, Nil).distinct.to(LazyList)
-    case None => Nil.to(LazyList)
-  }
+class ConfigurableGenerator[A](var products: Map[Expression, Seq[A]] = Map[Expression, Seq[A]]()) extends Generator[A] {
+  override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[A] =
+    sequent.sub(position) match {
+      case Some(Box(prg, _)) => findPrgProducts(prg)
+      case Some(Diamond(prg, _)) => findPrgProducts(prg)
+      case Some(f) => products.getOrElse(f, Nil).distinct.to(LazyList)
+      case None => Nil.to(LazyList)
+    }
 
   /**
    * Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint.

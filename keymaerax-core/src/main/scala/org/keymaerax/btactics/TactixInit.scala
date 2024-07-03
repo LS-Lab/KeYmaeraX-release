@@ -5,12 +5,9 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.btactics.Generator.Generator
 import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.core.{Box, Loop, ODESystem}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
-
-import scala.collection.immutable.Nil
 
 /**
  * Initialization routine needs to set some global fields without causing TactixLibrary to initialize, so those fields
@@ -54,8 +51,8 @@ object TactixInit {
    */
   val invGenerator: Generator[GenProduct] = (sequent, pos, defs) =>
     sequent.sub(pos) match {
-      case Some(Box(_: ODESystem, _)) => differentialInvGenerator(sequent, pos, defs)
-      case Some(Box(_: Loop, _)) => loopInvGenerator(sequent, pos, defs)
+      case Some(Box(_: ODESystem, _)) => differentialInvGenerator.generate(sequent, pos, defs)
+      case Some(Box(_: Loop, _)) => loopInvGenerator.generate(sequent, pos, defs)
       case Some(_) => throw new IllegalArgumentException(
           "ill-positioned " + pos + " does not give a differential equation or loop in " + sequent
         )

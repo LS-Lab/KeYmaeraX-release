@@ -5,25 +5,23 @@
 
 package org.keymaerax.btactics
 
-import java.io.File
 import org.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.Generator.Generator
 import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.core.{Formula, Program}
-import org.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import org.keymaerax.hydra.DatabasePopulator.TutorialEntry
+import org.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import org.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import org.keymaerax.tags.{ExtremeTest, SlowTest}
 import org.keymaerax.tools.{Tool, ToolEvidence}
 import org.scalatest.AppendedClues
 import org.scalatest.exceptions.TestFailedException
-
-import scala.io.Source
-import scala.language.postfixOps
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
+import java.io.File
+import scala.io.Source
+import scala.language.postfixOps
 import scala.util.matching.Regex
 
 /**

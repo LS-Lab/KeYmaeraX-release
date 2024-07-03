@@ -8,11 +8,10 @@ package org.keymaerax.hydra
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics.Generator.Generator
 import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros._
-import org.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, Generator, TacticTestBase, TactixLibrary}
 import org.keymaerax.core.{Expression, Formula, Real}
 import org.keymaerax.hydra.requests.models.{GetModelListRequest, ListExamplesRequest, UploadArchiveRequest}
 import org.keymaerax.hydra.requests.proofs.{

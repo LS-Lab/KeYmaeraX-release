@@ -5,30 +5,28 @@
 
 package org.keymaerax.bellerophon
 
-import java.util.concurrent.CancellationException
 import org.keymaerax.Logging
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.btactics.Generator.Generator
 import org.keymaerax.btactics.{
   Ax,
   ConfigurableGenerator,
   FixedGenerator,
+  Generator,
   InvariantGenerator,
   TacticFactory,
-  TactixInit,
   TactixLibrary,
 }
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
-import org.keymaerax.parser.Declaration
 import org.keymaerax.pt.ProvableSig
 
+import java.util.concurrent.CancellationException
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.control.Breaks._
+import scala.util.{Failure, Success, Try}
 
 /**
  * Sequential interpreter for Bellerophon tactic expressions.

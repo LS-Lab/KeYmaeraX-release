@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import java.io.PrintWriter
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.TacticStatistics
 import org.keymaerax.btactics.BenchmarkTests._
@@ -13,18 +12,17 @@ import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Program, Sequent, SuccPos}
 import org.keymaerax.hydra.DatabasePopulator
 import org.keymaerax.hydra.DatabasePopulator.TutorialEntry
-import org.keymaerax.parser.{Declaration, ParsedArchiveEntry}
 import org.keymaerax.parser._
 import org.keymaerax.tags.ExtremeTest
 import org.keymaerax.tools.ToolOperationManagement
-
-import scala.language.postfixOps
-import org.scalatest.{AppendedClues, Suites}
-import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
+import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{AppendedClues, Suites}
 
+import java.io.PrintWriter
 import scala.collection.immutable.{IndexedSeq, Map, Nil}
+import scala.language.postfixOps
 import scala.reflect.io.File
 
 /**
@@ -385,7 +383,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
             val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))
             println(s"Generating invariants $name")
             val invGenStart = System.currentTimeMillis()
-            val candidates = InvariantGenerator.pegasusCandidates(seq, SuccPos(0), defs).toList
+            val candidates = InvariantGenerator.pegasusCandidates.generate(seq, SuccPos(0), defs).toList
             val invGenEnd = System.currentTimeMillis()
             println(s"Done generating (${invGenEnd - invGenStart}ms: ${candidates
                 .map(c => c._1.prettyString + " (proof hint " + c._2 + ")")

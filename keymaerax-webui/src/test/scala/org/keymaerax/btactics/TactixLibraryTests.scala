@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
+import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.TacticInfo
@@ -252,10 +253,13 @@ class TactixLibraryTests extends TacticTestBase {
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
-    val boundedInvGen = (s: Sequent, p: Position, defs: Declaration) => {
-      !invs.contains((s, p)) // loopPostMaster shouldn't ask repeatedly the same question
-      invs += (s -> p)
-      invGenerator(s, p, defs)
+    val boundedInvGen = new Generator[GenProduct] {
+      override def generate(sequent: Sequent, position: Position, declaration: Declaration)
+          : LazyList[(Formula, Option[InvariantGenerator.ProofHint])] = {
+        !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question
+        invs += (sequent -> position)
+        invGenerator.generate(sequent, position, declaration)
+      }
     }
     val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(boundedInvGen)(1))
     result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
@@ -268,10 +272,13 @@ class TactixLibraryTests extends TacticTestBase {
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
-    val boundedInvGen = (s: Sequent, p: Position, defs: Declaration) => {
-      !invs.contains((s, p)) // loopPostMaster shouldn't ask repeatedly the same question
-      invs += (s -> p)
-      invGenerator(s, p, defs)
+    val boundedInvGen = new Generator[GenProduct] {
+      override def generate(sequent: Sequent, position: Position, declaration: Declaration)
+          : LazyList[(Formula, Option[InvariantGenerator.ProofHint])] = {
+        !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question
+        invs += (sequent -> position)
+        invGenerator.generate(sequent, position, declaration)
+      }
     }
     val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(boundedInvGen)(1))
     result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")

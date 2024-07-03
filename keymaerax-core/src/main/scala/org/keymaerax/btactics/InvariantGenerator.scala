@@ -6,13 +6,11 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Logging
-import org.keymaerax.core._
 import org.keymaerax.bellerophon.{BelleExpr, BelleNoProgress, ProverSetupException}
+import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, StaticSemanticsTools}
 import org.keymaerax.tools.ToolException
-
-import scala.collection.immutable.List
 
 /**
  * Invariant generators and differential invariant generators.
@@ -31,7 +29,6 @@ import scala.collection.immutable.List
  *   Formal Methods in System Design, 35(1), pp. 98-120, 2009
  */
 object InvariantGenerator extends Logging {
-  import Generator.Generator
 
   /** A proof hint on how to use an invariant. */
   abstract class ProofHint
@@ -79,18 +76,17 @@ object InvariantGenerator extends Logging {
       lazy val missing =
         if (analyzeMissing) frees.flatMap(relevantInvVars).diff(knowledge) else frees.flatMap(relevantInvVars)
       // @todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
-      generator(sequent, pos, defs)
+      generator
+        .generate(sequent, pos, defs)
         .distinct
-        .
         // new invariants only that aren't in the evolution domain constraint yet
         // @note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
-        filter(prod => (allowPost || prod._1 != post) && !evos.contains(prod._1))
-        .
+        .filter(prod => (allowPost || prod._1 != post) && !evos.contains(prod._1))
         // filter out constants
         // filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(bounds).isEmpty)
         // candidates with knowledge about missing variables
         // @todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
-        filter(prod => StaticSemantics.freeVars(prod._1).symbols.intersect(missing).nonEmpty)
+        .filter(prod => StaticSemantics.freeVars(prod._1).symbols.intersect(missing).nonEmpty)
       // @todo could check that it's not a tautology using RCF or check that it's not provable by DW
       // @todo postpone and try later candidates not covering all their dependencies (given the knowledge)
       //        filter(fml => {
@@ -162,10 +158,11 @@ object InvariantGenerator extends Logging {
       if (aOrder == bOrder) sizeCompare(a, b) else aOrder < bOrder
     }
 
-    relevanceFilter(generator, analyzeMissing = true)(sequent, pos, defs).
-        // sort by dependency order
-        // @todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
-      sortWith((a: GenProduct, b: GenProduct) =>
+    relevanceFilter(generator, analyzeMissing = true)
+      .generate(sequent, pos, defs)
+      // sort by dependency order
+      // @todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
+      .sortWith((a: GenProduct, b: GenProduct) =>
         // @todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
         // @todo improve sorting to take dependency cluster into account, too.
         if (a._1.isFOL == b._1.isFOL) depCompare(a._1, b._1)
@@ -179,7 +176,8 @@ object InvariantGenerator extends Logging {
    *   Andre Platzer
    */
   lazy val differentialInvariantGenerator: Generator[GenProduct] = (sequent, pos, defs) =>
-    (TactixLibrary.invSupplier(sequent, pos, defs) #::: differentialInvariantCandidates(sequent, pos, defs)).distinct
+    (TactixLibrary.invSupplier.generate(sequent, pos, defs) #:::
+      differentialInvariantCandidates.generate(sequent, pos, defs)).distinct
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
 
   /**
@@ -188,7 +186,7 @@ object InvariantGenerator extends Logging {
    *   Andre Platzer
    */
   lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = (sequent, pos, defs) =>
-    sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent, pos, defs).distinct
+    sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator).generate(sequent, pos, defs).distinct
 
   /**
    * A loop invariant generator.
@@ -196,8 +194,8 @@ object InvariantGenerator extends Logging {
    *   Andre Platzer
    */
   lazy val loopInvariantGenerator: Generator[GenProduct] = (sequent, pos, defs) =>
-    (TactixLibrary.invSupplier(sequent, pos, defs) #:::
-      sortedRelevanceFilter(loopInvariantCandidates)(sequent, pos, defs)).distinct
+    (TactixLibrary.invSupplier.generate(sequent, pos, defs) #::: sortedRelevanceFilter(loopInvariantCandidates)
+      .generate(sequent, pos, defs)).distinct
 
   /**
    * A simplistic differential invariant candidate generator.
@@ -208,8 +206,8 @@ object InvariantGenerator extends Logging {
     // @note be careful to not evaluate entire stream by sorting/filtering etc.
     // @note do not relevance filter Pegasus candidates: they contain trivial results, that however make ODE try harder
     // since flagged as truly invariant and not just a guess like the simple candidates
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent, pos, defs) #::: pegasusCandidates(sequent, pos, defs))
-      .distinct
+    (sortedRelevanceFilter(simpleInvariantCandidates).generate(sequent, pos, defs) #:::
+      pegasusCandidates.generate(sequent, pos, defs)).distinct
 
   /**
    * A simplistic loop invariant candidate generator.
@@ -365,7 +363,7 @@ object InvariantGenerator extends Logging {
       cache.get(box) match {
         case Some(cached) => cached
         case None =>
-          val remember = generator(sequent, pos, defs)
+          val remember = generator.generate(sequent, pos, defs)
           cache.put(box, remember)
           remember
       }

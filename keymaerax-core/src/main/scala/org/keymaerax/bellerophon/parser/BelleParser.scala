@@ -79,7 +79,7 @@ object BelleParser extends TacticParser with Logging {
    */
   def parseWithInvGen(
       s: String,
-      g: Option[Generator.Generator[GenProduct]] = None,
+      g: Option[Generator[GenProduct]] = None,
       defs: Declaration = Declaration(Map.empty),
       expandAll: Boolean = false,
   ): BelleExpr = firstUnacceptableCharacter(s) match {
@@ -187,7 +187,7 @@ object BelleParser extends TacticParser with Logging {
   def parseTokenStream(
       toks: TokenStream,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator.Generator[GenProduct]],
+      g: Option[Generator[GenProduct]],
       defs: Declaration,
       expandAll: Boolean,
   ): BelleExpr = {
@@ -204,7 +204,7 @@ object BelleParser extends TacticParser with Logging {
   private def parseLoop(
       st: ParserState,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator.Generator[GenProduct]],
+      g: Option[Generator[GenProduct]],
       defs: Declaration,
       expandAll: Boolean,
   ): ParserState = {
@@ -219,7 +219,7 @@ object BelleParser extends TacticParser with Logging {
   private def parseInnerExpr(
       tokens: List[BelleToken],
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator.Generator[GenProduct]],
+      g: Option[Generator[GenProduct]],
       defs: Declaration,
       expandAll: Boolean,
   ): (BelleExpr, Location, List[BelleToken]) = tokens match {
@@ -250,7 +250,7 @@ object BelleParser extends TacticParser with Logging {
   private def parseStep(
       st: ParserState,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator.Generator[GenProduct]],
+      g: Option[Generator[GenProduct]],
       defs: Declaration,
       expandAll: Boolean,
   ): ParserState = {
@@ -633,7 +633,7 @@ object BelleParser extends TacticParser with Logging {
       args: Option[List[TacticArg]],
       location: Location,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator.Generator[GenProduct]],
+      g: Option[Generator[GenProduct]],
       defs: Declaration,
       expandAll: Boolean,
   ): BelleExpr = {

@@ -7,7 +7,6 @@ package org.keymaerax.hydra
 
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.Generator.Generator
 import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._

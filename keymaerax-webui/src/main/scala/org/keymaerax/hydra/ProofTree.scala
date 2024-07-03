@@ -8,7 +8,7 @@ package org.keymaerax.hydra
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.macros._
 import org.keymaerax.core.{
   Box,
   Expression,
@@ -22,10 +22,10 @@ import org.keymaerax.core.{
   USubst,
   Variable,
 }
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{Position, UnificationTools}
-import org.keymaerax.parser.{ArchiveParser, Declaration, Location}
-import org.keymaerax.btactics.macros._
 import org.keymaerax.parser.StringConverter.StringToStringConverter
+import org.keymaerax.parser.{ArchiveParser, Declaration, Location}
 import org.keymaerax.pt.{ElidingProvable, ProvableSig, TermProvable}
 import org.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -495,7 +495,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
       subFormula match {
         case Box(Loop(_), _) =>
           // @todo provide model definitions
-          val invariant = generator(goal, pos, Declaration(Map.empty)).iterator
+          val invariant = generator.generate(goal, pos, Declaration(Map.empty)).iterator
           if (invariant.hasNext) Map(FormulaArg("J") -> invariant.next()._1) else Map.empty
         case Box(_: ODESystem, p) => Map(FormulaArg("P", List("y")) -> p) // @hack for dG
         case _ => Map.empty

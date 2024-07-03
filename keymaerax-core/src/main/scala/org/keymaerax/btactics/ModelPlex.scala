@@ -441,8 +441,11 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           invariant = Some(t.pt.inputs.head.asInstanceOf[Formula] -> None)
         case t: AppliedDependentPositionTactic if t.pt.name == "loopAuto" && invariant.isEmpty =>
           input match {
-            case BelleProvable(p, _) =>
-              invariant = TactixLibrary.invGenerator(p.subgoals(0), t.locator.toPosition(p).get, defs).toList.headOption
+            case BelleProvable(p, _) => invariant = TactixLibrary
+                .invGenerator
+                .generate(p.subgoals(0), t.locator.toPosition(p).get, defs)
+                .toList
+                .headOption
           }
         case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" && !inDW =>
           input match {

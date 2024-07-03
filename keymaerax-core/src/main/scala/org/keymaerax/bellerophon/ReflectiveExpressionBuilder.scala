@@ -6,16 +6,16 @@
 package org.keymaerax.bellerophon
 
 import org.keymaerax.Logging
-import org.keymaerax.btactics.macros._
 import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.{Declaration, ParseException, UnknownLocation}
 
 import scala.annotation.tailrec
 import scala.reflect.runtime.universe.typeTag
-import DerivationInfoAugmentors._
 
 /**
  * Constructs a [[org.keymaerax.bellerophon.BelleExpr]] from a tactic name
@@ -28,17 +28,17 @@ object ReflectiveExpressionBuilder extends Logging {
   def build(
       info: DerivationInfo,
       args: List[Either[Seq[Any], PositionLocator]],
-      generator: Option[Generator.Generator[GenProduct]],
+      generator: Option[Generator[GenProduct]],
       defs: Declaration,
   ): BelleExpr = {
     val posArgs = args.flatMap(_.toOption)
     val withGenerator =
       if (info.needsGenerator) {
         generator match {
-          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[GenProduct] => Any](theGenerator)
+          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator[GenProduct] => Any](theGenerator)
           case None =>
             logger.debug(s"Need a generator for tactic ${info.codeName} but none was provided; switching to default.")
-            info.belleExpr.asInstanceOf[Generator.Generator[GenProduct] => Any](TactixLibrary.invGenerator)
+            info.belleExpr.asInstanceOf[Generator[GenProduct] => Any](TactixLibrary.invGenerator)
         }
       } else { info.belleExpr }
     val expressionArgs = args
@@ -159,7 +159,7 @@ object ReflectiveExpressionBuilder extends Logging {
   def apply(
       name: String,
       arguments: List[Either[Seq[Any], PositionLocator]] = Nil,
-      generator: Option[Generator.Generator[GenProduct]],
+      generator: Option[Generator[GenProduct]],
       defs: Declaration,
   ): BelleExpr = {
     if (!DerivationInfo.hasCodeName(name)) {

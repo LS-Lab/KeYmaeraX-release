@@ -9,7 +9,6 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
-import org.keymaerax.btactics.Generator.Generator
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import org.keymaerax.btactics.SimplifierV3._
@@ -1368,7 +1367,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   private def ODE(useOdeInvariant: Boolean, introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic =
     anon((pos: Position, seq: Sequent, defs: Declaration) => {
       val invariantCandidates =
-        try { InvariantGenerator.differentialInvariantGenerator(seq, pos, defs) }
+        try { InvariantGenerator.differentialInvariantGenerator.generate(seq, pos, defs) }
         catch {
           case err: Exception =>
             logger.warn(
@@ -1543,7 +1542,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
         sys: ODESystem,
         generator: Generator[GenProduct],
         onGeneratorError: Throwable => LazyList[GenProduct],
-    ): DependentPositionTactic = fastODE(try { generator(seq, pos, defs).iterator }
+    ): DependentPositionTactic = fastODE(try { generator.generate(seq, pos, defs).iterator }
     catch {
       case ex: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: generator error listing options " + ex)
@@ -2344,7 +2343,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   })
 
   private def odeInvariantAutoBody: DependentPositionTactic = anon((pos: Position, seq: Sequent, defs: Declaration) => {
-    val invs = InvariantGenerator.pegasusInvariants(seq, pos, defs).toList
+    val invs = InvariantGenerator.pegasusInvariants.generate(seq, pos, defs).toList
     // Empty list = failed to generate an invariant
     // True ~ no DCs needed
     // Else, DC chain

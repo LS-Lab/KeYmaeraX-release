@@ -470,7 +470,7 @@ object TacticMacro {
     def typeName(ai: ArgInfo): Tree = {
       ai match {
         case _: GeneratorArg =>
-          tq"org.keymaerax.btactics.Generator.Generator[org.keymaerax.btactics.InvariantGenerator.GenProduct]"
+          tq"org.keymaerax.btactics.Generator[org.keymaerax.btactics.InvariantGenerator.GenProduct]"
         case _: FormulaArg => tq"org.keymaerax.core.Formula"
         case _: StringArg => tq"String"
         case _: NumberArg => tq"org.keymaerax.core.Number"

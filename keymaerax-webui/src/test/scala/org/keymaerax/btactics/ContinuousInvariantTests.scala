@@ -27,13 +27,14 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   "Continuous invariant lookup" should "provide a simple invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1)]x>0".asSequent
-    TactixLibrary.invGenerator(problem, SuccPos(0), Declaration(Map.empty)) should contain theSameElementsInOrderAs
-      (("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
+    TactixLibrary.invGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)) should
+      contain theSameElementsInOrderAs (("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
   it should "provide a conditional invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1, (x'=2 -> x>2), (x'=3 -> x>5))]x>0".asSequent
-    TactixLibrary.invGenerator(problem, SuccPos(0), Declaration(Map.empty)) should contain theSameElementsInOrderAs
+    TactixLibrary.invGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)) should
+      contain theSameElementsInOrderAs
       (("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) ::
         ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
@@ -43,7 +44,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     proveBy(problem, ODE(1)) shouldBe Symbol("proved")
 
     val (simpleInvariants, pegasusInvariants) =
-      TactixLibrary.differentialInvGenerator(problem, SuccPos(0), Declaration(Map.empty)).splitAt(4)
+      TactixLibrary.differentialInvGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)).splitAt(4)
     simpleInvariants should contain theSameElementsAs
       (("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
         ("y>=-1".asFormula, None) :: Nil)
@@ -80,7 +81,8 @@ class ContinuousInvariantTests extends TacticTestBase {
 
             // @note the annotations in nonlinear.kyx are produced by Pegasus
             val invariants = InvariantGenerator
-              .pegasusInvariants(Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
+              .pegasusInvariants
+              .generate(Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
 
             println("  generated: " + invariants.toList.map(i => s"${i._1}(${i._2})").mkString(", "))
 
@@ -163,7 +165,8 @@ class ContinuousInvariantTests extends TacticTestBase {
             println("\n" + name)
             val Imply(assumptions, goal @ Box(ODESystem(_, _), _)) = model
             val invariants = InvariantGenerator
-              .pegasusInvariants(Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
+              .pegasusInvariants
+              .generate(Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
             println("  generated: " + invariants.toList.map(i => s"${i._1}(${i._2})").mkString(", "))
             TactixInit.invSupplier = FixedGenerator(Nil)
             TactixInit.loopInvGenerator = FixedGenerator(Nil)
