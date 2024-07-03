@@ -94,7 +94,7 @@ object BelleExpr {
  * @see
  *   [[org.keymaerax.bellerophon.SequentialInterpreter]]
  */
-sealed abstract class BelleExpr(private var location: Location = UnknownLocation) {
+sealed abstract class BelleExpr {
   // tactic combinators
 
   /**
@@ -146,16 +146,6 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
 
   /** pretty-printed form of this Bellerophon tactic expression */
   def prettyString: String
-
-  /**
-   * @note
-   *   location is private so that it's not something that effects case class quality, and mutable so that it can be
-   *   ignored when building up custom tactics.
-   */
-  def setLocation(newLocation: Location): Unit = location = newLocation
-
-  /** Get the location where this tactic stems from. */
-  def getLocation: Location = location
 }
 
 /** A BelleExpr that has a proper code name, so is not just used internally during application. */

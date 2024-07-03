@@ -6,16 +6,15 @@
 package org.keymaerax.bellerophon.parser
 
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics._
-import org.keymaerax.core._
-import org.keymaerax.parser.{COLON => _, COMMA => _, EOF => _, IDENT => _, _}
-import org.keymaerax.parser.StringConverter._
-import BelleLexer.TokenStream
-import org.keymaerax.{Configuration, Logging}
+import org.keymaerax.bellerophon.parser.BelleLexer.TokenStream
 import org.keymaerax.btactics.InvariantGenerator.GenProduct
-import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
+import org.keymaerax.btactics._
 import org.keymaerax.btactics.macros._
-import org.keymaerax.parser.Declaration
+import org.keymaerax.core._
+import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.{COLON => _, COMMA => _, Declaration, EOF => _, IDENT => _, _}
+import org.keymaerax.{Configuration, Logging}
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -291,15 +290,15 @@ object BelleParser extends TacticParser with Logging {
       // endregion
 
       // region Either combinator
-      case _ :+ ParsedBelleExpr(_, _, _) :+ BelleToken(EITHER_COMBINATOR, combatinorLoc) => st.input.headOption match {
+      case _ :+ ParsedBelleExpr(_, _, _) :+ BelleToken(EITHER_COMBINATOR, combinatorLoc) => st.input.headOption match {
           case Some(BelleToken(OPEN_PAREN, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(IDENT(_), _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(PARTIAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(OPTIONAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(_) => throw BelleParseException("A combinator should be followed by a full tactic expression", st)
-          case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
+          case None => throw ParseException("Tactic script cannot end with a combinator", combinatorLoc)
         }
-      case r :+ ParsedBelleExpr(left, leftLoc, None) :+ BelleToken(EITHER_COMBINATOR, combatinorLoc) :+
+      case r :+ ParsedBelleExpr(left, leftLoc, None) :+ BelleToken(EITHER_COMBINATOR, combinatorLoc) :+
           ParsedBelleExpr(right, rightLoc, None) => st.input.headOption match {
           case Some(BelleToken(EITHER_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(KLEENE_STAR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
@@ -310,7 +309,6 @@ object BelleParser extends TacticParser with Logging {
           case Some(BelleToken(USING, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case _ =>
             val parsedExpr = left | right
-            parsedExpr.setLocation(combatinorLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(rightLoc), None), st.input)
         }
       // endregion
@@ -341,14 +339,12 @@ object BelleParser extends TacticParser with Logging {
             )
           }
         }
-        parsedExpr.setLocation(combinatorLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(branchTactics.last.loc), l), st.input)
 
       // Allow doStuff<() for partial tactics that just leave all branches open. Useful for interactive tactic development.
       case r :+ ParsedBelleExpr(left, leftLoc, l) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) :+
           BelleToken(OPEN_PAREN, _) :+ BelleToken(CLOSE_PAREN, cParenLoc) =>
         val parsedExpr = left < (Seq.empty[BelleExpr]: _*)
-        parsedExpr.setLocation(combinatorLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(cParenLoc), l), st.input)
 
       case _ :+ ParsedBelleExpr(_, _, _) :+ BelleToken(BRANCH_COMBINATOR, loc) :+ BelleToken(OPEN_PAREN, _) :+
@@ -488,17 +484,14 @@ object BelleParser extends TacticParser with Logging {
       // region Stars and Repitition
       case r :+ ParsedBelleExpr(expr, loc, l) :+ BelleToken(KLEENE_STAR, starLoc) =>
         val parsedExpr = SaturateTactic(expr)
-        parsedExpr.setLocation(starLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(starLoc), l), st.input)
 
       case r :+ ParsedBelleExpr(expr, loc, l) :+ BelleToken(N_TIMES(n), ntimesloc) =>
         val parsedExpr = RepeatTactic(expr, n)
-        parsedExpr.setLocation(ntimesloc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(ntimesloc), l), st.input)
 
       case r :+ ParsedBelleExpr(expr, loc, l) :+ BelleToken(SATURATE, satloc) =>
         val parsedExpr = expr & SaturateTactic(expr)
-        parsedExpr.setLocation(satloc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(satloc), l), st.input)
 
       // endregion
@@ -508,7 +501,6 @@ object BelleParser extends TacticParser with Logging {
       // Suffix case.
       case r :+ ParsedBelleExpr(expr, exprLoc, l) :+ BelleToken(PARTIAL, partialLoc) =>
         val parsedExpr = PartialTactic(expr)
-        parsedExpr.setLocation(partialLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, exprLoc.spanTo(partialLoc), l), st.input)
 
       case _ :+ BelleToken(PARTIAL, _) => st.input.headOption match {
@@ -519,7 +511,6 @@ object BelleParser extends TacticParser with Logging {
 
       case r :+ BelleToken(PARTIAL, partialLoc) :+ ParsedBelleExpr(expr, exprLoc, l) =>
         val parsedExpr = PartialTactic(expr)
-        parsedExpr.setLocation(partialLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, partialLoc.spanTo(exprLoc), l), st.input)
 
       // endregion
@@ -541,7 +532,6 @@ object BelleParser extends TacticParser with Logging {
             val spanLoc = if (endLoc.end.column != -1) identLoc.spanTo(endLoc) else identLoc
 
             val parsedExpr = constructTactic(name, Some(args), identLoc, tacticDefs, g, defs, expandAll)
-            parsedExpr.setLocation(identLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, spanLoc, None), remainder)
           }
         } catch {
