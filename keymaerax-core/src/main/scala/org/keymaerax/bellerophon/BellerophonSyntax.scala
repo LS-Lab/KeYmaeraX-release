@@ -63,8 +63,8 @@ object BelleExpr {
  * Algebraic Data Type whose elements are well-formed Bellerophon tactic expressions. All Bellerophon tactic expressions
  * are of type [[org.keymaerax.bellerophon.BelleExpr]], which provides the following tactic combinators
  *
- *   - `s ; t` alias `s & t` [[org.keymaerax.bellerophon.SeqTactic sequential composition]] executes t` on the output of
- *     `s`, failing if either fail.
+ *   - `s ; t` alias `s & t` [[org.keymaerax.bellerophon.SeqTactic sequential composition]] executes `t` on the output
+ *     of `s`, failing if either fail.
  *   - `s | t` [[org.keymaerax.bellerophon.EitherTactic alternative composition]] executes `t` if applying `s` fails,
  *     failing if both fail.
  *   - `t*` [[org.keymaerax.bellerophon.SaturateTactic saturating repetition]] executes tactic `t` repeatedly to a

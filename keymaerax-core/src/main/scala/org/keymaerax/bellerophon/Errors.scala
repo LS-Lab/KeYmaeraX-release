@@ -16,12 +16,12 @@ import org.apache.commons.lang3.StringUtils
  * Common exception type for all Bellerophon tactic problems and exceptions. Tactic exceptions come on three different
  * kinds:
  *   1. [[BelleCriticalException]] indicates an internal bug in a tactic implementation, such as applying left rules on
- *      the right. They will be reported but need a KeYmaera X implementation change to fix. 2.
- *      [[BelleUserCorrectableException]] indicates that the user has provided an unsuitable input problem or made a
+ *      the right. They will be reported but need a KeYmaera X implementation change to fix.
+ *   1. [[BelleUserCorrectableException]] indicates that the user has provided an unsuitable input problem or made a
  *      correctable error in a proof step. They will be reported back to the user along with a legible message
- *      describing what needs to be changed in the problem or proof. 3. [[BelleProofSearchControl]] indicates that one
- *      proof attempt did not succeed so other proof options should be tried. They will be swallowed by any outer proof
- *      search tactics that will try something else instead.
+ *      describing what needs to be changed in the problem or proof.
+ *   1. [[BelleProofSearchControl]] indicates that one proof attempt did not succeed so other proof options should be
+ *      tried. They will be swallowed by any outer proof search tactics that will try something else instead.
  * Some advanced proof search tactics may "convert" between these exception types or swallow more of them when they
  * deliberately try steps they know may fail spectacularly but have a backup plan.
  */
