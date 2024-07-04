@@ -33,7 +33,7 @@ import scala.collection.immutable.IndexedSeq
  * @see
  *   [[Provable]]
  */
-trait ProvableSig {
+sealed trait ProvableSig {
 
   /** The core's [[Provable]] that this object really represents. */
   val underlyingProvable: Provable = this match {
