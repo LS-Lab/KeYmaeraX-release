@@ -1,15 +1,15 @@
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateAnte
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.onBranch
-import edu.cmu.cs.ls.keymaerax.tactics.{FOQuantifierTacticsImpl, HybridProgramTacticsImpl, ODETactics, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import org.keymaerax.core._
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.tactics.BranchLabels._
+import org.keymaerax.tactics.HybridProgramTacticsImpl._
+import org.keymaerax.tactics.SearchTacticsImpl._
+import org.keymaerax.tactics.SearchTacticsImpl.locateAnte
+import org.keymaerax.tactics.SearchTacticsImpl.locateSucc
+import org.keymaerax.tactics.TacticLibrary._
+import org.keymaerax.tactics.TactixLibrary.onBranch
+import org.keymaerax.tactics.{FOQuantifierTacticsImpl, HybridProgramTacticsImpl, ODETactics, SuccPosition}
+import org.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
+import org.keymaerax.tactics.TactixLibrary._
 
 class HybridQuadrotorTacticGenerator extends (() => Tactic) {
   def apply() = {

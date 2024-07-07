@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+package org.keymaerax
+
+/**
+ * Bellerophon tactics language framework. This package includes
+ *   - [[org.keymaerax.bellerophon.BelleExpr tactic language expressions]]
+ *   - [[org.keymaerax.bellerophon.SequentialInterpreter sequential tactic interpreter]] for BelleExpr
+ *
+ * All Bellerophon tactic expressions are of type [[org.keymaerax.bellerophon.BelleExpr]], which provides the following
+ * tactic combinators
+ *
+ *   - `s & t` alias `s ; t` [[org.keymaerax.bellerophon.SeqTactic sequential composition]] executes `t` on the output
+ *     of `s`, failing if either fail.
+ *   - `s | t` [[org.keymaerax.bellerophon.EitherTactic alternative composition]] executes `t` if applying `s` fails,
+ *     failing if both fail.
+ *   - `t*` [[org.keymaerax.bellerophon.SaturateTactic saturating repetition]] executes tactic `t` repeatedly to a
+ *     fixpoint, casting result to type annotation, diverging if no fixpoint.
+ *   - `t*n` [[org.keymaerax.bellerophon.RepeatTactic bounded repetition]] executes `t` tactic `n` number of times,
+ *     failing if any of those repetitions fail.
+ *   - `t+` saturating repetition executes tactic `t` to a fixpoint, requires at least one successful application.
+ *   - `<(e1,...,en)` [[org.keymaerax.bellerophon.BranchTactic branching]] to run tactic `ei` on branch `i`, failing if
+ *     any of them fail or if there are not exactly `n` branches.
+ *   - `case _ of {fi => ei}` [[org.keymaerax.bellerophon.USubstPatternTactic uniform substitution case pattern]]
+ *     applies the first `ei` such that `fi` uniformly substitutes to current provable for which `ei` does not fail,
+ *     fails if the `ei` of all matching `fi` fail.
+ *
+ * [[org.keymaerax.bellerophon.PositionalTactic Positional tactics]] support flexible modes of identifying what position
+ * to apply them to via [[org.keymaerax.bellerophon.AtPosition]]. Applying a positional tactic `t` at a position
+ * supports many different ways of specifying the position:
+ *
+ *   - `t(1)` applied at the first [[org.keymaerax.core.Sequent.succ succedent]] formula.
+ *   - `t(-1)` applied at the first [[org.keymaerax.core.Sequent.ante antecedent]] formula.
+ *   - `t(-4, 0::1::1::Nil)` applied at [[PosInExpr subexpression positioned at]] `.0.1.1` of the fourth antecedent
+ *     formula, that is at the second child of the second child of the first child of the fourth antecedent formula in
+ *     the sequent.
+ *   - `t('L)` applied at the first applicable position in the [[org.keymaerax.core.Sequent.ante antecedent]] (left side
+ *     of the sequent).
+ *   - `t('R)` applied at the first applicable position in the [[org.keymaerax.core.Sequent.succ succedent]] (right side
+ *     of the sequent).
+ *   - `t('_)` applied at the first applicable position in the side of the sequent to which tactic `t` applies. The side
+ *     of the sequent is uniquely determined by type of tactic.
+ *   - `t('Llast)` applied at the last antecedent position (left side of the sequent).
+ *   - `t('Rlast)` applied at the last succedent position (right side of the sequent).
+ *
+ * In addition, the formulas expected or sought for at the respective positions identified by the locators can be
+ * provided, which is useful for tactic contract and tactic documentation purposes. It is also useful for finding a
+ * corresponding formula by pattern matching.
+ *
+ *   - `t(2, fml)` applied at the second [[org.keymaerax.core.Sequent.succ succedent]] formula, ensuring that the
+ *     formula `fml` is at that position.
+ *   - `t(-2, fml)` applied at the second [[org.keymaerax.core.Sequent.ante antecedent]] formula, ensuring that the
+ *     formula `fml` is at that position.
+ *   - `t(5, 0::1::1::Nil, ex)` applied at [[infrastruct.PosInExpr subexpression positioned at]] `.0.1.1` of the fifth
+ *     succedent formula, that is at the second child of the second child of the first child of the fifth succedent
+ *     formula in the sequent, ensuring that the expression `ex` is at that position.
+ *   - `t('L, fml)` applied at the antecedent position (left side of the sequent) where the expected formula `fml` can
+ *     be found (on the top level).
+ *   - `t('R, fml)` applied at the succedent position (right side of the sequent) where the expected formula `fml` can
+ *     be found (on the top level).
+ *   - `t('_, fml)` applied at the suitable position (uniquely determined by type of tactic) where the expected formula
+ *     `fml` can be found (on the top level).
+ *
+ * Which of the available tactics is actually shown on the User Interface is determined by [[UIIndex]].
+ *
+ * @author
+ *   Nathan Fulton
+ * @author
+ *   Stefan Mitsch
+ * @author
+ *   Andre Platzer
+ * @see
+ *   Nathan Fulton, Stefan Mitsch, Brandon Bohrer and Andre Platzer.
+ *   [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]]. In
+ *   Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017,
+ *   volume 10499 of LNCS. Springer, 2017.
+ * @see
+ *   [[BelleExpr]]
+ * @see
+ *   [[SequentialInterpreter]]
+ * @see
+ *   [[UIIndex]]
+ */
+package object bellerophon {}

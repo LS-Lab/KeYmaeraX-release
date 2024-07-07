@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+package org.keymaerax.hydra.responses.proofs
+
+import org.keymaerax.hydra.Response
+import spray.json.{JsObject, JsString, JsValue}
+
+class ProofStatusResponse(proofId: String, status: String, error: Option[String] = None) extends Response {
+  override val schema: Option[String] = Some("proofstatus.js")
+  def getJson: JsValue = JsObject(
+    "proofId" -> JsString(proofId),
+    "type" -> JsString("ProofLoadStatus"),
+    "status" -> JsString(status),
+    "textStatus" -> JsString(status + ": " + proofId),
+    "errorThrown" -> JsString(error.getOrElse("")),
+  )
+}
+// progress "open": open goals
+// progress "closed": no open goals but not checked for isProved
+class ProofProgressResponse(proofId: String, isClosed: Boolean)
+    extends ProofStatusResponse(proofId, if (isClosed) "closed" else "open")

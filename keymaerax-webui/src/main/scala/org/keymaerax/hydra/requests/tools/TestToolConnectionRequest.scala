@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+package org.keymaerax.hydra.requests.tools
+
+import org.keymaerax.btactics.ToolProvider
+import org.keymaerax.core.{Formula, QETool}
+import org.keymaerax.hydra.{DBAbstraction, ErrorResponse, GenericOKResponse, LocalhostOnlyRequest, Response}
+import org.keymaerax.parser.StringConverter.StringToStringConverter
+import org.keymaerax.tools.Tool
+
+import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
+
+class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends LocalhostOnlyRequest {
+  override def resultingResponse(): Response = {
+    ToolProvider.tool(toolId) match {
+      case Some(t: QETool) =>
+        val simpleQeTask = new FutureTask[Either[Formula, Throwable]](() =>
+          try { Left(t.quantifierElimination("1+2=3".asFormula)) }
+          catch { case e: Throwable => Right(e) }
+        )
+        new Thread(simpleQeTask).start()
+        try {
+          val result = simpleQeTask.get(1, TimeUnit.SECONDS)
+          result match {
+            case Left(f) if f == "true".asFormula => new GenericOKResponse
+            case Left(f) => new ErrorResponse(s"Testing connection failed: unexpected result $f for test 2+3=5")
+            case Right(t) => new ErrorResponse("Testing connection failed", t)
+          }
+        } catch {
+          case _: TimeoutException =>
+            new ErrorResponse("Testing connection failed: tool is not responding. Please restart KeYmaera X.")
+        }
+      case Some(t: Tool) =>
+        new ErrorResponse(s"Testing connection failed: do not know how to test '${t.getClass}' tool")
+      case _ =>
+        new ErrorResponse(s"Testing connection failed: unknown tool '$toolId'. Please check the tool configuration.")
+    }
+  }
+}

@@ -44,23 +44,23 @@
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="edu.cmu.cs.ls.keymaerax.hydra" level="info" additivity="false">
+        <Logger name="org.keymaerax.hydra" level="info" additivity="false">
             <AppenderRef ref="ConsolePrint"/>
         </Logger>
-        <Logger name="edu.cmu.cs.ls.keymaerax.launcher.Main" level="info" additivity="false">
+        <Logger name="org.keymaerax.launcher.Main" level="info" additivity="false">
             <AppenderRef ref="ConsolePrint"/>
         </Logger>
-        <Logger name="edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics$" level="info" additivity="false">
+        <Logger name="org.keymaerax.btactics.DebuggingTactics$" level="info" additivity="false">
             <AppenderRef ref="ConsolePrint"/>
         </Logger>
-        <Logger name="edu.cmu.cs.ls.keymaerax.tools.ext.JLinkMathematicaLink" level="info" additivity="false">
+        <Logger name="org.keymaerax.tools.ext.JLinkMathematicaLink" level="info" additivity="false">
             <AppenderRef ref="ConsolePrint"/>
         </Logger>
-        <Logger name="edu.cmu.cs.ls.keymaerax.tools.qe.JLinkMathematicaCommandRunner" level="debug" additivity="false">
+        <Logger name="org.keymaerax.tools.qe.JLinkMathematicaCommandRunner" level="debug" additivity="false">
             <AppenderRef ref="MathematicaQELog"/>
             <AppenderRef ref="MathematicaQENotebookContent"/>
         </Logger>
-        <Logger name="edu.cmu.cs.ls.keymaerax.tools.SmlQETests" level="debug" additivity="false">
+        <Logger name="org.keymaerax.tools.SmlQETests" level="debug" additivity="false">
             <AppenderRef ref="MathematicaQELog"/>
             <AppenderRef ref="MathematicaQENotebookContent"/>
         </Logger>

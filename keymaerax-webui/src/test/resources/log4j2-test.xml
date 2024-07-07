@@ -9,10 +9,10 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics$" level="info" additivity="false">
+        <Logger name="org.keymaerax.btactics.DebuggingTactics$" level="info" additivity="false">
             <AppenderRef ref="ConsolePrint"/>
         </Logger>
-        <Logger name="edu.cmu.cs.ls.keymaerax.tools.ext.JLinkMathematicaLink" level="info" additivity="false">
+        <Logger name="org.keymaerax.tools.ext.JLinkMathematicaLink" level="info" additivity="false">
             <AppenderRef ref="ConsolePrint"/>
         </Logger>
         <Root level="error">

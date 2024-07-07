@@ -1,19 +1,19 @@
-import edu.cmu.cs.ls.keymaerax.core.{Real, Nothing, Function, FuncOf, Unit, Variable}
-import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.eqLeft
-import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
-import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.{boxAssignT, boxChoiceT, boxNDetAssign, boxSeqT,
+import org.keymaerax.core.{Real, Nothing, Function, FuncOf, Unit, Variable}
+import org.keymaerax.tactics.BranchLabels._
+import org.keymaerax.tactics.EqualityRewritingImpl.eqLeft
+import org.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
+import org.keymaerax.tactics.HybridProgramTacticsImpl.{boxAssignT, boxChoiceT, boxNDetAssign, boxSeqT,
 boxTestT, discreteGhostT}
-import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diffIntroduceConstantT, diffCutT, diffInvariantT, diffWeakenT}
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndLeftT, AndRightT, CloseId, ImplyLeftT,
+import org.keymaerax.tactics.ODETactics.{diffIntroduceConstantT, diffCutT, diffInvariantT, diffWeakenT}
+import org.keymaerax.tactics.PropositionalTacticsImpl.{AndLeftT, AndRightT, CloseId, ImplyLeftT,
 ImplyRightT, OrLeftT, OrRightT}
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.onBranch
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, hideT, inductionT}
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, LabelBranch, PositionTactic}
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import org.keymaerax.tactics.SearchTacticsImpl._
+import org.keymaerax.tactics.SearchTacticsImpl.onBranch
+import org.keymaerax.tactics.TacticLibrary.{debugT, hideT, inductionT}
+import org.keymaerax.tactics.Tactics.{Tactic, LabelBranch, PositionTactic}
+import org.keymaerax.tactics.TactixLibrary._
+import org.keymaerax.tactics._
+import org.keymaerax.parser.StringConverter._
 
 import scala.language.postfixOps
 

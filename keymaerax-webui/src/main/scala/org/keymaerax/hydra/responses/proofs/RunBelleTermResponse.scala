@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+package org.keymaerax.hydra.responses.proofs
+
+import org.keymaerax.hydra.Response
+import spray.json.{JsObject, JsString, JsValue}
+
+case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String, info: String) extends Response {
+  def getJson: JsValue = JsObject(
+    "proofId" -> JsString(proofId),
+    "nodeId" -> JsString(nodeId),
+    "taskId" -> JsString(taskId),
+    "type" -> JsString("runbelleterm"),
+    "info" -> JsString(info),
+  )
+}

@@ -144,13 +144,13 @@ For more details on running tests, see the ScalaTest documentation on
 
 ```shell
 # Run a specific test
-sbt "testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests"
+sbt "testOnly org.keymaerax.btactics.BenchmarkTests"
 
 # Run all tests whose name contains "USubst"
 sbt "testOnly *USubst*"
 
 # Run all tests tagged "CheckinTest" except those tagged "TodoTest"
-sbt "testOnly -- -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest -l edu.cmu.cs.ls.keymaerax.tags.TodoTest"
+sbt "testOnly -- -n org.keymaerax.tags.CheckinTest -l org.keymaerax.tags.TodoTest"
 ```
 
 To generate an HTML report of the results, the `-h` option can be used.
@@ -166,26 +166,26 @@ in the target directory at `target/test-reports/index.html`.
 
 The following tags can usually be safely ignored:
 
-- `edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest`
-- `edu.cmu.cs.ls.keymaerax.tags.CaseStudyTest`
-- `edu.cmu.cs.ls.keymaerax.tags.CoverageTest`
-- `edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest`
-- `edu.cmu.cs.ls.keymaerax.tags.NotfixedTest`
-- `edu.cmu.cs.ls.keymaerax.tags.OptimisticTest`
-- `edu.cmu.cs.ls.keymaerax.tags.TodoTest`
+- `org.keymaerax.tags.AdvocatusTest`
+- `org.keymaerax.tags.CaseStudyTest`
+- `org.keymaerax.tags.CoverageTest`
+- `org.keymaerax.tags.IgnoreInBuildTest`
+- `org.keymaerax.tags.NotfixedTest`
+- `org.keymaerax.tags.OptimisticTest`
+- `org.keymaerax.tags.TodoTest`
 
 You may also wish to ignore these tags if you're short on time:
 
-- `edu.cmu.cs.ls.keymaerax.tags.SlowTest`
-- `edu.cmu.cs.ls.keymaerax.tags.ExtremeTest`
+- `org.keymaerax.tags.SlowTest`
+- `org.keymaerax.tags.ExtremeTest`
 
 For a quick smoke test suite that only takes a minute or two,
-use the tag `edu.cmu.cs.ls.keymaerax.tags.CheckinTest`:
+use the tag `org.keymaerax.tags.CheckinTest`:
 
 ```shell
 sbt "testOnly --
--n edu.cmu.cs.ls.keymaerax.tags.CheckinTest
--l edu.cmu.cs.ls.keymaerax.tags.TodoTest
+-n org.keymaerax.tags.CheckinTest
+-l org.keymaerax.tags.TodoTest
 "
 ```
 
@@ -194,15 +194,15 @@ run all tests except the slow ones and those that can safely be ignored:
 
 ```shell
 sbt "testOnly --
--l edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
--l edu.cmu.cs.ls.keymaerax.tags.CaseStudyTest
--l edu.cmu.cs.ls.keymaerax.tags.CoverageTest
--l edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
--l edu.cmu.cs.ls.keymaerax.tags.NotfixedTest
--l edu.cmu.cs.ls.keymaerax.tags.OptimisticTest
--l edu.cmu.cs.ls.keymaerax.tags.TodoTest
--l edu.cmu.cs.ls.keymaerax.tags.SlowTest
--l edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
+-l org.keymaerax.tags.AdvocatusTest
+-l org.keymaerax.tags.CaseStudyTest
+-l org.keymaerax.tags.CoverageTest
+-l org.keymaerax.tags.IgnoreInBuildTest
+-l org.keymaerax.tags.NotfixedTest
+-l org.keymaerax.tags.OptimisticTest
+-l org.keymaerax.tags.TodoTest
+-l org.keymaerax.tags.SlowTest
+-l org.keymaerax.tags.ExtremeTest
 "
 ```
 

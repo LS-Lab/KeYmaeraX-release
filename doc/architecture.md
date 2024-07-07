@@ -86,24 +86,24 @@ Documentation in the form of markdown files.
 
 This subproject contains the soundness-critical kernel as well as the core.
 
-The kernel is located in the `edu.cmu.cs.ls.keymaerax.core` package.
-Infrastructure around the kernel that is not soundness-critical can be found in `edu.cmu.cs.ls.keymaerax.infrastruct`.
-Integration with external tools like Mathematica and Z3 happens in `edu.cmu.cs.ls.keymaerax.tools`.
+The kernel is located in the `org.keymaerax.core` package.
+Infrastructure around the kernel that is not soundness-critical can be found in `org.keymaerax.infrastruct`.
+Integration with external tools like Mathematica and Z3 happens in `org.keymaerax.tools`.
 
-The Bellerophon language and interpreter are at `edu.cmu.cs.ls.keymaerax.bellerophon`
-while the tactic library is at `edu.cmu.cs.ls.keymaerax.btactics`.
+The Bellerophon language and interpreter are at `org.keymaerax.bellerophon`
+while the tactic library is at `org.keymaerax.btactics`.
 While tactics are scattered all throughout the package and its subpackages,
-proof rules and derived axioms are exclusively located in `edu.cmu.cs.ls.keymaerax.btactics.Ax`.
+proof rules and derived axioms are exclusively located in `org.keymaerax.btactics.Ax`.
 
 ### `keymaerax-webui/`
 
 This subproject contains the web server and web UI.
 
 The web server and web API implementation named **Hydra**
-is located in the `edu.cmu.cs.ls.keymaerax.hydra` package and subpackages.
+is located in the `org.keymaerax.hydra` package and subpackages.
 The HTML, CSS, JS files as well as all JS dependencies and other assets can be found in the project resources.
 
-The subproject also contains a launcher in the `edu.cmu.cs.ls.keymaerax.launcher` package
+The subproject also contains a launcher in the `org.keymaerax.launcher` package
 that restarts the jar on startup with a JVM option for more stack space.
 
 Finally, the subproject contains tests for both itself and the `keymaerax-core/` subproject.

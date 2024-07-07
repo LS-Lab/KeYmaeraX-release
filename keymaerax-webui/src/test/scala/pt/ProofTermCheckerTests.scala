@@ -5,15 +5,15 @@
 
 package edu.cmu.cs.ls.pt
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt._
-import edu.cmu.cs.ls.keymaerax.tagobjects.TodoTest
+import org.keymaerax.Configuration
+import org.keymaerax.bellerophon.parser.BelleParser
+import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics._
+import org.keymaerax.core._
+import org.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.pt._
+import org.keymaerax.tagobjects.TodoTest
 
 import java.io.PrintWriter
 

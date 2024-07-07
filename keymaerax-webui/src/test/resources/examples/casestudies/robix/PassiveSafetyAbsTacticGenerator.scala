@@ -1,10 +1,10 @@
-import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{PropositionalTactics, ToolTactics}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, QETool}
-import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
+import org.keymaerax.bellerophon._
+import org.keymaerax.btactics.{PropositionalTactics, ToolTactics}
+import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.DebuggingTactics.print
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.core.{Formula, QETool}
+import org.keymaerax.infrastruct.AntePosition
 
 import scala.language.postfixOps
 

@@ -10,70 +10,70 @@
 
 Main documentation entry points for KeYmaera X API:
 
-  - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
-      - `[[edu.cmu.cs.ls.keymaerax.core.Expression Expression]]` - Differential dynamic logic expressions:
-        `[[edu.cmu.cs.ls.keymaerax.core.Term Term]]`,
-        `[[edu.cmu.cs.ls.keymaerax.core.Formula Formula]]`,
-        `[[edu.cmu.cs.ls.keymaerax.core.Program Program]]`
-      - `[[edu.cmu.cs.ls.keymaerax.core.Sequent Sequent]]` - Sequents of formulas
-      - `[[edu.cmu.cs.ls.keymaerax.core.Provable Provable]]` - Proof certificates transformed by rules/axioms
-      - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules as well as `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubstOne]]` for (one-pass) uniform substitutions and [[edu.cmu.cs.ls.keymaerax.core.URename renaming]].
-      - `[[edu.cmu.cs.ls.keymaerax.core.StaticSemantics StaticSemantics]]` - Static semantics with free and bound variable analysis
-      - Instead of constructing dL expressions from constructors, it is easier to use the `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]`.
+  - `[[org.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
+      - `[[org.keymaerax.core.Expression Expression]]` - Differential dynamic logic expressions:
+        `[[org.keymaerax.core.Term Term]]`,
+        `[[org.keymaerax.core.Formula Formula]]`,
+        `[[org.keymaerax.core.Program Program]]`
+      - `[[org.keymaerax.core.Sequent Sequent]]` - Sequents of formulas
+      - `[[org.keymaerax.core.Provable Provable]]` - Proof certificates transformed by rules/axioms
+      - `[[org.keymaerax.core.Rule Rule]]` - Proof rules as well as `[[org.keymaerax.core.USubstOne USubstOne]]` for (one-pass) uniform substitutions and [[org.keymaerax.core.URename renaming]].
+      - `[[org.keymaerax.core.StaticSemantics StaticSemantics]]` - Static semantics with free and bound variable analysis
+      - Instead of constructing dL expressions from constructors, it is easier to use the `[[org.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]`.
 
-  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
+  - `[[org.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
 
       - [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter KeYmaeraXPrettyPrinter]]` - Pretty printer producing concrete KeYmaera X syntax
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]` - Parser reading concrete KeYmaera X syntax
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser KeYmaeraXArchiveParser]]` - Parser reading KeYmaera X model and proof archive `.kyx` files
-      - `[[edu.cmu.cs.ls.keymaerax.parser.DLParser DLParser]]` - Combinator parser reading concrete KeYmaera X syntax
-      - `[[edu.cmu.cs.ls.keymaerax.parser.DLArchiveParser DLArchiveParser]]` - Combinator parser reading KeYmaera X model and proof archive `.kyx` files
+      - `[[org.keymaerax.parser.KeYmaeraXPrettyPrinter KeYmaeraXPrettyPrinter]]` - Pretty printer producing concrete KeYmaera X syntax
+      - `[[org.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]` - Parser reading concrete KeYmaera X syntax
+      - `[[org.keymaerax.parser.KeYmaeraXArchiveParser KeYmaeraXArchiveParser]]` - Parser reading KeYmaera X model and proof archive `.kyx` files
+      - `[[org.keymaerax.parser.DLParser DLParser]]` - Combinator parser reading concrete KeYmaera X syntax
+      - `[[org.keymaerax.parser.DLArchiveParser DLArchiveParser]]` - Combinator parser reading KeYmaera X model and proof archive `.kyx` files
 
-  - `[[edu.cmu.cs.ls.keymaerax.infrastruct]]` - Prover infrastructure outside the kernel
-      - `[[edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch UnificationMatch]]` - Unification algorithm
-      - `[[edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst RenUSubst]]` - Renaming Uniform Substitution quickly combining kernel's renaming and substitution.
-      - `[[edu.cmu.cs.ls.keymaerax.infrastruct.Context Context]]` - Representation for contexts of formulas in which they occur.
-      - `[[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors Augmentors]]` - Augmenting formula and expression data structures with additional functionality
-      - `[[edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal ExpressionTraversal]]` - Generic traversal functionality for expressions
+  - `[[org.keymaerax.infrastruct]]` - Prover infrastructure outside the kernel
+      - `[[org.keymaerax.infrastruct.UnificationMatch UnificationMatch]]` - Unification algorithm
+      - `[[org.keymaerax.infrastruct.RenUSubst RenUSubst]]` - Renaming Uniform Substitution quickly combining kernel's renaming and substitution.
+      - `[[org.keymaerax.infrastruct.Context Context]]` - Representation for contexts of formulas in which they occur.
+      - `[[org.keymaerax.infrastruct.Augmentors Augmentors]]` - Augmenting formula and expression data structures with additional functionality
+      - `[[org.keymaerax.infrastruct.ExpressionTraversal ExpressionTraversal]]` - Generic traversal functionality for expressions
 
-  - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
-      - `[[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr BelleExpr]]` - Tactic language expressions
-      - `[[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter SequentialInterpreter]]` - Sequential tactic interpreter for Bellerophon tactics
+  - `[[org.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
+      - `[[org.keymaerax.bellerophon.BelleExpr BelleExpr]]` - Tactic language expressions
+      - `[[org.keymaerax.bellerophon.SequentialInterpreter SequentialInterpreter]]` - Sequential tactic interpreter for Bellerophon tactics
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Bellerophon tactic library for conducting proofs.
-      - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary TactixLibrary]]` - Main KeYmaera X tactic library including many proof tactics.
-      - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
-      - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus SequentCalculus]]` - Sequent Calculus for propositional and first-order logic
-      - `[[edu.cmu.cs.ls.keymaerax.btactics.HybridProgramCalculus HybridProgramCalculus]]` - Hybrid Program Calculus for differential dynamic logic
-      - `[[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus DifferentialEquationCalculus]]` - Differential Equation Calculus for differential dynamic logic
-      - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` - Unification-based uniform substitution calculus underlying the other calculi
-      - `[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.ForwardTactic ForwardTactic]` - Forward tactic framework for conducting proofs from premises to conclusions
+  - `[[org.keymaerax.btactics]]` - Bellerophon tactic library for conducting proofs.
+      - `[[org.keymaerax.btactics.TactixLibrary TactixLibrary]]` - Main KeYmaera X tactic library including many proof tactics.
+      - `[[org.keymaerax.btactics.HilbertCalculus HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
+      - `[[org.keymaerax.btactics.SequentCalculus SequentCalculus]]` - Sequent Calculus for propositional and first-order logic
+      - `[[org.keymaerax.btactics.HybridProgramCalculus HybridProgramCalculus]]` - Hybrid Program Calculus for differential dynamic logic
+      - `[[org.keymaerax.btactics.DifferentialEquationCalculus DifferentialEquationCalculus]]` - Differential Equation Calculus for differential dynamic logic
+      - `[[org.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` - Unification-based uniform substitution calculus underlying the other calculi
+      - `[org.keymaerax.btactics.UnifyUSCalculus.ForwardTactic ForwardTactic]` - Forward tactic framework for conducting proofs from premises to conclusions
 
-  - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
-      - `[[edu.cmu.cs.ls.keymaerax.lemma.Lemma Lemma]]` - Lemmas are [[edu.cmu.cs.ls.keymaerax.core.Provable Provables]] stored under a name, e.g., in files.
-      - `[[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB LemmaDB]]` - Lemma database stored in files or database etc.
+  - `[[org.keymaerax.lemma]]` - Lemma mechanism
+      - `[[org.keymaerax.lemma.Lemma Lemma]]` - Lemmas are [[org.keymaerax.core.Provable Provables]] stored under a name, e.g., in files.
+      - `[[org.keymaerax.lemma.LemmaDB LemmaDB]]` - Lemma database stored in files or database etc.
 
-  - `[[edu.cmu.cs.ls.keymaerax.tools.qe]]` - Real arithmetic back-end solvers
-      - `[[edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool MathematicaQETool]]` - Mathematica interface for real arithmetic.
-      - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool Z3QETool]]` - Z3 interface for real arithmetic.
-  - `[[edu.cmu.cs.ls.keymaerax.tools.ext]]` - Extended back-ends for noncritical ODE solving, counterexamples, algebra, simplifiers, etc.
-      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica  Mathematica]]` - Mathematica interface for ODE solving, algebra, simplification, invariant generation, etc.
-      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Z3 Z3]]` - Z3 interface for real arithmetic including simplifiers.
+  - `[[org.keymaerax.tools.qe]]` - Real arithmetic back-end solvers
+      - `[[org.keymaerax.tools.qe.MathematicaQETool MathematicaQETool]]` - Mathematica interface for real arithmetic.
+      - `[[org.keymaerax.tools.qe.Z3QETool Z3QETool]]` - Z3 interface for real arithmetic.
+  - `[[org.keymaerax.tools.ext]]` - Extended back-ends for noncritical ODE solving, counterexamples, algebra, simplifiers, etc.
+      - `[[org.keymaerax.tools.ext.Mathematica  Mathematica]]` - Mathematica interface for ODE solving, algebra, simplification, invariant generation, etc.
+      - `[[org.keymaerax.tools.ext.Z3 Z3]]` - Z3 interface for real arithmetic including simplifiers.
     
 ==Entry Points==
 
 Additional entry points and usage points for KeYmaera X API:
 
-  - `[[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
+  - `[[org.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]` - Axiom indexing data structures with keys and recursors for canonical proof strategies.
+  - `[[org.keymaerax.btactics.AxIndex]]` - Axiom indexing data structures with keys and recursors for canonical proof strategies.
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom]` `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
+  - `[[org.keymaerax.btactics.macros.Axiom]` `[[org.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
 
-  - `[[edu.cmu.cs.ls.keymaerax.bellerophon.UIIndex]]` - Index determining which canonical reasoning steps to display on the KeYmaera X User Interface.
+  - `[[org.keymaerax.bellerophon.UIIndex]]` - Index determining which canonical reasoning steps to display on the KeYmaera X User Interface.
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.Ax]]` - Registry for derived axioms and axiomatic proof rules that are proved from the core.
+  - `[[org.keymaerax.btactics.Ax]]` - Registry for derived axioms and axiomatic proof rules that are proved from the core.
 
 ==References==
 
@@ -91,4 +91,3 @@ In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automa
 [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
 Springer, 2018.
 [[http://video.lfcps.org/ Videos]]
-

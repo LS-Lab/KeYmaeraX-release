@@ -15,13 +15,13 @@ ThisBuild / scalacOptions ++= {
   // See also: https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
   val warnings = Seq(
     // Never silence warnings in the core
-    "site=edu.cmu.cs.ls.keymaerax.core.*:w",
+    "site=org.keymaerax.core.*:w",
 
     // Never silence warnings in newly written code
-    "site=edu.cmu.cs.ls.keymaerax.info.*:w",
+    "site=org.keymaerax.info.*:w",
 
     // Silence all deprecation warnings originating from @deprecated annotations inside keymaerax itself
-    "cat=deprecation&origin=edu.cmu.cs.ls.keymaerax.*:s",
+    "cat=deprecation&origin=org.keymaerax.*:s",
 
     // Silence match exhaustivity warnings
     "cat=other-match-analysis:s",
@@ -73,7 +73,7 @@ lazy val core = project
   .dependsOn(macros)
   .settings(
     name := "KeYmaeraX Core",
-    mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeymaeraxCore"),
+    mainClass := Some("org.keymaerax.cli.KeymaeraxCore"),
 
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
 
@@ -119,7 +119,7 @@ lazy val core = project
       "license" -> Files.readString(Paths.get("LICENSE.txt")),
       "licensesThirdParty" -> Files.readString(Paths.get("LICENSES_THIRD_PARTY.txt")),
     ),
-    buildInfoPackage := "edu.cmu.cs.ls.keymaerax.info",
+    buildInfoPackage := "org.keymaerax.info",
     buildInfoOptions += BuildInfoOption.PackagePrivate,
 
     // Use Mathematica's JLink.jar as unmanaged dependency
@@ -146,7 +146,7 @@ lazy val webui = project
   .dependsOn(macros, core)
   .settings(
     name := "KeYmaeraX WebUI",
-    mainClass := Some("edu.cmu.cs.ls.keymaerax.cli.KeymaeraxWebui"),
+    mainClass := Some("org.keymaerax.cli.KeymaeraxWebui"),
 
     /// sqlite driver
     libraryDependencies += "com.typesafe.slick" %% "slick" % "3.5.1",

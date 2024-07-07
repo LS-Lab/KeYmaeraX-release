@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+package org.keymaerax
+
+/**
+ * Code-generation tools to generate C-Code etc. from expressions.
+ * @author
+ *   Andre Platzer
+ * @todo
+ *   Stub. Describe for real.
+ */
+package object codegen {}

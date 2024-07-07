@@ -1,7 +1,7 @@
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import org.keymaerax.bellerophon.BelleExpr
 
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.parser.StringConverter._
 
 import scala.language.postfixOps
 

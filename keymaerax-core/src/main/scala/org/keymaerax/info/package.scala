@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+package org.keymaerax
+
+import java.net.URI
+
+/**
+ * Information about the KeYmaera X project.
+ *
+ * This object centralizes project information like the name, domain, and home page URL. Whenever this information is
+ * needed, the corresponding field of this object should be used. This helps prevent inconsistencies and makes it easier
+ * to change the information.
+ */
+package object info {
+
+  /** The full project name, including correct case and whitespace. */
+  val FullName: String = "KeYmaera X"
+
+  /** A version of the name that is safe to use in technical contexts (e.g. file names). */
+  val TechnicalName: String = "keymaerax"
+
+  /** The current project version. */
+  val Version: VersionNumber = VersionNumber.parse(BuildInfo.version)
+
+  /** The full name and version of the project. */
+  val FullNameAndVersion: String = s"$FullName $Version"
+
+  val Website = new URI("https://keymaerax.org/")
+
+  val PackageName = "org.keymaerax"
+
+  /** The full copyright text, taken from the `COPYRIGHT.txt` file. */
+  val FullCopyright: String = BuildInfo.copyright.stripLineEnd
+
+  /** A single line of copyright information. */
+  val ShortCopyright: String = BuildInfo.copyright.linesIterator.find(line => line.startsWith("Copyright")).get
+
+  /** The full license, taken from the `LICENSE.txt` file. */
+  val License: String = BuildInfo.license.stripLineEnd
+
+  /** Third party licenses, taken from the `LICENSES_THIRD_PARTY.txt` file. */
+  val ThirdPartyLicenses: String = BuildInfo.licensesThirdParty.stripLineEnd
+}

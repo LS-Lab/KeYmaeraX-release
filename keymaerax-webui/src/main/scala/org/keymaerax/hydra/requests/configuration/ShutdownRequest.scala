@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) Carnegie Mellon University, Karlsruhe Institute of Technology.
+ * See LICENSE.txt for the conditions of this license.
+ */
+
+package org.keymaerax.hydra.requests.configuration
+
+import org.keymaerax.btactics.ToolProvider
+import org.keymaerax.hydra.{BooleanResponse, HyDRAServerConfig, LocalhostOnlyRequest, RegisteredOnlyRequest, Response}
+
+class ShutdownRequest() extends LocalhostOnlyRequest with RegisteredOnlyRequest {
+  override def resultingResponse(): Response = {
+    new Thread() {
+      override def run(): Unit = {
+        try {
+          // Tell all scheduled tactics to stop.
+          // @todo figure out which of these are actually necessary.
+          System.out.flush()
+          System.err.flush()
+          ToolProvider.shutdown()
+          System.out.flush()
+          System.err.flush()
+          HyDRAServerConfig.system.terminate()
+          System.out.flush()
+          System.err.flush()
+          this.synchronized { this.wait(4000) }
+          System.out.flush()
+          System.err.flush()
+          System.exit(0) // should've already stopped the application by now.
+        } catch { case _: Exception => System.exit(-1) }
+
+      }
+    }.start()
+
+    BooleanResponse(flag = true)
+  }
+}
