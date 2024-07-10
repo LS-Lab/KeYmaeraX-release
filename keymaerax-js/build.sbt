@@ -11,101 +11,101 @@ lazy val root = project
   .in(file("."))
   .settings(
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Configuration.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "Configuration.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "MapConfiguration.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "MapConfiguration.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Logging.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "Logging.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "Assertion.java",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "Assertion.java",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "Version.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "Version.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "package.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "package.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "Expression.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "Expression.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "PrettyPrinter.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "PrettyPrinter.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "Sequent.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "Sequent.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "SetLattice.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "SetLattice.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "StaticSemantics.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "StaticSemantics.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "UniformSubstitution.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "UniformSubstitution.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core" / "USubstOne.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "USubstOne.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "Position.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "Position.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "FormulaTools.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "FormulaTools.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "ExpressionTraversal.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "ExpressionTraversal.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "Augmentors.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "Augmentors.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "Context.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "Context.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "SubstitutionHelper.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "SubstitutionHelper.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "DependencyAnalysis.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "DependencyAnalysis.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "StaticSemanticsTools.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "infrastruct" / "StaticSemanticsTools.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "InterpretedSymbols.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "InterpretedSymbols.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "BuiltinSymbols.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "BuiltinSymbols.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "ReservedSymbols.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "ReservedSymbols.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "TacticReservedSymbols.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "TacticReservedSymbols.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "Location.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "Location.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "InterpretedSymbols.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "InterpretedSymbols.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "OpSpec.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "OpSpec.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "ODEToInterpreted.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "ODEToInterpreted.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "SequentParser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "SequentParser.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "PrettyPrinter.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "PrettyPrinter.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "Stack.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "Stack.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "Parser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "Parser.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXPrettyPrinter.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "KeYmaeraXPrettyPrinter.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXTerminals.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "KeYmaeraXTerminals.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "DLParserUtils.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "DLParserUtils.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "DLParser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "DLParser.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "SubstitutionParser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "SubstitutionParser.scala",
 
     // for archive and tactic parsing
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-macros" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "btactics" / "macros" / "ArgInfo.scala",
+      baseDirectory.value.getParentFile / "keymaerax-macros" / "src" / "main" / "scala" / "org" / "keymaerax" / "btactics" / "macros" / "ArgInfo.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "bellerophon" / "PositionLocator.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "bellerophon" / "PositionLocator.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "bellerophon" / "parser" / "TacticParser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "bellerophon" / "parser" / "TacticParser.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "bellerophon" / "BelleLabel.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "bellerophon" / "BelleLabel.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "bellerophon" / "parser" / "DLBelleParser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "bellerophon" / "parser" / "DLBelleParser.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "ArchiveParser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "ArchiveParser.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "DLArchiveParser.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "DLArchiveParser.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "FormatProvider.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "FormatProvider.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXArchivePrinter.scala"
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "parser" / "KeYmaeraXArchivePrinter.scala"
   )
 
 Compile / scalacOptions ++= Seq(
