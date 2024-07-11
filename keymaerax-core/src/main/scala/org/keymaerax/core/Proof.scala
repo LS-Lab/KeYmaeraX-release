@@ -39,8 +39,9 @@
  */
 package org.keymaerax.core
 
-import java.security.MessageDigest
 import org.keymaerax.parser.Parser
+
+import java.security.MessageDigest
 
 // require favoring immutable Seqs for soundness
 
@@ -214,9 +215,6 @@ import scala.collection.immutable
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
 
-  /** Position types for the subgoals of a Provable. */
-  type Subgoal = Int
-
   /**
    * Checks whether this Provable proves its conclusion.
    *
@@ -268,7 +266,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @note
    *   soundness-critical. And soundness needs Rule to be sealed.
    */
-  final def apply(rule: Rule, subgoal: Subgoal): Provable = {
+  final def apply(rule: Rule, subgoal: Provable.Subgoal): Provable = {
     require(
       0 <= subgoal && subgoal < subgoals.length,
       "Rules " + rule + " should be applied to a subgoal " + subgoal + " that is within the subgoals " + subgoals,
@@ -332,7 +330,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @note
    *   soundness-critical
    */
-  final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
+  final def apply(subderivation: Provable, subgoal: Provable.Subgoal): Provable = {
     require(
       0 <= subgoal && subgoal < subgoals.length,
       "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals,
@@ -551,7 +549,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @note
    *   not soundness-critical only helpful for completeness-critical
    */
-  def sub(subgoal: Subgoal): Provable = {
+  def sub(subgoal: Provable.Subgoal): Provable = {
     require(
       0 <= subgoal && subgoal < subgoals.length,
       "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals,
@@ -581,6 +579,9 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
  *   [[Provable$.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  */
 object Provable {
+
+  /** Position types for the subgoals of a Provable. */
+  type Subgoal = Int
 
   /** List of the class names of all external real arithmetic tools whose answers KeYmaera X would believe */
   private val trustedTools: immutable.List[String] = "org.keymaerax.tools.qe.MathematicaQETool" ::

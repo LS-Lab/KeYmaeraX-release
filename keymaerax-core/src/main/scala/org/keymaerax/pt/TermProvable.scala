@@ -5,16 +5,15 @@
 
 package org.keymaerax.pt
 
-import org.keymaerax.{Configuration, Logging}
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{ProvableHelper, UnificationTools}
 import org.keymaerax.lemma.Lemma
 import org.keymaerax.parser.Declaration
+import org.keymaerax.{Configuration, Logging}
 
 import scala.collection.immutable
-import scala.collection.immutable.IndexedSeq
 
 /**
  * A common signature for [[org.keymaerax.pt.ProvableSig]]s and [[TermProvable]]s for use in the [[btactics]] package.
@@ -58,9 +57,6 @@ sealed trait ProvableSig {
 
   /* The number of steps performed to create this provable. */
   val steps: Int
-
-  /** Position types for the subgoals of a Provable. */
-  type Subgoal = Int
 
   /** the conclusion `G |- D` that follows if all subgoals are valid. */
   val conclusion: Sequent
@@ -110,7 +106,7 @@ sealed trait ProvableSig {
    * @requires
    *   0 <= subgoal && subgoal < subgoals.length
    */
-  def apply(rule: Rule, subgoal: Subgoal): ProvableSig
+  def apply(rule: Rule, subgoal: Provable.Subgoal): ProvableSig
 
   /**
    * Substitute subderivation as a proof of subgoal. Merge: Replace premise subgoal by the given subderivation. Use the
@@ -147,10 +143,10 @@ sealed trait ProvableSig {
    * @requires
    *   subderivation.conclusion == subgoals(subgoal)
    */
-  def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig
+  def apply(subderivation: ProvableSig, subgoal: Provable.Subgoal): ProvableSig
 
   /** Apply forward tactic `fw` at `subgoal`, or on all subgoals when `subgoal` < 0. */
-  def apply(fw: ProvableSig => ProvableSig, subgoal: Subgoal): ProvableSig =
+  def apply(fw: ProvableSig => ProvableSig, subgoal: Provable.Subgoal): ProvableSig =
     if (subgoal >= 0) apply(fw(sub(subgoal)), subgoal) else fw(this)
 
   /** Apply forward tactic on all subgoals. */
@@ -247,7 +243,7 @@ sealed trait ProvableSig {
    *   }}}
    *   which is suitable for being merged back into this Provable for subgoal `i` subsequently.
    */
-  def sub(subgoal: Subgoal): ProvableSig
+  def sub(subgoal: Provable.Subgoal): ProvableSig
 
   // included from Provable object here already for departure point with or without proof terms
 
@@ -449,10 +445,10 @@ case class ElidingProvable(provable: Provable, steps: Int, defs: Declaration) ex
   override val axioms: Map[String, ProvableSig] = ElidingProvable.axioms
   override val rules: Map[String, ProvableSig] = ElidingProvable.rules
 
-  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig =
+  override def apply(rule: Rule, subgoal: Provable.Subgoal): ProvableSig =
     ElidingProvable(provable(rule, subgoal), steps + 1, defs)
 
-  override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
+  override def apply(subderivation: ProvableSig, subgoal: Provable.Subgoal): ProvableSig = {
     // @note subderivation may have expanded definitions
     val subst = UnificationTools
       .collectSubst(underlyingProvable, subgoal, subderivation.underlyingProvable, defs.substs)
@@ -473,7 +469,7 @@ case class ElidingProvable(provable: Provable, steps: Int, defs: Declaration) ex
   override def apply(prolongation: ProvableSig): ProvableSig =
     ElidingProvable(provable(prolongation.underlyingProvable), steps + prolongation.steps, defs ++ prolongation.defs)
 
-  override def sub(subgoal: Subgoal): ProvableSig = ElidingProvable(provable.sub(subgoal), 0, defs)
+  override def sub(subgoal: Provable.Subgoal): ProvableSig = ElidingProvable(provable.sub(subgoal), 0, defs)
 
   override def startProof(goal: Sequent): ProvableSig = ElidingProvable(Provable.startProof(goal), 0, defs)
 
@@ -492,7 +488,7 @@ case class ElidingProvable(provable: Provable, steps: Int, defs: Declaration) ex
   }
 
   /** @inheritdoc */
-  override def hashCode(): Subgoal = provable.hashCode()
+  override def hashCode(): Int = provable.hashCode()
 }
 
 object ElidingProvable {
@@ -612,12 +608,12 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
   override def proved: Sequent = provable.proved
 
   /** @inheritdoc */
-  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = {
+  override def apply(rule: Rule, subgoal: Provable.Subgoal): ProvableSig = {
     TermProvable(provable(rule, subgoal), RuleApplication(pt, rule, subgoal), defs)
   }
 
   /** @inheritdoc */
-  override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
+  override def apply(subderivation: ProvableSig, subgoal: Provable.Subgoal): ProvableSig = {
     // @todo subderivation may have definitions expanded
     subderivation match {
       case TermProvable(subProvable, subPT, _) =>
@@ -705,7 +701,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
   }
 
   /** @inheritdoc */
-  override def sub(subgoal: Subgoal): ProvableSig =
+  override def sub(subgoal: Provable.Subgoal): ProvableSig =
     TermProvable(provable.sub(subgoal), StartProof(provable.subgoals(subgoal)), defs)
 
   /** @inheritdoc */
