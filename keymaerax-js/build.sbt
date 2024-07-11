@@ -1,3 +1,8 @@
+import java.io.{FileInputStream, InputStreamReader}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import java.util.Properties
+
 name := "KeYmaeraX-JS"
 
 ThisBuild / scalaVersion := "2.13.12"
@@ -9,7 +14,18 @@ scalaJSUseMainModuleInitializer := false
 // select core sources to include
 lazy val root = project
   .in(file("."))
+  .enablePlugins(BuildInfoPlugin)
   .settings(
+      // Include version number as constant in source code
+    buildInfoKeys := Seq[BuildInfoKey](
+      version,
+      "copyright" -> Files.readString(Paths.get("../COPYRIGHT.txt")),
+      "license" -> Files.readString(Paths.get("../LICENSE.txt")),
+      "licensesThirdParty" -> Files.readString(Paths.get("../LICENSES_THIRD_PARTY.txt")),
+    ),
+    buildInfoPackage := "edu.cmu.cs.ls.keymaerax.info",
+    buildInfoOptions += BuildInfoOption.PackagePrivate,
+
     Compile / unmanagedSources +=
       baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "Configuration.scala",
     Compile / unmanagedSources +=
@@ -17,9 +33,11 @@ lazy val root = project
     Compile / unmanagedSources +=
       baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "Logging.scala",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "Assertion.java",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "java" / "org" / "keymaerax" / "core" / "Assertion.java",
     Compile / unmanagedSources +=
-      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "Version.scala",
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "info" / "package.scala",
+    Compile / unmanagedSources +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "info" / "VersionNumber.scala",
     Compile / unmanagedSources +=
       baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "org" / "keymaerax" / "core" / "package.scala",
     Compile / unmanagedSources +=
