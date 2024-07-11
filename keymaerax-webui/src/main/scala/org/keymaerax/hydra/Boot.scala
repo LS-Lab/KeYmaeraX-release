@@ -39,7 +39,7 @@ object NonSSLBoot extends Logging {
     val api = routes
 
     // Do the KeYmaera X initialization GUI stuff...
-    LoadingDialogFactory() // @note show if not already started through Main.scala
+    LoadingDialogFactory() // @note show if not already started through KeymaeraxWebui.scala
     Http().newServerAt(interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port).bindFlow(api) map { _ =>
       // Finally, print a message indicating that the server was started.
       LoadingDialogFactory().addToStatus(10, Some("Finished loading"))

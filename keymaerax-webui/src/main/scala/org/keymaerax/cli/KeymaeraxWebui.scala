@@ -29,6 +29,8 @@ import org.apache.commons.lang3.StringUtils
 
 import java.io.PrintWriter
 import scala.collection.immutable.{List, Nil}
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.reflect.io.File
 
 /** Command-line interface for the KeYmaera X webui jar. */
@@ -95,7 +97,7 @@ object KeymaeraxWebui {
       LemmaCacheChecks.clearCacheIfDeprecated()
       LoadingDialogFactory().addToStatus(10, Some("Checking port..."))
       PortChecks.ensureWebuiPortCanBeBoundOrExit()
-      org.keymaerax.hydra.NonSSLBoot.run(options)
+      Await.result(org.keymaerax.hydra.NonSSLBoot.run(options), Duration.Inf)
     case _ => org.keymaerax.cli.KeymaeraxCore.runCommand(options)
   }
 
