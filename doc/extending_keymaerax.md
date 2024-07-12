@@ -1,6 +1,5 @@
 # Extending KeYmaera X
 
-**Warning:** The information in this file may be outdated.
 
 ## Adding Special Functions
 
@@ -24,9 +23,19 @@ Prover Core (soundness-critical):
 
 Parser & Pretty-Printer:
 
-1. Augment `org.keymaerax.parser.KeYmaeraXLexer.findNextToken` with new tokens for operator (if needed)
+1. Augment `org.keymaerax.parser.DLParser` with the new operators
 2. Define operator notation and precedence in `org.keymaerax.parser.OpSpec.op`
-3. Augment `org.keymaerax.parser.KeYmaeraXParser.op` with corresponding reverse operator notation lookup.
-4. Augment `org.keymaerax.parser.KeYmaeraXParser` first and follow set lookaheads according to grammar.
+3. Augment `org.keymaerax.parser.KeYmaeraXParser.op` with corresponding reverse operator notation lookup
+4. Define pretty pretting in `org.keymaerax.parser.KeYmaeraXPrinter.pp`, `org.keymaerax.parser.KeYmaeraXFullPrinter.pp`
+and `org.keymaerax.parser.KeYmaearXPrettierPrinter.docOf` or their callees
 
-Example: the addition of the `Dual` operator for hybrid games.
+General Infrastructure & Implementing Tactics:
+
+1. Define unification in `org.keymaerax.infrastruct.SchematicUnificationMatch.unify` and
+`org.keymaerax.infrastruct.UniformMatching.unify` or their callees
+2. Define uniform substitution and uniform renaming combined in `org.keymaerax.infrastruct.USubstRenOne.usubst` or its 
+callees
+3. Define context operations in `org.keymaerax.infrastruct.Context.{context, part, replaceAt}` or their callees
+4. Define annotated axioms in `org.keymaerax.btactics.Ax` and annotated tactics in `org.keymaerax.btactics`
+
+Example: the addition of the `Refinement` operator for dRL.
