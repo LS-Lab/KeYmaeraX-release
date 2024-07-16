@@ -444,7 +444,8 @@ object AssessmentProver {
               else Right(errorMsg(e, h))
             case (h: ExpressionArtifact, e: ExpressionArtifact) => (h.expr, e.expr) match {
                 case (ht: Term, et: Term) => run(() => polynomialEquality(ht, et))
-                case (hf: Formula, ef: Formula) => run(() => polynomialEquality(hf, ef, normalize = false))
+                case (hf: Formula, ef: Formula) =>
+                  run(() => polynomialEquality(hf, ef, args.getOrElse("normalize", "false").toBoolean))
                 case _ => Right(
                     "Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " +
                       have.longHintString
@@ -462,14 +463,6 @@ object AssessmentProver {
                 checkResults.find(!_.isProved).getOrElse(checkResults.head)
               })
             case (TexExpressionArtifact(h: Term), TexExpressionArtifact(e: Term)) => run(() => polynomialEquality(h, e))
-            case (h: ExpressionArtifact, e: ExpressionArtifact) => (h.expr, e.expr) match {
-                case (hf: Formula, ef: Formula) =>
-                  run(() => polynomialEquality(hf, ef, args.getOrElse("normalize", "false").toBoolean))
-                case _ => Right(
-                    "Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " +
-                      have.longHintString
-                  )
-              }
             case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) =>
               run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
             case (SequentArtifact(h :: Nil), SequentArtifact(e :: Nil)) =>
