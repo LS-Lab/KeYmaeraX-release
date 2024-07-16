@@ -6,41 +6,12 @@ import java.util.Properties
 ThisBuild / scalaVersion := "2.13.13"
 ThisBuild / version := "5.1.0"
 
-ThisBuild / scalacOptions ++= {
-  // Keymaerax has lots of warnings. Due to their volume, important warnings vanish between not-so-important ones.
-  // To make warnings useful again, this code hides the most common warnings.
-  // Over time, they should be re-enabled again and fixed.
-  //
-  // See `scalac -Wconf:help` for more details on how to write filters.
-  // See also: https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
-  val warnings = Seq(
-    // Never silence warnings in the core
-    "site=org.keymaerax.core.*:w",
-
-    // Never silence warnings in newly written code
-    "site=org.keymaerax.info.*:w",
-
-    // Silence all deprecation warnings originating from @deprecated annotations inside keymaerax itself
-    "cat=deprecation&origin=org.keymaerax.*:s",
-
-    // Silence match exhaustivity warnings
-    "cat=other-match-analysis:s",
-    "cat=unchecked&msg=Exhaustivity analysis:s",
-
-    // Silence type erasure warnings
-    "cat=unchecked&msg=erasure:s",
-
-    // Default configuration, see -Wconf:help
-    "cat=deprecation:ws",
-    "cat=feature:ws",
-    "cat=optimizer:ws",
-  )
-  Seq(
-    s"-Wconf:${warnings.mkString(",")}",
-    "-Xmaxwarns", "1000",
-    "-Ymacro-annotations",
-  )
-}
+ThisBuild / scalacOptions ++= Seq(
+  // Always show all non-suppressed warnings. See `scalac -Wconf:help` for more info.
+  // https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
+  "-Wconf:any:w",
+  "-Ymacro-annotations",
+)
 
 ThisBuild / assemblyMergeStrategy := {
   // Multiple dependency jars have a module-info.class file in the same location.
