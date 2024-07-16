@@ -10,6 +10,8 @@ import org.keymaerax.info.Version
 import org.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import org.keymaerax.infrastruct.PosInExpr
 
+import scala.annotation.nowarn
+
 /**
  * Prints a KeYmaera X archive.
  *
@@ -32,6 +34,7 @@ class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, wit
   import KeYmaeraXArchivePrinter._
 
   /** Prints the `entry`. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def apply(entry: ParsedArchiveEntry): String = {
     val head = entry.kind match {
       case "lemma" => LEMMA_BEGIN
@@ -162,6 +165,7 @@ object KeYmaeraXArchivePrinter {
       )
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def printDef(
       domain: Sort,
       args: Option[List[(Name, Sort)]],
@@ -314,6 +318,7 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
   }
 
   /** Prints the `entry`. */
+  @nowarn("msg=match may not be exhaustive")
   def apply(entry: ParsedArchiveEntry): String = {
     val head = entry.kind match {
       case "lemma" => LEMMA_BEGIN

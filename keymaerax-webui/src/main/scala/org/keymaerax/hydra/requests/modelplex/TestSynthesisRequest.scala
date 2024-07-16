@@ -30,6 +30,7 @@ import org.keymaerax.parser.ArchiveParser
 import org.keymaerax.tools.ToolException
 import org.keymaerax.tools.ext.{Mathematica, TestSynthesis}
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{List, ListMap, Map, Nil}
 
 class TestSynthesisRequest(
@@ -41,6 +42,7 @@ class TestSynthesisRequest(
     amount: Int,
     timeout: Option[Int],
 ) extends UserRequest(userId, _ => true) with RegisteredOnlyRequest {
+  @nowarn("msg=match may not be exhaustive")
   def resultingResponse(): Response = {
     logger.debug("Got Test Synthesis Request")
     val model = db.getModel(modelId)
@@ -68,6 +70,7 @@ class TestSynthesisRequest(
         )
     }
 
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def variance(vals: Map[Term, Term]): Number = {
       val (pre, post) = vals.partition({ case (v, _) => v.isInstanceOf[BaseVariable] })
       val postByPre: Map[Term, BigDecimal] = post.map({

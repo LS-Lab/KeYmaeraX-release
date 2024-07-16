@@ -42,6 +42,7 @@ package org.keymaerax.core
 import org.keymaerax.parser.Parser
 
 import java.security.MessageDigest
+import scala.annotation.nowarn
 
 // require favoring immutable Seqs for soundness
 
@@ -836,6 +837,7 @@ object Provable {
     // checks that e has no free variables
     def noFreeVars(e: Expression): Boolean = StaticSemantics.freeVars(e).isEmpty
     // checks that e has no uninterpreted symbols
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def noUninterpretedSymbols(e: Expression): Boolean = !StaticSemantics
       .signature(e)
       .exists(f =>

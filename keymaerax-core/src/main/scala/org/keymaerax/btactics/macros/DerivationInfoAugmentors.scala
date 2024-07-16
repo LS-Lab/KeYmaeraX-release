@@ -11,10 +11,12 @@ import org.keymaerax.infrastruct._
 import org.keymaerax.lemma._
 import org.keymaerax.pt._
 
+import scala.annotation.nowarn
 import scala.language.implicitConversions
 
 object DerivationInfoAugmentors {
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
+    @nowarn("msg=match may not be exhaustive")
     def belleExpr: Any = di match {
       // useAt will just ask a ProvableInfo for its provable
       case pi: ProvableInfo => HilbertCalculus.useAt(pi)
@@ -65,6 +67,7 @@ object DerivationInfoAugmentors {
     }
 
     /** Compute and cache formula. */
+    @nowarn("msg=match may not be exhaustive")
     def formula: Formula = {
       pi.theFormula match {
         case Some(formula) => formula.asInstanceOf[Formula]

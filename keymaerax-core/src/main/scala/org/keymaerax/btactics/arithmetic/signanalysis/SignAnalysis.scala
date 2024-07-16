@@ -7,7 +7,7 @@ package org.keymaerax.btactics.arithmetic.signanalysis
 
 import org.keymaerax.core._
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 
 /**
  * Tactics for simplifying arithmetic by analysing the signs of variables in formulas.
@@ -175,6 +175,7 @@ object SignAnalysis {
   }
 
   /** Normalizes <, <=, =, >=, > into >, >=, = with right-hand side 0 */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def normalize(c: ComparisonFormula): ComparisonFormula = {
     c match {
       case Less(l, r) => normalize(Greater(r, l))

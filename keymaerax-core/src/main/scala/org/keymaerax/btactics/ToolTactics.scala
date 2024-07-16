@@ -25,7 +25,7 @@ import org.keymaerax.tools.ext.QETacticTool
 import org.keymaerax.tools.install.ToolConfiguration
 import org.keymaerax.tools.qe.MathematicaOpSpec
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable._
 import scala.math.Ordering.Implicits._
 import scala.reflect.runtime.universe
@@ -294,6 +294,7 @@ private object ToolTactics extends TacticProvider {
   }
 
   /** Hides duplicate formulas (expensive because needs to sort positions). */
+  @nowarn("msg=match may not be exhaustive")
   private val hideDuplicates: BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireAtMostOneSubgoal(provable, "ToolTactics.hideDuplicates")
     provable
@@ -621,6 +622,7 @@ private object ToolTactics extends TacticProvider {
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def rcf(qeTool: => QETacticTool): BuiltInTactic = internal(
     "_rcf",
     (provable: ProvableSig) => {
@@ -829,6 +831,7 @@ private object ToolTactics extends TacticProvider {
    * Parses `to` for occurrences of `abbrv` to create a tactic. Returns `to` with `abbrv(...)` replaced by the
    * abbreviations and the tactic to turn `to` into the returned expression by proof.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def createAbbrvTactic(to: Expression, sequent: Sequent): (Expression, BelleExpr) = {
     var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable(TacticReservedSymbols.abbrv.name), sequent)
     val abbrvs = scala.collection.mutable.Map[PosInExpr, Term]()
@@ -868,6 +871,7 @@ private object ToolTactics extends TacticProvider {
    * corresponding to the expanded fn (abs,min,max) together with the tactic to turn `to` into the returned expression
    * by proof.
    */
+  @nowarn("msg=match may not be exhaustive")
   private def createExpandTactic(to: Expression, sequent: Sequent, pos: Position): (Expression, BelleExpr) = {
     val nextName: scala.collection.mutable.Map[String, Variable] = scala
       .collection
@@ -920,6 +924,7 @@ private object ToolTactics extends TacticProvider {
   }
 
   /** Transforms the formula at position `pos` into the formula `to`. */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   private def transformFormula(to: Formula, sequent: Sequent, pos: Position) = {
     val polarity = FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) * (if (pos.isSucc) 1 else -1)
 
@@ -1040,6 +1045,8 @@ private object ToolTactics extends TacticProvider {
   }
 
   /** Ensures that the formula at position `pos` is available at that position from the assumptions. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   private def ensureAt: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     lazy val ensuredFormula = seq.sub(pos) match {
       case Some(fml: Formula) => fml

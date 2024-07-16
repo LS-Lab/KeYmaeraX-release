@@ -5,8 +5,10 @@
 
 package org.keymaerax.utils
 
-import org.keymaerax.core._
 import org.keymaerax.btactics.TacticHelper
+import org.keymaerax.core._
+
+import scala.annotation.nowarn
 
 /**
  * Compile a hybrid program to a discrete program performing some form of numerical integration.
@@ -52,6 +54,7 @@ class EulerIntegrationCompiler extends NumericalCompiler {
      * turn {x'=f(x,y),y':=g(x,y)} ODE System into sequential composition of differential assignments x':=f(x,y);
      * y':=g(x,y)
      */
+    @nowarn("msg=match may not be exhaustive")
     def toDifferentialAssignments(ode: DifferentialProgram): Program = ode match {
       case AtomicODE(xp, e) => Assign(xp, e)
       case DifferentialProduct(l, r) => Compose(toDifferentialAssignments(l), toDifferentialAssignments(r))
@@ -60,6 +63,7 @@ class EulerIntegrationCompiler extends NumericalCompiler {
     }
 
     /** recursively decompose */
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def trafo(prog: Program): Program = prog match {
       case a: AtomicProgram => a
       case Choice(a, b) => Choice(trafo(a), trafo(b))

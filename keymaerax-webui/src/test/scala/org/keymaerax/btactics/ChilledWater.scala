@@ -13,10 +13,11 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.SlowTest
 import org.keymaerax.testhelper.ParserFactory._
 
+import scala.annotation.nowarn
 import scala.language.postfixOps
 
 /** Chilled water system case study. */
-@SlowTest
+@SlowTest @nowarn("msg=match may not be exhaustive")
 class ChilledWater extends TacticTestBase {
 
   def DAcleanup(msg: String): BelleExpr =

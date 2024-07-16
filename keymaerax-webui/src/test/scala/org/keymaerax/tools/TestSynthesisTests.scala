@@ -5,12 +5,13 @@
 
 package org.keymaerax.tools
 
-import org.keymaerax.btactics.{DebuggingTactics, ModelPlex, ModelPlexConjecture, TacticTestBase}
+import org.keymaerax.btactics.{ModelPlex, ModelPlexConjecture, TacticTestBase}
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tools.ext.TestSynthesis
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.collection.immutable.ListMap
 import scala.language.postfixOps
 
@@ -19,6 +20,7 @@ import scala.language.postfixOps
  * @author
  *   Stefan Mitsch
  */
+@nowarn("msg=match may not be exhaustive")
 class TestSynthesisTests extends TacticTestBase {
 
   "Test synthesis" should "generate test cases without safety margin" in withMathematica { tool =>

@@ -21,6 +21,7 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser.{Declaration, Signature, TacticReservedSymbols}
 import org.keymaerax.pt.ProvableSig
 
+import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
 import scala.reflect.runtime.universe
 import scala.util.{Failure, Success, Try}
@@ -41,6 +42,7 @@ private object DLBySubst extends TacticProvider {
   private[this] val isGame: Boolean = Try({ Dual(AssignAny(Variable("x"))); true }).getOrElse(false)
 
   /** @see [[HilbertCalculus.G]] */
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.SequentType")
   lazy val G: BelleExpr = {
     // @Tactic in [[HilbertCalculus.G]]
     // @todo optimizable why is this entire tactic not just TactixLibrary.by(Ax.Goedel)?
@@ -667,6 +669,7 @@ private object DLBySubst extends TacticProvider {
   }
 
   /** Analyzes a loop for counterexamples. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def cexLoop(inv: Formula): DependentPositionTactic = anon((pos: Position, seq: Sequent, defs: Declaration) => {
     val cexProgram = unfoldProgramNormalize & OnAll(Idioms.doIfElse(_.subgoals.forall(_.isFOL))(
       // @todo nested loops, loops in postcondition, ODEs in postcondition
@@ -800,6 +803,7 @@ private object DLBySubst extends TacticProvider {
   )
   def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic =
     inputanon(con(x, J, SaturateTactic(alphaRule))(_: Position))
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def con(v: Variable, variant: Formula, pre: BelleExpr): DependentPositionWithAppliedInputTactic =
     inputanon((pos: Position, sequent: Sequent) => {
       require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)

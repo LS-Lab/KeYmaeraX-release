@@ -18,6 +18,7 @@ import org.keymaerax.tags.SlowTest
 import org.keymaerax.testhelper.ParserFactory._
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.language.postfixOps
 
@@ -27,7 +28,7 @@ import scala.language.postfixOps
  * @author
  *   Stefan Mitsch
  */
-@SlowTest
+@SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class StttTutorial extends TacticTestBase {
 
   "Example 1" should "be provable" in withQE { _ =>

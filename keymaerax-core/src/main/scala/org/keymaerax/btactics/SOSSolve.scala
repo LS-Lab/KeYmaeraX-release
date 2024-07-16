@@ -6,18 +6,19 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.PolynomialArithV2.{NonSupportedDivisorException, NonSupportedOperationInapplicability}
+import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
-import org.keymaerax.infrastruct._
 import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.SOSsolveTool._
 import org.keymaerax.tools.qe.BigDecimalQETool
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /** @TODO: move somewhere reasonable! */
@@ -45,6 +46,7 @@ class NanoTimer extends Timer {
 }
 
 /** tactics to prove SOSsolve witnesses */
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 object SOSSolve {
 
   private lazy val zeroGtOne = AnonymousLemmas.remember("1 > 0".asFormula, QE & done)
@@ -313,6 +315,7 @@ object SOSSolve {
   }
 
   // normalize to rational form on the lhs
+  @nowarn("msg=match may not be exhaustive")
   def ratFormLhs = anon { (seq: Sequent) =>
     seq
       .zipAnteWithPositions
@@ -423,6 +426,7 @@ object SOSSolve {
       .getOrElse(skip)
   }
   // turns "a/b ~= 0" to "a ~= 0" if "b != 0" occurs in the antecedent
+  @nowarn("msg=match may not be exhaustive")
   def solveNonzeroDenominators: DependentTactic = TacticFactory.anon { (seq: Sequent) =>
     require(seq.succ.length == 0, "elimNegativeDenominators requires empty succedent")
     seq

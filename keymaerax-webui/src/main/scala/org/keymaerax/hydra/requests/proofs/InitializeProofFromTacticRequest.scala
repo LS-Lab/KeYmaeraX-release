@@ -24,11 +24,13 @@ import org.keymaerax.parser.ArchiveParser
 import spray.json.JsonParser.ParsingException
 import spray.json._
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{List, Nil}
 
 /** Create a proof if it does not exist yet. Read request, so that guest users can check proofs. */
 class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val proofInfo = db.getProofInfo(proofId)
     proofInfo.tactic match {

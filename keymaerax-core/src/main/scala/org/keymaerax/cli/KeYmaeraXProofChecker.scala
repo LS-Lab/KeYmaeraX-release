@@ -28,6 +28,7 @@ import java.io.PrintWriter
 import java.net.URLEncoder
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.immutable.{List, Nil}
 import scala.collection.mutable.ListBuffer
@@ -351,6 +352,7 @@ object KeYmaeraXProofChecker {
     .encode(filename, "UTF-8")
     .replace(URLEncoder.encode(File.separator, "UTF-8"), File.separator)
 
+  @nowarn("msg=match may not be exhaustive")
   private def proveEntry(
       path: Path,
       entry: ParsedArchiveEntry,

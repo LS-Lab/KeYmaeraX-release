@@ -5,18 +5,18 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct._
-import org.keymaerax.Logging
 import org.reflections.Reflections
 import org.reflections.scanners.Scanners
 
-import scala.annotation.tailrec
-import scala.language.implicitConversions
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.language.implicitConversions
 import scala.reflect.runtime.{universe => ru}
 import scala.util.Try
 
@@ -27,6 +27,7 @@ import scala.util.Try
 object DerivationInfoRegistry extends Logging {
   import scala.language.implicitConversions
 
+  @nowarn("msg=match may not be exhaustive")
   def convert(arg: ArgInfo, exprs: List[Expression]): Either[Any, String] = {
     (arg, exprs) match {
       case (_: NumberArg, (v: Number) :: Nil) => Left(v)

@@ -27,6 +27,7 @@ import org.keymaerax.infrastruct.FormulaTools
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.parser._
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, List, Nil, Set}
 
 class CheckTacticInputRequest(
@@ -41,6 +42,7 @@ class CheckTacticInputRequest(
 ) extends UserProofRequest(db, userId, proofId) with ReadRequest {
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: Declaration): Response = {
     try {
       input match {
@@ -61,6 +63,7 @@ class CheckTacticInputRequest(
   }
 
   /** Checks expression inputs. */
+  @nowarn("msg=match may not be exhaustive")
   private def checkExpressionInput[E <: Expression](
       arg: ArgInfo,
       exprs: List[E],
@@ -158,6 +161,7 @@ class CheckTacticInputRequest(
     BooleanResponse(flag = true)
   }
 
+  @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val info = DerivationInfo(tacticId)
     val expectedInputs = info.inputs

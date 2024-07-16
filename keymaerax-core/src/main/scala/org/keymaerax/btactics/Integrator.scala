@@ -14,6 +14,8 @@ import org.keymaerax.infrastruct.SubstitutionHelper
 import org.keymaerax.tools.Tool
 import org.keymaerax.tools.ext.ODESolverTool
 
+import scala.annotation.nowarn
+
 /**
  * Solves the initial value problem for systems of differential equations.
  *
@@ -70,6 +72,7 @@ object Integrator extends Logging {
    * @todo
    *   untested
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
     apply(iv, diffArg, ODESystem(diffSys)).foldLeft[Formula](True)((fml, eqn) => And(fml, eqn)) match {
       case True => None
@@ -118,6 +121,7 @@ object Integrator extends Logging {
    * @return
    *   Integral term dt
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def integrator(term: Term, time: (Term, Term, Set[Variable]), primedVars: Set[Variable]): Term = {
     val t = time._1
     val tsimp = time._2

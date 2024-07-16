@@ -5,19 +5,19 @@
 
 package org.keymaerax.hydra.restapi
 
-import akka.http.scaladsl.server.Route
-import spray.json._
 import akka.http.scaladsl.server.Directives._
-
+import akka.http.scaladsl.server.Route
 import org.keymaerax.hydra.RestApi.{completeRequest, database, userPrefix}
 import org.keymaerax.hydra._
 import org.keymaerax.hydra.requests.modelplex._
+import spray.json._
 
-import scala.annotation.tailrec
+import scala.annotation.nowarn
 import scala.language.postfixOps
 
 object ModelPlex {
 
+  @nowarn("msg=match may not be exhaustive")
   val modelplex: SessionToken => Route = (t: SessionToken) =>
     userPrefix { userId =>
       pathPrefix("model" / Segment / "modelplex" / "generate" / Segment / Segment / Segment / Segment) {
@@ -49,6 +49,7 @@ object ModelPlex {
       }
     }
 
+  @nowarn("msg=match may not be exhaustive")
   val testSynthesis: SessionToken => Route = (t: SessionToken) =>
     userPrefix { userId =>
       pathPrefix("model" / Segment / "testcase" / "generate" / Segment / Segment / Segment) {

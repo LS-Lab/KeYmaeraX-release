@@ -26,6 +26,7 @@ import org.keymaerax.tools.ext.{AllOf, Atom, Mathematica, OneOf}
 import org.slf4j.LoggerFactory
 
 import java.io.File
+import scala.annotation.nowarn
 import scala.collection.immutable.{List, _}
 import scala.reflect.runtime.universe
 import scala.util.Try
@@ -89,6 +90,8 @@ import scala.util.Try
  * @see
  *   [[ToolProvider]]
  */
+@nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
+@nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
 object TactixLibrary
     extends TacticProvider
     with HilbertCalculus
@@ -546,6 +549,7 @@ object TactixLibrary
    * @see
    *   [[abstractionb]]
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth")
   def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic =
     new DependentPositionTactic("with abstraction") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -759,6 +763,7 @@ object TactixLibrary
     )
   )
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth")
   private def ODEfinish(preferDw: Boolean) = anon((pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)

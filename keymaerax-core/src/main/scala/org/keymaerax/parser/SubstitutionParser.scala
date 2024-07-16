@@ -5,20 +5,9 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.core.{
-  CoreException,
-  DotTerm,
-  Expression,
-  Formula,
-  FormulaKind,
-  Program,
-  SubstitutionClashException,
-  SubstitutionPair,
-  Term,
-  TermKind,
-}
-import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import org.keymaerax.core.{CoreException, Expression, FormulaKind, SubstitutionPair, TermKind}
+
+import scala.annotation.nowarn
 
 /** Parses substitutions. */
 object SubstitutionParser {
@@ -67,6 +56,7 @@ object SubstitutionParser {
    * Parses a list of substitution pairs `what~>repl, what2~>repl2, ..., whatn~>repln`, optionally enclosed in
    * parentheses.
    */
+  @nowarn("msg=match may not be exhaustive")
   def parseSubstitutionPairs(s: String): List[SubstitutionPair] = {
     val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
     val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList

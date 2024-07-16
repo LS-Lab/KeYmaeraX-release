@@ -6,23 +6,20 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Logging
-import org.keymaerax.core.{Variable, _}
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.Idioms._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.btactics.SimplifierV3._
-import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.infrastruct._
 import org.keymaerax.bellerophon._
-
-import scala.collection.immutable
-import scala.collection.immutable._
-import org.keymaerax.pt.ProvableSig
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.bellerophon.OnAll
-import org.keymaerax.infrastruct.{RenUSubst, SubstitutionHelper}
+import org.keymaerax.btactics.AnonymousLemmas._
+import org.keymaerax.btactics.Idioms._
+import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.core.{Variable, _}
+import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct._
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.pt.ProvableSig
+
+import scala.annotation.nowarn
+import scala.collection.immutable._
 
 /** Created by yongkiat on 11/27/16. */
 object PolynomialArith extends Logging {
@@ -530,6 +527,7 @@ object PolynomialArith extends Logging {
   }
 
   // Multiplies and returns normalised polynomials
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def mulPoly(l: Term, r: Term, skip_proofs: Boolean = false): (Term, ProvableSig) = {
     val lhs = Times(l, r)
     val prover = getProver(skip_proofs)
@@ -677,6 +675,7 @@ object PolynomialArith extends Logging {
 //  }
 
   // Normalizes an otherwise un-normalized term
+  @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def normalise(l: Term, skip_proofs: Boolean = false): (Term, ProvableSig) = {
 
     logger.debug(s"Normalizing at $l")
@@ -857,6 +856,7 @@ object PolynomialArith extends Logging {
   // Polynomial division on head monomials (no proofs)
 
   // Find the first non-zero monomial in l that r divides if it exists & returns the quotient along with its coefficient
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def divPolyMono(l: Term, r: Term): Option[(Term, Term)] = {
     l match {
       case n: Number => None // We want non-zero monomials only
@@ -881,6 +881,7 @@ object PolynomialArith extends Logging {
   }
 
   // Returns the divisor and quotient (if one exists)
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def divPoly(l: Term, r: Term): Option[(Term, Term)] = {
     r match {
       case n: Number => None // Division by 0
@@ -923,6 +924,7 @@ object PolynomialArith extends Logging {
   // Input: list of pairs a_i, p_i
   // Proves sum_i (a_i * p_i ^2) >= 0
   // Each a_i should be a positive (rational) coefficient (proved by RCF)
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def sosGeZero(l: List[(Term, Term)]): (Term, ProvableSig) = {
     l match {
       case Nil => (Number(0), zeroGeZero)
@@ -965,6 +967,7 @@ object PolynomialArith extends Logging {
 
   // Generate a proof for |- g>0 -> g + a_1 * s_1^2 + ... + a_n * s_n^2 > 0)
   // Each a_i should be a positive (rational) coefficient (proved by RCF)
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def genWitness(gtz: Term, l: List[(Term, Term)]): (Term, ProvableSig) = {
     val (sos, geZ) = sosGeZero(l)
     val trm = Plus(gtz, sos)
@@ -980,6 +983,7 @@ object PolynomialArith extends Logging {
   }
 
   // Goal must be of the form (Fi=0, Gj!=0 |- )
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def genWitnessTac(
       mon: List[Int],
       witness: List[(Term, Term)],

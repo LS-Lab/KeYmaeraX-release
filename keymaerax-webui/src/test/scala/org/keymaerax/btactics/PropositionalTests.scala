@@ -8,22 +8,22 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon.BelleExpr
 import org.keymaerax.btactics.PropositionalTactics._
 import org.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPosition}
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tags.{SummaryTest, UsualTest}
-
-import scala.collection.immutable._
 import org.scalatest.LoneElement._
+
+import scala.annotation.nowarn
+import scala.collection.immutable._
 
 /**
  * Tests Propositional Calculus.
  * @see
  *   [[org.keymaerax.btactics.PropositionalTactics]]
  */
-@SummaryTest @UsualTest
+@SummaryTest @UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class PropositionalTests extends TacticTestBase {
 
   "Modus ponens" should "should work in a simple example" in withTactics {

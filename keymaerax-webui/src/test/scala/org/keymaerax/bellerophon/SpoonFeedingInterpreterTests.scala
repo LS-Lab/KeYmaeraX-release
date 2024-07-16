@@ -24,10 +24,12 @@ import org.keymaerax.tagobjects.{SlowTest, TodoTest}
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.language.{postfixOps, reflectiveCalls}
 
 /** Tests the spoon-feeding interpreter. Created by smitsch on 8/24/16. */
+@nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   private lazy val tacticParser = ArchiveParser.tacticParser

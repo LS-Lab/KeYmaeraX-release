@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.core.Expression
 import org.keymaerax.infrastruct.RenUSubst
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -33,18 +34,21 @@ case class BelleBranchingOpSpec(
     leftAssoc: Boolean,
     constructor: Seq[BelleExpr] => BelleExpr,
 ) extends BelleOpSpec
+@nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
 case class BelleSaturatingOpSpec(
     terminal: BelleTerminal,
     precedence: Int,
     leftAssoc: Boolean,
     constructor: (BelleExpr, BelleType) => BelleExpr,
 ) extends BelleOpSpec
+@nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
 case class BelleRepeatOpSpec(
     terminal: BelleTerminal,
     precedence: Int,
     leftAssoc: Boolean,
     constructor: (BelleExpr, Int, BelleType) => BelleExpr,
 ) extends BelleOpSpec
+@nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
 case class BelleUSubstOpSpec(
     terminal: BelleTerminal,
     precedence: Int,
@@ -76,12 +80,14 @@ object BelleOpSpec {
   val seq: BelleOpSpec = BelleBinaryOpSpec(SEQ_COMBINATOR, 200, leftAssoc = false)
   val either: BelleOpSpec = BelleBinaryOpSpec(EITHER_COMBINATOR, 220, leftAssoc = false)
   val star: BelleOpSpec = BelleUnaryOpSpec(KLEENE_STAR, 150, leftAssoc = false)
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
   val saturate: BelleOpSpec = BelleSaturatingOpSpec(
     SATURATE,
     150,
     leftAssoc = false,
     (child: BelleExpr, _: BelleType) => SaturateTactic.apply(child),
   )
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
   val repeat: Int => BelleOpSpec = (i: Int) =>
     BelleRepeatOpSpec(
       N_TIMES(i),

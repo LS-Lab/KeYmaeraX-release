@@ -6,17 +6,11 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Logging
+import org.keymaerax.btactics.macros.{AxiomInfo, AxiomaticRuleInfo, DerivationInfo, ProvableInfo}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.PosInExpr
-import org.keymaerax.btactics.macros.{
-  AxiomInfo,
-  AxiomaticRuleInfo,
-  CoreAxiomInfo,
-  DerivationInfo,
-  DerivedAxiomInfo,
-  ProvableInfo,
-}
-import org.keymaerax.pt.ProvableSig
+
+import scala.annotation.nowarn
 
 /**
  * Central Axiom Indexing data structures for canonical proof strategies, including [[UnifyUSCalculus.chase]],
@@ -73,6 +67,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
    * @todo
    *   copy documentation from chase
    */
+  @nowarn("msg=match may not be exhaustive")
   def axiomIndex(axiom: ProvableInfo): AxiomIndex = axiom match {
     case axiom: AxiomInfo => (axiom.key, axiom.recursor)
     // @todo improve if AxiomaticRuleInfo had recursor info we could keep chasing

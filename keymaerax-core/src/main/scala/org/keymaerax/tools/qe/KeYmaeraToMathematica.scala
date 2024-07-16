@@ -9,12 +9,11 @@ package org.keymaerax.tools.qe
 import org.keymaerax.Configuration
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.FormulaTools
+import org.keymaerax.tools.ConversionException
 import org.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import org.keymaerax.tools.qe.MathematicaNameConversion._
-import org.keymaerax.tools.ConversionException
 
-import scala.annotation.tailrec
-import scala.math.BigDecimal
+import scala.annotation.{nowarn, tailrec}
 
 // favoring immutable Seqs
 import scala.collection.immutable._
@@ -75,6 +74,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
   }
 
   /** Converts a KeYmaera term to a Mathematica expression. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   protected[tools] def convertTerm(t: Term): MExpr = {
     require(
       t.sort == Real || t.sort == Unit || FormulaTools.sortsList(t.sort).forall(_ == Real),

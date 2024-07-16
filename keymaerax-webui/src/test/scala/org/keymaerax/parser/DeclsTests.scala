@@ -10,7 +10,10 @@ import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
+
 /** Tests the declarations parser. Created by nfulton on 9/1/15. */
+@nowarn("msg=match may not be exhaustive")
 class DeclsTests extends TacticTestBase {
   "Archive parser" should "parse declarations of z, z_0 as two separate declarations" in {
     val input = {

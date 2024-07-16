@@ -23,6 +23,7 @@ import org.keymaerax.hydra.{
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, Nil}
 
 class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String)
@@ -34,6 +35,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
     pn.children.size == pn.localProvable.subgoals.size &&
       pn.children.zip(pn.localProvable.subgoals).forall({ case (c, sg) => c.localProvable.conclusion == sg })
 
+  @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     val marginLeft :: marginRight :: Nil = db

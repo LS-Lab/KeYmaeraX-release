@@ -9,6 +9,8 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.parser.Declaration
 
+import scala.annotation.nowarn
+
 /**
  * Generates formula and term evaluation C code. `termContainer` configures the location where primitive terms are
  * looked up (e.g., structs).
@@ -20,6 +22,7 @@ import org.keymaerax.parser.Declaration
 @deprecated("Use GenericFormulaTermGenerator instead")
 class PythonFormulaTermGenerator(termContainer: Expression => String, defs: Declaration)
     extends FormulaTermGenerator(termContainer, defs) {
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override def apply(
       expr: Expression,
       stateVars: Set[BaseVariable],

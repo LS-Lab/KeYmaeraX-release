@@ -10,7 +10,7 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import org.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.util.Try
 
 /**
@@ -54,6 +54,7 @@ abstract class MonitorGenerator(
   private def primitiveExprGenerator(params: Set[NamedSymbol]) =
     new GenericFormulaTermGenerator(prettyPrinter, termContainer(_, params), defs)
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def structuredExprGenerator(params: Set[NamedSymbol]) =
     new GenericFormulaTermGenerator(prettyPrinter, termContainer(_, params), defs) {
       override def apply(

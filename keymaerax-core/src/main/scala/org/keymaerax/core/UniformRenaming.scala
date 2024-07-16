@@ -23,7 +23,7 @@ package org.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
-import scala.collection.immutable
+import scala.annotation.nowarn
 
 /**
  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa, but clash for program
@@ -247,6 +247,7 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
       )
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renVar(x)), rename(e))
     // homomorphic cases

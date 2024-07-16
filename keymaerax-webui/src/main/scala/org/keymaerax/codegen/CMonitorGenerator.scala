@@ -5,10 +5,12 @@
 
 package org.keymaerax.codegen
 
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.codegen.CFormulaTermGenerator._
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.parser.Declaration
+
+import scala.annotation.nowarn
 
 object CMonitorGenerator {
 
@@ -24,6 +26,7 @@ object CMonitorGenerator {
   /** The name of the monitor function argument representing controller inputs. */
   private val INPUT_NAME = "in"
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def termContainer(expr: Expression, params: Set[NamedSymbol]): String = expr match {
     case t: Variable if params.contains(t) => MONITOR_PARAMS_NAME + "->"
     case t: Variable if !params.contains(t) && t.name.endsWith("post") => MONITOR_CURR_STATE_NAME + "."
@@ -59,6 +62,7 @@ class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration)
    * Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor
    * outcome.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable]): (String, String) = {
     val symbols = StaticSemantics.symbols(expr)
     val names = symbols.map(nameIdentifier)

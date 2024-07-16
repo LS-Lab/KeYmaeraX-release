@@ -19,6 +19,7 @@ import org.keymaerax.infrastruct._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
 import scala.util.Try
@@ -187,6 +188,7 @@ object SimplifierV3 extends TacticProvider {
    *   the simplified term s and an optional provable containing (premise,proof of premise->s=t) only if some
    *   simplification was applied. premise is an assumption in contained in ctx
    */
+  @nowarn("msg=match may not be exhaustive")
   def termSimp(t: Term, ctx: context, taxs: termIndex): (Term, Option[(Formula, ProvableSig)]) = {
     val (rect, recpropt) = t match {
       case bop: BinaryCompositeTerm =>

@@ -19,10 +19,12 @@ import org.keymaerax.parser.InterpretedSymbols
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
 
 /** Implementation: Tactics to rewrite equalities and introduce abbreviations. */
+@nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
 private object EqualityTactics extends TacticProvider {
 
   /** @inheritdoc */

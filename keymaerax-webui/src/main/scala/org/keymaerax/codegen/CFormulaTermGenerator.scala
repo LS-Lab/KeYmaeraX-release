@@ -5,9 +5,11 @@
 
 package org.keymaerax.codegen
 
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.parser.Declaration
+
+import scala.annotation.nowarn
 
 /**
  * Conversion of names.
@@ -63,6 +65,7 @@ object CFormulaTermGenerator {
  */
 class CFormulaTermGenerator(termContainer: Expression => String, defs: Declaration)
     extends FormulaTermGenerator(termContainer, defs) {
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override def apply(
       expr: Expression,
       stateVars: Set[BaseVariable],

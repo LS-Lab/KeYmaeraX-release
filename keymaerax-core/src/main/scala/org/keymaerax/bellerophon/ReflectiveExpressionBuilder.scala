@@ -14,7 +14,7 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.{Declaration, ParseException, UnknownLocation}
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.reflect.runtime.universe.typeTag
 
 /**
@@ -25,6 +25,8 @@ import scala.reflect.runtime.universe.typeTag
  *   Brandon Bohrer
  */
 object ReflectiveExpressionBuilder extends Logging {
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.AppliedDependentTwoPositionTactic")
   def build(
       info: DerivationInfo,
       args: List[Either[Seq[Any], PositionLocator]],

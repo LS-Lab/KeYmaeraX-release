@@ -7,14 +7,14 @@ package org.keymaerax.bellerophon
 
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.btactics.DebuggingTactics
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{RenUSubst, RestrictedBiDiUnificationMatch}
 import org.keymaerax.parser.Declaration
 import org.keymaerax.pt.ProvableSig
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
@@ -161,6 +161,9 @@ case class SpoonFeedingInterpreter(
   private def updateLabels(orig: List[BelleLabel], at: Int, p: BelleProvable): List[BelleLabel] =
     updateLabels(Some(orig), at, p).getOrElse(Nil)
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.SequentType")
   private def runTactic(
       tactic: BelleExpr,
       goal: BelleValue,

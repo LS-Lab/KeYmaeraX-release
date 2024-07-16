@@ -14,9 +14,11 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
+import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
 
 /** @author Nathan Fulton */
+@nowarn("msg=match may not be exhaustive")
 class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)

@@ -5,18 +5,19 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.{Configuration, Logging}
+import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.core._
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.helpers.DifferentialHelper
-import org.keymaerax.infrastruct.{Context, FormulaTools, PosInExpr, Position}
 import org.keymaerax.btactics.macros.Tactic
+import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct.{Context, FormulaTools, PosInExpr, Position}
+import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 
+import scala.annotation.nowarn
 import scala.reflect.runtime.universe
 
 /**
@@ -291,6 +292,7 @@ object Approximator extends TacticProvider with Logging {
     Range(0, 2 * A.length).map(i => if (i % 2 == 0) A(i / 2) else B((i - 1) / 2))
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def timeVar(ode: DifferentialProgram): Option[Variable] = ode match {
     case AtomicODE(xp, e) => if (e.equals(Number(1))) Some(xp.x) else None
     case DifferentialProduct(l, r) => timeVar(l) match {

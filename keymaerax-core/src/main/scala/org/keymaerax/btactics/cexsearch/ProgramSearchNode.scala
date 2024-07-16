@@ -5,12 +5,12 @@
 
 package org.keymaerax.btactics.cexsearch
 
-import org.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter}
 import org.keymaerax.btactics.TactixLibrary
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.tools.ext.QETacticTool
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 /**
@@ -40,6 +40,7 @@ case class ProgramSearchNode(pre: Formula, prog: Program, post: Formula)(implici
    *
    * If we are at a goal state, this returns the actual counterexample that we found, otherwise it returns None to indicate
    * absence of a counterexample */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def goal = (prog, post) match {
     case (_, Box(_, _)) => None
     case (Test(True), _) =>
@@ -59,6 +60,7 @@ case class ProgramSearchNode(pre: Formula, prog: Program, post: Formula)(implici
 
   /* Returns a sequence of search states reachable by running this program for one step. The search need not be complete
    * but should be sound, meaning that a counterexample for any child formula constitutes a counterexample for the parent. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def children = {
     val kids = prog match {
       case Test(True) => post match {

@@ -9,8 +9,9 @@ import org.keymaerax.btactics.ModelPlex
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.FormulaTools
 import org.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
-import org.keymaerax.tools._
 import org.keymaerax.tools.qe.MathematicaOpSpec
+
+import scala.annotation.nowarn
 
 /**
  * Synthesize test case configurations from ModelPlex formulas. Requires Mathematica.
@@ -31,6 +32,7 @@ class TestSynthesis(mathematicaTool: Mathematica)
    * Synthesize test configurations of both initial values and expected outcomes satisfying formula `fml`. The values
    * are numeric approximations (avoids Mathematica precision limit issues).
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def synthesizeTestConfig(
       fml: Formula,
       amount: Int = 1,
@@ -66,6 +68,7 @@ class TestSynthesis(mathematicaTool: Mathematica)
    * Synthesize a safety margin check, 0 is the boundary between safe and unsafe, positive values indicate unsafety,
    * negative values safety.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def synthesizeSafetyMarginCheck(fml: Formula, vals: Map[Term, Term]): Number = {
     val metricExpr = k2m.convert(Left(safetyMarginTerm(fml)))
     val valsExpr = MathematicaOpSpec
@@ -78,6 +81,7 @@ class TestSynthesis(mathematicaTool: Mathematica)
   }
 
   /** Computes the maximum safety range of fml. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def getSafetyRange(fml: Formula): (Number, Number) = {
     val metricExpr = k2m.convert(Left(safetyMarginTerm(fml)))
     val symbols = StaticSemantics.symbols(fml)
@@ -92,6 +96,7 @@ class TestSynthesis(mathematicaTool: Mathematica)
   }
 
   /** Safety margin (negated so that positive values mean good). */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def safetyMarginTerm(fml: Formula): Term = Neg(ModelPlex.toMetric(fml) match {
     case LessEqual(m, _) => m
     case Less(m, _) => m

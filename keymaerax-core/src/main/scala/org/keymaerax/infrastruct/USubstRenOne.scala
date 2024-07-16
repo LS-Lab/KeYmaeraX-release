@@ -9,6 +9,7 @@ import org.keymaerax.core.SetLattice.{allVars, bottom}
 import org.keymaerax.core.StaticSemantics.{apply => _, _}
 import org.keymaerax.core._
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.immutable._
 
@@ -342,6 +343,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   }
 
   /** uniform substitution on programs */
+  @nowarn("msg=match may not be exhaustive")
   private def usubst(u: SetLattice[Variable], program: Program): (SetLattice[Variable], Program) = {
     program match {
 //@todo      case ap@ProgramConst(a,sp) =>
@@ -379,6 +381,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
 
   /** uniform substitutions on differential programs */
   // @todo augment admissibility checks with vars before and after renaming. Enough to do in requireAdmissible?
+  @nowarn("msg=match may not be exhaustive")
   private def usubstODE(v: SetLattice[Variable], ode: DifferentialProgram): DifferentialProgram = {
     ode match {
       case AtomicODE(DifferentialSymbol(x), e) =>
@@ -431,6 +434,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
    * @note
    *   Not soundness-critical as result can be checked by inclusion for other usubst round
    */
+  @nowarn("msg=match may not be exhaustive")
   private def substBoundVars(program: Program): SetLattice[Variable] = {
     program match {
       // base cases

@@ -22,10 +22,12 @@ import org.keymaerax.core.{And, Equal, False, Less, LessEqual, Neg, Number, Or, 
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser.UnificationSubstitutionParser
 
+import scala.annotation.nowarn
 import scala.util.Try
 import scala.util.matching.Regex
 
 /** Extracts assessment information from tex sources. */
+@nowarn("cat=deprecation&origin=scala.collection.StringOps.r")
 object QuizExtractor {
   abstract class Question
 
@@ -117,6 +119,7 @@ object QuizExtractor {
     private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + "(?:(.*?)(?=\\\\" + QUESTION_START + ")|(.*))")
       .r(QUESTION_INFO1, QUESTION_INFO2)
 
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def firstFromString(rawContent: String): Option[AskQuestion] = {
       val firstMatch = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent)
       val qi = firstMatch.map(m =>
@@ -205,6 +208,7 @@ object QuizExtractor {
     }
 
     /** Translates `\sol` into an artifact. */
+    @nowarn("msg=match may not be exhaustive")
     def artifactFromSolContent(s: String): Option[Artifact] = {
       val artifacts = solContent("")
         .r(KYX_SOL, TEX_SOL, LISTINGS_SOL, TXT_SOL)
@@ -228,6 +232,7 @@ object QuizExtractor {
     }
 
     /** Translates `\kyxline` string into an artifact. */
+    @nowarn("msg=match may not be exhaustive")
     def artifactsFromKyxString(s: String): Artifact = {
       if (s.contains(TURNSTILE)) SequentArtifact(s.split(Regex.quote(GOAL_SEP)).map(_.asSequent).toList)
       else {
@@ -430,6 +435,7 @@ object QuizExtractor {
     }
 
     /** The problem questions with grading information. */
+    @nowarn("msg=match may not be exhaustive")
     private def questionsFromString(rawContent: String): List[Question] = {
       val questions = QUESTION_EXTRACTOR
         .findAllMatchIn(rawContent)

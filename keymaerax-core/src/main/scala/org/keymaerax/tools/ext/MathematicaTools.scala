@@ -18,6 +18,7 @@ import org.keymaerax.tools.qe.MathematicaOpSpec._
 import org.keymaerax.tools.qe._
 import org.keymaerax.{Configuration, Logging}
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 object UncheckedBaseConverter {
@@ -32,6 +33,7 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
   override def apply(e: MExpr): KExpr = convert(e)
 
   /** Extends default converter with rule and rule list handling */
+  @nowarn("msg=match may not be exhaustive")
   override def convert(e: MExpr): KExpr = {
     if (isAborted(e)) { throw MathematicaComputationAbortedException(e.toString) }
 
@@ -62,6 +64,7 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
   }
 
   /** Converts rules and rule lists, not to be used in QE! */
+  @nowarn("msg=match may not be exhaustive")
   private def convertRule(e: MExpr): Formula = convert(e.args()(0)) match {
     case t: Term => Equal(t, convert(e.args()(1)).asInstanceOf[Term])
     case f: Formula => Equiv(f, convert(e.args()(1)).asInstanceOf[Formula])
@@ -74,6 +77,7 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
     if (convertedRules.isEmpty) False else convertedRules.reduceLeft(Or)
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def convertDerivative(e: MExpr): KExpr = {
     require(e.args().length == 1, "Expected args size 1 (single differential symbol or single differential term)")
     require(
@@ -561,6 +565,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
    * @see
    *   [[convertDiffSatResult]], [[convertTrivialResult]]
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def extractResult(result: Expression): (immutable.Seq[(Formula, String)], Formula) = {
     def extractCuts(cuts: Formula): immutable.Seq[(Formula, String)] = cuts match {
       case And(Equal(LIST_LENGTH, Number(numCuts)), cutFmls) => FormulaTools
@@ -647,6 +652,7 @@ class MathematicaCEXTool(override val link: MathematicaLink)
     with CounterExampleTool
     with Logging {
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
     val cexVars = StaticSemantics
       .symbols(fml)
@@ -726,6 +732,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
    * @return
    *   The differential equation system in list form.
    */
+  @nowarn("msg=match may not be exhaustive")
   private def toDiffSys(diffSys: DifferentialProgram, diffArg: Variable): List[(Variable, Term)] = {
     var result = List[(Variable, Term)]()
     ExpressionTraversal.traverse(
@@ -828,6 +835,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink)
     case None => throw ConversionException("Unable to defunctionalize " + f)
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def deriveBy(term: Term, v: Variable): Term = {
     val mathTerm = k2m(term)
     val mathVar = k2m(v)
@@ -847,6 +855,7 @@ class MathematicaPDESolverTool(override val link: MathematicaLink)
     extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter, new DiffUncheckedM2KConverter)
     with PDESolverTool {
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = {
     val vars = DifferentialHelper.getPrimedVariables(diffSys).map(k2m).toArray
     val f = MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "f")
@@ -955,6 +964,7 @@ private class DiffUncheckedM2KConverter extends UncheckedBaseM2KConverter {
     } else super.convert(e)
   }
 
+  @nowarn("msg=match may not be exhaustive")
   protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.find(_._1.applies(e)) match {
     case Some((_, fn)) => convertFunction(fn, e.args())
     case None => toKeYmaera(e) match {
@@ -1140,6 +1150,7 @@ object SimulationK2MConverter extends K2MConverter[Simulation] {
 
   private val k2m: K2MConverter[KExpr] = new UncheckedBaseK2MConverter
 
+  @nowarn("msg=match may not be exhaustive")
   override def convert(e: Simulation): MExpr = {
     MathematicaOpSpec.list(
       e.map(r =>

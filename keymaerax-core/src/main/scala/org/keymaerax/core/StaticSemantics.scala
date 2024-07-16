@@ -23,6 +23,7 @@ package org.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 /**
@@ -63,8 +64,7 @@ import scala.collection.immutable
  */
 object StaticSemantics {
 
-  import SetLattice.allVars
-  import SetLattice.bottom
+  import SetLattice.{allVars, bottom}
 
   /**
    * Variable Categories for Formulas: Structure recording which names are free or bound in a formula.
@@ -104,6 +104,7 @@ object StaticSemantics {
   def apply(a: Program): VCP = progVars(a)
 
   /** The set FV(term) of free variables of `term`. */
+  @nowarn("msg=fruitless type test")
   def freeVars(term: Term): SetLattice[Variable] = term match {
     // base cases
     case x: Variable => SetLattice(x)
@@ -230,6 +231,7 @@ object StaticSemantics {
     case True | False => VCF(fv = bottom, bv = bottom)
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def progVars(program: Program): VCP = {
     program match {
       // base cases
@@ -373,6 +375,7 @@ object StaticSemantics {
    *   Not soundness-critical otherwise since substitution only uses it in old [[USubstChurch]] not in new
    *   [[USubstOne]].
    */
+  @nowarn("msg=match may not be exhaustive")
   def signature(program: Program): immutable.Set[NamedSymbol] = program match {
     // base cases
     case ap: ProgramConst => Set(ap)

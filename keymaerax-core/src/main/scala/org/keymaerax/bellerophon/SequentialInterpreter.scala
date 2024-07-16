@@ -6,22 +6,14 @@
 package org.keymaerax.bellerophon
 
 import org.keymaerax.Logging
-import org.keymaerax.btactics.{
-  Ax,
-  ConfigurableGenerator,
-  FixedGenerator,
-  Generator,
-  InvariantGenerator,
-  TacticFactory,
-  TactixLibrary,
-}
+import org.keymaerax.btactics.{Ax, TacticFactory, TactixLibrary}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
 import org.keymaerax.pt.ProvableSig
 
 import java.util.concurrent.CancellationException
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
@@ -159,6 +151,7 @@ abstract class BelleBaseInterpreter(
     .toList
 
   /** Computes a single provable that contains the combined effect of all the piecewise computations. */
+  @nowarn("msg=match may not be exhaustive")
   protected final def combineBranchResults(results: Seq[BelleValue], parent: ProvableSig): BelleProvable = {
     // @todo preserve labels from parent p (turn new labels into sublabels)
     // @todo combine result defs?
@@ -244,6 +237,11 @@ abstract class BelleBaseInterpreter(
   }
 
   /** Returns the result of running tactic `expr` on value `v`. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.SequentType")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.AppliedDependentTwoPositionTactic")
   protected def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case builtIn: BuiltInTactic => v match {
         case BelleProvable(pr, lbl) =>
@@ -816,6 +814,7 @@ case class ConcurrentInterpreter(
     override val throwWithDebugInfo: Boolean = false,
 ) extends BelleBaseInterpreter(listeners, throwWithDebugInfo) with Logging {
 
+  @nowarn("msg=match may not be exhaustive")
   override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case ParallelTactic(exprs) =>
       def firstToSucceed(in: List[Future[BelleValue]]): Future[BelleValue] = {

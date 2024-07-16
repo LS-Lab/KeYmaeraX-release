@@ -6,16 +6,16 @@
 package org.keymaerax.btactics.helpers
 
 import org.keymaerax.bellerophon.TacticInapplicableFailure
-import org.keymaerax.btactics._
-import org.keymaerax.core._
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.tools.ext.SimplificationTool
 import org.keymaerax.btactics.SimplifierV3._
+import org.keymaerax.btactics._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct._
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.tools.ext.SimplificationTool
 
-import scala.collection.immutable
+import scala.annotation.nowarn
 import scala.collection.immutable.{Map, Nil}
 import scala.util.Try
 
@@ -29,6 +29,7 @@ object DifferentialHelper {
 
   /** Returns all of the AtomicODE's in a system. */
   def atomicOdes(system: ODESystem): List[AtomicODE] = atomicOdes(system.ode)
+  @nowarn("msg=match may not be exhaustive")
   def atomicOdes(dp: DifferentialProgram): List[AtomicODE] = dp match {
     case DifferentialProgramConst(c, _) => ???
     case DifferentialProduct(x, y) => atomicOdes(x) ++ atomicOdes(y)
@@ -107,6 +108,7 @@ object DifferentialHelper {
   }
 
   /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
+  @nowarn("msg=match may not be exhaustive")
   def parseGhost(ghost: DifferentialProgram): (Variable, Term, Term) = {
     val y = Variable("y_")
     val yp = DifferentialSymbol(y)
@@ -423,6 +425,7 @@ object DifferentialHelper {
    * Computes the Lie derivative of the given `term` with respect to the differential equations `ode`. This
    * implementation constructs by DI proof, so will be correct.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def lieDerivative(ode: DifferentialProgram, term: Term): Term =
     lieDerivative(ode, Equal(term, Number(0))) match { case Equal(out, Number(n)) if n == 0 => out }
   // @todo performance: could consider replacing this by a direct recursive computation without proof.

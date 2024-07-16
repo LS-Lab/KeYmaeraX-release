@@ -7,6 +7,7 @@ package org.keymaerax.infrastruct
 
 import org.keymaerax.core._
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 /**
@@ -255,6 +256,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
     case Dual(a) => Dual(rename(a))
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renVar(x)), rename(e))
     case DifferentialProgramConst(c, sp) =>

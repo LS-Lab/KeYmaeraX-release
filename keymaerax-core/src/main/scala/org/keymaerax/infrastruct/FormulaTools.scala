@@ -10,8 +10,7 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.ExpressionTraversal._
 
-import scala.annotation.tailrec
-import scala.collection.immutable.List
+import scala.annotation.{nowarn, tailrec}
 
 /**
  * Tactic tools for formula manipulation and extraction.
@@ -194,6 +193,7 @@ object FormulaTools extends Logging {
    * @return
    *   -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def polarityAt(formula: Formula, pos: PosInExpr): Int =
     if (pos.pos.isEmpty) 1
     else formula match {
@@ -228,6 +228,7 @@ object FormulaTools extends Logging {
    * @return
    *   The formula with equivalences turned into implications.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def makePolarityAt(formula: Formula, pos: PosInExpr, polarity: Int): Formula = {
     require(polarity == 1 || polarity == -1, "Polarity must be either positive or negative")
     if (pos.pos.isEmpty && polarity == 1) formula
@@ -264,6 +265,7 @@ object FormulaTools extends Logging {
    * @return
    *   The first position, or None if `sub` is not contained in `expr`.
    */
+  @nowarn("msg=match may not be exhaustive")
   def posOf(expr: Expression, sub: Expression): Option[PosInExpr] = {
     var pos: Option[PosInExpr] = None
     sub match {
@@ -351,6 +353,7 @@ object FormulaTools extends Logging {
    *   singularities("x/y>z/2+8/(a+b) & [x:=a/c;]x+1/(3*d)>5/3".asFormula)==Set(y,a+b,c,3*d)
    *   }}}
    */
+  @nowarn("msg=match may not be exhaustive")
   def singularities(e: Expression): Set[Term] = e match {
     case t: Term => singularities(t)
     case f: Formula => singularities(f)
@@ -411,6 +414,7 @@ object FormulaTools extends Logging {
    * @see
    *   [[SubstitutionPair.dualFree]]
    */
+  @nowarn("msg=match may not be exhaustive")
   def dualFree(program: Program): Boolean = program match {
     case _: ProgramConst => false
     case _: SystemConst => true
@@ -495,6 +499,7 @@ object FormulaTools extends Logging {
   }
 
   /** Returns the formula in negation normal form, strengthened by replacing inequalities with strict inequalities. */
+  @nowarn("msg=match may not be exhaustive")
   def interior(fml: Formula): Formula = negationNormalForm(fml) match {
     case LessEqual(a, b) => Less(a, b)
     case GreaterEqual(a, b) => Greater(a, b)
@@ -509,6 +514,7 @@ object FormulaTools extends Logging {
   }
 
   /** Returns the formula in negation normal form, weakened by replacing strict inequalities with inequalities. */
+  @nowarn("msg=match may not be exhaustive")
   def closure(fml: Formula): Formula = negationNormalForm(fml) match {
     case Less(a, b) => LessEqual(a, b)
     case Greater(a, b) => GreaterEqual(a, b)

@@ -5,7 +5,6 @@
 
 package org.keymaerax.codegen
 
-import org.keymaerax.codegen.PythonPrettyPrinter.{nameIdentifier, printSort}
 import org.keymaerax.codegen.PythonGenerator.{
   printHeader,
   printInputDeclaration,
@@ -14,8 +13,11 @@ import org.keymaerax.codegen.PythonGenerator.{
   printVerdictDeclaration,
   IMPORT_STATEMENTS,
 }
+import org.keymaerax.codegen.PythonPrettyPrinter.{nameIdentifier, printSort}
 import org.keymaerax.core._
 import org.keymaerax.parser.{Declaration, Name, Signature}
+
+import scala.annotation.nowarn
 
 /**
  * Python code generator header and declaration printing.
@@ -40,6 +42,7 @@ object PythonGenerator {
                                     |""".stripMargin
 
   /** Prints a class declaration of class `name` with `fields` and documentation `comment`. */
+  @nowarn("msg=match may not be exhaustive")
   def printClassDeclaration[T <: NamedSymbol](name: String, fields: Set[T], comment: String): String = {
     val sortedVars = fields.toList.sorted[NamedSymbol]
     val names = sortedVars.map({
@@ -101,6 +104,8 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
   private val FUNC_PARAMS_NAME = "params"
 
   /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
+  @nowarn("cat=deprecation&origin=org.keymaerax.codegen.PythonFormulaTermGenerator")
   private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new PythonFormulaTermGenerator(
     {
       case t: Variable => if (parameters.contains(t)) FUNC_PARAMS_NAME + "." else ""
@@ -114,6 +119,7 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
   )
 
   /** Prints the function definitions of `defs` that are used transitively in `expr`. */
+  @nowarn("msg=match may not be exhaustive")
   private def printFuncDefs(defs: Declaration, parameters: Set[NamedSymbol], expr: Expression): String = {
     // @note substs are topologically sorted, print in that order
     val projected = defs.project(List(expr))

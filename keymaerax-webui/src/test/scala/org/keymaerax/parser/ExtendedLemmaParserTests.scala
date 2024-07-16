@@ -17,7 +17,10 @@ import org.keymaerax.tools.ToolEvidence
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
+
 /** @author Nathan Fulton */
+@nowarn("msg=match may not be exhaustive")
 class ExtendedLemmaParserTests extends TacticTestBase {
 
   "Extended Lemma Parser" should "work" in {

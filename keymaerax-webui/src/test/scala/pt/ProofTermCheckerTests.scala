@@ -10,12 +10,13 @@ import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics._
 import org.keymaerax.core._
-import org.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 import org.keymaerax.pt._
 import org.keymaerax.tagobjects.TodoTest
 
 import java.io.PrintWriter
+import scala.annotation.nowarn
 
 /**
  * Tests of the proof term checker <strike>from</strike> inspired by Nathan Fulton and Andre Platzer, "A Logic of Proofs
@@ -27,6 +28,7 @@ import java.io.PrintWriter
  * @author
  *   Brandon Bohrer
  */
+@nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
 class ProofTermCheckerTests extends TacticTestBase {
   private def proves(cert: ProvableSig, f: Formula) = {
     val s = cert.conclusion
@@ -501,6 +503,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     println(tacticResult)
   })
 
+  import _root_.pt.lib.Parser._
   import pt.lib.Int._
   import pt.lib.Rat._
   import pt.lib.Real._
@@ -508,7 +511,6 @@ class ProofTermCheckerTests extends TacticTestBase {
   import pt.lib.Sum_Type._
   import pt.lib.Syntax._
   import pt.lib.Proof_Checker._
-  import _root_.pt.lib.Parser._
 
   "sexp parser" should "parse ids" in {
     val (i1(), 2) = mv("i1", 0)

@@ -16,7 +16,7 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser.{COLON => _, COMMA => _, Declaration, EOF => _, IDENT => _, _}
 import org.keymaerax.{Configuration, Logging}
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.util.matching.Regex
 
 /**
@@ -216,6 +216,7 @@ object BelleParser extends TacticParser with Logging {
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def parseInnerExpr(
       tokens: List[BelleToken],
       tacticDefs: DefScope[String, DefTactic],
@@ -247,6 +248,7 @@ object BelleParser extends TacticParser with Logging {
       (result, oParenLoc.spanTo(cParenLoc), remainder)
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def parseStep(
       st: ParserState,
       tacticDefs: DefScope[String, DefTactic],
@@ -691,6 +693,7 @@ object BelleParser extends TacticParser with Logging {
    * @return
    *   Parsed arguments and the remainder token string.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def parseArgumentList(
       codeName: String,
       input: TokenStream,
@@ -828,6 +831,7 @@ object BelleParser extends TacticParser with Logging {
   }
 
   /** Parses string `undelim` according to the `ai` argument info. */
+  @nowarn("msg=match may not be exhaustive")
   private def parseArg(ai: ArgInfo, undelim: String, loc: Location): TacticArg = ai match {
     case _: PosInExprArg => Left(PosInExpr(undelim.split('.').filter(_.nonEmpty).map(_.toInt).toList))
     case _: StringArg => Left(undelim)

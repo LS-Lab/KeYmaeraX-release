@@ -11,10 +11,11 @@ import org.keymaerax.hydra._
 import org.keymaerax.hydra.responses.tools.ODEConditionsResponse
 import org.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaComputationTimedOutException}
 
-import scala.collection.immutable.Nil
+import scala.annotation.nowarn
 
 class ODEConditionsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {

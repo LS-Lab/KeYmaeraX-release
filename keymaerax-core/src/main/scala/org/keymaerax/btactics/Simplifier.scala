@@ -6,14 +6,14 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
+import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
-import org.keymaerax.btactics.Idioms._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, Position}
 
+import scala.annotation.nowarn
 import scala.language.reflectiveCalls
 
 /**
@@ -247,6 +247,7 @@ object Simplifier {
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def simpOnce(simps: List[Simplification] = defaultSimps): DependentPositionTactic = anon((pos, sequent) =>
     sequent.sub(pos) match {
       case Some(fml: Formula) => makeCE(fml, simp(simps, fml), pos)

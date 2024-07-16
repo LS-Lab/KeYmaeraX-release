@@ -7,6 +7,7 @@ package org.keymaerax.infrastruct
 
 import org.keymaerax.core._
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 
 /**
@@ -25,6 +26,7 @@ object TreeForm {
   final case class Constant(value: Number) extends TermSymbol {}
 
   object Tree {
+    @nowarn("msg=match may not be exhaustive")
     def binaryTree(t: Term): Tree = {
       t match {
         case Plus(t1, t2) => Tree(Operator("+", Some(2)), List(binaryTree(t1), binaryTree(t2)))

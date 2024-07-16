@@ -57,11 +57,12 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 import spray.json._
 
 import java.io.{ByteArrayOutputStream, PrintWriter}
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.StringOps
 import scala.io.Source
 
-@IgnoreInBuildTest
+@IgnoreInBuildTest @nowarn("msg=Exhaustivity analysis reached max recursion depth")
+@nowarn("msg=match may not be exhaustive")
 class AssessmentProverTests extends TacticTestBase {
 
   private val COURSE_PATH: String = "/Course-current"

@@ -6,12 +6,13 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
-import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.btactics.TacticIndex.{BranchRecursor, Branches, TacticRecursor, TacticRecursors}
+import org.keymaerax.btactics.TacticIndex.{BranchRecursor, TacticRecursor, TacticRecursors}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct._
 import org.keymaerax.parser.InterpretedSymbols
+
+import scala.annotation.nowarn
 
 /**
  * Tactic indexing data structures for canonical proof strategies.
@@ -173,6 +174,7 @@ class DefaultTacticIndex extends TacticIndex {
     case _ => (_: Sequent, _: Position) => Left(stop)
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def child[T <: Expression](e: Option[T]): Option[Formula] = e.map({
     case f: UnaryCompositeFormula => f.child
     case Box(_, p) => p
@@ -182,9 +184,11 @@ class DefaultTacticIndex extends TacticIndex {
   })
   private def child(fml: Formula): Option[Formula] = child(Some(fml))
   private def child(s: Sequent, p: Position): PositionLocator = Fixed(p ++ PosInExpr(0 :: Nil), child(s.sub(p)))
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def left(e: Option[Expression]): Option[Formula] = e.map({ case f: BinaryCompositeFormula => f.left })
   private def left(fml: Formula): Option[Formula] = left(Some(fml))
   private def left(s: Sequent, p: Position): PositionLocator = Fixed(p ++ PosInExpr(0 :: Nil), left(s.sub(p)))
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def right(e: Option[Expression]): Option[Formula] = e.map({ case f: BinaryCompositeFormula => f.right })
   private def right(fml: Formula): Option[Formula] = right(Some(fml))
   private def right(s: Sequent, p: Position): PositionLocator = Fixed(p ++ PosInExpr(1 :: Nil), right(s.sub(p)))
@@ -201,6 +205,8 @@ class DefaultTacticIndex extends TacticIndex {
   }
 
   /** Return ordered list of all canonical tactic names that simplifies the expression `expr` (ante, succ). */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeFalse")
   def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = {
     if (expr.kind == TermKind) expr match { case _ => (Nil, Nil) }
     else expr match {

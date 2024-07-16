@@ -16,6 +16,7 @@ import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import org.keymaerax.pt.ProvableSig
 
+import scala.annotation.nowarn
 import scala.reflect.runtime.universe
 
 /**
@@ -52,6 +53,9 @@ object SequentCalculus extends TacticProvider with SequentCalculus {
  * @Tactic
  *   complete
  */
+@nowarn("msg=match may not be exhaustive")
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeFalse")
 trait SequentCalculus {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

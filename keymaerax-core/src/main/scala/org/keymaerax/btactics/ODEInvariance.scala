@@ -27,6 +27,7 @@ import org.keymaerax.tools.qe.BigDecimalQETool
 import org.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
 import org.slf4j.LoggerFactory
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -741,6 +742,7 @@ object ODEInvariance extends TacticProvider {
    *   - `t=d` requires d to be a constant number, which forces the whole ODE to be frozen (of course, P should be true
    *     initially)
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def timeBound: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
       "timeBound: position " + pos + " must point to a top-level succedent position"
@@ -1307,6 +1309,7 @@ object ODEInvariance extends TacticProvider {
    * @return
    *   the symbolic bound `(u.v)^2 <= (||u||||v||)^2`
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def cauchy_schwartz_bound(n: Int): ProvableSig = {
 
     require(n >= 1, "Symbolic Cauchy-Schwartz inequality only applies for n >= 1")
@@ -1379,6 +1382,7 @@ object ODEInvariance extends TacticProvider {
    * @return
    *   the symbolic bounds (||G||^2 + 1) ||p||^2 <= 2*((Gp).p) <= (||G||^2 + 1) ||p||^2
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def frobenius_subord_bound(n: Int): (ProvableSig, ProvableSig) = {
 
     require(n >= 1, "Symbolic Frobenius norm inequality only applies for n >= 1")
@@ -1776,6 +1780,7 @@ object ODEInvariance extends TacticProvider {
   case class Triv() extends Instruction
 
   // A more exhaustive implementation
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   private def pStarHomPlus(
       ode: DifferentialProgram,
       dom: Formula,

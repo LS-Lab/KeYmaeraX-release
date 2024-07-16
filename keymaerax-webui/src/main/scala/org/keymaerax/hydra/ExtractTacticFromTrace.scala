@@ -26,12 +26,12 @@ import org.keymaerax.bellerophon.parser.{
   SEQ_COMBINATOR,
 }
 import org.keymaerax.hydra.TacticExtractionErrors.TacticExtractionError
-import org.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import org.keymaerax.parser.{ArchiveParser, Declaration, Location, Region}
 import org.keymaerax.pt.ProvableSig
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.StringOps
 import scala.util.Try
 
@@ -115,6 +115,7 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
   }
 
   /** Shifts the location by `lines` and `columns`. */
+  @nowarn("msg=match may not be exhaustive")
   private def shift(loc: Map[Location, ProofTreeNode], lines: Int, columns: Int): Map[Location, ProofTreeNode] = loc
     .map({ case (l: Region, n) =>
       (Region(l.line + lines, l.column + columns, l.endLine + lines, l.endColumn + columns), n)
@@ -189,6 +190,7 @@ class VerbatimTraceToTacticConverter(defs: Declaration) extends TraceToTacticCon
 class LabelledTraceToTacticConverter(defs: Declaration) extends VerbatimTraceToTacticConverter(defs) {
 
   /** Makes labels for the subgoals of `node`. */
+  @nowarn("msg=match may not be exhaustive")
   override protected def makeLabels(node: ProofTreeNode, tacticDefs: Map[String, BelleExpr]): List[BelleLabel] = {
     if (node.children.size > 1) {
       node.goal.map(s => BelleProvable.plain(ProvableSig.startProof(s, defs))) match {

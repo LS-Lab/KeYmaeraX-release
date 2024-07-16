@@ -5,20 +5,16 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.BelleExpr
-import org.keymaerax.infrastruct.SuccPosition
-import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.PolynomialArith._
 import org.keymaerax.core._
-import org.keymaerax.infrastruct.{AntePosition, SuccPosition}
-import org.keymaerax.parser.KeYmaeraXPrettierPrinter
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.SlowTest
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /** Created by yongkiat on 11/27/16. */
-@SlowTest
+@SlowTest @nowarn("msg=match may not be exhaustive")
 class PolynomialArithTests extends TacticTestBase {
 
   "PolynomialArith" should "order variables" in withMathematica { qeTool =>

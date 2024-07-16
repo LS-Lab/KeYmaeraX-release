@@ -18,7 +18,7 @@ import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.QETacticTool
 
 import java.math.{MathContext, RoundingMode}
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
 
@@ -159,6 +159,7 @@ object IntervalArithmeticV2 extends TacticProvider {
       }
     }
 
+    @nowarn("msg=match may not be exhaustive")
     private def collectSubterms(t: Term, m: Map[Term, Variable], i: Int): (Variable, Map[Term, Variable], Int) =
       t match {
         case b: BinaryCompositeTerm =>
@@ -182,6 +183,7 @@ object IntervalArithmeticV2 extends TacticProvider {
         case a: AtomicTerm => insert(a, m, i)
       }
 
+    @nowarn("msg=match may not be exhaustive")
     private def collectSubformulas(fml: Formula, m: Map[Term, Variable], i: Int): (Formula, Map[Term, Variable], Int) =
       fml match {
         case b: ComparisonFormula =>
@@ -1020,6 +1022,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def proveComparison(prec: Int)(qeTool: QETacticTool)(
       assms: IndexedSeq[Formula]
   )(include_assms: Boolean)(lowers0: BoundMap, uppers0: BoundMap, ssaMap: Map[Variable, Term])(
@@ -1079,6 +1082,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     )
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def proveBool(prec: Int)(qeTool: QETacticTool)(
       assms: IndexedSeq[Formula]
   )(include_assms: Boolean)(lowers0: BoundMap, uppers0: BoundMap, ssa: StaticSingleAssignmentExpression[Formula])(

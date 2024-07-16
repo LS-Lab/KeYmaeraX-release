@@ -25,6 +25,7 @@ import org.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymb
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.{Atom, OneOf, QETacticTool, SimplificationTool}
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{List, ListMap, Nil}
 import scala.collection.mutable.ListBuffer
 import scala.collection.{immutable, mutable}
@@ -192,6 +193,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   }
 
   /** Partitions the unobservable symbols into unobservable state variables and unknown model parameters. */
+  @nowarn("msg=match may not be exhaustive")
   def partitionUnobservable(unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (
       ListMap[Variable, Option[Formula]],
       ListMap[(Function, Variable), Option[Formula]],
@@ -275,6 +277,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           " unobservable, because their arguments are bound in program; replace manually with non-deterministic assignments (e.g., replace x:=2; y:=f(x) with x:=2; fx:=*; y:=fx)",
       )
 
+      @nowarn("msg=match may not be exhaustive")
       val postEstimators = unobservableStateVars
         .filter(_._2.isDefined)
         .map({ case (v, Some(e)) =>
@@ -288,6 +291,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           }
         })
 
+      @nowarn("msg=match may not be exhaustive")
       val preEstimator = unobservable
         .filter(_._2.isDefined)
         .map({ case (_, Some(e)) => e })
@@ -402,6 +406,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     f.replaceFree(v, t)
   })
 
+  @nowarn("msg=match may not be exhaustive")
   private def replace[S <: Expression, T <: Term, U <: Term](fml: S, repl: Map[T, U]): S = {
     repl.foldLeft(fml)({
       case (t: Term, v) => t.replaceFree(v._1, v._2).asInstanceOf[S]
@@ -410,6 +415,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     })
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def proofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration) =
     new IOListener() {
       var invariant: Option[GenProduct] = None
@@ -573,6 +579,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * Creates a model with the ODE approximated by the evolution domain and diff. invariants from the `tactic`. Returns
    * the adapted model and a tactic to proof safety from the original proof.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def createNonlinearModelApprox(
       name: String,
       tactic: BelleExpr,
@@ -708,6 +715,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       .toList
       .sorted[NamedSymbol]
 
+    @nowarn("msg=match may not be exhaustive")
     val consts: Map[Term, Variable] = constVars
       .filter({
         case Function(_, _, Unit, _, _) => true
@@ -868,6 +876,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @return
    *   The tactic to derive a sandbox safety proof from the original safety proof.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def sandboxTacticPlantFirst(
       name: String,
       inv: Formula,
@@ -981,6 +990,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @return
    *   The tactic to derive a sandbox safety proof from the original safety proof.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def sandboxTactic(
       name: String,
       inv: Formula,
@@ -1141,6 +1151,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       },
   )
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def chaseToTests(combineTests: Boolean): BuiltInPositionTactic = {
     // @note very slow on large formulas
     chaseI(
@@ -1564,6 +1575,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     p(CutRight(qf, SuccPos(0)), 0)(EquivifyRight(SuccPos(0)), 1)(CommuteEquivRight(SuccPos(0)), 1)(qfResult, 1)
   }
   def mxPartialQE(fml: Formula, defs: Declaration, tool: QETacticTool): ProvableSig = mxPartialQE(List(fml), defs, tool)
+  @nowarn("msg=match may not be exhaustive")
   def mxPartialQE(
       fmlAlts: List[Formula],
       defs: Declaration,
@@ -1620,6 +1632,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   }
 
   /** Splits into separate partial QE calls and merges results. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def stepwisePartialQE(
       fml: Formula,
       assumptions: List[Formula],
@@ -1847,6 +1860,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    * @see
    *   [[optimizationOneWithSearchAt]]
    */
+  @nowarn("msg=match may not be exhaustive")
   override def optimizationOneWithSearch(
       tool: Option[SimplificationTool],
       assumptions: List[Formula],
@@ -1886,6 +1900,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr)
   }
 
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   private def solutionQE(
       existsFml: Formula,
       qeFml: Formula,

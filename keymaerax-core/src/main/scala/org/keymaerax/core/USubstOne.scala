@@ -20,10 +20,11 @@
  */
 package org.keymaerax.core
 
+import org.keymaerax.core.SetLattice.{allVars, bottom}
+import org.keymaerax.core.StaticSemantics.boundVars
+
+import scala.annotation.nowarn
 import scala.collection.immutable
-import StaticSemantics.boundVars
-import SetLattice.allVars
-import SetLattice.bottom
 
 /**
  * A Uniform Substitution with its one-pass application mechanism. A Uniform Substitution uniformly replaces all
@@ -367,6 +368,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
    *   the set of variables that are taboo (including the surrounding ODESystem), so cannot be introduced free by the
    *   substitution into ode.
    */
+  @nowarn("msg=match may not be exhaustive")
   private def usubstODE(v: SetLattice[Variable], ode: DifferentialProgram): DifferentialProgram = {
     ode match {
       case AtomicODE(xp: DifferentialSymbol, e) =>
@@ -428,6 +430,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
    *   Like [[StaticSemantics.boundVars()]] except with replaced program constant symbols etc computed from their bound
    *   variables.
    */
+  @nowarn("msg=match may not be exhaustive")
   private def substBoundVars(program: Program): SetLattice[Variable] = {
     program match {
       // base cases

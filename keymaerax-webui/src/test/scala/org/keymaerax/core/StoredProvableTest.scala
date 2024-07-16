@@ -17,6 +17,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -24,6 +25,7 @@ import scala.collection.immutable._
  * @author
  *   Andre Platzer
  */
+@nowarn("msg=match may not be exhaustive")
 class StoredProvableTest extends AnyFlatSpec with Matchers with PrivateMethodTester with TimeLimits {
   Configuration.setConfiguration(FileConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)

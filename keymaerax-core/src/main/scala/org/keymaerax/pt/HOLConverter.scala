@@ -7,6 +7,8 @@ package org.keymaerax.pt
 
 import org.keymaerax.core._
 
+import scala.annotation.nowarn
+
 /**
  * Converts kyx expressions to subset used by hol formalization. Just different enough from Isabelle syntax that it's
  * not so easy to unify them just yet.
@@ -16,6 +18,7 @@ import org.keymaerax.core._
  */
 object HOLConverter {
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def apply(t: Term): String = {
     val c = '\"'
     t match {
@@ -34,6 +37,7 @@ object HOLConverter {
 
   def apply(s: String): String = s"\"$s\""
   // @todo not all constructs are needed yet
+  @nowarn("msg=match may not be exhaustive")
   def apply(p: Program): String = {
     p match {
       case Test(p) => s"(Test ${apply(p)})"
@@ -45,6 +49,7 @@ object HOLConverter {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def apply(f: Formula): String = {
     f match {
       case And(p, q) => s"(And ${apply(p)} ${apply(q)})"
@@ -61,6 +66,7 @@ object HOLConverter {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def configFile(
       consts: Set[NamedSymbol],
       vars: List[Variable],

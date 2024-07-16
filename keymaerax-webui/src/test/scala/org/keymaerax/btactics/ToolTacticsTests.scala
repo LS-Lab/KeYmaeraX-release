@@ -6,16 +6,18 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{BelleCEX, BelleThrowable}
-import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core.Sequent
 import org.keymaerax.parser.ArchiveParser
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.UsualTest
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
+
 /** Tests automatic [[org.keymaerax.btactics.ToolTactics]]. */
-@UsualTest
+@UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class ToolTacticsTests extends TacticTestBase {
   "Transform" should "transform top-level" in withQE { _ =>
     proveBy("x>=0".asFormula, transform("x>=1".asFormula)(1)).subgoals.loneElement shouldBe "==> x>=1".asSequent

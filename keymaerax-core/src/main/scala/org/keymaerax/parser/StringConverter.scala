@@ -10,6 +10,8 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import org.keymaerax.infrastruct.FormulaTools
 
+import scala.annotation.nowarn
+
 /**
  * Implicit conversions from strings into core data structures. Created by smitsch on 1/8/15.
  * @author
@@ -103,6 +105,7 @@ class StringConverter(val s: String) {
 
   /** Converts a stringified list of substitution pairs to a declaration object. */
   def asDeclaration: Declaration = asDeclaration(InterpretedSymbols.mathKyxDefs)
+  @nowarn("msg=match may not be exhaustive")
   def asDeclaration(defs: Declaration): Declaration = {
     def fnToNameSignature(fn: Function, arg: Term, repl: Expression, sp: List[SubstitutionPair]): (Name, Signature) = {
       val args =

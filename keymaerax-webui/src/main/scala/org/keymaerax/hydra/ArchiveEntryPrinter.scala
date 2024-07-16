@@ -14,9 +14,11 @@ import org.keymaerax.parser.{
   PrettierPrintFormatProvider,
 }
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, List, Nil}
 
 object ArchiveEntryPrinter {
+  @nowarn("msg=match may not be exhaustive")
   def archiveEntry(modelInfo: ModelPOJO, tactics: List[(String, String)], withComments: Boolean): String =
     try {
       ArchiveParser.parser(modelInfo.keyFile) match {

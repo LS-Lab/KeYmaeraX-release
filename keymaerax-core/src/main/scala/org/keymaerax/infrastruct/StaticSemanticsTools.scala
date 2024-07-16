@@ -8,10 +8,11 @@ package org.keymaerax.infrastruct
 import org.keymaerax.core.SetLattice.bottom
 import org.keymaerax.core.StaticSemantics._
 import org.keymaerax.core.{StaticSemantics, _}
+import org.keymaerax.infrastruct.PosInExpr.HereP
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.collection.{immutable, mutable}
-import org.keymaerax.infrastruct.PosInExpr.HereP
 
 /**
  * Additional tools read off from the static semantics for the tactics.
@@ -53,6 +54,7 @@ object StaticSemanticsTools {
    * The set of variables that the top-level operator of this program is binding itself, so not those variables that are
    * only bound because of operators in subprograms.
    */
+  @nowarn("msg=match may not be exhaustive")
   def bindingVars(program: Program): SetLattice[Variable] = program match {
     // @note It's the pieces of ODESystems that bind but the scope is the whole ODESystem, which is somewhat like an AtomicProgram
     case a: ODESystem => boundVars(a)
@@ -225,6 +227,7 @@ object StaticSemanticsTools {
     case ode: DifferentialProgram => depend(ode)
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def depend(ode: DifferentialProgram): mutable.Map[Variable, immutable.Set[Variable]] = ode match {
     // simply ignores xp->e so far.
     case AtomicODE(xp: DifferentialSymbol, e) => mutable.Map(xp.x -> StaticSemantics.freeVars(e).symbols)

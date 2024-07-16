@@ -10,6 +10,8 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.parser.Declaration
 
+import scala.annotation.nowarn
+
 object PythonMonitorGenerator {
 
   /** The name of the monitor/control function argument representing the current state. */
@@ -30,6 +32,7 @@ object PythonMonitorGenerator {
    */
   private val INPUT_NAME = "inp"
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def termContainer(expr: Expression, parameters: Set[NamedSymbol]): String = expr match {
     case t: Variable if parameters.contains(t) => MONITOR_PARAMS_NAME + "."
     case t: Variable if !parameters.contains(t) && t.name.endsWith("post") => MONITOR_CURR_STATE_NAME + "."
@@ -64,6 +67,7 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration)
    * Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor
    * outcome.
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def generateMonitoredCtrlPythonCode(expr: Expression, stateVars: Set[BaseVariable]): (String, String) = {
     val symbols = StaticSemantics.symbols(expr)
     val names = symbols.map(nameIdentifier)

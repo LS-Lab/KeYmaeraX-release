@@ -20,7 +20,7 @@ import org.keymaerax.parser.KeYmaeraXParser.ParseState
 import org.keymaerax.parser.OpSpec.{func, statementSemicolon}
 import org.keymaerax.{Configuration, Logging}
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable._
 
 /**
@@ -1294,6 +1294,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
 
   // error message handling
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def goodErrorMessage(st: ParseState): Option[String] = st.stack match {
     case _ :+ Token(org.keymaerax.parser.RBOX, _) =>
       Some("Syntax error. Perhaps the program contained in your box modality is ill-formed or incomplete?")

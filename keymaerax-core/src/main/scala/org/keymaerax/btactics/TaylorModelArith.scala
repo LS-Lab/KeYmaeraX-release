@@ -8,14 +8,15 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon.{BelleExpr, SaturateTactic, TacticInapplicableFailure}
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.TaylorModelTactics.{debugTac, TaylorModel}
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
-import org.keymaerax.tools.ext.{BigDecimalTool, RingsLibrary}
+import org.keymaerax.tools.ext.BigDecimalTool
 import org.keymaerax.tools.qe.BigDecimalQETool
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 trait TaylorModelOptions {
@@ -32,6 +33,7 @@ trait TimeStepOptions {
  *
  * Here, a Taylor model is a data structure maintaining a proof that some term is element of the Taylor model.
  */
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 object TaylorModelArith {
   import PolynomialArithV2._
   import PolynomialArithV2Helpers._
@@ -603,6 +605,7 @@ object TaylorModelArith {
       options: TaylorModelOptions
   ): Option[ProvableSig] = {
     require(argumentMap.forall { case (_, tm) => tm.context == context }, "require compatible contexts for evalFormula")
+    @nowarn("msg=match may not be exhaustive")
     def doEval(fml: Formula): Option[ProvableSig] = fml match {
       case cmp: ComparisonFormula =>
         val f = cmp.left

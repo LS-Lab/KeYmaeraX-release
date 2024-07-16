@@ -5,15 +5,15 @@
 
 package org.keymaerax.bellerophon
 
-import java.io.PrintStream
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.btactics.TactixLibrary
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.btactics.helpers.QELogger
 import org.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable.IndexedSeq
+import java.io.PrintStream
+import scala.annotation.nowarn
 import scala.collection.mutable
 
 /**
@@ -171,6 +171,7 @@ object IOListeners {
       printer.flush()
     }
 
+    @nowarn("msg=match may not be exhaustive")
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
       if (executionStack.nonEmpty && expr.eq(executionStack.head._1)) {
         executionStack = executionStack.tail

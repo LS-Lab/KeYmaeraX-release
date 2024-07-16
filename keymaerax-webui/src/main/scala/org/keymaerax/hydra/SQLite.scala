@@ -23,6 +23,7 @@ import slick.jdbc.SQLiteProfile.backend.Session
 
 import java.io.FileOutputStream
 import java.nio.channels.Channels
+import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -176,6 +177,7 @@ object SQLite {
       else if (x == 1) true
       else throw new IllegalStateException("Expected boolean encoded as either 0 or 1, but got " + x)
 
+    @nowarn("msg=match may not be exhaustive")
     private[this] def splitNameLabel(s: String): (String, Option[String]) =
       s.split(Regex.quote(RULENAME_BRANCH_SEPARATOR)).toList match {
         case rn :: Nil => (rn, None)

@@ -6,14 +6,13 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TacticHelper.timed
-import TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import org.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
-import org.keymaerax.core._
+import org.keymaerax.btactics.macros.{AxiomInfo, Tactic, TacticInfo}
+import org.keymaerax.core.{Close, Cut, EquivLeft, NotLeft, _}
 import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.{core, Logging}
 import org.keymaerax.infrastruct.{
   AntePosition,
   FormulaTools,
@@ -23,15 +22,16 @@ import org.keymaerax.infrastruct.{
   SuccPosition,
   UnificationMatchUSubstAboveURen,
 }
-import org.keymaerax.btactics.macros.{AxiomInfo, Tactic, TacticInfo}
 import org.keymaerax.pt.ProvableSig
+import org.keymaerax.{core, Logging}
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{::, List, Nil}
 import scala.reflect.runtime.universe
 import scala.util.Try
 
 /** [[PropositionalTactics]] provides tactics for propositional reasoning. */
+@nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
 private[keymaerax] object PropositionalTactics extends TacticProvider with Logging {
 
   /** @inheritdoc */

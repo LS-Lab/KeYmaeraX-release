@@ -29,6 +29,7 @@ package org.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.math._
 
@@ -1188,6 +1189,7 @@ object DifferentialProduct {
 
   /** Reassociate the data structure left-associative list form. */
   /** @tailrec */
+  @nowarn("msg=match may not be exhaustive")
   private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = left match {
     // properly associated cases
     case l: AtomicODE => new DifferentialProduct(l, right)

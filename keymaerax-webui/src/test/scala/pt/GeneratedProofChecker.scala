@@ -10,6 +10,8 @@ import java.io.{BufferedWriter, FileWriter}
 import pt.Int.int_of_integer
 import pt.Rat.Frct
 import pt.Real.Ratreal
+
+import scala.annotation.nowarn
 //import pt.lib.Scratch.myvars
 //import pt.lib.{Int, Nat, Proof_Checker, Rat, Real, Scratch, Sum_Type, Syntax, USubst}
 //import pt.lib.Syntax._
@@ -244,6 +246,7 @@ def equal_suma[A : HOL.equal, B : HOL.equal](x0: sum[A, B], x1: sum[A, B]):
 
 } /* object Sum_Type */
 
+@nowarn
 object Lista {
 
 def equal_lista[A : HOL.equal](x0: List[A], x1: List[A]): Boolean = (x0, x1)
@@ -673,6 +676,7 @@ def if_pred(b: Boolean): pred[Unit] =
 
 } /* object Predicate */
 
+@nowarn
 object Complete_Lattices {
 
 def Sup_set[A : HOL.equal](x0: Set.set[Set.set[A]]): Set.set[A] = x0 match {
@@ -1412,6 +1416,7 @@ def TadmitFFO[A : Enum.enum : HOL.equal, B : HOL.equal,
 
 } /* object USubst */
 
+@nowarn
 object Scratch {
 
 abstract sealed class myvars
@@ -10627,6 +10632,7 @@ def Predicational[A, B, C](p: A): formula[B, A, C] =
 
 
 
+@nowarn
 object ProofTerm {
   import Real._
   import Rat._
@@ -10660,6 +10666,7 @@ object ProofTerm {
 
 }
 
+@nowarn
 object Parser {
 
   import pt.Int._

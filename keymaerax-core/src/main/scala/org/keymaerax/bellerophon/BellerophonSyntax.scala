@@ -15,7 +15,7 @@ import org.keymaerax.parser.{BuiltinSymbols, Declaration}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.{Configuration, Logging}
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 
 object BelleExpr {
   val INTERNAL_NAME_PREFIX: String = "_"
@@ -138,6 +138,7 @@ sealed abstract class BelleExpr {
    * case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to
    * current provable for which ei does not fail, fails if the ei of all matching fi fail.
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.SequentType")
   def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(Seq(this, USubstPatternTactic(p)))
   // @todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 
@@ -246,6 +247,7 @@ case class CaseTactic(children: Seq[(BelleLabel, BelleExpr)]) extends BelleExpr 
  * In other words: `case _ of {fi => ei}` uniform substitution case pattern applies the first `ei` such that `fi`
  * uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.
  */
+@nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.BelleType")
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr {
   override def prettyString: String = "case { " + options.mkString(", ") + " }"
 }
@@ -683,6 +685,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   final def computeResult(provable: ProvableSig): ProvableSig =
     try {
       locator match {
@@ -944,6 +947,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
     fml.map(uninterp).contains(uninterp(shape))
   }
 
+  @nowarn("msg=match may not be exhaustive")
   final override def computeExpr(provable: ProvableSig, labels: Option[List[BelleLabel]]): BelleExpr =
     /*final override def computeExpr(v: BelleValue): BelleExpr =*/ try {
       locator match {

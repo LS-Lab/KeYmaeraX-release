@@ -5,10 +5,11 @@
 
 package org.keymaerax.infrastruct
 
-import org.keymaerax.{Configuration, Logging}
 import org.keymaerax.bellerophon.{SeqUnificationException, SubstUnificationException, UnificationException}
 import org.keymaerax.core._
+import org.keymaerax.{Configuration, Logging}
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{List, Nil}
 
 /**
@@ -182,6 +183,7 @@ trait InsistentMatcher extends Matcher with Logging {
  *   Andre Platzer
  */
 trait BaseMatcher extends Matcher with Logging {
+  @nowarn("msg=match may not be exhaustive")
   private def unifyExpr(e1: Expression, e2: Expression): Subst =
     if (e1.kind == e2.kind || e1.kind == ProgramKind && e2.kind == DifferentialProgramKind) e1 match {
       case t1: Term => val t2 = e2.asInstanceOf[Term]; unifier(t1, t2, unify(t1, t2))
@@ -191,6 +193,7 @@ trait BaseMatcher extends Matcher with Logging {
     }
     else throw new UnificationException(e1, e2, "have incompatible kinds " + e1.kind + " and " + e2.kind)
 
+  @nowarn("msg=match may not be exhaustive")
   override def apply(e1: Expression, e2: Expression): Subst =
     if (e1.kind == e2.kind || e1.kind == ProgramKind && e2.kind == DifferentialProgramKind) e1 match {
       case t1: Term => apply(t1, e2.asInstanceOf[Term])
@@ -272,6 +275,7 @@ trait BaseMatcher extends Matcher with Logging {
     catch { case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None }
 
   // @todo optimize: this may be slower than static type inference
+  @nowarn("msg=match may not be exhaustive")
   protected def unify(shape: Expression, input: Expression): List[SubstRepl] = shape match {
     case t1: Term => unify(t1, input.asInstanceOf[Term])
     case f1: Formula => unify(f1, input.asInstanceOf[Formula])
@@ -518,6 +522,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
    * A simple recursive unification algorithm for single-sided matching.
    * @inheritdoc
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   protected def unify(e1: Formula, e2: Formula): List[SubstRepl] = e1 match {
     case p: UnitPredicational => unifier(e1, e2)
     case PredOf(f: Function, Nothing) => unifier(e1, e2)
@@ -666,6 +671,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
    * A simple recursive unification algorithm for single-sided matching.
    * @inheritdoc
    */
+  @nowarn("msg=match may not be exhaustive")
   protected def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstRepl] = e1 match {
     case c: DifferentialProgramConst => unifier(e1, e2)
     case AtomicODE(xp, t) => e2 match {

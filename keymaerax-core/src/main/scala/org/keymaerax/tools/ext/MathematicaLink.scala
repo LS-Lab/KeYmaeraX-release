@@ -16,6 +16,7 @@ import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue
 
 import java.io.{File, FileWriter, IOException}
 import java.time.LocalDate
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.sys.process._
@@ -774,6 +775,7 @@ class WolframScript extends MathematicaLink with Logging {
   }
 
   private def parseExpressionJSON(expr: String): MExpr = {
+    @nowarn("msg=match may not be exhaustive")
     def convertJSON(v: JsValue): MExpr = v match {
       // strings are "'string'"
       case JsString(s) if s.startsWith("'") => new MExpr(s.substring(1, s.length - 1))

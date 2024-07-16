@@ -11,7 +11,7 @@ import org.keymaerax.lemma.Evidence
 import org.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import org.keymaerax.tools.ToolEvidence
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable
 
 /**
@@ -73,6 +73,7 @@ object KeYmaeraXExtendedLemmaParser
   }
 
   /** Parses the next lemma from token stream `input` and returns the lemma as well as the remaining tokens. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def parseNextLemma(input: TokenStream): (Option[String], Provable, List[Evidence], TokenStream) = {
     require(input.head.tok == LEMMA_BEGIN, "Expected ALP file to begin with Lemma block")
 
@@ -121,6 +122,7 @@ object KeYmaeraXExtendedLemmaParser
   }
 
   /** Parses token stream `input` into a single piece of evidence; returns the evidence and the remainder tokens. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {
     require(input.head.tok == TOOL_BEGIN, s"expected to find a begin evidence block but found ${input.head.tok}")
 

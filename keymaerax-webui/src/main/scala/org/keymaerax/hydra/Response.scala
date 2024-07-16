@@ -14,25 +14,21 @@
  */
 package org.keymaerax.hydra
 
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.core.{Expression, Formula}
-import org.keymaerax.bellerophon._
-import org.keymaerax.core._
-import org.keymaerax.parser._
-import org.keymaerax.Logging
-import org.keymaerax.bellerophon.parser.BelleParser
-import org.keymaerax.infrastruct._
-import org.keymaerax.btactics.macros._
-import org.keymaerax.hydra.responses.proofs.ApplicableAxiomsResponse
-
-import spray.json._
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import org.keymaerax.Logging
+import org.keymaerax.bellerophon._
+import org.keymaerax.bellerophon.parser.BelleParser
+import org.keymaerax.btactics.macros._
+import org.keymaerax.core.{Expression, Formula, _}
+import org.keymaerax.hydra.responses.proofs.ApplicableAxiomsResponse
+import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct._
+import org.keymaerax.parser._
+import spray.json._
 
 import java.io.{PrintWriter, StringWriter}
-
-import scala.annotation.tailrec
-import scala.collection.immutable.Seq
+import scala.annotation.{nowarn, tailrec}
 import scala.util.Try
 import scala.xml.Elem
 
@@ -370,6 +366,7 @@ object Helpers {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def printPrgJson(q: PosInExpr, expr: Program, fp: FormatProvider)(implicit
       top: Position,
       topExpr: Expression,
@@ -399,6 +396,7 @@ object Helpers {
       print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp) :: Nil
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def printRecPrgJson(q: PosInExpr, expr: Program, fp: FormatProvider)(implicit
       top: Position,
       topExpr: Expression,

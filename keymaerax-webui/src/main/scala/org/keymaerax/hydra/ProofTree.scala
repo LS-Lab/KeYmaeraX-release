@@ -29,7 +29,7 @@ import org.keymaerax.parser.{ArchiveParser, Declaration, Location}
 import org.keymaerax.pt.{ElidingProvable, ProvableSig, TermProvable}
 import org.keymaerax.tacticsinterface.TraceRecordingListener
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{List, Map}
 import scala.util.Try
 
@@ -505,6 +505,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
   }
 
   /** Deletes this node with the entire subtree underneath. */
+  @nowarn("msg=match may not be exhaustive")
   override def pruneBelow(): Unit = children match {
     case Nil => // nothing to do
     case (c: DbProofTreeNode) :: tail =>
@@ -646,6 +647,7 @@ case class DbLoadedProofTreeNode(
   /** The tactic (serialized BelleExpr) that produced this node from its parent. */
   override def maker: Option[String] = step.map(_ => dbMaker) // @todo load with step
 
+  @nowarn("msg=match may not be exhaustive")
   private val nameLabel: Option[(String, List[BelleLabel])] = step.map(_.rule.split("@@").toList match {
     case rn :: Nil => (rn, Nil)
     case rn :: bl :: Nil => (rn, BelleLabel.fromString(bl))

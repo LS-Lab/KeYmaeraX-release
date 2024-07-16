@@ -19,6 +19,7 @@ import org.keymaerax.tags.SlowTest
 import org.keymaerax.testhelper.ParserFactory._
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.language.postfixOps
 
 /**
@@ -27,7 +28,7 @@ import scala.language.postfixOps
  * @author
  *   Stefan Mitsch
  */
-@SlowTest
+@SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class CpsWeekTutorial extends TacticTestBase {
 
   "Example 0" should "prove with abstract invariant J(x)" in withQE { _ =>

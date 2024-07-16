@@ -25,6 +25,7 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt._
 import org.keymaerax.tools.ext.Mathematica
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
 import scala.reflect.runtime.universe
@@ -34,7 +35,7 @@ import scala.reflect.runtime.universe
  *
  * Created by yongkiat on 24 Feb 2020.
  */
-
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 object ODELiveness extends TacticProvider {
 
   /** @inheritdoc */

@@ -6,19 +6,20 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.Idioms._
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.core._
-
-import scala.collection.immutable.{Map, _}
-import org.keymaerax.pt.ProvableSig
 import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.infrastruct._
+import org.keymaerax.btactics.Idioms._
+import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros.ProvableInfo
+import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct._
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.pt.ProvableSig
+
+import scala.annotation.nowarn
+import scala.collection.immutable.{Map, _}
 
 /** Created by yongkiat on 9/29/16. */
 object SimplifierV2 {
@@ -257,6 +258,7 @@ object SimplifierV2 {
     )
   }
 
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def termSimpWithRewrite(t: Term, ctx: IndexedSeq[Formula]): (Term, ProvableSig) = {
     // todo: filter context and keep only equalities around?
     val teq = equalityRewrites(t, ctx)
@@ -271,6 +273,7 @@ object SimplifierV2 {
     )
   }
 
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   private def weaken(ctx: IndexedSeq[Formula]): ForwardTactic = pr => {
     val p = ProvableSig.startPlainProof(pr.conclusion.glue(Sequent(ctx, IndexedSeq())))
     proveBy(
@@ -601,6 +604,7 @@ object SimplifierV2 {
    * @return
    *   f',pr where pr proves the equivalence
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def formulaSimp(f: Formula, ctx: IndexedSeq[Formula] = IndexedSeq()): (Formula, ProvableSig) = {
     // println("At: "+f+" Context: "+ctx)
     // todo: remove the use of prop from short circuit branches
@@ -854,6 +858,7 @@ object SimplifierV2 {
   }
 
   // Splits an equivalence in succedent of provable into left and right halves
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def splitEquiv(pr: ProvableSig): (ProvableSig, ProvableSig) = {
     val seq = pr.conclusion
     assert(seq.succ.length == 1 && seq.succ(0).isInstanceOf[Equiv])
@@ -868,6 +873,7 @@ object SimplifierV2 {
 
   // Simplifies a formula including sub-terms occuring in the formula
   // was named "simplify"
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   lazy val simpTac: DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(f: Formula) =>
@@ -899,6 +905,7 @@ object SimplifierV2 {
   })
 
   // Simplifies at a (succ) position, restricting only to the requested part of the context and in the required order
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def rsimpTac(ipos: IndexedSeq[Integer]): DependentPositionTactic = new DependentPositionTactic("restricted simp") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -954,6 +961,7 @@ object SimplifierV2 {
 
   // Same as fullSimpTac, except the changes to the context get thrown out
   // todo: This doesn't work with antepositions
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   lazy val safeFullSimpTac: DependentPositionTactic = new DependentPositionTactic("simp") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -1057,6 +1065,7 @@ object SimplifierV2 {
   // Also works if given p1 -> p2 -> ... p -> [a*]f , in which case the attempted proof is
   // p1 -> p2 -> ... -> [a*]f |- p1-> p2 -> ... -> [b*]f
   // where b has the requested auxiliaries rewritten away
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def rewriteLoopAux(f: Formula, targets: List[Variable]): (Formula, ProvableSig) = {
     f match {
       case (Imply(pre, rhs)) =>

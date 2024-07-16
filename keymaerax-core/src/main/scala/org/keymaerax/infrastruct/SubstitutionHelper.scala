@@ -7,7 +7,7 @@ package org.keymaerax.infrastruct
 
 import org.keymaerax.core._
 
-import scala.collection.immutable.Set
+import scala.annotation.nowarn
 
 /**
  * Created by smitsch on 2/19/15.
@@ -53,6 +53,7 @@ object SubstitutionHelper {
    * Return the result of replacing all free occurrences of `what` in expression `expr` by `repl` whenever
    * `replaces(what) = Some(repl)`.
    */
+  @nowarn("msg=match may not be exhaustive")
   def replacesFree[T <: Expression](expr: T)(replaces: Term => Option[Term]): T = expr match {
     case f: Formula => replacesFree(f)(replaces).asInstanceOf[T]
     case t: Term => replacesFree(t)(replaces).asInstanceOf[T]
@@ -77,6 +78,7 @@ object SubstitutionHelper {
   def replaceFree[T <: Expression](expr: T)(what: Term, repl: Term): T = replacesFree[T](expr)(replaceOne(what, repl))
 
   /** Replaces any function application `fn`(...) in `fml` per `subst`. */
+  @nowarn("msg=match may not be exhaustive")
   def replaceFn(fn: Function, fml: Formula, subst: Map[Term, Variable]): Formula = {
     ExpressionTraversal.traverse(
       new ExpressionTraversal.ExpressionTraversalFunction() {
@@ -214,6 +216,7 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
    * @return
    *   The substitution result.
    */
+  @nowarn("msg=match may not be exhaustive")
   private def usubst(
       o: SetLattice[Variable],
       u: SetLattice[Variable],
@@ -226,6 +229,7 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
     case _: DifferentialProgramConst => p
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def primedVariables(ode: DifferentialProgram): Set[Variable] = ode match {
     case DifferentialProduct(a, b) => primedVariables(a) ++ primedVariables(b)
     case AtomicODE(DifferentialSymbol(x), _) => Set(x)

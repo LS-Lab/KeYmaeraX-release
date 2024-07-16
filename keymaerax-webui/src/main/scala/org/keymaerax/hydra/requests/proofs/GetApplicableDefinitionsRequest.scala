@@ -29,11 +29,13 @@ import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunctio
 import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import org.keymaerax.parser.{Name, Signature, UnknownLocation}
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, List, Map, Nil, Set}
 
 /** Gets the definitions that can be expanded at node `nodeId`. */
 class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     if (tree.done) return ApplicableDefinitionsResponse(Nil)

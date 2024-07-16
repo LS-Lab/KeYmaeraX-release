@@ -14,6 +14,7 @@ import org.keymaerax.tags.SlowTest
 import org.keymaerax.testhelper.ParserFactory._
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.io.Source
 import scala.language.postfixOps
 
@@ -27,7 +28,7 @@ import scala.language.postfixOps
  * @author
  *   Stefan Mitsch
  */
-@SlowTest
+@SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class Etcs extends TacticTestBase {
 
   "ETCS controllability" should "prove lemma with master" in withMathematica { _ =>

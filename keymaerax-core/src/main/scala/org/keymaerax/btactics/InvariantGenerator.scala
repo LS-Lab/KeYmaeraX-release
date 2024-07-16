@@ -12,6 +12,8 @@ import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, StaticSemanticsTools}
 import org.keymaerax.tools.ToolException
 
+import scala.annotation.nowarn
+
 /**
  * Invariant generators and differential invariant generators.
  * @author
@@ -50,6 +52,7 @@ object InvariantGenerator extends Logging {
    * @author
    *   Andre Platzer
    */
+  @nowarn("msg=match may not be exhaustive")
   def relevanceFilter(generator: Generator[GenProduct], analyzeMissing: Boolean): Generator[GenProduct] =
     (sequent, pos, defs) => {
       // @todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
@@ -100,6 +103,7 @@ object InvariantGenerator extends Logging {
    * @author
    *   Andre Platzer
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def sortedRelevanceFilter(generator: Generator[GenProduct]): Generator[GenProduct] = (sequent, pos, defs) => {
     // @todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val system = sequent.sub(pos) match {
@@ -301,6 +305,7 @@ object InvariantGenerator extends Logging {
    *   In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012,
    *   August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
    */
+  @nowarn("msg=match may not be exhaustive")
   val inverseCharacteristicDifferentialInvariantGenerator: Generator[GenProduct] = (sequent, pos, defs) => {
     import FormulaTools._
     if (ToolProvider.algebraTool().isEmpty)

@@ -6,19 +6,20 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
+import org.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
+import org.keymaerax.btactics.macros.{DerivationInfo, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
-import ProofRuleTactics.requireOneSubgoal
-import org.keymaerax.{Configuration, Logging}
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.infrastruct._
 import org.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
-import org.keymaerax.btactics.macros.{DerivationInfo, Tactic}
 import org.keymaerax.parser.{Declaration, KeYmaeraXOmitInterpretationPrettyPrinter}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
+import org.keymaerax.{Configuration, Logging}
 import org.slf4j.LoggerFactory
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
 import scala.reflect.runtime.universe
@@ -321,8 +322,6 @@ object DebuggingTactics extends TacticProvider {
     }
   }
 
-  import TacticFactory._
-
   /** Placeholder for a tactic string that is not executed. */
   @Tactic(name = "pending")
   def pending(tactic: String): StringInputTactic = {
@@ -388,6 +387,7 @@ object Idioms {
    *  cases must be exhaustive (or easily proved to be exhaustive in context)
    *  otherwise, the exhaustiveness case is left open
    * */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   def cases(
       exhaustive: BelleExpr = TactixLibrary.master()
   )(c1: (Case, BelleExpr), cs: (Case, BelleExpr)*): BelleExpr = {
@@ -503,6 +503,7 @@ object Idioms {
   }
 
   /** shift(shift, t) does t shifted from position p to shift(p) */
+  @nowarn("cat=deprecation&origin=org.keymaerax.infrastruct.Position.navigate")
   def shift[T <: BelleExpr](shift: PosInExpr => PosInExpr, t: AtPosition[T]): DependentPositionTactic = ANON by
     ((pos: Position, _: Sequent) => t(pos.navigate(shift(pos.inExpr))))
 
@@ -625,6 +626,7 @@ object TacticFactory {
       if (t.isInstanceOf[NoOpTactic]) byWithInputsNoop(t.inputs, t) else byWithInputs(t.inputs, t)
     }
 
+    @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
     def byTactic(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic =
       new DependentTwoPositionTactic(name) {
         override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {
@@ -633,6 +635,7 @@ object TacticFactory {
       }
 
     /** Creates a dependent two position tactic without inspecting the formula at that position */
+    @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
     def byLR(t: (AntePosition, SuccPosition) => BelleExpr): DependentTwoPositionTactic = {
       name byTactic { (_, l, r) =>
         require(l.isAnte && r.isAnte, "Expected antecedent and succedent position")
@@ -687,6 +690,7 @@ object TacticFactory {
         }
       }
 
+    @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
     def by(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = byTactic(t)
 
     /** A position tactic with multiple inputs. */
@@ -935,7 +939,7 @@ object TacticFactory {
   /**
    * Creates labels for a core tactic that produces 2 subgoals. @note: not hooked into the annotation macros framework.
    */
-  @inline
+  @nowarn("msg=match may not be exhaustive") @inline
   def corelabelledby[S <: Expression, T <: Expression](
       name: String,
       rule: Either[CoreLeftTactic, CoreRightTactic],
@@ -984,10 +988,12 @@ object TacticFactory {
   def anon(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = ANON by t
   def anon(t: (ProvableSig, SuccPosition) => ProvableSig): BuiltInRightTactic = ANON by t
   def anon(t: (ProvableSig, Position, Position) => ProvableSig): BuiltInTwoPositionTactic = ANON by t
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
   def anon(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = ANON byTactic t
   def anon(t: (Position, Sequent) => BelleExpr): DependentPositionTactic = ANON by t
   def anon(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionTactic = ANON by t
   def anon(t: Position => BelleExpr): DependentPositionTactic = ANON by t
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
   def anonLR(t: (AntePosition, SuccPosition) => BelleExpr): DependentTwoPositionTactic = ANON byLR t
   def anonL(t: AntePosition => BelleExpr): DependentPositionTactic = ANON byL t
   def anonR(t: SuccPosition => BelleExpr): DependentPositionTactic = ANON byR t

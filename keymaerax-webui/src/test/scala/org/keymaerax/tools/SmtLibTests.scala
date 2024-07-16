@@ -7,12 +7,15 @@ package org.keymaerax.tools
 
 import org.keymaerax.btactics.TacticTestBase
 import org.keymaerax.core.{BaseVariable, Exists, Forall, Formula, FuncOf, Not, Term, Variable}
-import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tools.ext.SmtLibReader
 import org.keymaerax.tools.qe.DefaultSMTConverter
 
+import scala.annotation.nowarn
+
+@nowarn("msg=match may not be exhaustive")
 class SmtLibTests extends TacticTestBase {
 
   /** Prefixes from [[DefaultSMTConverter]]. */

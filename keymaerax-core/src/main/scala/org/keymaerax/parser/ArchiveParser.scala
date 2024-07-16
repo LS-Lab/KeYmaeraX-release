@@ -6,15 +6,14 @@
 package org.keymaerax.parser
 
 import org.keymaerax.bellerophon.parser.TacticParser
-
-import java.io.InputStream
 import org.keymaerax.bellerophon.{BelleExpr, ProverSetupException}
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
-import org.keymaerax.infrastruct.Augmentors._
 
-import scala.collection.immutable.List
+import java.io.InputStream
+import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
 
 /** Name is alphanumeric name and index. */
@@ -226,6 +225,7 @@ case class Declaration(decls: Map[Name, Signature]) {
     }
 
   /** Elaborates program constants to system constants if their definition is dual-free. */
+  @nowarn("msg=match may not be exhaustive")
   def elaborateToSystemConsts[T <: Expression](expr: T): T = {
     val elaborator = new ExpressionTraversalFunction() {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
@@ -250,6 +250,7 @@ case class Declaration(decls: Map[Name, Signature]) {
   def elaborateWithDots: Declaration = Declaration(decls.map(d => Declaration.elaborateWithDots(d._1, d._2)))
 
   /** Turns a function declaration (with defined body) into a substitution pair. */
+  @nowarn("msg=match may not be exhaustive")
   private def declAsSubstitutionPair(name: Name, signature: Signature): SubstitutionPair = {
     // @todo Function interpretation would also need to keep track of differentiable yes/no
     // require(signature.interpretation.isRight && signature.interpretation.right.get.isDefined, "Substitution only for defined functions")
@@ -412,6 +413,7 @@ object Declaration {
   }
 
   /** Converts name `n` with signature `s` to a named symbol. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def asNamedSymbol(n: Name, s: Signature): NamedSymbol = (n, s) match {
     case (n @ Name(name, idx), s @ Signature(domain, sort, args, interp, _)) => sort match {
         case Real | Bool =>
@@ -442,6 +444,7 @@ object Declaration {
   }
 
   /** Converts a list of substitution pairs `s` into a declaration, using the argument names of definitions in `ref`. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def fromSubst(s: List[SubstitutionPair], ref: Declaration): Declaration = {
     def argsFromExpr(t: Expression): Option[List[(Name, Sort)]] = {
       val symbols = StaticSemantics.symbols(t)
@@ -541,6 +544,7 @@ case class ParsedArchiveEntry(
 trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
   final override def apply(input: String): List[ParsedArchiveEntry] = parse(input)
   final def parse(input: String): List[ParsedArchiveEntry] = parse(input, parseTactics = true)
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   final def parse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
     val result = doParse(input, parseTactics).map(e =>
       if (e.defs.decls.isEmpty) ArchiveParser.elaborate(e.copy(defs = ArchiveParser.declarationsOf(e.model)))
@@ -552,6 +556,7 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
   protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry]
 
   /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
+  @nowarn("msg=match may not be exhaustive")
   def parseFromFile(file: String): List[ParsedArchiveEntry] = {
     file.split('#').toList match {
       case fileName :: Nil =>

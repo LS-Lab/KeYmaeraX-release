@@ -20,6 +20,7 @@ import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.time.SpanSugar._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.collection.mutable
 import scala.language.{postfixOps, reflectiveCalls}
@@ -30,6 +31,9 @@ import scala.language.{postfixOps, reflectiveCalls}
  * @author
  *   Nathan Fulton
  */
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
+@nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.SequentType")
 class SequentialInterpreterTests extends TacticTestBase {
 
   private lazy val tacticParser = ArchiveParser.tacticParser

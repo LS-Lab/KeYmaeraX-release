@@ -36,6 +36,7 @@ import org.scalatest.time._
 import org.scalatest.{AppendedClues, BeforeAndAfterAll, BeforeAndAfterEach, PrivateMethodTester}
 
 import java.io.File
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -63,6 +64,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   /** Default signaler for failAfter in tests without tools. */
   protected implicit val signaler: Signaler = { t: Thread => theInterpreter.kill(); t.interrupt() }
 
+  @nowarn("msg=match may not be exhaustive")
   override def timeLimit: Span = {
     this
       .getClass
@@ -349,6 +351,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   }
 
   /** Test suite setup */
+  @nowarn("msg=match may not be exhaustive")
   override def beforeAll(): Unit = {
     mathematicaProvider =
       if (WOLFRAM == ToolName.Mathematica)

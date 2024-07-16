@@ -26,6 +26,7 @@ import org.keymaerax.parser.{
   PrettierPrintFormatProvider,
 }
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, Map, Nil}
 
 class OpenOrCreateLemmaProofRequest(
@@ -35,6 +36,7 @@ class OpenOrCreateLemmaProofRequest(
     parentProofId: String,
     parentTaskId: String,
 ) extends UserRequest(userId, _ => true) with WriteRequest {
+  @nowarn("msg=match may not be exhaustive")
   def resultingResponse(): Response = {
     val modelId: Int = db.getModelList(userId).find(_.name == lemmaName) match {
       case Some(model) => model.modelId

@@ -19,6 +19,7 @@ import org.keymaerax.tags.SlowTest
 import org.keymaerax.testhelper.ParserFactory._
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.collection.immutable.ListMap
 import scala.language.postfixOps
 
@@ -30,7 +31,7 @@ import scala.language.postfixOps
  * @author
  *   Ran Ji
  */
-@SlowTest
+@SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 class Robix extends TacticTestBase {
 
   "Static Safety" should "be provable" in withMathematica { _ =>

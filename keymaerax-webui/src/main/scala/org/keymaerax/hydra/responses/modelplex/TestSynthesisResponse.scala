@@ -10,6 +10,8 @@ import org.keymaerax.hydra.{ModelPOJO, Response, UIKeYmaeraXPrettyPrinter}
 import org.keymaerax.parser.KeYmaeraXPrettyPrinter
 import spray.json.{JsArray, JsNumber, JsObject, JsString, JsValue}
 
+import scala.annotation.nowarn
+
 class TestSynthesisResponse(
     model: ModelPOJO,
     metric: Formula,
@@ -44,6 +46,7 @@ class TestSynthesisResponse(
   )
 
   // pre/post/labels/series
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def prePostVals(vals: Map[Term, Term]): (JsArray, JsArray, JsArray, JsArray) = {
     val (pre, post) = vals.partition({ case (v, _) => v.isInstanceOf[BaseVariable] })
     val preByPost: Map[Term, Term] = post.map({

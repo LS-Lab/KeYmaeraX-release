@@ -11,6 +11,8 @@ import pt.lib._
 import pt.lib.Scratch.myvars
 import pt.lib.Sum_Type._
 
+import scala.annotation.nowarn
+
 object Failure {
   def fail[T]():T = {
     throw new Exception ("Raised error during proofchecking")
@@ -183,6 +185,7 @@ object Sum_Type {
 
 } /* object Sum_Type */
 
+@nowarn
 object Lista {
 
   def equal_lista[A : HOL.equal](x0: List[A], x1: List[A]): Boolean = (x0, x1)
@@ -593,6 +596,7 @@ object Predicate {
 
 } /* object Predicate */
 
+@nowarn
 object Complete_Lattices {
 
   def Sup_set[A : HOL.equal](x0: Set.set[Set.set[A]]): Set.set[A] = x0 match {
@@ -901,6 +905,7 @@ object Syntax {
 
 } /* object Syntax */
 
+@nowarn
 object Parser {
 
   import pt.lib.Int._

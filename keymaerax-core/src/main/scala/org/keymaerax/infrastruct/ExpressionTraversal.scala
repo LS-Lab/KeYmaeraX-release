@@ -8,6 +8,8 @@ package org.keymaerax.infrastruct
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.PosInExpr.HereP
 
+import scala.annotation.nowarn
+
 /**
  * Generic traversal functionality for expressions for pre/post/infix traversal.
  * @author
@@ -93,6 +95,7 @@ object ExpressionTraversal {
         Right(e)
   }
 
+  @nowarn("msg=match may not be exhaustive")
   final def pre[A <: Expression](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] =
     e match {
       case x: Formula => f.preF(p, x) match {
@@ -112,6 +115,7 @@ object ExpressionTraversal {
         }
     }
 
+  @nowarn("msg=match may not be exhaustive")
   final def in[A <: Expression](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] =
     e match {
       case x: Formula => f.inF(p, x) match {
@@ -131,6 +135,7 @@ object ExpressionTraversal {
         }
     }
 
+  @nowarn("msg=match may not be exhaustive")
   final def post[A <: Expression](
       f: ExpressionTraversalFunction,
       p: PosInExpr,
@@ -188,6 +193,7 @@ object ExpressionTraversal {
   }
 
   def traverse[A <: Expression](f: ExpressionTraversalFunction, e: A): Option[A] = traverse(HereP, f, e)
+  @nowarn("msg=match may not be exhaustive")
   def traverseExpr[E <: Expression](f: ExpressionTraversalFunction, expr: E): Option[E] = expr match {
     case e: Term => traverse(HereP, f, e).map(_.asInstanceOf[E])
     case e: Formula => traverse(HereP, f, e).map(_.asInstanceOf[E])

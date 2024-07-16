@@ -44,7 +44,7 @@ import org.keymaerax.tools.{
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{List, Map}
 import scala.util.Try
 
@@ -56,6 +56,7 @@ class CounterExampleRequest(
     assumptions: String,
     fmlIndices: String,
 ) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  @nowarn("msg=match may not be exhaustive")
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t =>
       t match {
@@ -91,6 +92,7 @@ class CounterExampleRequest(
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val assumptionsJson = assumptions.parseJson.asJsObject.fields.get("additional")
     val additionalAssumptions: Option[Formula] =

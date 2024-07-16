@@ -18,7 +18,7 @@ import org.keymaerax.tools.qe.MathematicaOpSpec._
 import org.keymaerax.tools.qe.{BinaryMathOpSpec, MathematicaOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
 import org.keymaerax.{Configuration, Logging}
 
-import scala.collection.immutable.Seq
+import scala.annotation.nowarn
 
 /**
  * A continuous invariant implementation using Mathematica over the JLink interface.
@@ -208,6 +208,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   }
 
   /** @inheritdoc */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override def refuteODE(
       ode: ODESystem,
       assumptions: Seq[Formula],

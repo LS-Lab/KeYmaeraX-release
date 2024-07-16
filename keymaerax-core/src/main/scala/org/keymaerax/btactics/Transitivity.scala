@@ -7,10 +7,11 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{BelleExpr, DependentTactic, TacticInapplicableFailure}
 import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.core._
 import org.keymaerax.btactics.macros.Tactic
+import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.reflect.runtime.universe
 
@@ -61,6 +62,7 @@ object Transitivity extends TacticProvider {
 
   })
 
+  @nowarn("msg=match may not be exhaustive")
   def closeIds(formulas: List[Formula]): BelleExpr = formulas match {
     case e :: Nil => TactixLibrary.id
     case e :: es => TactixLibrary.andR(Symbol("Rlast")) < (closeIds(es), TactixLibrary.id)
@@ -121,6 +123,7 @@ object Transitivity extends TacticProvider {
     case _ => None
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def getConstructor(inequality: Formula): (Term, Term) => Formula = inequality match {
     case GreaterEqual(left, right) => (a: Term, b: Term) => GreaterEqual(a, b)
     case Greater(left, right) => (a: Term, b: Term) => Greater(a, b)
@@ -138,6 +141,7 @@ object Transitivity extends TacticProvider {
       }
     })
 
+  @nowarn("msg=match may not be exhaustive")
   private def searchHelper(
       s: Sequent,
       direction: TransitivityDirection,

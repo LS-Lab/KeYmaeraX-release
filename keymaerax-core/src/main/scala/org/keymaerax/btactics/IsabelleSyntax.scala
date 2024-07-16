@@ -10,13 +10,14 @@ import org.keymaerax.btactics.DebuggingTactics.print
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.SimplifierV2._
 import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.infrastruct._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.core.{Assign, Variable, _}
+import org.keymaerax.infrastruct._
+import org.keymaerax.parser.InterpretedSymbols._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.parser.InterpretedSymbols._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -80,6 +81,7 @@ object IsabelleSyntax {
   }
 
   // Returns a program, and an equivalent formula to check after that program
+  @nowarn("msg=match may not be exhaustive")
   def deriveFormulaProgram(
       f: Formula,
       vars: Map[Term, Variable] = Map[Term, Variable](),
@@ -303,6 +305,7 @@ object IsabelleSyntax {
   }
 
   // Merging everything together
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def isarSyntax(f: Formula): (Program, ProvableSig) = {
     val (normf, normproof) = normalise(f) // normf <-> f
     val (commf, commproof) = commonFormulaProof(normf) // commf -> normf

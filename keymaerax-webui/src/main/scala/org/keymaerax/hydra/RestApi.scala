@@ -20,6 +20,7 @@ import org.keymaerax.hydra.restapi.Tools._
 import org.keymaerax.hydra.restapi.Users._
 import org.keymaerax.{Configuration, Logging}
 
+import scala.annotation.nowarn
 import scala.language.postfixOps
 
 /** RestApi is the API router. See README.md for a description of the API. */
@@ -242,6 +243,7 @@ object RestApi extends Logging {
     // DO NOT ADD ANYTHING AFTER LOGOFF!
   )
 
+  @nowarn("msg=match may not be exhaustive")
   val sessionRoutes: List[Route] = partialSessionRoutes.map(routeForSession =>
     optionalHeaderValueByName("x-session-token") {
       case Some(token) if HyDRAServerConfig.isHosted => routeForSession(SessionManager.token(token))

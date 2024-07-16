@@ -8,7 +8,7 @@ package org.keymaerax.infrastruct
 import org.keymaerax.bellerophon.UnificationException
 import org.keymaerax.core._
 
-import scala.collection.immutable.{List, Nil}
+import scala.annotation.nowarn
 
 /**
  * Uniform Matching algorithm for tactics by sweeping.
@@ -123,6 +123,7 @@ abstract class UniformMatching extends BaseMatcher {
    * Algorithm for sweeping uniform matching.
    * @inheritdoc
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   protected def unify(e1: Formula, e2: Formula): List[SubstRepl] = e1 match {
     case p: UnitPredicational => unifier(e1, e2)
     case PredOf(f: Function, Nothing) => unifier(e1, e2)
@@ -270,6 +271,7 @@ abstract class UniformMatching extends BaseMatcher {
    * Algorithm for sweeping uniform matching.
    * @inheritdoc
    */
+  @nowarn("msg=match may not be exhaustive")
   protected def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstRepl] = e1 match {
     case c: DifferentialProgramConst => unifier(e1, e2)
     case AtomicODE(xp, t) => e2 match {

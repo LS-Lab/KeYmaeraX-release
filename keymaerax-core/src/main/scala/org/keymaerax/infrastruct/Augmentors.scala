@@ -5,11 +5,10 @@
 
 package org.keymaerax.infrastruct
 
-import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
-import scala.annotation.tailrec
-import scala.collection.immutable.List
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -380,6 +379,7 @@ object Augmentors {
      *   When `repl` cannot be cast to the type expected at an occurrence of `what` (e.g., when replacing x with f()
      *   inside x:=y).
      */
+    @nowarn("msg=match may not be exhaustive")
     def replaceAll(repls: Map[Expression, Expression]): E = {
       require(
         repls.forall({ case (k, v) => k.kind == v.kind }),
@@ -497,6 +497,7 @@ object Augmentors {
       }
 
       /** Returns the dots used in expression `e`. */
+      @nowarn("msg=match may not be exhaustive")
       def dotsOf(e: Expression): Set[DotTerm] = {
         val dots = scala.collection.mutable.Set[DotTerm]()
         val traverseFn = new ExpressionTraversalFunction() {
@@ -552,6 +553,7 @@ object Augmentors {
      * and ignores all non-function symbols in `signature`. Also elaborates [[FuncOf]] to [[PredOf]] per sort in
      * `signature`.
      */
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def elaborateToFunctions(signature: Set[NamedSymbol]): Expression = {
       def byNameIdx(symbols: Set[NamedSymbol]): Map[(String, Option[Int]), Set[NamedSymbol]] = symbols
         .groupBy(s => (s.name, s.index))
@@ -719,6 +721,7 @@ object Augmentors {
   implicit class SortAugmentor(val sort: Sort) {
 
     /** Converts this `sort` into nested pairs of DotTerms. Returns the nested dots and the next unused dot index. */
+    @nowarn("msg=match may not be exhaustive")
     def toDots(idx: Int): (Term, Int) = sort match {
       case Real | Bool => (DotTerm(sort, Some(idx)), idx + 1)
       case Tuple(l, r) =>
@@ -728,6 +731,7 @@ object Augmentors {
     }
 
     /** Converts this `sort` into nested pairs of DotTerms. Returns the nested dots and unused dot indices. */
+    @nowarn("msg=match may not be exhaustive")
     def toDots(idxs: List[Int]): (Term, List[Int]) = sort match {
       case Real | Bool => idxs match {
           case idx :: q => (DotTerm(sort, Some(idx)), q)

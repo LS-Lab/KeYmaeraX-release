@@ -15,6 +15,7 @@ import org.keymaerax.tools.{
   MathematicaComputationTimedOutException,
 }
 
+import scala.annotation.nowarn
 import scala.reflect.ClassTag
 
 // favoring immutable Seqs
@@ -182,6 +183,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   }
 
   /** Converts an atomic term (either interpreted/uninterpreted function symbol or variable). */
+  @nowarn("msg=match may not be exhaustive")
   protected def convertAtomicTerm(e: MExpr): KExpr = MathematicaOpSpec.interpretedSymbols.find(_._1.applies(e)) match {
     case Some((_, fn)) => convertFunction(fn, e.args)
     case None =>

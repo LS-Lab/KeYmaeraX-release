@@ -8,6 +8,7 @@ package org.keymaerax.cli.grade
 import org.keymaerax.cli.grade.QuizExtractor.AskQuestion
 import spray.json._
 
+import scala.annotation.nowarn
 import scala.util.matching.Regex
 
 /** Extracts submission information from a JSON AST. */
@@ -26,6 +27,7 @@ object Submission {
           SCORES -> JsObject(scores.map({ case (p, s) => p.title -> s.toJson }).toMap),
         )
 
+        @nowarn("msg=match may not be exhaustive")
         override def read(json: JsValue): List[(Problem, Double)] = {
           val problems = json.asJsObject.fields(PROBLEMS).asJsObject.fields
           json
@@ -71,6 +73,7 @@ object Submission {
           JsObject(ID -> grader.id.toJson, NAME -> grader.name.toJson, BODY -> s"${grader.method}".toJson)
         }
 
+        @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
         override def read(json: JsValue): GraderCookie = {
           json.asJsObject.getFields(ID, NAME, BODY).toList match {
             case JsNumber(id) :: JsString(name) :: JsString(graderMethod) :: Nil =>
@@ -140,6 +143,7 @@ object Submission {
         }
       }
 
+      @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
       override def read(json: JsValue): Answer = {
         val fields = json.asJsObject.fields
         val id = fields(ID) match { case JsNumber(n) => n.toLong }
@@ -214,6 +218,7 @@ object Submission {
         CHILDREN -> prompt.answers.toJson,
       )
 
+      @nowarn("msg=match may not be exhaustive")
       override def read(json: JsValue): Submission.Prompt = {
         val root = json.asJsObject
         val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
@@ -252,6 +257,7 @@ object Submission {
       )
 
       /** Extracts a problem segment from the `json` problem object (identified by having "name"="problem"). */
+      @nowarn("msg=match may not be exhaustive")
       override def read(json: JsValue): Problem = {
         val root = json.asJsObject()
         require(
@@ -302,6 +308,7 @@ object Submission {
       }
 
       /** Extract problems from the chapter JSON object `root`, looking for the section number along the way. */
+      @nowarn("msg=match may not be exhaustive")
       private def extractProblems(root: JsObject, sectionNumber: Option[String]): List[Problem] = {
         root.fields.get(CHILDREN) match {
           case Some(JsArray(segments)) => segments

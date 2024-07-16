@@ -23,11 +23,13 @@ import org.scalatest.exceptions.TestCanceledException
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.SpanSugar._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.language.postfixOps
 
 /** Tests automatic [[org.keymaerax.btactics.TactixLibrary.ODE]] differential equations proving. */
-@UsualTest
+@UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
 
   "ODE" should "prove x>0 -> [{x'=-x}]x>0" in withMathematica { _ =>

@@ -7,7 +7,7 @@ package org.keymaerax.btactics.arithmetic.signanalysis
 
 import org.keymaerax.core._
 
-import scala.collection.immutable.Map
+import scala.annotation.nowarn
 
 /**
  * Sign arithmetic.
@@ -58,6 +58,7 @@ object Sign extends Enumeration {
 
   def num(n: Number): Sign = if (n.value >= 0) Pos0 else /* n.value <= 0 */ Neg0
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def sign(term: Term)(implicit atoms: Map[Term, Sign] = Map()): Sign = atoms.getOrElse(
     term,
     term match {
@@ -75,6 +76,7 @@ object Sign extends Enumeration {
     },
   )
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def pushDown(term: Term, parent: Set[Sign])(implicit atoms: Map[Term, Set[Sign]] = Map()): Map[Term, Set[Sign]] =
     if (parent.contains(Unknown) && atoms.contains(term)) pushDown(term, atoms.get(term).get)
     else term match {

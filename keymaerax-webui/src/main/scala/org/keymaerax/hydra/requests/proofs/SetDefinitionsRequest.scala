@@ -29,11 +29,12 @@ import org.keymaerax.hydra.{
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.parser.{Name, Signature, UnknownLocation}
 
-import scala.collection.immutable.List
+import scala.annotation.nowarn
 import scala.util.Try
 
 class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, what: String, repl: String)
     extends UserProofRequest(db, userId, proofId) with WriteRequest {
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     Try(what.asExpr).toEither match {
@@ -89,6 +90,7 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def elaborate(e: Expression, elaboratables: List[NamedSymbol]): Expression = {
     def elaborateTo(fn: Function, c: Term, to: (Function, Term) => Expression): Expression = {
       elaboratables.find(ns => ns.name == fn.name && ns.index == fn.index) match {

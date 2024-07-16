@@ -16,7 +16,7 @@ import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter._
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.reflect.runtime.universe
 
 /**
@@ -231,6 +231,7 @@ object SwitchedSystems extends TacticProvider {
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def parseInit(init: Program): (Variable, List[String], Option[Program]) = {
 
     val (initL, initR) = init match {
@@ -404,6 +405,7 @@ object SwitchedSystems extends TacticProvider {
     val minDwell: List[List[(String, Option[Term])]] = modes.map(_._4)
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def timedFromProgram(p: Program, topt: Option[Variable]): Timed = {
     val c = controlledFromProgram(p, topt)
 
@@ -1031,6 +1033,7 @@ object SwitchedSystems extends TacticProvider {
     })
 
   // Internal MLF tactic for state-dependent
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def proveStabilityStateMLF(lyaps: List[Term], ss: SwitchedSystem, apos: Integer, pos: Position): BelleExpr = {
     require(ss.isInstanceOf[StateDependent] || ss.isInstanceOf[Guarded])
     require(
@@ -1627,6 +1630,7 @@ object SwitchedSystems extends TacticProvider {
     })
 
   // Internal MLF tactic
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def proveAttractivityStateMLF(
       lyaps: List[Term],
       ss: SwitchedSystem,

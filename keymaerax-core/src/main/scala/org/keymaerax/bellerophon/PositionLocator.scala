@@ -5,20 +5,13 @@
 
 package org.keymaerax.bellerophon
 
-import org.keymaerax.pt.ProvableSig
 import org.keymaerax.core.{Expression, Formula, Sequent, Term}
 import org.keymaerax.infrastruct.PosInExpr.HereP
-import org.keymaerax.infrastruct.{FormulaTools, _}
-import org.keymaerax.parser.{
-  ArchiveParser,
-  BuiltinSymbols,
-  Declaration,
-  InterpretedSymbols,
-  KeYmaeraXOmitInterpretationPrettyPrinter,
-  TacticReservedSymbols,
-}
+import org.keymaerax.infrastruct._
+import org.keymaerax.parser.{BuiltinSymbols, Declaration, KeYmaeraXOmitInterpretationPrettyPrinter}
+import org.keymaerax.pt.ProvableSig
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.util.matching.Regex
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,6 +43,7 @@ object PositionLocator {
    * #-placeholder expression and regex for matching left/right placeholder; forces parentheses by non-default
    * associativity.
    */
+  @nowarn("msg=match may not be exhaustive")
   def placeholder(e: Expression): (Expression, String, String) = e match {
     case f: Formula =>
       val h = PredOf(Function("h_", None, Unit, Bool), Nothing)
@@ -63,6 +57,7 @@ object PositionLocator {
   }
 
   /** Replaces `#` in `s` with parentheses/braces per `kind`. */
+  @nowarn("msg=match may not be exhaustive")
   def replaceHashesParenthesized(s: String, kind: Kind): String = {
     val (l, r) = kind match {
       case TermKind | FormulaKind => ("(", ")")
@@ -91,6 +86,7 @@ object PositionLocator {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def withMarkers(s: String, sub: Expression, start: Int, end: Int): (String, Expression) = {
     val (p, _, _) = placeholder(sub)
     // @note [[withMarkers]] removes enclosing () and {} for more concise appearance
@@ -164,7 +160,7 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
   def findPosition(p: ProvableSig, pos: Position): Option[Position] = findPosition(p.subgoals(goal), pos)
 
   /** Finds a position in the sequent `s` at or after `pos` that matches the `shape` of this locator. */
-  @tailrec
+  @nowarn("msg=match may not be exhaustive") @tailrec
   final def findPosition(s: Sequent, pos: Position): Option[Position] = {
     require(
       start.isIndexDefined(s),

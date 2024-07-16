@@ -9,6 +9,8 @@ import org.keymaerax.codegen.CFormulaTermGenerator._
 import org.keymaerax.core._
 import org.keymaerax.parser.Declaration
 
+import scala.annotation.nowarn
+
 /**
  * Generates a controller from a hybrid program without loops and ODEs. A controller transforms an input state by
  * choosing control set values depending on inputs and parameters.
@@ -58,6 +60,7 @@ class CControllerGenerator(defs: Declaration) extends CodeGenerator {
     defs,
   )
 
+  @nowarn("msg=match may not be exhaustive")
   private def generateProgramBody(prg: Program, indent: String)(implicit
       exprGenerator: Expression => (String, String)
   ): String = prg match {
@@ -149,6 +152,7 @@ class CMpfrControllerGenerator(defs: Declaration) extends CodeGenerator {
     decls + "\n" + indent + init.trim() + "\n" + indent + compute.trim()
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def generateProgramBody(prg: Program, indent: String)(implicit
       exprGenerator: Expression => (String, String)
   ): String = prg match {
@@ -231,6 +235,7 @@ class CDetControllerGenerator(defs: Declaration) extends CodeGenerator {
     defs,
   )
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def generateProgramBody(prg: Program, indent: String)(implicit
       exprGenerator: Expression => (String, String)
   ): String = prg match {

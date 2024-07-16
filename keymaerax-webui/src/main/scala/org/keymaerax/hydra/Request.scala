@@ -20,6 +20,7 @@ import spray.json._
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.util.Try
 
@@ -174,6 +175,7 @@ object RequestHelper {
 
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def getSpecificName(
       tacticId: String,
       sequent: Sequent,

@@ -5,13 +5,13 @@
 
 package org.keymaerax.infrastruct
 
-import org.keymaerax.bellerophon.{SubstUnificationException, UnificationException}
-import SubstitutionHelper.replaceFree
 import org.keymaerax.Logging
+import org.keymaerax.bellerophon.{SubstUnificationException, UnificationException}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import org.keymaerax.infrastruct.SubstitutionHelper.replaceFree
 
-import scala.collection.immutable.{List, Nil}
+import scala.annotation.nowarn
 import scala.util.Try
 
 /**
@@ -724,6 +724,7 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
     try { Some(apply(shape, input)) }
     catch { case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None }
 
+  @nowarn("msg=match may not be exhaustive")
   private def staple(e: Expression, ren: Subst, subst: Subst): Subst = {
     import Augmentors.FormulaAugmentor
     // @note optimizable
@@ -835,6 +836,7 @@ object NonSubstUnificationMatch extends FreshUnificationMatch {
   private case class NaiveSubst(subs: List[(Expression, Expression)]) extends (Expression => Expression) {
     import Augmentors._
 
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def apply(e: Expression): Expression = e match {
       case prg: Program => subs.foldLeft(prg)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })
       case fml: Formula => subs.foldLeft(fml)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })

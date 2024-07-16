@@ -6,18 +6,18 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
-import org.keymaerax.core._
-import TacticFactory._
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.btactics.helpers.DifferentialHelper._
+import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.helpers.DifferentialHelper._
+import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct._
 import org.keymaerax.parser.Declaration
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ElidingProvable
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable._
 
 /**
@@ -294,6 +294,7 @@ object AxiomaticODESolver {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def alist(ode: DifferentialProgram): Option[List[AtomicODE] ]= {
     ode match {
       case _: DifferentialProgramConst => None
@@ -365,6 +366,7 @@ object AxiomaticODESolver {
     Provable.axioms(", commute")(commSubst(dom, post, ode1, ode2))
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def splitODEAt(ode:DifferentialProgram, v:Variable):(List[AtomicODE], List[AtomicODE], List[AtomicODE]) = {
     ode match {
       case DifferentialProduct(AtomicODE(DifferentialSymbol(v2),e), tail) => {
@@ -423,6 +425,7 @@ object AxiomaticODESolver {
     DebuggingTactics.debug("Sorting to " + ord.mkString("::"), ODE_DEBUGGER) & selectionSort(dom, post, ode, ord, pos)
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def odeSolverPreconds(ord: List[Variable]): DependentPositionTactic =  TacticFactory.anon ((pos: Position, s: Sequent) => {
     val (ode: DifferentialProgram, dom: Formula, post: Formula) = s.sub(pos) match {
       case Some(Box(ODESystem(o, q), p)) => (o, q, p)

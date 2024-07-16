@@ -5,7 +5,6 @@
 
 package org.keymaerax.hydra
 
-import java.io.File
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
@@ -20,15 +19,15 @@ import org.keymaerax.core.{
   Sequent,
   Sort,
   StaticSemantics,
-  Variable,
 }
 import org.keymaerax.hydra.SQLite.SQLiteDB
 import org.keymaerax.infrastruct.Augmentors.SortAugmentor
-import org.keymaerax.parser.KeYmaeraXArchivePrinter
-import org.keymaerax.parser.{ArchiveParser, Declaration, Name, ParseException}
+import org.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, Name, ParseException}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tacticsinterface.TraceRecordingListener
 
+import java.io.File
+import scala.annotation.nowarn
 import scala.collection.immutable.{IndexedSeq, Nil, Seq}
 
 /** Create models and record proofs in a temporary database. */
@@ -191,6 +190,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
    * Extracts the internal steps taken by proof step `stepId` at level `level` (0: original tactic, 1: direct internal
    * steps, etc.)
    */
+  @nowarn("msg=match may not be exhaustive")
   def extractStepDetails(proofId: Int, stepId: String, level: Int = 1): BelleExpr = {
     DbProofTree(db, proofId.toString).locate(stepId) match {
       case Some(node) => node.maker match {

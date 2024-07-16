@@ -5,12 +5,12 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.core._
 import org.keymaerax.bellerophon.TacticInapplicableFailure
-import org.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, Position}
+import org.keymaerax.core._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import org.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, Position}
 
-import java.util.Date
+import scala.annotation.nowarn
 
 /** Some commonly useful helper utilities for basic tactic implementations. */
 object TacticHelper {
@@ -186,6 +186,7 @@ object TacticHelper {
    * Computes substitution with position of `name(old)` in sequent `seq` (either `replCandidate` or a previously
    * introduced substitution that is present in `seq`). Returns (repl, replPos, nextReplCandidate).
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def findSubst(what: Term, replCandidate: Variable, seq: Sequent): (Variable, Option[Position], Variable) = {
     val (repl: Variable, replPos: Option[Position], nextReplCandidate: Variable) = what match {
       case v: Variable => seq

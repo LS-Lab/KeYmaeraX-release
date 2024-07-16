@@ -10,6 +10,8 @@ import org.keymaerax.codegen.CGenerator._
 import org.keymaerax.core._
 import org.keymaerax.parser.{Declaration, Name, Signature}
 
+import scala.annotation.nowarn
+
 object CGenerator {
 
   /** Prints a file header */
@@ -72,6 +74,7 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
   private val FUNC_PARAMS_NAME = CPrettyPrinter.PARAMS
 
   /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator(
     {
       case t: Variable => if (parameters.contains(t)) FUNC_PARAMS_NAME + "->" else ""
@@ -85,6 +88,7 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
   )
 
   /** Prints function definitions. */
+  @nowarn("msg=match may not be exhaustive")
   private def printFuncDefs(defs: Declaration, parameters: Set[NamedSymbol]): String = {
     // @note substs are topologically sorted, print in that order
     defs

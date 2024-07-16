@@ -11,6 +11,7 @@ import org.keymaerax.parser.ArchiveParser
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.SlowTest
 
+import scala.annotation.nowarn
 import scala.language.postfixOps
 
 /**
@@ -19,7 +20,7 @@ import scala.language.postfixOps
  * @author
  *   Stefan Mitsch
  */
-@SlowTest
+@SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class FMTutorial extends TacticTestBase {
 
   "Example 1" should "be provable with master" in withQE { _ =>

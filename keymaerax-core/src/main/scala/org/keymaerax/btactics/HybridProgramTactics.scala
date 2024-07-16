@@ -6,10 +6,11 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic}
+import org.keymaerax.btactics.macros.Tactic
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Position
-import org.keymaerax.btactics.macros.Tactic
 
+import scala.annotation.nowarn
 import scala.reflect.runtime.universe
 
 /**
@@ -42,6 +43,7 @@ private object HybridProgramTactics extends TacticProvider {
     }
   })
 
+  @nowarn("msg=match may not be exhaustive")
   private def decomposeChoices(ctrl: Program, pos: Position): BelleExpr = ctrl match {
     case Compose(l, r) => TactixLibrary.composeb(pos) & decomposeChoices(l, pos)
     case Choice(l, r) => {

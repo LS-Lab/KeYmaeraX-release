@@ -9,10 +9,10 @@ import org.keymaerax.Configuration
 import org.keymaerax.btactics.TacticTestBase
 import org.keymaerax.btactics.helpers.QELogger
 import org.keymaerax.core._
-import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import org.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, PrettierPrintFormatProvider}
+import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, PrettierPrintFormatProvider}
 import org.keymaerax.tags.ExtremeTest
 import org.keymaerax.tools.ext.{
   CounterExampleTool,
@@ -23,23 +23,23 @@ import org.keymaerax.tools.ext.{
   SmtLibReader,
 }
 import org.keymaerax.tools.qe.{DefaultSMTConverter, SMTConverter}
-
-import java.io.{File, FileOutputStream, FileReader, FilenameFilter, PrintWriter, StringWriter}
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
-import scala.sys.process._
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.slf4j.{LoggerFactory, MarkerFactory}
 import smtlib.trees.Commands.SetInfo
 import smtlib.trees.Terms.{Attribute, SKeyword, SSymbol}
 
+import java.io.{File, FileOutputStream, FileReader, FilenameFilter, PrintWriter, StringWriter}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
 import scala.io.Source
+import scala.sys.process._
 import scala.util.Try
 
-@ExtremeTest
+@ExtremeTest @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
 class SmlQETests extends TacticTestBase {
   object BenchmarkResult {
     val csvHeader: String = "Name,Index,Status,Timeout[ms],Duration[ms],Result,Logic,Expected,Input BV, Input FV"

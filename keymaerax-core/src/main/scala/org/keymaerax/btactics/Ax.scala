@@ -19,6 +19,7 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt._
 import org.keymaerax.tools.ToolEvidence
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.collection.{immutable, mutable}
 import scala.reflect.runtime.universe.{Assign => _, _}
@@ -111,6 +112,7 @@ import scala.reflect.runtime.{universe => ru}
  *   Derived axioms use the Provable facts of other derived axioms in order to avoid initialization cycles with
  *   AxiomInfo's contract checking.
  */
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 object Ax extends Logging {
 
   private val DerivedAxiomProvableSig = ProvableSig // NoProofTermProvable

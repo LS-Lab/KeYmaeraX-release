@@ -10,11 +10,12 @@ import org.keymaerax.parser.InterpretedSymbols
 import org.keymaerax.tools.ConversionException
 import org.keymaerax.tools.qe.DefaultSMTConverter
 import smtlib.theories.{Core, Reals}
-import smtlib.trees.Commands.{Logic, _}
-import smtlib.trees.Terms.{Attribute, FunctionApplication, Identifier, QualifiedIdentifier, SKeyword, SSymbol}
+import smtlib.trees.Commands._
 import smtlib.trees.Terms
+import smtlib.trees.Terms.{Attribute, FunctionApplication, Identifier, QualifiedIdentifier, SKeyword, SSymbol}
 
 import java.io.{Reader, StringReader}
+import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
 
 /** Reads [[Expression]]s from SMT-LIB format: converts every (assert X) statement into an expression. */
@@ -45,6 +46,7 @@ object SmtLibReader {
   }
 
   /** Reads expressions occurring in `(assert ...)` statements in the input provided by reader `r`. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def read(r: Reader): (List[Expression], Map[String, String]) = {
     val lexer = new smtlib.lexer.Lexer(r)
     val parser = new smtlib.parser.Parser(lexer)
@@ -76,6 +78,7 @@ object SmtLibReader {
   private def sanitize(name: String): String = { name.replace("_", USCORE) }
 
   /** Converts a formula. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def convertFormula(t: Terms.Term)(implicit defs: Map[String, Expression]): Formula = t match {
     case Core.True() => True
     case Core.False() => False
@@ -113,6 +116,7 @@ object SmtLibReader {
   }
 
   /** Converts a term. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def convertTerm(t: Terms.Term)(implicit defs: Map[String, Expression]): Term = t match {
     case Reals.NumeralLit(n) => Number(BigDecimal(n))
     case Reals.DecimalLit(n) => if (n.isValidLong) Number(BigDecimal(n.longValue)) else Number(n)
@@ -157,6 +161,7 @@ object SmtLibReader {
   }
 
   /** Converts a variable. */
+  @nowarn("msg=match may not be exhaustive")
   private def convertVar(t: Terms.SortedVar): Variable = t match {
     case Terms.SortedVar(Terms.SSymbol(name), sort) if Reals.RealSort.unapply(sort) =>
       DefaultSMTConverter.nameFromIdentifier(name) match {

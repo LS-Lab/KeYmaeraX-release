@@ -13,6 +13,7 @@ import org.keymaerax.hydra.requests.configuration._
 import org.keymaerax.tools.ToolName
 import spray.json._
 
+import scala.annotation.nowarn
 import scala.language.postfixOps
 
 object Configuration {
@@ -133,6 +134,7 @@ object Configuration {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   val fullConfig: Route = path("config" / "fullContent") {
     pathEnd {
       get { completeRequest(new GetFullConfigRequest(), EmptyToken()) } ~ post {

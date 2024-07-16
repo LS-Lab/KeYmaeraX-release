@@ -17,6 +17,7 @@ import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -26,7 +27,8 @@ import scala.collection.immutable._
  * @author
  *   Andre Platzer
  */
-@SummaryTest @UsualTest @CheckinTest
+@SummaryTest @UsualTest @CheckinTest @nowarn("msg=Exhaustivity analysis reached max recursion depth")
+@nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class HilbertTests extends TacticTestBase {
   import Derive._
 

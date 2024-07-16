@@ -15,8 +15,10 @@ import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.tags.{SummaryTest, UsualTest}
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
+
 /** Tests [[org.keymaerax.btactics.FOQuantifierTactics]]. */
-@SummaryTest @UsualTest
+@SummaryTest @UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class FOQuantifierTests extends TacticTestBase {
   "allL" should "instantiate simple predicate" in withTactics {
     val tactic = allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1)

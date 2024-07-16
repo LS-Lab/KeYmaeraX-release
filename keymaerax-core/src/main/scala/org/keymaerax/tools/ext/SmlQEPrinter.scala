@@ -7,6 +7,8 @@ package org.keymaerax.tools.ext
 
 import org.keymaerax.core._
 
+import scala.annotation.nowarn
+
 /** Prints SML QE problems with Real64 rounding. */
 object SmlQEReal64Printer extends (Formula => String) {
   def apply(f: Formula): String = new SmlQEPrinter(_.toString + ".0", _.toString)
@@ -31,6 +33,7 @@ object SmlQENoRoundingPrinter extends (Formula => String) {
 class SmlQEPrinter(intPrinter: BigInt => String, realPrinter: BigDecimal => String) {
 
   /** Prints formula `f`, encoding variables using DeBruijn-indices as supplied by `vIdx`. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def print(f: Formula)(implicit vIdxs: Map[Variable, Int]): String = f match {
     case True => "TrueF"
     case False => "FalseF"
@@ -56,6 +59,7 @@ class SmlQEPrinter(intPrinter: BigInt => String, realPrinter: BigDecimal => Stri
   }
 
   /** Prints term `t`, encoding variables using DeBruijn-indices as supplied by `vIdx`. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def print(t: Term)(implicit vIdx: Map[Variable, Int]): String = t match {
     case Number(n) => s"Const ${printNum(n)}"
     case v: Variable => s"Var ${vIdx(v)}"

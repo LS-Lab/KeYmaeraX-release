@@ -5,13 +5,15 @@
 
 package org.keymaerax.hydra
 
-import org.keymaerax.core._
-import org.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXPrettierPrinter, KeYmaeraXWeightedPrettyPrinter}
 import org.keymaerax.bellerophon._
-import org.keymaerax.parser.OpSpec.op
+import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
+import org.keymaerax.parser.OpSpec.op
+import org.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXPrettierPrinter, KeYmaeraXWeightedPrettyPrinter}
 import org.typelevel.paiges.Doc
+
+import scala.annotation.nowarn
 
 /** Prints HTML tags and HTML operators. */
 trait HTMLPrinter {
@@ -76,6 +78,7 @@ trait HTMLPrinter {
   }
 }
 
+@nowarn("cat=deprecation&origin=org.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter")
 class UIAbbreviatingKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter {
   protected override def pp(q: PosInExpr, term: Term): String = term match {
     case FuncOf(Function(n, i, _, _, Some(_)), Nothing) => emit(q, n + i.map("_" + _).getOrElse("") + "()")
@@ -297,6 +300,7 @@ object UIKeYmaeraXAxiomPrettyPrinter {
  * @author
  *   Stefan Mitsch
  */
+@nowarn("cat=deprecation&origin=org.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter")
 class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with HTMLPrinter {
   override def apply(expr: Expression): String = htmlEncode(stringify(expr))
 

@@ -18,6 +18,7 @@ import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tools.{Tool, ToolExecutionException}
 
+import scala.annotation.nowarn
 import scala.jdk.CollectionConverters._
 
 /** A link to Rings library for its algebra tools */
@@ -293,6 +294,7 @@ class RingsLibrary(terms: Iterable[Term]) {
    * a<=b to 0<=a-b, with the standard representation of a-b (distributive and according to the variable order of
    * [[ring]], also distributes over conjunctions...
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def normalizeLessEquals(qeTac: BelleExpr): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       // TODO: generalize, chase?

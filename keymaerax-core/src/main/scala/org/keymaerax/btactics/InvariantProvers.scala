@@ -16,6 +16,7 @@ import org.keymaerax.parser.{Declaration, Parser}
 import org.keymaerax.pt.ProvableSig
 import org.slf4j.LoggerFactory
 
+import scala.annotation.nowarn
 import scala.util.control.Breaks._
 
 /**
@@ -39,6 +40,7 @@ object InvariantProvers {
    *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
    *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Example 32.
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   def loopSR(gen: Generator[GenProduct]): DependentPositionTactic =
     anon((pos: Position, seq: Sequent, defs: Declaration) =>
       Augmentors.SequentAugmentor(seq)(pos) match {

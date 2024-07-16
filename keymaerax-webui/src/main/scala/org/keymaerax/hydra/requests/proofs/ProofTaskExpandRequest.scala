@@ -27,10 +27,12 @@ import org.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, List, Nil}
 
 class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, strict: Boolean)
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {

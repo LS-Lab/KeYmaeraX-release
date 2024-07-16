@@ -5,16 +5,17 @@
 
 package org.keymaerax.btactics
 
-import java.io.File
-import java.util.UUID
 import org.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
+import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.core.{Formula, Sequent}
+import org.keymaerax.infrastruct.{ProvableHelper, UnificationTools}
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
-import TacticFactory._
-import org.keymaerax.infrastruct.{ProvableHelper, UnificationTools}
 
+import java.io.File
+import java.util.UUID
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 /**
@@ -81,6 +82,7 @@ object AnonymousLemmas {
   }
 
   /** Looks up and anonymizes a lemma. */
+  @nowarn("msg=match may not be exhaustive")
   private def getAnonymousLemma(id: lemmaDB.LemmaID, s: Sequent): Option[Lemma] = {
     lemmaDB.get(id) match {
       case None => None

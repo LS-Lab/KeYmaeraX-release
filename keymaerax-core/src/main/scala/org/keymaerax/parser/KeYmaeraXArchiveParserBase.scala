@@ -7,15 +7,15 @@ package org.keymaerax.parser
 
 import org.keymaerax.bellerophon.BelleExpr
 import org.keymaerax.bellerophon.parser.{BelleParser, TacticParser}
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, StaticSemanticsTools}
-import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, StaticSemanticsTools}
 import org.keymaerax.parser.ArchiveParser.{declarationsOf, elaborate}
 import org.keymaerax.parser.KeYmaeraXParser.ParseState
 import org.keymaerax.parser.ODEToInterpreted.FromProgramException
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{List, StringOps}
 import scala.collection.mutable.ListBuffer
 
@@ -282,6 +282,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
     case _ => parseLoop(parseStep(st, text), text)
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def parseStep(st: ParseState, text: String): ParseState = {
     val ParseState(s, input @ ((nextTok @ Token(la, currLoc)) :: rest)) = st
 
@@ -1648,6 +1649,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
    * Parses definition tokens `defTokens` with `parser` (using `text` to produce error messages). Returns the parsed
    * expression, the end location of the definition, and the remainder tokens after the definition.
    */
+  @nowarn("msg=match may not be exhaustive")
   private def parseDefinition[T <: Expression](
       defTokens: List[Token],
       text: String,

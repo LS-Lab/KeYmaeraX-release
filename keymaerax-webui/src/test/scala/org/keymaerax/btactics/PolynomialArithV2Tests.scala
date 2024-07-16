@@ -16,9 +16,11 @@ import org.keymaerax.tagobjects.SlowTest
 import org.keymaerax.tools.ext.RingsLibrary
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /** @author Fabian Immler */
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 class PolynomialArithV2Tests extends TacticTestBase {
   lazy val aT = "-x + 2/3*y - 4*z^3".asTerm
   lazy val bT =

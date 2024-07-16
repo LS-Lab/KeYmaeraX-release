@@ -29,7 +29,7 @@ import org.keymaerax.tools._
 import org.keymaerax.tools.qe.BigDecimalQETool
 import org.keymaerax.{Configuration, Logging}
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
 import scala.reflect.runtime.universe
 import scala.util.Try
@@ -144,6 +144,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   }
 
   /** @see [[TactixLibrary.dI]] */
+  @nowarn("msg=match may not be exhaustive")
   def diffInd(auto: Symbol = Symbol("full")): DependentPositionTactic = {
     if (!(auto == Symbol("full") || auto == Symbol("none") || auto == Symbol("diffInd") || auto == Symbol("cex")))
       throw new TacticRequirementError(
@@ -617,6 +618,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
    * @example
    *   Turns `|- [v'=a & a>0](a>0&v>0)` into `|- [v'=a & a>0]v>0`
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def domSimplify: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "domSimplify currently only works at top-level succedents")
 

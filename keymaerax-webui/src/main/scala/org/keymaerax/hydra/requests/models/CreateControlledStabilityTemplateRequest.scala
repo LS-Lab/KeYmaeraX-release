@@ -30,6 +30,7 @@ import org.keymaerax.parser.StringConverter.StringToStringConverter
 import spray.json.DefaultJsonProtocol._
 import spray.json.JsArray
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, List, Nil}
 
 class CreateControlledStabilityTemplateRequest(
@@ -41,6 +42,7 @@ class CreateControlledStabilityTemplateRequest(
     subGraphs: JsArray,
     transitions: JsArray,
 ) extends UserRequest(userId, _ => true) with ReadRequest {
+  @nowarn("msg=match may not be exhaustive")
   override def resultingResponse(): Response = {
     val mode = "mode".asVariable
     def modeOf(s: String): Term = FuncOf(Function(s, None, Unit, Real), Nothing)

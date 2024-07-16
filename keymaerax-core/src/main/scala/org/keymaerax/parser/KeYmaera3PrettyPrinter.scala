@@ -9,6 +9,8 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.parser.OpSpec.op
 
+import scala.annotation.nowarn
+
 /** Differential Dynamic Logic pretty printer in concrete KeYmaera 3 notation. */
 object KeYmaera3PrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
@@ -19,6 +21,7 @@ object KeYmaera3PrettyPrinter extends KeYmaeraXPrecedencePrinter {
     val vars = StaticSemantics.vars(fml).toSet[Variable].filter(_.isInstanceOf[BaseVariable])
     val fns = (StaticSemantics.symbols(fml) -- vars).filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function])
 
+    @nowarn("msg=match may not be exhaustive")
     def domainDecl(s: Sort): String = s match {
       case Real => "R"
       case Tuple(l, r) => domainDecl(l) + "," + domainDecl(r)

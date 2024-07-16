@@ -12,6 +12,7 @@ import org.keymaerax.tags.{CheckinTest, CoverageTest}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 /**
@@ -23,7 +24,7 @@ import scala.collection.immutable
  * @author
  *   Andre Platzer
  */
-@CoverageTest @CheckinTest
+@CoverageTest @CheckinTest @nowarn("msg=match may not be exhaustive")
 class RandomReapplyTests extends AnyFlatSpec with Matchers {
   val randomTrials = 4000
   val randomComplexity = 30

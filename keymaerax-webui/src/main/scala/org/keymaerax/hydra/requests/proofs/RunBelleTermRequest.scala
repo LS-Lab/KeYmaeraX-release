@@ -18,6 +18,7 @@ import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ext.{Mathematica, Z3}
 import org.keymaerax.tools.{ToolName, ToolOperationManagement}
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{::, List, Nil, Seq}
 
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
@@ -36,6 +37,7 @@ class RunBelleTermRequest(
 ) extends UserProofRequest(db, userId, proofId) with WriteRequest {
 
   /** Turns belleTerm into a specific tactic expression, including input arguments */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def fullExpr(sequent: Sequent): String = {
     val paramStrings: List[String] = inputs.map {
       case BelleTermInput(value, Some(_: FormulaArg)) => "\"" + value + "\""
@@ -153,6 +155,7 @@ class RunBelleTermRequest(
       case _ => ""
     })
 
+  @nowarn("msg=match may not be exhaustive")
   override protected def doResultingResponse(): Response = {
     if (backendAvailable) {
       val proof = db.getProofInfo(proofId)

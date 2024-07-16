@@ -14,11 +14,11 @@
  */
 package org.keymaerax.parser
 
-import org.keymaerax.core._
 import fastparse._
 import fastparse.internal.{Msgs, Util}
+import org.keymaerax.core._
 
-import scala.annotation.{switch, tailrec}
+import scala.annotation.{nowarn, switch, tailrec}
 import scala.collection.immutable._
 
 /**
@@ -420,6 +420,7 @@ class DLParser extends Parser {
 
   def baseVariable[$: P]: P[BaseVariable] = ident.map(s => Variable(s._1, s._2, Real))
   def diffVariable[$: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
+  @nowarn("msg=match may not be exhaustive")
   def variable[$: P]: P[Variable] = P(baseVariable ~ "'".!.?).map {
     case (v, None) => v
     case (v, Some("'")) => DifferentialSymbol(v)
@@ -454,6 +455,7 @@ class DLParser extends Parser {
    * If doAmbigCuts is true, we assume the input is a term, and perform all permissible cuts. If it is false, we only
    * perform cuts that are unambiguous indicators the input is a term.
    */
+  @nowarn("msg=match may not be exhaustive")
   def term[$: P](doAmbigCuts: Boolean): P[Term] = P(
     (if (Parser.weakNeg) signed(summand(doAmbigCuts)) else summand(doAmbigCuts).map(t => Left(t))) ~
       // Note: on weakNeg, the summand is signed, rather than the first multiplicand
@@ -467,6 +469,7 @@ class DLParser extends Parser {
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def mulDiv(left: Term, rest: Seq[(String, Either[Term, Term])]): Term = (left, rest) match {
     case (l, Nil) => l
     case (l, (op, Right(n @ Neg(c))) +: r) if Parser.weakNeg =>
@@ -518,6 +521,7 @@ class DLParser extends Parser {
     )
   })
 
+  @nowarn("msg=match may not be exhaustive")
   def unitFunctional[$: P](doAmbigCuts: Boolean): P[UnitFunctional] =
     P(ident ~~ (if (doAmbigCuts) space else NoCut(space))).map({ case (s, None, sp) => UnitFunctional(s, sp, Real) })
 
@@ -531,6 +535,7 @@ class DLParser extends Parser {
   })
 
   /** Parses term' */
+  @nowarn("msg=match may not be exhaustive")
   def diff[$: P](left: Term): P[Term] = "'"
     .!
     .?
@@ -598,6 +603,7 @@ class DLParser extends Parser {
   // Ambiguous base formula cases. Note that we still do not cut on
   // the ambiguous constructions, because we want error aggregates to
   // still allow for these ambiguous cases to actually be terms
+  @nowarn("msg=match may not be exhaustive")
   def ambiguousBaseF[$: P]: P[Formula] =
     (
       /* variables */
@@ -628,6 +634,7 @@ class DLParser extends Parser {
         })
     )
 
+  @nowarn("msg=match may not be exhaustive")
   def unambiguousBaseF[$: P]: P[Formula] =
     /* atomic formulas, constant T/F, quantifiers, modalities */
     "true".!.map(_ => True) | "false".!.map(_ => False) |
@@ -644,6 +651,7 @@ class DLParser extends Parser {
       "__________".!.map(_ => UnitPredicational("exerciseP_", AnyArg))
 
   /** Parses a comparison, given the left-hand term */
+  @nowarn("msg=match may not be exhaustive")
   def comparison[$: P]: P[Formula] = P(
     // We don't know if the starting input is a term, but after
     // seeing the comparator we know the RHS must be a term
@@ -660,6 +668,7 @@ class DLParser extends Parser {
   def comparator[$: P]: P[Unit] = P("=" ~~ !"=" | "!=" | "≠" | ">=" | "≥" | ">" | "<=" | "≤" | "<" ~~ !"-")
 
   /** Unit predicationals c(||) */
+  @nowarn("msg=match may not be exhaustive")
   def unitPredicational[$: P]: P[UnitPredicational] = P(ident ~~ space).map({ case (s, None, sp) =>
     UnitPredicational(s, sp)
   })
@@ -673,6 +682,7 @@ class DLParser extends Parser {
   // program parser
   // *****************
 
+  @nowarn("msg=match may not be exhaustive")
   def programSymbol[$: P]: P[Program] = P(
     DLParserUtils
       .filterWithMsg(ident ~~ odeSpace.? ~ (";" | "^@").!./)(_._2.isEmpty)("Program symbols cannot have an index")
@@ -685,6 +695,7 @@ class DLParser extends Parser {
       })
   )
   // @todo combine system symbol and space taboo
+  @nowarn("msg=match may not be exhaustive")
   def systemSymbol[$: P]: P[AtomicProgram] = P(
     DLParserUtils
       .filterWithMsg(ident ~~ "{|^@" ~/ variable.rep(sep = ","./) ~ "|}" ~ ";")(_._2.isEmpty)(
@@ -695,12 +706,14 @@ class DLParser extends Parser {
 
   def programExercise[$: P]: P[AtomicProgram] = "__________".!.map(_ => SystemConst("exerciseS_", AnyArg))
 
+  @nowarn("msg=match may not be exhaustive")
   def assign[$: P]: P[AtomicProgram] = ((variable ~ ":=" ~/ ("*".!./.map(Left(_)) | term(true).map(Right(_))) ~ ";")
     .map({
       case (x, Left("*")) => AssignAny(x)
       case (x, Right(t)) => Assign(x, t)
     }))
   def test[$: P]: P[Test] = ("?" ~/ formula ~ ";").map(f => Test(f))
+  @nowarn("msg=match may not be exhaustive")
   def braceP[$: P]: P[Program] = ("{" ~ program ~ "}" ~/ (("*" | "×")./.! ~ annotation.?).?).map({
     case (p, None) => p
     case (p, Some(("*", None))) => Loop(p)
@@ -724,6 +737,7 @@ class DLParser extends Parser {
     (systemSymbol | programSymbol | assign | test | ifthen | odesystem | braceP | programExercise)
 
   /** Parses dual notation: baseP or baseP&#94;@ */
+  @nowarn("msg=match may not be exhaustive")
   def dual[$: P]: P[Program] = (baseP ~ "^@".!./.?).map({
     case (p, None) => p
     case (p, Some("^@")) => Dual(p)
@@ -735,6 +749,7 @@ class DLParser extends Parser {
 
   def sequence[$: P]: P[Program] = ((dual ~/ ";".?).rep(1)).map(ps => ps.reduceRight(Compose))
 
+  @nowarn("msg=match may not be exhaustive")
   def choice[$: P]: P[Program] = (sequence ~/ (("++"./ | "∪"./ | "--" | "∩"./).! ~ sequence).rep).map({ case (p, ps) =>
     ((None, p) +: ps.map { case (s, p) => (Some(s), p) })
       .reduceRight[(Option[String], Program)] {
@@ -758,6 +773,7 @@ class DLParser extends Parser {
   // *****************
 
   def ode[$: P]: P[AtomicODE] = P(diffVariable ~ "=" ~/ term(true)).map({ case (x, t) => AtomicODE(x, t) })
+  @nowarn("msg=match may not be exhaustive")
   def diffProgramSymbol[$: P]: P[DifferentialProgramConst] = P(
     DLParserUtils
       .filterWithMsg(ident ~~ odeSpace.?)(_._2.isEmpty)("Differential program symbols cannot have an index")

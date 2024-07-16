@@ -7,15 +7,16 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
-import org.scalatest.PrivateMethodTester
-import org.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
 import org.keymaerax.tags.SummaryTest
+import org.scalatest.PrivateMethodTester
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -23,7 +24,7 @@ import scala.collection.immutable._
  *
  * Documents some failures in UnifyUSCalculus, and usage of a few primitives
  */
-@SummaryTest
+@SummaryTest @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
 class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
 
   // Unifier manages to unify F_() - F_() with bad LHS

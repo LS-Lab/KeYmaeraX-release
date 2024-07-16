@@ -10,7 +10,7 @@ import org.keymaerax.core._
 import org.keymaerax.parser.InterpretedSymbols
 import org.keymaerax.tools.ConversionException
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 
 /** A default SMT converter with output as preferred by KeYmaera X. */
 object DefaultSMTConverter extends SMTConverter {}
@@ -65,6 +65,7 @@ abstract class SMTConverter extends (Formula => String) {
   /**
    * Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula
    */
+  @nowarn("msg=match may not be exhaustive")
   def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
     val names = allSymbols.map(s => nameIdentifier(s))
@@ -140,6 +141,7 @@ abstract class SMTConverter extends (Formula => String) {
   }
 
   /** Convert KeYmaera X formula to string in SMT notation */
+  @nowarn("msg=match may not be exhaustive")
   protected def convertFormula(f: Formula): String = f match {
     case Not(ff) => "(not " + convertFormula(ff) + ")"
     case And(l, r) => "(and " + convertFormula(l) + " " + convertFormula(r) + ")"

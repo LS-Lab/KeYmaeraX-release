@@ -14,6 +14,7 @@
  */
 package org.keymaerax.bellerophon.parser
 
+import fastparse._
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.macros.{
   ArgInfo,
@@ -32,12 +33,12 @@ import org.keymaerax.btactics.macros.{
 }
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
-import org.keymaerax.parser.{DLParser, Declaration, ParseException, Parser, TacticReservedSymbols}
-import fastparse._
 import org.keymaerax.infrastruct.PosInExpr.HereP
 import org.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
 import org.keymaerax.parser.DLParser.{fullExpression, fullFormula, parseException}
+import org.keymaerax.parser.{DLParser, Declaration, ParseException, Parser, TacticReservedSymbols}
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.util.Try
 
@@ -151,6 +152,7 @@ class DLBelleParser(
     case (p, Some((_, (_, posIn)))) => Fail
         .opaque("Non-conflicting sub-positions (but " + p.inExpr.prettyString + " != " + posIn.prettyString + ")")
   })
+  @nowarn("msg=match may not be exhaustive")
   def searchLocator[$: P]: P[PositionLocator] = P(
     ("'Llast".! ~~ posInExpr)./.map({ case (_, js) => LastAnte(0, js) }) | ("'Rlast".! ~~ posInExpr)
       ./
@@ -301,6 +303,7 @@ class DLBelleParser(
 
   def baseTac[$: P]: P[BelleExpr] = P(branchTac | parenTac | builtinTactic | at | atomicTactic)
 
+  @nowarn("msg=match may not be exhaustive")
   def repTac[$: P]: P[BelleExpr] =
     (baseTac ~ (("*".! ~ (integer.map(Left(_)) | (!CharIn("0-9")).map(Right(_)))) | "+".!.map(s => (s, Right(())))).?)
       .map({
@@ -341,6 +344,7 @@ class DLBelleParser(
 
   def escapedString[$: P]: P[String] = P(string).map(_.replace("\\\"", "\""))
 
+  @nowarn("msg=match may not be exhaustive")
   def escapedPositionExpression[$: P]: P[(Expression, PosInExpr)] = P(escapedString)
     ./
     .flatMap(str => {

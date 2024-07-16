@@ -24,6 +24,7 @@ import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.time.SpanSugar._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
@@ -34,7 +35,8 @@ import scala.reflect.io.File
  * @author
  *   Andre Platzer
  */
-@SummaryTest @UsualTest
+@SummaryTest @UsualTest @nowarn("msg=Exhaustivity analysis reached max recursion depth")
+@nowarn("msg=match may not be exhaustive")
 class TactixLibraryTests extends TacticTestBase {
   private val someList: () => Iterator[Formula] = () =>
     ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator

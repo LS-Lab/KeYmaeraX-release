@@ -22,6 +22,7 @@ import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.util.Try
 
@@ -31,7 +32,8 @@ import scala.util.Try
  * @see
  *   [[ContinuousInvariantTests]]
  */
-@SummaryTest @UsualTest
+@SummaryTest @UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
+@nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class DifferentialTests extends TacticTestBase {
   val randomTrials = 500
   val randomComplexity = 6

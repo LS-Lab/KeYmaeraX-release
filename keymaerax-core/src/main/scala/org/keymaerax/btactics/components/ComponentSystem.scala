@@ -6,18 +6,18 @@
 package org.keymaerax.btactics.components
 
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics._
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics._
 import org.keymaerax.btactics.helpers.DifferentialHelper
+import org.keymaerax.btactics.macros.Tactic
 import org.keymaerax.core.{And, Compose, _}
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct._
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import org.keymaerax.btactics.macros.Tactic
 import org.keymaerax.parser.StringConverter._
 
-import scala.collection.immutable.List
+import scala.annotation.nowarn
 import scala.reflect.runtime.universe
 
 /**
@@ -37,21 +37,25 @@ object ComponentSystem extends TacticProvider {
   private val namespace = "components"
 
   /** STTT Lemma 1 Corollaries */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   private lazy val assignmentIndependence1 = AnonymousLemmas.remember(
     "[x_:=s_();][y_:=t_();]p_(x_,y_) <-> [y_:=t_();][x_:=s_();]p_(x_,y_)".asFormula,
     master() & done,
     namespace
   )
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   private lazy val assignmentIndependence2 = AnonymousLemmas.remember(
     "[x_:=*;][y_:=t_();]p_(x_,y_) <-> [y_:=t_();][x_:=*;]p_(x_,y_)".asFormula,
     master() & allL(Symbol("Llast")) & id & done,
     namespace
   )
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   private lazy val assignmentIndependence3 = AnonymousLemmas.remember(
     "[x_:=*;][y_:=*;]p_(x_,y_) <-> [y_:=*;][x_:=*;]p_(x_,y_)".asFormula,
     master() & prop & done,
     namespace
   )
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   private lazy val assignmentIndependence4 = AnonymousLemmas.remember(
     "[x_:=s_();][?q_();]p_(x_) <-> [?q_();][x_:=s_();]p_(x_)".asFormula,
     master() & prop & done,
@@ -65,6 +69,7 @@ object ComponentSystem extends TacticProvider {
     ) & done,
     namespace
   )
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   private lazy val testIndependence = AnonymousLemmas.remember(
     "[?q_();][?r_();]p_() <-> [?r_();][?q_();]p_()".asFormula,
     master() & prop & done,
@@ -161,6 +166,7 @@ object ComponentSystem extends TacticProvider {
   })
 
   /** STTT Lemma 3 */
+  @nowarn("msg=match may not be exhaustive")
   def dropPlant(keep: Set[Variable]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     require(pos.isSucc, "Drop plant only in succedent")
     val lemma3 = seq.sub(pos) match {
@@ -427,6 +433,8 @@ object ComponentSystem extends TacticProvider {
   })
 
   /** STTT Fig. 11: Component 1 */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth")
+  @nowarn("msg=match may not be exhaustive")
   private def proveSystemCompStep(c1step: Lemma, c2use: Lemma, c2step: Lemma,
                                   compatibility: Lemma, comGuaranteeLiveness: Lemma, fout: Formula) = anon ((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel)

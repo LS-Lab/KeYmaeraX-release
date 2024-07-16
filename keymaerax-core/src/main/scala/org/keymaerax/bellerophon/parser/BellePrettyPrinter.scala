@@ -6,7 +6,7 @@
 package org.keymaerax.bellerophon.parser
 
 import org.keymaerax.bellerophon._
-import BelleOpSpec.op
+import org.keymaerax.bellerophon.parser.BelleOpSpec.op
 import org.keymaerax.bellerophon.parser.BelleParser.{
   DOUBLE_COLON,
   DOUBLE_QUOTE,
@@ -19,12 +19,13 @@ import org.keymaerax.bellerophon.parser.BelleParser.{
   TAB,
   TODO_TACTIC,
 }
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros.TacticInfo
 import org.keymaerax.core.{Equal, Expression, Formula, Term}
-import org.keymaerax.parser.KeYmaeraXOmitInterpretationPrettyPrinter
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.infrastruct.PosInExpr
+import org.keymaerax.parser.KeYmaeraXOmitInterpretationPrettyPrinter
 
+import scala.annotation.nowarn
 import scala.util.Try
 
 /**
@@ -57,6 +58,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def pp(e: BelleExpr, indent: Int): String = {
     // Prefer the code name if one exists for this tactic, but looking up code name may throw exception.
     //      println("Looking for a code name for " + e)

@@ -7,31 +7,31 @@ package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.btactics.ArithmeticSimplification._
-import org.keymaerax.btactics.components.ComponentSystem._
 import org.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import org.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
+import org.keymaerax.btactics.components.ComponentSystem._
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
 import org.keymaerax.parser.ArchiveParser
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.SlowTest
-
-import scala.language.postfixOps
 import org.scalatest.LoneElement._
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{List, ListMap}
+import scala.language.postfixOps
 
 /**
  * Component-based proving test cases (FASE).
  * @author
  *   Stefan Mitsch
  */
-@SlowTest
+@SlowTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class Compbased extends TacticTestBase {
 
   "Lemma 1" should "work for easy case" in withMathematica { _ =>

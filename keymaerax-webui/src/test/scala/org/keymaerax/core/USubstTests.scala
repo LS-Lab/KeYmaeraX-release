@@ -16,6 +16,7 @@ import org.keymaerax.tagobjects.{AdvocatusTest, CoverageTest, OptimisticTest}
 import org.keymaerax.tags.{CheckinTest, SummaryTest, USubstTest, UsualTest}
 import org.keymaerax.testhelper.CustomAssertions._
 
+import scala.annotation.nowarn
 import scala.language.postfixOps
 
 /**
@@ -26,7 +27,8 @@ import scala.language.postfixOps
  * @author
  *   smitsch
  */
-@SummaryTest @UsualTest @USubstTest @CheckinTest
+@SummaryTest @UsualTest @USubstTest @CheckinTest @nowarn("msg=Exhaustivity analysis reached max recursion depth")
+@nowarn("msg=match may not be exhaustive")
 class USubstTests extends TacticTestBase {
   private val randomTrials = 50
   private val randomComplexity = 20

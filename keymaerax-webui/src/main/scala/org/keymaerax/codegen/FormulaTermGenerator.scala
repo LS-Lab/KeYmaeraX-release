@@ -9,6 +9,8 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import org.keymaerax.parser.{Declaration, KeYmaeraXPrettyPrinter}
 
+import scala.annotation.nowarn
+
 /**
  * Generates formula and term evaluation code. `termContainer` configures the location where primitive terms are looked
  * up (e.g., structs, classes).
@@ -146,6 +148,7 @@ class GenericFormulaTermGenerator(
 ) extends FormulaTermGenerator(termContainer, defs) {
 
   /** @inheritdoc */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   override def apply(
       expr: Expression,
       stateVars: Set[BaseVariable],

@@ -31,6 +31,7 @@ import org.keymaerax.hydra.{RequestHelper, Response}
 import org.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import spray.json.{JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsValue}
 
+import scala.annotation.nowarn
 import scala.util.Try
 
 case class ApplicableAxiomsResponse(
@@ -62,6 +63,7 @@ case class ApplicableAxiomsResponse(
     else JsString(scala.io.Source.fromInputStream(helpResource)(scala.io.Codec.UTF8).mkString)
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def axiomJson(info: DerivationInfo): JsObject = {
     val formulaText = (info, info.display) match {
       case (_, di: AxiomDisplayInfo) => di.formula

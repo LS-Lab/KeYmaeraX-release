@@ -7,6 +7,7 @@ package org.keymaerax.btactics.arithmetic.signanalysis
 
 import org.keymaerax.core._
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -44,6 +45,7 @@ object Bound extends Enumeration {
 
   def power(l: Bound, r: Int): Bound = Unknown
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def bound(term: Term)(implicit atoms: Map[Term, Bound] = Map()): Bound = atoms.getOrElse(
     term,
     term match {
@@ -60,6 +62,7 @@ object Bound extends Enumeration {
     },
   )
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def pushDown(term: Term, bound: Map[Bound, Set[AntePos]])(implicit
       signs: Map[Term, Map[Sign.Sign, Set[AntePos]]] = Map()
   ): Map[Term, Map[Bound, Set[AntePos]]] = term match {

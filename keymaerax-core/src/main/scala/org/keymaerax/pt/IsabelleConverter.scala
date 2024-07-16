@@ -5,15 +5,16 @@
 
 package org.keymaerax.pt
 
-import java.io.{BufferedWriter, FileWriter, Writer}
-
-import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import org.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
 import org.keymaerax.Logging
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.btactics.macros._
 import org.keymaerax.core.{DotFormula, _}
+import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import org.keymaerax.pt.IsabelleConverter.{ID, IDEnum, IDLeft, IDRight, IDUnit, ISABELLE_IDS, Irule, Isequent}
+
+import java.io.{BufferedWriter, FileWriter}
+import scala.annotation.nowarn
 
 /**
  * Convert proof terms to sublanguage + syntax used by Isabelle formalization
@@ -183,6 +184,7 @@ object IDMap extends Logging {
     tr.pos
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def ofExp(e: Expression, acc: IDMap): IDMap = {
     e match {
       case t: Term => ofTerm(t, acc)
@@ -855,6 +857,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
   var subst_so_far = 0
   // @TODO: Surely has type issues
   // @TODO: Have to ensure identifier renaming preserves choice of reserved identifiers in axioms/axiomatic rules
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def apply(sub: USubst, defun: Boolean = false, depred: Boolean = false, space: Ispace = IAllSpace()): Isubst = {
     /*if(defun)
       println("DEFUN")
@@ -1312,6 +1315,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def apply(pt: ProofTerm): Ipt = {
     if (isDiffTermChase(pt)) { translateDiffTermChase(pt) }
     else if (isDiffFormulaChase(pt)) { translateDiffFormulaChase(pt) }
@@ -1365,6 +1369,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def seqNeedsDefun(phi: Sequent): Boolean = {
     def reverse(f: Formula) = { f match { case Equiv(l, r) => Equiv(r, l) } }
     // only one sequent ever needs this so far
@@ -1385,6 +1390,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
     specials.contains(phi)*/
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def seqNeedsBanana(phi: Sequent): Boolean = {
     def reverse(f: Formula) = { f match { case Equiv(l, r) => Equiv(r, l) } }
     // only one sequent ever needs this so far
@@ -1403,6 +1409,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
     }*/
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def apply(f: Formula, sm: SymMode): Iformula = {
     (f, sm.isDepred) match {
       case (DotFormula, _) => IInContext(IDRight(IDUnit(), "myvars", "Unit"), IGeq(IConst(0), IConst(0)))
@@ -1506,6 +1513,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
 
   val emptyArgs: List[Itrm] = List.tabulate(m.fArity)(_ => IConst(0))
 
+  @nowarn("msg=match may not be exhaustive")
   def apply(t: Term, sm: SymMode): Itrm = {
     (t, sm.isDefun) match {
       case (Nothing, _) =>
@@ -1557,6 +1565,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def apply(o: DifferentialProgram, sm: SymMode): IODE = {
     o match {
       case AtomicODE(DifferentialSymbol(BaseVariable(x, ind, _)), e) =>
@@ -1567,6 +1576,7 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
     }
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def apply(hp: Program, sm: SymMode): Ihp = {
     hp match {
       case SystemConst(name, _) => IPvar(IDEnum(m.progMap((name))))
@@ -1833,6 +1843,7 @@ abstract class SourceBuilder(sb: StringBuilder) {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   def apply(ax: Iaxiom): Unit = {
     ax match {
       case IAloopIter() => b0("AloopIter")

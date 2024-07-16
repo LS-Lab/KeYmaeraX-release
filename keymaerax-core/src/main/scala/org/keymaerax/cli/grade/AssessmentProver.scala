@@ -55,7 +55,7 @@ import spray.json._
 import java.io.{BufferedWriter, File, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
 import java.util.Properties
 import java.util.concurrent.TimeoutException
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{HashSet, IndexedSeq, Nil}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
@@ -392,6 +392,7 @@ object AssessmentProver {
       case _ => errorMsg(expected, have.prettyString)
     }
 
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     private def check(have: Artifact, expected: Artifact): Either[ProvableSig, String] = {
       mode.getOrElse(Modes.SYN_EQ) match {
         case Modes.SYN_EQ => (have, expected) match {
@@ -1032,6 +1033,7 @@ object AssessmentProver {
   }
 
   /** Proves polynomial equality of `a` and `b`. */
+  @nowarn("msg=match may not be exhaustive")
   def polynomialEquality(a: Term, b: Term): ProvableSig = (a, b) match {
     case (Pair(al, ar), Pair(bl, br)) =>
       if (polynomialEquality(al, bl).isProved) polynomialEquality(ar, br)
@@ -1148,6 +1150,7 @@ object AssessmentProver {
   }
 
   /** Polynomial equality by Groebner basis comparison for formulas whose atoms are all equalities. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def groebnerBasisEquality(a: Formula, b: Formula, normalize: Boolean): ProvableSig = {
     val at = SimplifierV3.algNormalize(a)._1 match { case Equal(l, Number(n)) if n == 0 => l }
     val bt = SimplifierV3.algNormalize(b)._1 match { case Equal(l, Number(n)) if n == 0 => l }
@@ -1245,6 +1248,7 @@ object AssessmentProver {
   }
 
   /** Compares expressions for syntactic equality. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def syntacticEquality(a: Expression, b: Expression): ProvableSig = (a, b) match {
     case (af: Formula, bf: Formula) => KeYmaeraXProofChecker(1000.seconds, Declaration(Map.empty))(
         useAt(Ax.equivReflexive)(1)
@@ -1270,6 +1274,7 @@ object AssessmentProver {
     syntacticEquality(fmls.map(_._1).reduceRight(And), fmls.map(_._2).reduceRight(And))
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def dIPremiseCheck(a: Formula, b: Formula, diffAssignsMandatory: Boolean, normalize: Boolean): ProvableSig = {
     if (diffAssignsMandatory) {
       def collectDiffAssigns(f: Formula) = {
@@ -1403,6 +1408,7 @@ object AssessmentProver {
   }
 
   /** Checks program equivalence by `[a;]P <-> [b;]P.` */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def prgEquivalence(a: Program, b: Program): ProvableSig = {
     val p = PredOf(Function("P", None, Unit, Bool), Nothing)
     def searchCMon(at: PosInExpr) = TacticFactory.anon { (seq: Sequent) =>
@@ -1451,6 +1457,7 @@ object AssessmentProver {
     )(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(as, p), Box(bs, p)))))
   }
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def contractEquivalence(have: Formula, expected: Formula): ProvableSig = {
     val rephrasePost = TacticFactory.anon { s: Sequent =>
       val anteBoxes = s.ante.filter(_.isInstanceOf[Box])
@@ -1546,6 +1553,7 @@ object AssessmentProver {
     else { grade(chapter, msgOut, resultOut, skipGradingOnParseError) }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def grade(
       chapter: Submission.Chapter,
       msgOut: OutputStream,
@@ -1834,6 +1842,7 @@ object AssessmentProver {
     }
   }
 
+  @nowarn("msg=match may not be exhaustive")
   private def toGrader(problem: Submission.Problem, p: Submission.Prompt): Grader = p match {
     case mp @ Submission.MultiPrompt(main, earlier) =>
       require(mp.name == "\\ask", "Expected text multiprompt") // @note other questions do not have \algog

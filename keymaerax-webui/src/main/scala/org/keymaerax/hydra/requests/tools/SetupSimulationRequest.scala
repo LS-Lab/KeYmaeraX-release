@@ -45,6 +45,7 @@ import org.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import org.keymaerax.tools.ToolException
 import org.keymaerax.utils.EulerIntegrationCompiler
 
+import scala.annotation.nowarn
 import scala.collection.immutable.{Map, Nil, Set}
 
 class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
@@ -121,6 +122,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
     )
     .get
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def solve(sys: ODESystem): Program = {
     val iv: Map[Variable, Variable] = DifferentialHelper
       .getPrimedVariables(sys.ode)

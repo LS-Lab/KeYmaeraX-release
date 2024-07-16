@@ -5,29 +5,25 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.core._
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.Idioms._
-import org.keymaerax.btactics.SimplifierV3._
-import org.keymaerax.btactics.AnonymousLemmas._
-import org.keymaerax.infrastruct._
-import org.keymaerax.infrastruct.{RenUSubst, SubstitutionHelper}
-import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.bellerophon._
-import org.keymaerax.pt.ProvableSig
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.tools.qe.BigDecimalQETool
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.PolynomialArithV2.{
   NonPolynomialArithmeticException,
   NonSupportedDivisorException,
   NonSupportedExponentException,
-  NonSupportedOperationException,
 }
-import org.keymaerax.tools.ext.RingsLibrary
+import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
+import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.infrastruct._
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.pt.ProvableSig
+import org.keymaerax.tools.ext.RingsLibrary
+import org.keymaerax.tools.qe.BigDecimalQETool
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -428,6 +424,7 @@ case class TwoThreeTreePolynomialRing(
    *   - lhs: input term (arbitrary, trace of construction)
    *   - rhs: Divide(Number(num), Number(denom))
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   case class Coefficient(num: BigDecimal, denom: BigDecimal, prvO: Option[ProvableSig] = None) {
     val numN = Number(num)
     val denomN = Number(denom)
@@ -619,6 +616,7 @@ case class TwoThreeTreePolynomialRing(
    * rhs: representation of `coeff*powers.map(^)`
    * }}}
    */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   case class Monomial(coeff: Coefficient, powerProduct: SparsePowerProduct, prvO: Option[ProvableSig] = None) {
     val powers = powerProduct.sparse.toIndexedSeq
     lazy val powersTerm: Term = powers.map { case (v, i) => Power(v, Number(i)) }.foldLeft(Number(1): Term)(Times)
@@ -767,6 +765,7 @@ case class TwoThreeTreePolynomialRing(
       }
       else None
 
+    @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
     def normalizePowers(c: Coefficient, t: Term): (ProvableSig, Term) = t match {
       case Times(Number(one), t @ Power(v, Number(n))) =>
         // assert(one.compareTo(1)==0)
@@ -1016,6 +1015,7 @@ case class TwoThreeTreePolynomialRing(
 
   lazy val equalReflexive = Ax.equalReflexive.provable
 
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
     override def representation: ProvableSig = prv
@@ -1841,6 +1841,7 @@ case class TwoThreeTreePolynomialRing(
 
   def equate(t1: Term, t2: Term): Option[ProvableSig] = ofTerm(t1).equate(ofTerm(t2))
 
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   val equate: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
@@ -1922,6 +1923,7 @@ case class TwoThreeTreePolynomialRing(
       (gcd, ra, rb)
     }
 
+    @nowarn("msg=match may not be exhaustive")
     def rec(term: Term): (Polynomial, ringsLibrary.Ring, Polynomial, ringsLibrary.Ring, ProvableSig) = term match {
       case binop: BinaryCompositeTerm =>
         val (nx, nxR, dx, dxR, xPrv) = rec(binop.left)

@@ -21,7 +21,7 @@ import org.keymaerax.tools.install.ToolConfiguration
 import org.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import org.keymaerax.tools.qe.MathematicaOpSpec._
 
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.collection.immutable.{IndexedSeq, Map, Seq}
 import scala.collection.mutable.ListBuffer
 
@@ -142,6 +142,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
    * Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica
    * input/output as evidence
    */
+  @nowarn("msg=match may not be exhaustive")
   override def qe(formula: Formula): Lemma = {
     mQE.timeout = qeInitialTimeout
     try { mQE.run(ProvableSig.proveArithmeticLemma(_, formula)) }
@@ -178,6 +179,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   }
 
   /** Runs (parallel) QE with maximum timeout. */
+  @nowarn("msg=match may not be exhaustive")
   private def doMaxQE(formula: Formula): Lemma = {
     mQE.timeout = qeMaxTimeout
 

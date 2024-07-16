@@ -32,9 +32,10 @@ package org.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import org.keymaerax.core.SetLattice.{allVars, bottom}
+
+import scala.annotation.nowarn
 import scala.collection.immutable
-import SetLattice.bottom
-import SetLattice.allVars
 
 /**
  * A Uniform Substitution with its application mechanism (original version).
@@ -277,6 +278,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   // @see Figure 1 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
 
   /** uniform substitution on terms */
+  @nowarn("msg=match may not be exhaustive")
   private def usubst(term: Term): Term = {
     term match {
       // uniform substitution base cases
@@ -321,6 +323,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   } // ensures(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   /** uniform substitution on formulas */
+  @nowarn("msg=match may not be exhaustive")
   private def usubst(formula: Formula): Formula = {
     formula match {
       case app @ PredOf(op, theta) if matchHead(app) =>
@@ -394,6 +397,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   } // ensures(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   /** uniform substitution on programs */
+  @nowarn("msg=match may not be exhaustive")
   private def usubst(program: Program): Program = {
     program match {
       case a: ProgramConst if subsDefs.exists(_.what == a) => subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
@@ -434,6 +438,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    *   the bound variables of the whole ODESystem within which ode occurs, so all odeBV are taboo during the
    *   substitution.
    */
+  @nowarn("msg=match may not be exhaustive")
   private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[Variable]): DifferentialProgram = {
     ode match {
       case AtomicODE(xp: DifferentialSymbol, e) =>

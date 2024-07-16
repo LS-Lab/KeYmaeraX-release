@@ -9,6 +9,7 @@ import org.keymaerax.core.StaticSemantics.signature
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.PosInExpr.HereP
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 
 /**
@@ -828,6 +829,7 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
    * Return the result of instantiating this context with argument `e`. That is filling the respective dot placeholder
    * of this context with expression `e`.
    */
+  @nowarn("msg=match may not be exhaustive")
   def apply(e: Expression): T = e match {
     case f: Formula => instantiate(f)
     case t: Term => instantiate(t)

@@ -36,6 +36,7 @@ import org.keymaerax.parser.Declaration
 import org.keymaerax.pt.ProvableSig
 import org.slf4j.LoggerFactory
 
+import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.reflect.runtime.universe
 import scala.util.Try
@@ -226,6 +227,7 @@ trait UnifyUSCalculus {
    * @param pi
    *   the information for the Provable to use, e.g., from [[Ax]].
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def by(pi: ProvableInfo): BelleExpr = by(pi.provable, pi.codeName)
 
   /**
@@ -254,6 +256,7 @@ trait UnifyUSCalculus {
       )
     }
   }
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def by(lemma: Lemma): BelleExpr = if (lemma.name.isDefined) by(lemma.fact, lemma.name.get) else by(lemma.fact)
 
   // by with given substitutions
@@ -275,12 +278,16 @@ trait UnifyUSCalculus {
    * @see
    *   [[byUS()]]
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst), pi.codeName)
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable), pi.codeName)
 
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def by(lemma: Lemma, subst: USubst): BelleExpr = by(lemma.fact(subst))
 
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def by(lemma: Lemma, subst: Subst): BelleExpr = by(subst.toForward(lemma.fact))
 
   /* ******************************************************************
@@ -335,6 +342,8 @@ trait UnifyUSCalculus {
    */
   def byUS(pi: ProvableInfo, inst: Subst => Subst): BelleExpr = byUS(pi.provable, inst)
 
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
+  @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.SequentType")
   private[btactics] def byUS(fact: ProvableSig, inst: Subst => Subst = us => us): BelleExpr = {
     // @todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
     def renameAndSubst = (us: RenUSubst) => {
@@ -494,6 +503,7 @@ trait UnifyUSCalculus {
    *   optional transformation augmenting or replacing the uniform substitutions after unification with additional
    *   information.
    */
+  @nowarn("msg=match may not be exhaustive")
   def useAt(lem: Lemma, key: PosInExpr, inst: Option[Subst] => Subst): BuiltInPositionTactic = lem.name match {
     case Some(name) if ProvableInfo.existsStoredName(name) =>
       val info = ProvableInfo.ofStoredName(name)
@@ -588,6 +598,7 @@ trait UnifyUSCalculus {
    * @see
    *   [[US(USubst, ProvableInfo)]]
    */
+  @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def US(subst: USubst, fact: ProvableSig): BuiltInTactic = by(fact(subst))
 
   // *********************
@@ -890,6 +901,7 @@ trait UnifyUSCalculus {
        *   The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming
        *   merely from the context embedding contracts.
        */
+      @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
       private def useAt[T <: Expression](
           subst: Subst,
           K: Context[T],
@@ -1152,6 +1164,7 @@ trait UnifyUSCalculus {
   }
 
   /* Specialized congruence reasoning for the questions arising in the axiomatic ODE solver DC step */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def condEquivCongruence(
       context: Formula,
       towards: PosInExpr,
@@ -1652,6 +1665,7 @@ trait UnifyUSCalculus {
   def CMon(inEqPos: PosInExpr): InputTactic = inputanon { CMonFw(inEqPos) }
 
   /** Builtin forward implementation of CMon. */
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private[btactics] def CMonFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
     val sequent = provable.subgoals.head
@@ -1745,6 +1759,7 @@ trait UnifyUSCalculus {
    */
   //  @Tactic(premises = "Γ |- C{Q}, Δ ;; Q↔P",
   //    conclusion = "Γ |- C{P}, Δ")
+  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def CEat(fact: ProvableSig): BuiltInPositionTactic = {
     require(
       fact.conclusion.ante.isEmpty && fact.conclusion.succ.length == 1,
@@ -1846,6 +1861,7 @@ trait UnifyUSCalculus {
    *   `CE(fact, Context("x>0&⎵".asFormula))(p)` is equivalent to `CE(fact)(p+PosInExpr(1::Nil))`. Except that the
    *   former has the shape `x>0&⎵` for the context starting from position `p`.
    */
+  @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
   def CEat(fact: ProvableSig, C: Context[Formula]): DependentPositionTactic =
     new DependentPositionTactic("CE(Provable,Context)") {
       require(
@@ -2120,6 +2136,7 @@ trait UnifyUSCalculus {
     if (logger.isDebugEnabled) logger.debug("CMon(" + C + ")" + "(" + impl + ")")
 
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
+    @nowarn("msg=match may not be exhaustive")
     def monStep(C: Context[Formula], mon: ProvableSig): ProvableSig = {
       // @todo assert(mon.ante.head == C{left or right} && mon.succ.head == C{right or left})
       if (logger.isDebugEnabled)
@@ -2597,6 +2614,8 @@ trait UnifyUSCalculus {
          * @see
          *   [[useFor()]]
          */
+        @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
+        @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
         def useFor[T <: Expression](
             subst: Subst,
             K: Context[T],
@@ -3142,6 +3161,7 @@ trait UnifyUSCalculus {
   private[this] def chaseFor2Back(name: String, forward: ForwardPositionTactic): BuiltInPositionTactic = {
 
     /** Construct a proof proving the answer of the chase of e, so proves e=chased(e) or e<->chased(e) */
+    @nowarn("msg=match may not be exhaustive")
     def chaseProof(e: Expression): ProvableSig = {
       // reflexive setup corresponds to no-progress chase
       val initial: ProvableSig = e match {
