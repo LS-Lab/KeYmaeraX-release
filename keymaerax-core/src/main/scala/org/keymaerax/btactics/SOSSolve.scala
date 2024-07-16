@@ -267,9 +267,9 @@ object SOSSolve {
     case fml: UnaryCompositeFormula => naturalExponentCheck(fml.child)
     case fml: Quantified => naturalExponentCheck(fml.child)
     case fml: Modal => naturalExponentCheck(fml.child)
-    case fml: AtomicFormula => None
     case fml: PredOf => naturalExponentCheck(fml.child)
     case fml: PredicationalOf => naturalExponentCheck(fml.child)
+    case fml: AtomicFormula => None
     case _ => ???
   }
 
