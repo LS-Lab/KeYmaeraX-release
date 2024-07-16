@@ -10,6 +10,8 @@ import org.keymaerax.tools._
 import org.keymaerax.tools.ext._
 import org.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 
+import scala.reflect.{classTag, ClassTag}
+
 /**
  * Central repository providing access to arithmetic tools.
  * @note
@@ -287,7 +289,10 @@ case class MultiToolProvider(providers: List[ToolProvider])
 /** Base class for Wolfram tools with alternative names. */
 abstract class WolframToolProvider(val tool: Mathematica, config: ToolConfiguration, alternativeNames: List[String])
     extends PreferredToolProvider(tool :: Nil) {
-  protected def alternativeTool[S](nameOpt: Option[String], factory: Option[String] => Option[S]): Option[S] = {
+  protected def alternativeTool[S: ClassTag](
+      nameOpt: Option[String],
+      factory: Option[String] => Option[S],
+  ): Option[S] = {
     // First, try the factory
     factory(nameOpt).foreach(it => return Some(it))
 
@@ -295,8 +300,10 @@ abstract class WolframToolProvider(val tool: Mathematica, config: ToolConfigurat
     val name = nameOpt.getOrElse(return None)
     if (!alternativeNames.contains(name)) return None
 
-    // Use the default tool if it has type S
-    defaultTool().collect { case s: S => s }
+    // Use the default tool if it has type S.
+    // Because S is generic and thus elided at runtime, a plain `asInstanceOf[S]` results in no runtime check.
+    // Hence we need to do our own ClassTag-based runtime check to ensure the type actually matches.
+    defaultTool().filter(tool => classTag[S].runtimeClass.isInstance(tool)).map(tool => tool.asInstanceOf[S])
   }
 
   override def qeTool(name: Option[String] = None): Option[QETacticTool] = alternativeTool(name, super.qeTool)
