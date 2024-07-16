@@ -207,7 +207,6 @@ object Augmentors {
         .signature(fml)
         .forall({
           case Function(_, _, _, Bool, None) => false
-          case _: PredicationalOf => false
           case _: UnitPredicational => false
           case _ => true
         })
