@@ -423,8 +423,11 @@ object AssessmentProver {
                   )
               }
             case (TexExpressionArtifact(h: Term), TexExpressionArtifact(e: Term)) => run(() => valueEquality(h, e))
-            case (ListExpressionArtifact(h: List[Term]), ListExpressionArtifact(e: List[Term])) =>
-              Try(Left(valueEquality(h, e))).getOrElse(Right(
+            case (ListExpressionArtifact(h: List[Expression]), ListExpressionArtifact(e: List[Expression]))
+                if h.forall(e => e.isInstanceOf[Term]) && e.forall(e => e.isInstanceOf[Term]) =>
+              val hTerms = h.asInstanceOf[List[Term]]
+              val eTerms = e.asInstanceOf[List[Term]]
+              Try(Left(valueEquality(hTerms, eTerms))).getOrElse(Right(
                 if (h.size < e.size) "Too few values" else if (h.size > e.size) "Too many values" else ""
               ))
             case _ => Right(
