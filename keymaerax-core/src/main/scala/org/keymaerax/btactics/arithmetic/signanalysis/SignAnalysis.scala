@@ -193,14 +193,11 @@ object SignAnalysis {
       case Greater(Number(i), r) if i == 0 => Greater(Neg(r), Number(0))
       case Greater(l, r) => Greater(Minus(l, r), Number(0))
     }
-  } ensures
-    (r =>
-      r match {
-        case NotEqual(_, Number(i)) => i == 0
-        case Equal(_, Number(i)) => i == 0
-        case GreaterEqual(_, Number(i)) => i == 0
-        case Greater(_, Number(i)) => i == 0
-      }
-    )
+  } ensures {
+    case NotEqual(_, Number(i)) => i == 0
+    case Equal(_, Number(i)) => i == 0
+    case GreaterEqual(_, Number(i)) => i == 0
+    case Greater(_, Number(i)) => i == 0
+  }
 
 }

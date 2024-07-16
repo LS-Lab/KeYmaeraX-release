@@ -145,34 +145,32 @@ object Transitivity extends TacticProvider {
       prefixes: Set[List[Formula]],
   ): Option[List[Formula]] = {
     // Extends a1 ~ a2 ~ .. ~ a_k with all a_n s.t. a_n ~ a_k occurs in the antecedent and all ~'s have the same direction.
-    val prefixExtensions: Set[List[Formula]] = prefixes
-      .map(prefix => {
-        val prefixEndTerm = decomposeInequality(prefix.last).get._3
+    val prefixExtensions: Set[List[Formula]] = prefixes.flatMap(prefix => {
+      val prefixEndTerm = decomposeInequality(prefix.last).get._3
 
-        val extensions: IndexedSeq[Formula] = s
-          .ante
-          .filter(anteF =>
-            anteF match {
-              case Less(al, ar) if (al == prefixEndTerm && direction == LesserDir) => true
-              case LessEqual(al, ar) if (al == prefixEndTerm && direction == LesserDir) => true
-              case Greater(al, ar) if (al == prefixEndTerm && direction == GreaterDir) => true
-              case GreaterEqual(al, ar) if (al == prefixEndTerm && direction == GreaterDir) => true
-              case Equal(al, ar) if (al == prefixEndTerm) => true
-              case _ => false
-            }
-          )
+      val extensions: IndexedSeq[Formula] = s
+        .ante
+        .filter(anteF =>
+          anteF match {
+            case Less(al, ar) if (al == prefixEndTerm && direction == LesserDir) => true
+            case LessEqual(al, ar) if (al == prefixEndTerm && direction == LesserDir) => true
+            case Greater(al, ar) if (al == prefixEndTerm && direction == GreaterDir) => true
+            case GreaterEqual(al, ar) if (al == prefixEndTerm && direction == GreaterDir) => true
+            case Equal(al, ar) if (al == prefixEndTerm) => true
+            case _ => false
+          }
+        )
 
-        if (extensions.isEmpty) Set() // We've reached the end of this prefix and did not find the goal.
-        else extensions.map(prefix :+ _).toSet
-      })
-      .flatten
+      if (extensions.isEmpty) Set() // We've reached the end of this prefix and did not find the goal.
+      else extensions.map(prefix :+ _).toSet
+    })
 
     val cycleFreePrefixes = filterCycles(prefixExtensions)
 
     cycleFreePrefixes.find(prefix => decomposeInequality(prefix.last).get._3 == end) match {
       case Some(completedPrefix) => Some(completedPrefix)
-      case None if (cycleFreePrefixes.size > 0) => searchHelper(s, direction, end, cycleFreePrefixes)
-      case None if (cycleFreePrefixes.size == 0) => None
+      case None if cycleFreePrefixes.nonEmpty => searchHelper(s, direction, end, cycleFreePrefixes)
+      case None if cycleFreePrefixes.isEmpty => None
     }
   }
 

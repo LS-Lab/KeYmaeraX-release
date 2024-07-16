@@ -836,9 +836,9 @@ object Provable {
     // checks that e has no free variables
     def noFreeVars(e: Expression): Boolean = StaticSemantics.freeVars(e).isEmpty
     // checks that e has no uninterpreted symbols
-    def noUninterpretedSymbols(e: Expression): Boolean = StaticSemantics
+    def noUninterpretedSymbols(e: Expression): Boolean = !StaticSemantics
       .signature(e)
-      .filter(f =>
+      .exists(f =>
         f match {
           case f: Function if f.interpreted =>
             false // by data structure invariant, f is a valid interpreted function symbol
@@ -846,7 +846,6 @@ object Provable {
           // remaining cases are impossible by data structure invariant on function interpretations
         }
       )
-      .isEmpty
 
     // Check the shape of initial condition and extract the equalities x=x0&t=t0
     // Right-hand sides of initial conditions must have no free variables nor uninterpreted symbols

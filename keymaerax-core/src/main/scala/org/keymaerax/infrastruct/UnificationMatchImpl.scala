@@ -729,13 +729,11 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/ Matcher with Logging
     // @note optimizable
     val argOfPred: Function => Term = p =>
       e.asInstanceOf[Formula]
-        .findSubformula(g =>
-          g match {
-            // @note want to know t
-            case PredOf(q, t) if q == p => true
-            case _ => false
-          }
-        )
+        .findSubformula {
+          // @note want to know t
+          case PredOf(q, t) if q == p => true
+          case _ => false
+        }
         .get
         ._2
         .asInstanceOf[PredOf]
