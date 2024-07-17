@@ -1418,7 +1418,10 @@ object TactixLibrary
    * Applies substitutions `substs` to the products of `generator` and returns a new generator that includes both
    * original and substituted products
    */
-  def substGenerator[A](generator: Generator[A], substs: List[USubst]): Generator[A] = generator match {
+  def substGenerator(
+      generator: Generator[(Formula, Option[InvariantGenerator.ProofHint])],
+      substs: List[USubst],
+  ): Generator[(Formula, Option[InvariantGenerator.ProofHint])] = generator match {
     case c: ConfigurableGenerator[(Formula, Option[InvariantGenerator.ProofHint])] => new ConfigurableGenerator(
         c.products ++
           c.products
@@ -1427,14 +1430,14 @@ object TactixLibrary
                 s(p._1) -> p._2.map({ case (f: Formula, h) => s(f) -> h })
               })
             )
-      ).asInstanceOf[Generator[A]]
+      )
     case c: FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])] => FixedGenerator(
         c.list ++
           c.list
             .map(p =>
               substs.foldRight[(Formula, Option[InvariantGenerator.ProofHint])](p)({ case (s, p) => s(p._1) -> p._2 })
             )
-      ).asInstanceOf[Generator[A]]
+      )
     case _ => generator // other generators do not include predefined invariants; they produce their results when asked
   }
 
