@@ -796,8 +796,8 @@ private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr)
   override def toString = "ReplContext{{" + replicate.prettyString + " at " + dot + "}}"
 
   override def equals(e: Any): Boolean = e match {
-    case a: ReplacementContext[T] => ctx == a.ctx
-    case a: GuardedContext[T] if !isTermContext => ctx == a.ctx // @todo good or bad idea?
+    case a: ReplacementContext[_] => ctx == a.ctx
+    case a: GuardedContext[_] if !isTermContext => ctx == a.ctx // @todo good or bad idea?
     case _ => false
   }
 
@@ -894,8 +894,8 @@ private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
 
   // @todo good or bad idea?
   override def equals(e: Any): Boolean = e match {
-    case a: ReplacementContext[T] if !isTermContext => ctx == a.ctx
-    case a: GuardedContext[T] => ctx == a.ctx
+    case a: ReplacementContext[_] if !isTermContext => ctx == a.ctx
+    case a: GuardedContext[_] => ctx == a.ctx
     case _ => false
   }
 
