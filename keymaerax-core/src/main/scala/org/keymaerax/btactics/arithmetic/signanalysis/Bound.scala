@@ -83,13 +83,13 @@ object Bound extends Enumeration {
       val leftSign = signs.getOrElse(l, Map(Sign.Unknown -> Set[AntePos]()))
       val rightSign = signs.getOrElse(r, Map(Sign.Unknown -> Set[AntePos]()))
 
-      val (wantLeft: Map[Bound, Set[AntePos]], wantRight: Map[Bound, Set[AntePos]]) =
+      val (wantLeft, wantRight) =
         if (bound.size == 1 && leftSign.size == 1 && rightSign.size == 1) {
           timesBounds(bound.head._1, leftSign) match {
             case (lb, _) if lb.keySet.contains(Unknown) => timesBounds(bound.head._1, rightSign)
             case res => res
           }
-        } else (Map(Unknown -> Set()), Map(Unknown -> Set()))
+        } else (Map[Bound, Set[AntePos]](Unknown -> Set()), Map[Bound, Set[AntePos]](Unknown -> Set()))
       combine(pushDown(l, wantLeft), pushDown(r, wantRight)) // )
     case Divide(l @ Number(n), r) if n == 1 =>
       combine(pushDown(l, Map(Exact -> Set())), pushDown(r, bound.map(b => converse(b._1) -> b._2)))
