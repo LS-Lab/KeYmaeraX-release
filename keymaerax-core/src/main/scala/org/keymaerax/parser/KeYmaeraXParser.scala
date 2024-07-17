@@ -15,13 +15,13 @@
  */
 package org.keymaerax.parser
 
+import org.keymaerax.core._
+import org.keymaerax.parser.KeYmaeraXParser.ParseState
+import org.keymaerax.parser.OpSpec.{func, statementSemicolon}
 import org.keymaerax.{Configuration, Logging}
 
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
-import org.keymaerax.core._
-import org.keymaerax.parser.KeYmaeraXParser.ParseState
-import org.keymaerax.parser.OpSpec.{func, statementSemicolon}
 
 /**
  * KeYmaera X parser items on the parser stack.
@@ -337,7 +337,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       // case ode: DifferentialProgramConst if kind==ProgramKind => Some(ProgramConst(ode.name, ode.space))
       // lift differential equations without evolution domain constraints to ODESystems
       case ode: DifferentialProgram if ode.kind == DifferentialProgramKind && kind == ProgramKind =>
-        assert(!ode.isInstanceOf[ODESystem], "wrong kind"); Some(ODESystem(ode))
+        Some(ODESystem(ode))
 
       // space-dependent elaborations
       case UnitPredicational(name, space) if kind == TermKind => Some(UnitFunctional(name, space, Real))
@@ -1304,8 +1304,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def goodErrorMessage(st: ParseState): Option[String] = st.stack match {
     case _ :+ Token(org.keymaerax.parser.RBOX, _) =>
       Some("Syntax error. Perhaps the program contained in your box modality is ill-formed or incomplete?")
-    case _ :+ (e: org.keymaerax.parser.Expr) :+ Token(org.keymaerax.parser.RBRACE, _) if !e.isInstanceOf[Program] =>
-      Some(
+    case _ :+ (e: org.keymaerax.parser.Expr) :+ Token(org.keymaerax.parser.RBRACE, _) => Some(
         "Syntax error. Expression " + e.expr.prettyString + " is not a program: change to " +
           e.expr.prettyString + "; for a program constant, or to " +
           "{" + e.expr.prettyString + "} for a differential program constant."
