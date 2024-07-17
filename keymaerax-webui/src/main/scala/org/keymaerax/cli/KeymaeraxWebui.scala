@@ -5,6 +5,7 @@
 
 package org.keymaerax.cli
 
+import org.apache.commons.lang3.StringUtils
 import org.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
@@ -25,7 +26,6 @@ import org.keymaerax.parser._
 import org.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 import org.keymaerax.tools.{ToolEvidence, ToolName}
 import org.keymaerax.{Configuration, FileConfiguration}
-import org.apache.commons.lang3.StringUtils
 
 import java.io.PrintWriter
 import scala.collection.immutable.{List, Nil}
@@ -36,8 +36,8 @@ import scala.reflect.io.File
 /** Command-line interface for the KeYmaera X webui jar. */
 object KeymaeraxWebui {
   def main(args: Array[String]): Unit = {
-    val options = Options.parseArgs(args, name = s"$TechnicalName-webui", webui = true)
-    if (!options.launch) Relauncher.relaunchOrExit(args)
+    val options = Options.parseArgs(args.toSeq, name = s"$TechnicalName-webui", webui = true)
+    if (!options.launch) Relauncher.relaunchOrExit(args.toSeq)
 
     Configuration.setConfiguration(FileConfiguration)
     GlobalLockChecks.acquireGlobalLockFileOrExit(graphical = true)

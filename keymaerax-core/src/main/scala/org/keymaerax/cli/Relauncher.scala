@@ -22,7 +22,7 @@ object Relauncher {
     val allArgs = info.arguments().toScala.getOrElse(return None)
     val jvmArgs = if (allArgs.endsWith(cliArgs)) allArgs.dropRight(cliArgs.length) else return None
 
-    Some(LaunchCommand(jvmCmd = jvmCmd, jvmArgs = jvmArgs, cliArgs = cliArgs))
+    Some(LaunchCommand(jvmCmd = jvmCmd, jvmArgs = jvmArgs.toSeq, cliArgs = cliArgs))
   }
 
   /**
