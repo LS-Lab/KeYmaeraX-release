@@ -14,9 +14,6 @@ import scala.util.Try
 object ToolPathFinder {
   case class MathematicaPaths(mathKernel: Path, jlinkLib: Path)
 
-  @deprecated("use findMathematicaPaths instead")
-  def jlinkLibFileName: String = findMathematicaPaths(Paths.get(".")).map(_.jlinkLib.getFileName.toString).getOrElse("")
-
   private def parseVersion(s: String): Option[(Int, Int)] = {
     val matched = """^(\d+)\.(\d+)$""".r.findFirstMatchIn(s).getOrElse(return None)
     val major = Try(Integer.parseInt(matched.group(1))).getOrElse(return None)

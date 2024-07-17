@@ -272,8 +272,12 @@ object KeymaeraxCore {
          |$linkNamePath
          |Please specify the correct path using the -mathkernel command line option.""".stripMargin,
     )
+    val jlinkLibFileName = ToolPathFinder
+      .findMathematicaPaths(Paths.get("."))
+      .map(_.jlinkLib.getFileName.toString)
+      .getOrElse("")
     assert(
-      Files.exists(Paths.get(libDirPath).resolve(ToolPathFinder.jlinkLibFileName)),
+      Files.exists(Paths.get(libDirPath).resolve(jlinkLibFileName)),
       s"""[Error] Can't find jlink library in this directory:
          |$libDirPath
          |Please specify the correct path using the -jlink command line option.""".stripMargin,
