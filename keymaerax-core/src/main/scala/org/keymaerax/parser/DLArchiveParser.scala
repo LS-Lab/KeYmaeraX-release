@@ -5,14 +5,14 @@
 
 package org.keymaerax.parser
 
+import fastparse.JavaWhitespace.whitespace
+import fastparse._
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.BelleExpr
 import org.keymaerax.bellerophon.parser.{DLTacticParser, TacticParser}
 import org.keymaerax.core._
 import org.keymaerax.parser.DLParser.parseException
 import org.keymaerax.parser.ODEToInterpreted.FromProgramException
-import fastparse.JavaWhitespace.whitespace
-import fastparse._
 
 import java.io.FileInputStream
 import scala.collection.immutable._
@@ -259,40 +259,6 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
             } else { Fail.opaque("Unique name (" + redefined.map(_.prettyString).mkString(",") + " not unique)") }
           }) | importDef
     )
-
-  private def namedTupleDo(
-      ty1: Sort,
-      n1: Option[Name],
-      ty2: Sort,
-      n2: Option[List[(Name, Sort)]],
-  ): (Sort, Option[List[(Name, Sort)]]) = (
-    Tuple(ty1, ty2),
-    n2 match {
-      case Some(args) => Some(
-          (
-            n1.getOrElse(
-              throw ParseException("Either all or no arguments of function/predicate declarations should have names")
-            ),
-            ty1,
-          ) :: args
-        )
-      case None =>
-        if (n1.isEmpty) None
-        else throw ParseException("Either all or no arguments of function/predicate declarations should have names")
-    },
-  )
-  private def namedTuple(
-      args: ((Sort, Option[Name]), (Sort, Option[List[(Name, Sort)]]))
-  ): (Sort, Option[List[(Name, Sort)]]) = namedTupleDo(args._1._1, args._1._2, args._2._1, args._2._2)
-//  private def namedTuple(ty1: Sort, n1: Option[(String, Option[Int])], args: (Sort, Option[List[((String, Option[Int]), Sort)]])): (Sort, Option[List[(Name, Sort)]]) =
-//    namedTupleDo(ty1, n1, args._1, args._2)
-  private def namedArgs(ty1: Sort, n1: Option[Name], acc: Option[List[(Name, Sort)]]): Option[List[(Name, Sort)]] =
-    n1 match {
-      case Some(name) => Some((name, ty1) :: acc.getOrElse(Nil))
-      case None =>
-        if (acc.isEmpty) None
-        else throw ParseException("Either all or no arguments of function/predicate declarations should have names")
-    }
 
   /** `name(sort1 arg1, sorg2 arg2)` declaration part with optional interpretation. Input sort is the (codomain) sort */
   def declPart(ty: Sort)(implicit ctx: P[_]): P[(Name, Signature)] =
