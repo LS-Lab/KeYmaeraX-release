@@ -13,8 +13,6 @@ import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct._
 import org.keymaerax.parser.InterpretedSymbols
 
-import scala.annotation.switch
-
 /**
  * Tactic indexing data structures for canonical proof strategies.
  * @author
@@ -86,7 +84,7 @@ class DefaultTacticIndex extends TacticIndex {
   private def two(p1: PositionLocator, p2: PositionLocator): TacticRecursor = two(p1 :: Nil, p2 :: Nil)
 
   /** Return tactic index with list of recursors on other sibling, i.e., for chasing after the tactic is applied. */
-  def tacticRecursors(tactic: BelleExpr): TacticRecursors = (tactic: @switch) match {
+  def tacticRecursors(tactic: BelleExpr): TacticRecursors = tactic match {
     // @note IMPORTANT: add only tactics with tactic annotations here! otherwise, will match with whatever based on the name ANON
     // @note expected formulas are used to fall back to search
     case TactixLibrary.notL => (s: Sequent, p: Position) =>

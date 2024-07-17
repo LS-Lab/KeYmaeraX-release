@@ -20,7 +20,7 @@ import org.keymaerax.parser.KeYmaeraXParser.ParseState
 import org.keymaerax.parser.OpSpec.{func, statementSemicolon}
 import org.keymaerax.{Configuration, Logging}
 
-import scala.annotation.{switch, tailrec}
+import scala.annotation.tailrec
 import scala.collection.immutable._
 
 /**
@@ -1692,7 +1692,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
    */
   private[parser] def op(st: ParseState, tok: Terminal, kinds: List[Kind]): OpSpec = {
     // println("\top(" + tok +" " + kinds)
-    (tok: @switch) match {
+    tok match {
       // @note could almost(!) replace by reflection to search through all OpSpec and check their images.
       // terms
       case sDotTerm.op => sDotTerm
