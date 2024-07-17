@@ -1194,13 +1194,6 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         else if (elaboratable(FormulaKind, t1, lax).isDefined && followsFormula(la)) shift(st)
         else error(st, List(FOLLOWSEXPRESSION))
 
-      case _ :+ Token(IF, _) :+ Token(LPAREN, _) :+ Expr(_, _) :+ Token(RPAREN, _) :+ Token(LBRACE, _) =>
-        if (firstProgram(la)) shift(st) else error(st, List(FIRSTPROGRAM))
-
-      case _ :+ Token(IF, _) :+ Token(LPAREN, _) :+ Expr(_, _) :+ Token(RPAREN, _) :+ Token(LBRACE, _) :+ Expr(
-            _,
-            _,
-          ) :+ Token(RBRACE, _) if la == ELSE => shift(st)
       case _ :+ Token(IF, _) :+ Token(LPAREN, _) :+ Expr(_, _) :+ Token(RPAREN, _) :+ (tok2 @ Token(LBRACE, _)) :+ Expr(
             _,
             _,
