@@ -1501,7 +1501,6 @@ class IsabelleConverter(pt: ProofTerm) extends Logging {
       case (DifferentialFormula(Or(p, q)), _) =>
         val (al, ar) = (apply(DifferentialFormula(p), ddefun(sm)), apply(DifferentialFormula(q), ddefun(sm)))
         IAnd(al, ar)
-      case (_: UnitFunctional, _) => throw ConversionException("Functionals not supported yet")
     }
   }
 
