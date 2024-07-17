@@ -186,8 +186,7 @@ trait BaseMatcher extends Matcher with Logging {
     if (e1.kind == e2.kind || e1.kind == ProgramKind && e2.kind == DifferentialProgramKind) e1 match {
       case t1: Term => val t2 = e2.asInstanceOf[Term]; unifier(t1, t2, unify(t1, t2))
       case f1: Formula => val f2 = e2.asInstanceOf[Formula]; unifier(f1, f2, unify(f1, f2))
-      case p1: DifferentialProgram if !p1.isInstanceOf[ODESystem] =>
-        val p2 = e2.asInstanceOf[DifferentialProgram]; unifier(p1, p2, unify(p1, p2))
+      case p1: DifferentialProgram => val p2 = e2.asInstanceOf[DifferentialProgram]; unifier(p1, p2, unify(p1, p2))
       case p1: Program => val p2 = e2.asInstanceOf[Program]; unifier(p1, p2, unify(p1, p2))
     }
     else throw new UnificationException(e1, e2, "have incompatible kinds " + e1.kind + " and " + e2.kind)
@@ -196,7 +195,7 @@ trait BaseMatcher extends Matcher with Logging {
     if (e1.kind == e2.kind || e1.kind == ProgramKind && e2.kind == DifferentialProgramKind) e1 match {
       case t1: Term => apply(t1, e2.asInstanceOf[Term])
       case f1: Formula => apply(f1, e2.asInstanceOf[Formula])
-      case p1: DifferentialProgram if !p1.isInstanceOf[ODESystem] => apply(p1, e2.asInstanceOf[DifferentialProgram])
+      case p1: DifferentialProgram => apply(p1, e2.asInstanceOf[DifferentialProgram])
       case p1: Program => apply(p1, e2.asInstanceOf[Program])
     }
     else throw new UnificationException(e1, e2, "have incompatible kinds " + e1.kind + " and " + e2.kind)
@@ -276,7 +275,7 @@ trait BaseMatcher extends Matcher with Logging {
   protected def unify(shape: Expression, input: Expression): List[SubstRepl] = shape match {
     case t1: Term => unify(t1, input.asInstanceOf[Term])
     case f1: Formula => unify(f1, input.asInstanceOf[Formula])
-    case p1: DifferentialProgram if !p1.isInstanceOf[ODESystem] => unifyODE(p1, input.asInstanceOf[DifferentialProgram])
+    case p1: DifferentialProgram => unifyODE(p1, input.asInstanceOf[DifferentialProgram])
     case p1: Program => unify(p1, input.asInstanceOf[Program])
   }
 
