@@ -198,13 +198,13 @@ object IntervalArithmeticV2 extends TacticProvider {
         case a: AtomicFormula => (a, m, i)
       }
 
-    val (expression: E, abbrev: Map[Term, Variable]) = e match {
+    val (expression, abbrev: Map[Term, Variable]) = e match {
       case t: Term =>
         val (fml, unm, _) = collectSubterms(t, Map(), 0)
-        (fml, unm)
+        (fml.asInstanceOf[E], unm)
       case fml: Formula =>
         val (fml2, unm, _) = collectSubformulas(fml, Map(), 0)
-        (fml2, unm)
+        (fml2.asInstanceOf[E], unm)
     }
 
     val unfoldMap: Map[Variable, Term] = abbrev.map { case (t, v) => (v, t) }
