@@ -353,7 +353,7 @@ class NonlinearExamplesTester(
     }
   }
 
-  private val infoPrinter = (info: Any) => info match { case i: Map[String, Any] => i.values.mkString(",") }
+  private val infoPrinter = (info: Any) => info match { case i: Map[_, _] => i.values.mkString(",") }
 
   it should "output plots" ignore withMathematica { _ =>
     entries.foreach(e => {
