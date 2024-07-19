@@ -1185,12 +1185,6 @@ class ScriptedRequestTests extends TacticTestBase {
         }
       case NamedTactic(name, _) => (name, Nil, None, None, true)
       case InputTactic(name, inputs) => (name, createInputs(name, inputs), None, None, true)
-      case t: AppliedDependentPositionTacticWithAppliedInput => t.pt match {
-          case inner: DependentPositionWithAppliedInputTactic =>
-            if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None, true)
-            else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None, true)
-          case _ => (t.pt.name, Nil, Some(t.locator), None, true)
-        }
       case t => (BellePrettyPrinter(t), Nil, None, None, false)
     }
     runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo, pos1, pos2, inputs)

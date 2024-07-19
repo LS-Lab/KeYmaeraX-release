@@ -682,7 +682,6 @@ abstract class BelleBaseInterpreter(
               case d: AppliedDependentPositionTactic => d.locator.toPosition(seq).contains(pos)
               case d: AppliedPositionTactic => d.locator.toPosition(seq).contains(pos)
               case d: AppliedBuiltinTwoPositionTactic => d.posOne == pos || d.posTwo == pos
-              case d: AppliedDependentPositionTacticWithAppliedInput => d.locator.toPosition(seq).contains(pos)
               case _ => false
             })
 

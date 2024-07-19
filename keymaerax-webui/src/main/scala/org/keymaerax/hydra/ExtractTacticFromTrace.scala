@@ -156,8 +156,6 @@ abstract class TraceToTacticConverterBase(defs: Declaration) extends TraceToTact
           else parseTactic(m, tacticDefs.toMap) match {
             case Some(t: AppliedPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
             case Some(t: AppliedDependentPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
-            case Some(t: AppliedDependentPositionTacticWithAppliedInput) =>
-              (BellePrettyPrinter(convertLocator(t, node)), Some(t))
             case Some(using @ Using(es, t)) => (BellePrettyPrinter(Using(es, convertLocator(t, node))), Some(using))
             case Some(t) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
             case _ => (m, None)
