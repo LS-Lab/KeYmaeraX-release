@@ -9,6 +9,8 @@ import org.keymaerax.pt.ProvableSig
 import org.scalatest.Assertions.{fail, withClue}
 import org.scalatest.matchers.{MatchResult, Matcher}
 
+import scala.reflect.{classTag, ClassTag}
+
 /**
  * Custom test assertions.
  *
@@ -30,9 +32,9 @@ object CustomAssertions {
    * Turns exceptions into 'None', most useful with Matcher throwOrNoop
    * {{{theDeductionOf { proveBy(formula, tactic) } should throwOrNoop}}}
    */
-  def theDeductionOf[E <: Throwable](f: => ProvableSig): Either[ProvableSig, E] =
+  def theDeductionOf[E <: Throwable: ClassTag](f: => ProvableSig): Either[ProvableSig, E] =
     try { Left(f) }
-    catch { case e: E => Right(e) }
+    catch { case e if classTag[E].runtimeClass.isInstance(e) => Right(e.asInstanceOf[E]) }
 
   /**
    * Checks that a provable, if present, has a sole subgoal equal to its conclusion, so is equivalent to a single
