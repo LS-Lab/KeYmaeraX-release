@@ -37,8 +37,11 @@ jobs:
       - name: Check formatting
         run: sbt --mem 2048 scalafmtCheck Test/scalafmtCheck
 
-      - name: Build jar files
-        run: sbt --mem 2048 assembly
+      - name: Compile
+        run: sbt --mem 2048 'set ThisBuild/scalacOptions += "-Werror"' compile
 
       - name: Compile tests
-        run: sbt --mem 2048 Test/compile
+        run: sbt --mem 2048 'set ThisBuild/scalacOptions += "-Werror"' Test/compile
+
+      - name: Build jar files
+        run: sbt --mem 2048 'set ThisBuild/scalacOptions += "-Werror"' assembly
