@@ -370,9 +370,9 @@ object KeYmaeraXProofChecker {
           val writer = new PrintWriter(path)
           writer.write(source)
           writer.close()
-        case (_, None) => ()
         case (_: TermProvable, None) =>
           assert(assertion = false, "Proof term output path specified but proof did not contain proof term")
+        case (_, None) => ()
       }
     }
 

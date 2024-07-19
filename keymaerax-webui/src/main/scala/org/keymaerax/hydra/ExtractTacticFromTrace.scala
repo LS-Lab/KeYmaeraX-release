@@ -250,9 +250,9 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends LabelledTraceToTa
   /** Converts fixed positions into searchy locators. */
   override protected def convertLocator(tactic: BelleExpr, node: ProofTreeNode): BelleExpr = tactic match {
     case t @ AppliedPositionTactic(_, l) => t.copy(locator = convertLocator(l, node))
-    case t: AppliedDependentPositionTactic => new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node))
     case t: AppliedDependentPositionTacticWithAppliedInput =>
       new AppliedDependentPositionTacticWithAppliedInput(t.pt, convertLocator(t.locator, node))
+    case t: AppliedDependentPositionTactic => new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node))
     case t => t
   }
 }
