@@ -54,38 +54,41 @@ object ReflectiveExpressionBuilder extends Logging {
       )
 
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
-      // @note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
-      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe => expr(s)
-      case (expr: TypedFunc[PosInExpr, _], (pie: PosInExpr) :: Nil) if expr.argType.tpe <:< typeTag[PosInExpr].tpe =>
-        expr(pie)
-      case (expr: TypedFunc[Formula, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Formula].tpe =>
-        expr(fml)
-      case (expr: TypedFunc[Variable, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe => expr(y)
-      case (expr: TypedFunc[Term, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe => expr(term)
-      case (expr: TypedFunc[Expression, _], (ex: Expression) :: Nil) if expr.argType.tpe <:< typeTag[Expression].tpe =>
-        expr(ex)
-      case (expr: TypedFunc[SubstitutionPair, _], (ex: SubstitutionPair) :: Nil)
-          if expr.argType.tpe <:< typeTag[SubstitutionPair].tpe => expr(ex)
-      case (expr: TypedFunc[Option[Formula], _], (fml: Formula) :: Nil)
-          if expr.argType.tpe <:< typeTag[Option[Formula]].tpe => expr(Some(fml))
-      case (expr: TypedFunc[Option[Variable], _], (y: Variable) :: Nil)
-          if expr.argType.tpe <:< typeTag[Option[Variable]].tpe => expr(Some(y))
-      case (expr: TypedFunc[Option[Term], _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Option[Term]].tpe =>
-        expr(Some(term))
-      case (expr: TypedFunc[Option[Expression], _], (ex: Expression) :: Nil)
-          if expr.argType.tpe <:< typeTag[Option[Expression]].tpe => expr(Some(ex))
-      case (expr: TypedFunc[Option[String], _], (s: String) :: Nil)
-          if expr.argType.tpe <:< typeTag[Option[String]].tpe => expr(Some(s))
-      case (expr: TypedFunc[Option[PosInExpr], _], (pie: PosInExpr) :: Nil)
-          if expr.argType.tpe <:< typeTag[Option[PosInExpr]].tpe => expr(Some(pie))
-      case (expr: TypedFunc[Seq[Expression], _], fmls: Seq[Expression])
-          if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(fmls)
-      case (expr: TypedFunc[Seq[Expression], _], fml: Expression)
-          if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(Seq(fml))
-      case (expr: TypedFunc[Seq[SubstitutionPair], _], ex: Seq[SubstitutionPair])
-          if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(ex)
-      case (expr: TypedFunc[Seq[SubstitutionPair], _], (ex: SubstitutionPair) :: Nil)
-          if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(Seq(ex))
+      case (expr: TypedFunc[_, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe =>
+        expr.asInstanceOf[TypedFunc[String, _]](s)
+      case (expr: TypedFunc[_, _], (pie: PosInExpr) :: Nil) if expr.argType.tpe <:< typeTag[PosInExpr].tpe =>
+        expr.asInstanceOf[TypedFunc[PosInExpr, _]](pie)
+      case (expr: TypedFunc[_, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Formula].tpe =>
+        expr.asInstanceOf[TypedFunc[Formula, _]](fml)
+      case (expr: TypedFunc[_, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe =>
+        expr.asInstanceOf[TypedFunc[Variable, _]](y)
+      case (expr: TypedFunc[_, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe =>
+        expr.asInstanceOf[TypedFunc[Term, _]](term)
+      case (expr: TypedFunc[_, _], (ex: Expression) :: Nil) if expr.argType.tpe <:< typeTag[Expression].tpe =>
+        expr.asInstanceOf[TypedFunc[Expression, _]](ex)
+      case (expr: TypedFunc[_, _], (ex: SubstitutionPair) :: Nil)
+          if expr.argType.tpe <:< typeTag[SubstitutionPair].tpe => expr.asInstanceOf[TypedFunc[SubstitutionPair, _]](ex)
+      case (expr: TypedFunc[_, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Option[Formula]].tpe =>
+        expr.asInstanceOf[TypedFunc[Option[Formula], _]](Some(fml))
+      case (expr: TypedFunc[_, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Option[Variable]].tpe =>
+        expr.asInstanceOf[TypedFunc[Option[Variable], _]](Some(y))
+      case (expr: TypedFunc[_, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Option[Term]].tpe =>
+        expr.asInstanceOf[TypedFunc[Option[Term], _]](Some(term))
+      case (expr: TypedFunc[_, _], (ex: Expression) :: Nil) if expr.argType.tpe <:< typeTag[Option[Expression]].tpe =>
+        expr.asInstanceOf[TypedFunc[Option[Expression], _]](Some(ex))
+      case (expr: TypedFunc[_, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[Option[String]].tpe =>
+        expr.asInstanceOf[TypedFunc[Option[String], _]](Some(s))
+      case (expr: TypedFunc[_, _], (pie: PosInExpr) :: Nil) if expr.argType.tpe <:< typeTag[Option[PosInExpr]].tpe =>
+        expr.asInstanceOf[TypedFunc[Option[PosInExpr], _]](Some(pie))
+      case (expr: TypedFunc[_, _], fmls: Seq[_]) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe =>
+        expr.asInstanceOf[TypedFunc[Seq[Expression], _]](fmls.asInstanceOf[Seq[Expression]])
+      case (expr: TypedFunc[_, _], fml: Expression) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe =>
+        expr.asInstanceOf[TypedFunc[Seq[Expression], _]](Seq(fml))
+      case (expr: TypedFunc[_, _], ex: Seq[_]) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe =>
+        expr.asInstanceOf[TypedFunc[Seq[SubstitutionPair], _]](ex.asInstanceOf[Seq[SubstitutionPair]])
+      case (expr: TypedFunc[_, _], (ex: SubstitutionPair) :: Nil)
+          if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe =>
+        expr.asInstanceOf[TypedFunc[Seq[SubstitutionPair], _]](Seq(ex))
       case (expr: TypedFunc[_, _], _) => throw ParseException(
           s"Expected argument of type ${expr.argType}, but got " + expr.getClass.getSimpleName,
           UnknownLocation,
@@ -95,17 +98,24 @@ object ReflectiveExpressionBuilder extends Logging {
 
     @tailrec
     def fillOptions(expr: Any): Any = expr match {
-      case e: TypedFunc[Option[Formula], _] if e.argType.tpe <:< typeTag[Option[Formula]].tpe => fillOptions(e(None))
-      case e: TypedFunc[Option[Term], _] if e.argType.tpe <:< typeTag[Option[Term]].tpe => fillOptions(e(None))
-      case e: TypedFunc[Option[Variable], _] if e.argType.tpe <:< typeTag[Option[Variable]].tpe => fillOptions(e(None))
-      case e: TypedFunc[Option[String], _] if e.argType.tpe <:< typeTag[Option[String]].tpe => fillOptions(e(None))
-      case e: TypedFunc[Option[PosInExpr], _] if e.argType.tpe <:< typeTag[Option[PosInExpr]].tpe =>
-        fillOptions(e(None))
-      case e: TypedFunc[List[Formula], _] if e.argType.tpe <:< typeTag[List[Formula]].tpe => fillOptions(e(List.empty))
-      case e: TypedFunc[List[Term], _] if e.argType.tpe <:< typeTag[List[Term]].tpe => fillOptions(e(List.empty))
-      case e: TypedFunc[List[Variable], _] if e.argType.tpe <:< typeTag[List[Variable]].tpe =>
-        fillOptions(e(List.empty))
-      case e: TypedFunc[List[String], _] if e.argType.tpe <:< typeTag[List[String]].tpe => fillOptions(e(List.empty))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[Option[Formula]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[Option[Formula], _]](None))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[Option[Term]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[Option[Term], _]](None))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[Option[Variable]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[Option[Variable], _]](None))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[Option[String]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[Option[String], _]](None))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[Option[PosInExpr]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[Option[PosInExpr], _]](None))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[List[Formula]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[List[Formula], _]](List.empty))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[List[Term]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[List[Term], _]](List.empty))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[List[Variable]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[List[Variable], _]](List.empty))
+      case e: TypedFunc[_, _] if e.argType.tpe <:< typeTag[List[String]].tpe =>
+        fillOptions(e.asInstanceOf[TypedFunc[List[String], _]](List.empty))
       case e => e
     }
 
@@ -121,13 +131,10 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr: DependentPositionTactic, arg :: Nil, 1) => new AppliedDependentPositionTactic(expr, arg)
       case (expr: BuiltInTwoPositionTactic, Fixed(arg1: Position, _, _) :: Fixed(arg2: Position, _, _) :: Nil, 2) =>
         AppliedBuiltinTwoPositionTactic(expr, arg1, arg2)
-      case (expr: (Position => DependentPositionTactic), Fixed(arg1: Position, _, _) :: arg2 :: Nil, 2) =>
-        new AppliedDependentPositionTactic(expr(arg1), arg2)
-      case (
-            expr: ((Position, Position) => BelleExpr),
-            Fixed(arg1: Position, _, _) :: Fixed(arg2: Position, _, _) :: Nil,
-            2,
-          ) => expr(arg1, arg2)
+      case (expr: Function1[_, _], Fixed(arg1: Position, _, _) :: arg2 :: Nil, 2) =>
+        new AppliedDependentPositionTactic(expr.asInstanceOf[(Position => DependentPositionTactic)](arg1), arg2)
+      case (expr: Function2[_, _, _], Fixed(arg1: Position, _, _) :: Fixed(arg2: Position, _, _) :: Nil, 2) => expr
+          .asInstanceOf[((Position, Position) => BelleExpr)](arg1, arg2)
       case (expr, pArgs, num) =>
         if (pArgs.length > num) {
           throw ParseException(

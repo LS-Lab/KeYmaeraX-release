@@ -86,19 +86,22 @@ class CodeNameChecker extends TacticTestBase with Matchers {
         .inputs
         .foldLeft(info.belleExpr)((t, _) =>
           t match {
-            case expr: TypedFunc[Formula, _] if expr.argType.tpe <:< typeTag[Formula].tpe => expr(True)
-            case expr: TypedFunc[Variable, _] if expr.argType.tpe <:< typeTag[Variable].tpe => expr(Variable("dummy"))
-            case expr: TypedFunc[Term, _] if expr.argType.tpe <:< typeTag[Term].tpe => expr(Number(42))
-            case expr: TypedFunc[Expression, _] if expr.argType.tpe <:< typeTag[Expression].tpe =>
-              expr(Variable("dummy"))
-            case expr: TypedFunc[Option[Formula], _] if expr.argType.tpe <:< typeTag[Option[Formula]].tpe =>
-              expr(Some(True))
-            case expr: TypedFunc[Option[Variable], _] if expr.argType.tpe <:< typeTag[Option[Variable]].tpe =>
-              expr(Some(Variable("dummy")))
-            case expr: TypedFunc[Option[Term], _] if expr.argType.tpe <:< typeTag[Option[Term]].tpe =>
-              expr(Some(Number(42)))
-            case expr: TypedFunc[Option[Expression], _] if expr.argType.tpe <:< typeTag[Option[Expression]].tpe =>
-              expr(Some(Variable("dummy")))
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Formula].tpe =>
+              expr.asInstanceOf[TypedFunc[Formula, _]](True)
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Variable].tpe =>
+              expr.asInstanceOf[TypedFunc[Variable, _]](Variable("dummy"))
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Term].tpe =>
+              expr.asInstanceOf[TypedFunc[Term, _]](Number(42))
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Expression].tpe =>
+              expr.asInstanceOf[TypedFunc[Expression, _]](Variable("dummy"))
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Formula]].tpe =>
+              expr.asInstanceOf[TypedFunc[Option[Formula], _]](Some(True))
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Variable]].tpe =>
+              expr.asInstanceOf[TypedFunc[Option[Variable], _]](Some(Variable("dummy")))
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Term]].tpe =>
+              expr.asInstanceOf[TypedFunc[Option[Term], _]](Some(Number(42)))
+            case expr: TypedFunc[_, _] if expr.argType.tpe <:< typeTag[Option[Expression]].tpe =>
+              expr.asInstanceOf[TypedFunc[Option[Expression], _]](Some(Variable("dummy")))
           }
         )
       e match {
