@@ -1154,12 +1154,16 @@ class ScriptedRequestTests extends TacticTestBase {
         .zipWithIndex
         .flatMap({
           case (in: Expression, i) => Some(BelleTermInput(in.prettyString, Some(expectedInputs(i))))
-          case (es: List[Expression], i) =>
-            Some(BelleTermInput(es.map(_.prettyString).mkString(","), Some(expectedInputs(i))))
-          case (_: Generator[GenProduct], _) => None // @todo pass on once supported
+          case (es: List[_], i) => Some(BelleTermInput(
+              es.asInstanceOf[List[Expression]].map(_.prettyString).mkString(","),
+              Some(expectedInputs(i)),
+            ))
+          case (_: Generator[_], _) => None // @todo pass on once supported
           case (Some(e: Expression), i) => Some(BelleTermInput(e.prettyString, Some(expectedInputs(i))))
-          case (Some(es: List[Expression]), i) =>
-            Some(BelleTermInput(es.map(_.prettyString).mkString(","), Some(expectedInputs(i))))
+          case (Some(es: List[_]), i) => Some(BelleTermInput(
+              es.asInstanceOf[List[Expression]].map(_.prettyString).mkString(","),
+              Some(expectedInputs(i)),
+            ))
           case (None, _) => None
           case (in, i) => Some(BelleTermInput(in.toString, Some(expectedInputs(i))))
         })
