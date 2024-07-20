@@ -2265,9 +2265,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "correctly Dconstify 2" in withQE { _ =>
     val seq = "b=1,x>b,a=-1==> [{x'=a & x > 1}] x*a^2>b".asSequent
-    withTacticProgress(DifferentialTactics.dgBarrier(1), "barrier" :: Nil) {
-      TactixLibrary.proveBy(seq, _)
-    } shouldBe Symbol("proved")
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe Symbol("proved")
   }
 
   it should "handle Z3 ghost cuts correctly" in withQE { _ =>

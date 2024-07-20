@@ -531,8 +531,7 @@ class Compbased extends TacticTestBase {
           .mkString,
       )
       .get
-    withTacticProgress(entry.tactics.head._3) { proveBy(entry.model.asInstanceOf[Formula], _) } shouldBe
-      Symbol("proved")
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
   }
 
   "ETCS" should "prove RBC component" in withMathematica { _ =>

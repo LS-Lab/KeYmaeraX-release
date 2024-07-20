@@ -771,9 +771,8 @@ class TactixLibraryTests extends TacticTestBase {
         io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString,
       )
       .get
-    withTacticProgress(autoClose, List("_ALL"))(
-      proveBy(entry.model.asInstanceOf[Formula], _, defs = entry.defs)
-    ) shouldBe Symbol("proved")
+
+    proveBy(entry.model.asInstanceOf[Formula], autoClose, defs = entry.defs) shouldBe Symbol("proved")
   }
 
   it should "prove ATC-2 fully automatically" in withMathematica { _ =>
@@ -784,9 +783,8 @@ class TactixLibraryTests extends TacticTestBase {
         io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString,
       )
       .get
-    withTacticProgress(autoClose, List("_ALL"))(
-      proveBy(entry.model.asInstanceOf[Formula], _, defs = entry.defs)
-    ) shouldBe Symbol("proved")
+
+    proveBy(entry.model.asInstanceOf[Formula], autoClose, defs = entry.defs) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: prove an event-triggered system fully automatically" taggedAs TodoTest in
@@ -799,9 +797,8 @@ class TactixLibraryTests extends TacticTestBase {
           io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString,
         )
         .get
-      withTacticProgress(autoClose, List("_ALL"))(
-        proveBy(entry.model.asInstanceOf[Formula], _, defs = entry.defs)
-      ) shouldBe Symbol("proved")
+
+      proveBy(entry.model.asInstanceOf[Formula], autoClose, defs = entry.defs) shouldBe Symbol("proved")
     }
 
   it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>
