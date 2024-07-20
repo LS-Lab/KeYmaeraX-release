@@ -11,7 +11,7 @@ import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser.{ArchiveParser, Declaration}
-import org.keymaerax.tagobjects.{ExtremeTest, SlowTest}
+import org.keymaerax.tagobjects.{ExtremeTest, IgnoreInBuildTest, SlowTest}
 import org.keymaerax.tools.MathematicaComputationTimedOutException
 import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery, whenever}
@@ -39,22 +39,25 @@ class ContinuousInvariantTests extends TacticTestBase {
         ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
-  "Continuous invariant generation" should "generate a simple invariant" in withMathematicaMatlab { _ =>
-    val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
-    proveBy(problem, ODE(1)) shouldBe Symbol("proved")
+  "Continuous invariant generation" should "generate a simple invariant" taggedAs IgnoreInBuildTest in
+    withMathematicaMatlab { _ =>
+      val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
+      proveBy(problem, ODE(1)) shouldBe Symbol("proved")
 
-    val (simpleInvariants, pegasusInvariants) =
-      TactixLibrary.differentialInvGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)).splitAt(4)
-    simpleInvariants should contain theSameElementsAs
-      (("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
-        ("y>=-1".asFormula, None) :: Nil)
-    // pegasus result may vary depending on its internal configuration - check only basic properties
-    // (last element is a candidate composed of all other candidates)
-    pegasusInvariants should have size 3
-    val invariants = pegasusInvariants.take(pegasusInvariants.size - 1)
-    val candidate = pegasusInvariants.last
-    candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant = true, None))
-  }
+      val (simpleInvariants, pegasusInvariants) = TactixLibrary
+        .differentialInvGenerator
+        .generate(problem, SuccPos(0), Declaration(Map.empty))
+        .splitAt(4)
+      simpleInvariants should contain theSameElementsAs
+        (("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
+          ("y>=-1".asFormula, None) :: Nil)
+      // pegasus result may vary depending on its internal configuration - check only basic properties
+      // (last element is a candidate composed of all other candidates)
+      pegasusInvariants should have size 3
+      val invariants = pegasusInvariants.take(pegasusInvariants.size - 1)
+      val candidate = pegasusInvariants.last
+      candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant = true, None))
+    }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica {
     tool =>

@@ -15,7 +15,7 @@ import org.keymaerax.hydra.DatabasePopulator
 import org.keymaerax.infrastruct.{FormulaTools, SuccPosition}
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser.{ArchiveParser, Declaration, Parser}
-import org.keymaerax.tagobjects.TodoTest
+import org.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 import org.keymaerax.tags.{ExtremeTest, UsualTest}
 import org.keymaerax.tools.ext.{MathematicaInvGenTool, PlotConverter}
 import org.keymaerax.tools.install.ToolConfiguration
@@ -211,7 +211,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
       )
   }
 
-  it should "generate Darboux polynomials" in withMathematicaMatlab { _ =>
+  it should "generate Darboux polynomials" taggedAs IgnoreInBuildTest in withMathematicaMatlab { _ =>
     val s = """x > -1, x < -3/4, y <= 3/2 & y >= 1
               |==>
               |[

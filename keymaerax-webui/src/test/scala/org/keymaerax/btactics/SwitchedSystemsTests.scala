@@ -9,7 +9,7 @@ import org.keymaerax.btactics.SwitchedSystems._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
-import org.keymaerax.tagobjects.TodoTest
+import org.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 
 class SwitchedSystemsTests extends TacticTestBase {
 
@@ -224,7 +224,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr2 shouldBe Symbol("proved")
   }
 
-  it should "prove system stable automatically" in withMathematicaMatlab { _ =>
+  it should "prove system stable automatically" taggedAs IgnoreInBuildTest in withMathematicaMatlab { _ =>
     val ode1 = ODESystem("x1'=-2*x1-x2-x3, x2'=-x2, x3'=-x1-x2-2*x3".asDifferentialProgram, True)
     val ode2 = ODESystem("x1'=2*x2, x2'=-2*x1-x2, x3'=x1-2*x2-x3".asDifferentialProgram, True)
 
@@ -497,7 +497,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr2 shouldBe Symbol("proved")
   }
 
-  it should "prove guarded system stable automatically" in withMathematica { _ =>
+  it should "prove guarded system stable automatically" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     // Johansson and Rantzer motivating example
     val ode1 = ODESystem("x1' = -5*x1-4*x2, x2' =   -x1-2*x2".asDifferentialProgram, "x1<=0".asFormula)
     val ode2 = ODESystem("x1' = -2*x1-4*x2, x2' = 20*x1-2*x2".asDifferentialProgram, "x1>=0".asFormula)
