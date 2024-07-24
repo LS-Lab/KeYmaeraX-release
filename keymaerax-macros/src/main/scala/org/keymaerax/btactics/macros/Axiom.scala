@@ -109,7 +109,7 @@ object AxiomMacro {
   /** Functions that can be used with `@Axiom` and their corresponding min and max parameter counts. */
   private val ALLOWED_FUNCTIONS_AND_ARGUMENTS: Map[String, (Int, Int)] = Map(
     "coreAxiom" -> (1, 1),
-    "derivedAxiom" -> (3, 4),
+    "derivedAxiom" -> (3, 3),
     "derivedAxiomFromFact" -> (3, 4),
     "derivedFormula" -> (3, 3),
     "derivedFact" -> (2, 3),

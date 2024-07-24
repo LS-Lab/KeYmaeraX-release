@@ -272,24 +272,11 @@ object Ax extends Logging {
   /**
    * Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available
    */
-  def derivedAxiom(
-      canonicalName: String,
-      derived: => Sequent,
-      tactic: => BelleExpr,
-      codeNameOpt: Option[String] = None,
-  ): DerivedAxiomInfo = {
+  def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr): DerivedAxiomInfo = {
     val dai: DerivedAxiomInfo = DerivedAxiomInfo.apply(canonicalName)
-    val codeName = codeNameOpt match {
-      case Some(codeName) => codeName
-      case None =>
-        try { dai.codeName }
-        catch {
-          case t: Throwable => throw new Exception(
-              s"Derived axiom info for $canonicalName needs to exist or codeName needs to be explicitly passed",
-              t,
-            )
-        }
-    }
+    val codeName =
+      try { dai.codeName }
+      catch { case t: Throwable => throw new Exception(s"Derived axiom info for $canonicalName needs to exist", t) }
     val storedName = DerivedAxiomInfo.toStoredName(codeName)
     val lemma = derivedAxiomDB.get(storedName) match {
       case Some(lemma) => lemma
