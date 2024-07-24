@@ -79,7 +79,7 @@ object ProofRuleMacro {
 
   /** Functions that can be used with `@Axiom` and their corresponding min and max parameter counts. */
   private val ALLOWED_FUNCTIONS_AND_ARGUMENTS: Map[String, (Int, Int)] =
-    Map("coreRule" -> (1, 1), "derivedRule" -> (2, 3), "derivedRuleSequent" -> (3, 4))
+    Map("coreRule" -> (1, 1), "derivedRule" -> (2, 3), "derivedRuleSequent" -> (3, 3))
 
   private val ALLOWED_FUNCTION_NAMES_STR: String = ALLOWED_FUNCTIONS_AND_ARGUMENTS.keys.toList.sorted.mkString(", ")
 

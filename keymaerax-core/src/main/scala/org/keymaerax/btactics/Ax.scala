@@ -178,7 +178,7 @@ object Ax extends Logging {
     dai
   }
 
-  def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): DerivedRuleInfo = {
+  def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String] = None): DerivedRuleInfo = {
     // create evidence (traces input into tool and output from tool)
     val dri = DerivedRuleInfo(name)
     val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
@@ -214,28 +214,17 @@ object Ax extends Logging {
     dri
   }
 
-  private[this] def derivedRuleSequent(
-      name: String,
-      derived: => Sequent,
-      tactic: => BelleExpr,
-      codeNameOpt: Option[String] = None,
-  ): DerivedRuleInfo = {
+  private[this] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr): DerivedRuleInfo = {
     val dri =
       try { DerivedRuleInfo(name) }
-      catch {
-        case _: Throwable =>
-          throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
-      }
-    val codeName = codeNameOpt match {
-      case Some(codeName) => codeName
-      case None => dri.codeName
-    }
+      catch { case _: Throwable => throw new Exception("Derived rule info needs to exist") }
+    val codeName = dri.codeName
     val storageName = DerivedAxiomInfo.toStoredName(codeName)
     val lemma = derivedAxiomDB.get(storageName) match {
       case Some(lemma) => lemma
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
-        derivedRule(name, witness, codeNameOpt).lemma
+        derivedRule(name, witness).lemma
     }
     dri.setLemma(lemma)
     dri
