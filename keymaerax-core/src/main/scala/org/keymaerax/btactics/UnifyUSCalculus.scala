@@ -12,18 +12,7 @@ import org.keymaerax.btactics.PropositionalTactics._
 import org.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{
-  AxiomInfo,
-  DerivationInfo,
-  ProvableInfo,
-  Tactic,
-  TacticInfo,
-  UnifierFull,
-  UnifierLinear,
-  UnifierSurjective,
-  UnifierSurjectiveLinear,
-  UnifierSurjectiveLinearPretend,
-}
+import org.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic, TacticInfo, Unifier}
 import org.keymaerax.core.StaticSemantics._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
@@ -3350,17 +3339,17 @@ trait UnifyUSCalculus {
    */
   private[keymaerax] def matcherFor(pi: ProvableInfo): Matcher = pi match {
     case ifo: AxiomInfo => ifo.unifier match {
-        case UnifierFull => defaultMatcher
-        case UnifierLinear => LinearMatcher
-        case UnifierSurjective => UniformMatcher
+        case Unifier.Full => defaultMatcher
+        case Unifier.Linear => LinearMatcher
+        case Unifier.Surjective => UniformMatcher
         // TODO Switch to different matcher
         // A typo in the original code meant that all axioms etc. marked "surjlinear" and "surjlinearpretend" would not
         // use the matcher intended for the "surjlinear" and "surjlinearpretend" unifiers (UniformMatcher) but instead
         // the default matcher (UnificationMatch).
         // Also, before refactoring, the docs for "surjlinear" mentioned that LinearMatcher instead of UniformMatcher
         // should also be okay.
-        case UnifierSurjectiveLinear => defaultMatcher
-        case UnifierSurjectiveLinearPretend => defaultMatcher
+        case Unifier.SurjectiveLinear => defaultMatcher
+        case Unifier.SurjectiveLinearPretend => defaultMatcher
       }
     case _ => defaultMatcher
   }

@@ -81,7 +81,7 @@ class Axiom(
     val displayNameLong: Option[String] = None,
     val displayLevel: DisplayLevel = DisplayLevelInternal,
     val displayConclusion: String = "",
-    val unifier: Unifier = UnifierFull,
+    val unifier: Unifier = Unifier.Full,
     val inputs: String = "",
     val key: String = "0",
     val recursor: String = "",
@@ -98,7 +98,7 @@ case class AxiomArgs(
     displayNameLong: Option[String] = None,
     displayLevel: DisplayLevel = DisplayLevelInternal,
     displayConclusion: String = "",
-    unifier: Unifier = UnifierFull,
+    unifier: Unifier = Unifier.Full,
     inputs: String = "",
     key: String = "0",
     recursor: String = "",
@@ -136,14 +136,7 @@ object AxiomMacro {
               DisplayLevelBrowse,
               DisplayLevelMenu,
               DisplayLevelAll,
-            };
-            import org.keymaerax.btactics.macros.{
               Unifier,
-              UnifierFull,
-              UnifierLinear,
-              UnifierSurjective,
-              UnifierSurjectiveLinear,
-              UnifierSurjectiveLinearPretend,
             };
             org.keymaerax.btactics.macros.AxiomArgs(..$args)
           }"""

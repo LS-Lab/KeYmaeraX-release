@@ -173,11 +173,11 @@ object AnnotationCommon {
   def astForUnifier(unifier: Unifier)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     unifier match {
-      case UnifierFull => q"org.keymaerax.btactics.macros.UnifierFull"
-      case UnifierLinear => q"org.keymaerax.btactics.macros.UnifierLinear"
-      case UnifierSurjective => q"org.keymaerax.btactics.macros.UnifierSurjective"
-      case UnifierSurjectiveLinear => q"org.keymaerax.btactics.macros.UnifierSurjectiveLinear"
-      case UnifierSurjectiveLinearPretend => q"org.keymaerax.btactics.macros.UnifierSurjectiveLinearPretend"
+      case Unifier.Full => q"org.keymaerax.btactics.macros.Unifier.Full"
+      case Unifier.Linear => q"org.keymaerax.btactics.macros.Unifier.Linear"
+      case Unifier.Surjective => q"org.keymaerax.btactics.macros.Unifier.Surjective"
+      case Unifier.SurjectiveLinear => q"org.keymaerax.btactics.macros.Unifier.SurjectiveLinear"
+      case Unifier.SurjectiveLinearPretend => q"org.keymaerax.btactics.macros.Unifier.SurjectiveLinearPretend"
     }
   }
 

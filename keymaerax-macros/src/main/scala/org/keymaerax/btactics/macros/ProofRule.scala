@@ -53,7 +53,7 @@ class ProofRule(
     val displayLevel: DisplayLevel = DisplayLevelInternal,
     val displayPremises: String = "",
     val displayConclusion: String = "",
-    val unifier: Unifier = UnifierFull,
+    val unifier: Unifier = Unifier.Full,
     val key: String = "",
     val recursor: String = "*",
 ) extends StaticAnnotation {
@@ -70,7 +70,7 @@ case class ProofRuleArgs(
     displayLevel: DisplayLevel = DisplayLevelInternal,
     displayPremises: String = "",
     displayConclusion: String = "",
-    unifier: Unifier = UnifierFull,
+    unifier: Unifier = Unifier.Full,
     key: String = "",
     recursor: String = "*",
 )
@@ -102,14 +102,7 @@ object ProofRuleMacro {
               DisplayLevelBrowse,
               DisplayLevelMenu,
               DisplayLevelAll,
-            };
-            import org.keymaerax.btactics.macros.{
               Unifier,
-              UnifierFull,
-              UnifierLinear,
-              UnifierSurjective,
-              UnifierSurjectiveLinear,
-              UnifierSurjectiveLinearPretend,
             };
             org.keymaerax.btactics.macros.ProofRuleArgs(..$args)
           }"""
