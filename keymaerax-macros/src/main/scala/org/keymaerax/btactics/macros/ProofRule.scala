@@ -157,7 +157,6 @@ object ProofRuleMacro {
     val displayNameAscii = AnnotationCommon.getDisplayNameAscii(args.displayNameAscii, displayName)(c)
     val displayNameLong = AnnotationCommon.getDisplayNameLong(args.displayNameLong, displayName)(c)
 
-    val storageName = name.toLowerCase
     val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
 
     /*
@@ -194,9 +193,7 @@ object ProofRuleMacro {
      * Build AST
      */
 
-    // The derived* functions allow an optional argument for the codeName, which we supply here.
-    val fullParams = if (isCore) tParams else tParams.take(minParam).:+(q"Some($storageName)")
-    val fullRhs = q"$tFunctionName( ..$fullParams)"
+    val fullRhs = q"$tFunctionName( ..$tParams)"
 
     // Tactic implementation of derived rule is always useAt
     val expr = q"""
