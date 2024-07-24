@@ -173,7 +173,6 @@ object AxiomMacro {
      * Compute different names
      */
 
-    val name = AnnotationCommon.getName(args.name)(c)
     val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
 
     /*
@@ -185,7 +184,7 @@ object AxiomMacro {
     val recursor = parsePoses(args.recursor)(c)
 
     val displayNames = DisplayNames.createWithChecks(
-      name = args.displayName.getOrElse(name),
+      name = args.displayName.getOrElse(args.name),
       nameAscii = args.displayNameAscii,
       nameLong = args.displayNameLong,
     )
@@ -211,7 +210,7 @@ object AxiomMacro {
         q"""CoreAxiomInfo(
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(displayInfo)(c)},
-          codeName = $name,
+          codeName = ${args.name},
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,
@@ -222,7 +221,7 @@ object AxiomMacro {
         q"""DerivedAxiomInfo(
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(displayInfo)(c)},
-          codeName = $name,
+          codeName = ${args.name},
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,

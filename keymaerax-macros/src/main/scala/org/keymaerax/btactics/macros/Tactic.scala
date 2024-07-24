@@ -272,19 +272,13 @@ object TacticMacro {
     val funcSort = funcName.flatMap(ANON_SORTS.get)
 
     /*
-     * Compute different names
-     */
-
-    val name = AnnotationCommon.getName(args.name)(c)
-
-    /*
      * Parse annotation arguments
      */
 
     val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
 
     val displayNames = DisplayNames.createWithChecks(
-      name = args.displayName.getOrElse(name),
+      name = args.displayName.getOrElse(args.name),
       nameAscii = args.displayNameAscii,
       nameLong = args.displayNameLong,
     )
@@ -468,7 +462,7 @@ object TacticMacro {
         .map(ai => Ident(TermName(ai.name)))
         .foldRight[Tree](q"Nil") { case (arg, acc) => q"$arg :: $acc" }
 
-      val tFactory = q"new org.keymaerax.btactics.TacticFactory.TacticForNameFactory($name)"
+      val tFactory = q"new org.keymaerax.btactics.TacticFactory.TacticForNameFactory(${args.name})"
 
       /** The body, but if the function used is in [[ANON_SORTS]], the function is removed. */
       val tRhs = body match {
@@ -571,7 +565,7 @@ object TacticMacro {
     val info = returnType match {
       case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => q"""
         new org.keymaerax.btactics.macros.PlainTacticInfo(
-          codeName = $name,
+          codeName = ${args.name},
           display = ${astForDisplayInfo(display)(c)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
@@ -580,7 +574,7 @@ object TacticMacro {
 
       case "InputTactic" | "StringInputTactic" => q"""
         new org.keymaerax.btactics.macros.InputTacticInfo(
-          codeName = $name,
+          codeName = ${args.name},
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
           needsGenerator = $needsGenerator,
@@ -591,7 +585,7 @@ object TacticMacro {
       case "DependentPositionTactic" | "BuiltInLeftTactic" | "BuiltInRightTactic" | "BuiltInPositionTactic" |
           "CoreLeftTactic" | "CoreRightTactic" => q"""
         new org.keymaerax.btactics.macros.PositionTacticInfo(
-          codeName = $name,
+          codeName = ${args.name},
           display = ${astForDisplayInfo(display)(c)},
           needsGenerator = $needsGenerator,
           revealInternalSteps = ${args.revealInternalSteps},
@@ -600,7 +594,7 @@ object TacticMacro {
 
       case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => q"""
         new org.keymaerax.btactics.macros.InputPositionTacticInfo(
-          codeName = $name,
+          codeName = ${args.name},
           display = ${astForDisplayInfo(display)(c)},
           inputs = ${displayInputs.map(ai => astForArgInfo(ai)(c))},
           needsGenerator = $needsGenerator,
@@ -610,7 +604,7 @@ object TacticMacro {
 
       case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => q"""
         new org.keymaerax.btactics.macros.TwoPositionTacticInfo(
-          codeName = $name,
+          codeName = ${args.name},
           display = ${astForDisplayInfo(display)(c)},
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)
@@ -618,7 +612,7 @@ object TacticMacro {
 
       case "AppliedBuiltInTwoPositionTactic" => q"""
         new org.keymaerax.btactics.macros.InputTwoPositionTacticInfo(
-          codeName = $name,
+          codeName = ${args.name},
           display = ${astForDisplayInfo(display)(c)},
           needsGenerator = $needsGenerator,
         )(theExpr = $expr)

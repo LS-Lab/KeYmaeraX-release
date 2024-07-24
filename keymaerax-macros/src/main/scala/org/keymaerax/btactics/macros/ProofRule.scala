@@ -139,7 +139,6 @@ object ProofRuleMacro {
      * Compute different names
      */
 
-    val name = AnnotationCommon.getName(args.name)(c)
     val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
 
     /*
@@ -152,7 +151,7 @@ object ProofRuleMacro {
     val recursor = parsePoses(args.recursor)(c)
 
     val displayNames = DisplayNames.createWithChecks(
-      name = args.displayName.getOrElse(name),
+      name = args.displayName.getOrElse(args.name),
       nameAscii = args.displayNameAscii,
       nameLong = args.displayNameLong,
     )
@@ -181,7 +180,7 @@ object ProofRuleMacro {
         q"""AxiomaticRuleInfo(
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
-          codeName = $name,
+          codeName = ${args.name},
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,
@@ -192,7 +191,7 @@ object ProofRuleMacro {
         q"""DerivedRuleInfo(
           canonicalName = $canonicalName,
           display = ${astForDisplayInfo(display)(c)},
-          codeName = $name,
+          codeName = ${args.name},
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,

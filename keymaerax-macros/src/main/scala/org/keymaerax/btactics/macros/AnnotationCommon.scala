@@ -169,13 +169,6 @@ object AnnotationCommon {
     }
   }
 
-  def getName(name: String)(implicit c: whitebox.Context): String = {
-    val valid = "^[a-zA-Z0-9_]*$".r.matches(name)
-    if (!valid) c.abort(c.enclosingPosition, "name must consist only of a-z, A-Z, 0-9, _")
-
-    name
-  }
-
   /** Elaborate the display formula from a raw unicode string that may contain HTML tags to HTML. */
   // TODO Figure out how to get rid of this
   def renderDisplayFormula(displayFormula: String) = displayFormula

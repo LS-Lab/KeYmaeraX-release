@@ -225,6 +225,7 @@ sealed trait DerivationInfo {
 
   /** The unique alphanumeric identifier for this inference step. Cannot contain spaces or special characters. */
   val codeName: String
+  require("^[a-zA-Z0-9_]*$".r.matches(codeName), "codeName must consist only of a-z, A-Z, 0-9, _")
 
   /**
    * Specification of inputs (other than positions) to the derivation, along with names to use when displaying in the
