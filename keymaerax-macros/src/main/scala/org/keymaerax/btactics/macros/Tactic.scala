@@ -139,23 +139,25 @@ case class TacticArgs(
 )
 
 object TacticMacro {
-  trait AnonSort
-  case object CoreAnonSort extends AnonSort
-  case object SimpleAnonSort extends AnonSort
-  case object UnguardedAnonSort extends AnonSort
+  sealed trait AnonSort
+  object AnonSort {
+    case object Core extends AnonSort
+    case object Simple extends AnonSort
+    case object Unguarded extends AnonSort
+  }
 
   val ANON_SORTS: Map[String, AnonSort] = Map(
-    "anon" -> SimpleAnonSort,
-    "anonL" -> SimpleAnonSort,
-    "anonR" -> SimpleAnonSort,
-    "anonLR" -> SimpleAnonSort,
-    "inputanon" -> SimpleAnonSort,
-    "inputanonL" -> SimpleAnonSort,
-    "inputanonP" -> SimpleAnonSort,
-    "inputanonR" -> SimpleAnonSort,
-    "inputanonS" -> SimpleAnonSort,
-    "anons" -> UnguardedAnonSort,
-    "coreanon" -> CoreAnonSort,
+    "anon" -> AnonSort.Simple,
+    "anonL" -> AnonSort.Simple,
+    "anonR" -> AnonSort.Simple,
+    "anonLR" -> AnonSort.Simple,
+    "inputanon" -> AnonSort.Simple,
+    "inputanonL" -> AnonSort.Simple,
+    "inputanonP" -> AnonSort.Simple,
+    "inputanonR" -> AnonSort.Simple,
+    "inputanonS" -> AnonSort.Simple,
+    "anons" -> AnonSort.Unguarded,
+    "coreanon" -> AnonSort.Core,
   )
 
   val KNOWN_TACTIC_TYPES: List[String] = List(
@@ -502,9 +504,9 @@ object TacticMacro {
       if (funcSort.isEmpty) return q"$tFactory.forward($tRhs)"
 
       (hasInputs, positionArgs) match {
-        case (false, NoPos(None)) if funcSort.contains(UnguardedAnonSort) => q"$tFactory.bys($tRhs)"
+        case (false, NoPos(None)) if funcSort.contains(AnonSort.Unguarded) => q"$tFactory.bys($tRhs)"
         case (false, NoPos(None)) => q"$tFactory.by($tRhs)"
-        case (false, NoPos(Some(arg))) if funcSort.contains(UnguardedAnonSort) => q"$tFactory.bys(($arg) => $tRhs)"
+        case (false, NoPos(Some(arg))) if funcSort.contains(AnonSort.Unguarded) => q"$tFactory.bys(($arg) => $tRhs)"
         case (false, NoPos(Some(arg))) => q"$tFactory.by(($arg) => $tRhs)"
         case (false, SequentArg(sequentName)) => q"$tFactory.by(($sequentName) => $tRhs)"
         case (false, OnePos(pname, None, _)) => q"$tFactory.by(($pname) => $tRhs)"
@@ -521,13 +523,13 @@ object TacticMacro {
           q"$tFactory.byWithInputsP($definitionArgsExpr, ($pname, $sname) => $tRhs)"
         case (false, AntePos(None, pname)) => q"$tFactory.byL(($pname) => $tRhs)"
         case (false, AntePos(Some(sname), pname)) =>
-          if (funcSort.contains(CoreAnonSort)) q"$tFactory.coreby(($sname, $pname) => $tRhs)"
+          if (funcSort.contains(AnonSort.Core)) q"$tFactory.coreby(($sname, $pname) => $tRhs)"
           else q"$tFactory.by(($sname, $pname) => $tRhs)"
         case (true, AntePos(Some(sname), pname)) =>
           q"$tFactory.corebyWithInputsL($definitionArgsExpr, ($sname, $pname) => $tRhs)"
         case (false, SuccPos(None, pname)) => q"$tFactory.byR(($pname) => $tRhs)"
         case (false, SuccPos(Some(sname), pname)) =>
-          if (funcSort.contains(CoreAnonSort)) q"$tFactory.coreby(($sname, $pname) => $tRhs)"
+          if (funcSort.contains(AnonSort.Core)) q"$tFactory.coreby(($sname, $pname) => $tRhs)"
           else q"$tFactory.by(($sname, $pname) => $tRhs)"
         case (true, SuccPos(Some(sname), pname)) =>
           q"$tFactory.corebyWithInputsR($definitionArgsExpr, ($sname, $pname) => $tRhs)"
