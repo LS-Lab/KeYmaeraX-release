@@ -51,6 +51,7 @@ lazy val core = project
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
     libraryDependencies += "com.github.scopt" %% "scopt" % "4.1.0",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.0",
+    libraryDependencies += "io.github.classgraph" % "classgraph" % "4.8.174",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
     libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.10.1",
     libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.14.0",

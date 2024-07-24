@@ -5,14 +5,17 @@
 
 package org.keymaerax.btactics
 
+import io.github.classgraph.ClassGraph
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
+import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct._
 import org.reflections.Reflections
 import org.reflections.scanners.Scanners
 
+import java.lang.reflect.{Field, InvocationTargetException}
 import scala.annotation.{nowarn, tailrec}
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
@@ -182,6 +185,65 @@ object DerivationInfoRegistry extends Logging {
     )
   }
 
+  /** Evaluate the field of a Scala object and register it with the global [[DerivationInfo]] object. */
+  private def registerDerivationFromField(clazz: Class[_], instance: AnyRef, field: Field): Unit = {
+    // Val fields are private but have public getter functions of the same name.
+    val getter = clazz.getMethod(field.getName)
+
+    // Exceptions that occur during reflection are wrapped in an InvocationTargetException.
+    // We unwrap and rethrow so from the outside it looks like we just evaluated the derivation normally.
+    val valueAny =
+      try { getter.invoke(instance) }
+      catch { case e: InvocationTargetException => throw e.getCause }
+
+    val value = valueAny.asInstanceOf[DerivationInfo]
+    DerivationInfo.register(value)
+  }
+
+  /**
+   * Find and register all fields of a Scala object which are marked with the [[Derivation]] annotation.
+   *
+   * @return
+   *   A list of fields that failed to initialize and register, along with the cause.
+   */
+  private def registerDerivationsFromObject(clazz: Class[_]): Seq[(Field, Throwable)] = {
+    // An object's instance can be located through its public static final MODULE$ field.
+    // TODO Fail gracefully if this is not a Scala object
+    val instance = clazz.getField("MODULE$").get(null)
+
+    clazz
+      .getDeclaredFields
+      .toSeq
+      .filter(_.isAnnotationPresent(classOf[Derivation]))
+      .flatMap(field =>
+        try {
+          registerDerivationFromField(clazz, instance, field)
+          None
+        } catch { case t: Throwable => Some(field -> t) }
+      )
+  }
+
+  /**
+   * Find and register all fields marked with the [[Derivation]] annotation globally. The fields must be Scala object
+   * fields, and they must be of type [[DerivationInfo]].
+   *
+   * This function is implemented without using the Scala 2 reflection API. Hopefully this will make it easier to
+   * upgrade to Scala 3 later.
+   *
+   * @return
+   *   A list of fields that failed to initialize and register, along with the cause.
+   */
+  private def registerDerivationsGlobally(): Seq[(Field, Throwable)] = {
+    import scala.jdk.CollectionConverters._
+    new ClassGraph()
+      .enableAllInfo()
+      .scan()
+      .getClassesWithFieldAnnotation(classOf[Derivation])
+      .asScala
+      .toSeq
+      .flatMap(info => registerDerivationsFromObject(info.loadClass()))
+  }
+
   /** Has the global DerivationInfo list been initialized? */
   def isInit: Boolean = DerivationInfo._allInfo.nonEmpty
 
@@ -202,6 +264,17 @@ object DerivationInfoRegistry extends Logging {
     // Remember that initialization is in progress,
     DerivationInfo._initStatus = DerivationInfo.InitInProgress
     if (!initLibrary) return // Advanced use - user takes over in-progress initialization
+
+    val derivationErrors = registerDerivationsGlobally()
+    if (derivationErrors.nonEmpty) {
+      println()
+      println("Failed to initialize derivations:")
+      derivationErrors.foreach { case (field, _) =>
+        println(s"- (in ${field.getDeclaringClass.getName}) ${field.getName}")
+      }
+      println()
+    }
+
     // Initialize derived axioms and rules, which automatically initializes their AxiomInfo and RuleInfo too
     // To allow working with restricted functionality: continue initialization despite potential errors in
     // deriving axioms, throw exception at end of initialization
@@ -247,6 +320,7 @@ object DerivationInfoRegistry extends Logging {
       s"@Tactic init failed: Following DerivationInfo never implemented as @Tactic: " + unimplemented.mkString(", "),
     )
     DerivationInfo._initStatus = DerivationInfo.InitComplete
+    if (derivationErrors.nonEmpty) { throw derivationErrors.head._2 }
     deriveErrors match {
       case Left(t) => throw t
       case _ => // nothing to do

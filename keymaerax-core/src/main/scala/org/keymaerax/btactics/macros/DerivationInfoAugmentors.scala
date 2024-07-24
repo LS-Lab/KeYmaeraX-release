@@ -26,10 +26,10 @@ object DerivationInfoAugmentors {
 
   implicit class ProvableInfoAugmentor(val pi: ProvableInfo) {
     val derivedAxiomDB: LemmaDB = LemmaDBFactory.lemmaDB
-    def derivedAxiomOrRule(name: String): ProvableSig = {
-      val lemmaName = DerivationInfo(name) match {
+    def derivedAxiomOrRule(info: DerivationInfo): ProvableSig = {
+      val lemmaName = info match {
         case si: StorableInfo => si.storedName
-        case _ => throw new IllegalArgumentException(s"Axiom or rule $name is not storable")
+        case _ => throw new IllegalArgumentException(s"Axiom or rule ${info.canonicalName} is not storable")
       }
       require(
         derivedAxiomDB.contains(lemmaName),
@@ -40,7 +40,7 @@ object DerivationInfoAugmentors {
         .get(lemmaName)
         .getOrElse(
           throw new IllegalArgumentException(
-            "Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already"
+            s"Lemma $lemmaName for derived axiom/rule ${info.canonicalName} should have been added already"
           )
         )
         .fact
@@ -54,8 +54,8 @@ object DerivationInfoAugmentors {
           val provable = pi match {
             case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
             case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
-            case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName)
-            case dari: DerivedRuleInfo => derivedAxiomOrRule(dari.canonicalName)
+            case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai)
+            case dari: DerivedRuleInfo => derivedAxiomOrRule(dari)
           }
           pi.theProvable = Some(provable)
           provable
@@ -69,7 +69,7 @@ object DerivationInfoAugmentors {
         case Some(formula) => formula.asInstanceOf[Formula]
         case None =>
           val formula = pi match {
-            case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
+            case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai).conclusion.succ.head
             case _: CoreAxiomInfo => ProvableSig.axiom.get(pi.canonicalName) match {
                 case Some(fml) => fml
                 case None => throw AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)

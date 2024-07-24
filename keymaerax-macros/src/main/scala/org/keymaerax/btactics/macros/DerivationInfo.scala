@@ -128,27 +128,34 @@ object DerivationInfo {
     }
   }
 
+  private def addInfoWithChecks(info: DerivationInfo): Unit = {
+    _allInfo.get(info.codeName) match {
+      case None => addInfo(info)
+      case Some(knownInfo) if knownInfo == info => // Nothing to do here
+      case Some(knownInfo) => throw new IllegalArgumentException(
+          s"Duplicate name registration attempt: ${info.codeName} already registered as $knownInfo of ${knownInfo.getClass.getSimpleName}"
+        )
+    }
+  }
+
+  def register(info: DerivationInfo): Unit = {
+    requireInitInProgress(info)
+    addInfoWithChecks(info)
+  }
+
   // Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info/
   def registerR[T, R <: DerivationInfo](value: => T, p: R): R = {
     // Note: We don't require DerivationInfo initialization to be "in progress" for registerR because it used for axioms rather than tactics.
-    if (!_allInfo.contains(p.codeName)) addInfo(p)
-    else if (_allInfo(p.codeName) != p) throw new IllegalArgumentException(
-      "Duplicate name registration attempt: axiom " + p.codeName + " already registered as " + _allInfo(p.codeName) +
-        " of " + _allInfo(p.codeName).getClass.getSimpleName
-    )
+    addInfoWithChecks(p)
     val _ = value
     p
   }
 
   def registerL[T, R <: DerivationInfo](value: => T, p: R): T = {
     requireInitInProgress(p)
-    if (!_allInfo.contains(p.codeName)) addInfo(p)
-    else if (_allInfo(p.codeName) != p) throw new IllegalArgumentException(
-      "Duplicate name registration attempt: tactic " + p.codeName + " already registered as " + _allInfo(p.codeName) +
-        " of " + _allInfo(p.codeName).getClass.getSimpleName
-    )
+    addInfoWithChecks(p)
     val _ = value
     value
   }

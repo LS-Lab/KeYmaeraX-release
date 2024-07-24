@@ -1564,9 +1564,8 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1 :: Nil))(-1) & useAt(box, PosInExpr(1 :: Nil))(1) &
       notL(-1) & notR(1) &
-      // @todo use [[DerivedAxioms.mondrule]]
       by(
-        ProvableInfo("<> monotone"),
+        Ax.mondrule,
         USubst(
           SubstitutionPair(UnitPredicational("p_", AnyArg), Not(UnitPredicational("q_", AnyArg))) ::
             SubstitutionPair(UnitPredicational("q_", AnyArg), Not(UnitPredicational("p_", AnyArg))) :: Nil
