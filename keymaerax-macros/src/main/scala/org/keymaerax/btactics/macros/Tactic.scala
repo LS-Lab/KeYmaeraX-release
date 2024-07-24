@@ -228,9 +228,11 @@ object TacticMacro {
     sealed trait Body {
       val rhs: Tree
     }
-    final case class BodyFuncLambda(func: Ident, params: Seq[Tree], rhs: Tree) extends Body
-    final case class BodyFunc(func: Ident, rhs: Tree) extends Body
-    final case class BodyPlain(rhs: Tree) extends Body
+    object Body {
+      case class FuncLambda(func: Ident, params: Seq[Tree], rhs: Tree) extends Body
+      case class Func(func: Ident, rhs: Tree) extends Body
+      case class Plain(rhs: Tree) extends Body
+    }
 
     // Annotation must be applied to single annottee
     val annottee = annottees.map(_.tree) match {
@@ -249,9 +251,9 @@ object TacticMacro {
 
     // Body must be one of three possible definition styles
     val body = definition.body match {
-      case q"${func: Ident}((..$params) => $rhs)" => BodyFuncLambda(func, params, rhs)
-      case q"${func: Ident}($rhs)" => BodyFunc(func, rhs)
-      case rhs => BodyPlain(rhs)
+      case q"${func: Ident}((..$params) => $rhs)" => Body.FuncLambda(func, params, rhs)
+      case q"${func: Ident}($rhs)" => Body.Func(func, rhs)
+      case rhs => Body.Plain(rhs)
     }
 
     val returnType = definition.returnType match {
@@ -263,9 +265,9 @@ object TacticMacro {
     }
 
     val funcName = body match {
-      case BodyFuncLambda(func, _, _) => Some(func.name.decodedName.toString)
-      case BodyFunc(func, _) => Some(func.name.decodedName.toString)
-      case BodyPlain(_) => None
+      case Body.FuncLambda(func, _, _) => Some(func.name.decodedName.toString)
+      case Body.Func(func, _) => Some(func.name.decodedName.toString)
+      case Body.Plain(_) => None
     }
     val funcSort = funcName.flatMap(ANON_SORTS.get)
 
@@ -369,7 +371,7 @@ object TacticMacro {
 
     val positionArgs = {
       val params = body match {
-        case body: BodyFuncLambda => body.params.toList
+        case body: Body.FuncLambda => body.params.toList
         case _ => Nil
       }
 
@@ -490,9 +492,9 @@ object TacticMacro {
       /** The body, but if the function used is in [[ANON_SORTS]], the function is removed. */
       val tRhs = body match {
         case body if funcSort.isDefined => body.rhs
-        case BodyFuncLambda(func, params, rhs) => q"$func((..$params) => $rhs)"
-        case BodyFunc(func, rhs) => q"$func($rhs)"
-        case BodyPlain(rhs) => rhs
+        case Body.FuncLambda(func, params, rhs) => q"$func((..$params) => $rhs)"
+        case Body.Func(func, rhs) => q"$func($rhs)"
+        case Body.Plain(rhs) => rhs
       }
 
       // [[isCoreAnon]] represents "which anon function" was on the RHS of the definition.
