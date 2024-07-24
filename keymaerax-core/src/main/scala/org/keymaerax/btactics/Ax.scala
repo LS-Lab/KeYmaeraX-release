@@ -131,9 +131,7 @@ object Ax extends Logging {
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
   def derivedFact(name: String, fact: ProvableSig): DerivedAxiomInfo = {
     val dai = DerivedAxiomInfo(name)
-    val lemmaName =
-      try { dai.storedName }
-      catch { case t: Throwable => throw new Exception(s"Derived axiom info for $name needs to exist", t) }
+    val lemmaName = dai.storedName
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     val npt = ElidingProvable(fact.underlyingProvable, fact.defs)
     val alternativeFact =
@@ -174,10 +172,7 @@ object Ax extends Logging {
     // create evidence (traces input into tool and output from tool)
     val dri = DerivedRuleInfo(name)
     val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
-    val codeName =
-      try { DerivedRuleInfo(name).codeName }
-      catch { case _: Throwable => throw new Exception("Derived rule info needs to exist") }
-    val lemmaName = DerivedAxiomInfo.toStoredName(codeName)
+    val lemmaName = dri.storedName
     val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     val insertedLemma =
       if (!AUTO_INSERT) { lemma }
@@ -201,11 +196,8 @@ object Ax extends Logging {
   }
 
   private[this] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr): DerivedRuleInfo = {
-    val dri =
-      try { DerivedRuleInfo(name) }
-      catch { case _: Throwable => throw new Exception("Derived rule info needs to exist") }
-    val codeName = dri.codeName
-    val storageName = DerivedAxiomInfo.toStoredName(codeName)
+    val dri = DerivedRuleInfo(name)
+    val storageName = dri.storedName
     val lemma = derivedAxiomDB.get(storageName) match {
       case Some(lemma) => lemma
       case None =>
@@ -233,12 +225,8 @@ object Ax extends Logging {
    * Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available
    */
   def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr): DerivedAxiomInfo = {
-    val dai: DerivedAxiomInfo = DerivedAxiomInfo.apply(canonicalName)
-    val codeName =
-      try { dai.codeName }
-      catch { case t: Throwable => throw new Exception(s"Derived axiom info for $canonicalName needs to exist", t) }
-    val storedName = DerivedAxiomInfo.toStoredName(codeName)
-    val lemma = derivedAxiomDB.get(storedName) match {
+    val dai: DerivedAxiomInfo = DerivedAxiomInfo(canonicalName)
+    val lemma = derivedAxiomDB.get(dai.storedName) match {
       case Some(lemma) => lemma
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)

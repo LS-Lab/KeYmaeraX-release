@@ -7,6 +7,7 @@ package org.keymaerax.btactics.macros
 
 import org.keymaerax.btactics.macros.AnnotationCommon.ExprPos
 
+import java.util.Locale
 import scala.collection.immutable.{List, Nil}
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
@@ -332,7 +333,7 @@ sealed trait ProvableInfo extends DerivationInfo {
  *   [[DerivedRuleInfo]]
  */
 sealed trait StorableInfo extends DerivationInfo {
-  val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
+  val storedName: String = codeName.toLowerCase(Locale.ROOT)
 
   /** Gives the [[Lemma]] stored for this derivation info (after initialization). */
   // We would like to make theLemma writable only by [[Ax.scala]], but putting Ax.scala in the [[macros]] package
@@ -392,7 +393,6 @@ case class DerivedAxiomInfo(
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends AxiomInfo with StorableInfo {
-  override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   DerivationInfo.assertValidIdentifier(codeName)
   override val numPositionArgs = 1
 }
@@ -544,8 +544,6 @@ object DerivedAxiomInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
     }
   }
-
-  def toStoredName(codeName: String): String = codeName.toLowerCase
 
   /** All registered derived axiom info by code name. */
   def allInfo: Map[String, DerivedAxiomInfo] = DerivationInfo._derivedAxiomInfo
