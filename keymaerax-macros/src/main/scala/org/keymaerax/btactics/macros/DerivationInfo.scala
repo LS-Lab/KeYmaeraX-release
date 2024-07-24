@@ -331,16 +331,12 @@ sealed trait AxiomInfo extends ProvableInfo
  * Meta-Information for an axiom from the prover core
  * @see
  *   [[org.keymaerax.core.AxiomBase]]
- * @see
- *   [[DerivedAxiomInfo]] [[theExpr]] should be [[Unit => DependentPositionTactic]], correct type recovered in
- *   keymaerax-core wrapper
  */
 case class CoreAxiomInfo(
     override val canonicalName: String,
     override val display: DisplayInfo,
     override val codeName: String,
     override val unifier: Unifier,
-    val theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends AxiomInfo {
@@ -354,15 +350,12 @@ case class CoreAxiomInfo(
  *   [[org.keymaerax.btactics.DerivedAxioms]]
  * @see
  *   [[CoreAxiomInfo]]
- * @TODO:
- *   Enforce theExpr : Unit => DependentPositionTactic
  */
 case class DerivedAxiomInfo(
     override val canonicalName: String,
     override val display: DisplayInfo,
     override val codeName: String,
     override val unifier: Unifier,
-    theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends AxiomInfo with StorableInfo {
@@ -384,7 +377,6 @@ case class AxiomaticRuleInfo(
     override val display: DisplayInfo,
     override val codeName: String,
     override val unifier: Unifier,
-    theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends ProvableInfo {
@@ -413,7 +405,6 @@ case class DerivedRuleInfo(
     override val display: DisplayInfo,
     override val codeName: String,
     override val unifier: Unifier,
-    val theExpr: Unit => Any,
     override val theKey: ExprPos = 0 :: Nil,
     override val theRecursor: List[ExprPos] = Nil,
 ) extends ProvableInfo with StorableInfo {

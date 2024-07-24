@@ -222,13 +222,6 @@ object AxiomMacro {
 
     val fullRhs = q"$tFunctionName( ..$tParams)"
 
-    // Tactic implementation of derived axiom is always useAt
-    val expr = q"""
-      ({ case () =>
-        org.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonicalName))
-      })
-    """ // : (Unit => Any)
-
     val (infoType, info) =
       if (isCore) (
         tq"org.keymaerax.btactics.macros.CoreAxiomInfo",
@@ -239,7 +232,6 @@ object AxiomMacro {
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,
-          theExpr = $expr,
         )""",
       )
       else (
@@ -251,7 +243,6 @@ object AxiomMacro {
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
           theRecursor = $recursor,
-          theExpr = $expr,
         )""",
       )
 

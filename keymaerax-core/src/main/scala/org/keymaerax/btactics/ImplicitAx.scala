@@ -75,7 +75,6 @@ object ImplicitAx extends TacticProvider {
       ),
       codeName = codename,
       unifier = Unifier.SurjectiveLinear,
-      theExpr = { case () => org.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
       theKey = List(0),
       theRecursor = List(List(1)),
     )
@@ -142,7 +141,6 @@ object ImplicitAx extends TacticProvider {
       ),
       codeName = codename,
       unifier = Unifier.SurjectiveLinear,
-      theExpr = { case () => org.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
       theKey = List(0),
       theRecursor = List(List(1)),
     )
@@ -205,7 +203,6 @@ object ImplicitAx extends TacticProvider {
       ),
       codeName = codename,
       unifier = Unifier.SurjectiveLinear,
-      theExpr = { case () => org.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo(name)) },
       theKey = List(0),
       theRecursor = List(List(1)),
     )

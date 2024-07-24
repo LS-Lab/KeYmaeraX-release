@@ -182,13 +182,6 @@ object ProofRuleMacro {
 
     val fullRhs = q"$tFunctionName( ..$tParams)"
 
-    // Tactic implementation of derived rule is always useAt
-    val expr = q"""
-      ({ case () =>
-        org.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonicalName))
-      })
-    """ // : (Unit => Any)
-
     val (infoType, info) =
       if (isCore) (
         tq"org.keymaerax.btactics.macros.AxiomaticRuleInfo",
@@ -197,7 +190,6 @@ object ProofRuleMacro {
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           unifier = ${astForUnifier(args.unifier)(c)},
-          theExpr = $expr,
           theKey = $key,
           theRecursor = $recursor,
         )""",
@@ -209,7 +201,6 @@ object ProofRuleMacro {
           display = ${astForDisplayInfo(display)(c)},
           codeName = $name,
           unifier = ${astForUnifier(args.unifier)(c)},
-          theExpr = $expr,
           theKey = $key,
           theRecursor = $recursor,
         )""",
