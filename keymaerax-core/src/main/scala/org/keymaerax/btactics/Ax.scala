@@ -178,19 +178,13 @@ object Ax extends Logging {
     dai
   }
 
-  def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String] = None): DerivedRuleInfo = {
+  def derivedRule(name: String, fact: ProvableSig): DerivedRuleInfo = {
     // create evidence (traces input into tool and output from tool)
     val dri = DerivedRuleInfo(name)
     val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
-    val codeName = codeNameOpt match {
-      case Some(codeName) => codeName
-      case None =>
-        try { DerivedRuleInfo(name).codeName }
-        catch {
-          case _: Throwable =>
-            throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
-        }
-    }
+    val codeName =
+      try { DerivedRuleInfo(name).codeName }
+      catch { case _: Throwable => throw new Exception("Derived rule info needs to exist") }
     val lemmaName = DerivedAxiomInfo.toStoredName(codeName)
     val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     val insertedLemma =
