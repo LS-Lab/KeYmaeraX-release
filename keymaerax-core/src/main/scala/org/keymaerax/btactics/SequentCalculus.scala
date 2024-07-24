@@ -9,7 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary.{exhaustiveEqL2R, uniformRename, useAt}
-import org.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic, TacticInfo}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic, TacticInfo}
 import org.keymaerax.core
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
@@ -574,7 +574,7 @@ trait SequentCalculus {
     name = "allRi",
     displayName = Some("∀Ri"),
     displayNameAscii = Some("allRi"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     inputs = "f:term;;x[x]:option[variable]",
     displayPremises = "Γ |- ∀x p(f(x)), Δ",
     displayConclusion = "Γ |- p(f(y)), Δ",
@@ -711,7 +711,7 @@ trait SequentCalculus {
     name = "existsLi",
     displayName = Some("∃Li"),
     displayNameAscii = Some("existsLi"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     inputs = "f:term;;x[x]:option[variable]",
     displayPremises = "Γ, ∃x p(f(x)) |- Δ",
     displayConclusion = "Γ, p(f(y)) |- Δ",

@@ -10,7 +10,7 @@ import org.keymaerax.btactics.ArithmeticSimplification._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnalysis}
-import org.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.btactics.{DebuggingTactics, Idioms, SimplifierV3, TacticProvider, ToolTactics}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -40,7 +40,7 @@ object ArithmeticSpeculativeSimplification extends TacticProvider {
   @Tactic(
     name = "smartQE",
     displayName = Some("Speculative QE"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "*",
     displayConclusion = "Γ<sub>FOLR</sub> |- Δ<sub>FOLR</sub>",
   )

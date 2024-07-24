@@ -7,7 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.macros.{DisplayLevelAll, DisplayLevelBrowse, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Position
 
@@ -78,7 +78,7 @@ trait DifferentialEquationCalculus {
     name = "solve",
     displayName = Some("[']"),
     displayNameLong = Some("Solution"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
     displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     displayContextPremises = "Γ |- C( ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)) ), Δ",
@@ -96,7 +96,7 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "solveEnd",
     displayNameLong = Some("Solution with q(x) true at end"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
     displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = true,
@@ -205,7 +205,7 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dIRule",
     displayNameLong = Some("Differential Invariant"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( Q→P∧[x':=f(x)](P)' ), Δ",
@@ -242,7 +242,7 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dIClose",
     displayNameLong = Some("Differential Invariant Auto-Close"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "*",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
@@ -314,7 +314,7 @@ trait DifferentialEquationCalculus {
   @Tactic(
     name = "dI",
     displayNameLong = Some("Differential Invariant"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", // todo: how to indicate closed premise?
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",

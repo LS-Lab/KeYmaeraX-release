@@ -14,7 +14,7 @@ import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.helpers.DifferentialHelper._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{DisplayLevelAll, DisplayLevelBrowse, DisplayLevelInternal, ProvableInfo, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, ProvableInfo, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.DependencyAnalysis._
@@ -816,7 +816,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "odeUnify",
     displayNameLong = Some("ODE Unify"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q&B]P, Δ ;; A |- Q",
     displayConclusion = "Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q]P, Δ",
   )
@@ -893,7 +893,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "compatCut",
     displayNameLong = Some("Compatible ODE Cut"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ, [x'=f(x) & Q]R |- C(⟨x'=f(x) & Q⟩P), Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
     displayConclusion = "Γ |- C(⟨x'=f(x) & Q⟩P), Δ",
     inputs = "R:formula",
@@ -933,7 +933,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "kDomainDiamond",
     displayName = Some("K<&>"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- ⟨x'=f(x) & Q⟩ R, Δ ;; Γ |- [x'=f(x) & Q∧¬P]¬R, Δ",
     displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩ P, Δ",
   )
@@ -979,7 +979,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "dDR",
     displayNameLong = Some("Diamond Differential Refinement"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- [x'=f(x) & R]Q, Δ",
     displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
   )
@@ -1744,7 +1744,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "closedRef",
     displayNameLong = Some("Closed Domain Refinement"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- g>0 & [x'=f(x) & R∧¬P∧g≳0]g>0, Δ",
     displayConclusion = "Γ |- ⟨x'=f(x) & g≳0⟩P, Δ",
   )
@@ -1855,7 +1855,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "bDG",
     displayNameLong = Some("Bounded Differential Ghost"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [ghost, x'=f(x) & Q] (||ghost||)^2 <= p, Δ ;; [ghost, x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
     inputs = "ghost:expression ;; p:term",
@@ -1874,7 +1874,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "vDG",
     displayNameLong = Some("Affine Vectorial Differential Ghost"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [ghost, x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
     inputs = "ghost:expression",
@@ -2006,7 +2006,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "dBDG",
     displayNameLong = Some("Bounded Diff Ghost"),
-    displayLevel = DisplayLevelInternal,
+    displayLevel = DisplayLevel.Internal,
     displayPremises = "Γ |- [y'=g(x,y),x'=f(x) & Q]||y||^2 ≤ p(x) ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     displayConclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
   )
@@ -2016,7 +2016,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "dDDG",
     displayNameLong = Some("Differentially-bounded Diff Ghost"),
-    displayLevel = DisplayLevelInternal,
+    displayLevel = DisplayLevel.Internal,
     displayPremises = "Γ |- [y'=g(x,y),x'=f(x) & Q](||y||^2)' <= L||y||+M ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     displayConclusion = "Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
   )
@@ -2032,7 +2032,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "gEx",
     displayNameLong = Some("Global Existence"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "* (hint)",
     displayConclusion = "Γ |- ⟨x'=f(x),t'=1⟩t>s(), Δ",
   )
@@ -2044,7 +2044,7 @@ object ODELiveness extends TacticProvider {
   @Tactic(
     name = "dV",
     displayNameLong = Some("Differential Variant"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = " Γ |- ∃ε (ε>0 ∧ [x'=f(x)& Q∧¬P](P)'≳ε), Δ ;; Γ |- ∀s ⟨x'=f(x),t'=1 & Q⟩t≳s, Δ",
     displayConclusion = "Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     inputs = "ε:Option[Term]",

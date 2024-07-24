@@ -8,7 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Idioms.saturate
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import org.keymaerax.btactics.macros.{DisplayLevelAll, DisplayLevelBrowse, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
@@ -614,7 +614,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   @Tactic(
     name = "boxTrue",
     displayName = Some("[]T"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayConclusion = "__[a]⊤__ ↔ ⊤",
   )
   // @note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
@@ -725,7 +725,7 @@ trait Derive extends UnifyUSCalculus {
    *   }}}
    * @incontext
    */
-  @Tactic(name = "Dvar", displayName = Some("(x)'"), displayLevel = DisplayLevelBrowse, displayConclusion = "(x)' = x")
+  @Tactic(name = "Dvar", displayName = Some("(x)'"), displayLevel = DisplayLevel.Browse, displayConclusion = "(x)' = x")
   lazy val Dvar: DependentPositionTactic = anon { (pos: Position) =>
     (if (INTERNAL) useAt(Ax.DvarAxiom) else DifferentialTactics.Dvariable) (pos)
   }

@@ -107,7 +107,7 @@ class Tactic(
     val displayName: Option[String] = None,
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
-    val displayLevel: DisplayLevel = DisplayLevelInternal,
+    val displayLevel: DisplayLevel = DisplayLevel.Internal,
     val displayPremises: String = "",
     val displayConclusion: String = "",
     val displayContextPremises: String = "",
@@ -127,7 +127,7 @@ case class TacticArgs(
     displayName: Option[String] = None,
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
-    displayLevel: DisplayLevel = DisplayLevelInternal,
+    displayLevel: DisplayLevel = DisplayLevel.Internal,
     displayPremises: String = "",
     displayConclusion: String = "",
     displayContextPremises: String = "",
@@ -199,13 +199,7 @@ object TacticMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" => c.eval(c.Expr[TacticArgs](
           q"""{
-            import org.keymaerax.btactics.macros.{
-              DisplayLevel,
-              DisplayLevelInternal,
-              DisplayLevelBrowse,
-              DisplayLevelMenu,
-              DisplayLevelAll,
-            };
+            import org.keymaerax.btactics.macros.DisplayLevel;
             org.keymaerax.btactics.macros.TacticArgs(..$args)
           }"""
         ))
@@ -573,7 +567,7 @@ object TacticMacro {
     // Error check:
     // The web UI uses the axiom/rule display to let the user input arguments of a tactic.
     // This requires every argument name to appear in the display info.
-    if (args.displayLevel != DisplayLevelInternal) {
+    if (args.displayLevel != DisplayLevel.Internal) {
       for (input <- displayInputs) {
         val name = input.name
 

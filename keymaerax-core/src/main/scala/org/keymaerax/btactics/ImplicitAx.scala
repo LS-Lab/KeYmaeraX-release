@@ -70,7 +70,7 @@ object ImplicitAx extends TacticProvider {
         name = name,
         nameAscii = name,
         nameLong = name,
-        level = DisplayLevelInternal,
+        level = DisplayLevel.Internal,
         formula = "__" + lhs + "__ = " + rhs,
       ),
       codeName = codename,
@@ -137,7 +137,7 @@ object ImplicitAx extends TacticProvider {
         name = name,
         nameAscii = name,
         nameLong = name,
-        level = DisplayLevelInternal,
+        level = DisplayLevel.Internal,
         formula = "__" + lhs + "__ = " + rhs,
       ),
       codeName = codename,
@@ -200,7 +200,7 @@ object ImplicitAx extends TacticProvider {
         name = name,
         nameAscii = name,
         nameLong = name,
-        level = DisplayLevelInternal,
+        level = DisplayLevel.Internal,
         formula = "__" + lhs + "__ <-> " + rhs,
       ),
       codeName = codename,
@@ -1046,7 +1046,7 @@ object ImplicitAx extends TacticProvider {
   // Helper to prove a property (typically of a user-provided interpreted function) by unfolding it into a differential equation proof
   @Tactic(
     name = "diffUnfold",
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- P(t0), Δ ;; v=t0 |- [v'=1 & v<=v0]P(v) ;; v=t0 |- [v'=(-1) & v0<=v]P(v)",
     displayConclusion = "Γ |- P(v0), Δ",
   )
@@ -1093,7 +1093,7 @@ object ImplicitAx extends TacticProvider {
   // Diamond version of diffUnfold for existentials
   @Tactic(
     name = "diffUnfoldD",
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, v=t0 |- <v'=1>P(v) ∨ <v'=(-1)> P(v), Δ ",
     displayConclusion = "Γ |- ∃v P(v), Δ",
   )

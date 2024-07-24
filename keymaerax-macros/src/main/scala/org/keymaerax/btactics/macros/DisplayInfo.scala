@@ -5,22 +5,6 @@
 
 package org.keymaerax.btactics.macros
 
-// TODO Convert into enum after updating to Scala 3
-/** Where to display an axiom/rule/tactic in the user interface. */
-sealed trait DisplayLevel
-
-/** Don't display in UI at all. */
-case object DisplayLevelInternal extends DisplayLevel
-
-/** Only display when searching for it in browse. */
-case object DisplayLevelBrowse extends DisplayLevel
-
-/** Like [[DisplayLevelInternal]] but also display in top level menu. */
-case object DisplayLevelMenu extends DisplayLevel
-
-/** Like [[DisplayLevelMenu]] but also pop up in context menu. */
-case object DisplayLevelAll extends DisplayLevel
-
 /**
  * Render a sequent as a list of antecedent UI strings and a list of succedent UI strings.
  *

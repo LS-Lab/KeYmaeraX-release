@@ -50,7 +50,7 @@ class ProofRule(
     val displayName: Option[String] = None,
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
-    val displayLevel: DisplayLevel = DisplayLevelInternal,
+    val displayLevel: DisplayLevel = DisplayLevel.Internal,
     val displayPremises: String = "",
     val displayConclusion: String = "",
     val unifier: Unifier = Unifier.Full,
@@ -67,7 +67,7 @@ case class ProofRuleArgs(
     displayName: Option[String] = None,
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
-    displayLevel: DisplayLevel = DisplayLevelInternal,
+    displayLevel: DisplayLevel = DisplayLevel.Internal,
     displayPremises: String = "",
     displayConclusion: String = "",
     unifier: Unifier = Unifier.Full,
@@ -96,14 +96,8 @@ object ProofRuleMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" => c.eval(c.Expr[ProofRuleArgs](
           q"""{
-            import org.keymaerax.btactics.macros.{
-              DisplayLevel,
-              DisplayLevelInternal,
-              DisplayLevelBrowse,
-              DisplayLevelMenu,
-              DisplayLevelAll,
-              Unifier,
-            };
+            import org.keymaerax.btactics.macros.DisplayLevel;
+            import org.keymaerax.btactics.macros.Unifier;
             org.keymaerax.btactics.macros.ProofRuleArgs(..$args)
           }"""
         ))

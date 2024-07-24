@@ -7,7 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.macros.{DisplayLevelAll, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Position
 
@@ -146,7 +146,7 @@ trait HybridProgramCalculus {
   @Tactic(
     name = "loop",
     displayNameLong = Some("Loop Invariant"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
     displayConclusion = "Γ |- [a<sup>*</sup>]P, Δ",
     revealInternalSteps = true,
@@ -188,7 +188,7 @@ trait HybridProgramCalculus {
   @Tactic(
     name = "fp",
     displayNameLong = Some("Fixpoint"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P ∨ &langle;a&rangle;J |- J",
     displayConclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ",
     revealInternalSteps = true,

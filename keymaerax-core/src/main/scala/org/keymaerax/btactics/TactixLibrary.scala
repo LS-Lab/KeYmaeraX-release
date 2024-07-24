@@ -12,7 +12,7 @@ import org.keymaerax.btactics.DifferentialTactics.{dgDbx, dgDbxAuto}
 import org.keymaerax.btactics.Idioms.{?, must}
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
-import org.keymaerax.btactics.macros.{DerivationInfo, DisplayLevelAll, DisplayLevelBrowse, DisplayLevelMenu, Tactic}
+import org.keymaerax.btactics.macros.{DerivationInfo, DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, RestrictedBiDiUnificationMatch}
@@ -152,7 +152,7 @@ object TactixLibrary
   @Tactic(
     name = "step",
     displayNameLong = Some("Program Step"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     revealInternalSteps = true,
   )
   val step: DependentPositionTactic = doStep(sequentStepIndex)
@@ -177,7 +177,7 @@ object TactixLibrary
   @Tactic(
     name = "normalize",
     displayNameLong = Some("Normalize to Sequent Form"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     revealInternalSteps = true,
   )
   lazy val normalize: BelleExpr = anon {
@@ -207,7 +207,7 @@ object TactixLibrary
   @Tactic(
     name = "unfold",
     displayNameLong = Some("Unfold Program Structure"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     revealInternalSteps = true,
   )
   val unfoldProgramNormalize: BelleExpr = anon {
@@ -232,7 +232,7 @@ object TactixLibrary
   @Tactic(
     name = "chaseAt",
     displayNameLong = Some("Decompose"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     revealInternalSteps = true,
   )
   def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) =>
@@ -286,7 +286,7 @@ object TactixLibrary
   @Tactic(
     name = "prop",
     displayNameLong = Some("Unfold Propositional"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     revealInternalSteps = true,
   )
   val prop: BelleExpr = anon {
@@ -310,7 +310,7 @@ object TactixLibrary
   @Tactic(
     name = "propClose",
     displayNameLong = Some("Prove Propositional"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     revealInternalSteps = true,
   )
   val propClose: BelleExpr =
@@ -885,7 +885,7 @@ object TactixLibrary
   @Tactic(
     name = "odeInvC",
     displayName = Some("ODE Invariant Complete"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     displayPremises = "*",
     displayConclusion = "Γ, P |- [x'=f(x)&Q]P",
   )
@@ -913,7 +913,7 @@ object TactixLibrary
   @Tactic(
     name = "dbx",
     displayNameLong = Some("Darboux (in)equalities"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- p≳0 ;; Q |- p' ≳ g p",
     displayConclusion = "Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs = "g:option[term]",
@@ -1009,7 +1009,7 @@ object TactixLibrary
   @Tactic(
     name = "pQE",
     displayName = Some("Partial QE"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- Δ",
     displayConclusion = "Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
   )
@@ -1364,7 +1364,7 @@ object TactixLibrary
   @Tactic(
     name = "rcf",
     displayName = Some("RCF"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "*",
     displayConclusion = "Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
   )
@@ -1749,7 +1749,7 @@ object TactixLibrary
   @Tactic(
     name = "sosQE",
     displayNameLong = Some("Prove arithmetic with sum-of-squares witness"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises =
       "normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
     displayConclusion = "Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",

@@ -15,7 +15,7 @@ import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{AxiomInfo, DisplayLevelAll, DisplayLevelBrowse, DisplayLevelInternal, Tactic}
+import org.keymaerax.btactics.macros.{AxiomInfo, DisplayLevel, Tactic}
 import org.keymaerax.core.{NamedSymbol, _}
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
@@ -469,7 +469,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dR",
     displayNameLong = Some("Differential Refine"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     displayConclusion = "Γ |- [x'=f(x)&Q]P, Δ",
   )
@@ -504,7 +504,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dCi",
     displayNameLong = Some("Inverse Differential Cut"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
     displayConclusion = "Γ |- [x'=f(x) & Q∧R]P, Δ",
   )
@@ -852,7 +852,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dGi", // todo: rename the tactic directly
     displayName = Some("Inverse Differential Ghost"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- ∃y [x'=f(x),E & Q]P, Δ",
   )
@@ -904,7 +904,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "Dvariable",
     displayName = Some("x'"),
-    displayLevel = DisplayLevelInternal,
+    displayLevel = DisplayLevel.Internal,
     displayConclusion = "__(x)'__ = x",
   )
   private[btactics] lazy val Dvariable: BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
@@ -967,7 +967,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "diffUnpackEvolDomain", // todo: rename the tactic directly
     displayName = Some("Unpack evolution domain"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, Q |- [x'=f(x) & Q]P, Δ",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
   )
@@ -994,7 +994,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dW",
     displayNameLong = Some("Differential Weaken"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
@@ -1046,7 +1046,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
     displayName = Some("dW+"),
     displayNameAscii = Some("dWplus"), // Initial State-Preserving Differential Weaken
     displayNameLong = Some("Differential Weaken"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
     displayConclusion = "Γ |- [x'=f(x) & Q]P, Δ",
     displayContextPremises = "Γ |- C( ∀x (Q→P) ), Δ",
@@ -1640,7 +1640,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "splitWeakInequality",
     displayName = Some("Split weak inequality"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [{x'=f(x) & Q}] p>q, Δ ;; Γ |- [{x'=f(x) & Q}] p=q, Δ",
     displayConclusion = "Γ |- [{x'=f(x) & Q}] p≳q, Δ",
   )
@@ -1919,7 +1919,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
     name = "barrier", // todo: rename the tactic directly
     displayName = Some("Barr"),
     displayNameLong = Some("Strict Barrier Certificate"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
     displayConclusion = "Γ |- [x'=f(x) & Q] p≳0, Δ",
   )
@@ -2629,7 +2629,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dCClosure",
     displayName = Some("dC Closure"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x)&Q∧closure(P)]interior(P), Δ ;; Γ |- interior(P)",
     displayConclusion = "Γ |- [x'=f(x)&Q]P, Δ",
     revealInternalSteps = true,
@@ -2639,7 +2639,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "dIClosed",
     displayName = Some("dI Closed"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x)&Q∧P]q'(x)>0, Δ ;; Γ |- q(x)>=0",
     displayConclusion = "Γ |- [x'=f(x)&Q]q(x)>=0, Δ",
     revealInternalSteps = true,
@@ -2655,7 +2655,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "taylorB",
     displayName = Some("Taylor Polynomial is Bound"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Q |- q''(x)>=0",
     displayConclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
     revealInternalSteps = true,
@@ -2686,7 +2686,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
   @Tactic(
     name = "taylorStep",
     displayName = Some("Taylor Polynomial is Bound: step"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Q |- q'(x)>=q'(x_0)",
     displayConclusion = "Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
     revealInternalSteps = true,

@@ -53,7 +53,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
     // @todo this might fail when the instance requires semantic renaming
     u.toCore(keyPart) shouldBe instance
 
-    if (axiom.display.level != DisplayLevelInternal) {
+    if (axiom.display.level != DisplayLevel.Internal) {
       // useAt(axiom) should result in all recursors being well-defined
       val pr = TactixLibrary.proveBy(instance, TactixLibrary.useAt(axiom)(1))
       for (pos <- axiom.recursor) { pr.subgoals.head.succ(0).sub(pos) shouldBe Symbol("defined") }

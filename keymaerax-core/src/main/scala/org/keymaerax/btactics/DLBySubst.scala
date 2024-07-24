@@ -12,7 +12,7 @@ import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{DisplayLevelAll, DisplayLevelBrowse, DisplayLevelMenu, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core.{Sequent, _}
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
@@ -80,7 +80,7 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "GV",
     displayNameLong = Some("Gödel Vacuous"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
     displayConclusion = "Γ |- [a]P, Δ",
     displayContextPremises = "Γ |- C( ∀x P ), Δ",
@@ -168,7 +168,7 @@ private object DLBySubst extends TacticProvider {
     name = "stutter",
     displayName = Some("[:=]"),
     displayNameLong = Some("Introduce Self-Assign"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x:=x]P, Δ",
     displayConclusion = "Γ |- P, Δ",
   )
@@ -310,7 +310,7 @@ private object DLBySubst extends TacticProvider {
     name = "assignEquality",
     displayName = Some("[:=]="),
     displayNameLong = Some("Assign Equality"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ, x=e |- P, Δ",
     displayConclusion = "Γ |- [x:=e]P, Δ",
   )
@@ -401,7 +401,7 @@ private object DLBySubst extends TacticProvider {
     name = "assigndEquality",
     displayName = Some("<:=>="),
     displayNameLong = Some("Assign Equality"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ, x=e |- P, Δ",
     displayConclusion = "Γ |- ⟨x:=e⟩P, Δ",
   )
@@ -511,7 +511,7 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "postCut",
     displayNameLong = Some("Cut in Postcondition"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [a]C, Δ ;; Γ |- [a](C→P)",
     displayConclusion = "Γ |- [a]P, Δ",
   )
@@ -753,7 +753,7 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "throughout",
     displayNameLong = Some("Loop Throughout Invariant"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- J, Δ ;; J |- [a]J ;; J |- [b]J ;; J |- P",
     displayConclusion = "Γ |- [{a;b}<sup>*</sup>]P, Δ",
   )
@@ -796,7 +796,7 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "con",
     displayNameLong = Some("Loop Convergence"),
-    displayLevel = DisplayLevelAll,
+    displayLevel = DisplayLevel.All,
     displayPremises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     displayConclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
     inputs = "x[x]:variable;;J(x)[x]:formula",
@@ -895,7 +895,7 @@ private object DLBySubst extends TacticProvider {
   @Tactic(
     name = "conRule",
     displayNameLong = Some("Loop Convergence Rule"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     displayConclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
     inputs = "x:variable;;J[x]:formula",
@@ -929,7 +929,7 @@ private object DLBySubst extends TacticProvider {
     name = "discreteGhost",
     displayName = Some("iG"),
     displayNameLong = Some("Discrete Ghost"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     displayPremises = "Γ |- [x:=e]P, Δ",
     displayConclusion = "Γ |- P, Δ",
     inputs = "e:term;;x[x]:option[variable]",
@@ -1046,7 +1046,7 @@ private object DLBySubst extends TacticProvider {
     name = "assignbExistsRule",
     displayName = Some("[:=] assign exists"),
     displayNameLong = Some("Translate Quantifier to Assignment"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [t:=e][x:=t]P, Δ",
     displayConclusion = "Γ |- ∃t [x:=t]P, Δ",
   )
@@ -1085,7 +1085,7 @@ private object DLBySubst extends TacticProvider {
     name = "assignbAllRule",
     displayName = Some("[:=] assign all"),
     displayNameLong = Some("Translate Quantifier to Assignment"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, [t:=e][x:=t]P |- Δ",
     displayConclusion = "Γ, ∀t [x:=t]P |- Δ",
   )

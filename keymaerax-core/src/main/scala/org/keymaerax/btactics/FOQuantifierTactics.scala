@@ -9,7 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{AxiomInfo, DisplayLevelBrowse, ProvableInfo, Tactic}
+import org.keymaerax.btactics.macros.{AxiomInfo, DisplayLevel, ProvableInfo, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct._
@@ -673,7 +673,7 @@ protected object FOQuantifierTactics extends TacticProvider {
     name = "universalClosure",
     displayName = Some("∀Cl"),
     displayNameAscii = Some("allClosure"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- \\forall order p(x,y,z), Δ",
     displayConclusion = "Γ |- p(x,y,z), Δ",
     inputs = "order:list[variable]",

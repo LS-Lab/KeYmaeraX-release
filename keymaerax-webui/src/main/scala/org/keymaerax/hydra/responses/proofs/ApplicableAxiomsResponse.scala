@@ -13,10 +13,7 @@ import org.keymaerax.btactics.macros.{
   AxiomDisplayInfo,
   AxiomInfo,
   DerivationInfo,
-  DisplayLevelAll,
-  DisplayLevelBrowse,
-  DisplayLevelInternal,
-  DisplayLevelMenu,
+  DisplayLevel,
   DisplaySequent,
   FormulaArg,
   InputAxiomDisplayInfo,
@@ -154,10 +151,10 @@ case class ApplicableAxiomsResponse(
       "codeName" -> new JsString(derivationInfo.codeName),
       "longName" -> new JsString(derivationInfo.display.nameLong),
       "displayLevel" -> new JsString(derivationInfo.display.level match {
-        case DisplayLevelInternal => "internal"
-        case DisplayLevelBrowse => "browse"
-        case DisplayLevelMenu => "menu"
-        case DisplayLevelAll => "all"
+        case DisplayLevel.Internal => "internal"
+        case DisplayLevel.Browse => "browse"
+        case DisplayLevel.Menu => "menu"
+        case DisplayLevel.All => "all"
       }),
       "numPositionArgs" -> new JsNumber(derivationInfo.numPositionArgs),
       "derivation" -> derivation,

@@ -10,7 +10,7 @@ import org.keymaerax.btactics.AnonymousLemmas.remember
 import org.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.helpers.DifferentialHelper
-import org.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core.{Variable, _}
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{PosInExpr, Position}
@@ -565,7 +565,7 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "stabilityCLF",
     displayNameLong = Some("Stability by Common Lyapunov Function"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<=0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0)",
     displayConclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
   )
@@ -703,7 +703,7 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "attractivityCLF",
     displayNameLong = Some("Attractivity by Common Lyapunov Function"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0) ∧ RUB(V)",
     displayConclusion =
       "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
@@ -987,7 +987,7 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "stabilityStateMLF",
     displayNameLong = Some("Stability for State-dependent Switching by Multiple Lyapunov Functions"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<=0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0)",
     displayConclusion =
       "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ a; x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
@@ -1574,7 +1574,7 @@ object SwitchedSystems extends TacticProvider {
   @Tactic(
     name = "attractivityStateMLF",
     displayNameLong = Some("Attractivity for State-dependent Switching by Multiple Lyapunov Functions"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises =
       "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0) ∧ RUB(Vp)",
     displayConclusion =

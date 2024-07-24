@@ -8,7 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
@@ -48,7 +48,7 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "smartHide",
     displayName = Some("Smart Hide"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ<sub>hide</sub> |- Δ",
     displayConclusion = "Γ |- Δ",
   )
@@ -125,7 +125,7 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "hideFactsAbout",
     displayName = Some("Hide Facts"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- Δ",
     displayConclusion = "Γ, P(xs) |- Q(xs), Δ",
   )
@@ -159,7 +159,7 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "keepFactsAbout",
     displayName = Some("Keep Facts"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "P(xs) |- Q(xs)",
     displayConclusion = "Γ(!xs), P(xs) |- Q(xs), Δ(!xs)",
   )
@@ -195,7 +195,7 @@ object ArithmeticSimplification extends TacticProvider {
   @Tactic(
     name = "transformEquality",
     displayName = Some("Transform Equality"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- equality ;; Γ |- P(equalityRHS) Δ",
     displayConclusion = "Γ |- P(equalityLHS), Δ",
   )

@@ -79,7 +79,7 @@ class Axiom(
     val displayName: Option[String] = None,
     val displayNameAscii: Option[String] = None,
     val displayNameLong: Option[String] = None,
-    val displayLevel: DisplayLevel = DisplayLevelInternal,
+    val displayLevel: DisplayLevel = DisplayLevel.Internal,
     val displayConclusion: String = "",
     val unifier: Unifier = Unifier.Full,
     val inputs: String = "",
@@ -96,7 +96,7 @@ case class AxiomArgs(
     displayName: Option[String] = None,
     displayNameAscii: Option[String] = None,
     displayNameLong: Option[String] = None,
-    displayLevel: DisplayLevel = DisplayLevelInternal,
+    displayLevel: DisplayLevel = DisplayLevel.Internal,
     displayConclusion: String = "",
     unifier: Unifier = Unifier.Full,
     inputs: String = "",
@@ -130,14 +130,8 @@ object AxiomMacro {
     val args = c.prefix.tree match {
       case q"new $_(..$args)" => c.eval(c.Expr[AxiomArgs](
           q"""{
-            import org.keymaerax.btactics.macros.{
-              DisplayLevel,
-              DisplayLevelInternal,
-              DisplayLevelBrowse,
-              DisplayLevelMenu,
-              DisplayLevelAll,
-              Unifier,
-            };
+            import org.keymaerax.btactics.macros.DisplayLevel;
+            import org.keymaerax.btactics.macros.Unifier;
             org.keymaerax.btactics.macros.AxiomArgs(..$args)
           }"""
         ))

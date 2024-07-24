@@ -14,7 +14,7 @@ import org.keymaerax.btactics.SimplifierV3._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.helpers.DifferentialHelper._
-import org.keymaerax.btactics.macros.{DisplayLevelBrowse, DisplayLevelMenu, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, RenUSubst, UnificationMatch}
@@ -870,7 +870,7 @@ object ODEInvariance extends TacticProvider {
 
   @Tactic(
     name = "domainStuck",
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
     displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
   )
@@ -1202,7 +1202,7 @@ object ODEInvariance extends TacticProvider {
   @Tactic(
     name = "dRI",
     displayName = Some("(Conj.) Differential Radical Invariants"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, Q |- p*=0",
     displayConclusion = "Γ |- [x'=f(x) & Q}]p=0, Δ",
   )
@@ -1259,7 +1259,7 @@ object ODEInvariance extends TacticProvider {
   @Tactic(
     name = "dgVdbxAuto",
     displayName = Some("Vectorial Darboux (auto)"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- [x'=f(x)& Q & p*!=0]p!=0, Δ",
     displayConclusion = "Γ |- [x'=f(x) & Q}]p!=0, Δ",
   )
@@ -1513,7 +1513,7 @@ object ODEInvariance extends TacticProvider {
   @Tactic(
     name = "dFP",
     displayName = Some("Differential Fixed Point"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
     displayConclusion = "Γ |- [x'=f(x) & Q}]P, Δ",
   )
@@ -2082,7 +2082,7 @@ object ODEInvariance extends TacticProvider {
     name = "nilpotentSolve",
     displayName = Some("[']n"),
     displayNameLong = Some("nilsolve"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     displayPremises = "Γ,x=x0,t=0 |- [x'=f(x),t'=1&q(x)&x=y(x0,t)]p(x), Δ",
     displayConclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
     revealInternalSteps = false,

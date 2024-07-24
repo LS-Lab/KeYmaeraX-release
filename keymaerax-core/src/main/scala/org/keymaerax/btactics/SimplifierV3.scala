@@ -12,7 +12,7 @@ import org.keymaerax.btactics.PropositionalTactics.prop
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct._
@@ -1104,7 +1104,7 @@ object SimplifierV3 extends TacticProvider {
   @Tactic(
     name = "simplify",
     displayName = Some("Simplify"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- simplify(P), Δ",
     displayConclusion = "Γ |- P, Δ",
   )
@@ -1200,7 +1200,7 @@ object SimplifierV3 extends TacticProvider {
   @Tactic(
     name = "fullSimplify",
     displayName = Some("Full Simplify"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "simplify(Γ |- P, Δ)",
     displayConclusion = "Γ |- P, Δ",
   )

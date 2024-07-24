@@ -86,10 +86,10 @@ object AnnotationCommon {
   private def astForDisplayLevel(level: DisplayLevel)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     level match {
-      case DisplayLevelInternal => q"org.keymaerax.btactics.macros.DisplayLevelInternal"
-      case DisplayLevelBrowse => q"org.keymaerax.btactics.macros.DisplayLevelBrowse"
-      case DisplayLevelMenu => q"org.keymaerax.btactics.macros.DisplayLevelMenu"
-      case DisplayLevelAll => q"org.keymaerax.btactics.macros.DisplayLevelAll"
+      case DisplayLevel.Internal => q"org.keymaerax.btactics.macros.DisplayLevel.Internal"
+      case DisplayLevel.Browse => q"org.keymaerax.btactics.macros.DisplayLevel.Browse"
+      case DisplayLevel.Menu => q"org.keymaerax.btactics.macros.DisplayLevel.Menu"
+      case DisplayLevel.All => q"org.keymaerax.btactics.macros.DisplayLevel.All"
     }
   }
 

@@ -8,7 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.macros.{DisplayLevelBrowse, Tactic, TacticInfo}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic, TacticInfo}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
@@ -150,7 +150,7 @@ private object ProofRuleTactics extends TacticProvider with Logging {
   @Tactic(
     name = "boundRenameAt",
     displayName = Some("BRat"),
-    displayLevel = DisplayLevelBrowse,
+    displayLevel = DisplayLevel.Browse,
     displayPremises = "Γ |- ∀y Q(y), Δ",
     displayConclusion = "Γ |- ∀x Q(x), Δ",
     inputs = "y:variable",

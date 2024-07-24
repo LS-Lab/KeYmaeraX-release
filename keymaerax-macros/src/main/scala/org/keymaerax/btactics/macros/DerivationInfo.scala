@@ -180,7 +180,7 @@ object DerivationInfo {
   def ofBuiltinName(name: String): Option[DerivationInfo] = {
     val expandPattern = """(expand\("[^"]*"\))|(expandAllDefs)""".r
     name match {
-      case expandPattern(_*) => Some(new BuiltinInfo(name, SimpleDisplayInfo(name, name, name, DisplayLevelInternal)))
+      case expandPattern(_*) => Some(new BuiltinInfo(name, SimpleDisplayInfo(name, name, name, DisplayLevel.Internal)))
       case _ => None
     }
   }

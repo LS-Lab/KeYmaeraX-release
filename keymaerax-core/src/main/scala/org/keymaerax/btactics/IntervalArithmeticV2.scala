@@ -8,7 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.macros.{DisplayLevelInternal, DisplayLevelMenu, Tactic}
+import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, SuccPosition}
@@ -1227,7 +1227,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     }
   }
 
-  @Tactic(name = "intervalArithmetic", displayName = Some("Interval Arithmetic"), displayLevel = DisplayLevelMenu)
+  @Tactic(name = "intervalArithmetic", displayName = Some("Interval Arithmetic"), displayLevel = DisplayLevel.Menu)
   lazy val intervalArithmetic: BelleExpr = anon {
     val precision = 15 // @todo: precision as (optional) argument?
     SaturateTactic((orRi |! skip)) & intervalArithmeticPreproc(1) &
@@ -1259,7 +1259,7 @@ object IntervalArithmeticV2 extends TacticProvider {
   @Tactic(
     name = "intervalCutTerms" /* @todo old codeName */,
     displayName = Some("Interval Arithmetic Cut"),
-    displayLevel = DisplayLevelMenu,
+    displayLevel = DisplayLevel.Menu,
     // @TODO: closed premise
     displayPremises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     displayConclusion = "Γ |- Δ",
@@ -1278,7 +1278,7 @@ object IntervalArithmeticV2 extends TacticProvider {
   @Tactic(
     name = "intervalCut",
     displayName = Some("Interval Arithmetic Cut"),
-    displayLevel = DisplayLevelInternal,
+    displayLevel = DisplayLevel.Internal,
     displayPremises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     displayConclusion = "Γ |- Δ",
   )
