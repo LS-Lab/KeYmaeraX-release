@@ -275,7 +275,7 @@ object TacticMacro {
      * Parse annotation arguments
      */
 
-    val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
+    val inputs: List[ArgInfo] = parseAIs(args.inputs)
 
     val displayNames = DisplayNames.createWithChecks(
       name = args.displayName.getOrElse(args.name),

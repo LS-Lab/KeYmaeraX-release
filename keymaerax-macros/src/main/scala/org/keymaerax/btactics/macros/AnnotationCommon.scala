@@ -5,12 +5,12 @@
 
 package org.keymaerax.btactics.macros
 
-import scala.reflect.macros.{blackbox, whitebox}
+import scala.reflect.macros.blackbox
 
 object AnnotationCommon {
   type ExprPos = List[Int]
 
-  def toArgInfo(name: String, tpe: String, allowFresh: List[String])(implicit c: blackbox.Context): ArgInfo = {
+  def toArgInfo(name: String, tpe: String, allowFresh: List[String]): ArgInfo = {
     val first = tpe.indexOf('[')
     val last = tpe.lastIndexOf(']')
     if (first != -1 && last != -1) {
@@ -18,7 +18,7 @@ object AnnotationCommon {
       tpeFun match {
         case "list" => ListArg(toArgInfo(name, tpeArg, allowFresh))
         case "option" => OptionArg(toArgInfo(name, tpeArg, allowFresh))
-        case s => c.abort(c.enclosingPosition, "Unexpected type constructor: " + s + ", should be option[] or list[]")
+        case s => throw new Exception(s"Unexpected type constructor: $s, should be option[] or list[]")
       }
     } else {
       tpe.trim.toLowerCase match {
@@ -29,17 +29,15 @@ object AnnotationCommon {
         case "string" => StringArg(name, allowFresh)
         case "expression" => ExpressionArg(name, allowFresh)
         case "substitution" => SubstitutionArg(name, allowFresh)
-        case s => c.abort(
-            c.enclosingPosition,
-            "Unexpected type name: " + s +
-              ", should be number, string, substitution, variable, term, formula, expression, list[t], or option[t]",
+        case s => throw new Exception(
+            s"Unexpected type name: $s, should be number, string, substitution, variable, term, formula, expression, list[t], or option[t]"
           )
       }
     }
   }
-  def parseAI(s: String)(implicit c: blackbox.Context): ArgInfo = {
+  def parseAI(s: String): ArgInfo = {
     val iCln = s.lastIndexOf(':')
-    if (iCln < 0) c.abort(c.enclosingPosition, "Invalid argument type descriptor:" + s)
+    require(iCln >= 0, s"Invalid argument type descriptor: $s")
     val (id, tpe) = (s.take(iCln), s.takeRight(s.length - (iCln + 1)))
     val first = id.indexOf('[')
     val last = id.lastIndexOf(']')
@@ -48,7 +46,7 @@ object AnnotationCommon {
       else (id.trim, Nil)
     toArgInfo(name, tpe.trim, allowFresh)
   }
-  def parseAIs(str: String)(implicit c: blackbox.Context): List[ArgInfo] = {
+  def parseAIs(str: String): List[ArgInfo] = {
     val s = str.filter(c => !(c == '\n' || c == '\r'))
     if (s.isEmpty) Nil else s.split(";;").toList.map(s => parseAI(s.trim))
   }
@@ -63,6 +61,47 @@ object AnnotationCommon {
   }
   def parsePoses(s: String)(implicit c: blackbox.Context): List[ExprPos] = {
     if (s == "") Nil else s.split(";").toList.map(parsePos)
+  }
+
+  def axiomDisplayInfo(
+      name: String,
+      nameAscii: Option[String],
+      nameLong: Option[String],
+      level: DisplayLevel,
+      conclusion: String,
+      inputs: String,
+  ): DisplayInfo = {
+    val pInputs: List[ArgInfo] = parseAIs(inputs)
+
+    val names = DisplayNames.createWithChecks(name = name, nameAscii = nameAscii, nameLong = nameLong)
+
+    (conclusion, pInputs) match {
+      case ("", Nil) => SimpleDisplayInfo(names = names, level = level)
+      case ("", _) => throw new Exception("axiom with inputs must have a conclusion")
+      case (fml, Nil) => AxiomDisplayInfo(names = names, level = level, formula = renderDisplayFormula(fml))
+      case (fml, input) => InputAxiomDisplayInfo(names = names, level = level, formula = fml, input = input)
+    }
+  }
+
+  def ruleDisplayInfo(
+      name: String,
+      nameAscii: Option[String],
+      nameLong: Option[String],
+      level: DisplayLevel,
+      premises: String,
+      conclusion: String,
+  ): DisplayInfo = {
+    val pPremises = DisplaySequent.parseMany(premises)
+    val pConclusionOpt = Some(conclusion).filter(_.nonEmpty).map(DisplaySequent.parse)
+
+    val names = DisplayNames.createWithChecks(name = name, nameAscii = nameAscii, nameLong = nameLong)
+
+    (pPremises, pConclusionOpt) match {
+      case (Nil, None) => SimpleDisplayInfo(names = names, level = level)
+      case (prem, Some(conc)) =>
+        RuleDisplayInfo(names = names, level = level, conclusion = conc, premises = prem, inputGenerator = None)
+      case _ => throw new Exception("proof rule with premises must have a conclusion")
+    }
   }
 
   def astForArgInfo(ai: ArgInfo)(implicit c: blackbox.Context): c.universe.Tree = {

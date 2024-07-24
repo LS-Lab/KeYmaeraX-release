@@ -5,14 +5,7 @@
 
 package org.keymaerax.btactics.macros
 
-import org.keymaerax.btactics.macros.AnnotationCommon.{
-  astForDisplayInfo,
-  astForUnifier,
-  parseAIs,
-  parsePos,
-  parsePoses,
-  renderDisplayFormula,
-}
+import org.keymaerax.btactics.macros.AnnotationCommon.{astForDisplayInfo, astForUnifier, parsePos, parsePoses}
 
 import scala.annotation.{compileTimeOnly, StaticAnnotation}
 import scala.language.experimental.macros
@@ -179,24 +172,17 @@ object AxiomMacro {
      * Parse annotation arguments
      */
 
-    val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val displayNames = DisplayNames.createWithChecks(
+    val displayInfo = AnnotationCommon.axiomDisplayInfo(
       name = args.displayName.getOrElse(args.name),
       nameAscii = args.displayNameAscii,
       nameLong = args.displayNameLong,
+      level = args.displayLevel,
+      conclusion = args.displayConclusion,
+      inputs = args.inputs,
     )
-
-    val displayInfo: DisplayInfo = (args.displayConclusion, inputs) match {
-      case ("", Nil) => SimpleDisplayInfo(names = displayNames, level = args.displayLevel)
-      case ("", _) => c.abort(c.enclosingPosition, "@Axiom with inputs must have a conclusion")
-      case (fml, Nil) =>
-        AxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = renderDisplayFormula(fml))
-      case (fml, input) =>
-        InputAxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = fml, input = input)
-    }
 
     /*
      * Build AST

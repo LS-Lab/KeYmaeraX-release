@@ -145,28 +145,17 @@ object ProofRuleMacro {
      * Parse annotation arguments
      */
 
-    val premises = DisplaySequent.parseMany(args.displayPremises)
-    val conclusionOpt = Some(args.displayConclusion).filter(_.nonEmpty).map(DisplaySequent.parse)
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val displayNames = DisplayNames.createWithChecks(
+    val displayInfo = AnnotationCommon.ruleDisplayInfo(
       name = args.displayName.getOrElse(args.name),
       nameAscii = args.displayNameAscii,
       nameLong = args.displayNameLong,
+      level = args.displayLevel,
+      premises = args.displayPremises,
+      conclusion = args.displayConclusion,
     )
-
-    val display = (premises, conclusionOpt) match {
-      case (Nil, None) => SimpleDisplayInfo(names = displayNames, level = args.displayLevel)
-      case (prem, Some(conc)) => RuleDisplayInfo(
-          names = displayNames,
-          level = args.displayLevel,
-          conclusion = conc,
-          premises = prem,
-          inputGenerator = None,
-        )
-      case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")
-    }
 
     /*
      * Build AST
@@ -179,7 +168,7 @@ object ProofRuleMacro {
         tq"org.keymaerax.btactics.macros.AxiomaticRuleInfo",
         q"""AxiomaticRuleInfo(
           canonicalName = $canonicalName,
-          display = ${astForDisplayInfo(display)(c)},
+          display = ${astForDisplayInfo(displayInfo)(c)},
           codeName = ${args.name},
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
@@ -190,7 +179,7 @@ object ProofRuleMacro {
         tq"org.keymaerax.btactics.macros.DerivedRuleInfo",
         q"""DerivedRuleInfo(
           canonicalName = $canonicalName,
-          display = ${astForDisplayInfo(display)(c)},
+          display = ${astForDisplayInfo(displayInfo)(c)},
           codeName = ${args.name},
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
