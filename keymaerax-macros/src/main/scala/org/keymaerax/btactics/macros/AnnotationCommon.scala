@@ -50,18 +50,15 @@ object AnnotationCommon {
     val s = str.filter(c => !(c == '\n' || c == '\r'))
     if (s.isEmpty) Nil else s.split(";;").toList.map(s => parseAI(s.trim))
   }
-  def toNonneg(s: String)(implicit c: blackbox.Context): Int = {
+  def toNonneg(s: String): Int = {
     val i =
       try { s.toInt }
-      catch { case t: Throwable => c.abort(c.enclosingPosition, "Could not convert position " + s + " to integer") }
-    if (i < 0) c.abort(c.enclosingPosition, "Position needs to be nonnegative, got: " + i) else i
+      catch { case _: NumberFormatException => throw new Exception(s"Could not convert position $s to integer") }
+    require(i >= 0, s"Position needs to be nonnegative, got: $i")
+    i
   }
-  def parsePos(s: String)(implicit c: blackbox.Context): ExprPos = {
-    if (s == "*" || s == "") Nil else s.split("\\.").toList.map(toNonneg)
-  }
-  def parsePoses(s: String)(implicit c: blackbox.Context): List[ExprPos] = {
-    if (s == "") Nil else s.split(";").toList.map(parsePos)
-  }
+  def parsePos(s: String): ExprPos = { if (s == "*" || s == "") Nil else s.split("\\.").toList.map(toNonneg) }
+  def parsePoses(s: String): List[ExprPos] = { if (s == "") Nil else s.split(";").toList.map(parsePos) }
 
   def axiomDisplayInfo(
       name: String,

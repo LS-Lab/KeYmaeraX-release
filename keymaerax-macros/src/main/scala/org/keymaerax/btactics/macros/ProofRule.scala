@@ -145,8 +145,8 @@ object ProofRuleMacro {
      * Parse annotation arguments
      */
 
-    val key = parsePos(args.key)(c)
-    val recursor = parsePoses(args.recursor)(c)
+    val key = parsePos(args.key)
+    val recursor = parsePoses(args.recursor)
 
     val displayInfo = AnnotationCommon.ruleDisplayInfo(
       name = args.displayName.getOrElse(args.name),
