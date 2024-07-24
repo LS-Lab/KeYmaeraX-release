@@ -444,6 +444,44 @@ case class DerivedRuleInfo(
   override val numPositionArgs = 0
 }
 
+object DerivedRuleInfo {
+  def create(
+      name: String,
+      canonicalName: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      unifier: Unifier = Unifier.Full,
+      key: String = "",
+      recursor: String = "*",
+  ): DerivedRuleInfo = DerivedRuleInfo(
+    canonicalName = canonicalName,
+    display = AnnotationCommon.ruleDisplayInfo(
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+    ),
+    codeName = name,
+    unifier = unifier,
+    theKey = parsePos(key),
+    theRecursor = parsePoses(recursor),
+  )
+
+  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
+  def apply(ruleName: String): DerivedRuleInfo = DerivationInfo.byCanonicalName(ruleName) match {
+    case info: DerivedRuleInfo => info
+    case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived rule")
+  }
+
+  def allInfo: Map[String, DerivedRuleInfo] = DerivationInfo._derivedRuleInfo
+}
+
 // tactics
 
 /** Meta-information on builtin tactic expressions (expand etc.). */
@@ -546,25 +584,6 @@ object DerivedAxiomInfo {
 
   /** All registered derived axiom info by stored name. */
   def allInfoByStoredName: Map[String, StorableInfo] = DerivationInfo._byStoredName
-}
-
-// axiomatic proof rules
-
-object DerivedRuleInfo {
-
-  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
-  def locate(ruleName: String): Option[DerivedRuleInfo] = DerivationInfo.byCanonicalName(ruleName) match {
-    case info: DerivedRuleInfo => Some(info)
-    case _ => None
-  }
-
-  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
-  def apply(ruleName: String): DerivedRuleInfo = DerivationInfo.byCanonicalName(ruleName) match {
-    case info: DerivedRuleInfo => info
-    case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived rule")
-  }
-
-  def allInfo: Map[String, DerivedRuleInfo] = DerivationInfo._derivedRuleInfo
 }
 
 // tactics

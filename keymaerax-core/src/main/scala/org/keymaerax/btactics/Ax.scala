@@ -167,11 +167,10 @@ object Ax extends Logging {
     dai
   }
 
-  def derivedRule(name: String, fact: ProvableSig): DerivedRuleInfo = {
+  def derivedRule(info: DerivedRuleInfo, fact: ProvableSig): DerivedRuleInfo = {
     // create evidence (traces input into tool and output from tool)
-    val dri = DerivedRuleInfo(name)
     val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
-    val lemmaName = dri.storedName
+    val lemmaName = info.storedName
     val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     val insertedLemma =
       if (!AUTO_INSERT) { lemma }
@@ -183,28 +182,31 @@ object Ax extends Logging {
             if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
             else {
               throw new IllegalStateException(
-                "Prover already has a different lemma filed under the same name " + derivedAxiomDB
-                  .get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma
+                s"Prover already has a different lemma filed under the same name: ${derivedAxiomDB
+                    .get(lemmaName)} (lemma ${info.codeName} stored in file $lemmaName) instead of $lemma"
               )
             }
           } else { derivedAxiomDB.add(lemma) }
         derivedAxiomDB.get(lemmaID).get
       }
-    dri.setLemma(insertedLemma)
-    dri
+    info.setLemma(insertedLemma)
+    info
   }
 
-  private[this] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr): DerivedRuleInfo = {
-    val dri = DerivedRuleInfo(name)
-    val storageName = dri.storedName
+  private[this] def derivedRuleSequent(
+      info: DerivedRuleInfo,
+      derived: => Sequent,
+      tactic: => BelleExpr,
+  ): DerivedRuleInfo = {
+    val storageName = info.storedName
     val lemma = derivedAxiomDB.get(storageName) match {
       case Some(lemma) => lemma
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
-        derivedRule(name, witness).lemma
+        derivedRule(info, witness).lemma
     }
-    dri.setLemma(lemma)
-    dri
+    info.setLemma(lemma)
+    info
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
@@ -1112,14 +1114,15 @@ object Ax extends Logging {
    *
    * @derived
    */
-  @ProofRule(
-    name = "contraposition2Rule",
-    displayName = Some("contra2"),
-    displayPremises = "!Q |- !P",
-    displayConclusion = "P |- Q",
-  )
+  @Derivation
   lazy val contraposition2Rule: DerivedRuleInfo = derivedRuleSequent(
-    "contra2",
+    DerivedRuleInfo.create(
+      name = "contraposition2Rule",
+      canonicalName = "contra2",
+      displayName = Some("contra2"),
+      displayPremises = "!Q |- !P",
+      displayConclusion = "P |- Q",
+    ),
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
     useAt(doubleNegation, PosInExpr(1 :: Nil))(1) &
       useAt(doubleNegation, PosInExpr(1 :: Nil))(-1) &
@@ -1134,11 +1137,13 @@ object Ax extends Logging {
    * Conclusion p(||) ==> [a*]p(||)
    * }}}
    * {{{
-   *     p(x) |- [a]p(x)
-   *   --------------------- ind
-   *     p(x) |- [{a}*]p(x)
+   *  p(x) |- [a]p(x)
+   * -------------------- ind
+   *  p(x) |- [{a}*]p(x)
    * }}}
+   *
    * Interderives with FP fixpoint rule.
+   *
    * @see
    *   Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log.
    *   17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
@@ -1146,12 +1151,14 @@ object Ax extends Logging {
    *   Lemma 7.2 and Corollary 16.1 of Andre Platzer.
    *   [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
    */
-//  ("ind induction",
-//    (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
-//      Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
-  @ProofRule(name = "indrule", displayPremises = "P |- [a]P", displayConclusion = "P |- [a*]P")
+  @Derivation
   lazy val indrule: DerivedRuleInfo = derivedRuleSequent(
-    "ind induction",
+    DerivedRuleInfo.create(
+      name = "indrule",
+      canonicalName = "ind induction",
+      displayPremises = "P |- [a]P",
+      displayConclusion = "P |- [a*]P",
+    ),
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("[{a_;}*]p_(||)".asFormula)),
     useAt(box, PosInExpr(1 :: Nil))(1) &
       useAt(doubleNegation, PosInExpr(1 :: Nil))(-1) & notR(1) & notL(-1) &
@@ -1166,17 +1173,20 @@ object Ax extends Logging {
   /**
    * DUPLICATE: Rule "FP fixpoint duplicate" only for documentation purposes to show that FP rule derives from ind
    * induction rule, except with a duplicate premise.
+   *
    * {{{
    * Premise p(||) | <a>q(||) ==> q(||)
    * Conclusion <a*>p(||) ==> q(||)
    * }}}
    * {{{
-   *     p(x) | <a>q(x) |- q(x)    p(x) | <a>q(x) |- q(x)
-   *   --------------------------------------------------- FP
-   *     <a*>p(x) |- q(x)
+   *  p(x) | <a>q(x) |- q(x)    p(x) | <a>q(x) |- q(x)
+   * -------------------------------------------------- FP
+   *  <a*>p(x) |- q(x)
    * }}}
+   *
    * Interderives with ind induction rule. FP is used as basis, because deriving FP from ind leads to a duplicate
    * premise, needing list to set contraction.
+   *
    * @see
    *   Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log.
    *   17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
@@ -1186,14 +1196,15 @@ object Ax extends Logging {
    * @see
    *   [[FPrule]]
    */
-  @ProofRule(
-    name = "FPruleduplicate",
-    displayLevel = DisplayLevel.Internal,
-    displayPremises = "P | <a>Q |- Q ;; P | <a>Q |- Q",
-    displayConclusion = "<a*>P |- Q",
-  )
+  @Derivation
   private[btactics] lazy val FPruleduplicate: DerivedRuleInfo = derivedRuleSequent(
-    "FP rule duplicate",
+    DerivedRuleInfo.create(
+      name = "FPruleduplicate",
+      canonicalName = "FP rule duplicate",
+      displayLevel = DisplayLevel.Internal,
+      displayPremises = "P | <a>Q |- Q ;; P | <a>Q |- Q",
+      displayConclusion = "<a*>P |- Q",
+    ),
     Sequent(immutable.IndexedSeq("<{a_;}*>p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
     cut("<{a_;}*>q_(||)".asFormula) < (
       /* use: */
@@ -1237,17 +1248,17 @@ object Ax extends Logging {
    * @note
    *   generalization of p(x) to p(||) as in Theorem 14
    */
-  @ProofRule(
-    name = "allGeneralize",
-    displayName = Some("all gen"),
-    displayNameAscii = Some("allgen"),
-    displayNameLong = Some("allgen"),
-    displayPremises = "|- P",
-    displayConclusion = "|- \\forall x P",
-  )
+  @Derivation
   lazy val allGeneralize: DerivedRuleInfo = derivedRuleSequent(
-    "all generalization",
-    // (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
+    DerivedRuleInfo.create(
+      name = "allGeneralize",
+      canonicalName = "all generalization",
+      displayName = Some("all gen"),
+      displayNameAscii = Some("allgen"),
+      displayNameLong = Some("allgen"),
+      displayPremises = "|- P",
+      displayConclusion = "|- \\forall x P",
+    ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
     useAt(randomb, PosInExpr(1 :: Nil))(1) &
       cut(Box(AssignAny(Variable("x_", None, Real)), True)) < (
@@ -1264,15 +1275,16 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @ProofRule(
-    name = "monallrule",
-    displayName = Some("M∀"),
-    displayNameAscii = Some("Mall"),
-    displayPremises = "P |- Q",
-    displayConclusion = "∀x P |- ∀ x Q",
-  )
+  @Derivation
   lazy val monallrule: DerivedRuleInfo = derivedRuleSequent(
-    "all monotone",
+    DerivedRuleInfo.create(
+      name = "monallrule",
+      canonicalName = "all monotone",
+      displayName = Some("M∀"),
+      displayNameAscii = Some("Mall"),
+      displayPremises = "P |- Q",
+      displayConclusion = "∀x P |- ∀ x Q",
+    ),
     Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
     implyRi()(-1, 1) &
       useAt(allDistElim)(1) &
@@ -1287,18 +1299,25 @@ object Ax extends Logging {
    * End.
    * }}}
    * {{{
-   *       p(||)
-   *   ----------- G
-   *    [a{|^@|};]p(||)
+   *     p(||)
+   * ----------- G
+   *  [a{|^@|};]p(||)
    * }}}
+   *
    * @note
    *   Unsound for hybrid games
    * @derived
    *   from M and [a]true
    */
-  @ProofRule(name = "Goedel", displayName = Some("G"), displayPremises = "|- P", displayConclusion = "|- [a;]P")
+  @Derivation
   lazy val Goedel: DerivedRuleInfo = derivedRuleSequent(
-    "Goedel",
+    DerivedRuleInfo.create(
+      name = "Goedel",
+      canonicalName = "Goedel",
+      displayName = Some("G"),
+      displayPremises = "|- P",
+      displayConclusion = "|- [a;]P",
+    ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) < (
       // use
@@ -1427,16 +1446,17 @@ object Ax extends Logging {
    * @derived
    *   ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
    */
-  @ProofRule(
-    name = "CTtermCongruence",
-    displayName = Some("CT term congruence"),
-    displayNameAscii = Some("CTtermCongruence"),
-    displayNameLong = Some("CTtermCongruence"),
-    displayPremises = "|- f_(||) = g_(||)",
-    displayConclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
-  )
+  @Derivation
   lazy val CTtermCongruence: DerivedRuleInfo = derivedRuleSequent(
-    "CT term congruence",
+    DerivedRuleInfo.create(
+      name = "CTtermCongruence",
+      canonicalName = "CT term congruence",
+      displayName = Some("CT term congruence"),
+      displayNameAscii = Some("CTtermCongruence"),
+      displayNameLong = Some("CTtermCongruence"),
+      displayPremises = "|- f_(||) = g_(||)",
+      displayConclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
+    ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) = ctx_(g_(||))".asFormula)),
     cutR("ctx_(g_(||)) = ctx_(g_(||))".asFormula)(SuccPos(0)) < (
       byUS(equalReflexive),
@@ -1454,16 +1474,17 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @ProofRule(
-    name = "CQimplyCongruence",
-    displayName = Some("CQimply"),
-    displayNameAscii = Some("CQimplyCongruence"),
-    displayNameLong = Some("CQimplyCongruence"),
-    displayPremises = "|- f_(||) = g_(||)",
-    displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
-  )
+  @Derivation
   lazy val CQimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
-    "CQimply equation congruence",
+    DerivedRuleInfo.create(
+      name = "CQimplyCongruence",
+      canonicalName = "CQimply equation congruence",
+      displayName = Some("CQimply"),
+      displayNameAscii = Some("CQimplyCongruence"),
+      displayNameLong = Some("CQimplyCongruence"),
+      displayPremises = "|- f_(||) = g_(||)",
+      displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+    ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
     TactixLibrary.equivifyR(1) & by(CQrule),
   )
@@ -1476,16 +1497,17 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @ProofRule(
-    name = "CQrevimplyCongruence",
-    displayName = Some("CQrevimply"),
-    displayNameAscii = Some("CQrevimplyCongruence"),
-    displayNameLong = Some("CQrevimplyCongruence"),
-    displayPremises = "|- g_(||) = f_(||)",
-    displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
-  )
+  @Derivation
   lazy val CQrevimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
-    "CQrevimply equation congruence",
+    DerivedRuleInfo.create(
+      name = "CQrevimplyCongruence",
+      canonicalName = "CQrevimply equation congruence",
+      displayName = Some("CQrevimply"),
+      displayNameAscii = Some("CQrevimplyCongruence"),
+      displayNameLong = Some("CQrevimplyCongruence"),
+      displayPremises = "|- g_(||) = f_(||)",
+      displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+    ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
     TactixLibrary.equivifyR(1) & by(CQrule) & TactixLibrary.commuteEqual(1),
   )
@@ -1498,16 +1520,17 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @ProofRule(
-    name = "CEimplyCongruence",
-    displayName = Some("CEimply"),
-    displayNameAscii = Some("CEimplyCongruence"),
-    displayNameLong = Some("CEimplyCongruence"),
-    displayPremises = "|- p_(||) <-> q_(||)",
-    displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
-  )
+  @Derivation
   lazy val CEimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
-    "CEimply congruence",
+    DerivedRuleInfo.create(
+      name = "CEimplyCongruence",
+      canonicalName = "CEimply congruence",
+      displayName = Some("CEimply"),
+      displayNameAscii = Some("CEimplyCongruence"),
+      displayNameLong = Some("CEimplyCongruence"),
+      displayPremises = "|- p_(||) <-> q_(||)",
+      displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
+    ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
     TactixLibrary.equivifyR(1) & by(CErule),
   )
@@ -1520,16 +1543,17 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @ProofRule(
-    name = "CErevimplyCongruence",
-    displayName = Some("CErevimply"),
-    displayNameAscii = Some("CErevimplyCongruence"),
-    displayNameLong = Some("CErevimplyCongruence"),
-    displayPremises = "|- q_(||) <-> p_(||)",
-    displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
-  )
+  @Derivation
   lazy val CErevimplyCongruence: DerivedRuleInfo = derivedRuleSequent(
-    "CErevimply congruence",
+    DerivedRuleInfo.create(
+      name = "CErevimplyCongruence",
+      canonicalName = "CErevimply congruence",
+      displayName = Some("CErevimply"),
+      displayNameAscii = Some("CErevimplyCongruence"),
+      displayNameLong = Some("CErevimplyCongruence"),
+      displayPremises = "|- q_(||) <-> p_(||)",
+      displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
+    ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
     TactixLibrary.equivifyR(1) & by(CErule) & TactixLibrary.commuteEquivR(1),
   )
@@ -1551,16 +1575,17 @@ object Ax extends Logging {
    * @note
    *   Notation changed to p instead of p_ just for the sake of the derivation.
    */
-  @ProofRule(
-    name = "monbaxiom",
-    displayName = Some("[] monotone"),
-    displayNameAscii = Some("[]monotone"),
-    displayNameLong = Some("[]monotone"),
-    displayPremises = "P |- Q",
-    displayConclusion = "[a;]P |- [a;]Q",
-  )
+  @Derivation
   lazy val monbaxiom: DerivedRuleInfo = derivedRuleSequent(
-    "[] monotone",
+    DerivedRuleInfo.create(
+      name = "monbaxiom",
+      canonicalName = "[] monotone",
+      displayName = Some("[] monotone"),
+      displayNameAscii = Some("[]monotone"),
+      displayNameLong = Some("[]monotone"),
+      displayPremises = "P |- Q",
+      displayConclusion = "[a;]P |- [a;]Q",
+    ),
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1 :: Nil))(-1) & useAt(box, PosInExpr(1 :: Nil))(1) &
       notL(-1) & notR(1) &
@@ -1591,16 +1616,17 @@ object Ax extends Logging {
    * @note
    *   Renamed form of boxMonotone.
    */
-  @ProofRule(
-    name = "monb2",
-    displayName = Some("[] monotone 2"),
-    displayNameAscii = Some("[]monotone 2"),
-    displayNameLong = Some("[]monotone 2"),
-    displayPremises = "Q |- P",
-    displayConclusion = "[a;]Q |- [a;]P",
-  )
+  @Derivation
   lazy val monb2: DerivedRuleInfo = derivedRuleSequent(
-    "[] monotone 2",
+    DerivedRuleInfo.create(
+      name = "monb2",
+      canonicalName = "[] monotone 2",
+      displayName = Some("[] monotone 2"),
+      displayNameAscii = Some("[]monotone 2"),
+      displayNameLong = Some("[]monotone 2"),
+      displayPremises = "Q |- P",
+      displayConclusion = "[a;]Q |- [a;]P",
+    ),
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
     useAt(box, PosInExpr(1 :: Nil))(-1) & useAt(box, PosInExpr(1 :: Nil))(1) &
       notL(-1) & notR(1) &
@@ -1619,21 +1645,22 @@ object Ax extends Logging {
    * Conclusion  \exists x_ J(||) |- <a{|x_|}*>P(||)
    * }}}
    * {{{
-   *    \exists x_ (x_ <= 0 & J(x_)) |- P   x_ > 0, J(x_) |- <a{|x_|}>J(x_-1)
-   *    ------------------------------------------------- con
-   *     \exists x_ J(x_) |- <a{|x_|}*>P
+   *  \exists x_ (x_ <= 0 & J(x_)) |- P   x_ > 0, J(x_) |- <a{|x_|}>J(x_-1)
+   * ----------------------------------------------------------------------- con
+   *  \exists x_ J(x_) |- <a{|x_|}*>P
    * }}}
    */
-  @ProofRule(
-    name = "conflat",
-    displayName = Some("con flat"),
-    displayNameAscii = Some("conflat"),
-    displayNameLong = Some("conflat"),
-    displayPremises = "\\exists v (v<=0&J) |- P;; v > 0, J |- <a>J(v-1)",
-    displayConclusion = "J |- <a*>P",
-  )
+  @Derivation
   lazy val conflat: DerivedRuleInfo = derivedRuleSequent(
-    "con convergence flat",
+    DerivedRuleInfo.create(
+      name = "conflat",
+      canonicalName = "con convergence flat",
+      displayName = Some("con flat"),
+      displayNameAscii = Some("conflat"),
+      displayNameLong = Some("conflat"),
+      displayPremises = "\\exists v (v<=0&J) |- P;; v > 0, J |- <a>J(v-1)",
+      displayConclusion = "J |- <a*>P",
+    ),
     Sequent(
       immutable.IndexedSeq(Exists(immutable.Seq(v), Jany)),
       immutable.IndexedSeq(Diamond(Loop(anonv), "p_(||)".asFormula)),
