@@ -111,7 +111,7 @@ object AxiomMacro {
     "coreAxiom" -> (1, 1),
     "derivedAxiom" -> (3, 4),
     "derivedAxiomFromFact" -> (3, 4),
-    "derivedFormula" -> (3, 4),
+    "derivedFormula" -> (3, 3),
     "derivedFact" -> (2, 3),
   )
 

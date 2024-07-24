@@ -308,13 +308,8 @@ object Ax extends Logging {
   /**
    * Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available
    */
-  def derivedFormula(
-      name: String,
-      derived: Formula,
-      tactic: => BelleExpr,
-      codeNameOpt: Option[String] = None,
-  ): DerivedAxiomInfo =
-    derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic, codeNameOpt)
+  def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr): DerivedAxiomInfo =
+    derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic)
 
   private val v = Variable("x_", None, Real)
   private val anonv = ProgramConst("a_", Except(v :: Nil))
