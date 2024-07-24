@@ -110,7 +110,7 @@ object AxiomMacro {
   private val ALLOWED_FUNCTIONS_AND_ARGUMENTS: Map[String, (Int, Int)] = Map(
     "coreAxiom" -> (1, 1),
     "derivedAxiom" -> (3, 3),
-    "derivedAxiomFromFact" -> (3, 4),
+    "derivedAxiomFromFact" -> (3, 3),
     "derivedFormula" -> (3, 3),
     "derivedFact" -> (2, 3),
   )

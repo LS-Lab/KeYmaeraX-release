@@ -242,22 +242,10 @@ object Ax extends Logging {
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  def derivedAxiomFromFact(
-      canonicalName: String,
-      derived: Formula,
-      fact: ProvableSig,
-      codeNameOpt: Option[String] = None,
-  ): DerivedAxiomInfo = {
-    val codeName = codeNameOpt match {
-      case Some(codeName) => codeName
-      case None =>
-        try { DerivedAxiomInfo.apply(canonicalName).codeName }
-        catch {
-          case _: Throwable => throw new Exception(
-              s"""Derived axiom info for   '$canonicalName' needs to exist or codeName needs to be explicitly passed"""
-            )
-        }
-    }
+  def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig): DerivedAxiomInfo = {
+    val codeName =
+      try { DerivedAxiomInfo.apply(canonicalName).codeName }
+      catch { case _: Throwable => throw new Exception(s"Derived axiom info for $canonicalName needs to exist") }
     val storedName = DerivedAxiomInfo.toStoredName(codeName)
     derivedFact(canonicalName, fact, Some(storedName)) ensuring (
       info =>
