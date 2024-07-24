@@ -129,19 +129,11 @@ object Ax extends Logging {
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): DerivedAxiomInfo = {
+  def derivedFact(name: String, fact: ProvableSig): DerivedAxiomInfo = {
     val dai = DerivedAxiomInfo(name)
-    val lemmaName = storedNameOpt match {
-      case Some(storedName) => storedName
-      case None =>
-        try { dai.storedName }
-        catch {
-          case t: Throwable => throw new Exception(
-              s"Derived axiom info for $name needs to exist or codeName needs to be explicitly passed",
-              t,
-            )
-        }
-    }
+    val lemmaName =
+      try { dai.storedName }
+      catch { case t: Throwable => throw new Exception(s"Derived axiom info for $name needs to exist", t) }
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     val npt = ElidingProvable(fact.underlyingProvable, fact.defs)
     val alternativeFact =
@@ -225,20 +217,17 @@ object Ax extends Logging {
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig): DerivedAxiomInfo = {
-    val codeName =
-      try { DerivedAxiomInfo.apply(canonicalName).codeName }
-      catch { case _: Throwable => throw new Exception(s"Derived axiom info for $canonicalName needs to exist") }
-    val storedName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedFact(canonicalName, fact, Some(storedName)) ensuring (
-      info =>
-        DerivationInfoAugmentors.ProvableInfoAugmentor(info).provable.conclusion == Sequent(
-          immutable.IndexedSeq(),
-          immutable.IndexedSeq(derived),
-        ),
-      "derivedAxioms's fact indeed proved the expected formula.\n" + derived + "\nproved by\n" + fact
-    )
-  }
+  def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig): DerivedAxiomInfo = derivedFact(
+    canonicalName,
+    fact,
+  ) ensuring (
+    info =>
+      DerivationInfoAugmentors.ProvableInfoAugmentor(info).provable.conclusion == Sequent(
+        immutable.IndexedSeq(),
+        immutable.IndexedSeq(derived),
+      ),
+    "derivedAxioms's fact indeed proved the expected formula.\n" + derived + "\nproved by\n" + fact
+  )
 
   /**
    * Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available
@@ -257,7 +246,7 @@ object Ax extends Logging {
           witness.isProved,
           "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness,
         )
-        derivedFact(canonicalName, witness, Some(storedName)).lemma
+        derivedFact(canonicalName, witness).lemma
     }
     dai.setLemma(lemma)
     dai
@@ -1703,7 +1692,6 @@ object Ax extends Logging {
     (Close(AntePos(0), SuccPos(0)), 1)
     // left branch
     (Close(AntePos(0), SuccPos(0)), 0),
-    None,
   )
 
   /** Convert <-> to two implications: `(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())` */

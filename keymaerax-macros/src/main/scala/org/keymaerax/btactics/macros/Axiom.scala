@@ -112,7 +112,7 @@ object AxiomMacro {
     "derivedAxiom" -> (3, 3),
     "derivedAxiomFromFact" -> (3, 3),
     "derivedFormula" -> (3, 3),
-    "derivedFact" -> (2, 3),
+    "derivedFact" -> (2, 2),
   )
 
   private val ALLOWED_FUNCTION_NAMES_STR: String = ALLOWED_FUNCTIONS_AND_ARGUMENTS.keys.toList.sorted.mkString(", ")
