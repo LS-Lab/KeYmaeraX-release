@@ -492,10 +492,10 @@ object Helpers {
     val (name, codeName, asciiName, longName, maker, derivation: JsValue) =
       Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
         case Some(di) => (
-            di.display.name,
+            di.display.names.name,
             di.codeName,
-            di.display.nameAscii,
-            di.display.nameLong,
+            di.display.names.nameAscii,
+            di.display.names.nameLong,
             ruleName,
             ApplicableAxiomsResponse(Nil, Map.empty, topLevel = true, pos)
               .derivationJson(di)

@@ -104,43 +104,36 @@ object AnnotationCommon {
     )"""
   }
 
+  def astForDisplayNames(displayNames: DisplayNames)(implicit c: blackbox.Context): c.universe.Tree = {
+    import c.universe._
+    q"""new org.keymaerax.btactics.macros.DisplayNames(
+      name = ${displayNames.name},
+      nameAscii = ${displayNames.nameAscii},
+      nameLong = ${displayNames.nameLong},
+    )"""
+  }
+
   def astForDisplayInfo(displayInfo: DisplayInfo)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
 
     displayInfo match {
-      case SimpleDisplayInfo(name, nameAscii, nameLong, level) =>
-        q"""new org.keymaerax.btactics.macros.SimpleDisplayInfo(
-          name = $name,
-          nameAscii = $nameAscii,
-          nameLong = $nameLong,
+      case SimpleDisplayInfo(names, level) => q"""new org.keymaerax.btactics.macros.SimpleDisplayInfo(
+          names = ${astForDisplayNames(names)},
           level = ${astForDisplayLevel(level)},
         )"""
 
-      case RuleDisplayInfo(name, nameAscii, nameLong, level, conclusion, premises, inputGenerator) =>
+      case RuleDisplayInfo(names, level, conclusion, premises, inputGenerator) =>
         q"""new org.keymaerax.btactics.macros.RuleDisplayInfo(
-          name = $name,
-          nameAscii = $nameAscii,
-          nameLong = $nameLong,
+          names = ${astForDisplayNames(names)},
           level = ${astForDisplayLevel(level)},
           conclusion = ${astForDisplaySequent(conclusion)},
           premises = ${premises.map(astForDisplaySequent)},
           inputGenerator = $inputGenerator,
         )"""
 
-      case TacticDisplayInfo(
-            name,
-            nameAscii,
-            nameLong,
-            level,
-            conclusion,
-            premises,
-            ctxConclusion,
-            ctxPremises,
-            inputGenerator,
-          ) => q"""new org.keymaerax.btactics.macros.TacticDisplayInfo(
-          name = $name,
-          nameAscii = $nameAscii,
-          nameLong = $nameLong,
+      case TacticDisplayInfo(names, level, conclusion, premises, ctxConclusion, ctxPremises, inputGenerator) =>
+        q"""new org.keymaerax.btactics.macros.TacticDisplayInfo(
+          names = ${astForDisplayNames(names)},
           level = ${astForDisplayLevel(level)},
           conclusion = ${astForDisplaySequent(conclusion)},
           premises = ${premises.map(astForDisplaySequent)},
@@ -149,20 +142,15 @@ object AnnotationCommon {
           inputGenerator = $inputGenerator,
         )"""
 
-      case AxiomDisplayInfo(name, nameAscii, nameLong, level, formula) =>
-        q"""new org.keymaerax.btactics.macros.AxiomDisplayInfo(
-          name = $name,
-          nameAscii = $nameAscii,
-          nameLong = $nameLong,
+      case AxiomDisplayInfo(names, level, formula) => q"""new org.keymaerax.btactics.macros.AxiomDisplayInfo(
+          names = ${astForDisplayNames(names)},
           level = ${astForDisplayLevel(level)},
           formula = $formula,
         )"""
 
-      case InputAxiomDisplayInfo(name, nameAscii, nameLong, level, formula, input) =>
+      case InputAxiomDisplayInfo(names, level, formula, input) =>
         q"""new org.keymaerax.btactics.macros.InputAxiomDisplayInfo(
-          name = $name,
-          nameAscii = $nameAscii,
-          nameLong = $nameLong,
+          names = ${astForDisplayNames(names)},
           level = ${astForDisplayLevel(level)},
           formula = $formula,
           input = ${input.map(astForArgInfo)},
@@ -186,33 +174,6 @@ object AnnotationCommon {
     if (!valid) c.abort(c.enclosingPosition, "name must consist only of a-z, A-Z, 0-9, _")
 
     name
-  }
-
-  def getDisplayName(displayName: Option[String], name: String)(implicit c: whitebox.Context): String = {
-    if (displayName.contains(name)) c.warning(c.enclosingPosition, "redundant displayName")
-
-    displayName.getOrElse(name)
-  }
-
-  def getDisplayNameAscii(displayNameAscii: Option[String], displayName: String)(implicit
-      c: whitebox.Context
-  ): String = {
-    if (displayNameAscii.contains(displayName)) c.warning(c.enclosingPosition, "redundant displayNameAscii")
-
-    val result = displayNameAscii.getOrElse(displayName)
-
-    val isPrintableAscii = result.codePoints().allMatch(c => 0x20 <= c && c <= 0x7e)
-    if (!isPrintableAscii) {
-      c.abort(c.enclosingPosition, "displayNameAscii contains characters outside the printable ASCII range")
-    }
-
-    result
-  }
-
-  def getDisplayNameLong(displayNameLong: Option[String], displayName: String)(implicit c: whitebox.Context): String = {
-    if (displayNameLong.contains(displayName)) c.warning(c.enclosingPosition, "redundant displayNameLong")
-
-    displayNameLong.getOrElse(displayName)
   }
 
   /** Elaborate the display formula from a raw unicode string that may contain HTML tags to HTML. */

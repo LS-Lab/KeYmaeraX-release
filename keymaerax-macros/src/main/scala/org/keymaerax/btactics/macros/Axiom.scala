@@ -174,10 +174,6 @@ object AxiomMacro {
      */
 
     val name = AnnotationCommon.getName(args.name)(c)
-    val displayName = AnnotationCommon.getDisplayName(args.displayName, name)(c)
-    val displayNameAscii = AnnotationCommon.getDisplayNameAscii(args.displayNameAscii, displayName)(c)
-    val displayNameLong = AnnotationCommon.getDisplayNameLong(args.displayNameLong, displayName)(c)
-
     val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
 
     /*
@@ -188,32 +184,19 @@ object AxiomMacro {
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val display: DisplayInfo = (args.displayConclusion, inputs) match {
-      case ("", Nil) => SimpleDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
-          level = args.displayLevel,
-        )
+    val displayNames = DisplayNames.createWithChecks(
+      name = args.displayName.getOrElse(name),
+      nameAscii = args.displayNameAscii,
+      nameLong = args.displayNameLong,
+    )
 
+    val displayInfo: DisplayInfo = (args.displayConclusion, inputs) match {
+      case ("", Nil) => SimpleDisplayInfo(names = displayNames, level = args.displayLevel)
       case ("", _) => c.abort(c.enclosingPosition, "@Axiom with inputs must have a conclusion")
-
-      case (fml, Nil) => AxiomDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
-          level = args.displayLevel,
-          formula = renderDisplayFormula(fml),
-        )
-
-      case (fml, input) => InputAxiomDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
-          level = args.displayLevel,
-          formula = fml,
-          input = input,
-        )
+      case (fml, Nil) =>
+        AxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = renderDisplayFormula(fml))
+      case (fml, input) =>
+        InputAxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = fml, input = input)
     }
 
     /*
@@ -227,7 +210,7 @@ object AxiomMacro {
         tq"org.keymaerax.btactics.macros.CoreAxiomInfo",
         q"""CoreAxiomInfo(
           canonicalName = $canonicalName,
-          display = ${astForDisplayInfo(display)(c)},
+          display = ${astForDisplayInfo(displayInfo)(c)},
           codeName = $name,
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,
@@ -238,7 +221,7 @@ object AxiomMacro {
         tq"org.keymaerax.btactics.macros.DerivedAxiomInfo",
         q"""DerivedAxiomInfo(
           canonicalName = $canonicalName,
-          display = ${astForDisplayInfo(display)(c)},
+          display = ${astForDisplayInfo(displayInfo)(c)},
           codeName = $name,
           unifier = ${astForUnifier(args.unifier)(c)},
           theKey = $key,

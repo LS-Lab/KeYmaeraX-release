@@ -67,9 +67,7 @@ object ImplicitAx extends TacticProvider {
     val info = new DerivedAxiomInfo(
       canonicalName = name,
       display = AxiomDisplayInfo(
-        name = name,
-        nameAscii = name,
-        nameLong = name,
+        names = DisplayNames.singleName(name),
         level = DisplayLevel.Internal,
         formula = "__" + lhs + "__ = " + rhs,
       ),
@@ -133,9 +131,7 @@ object ImplicitAx extends TacticProvider {
     val info = new DerivedAxiomInfo(
       canonicalName = name,
       display = AxiomDisplayInfo(
-        name = name,
-        nameAscii = name,
-        nameLong = name,
+        names = DisplayNames.singleName(name),
         level = DisplayLevel.Internal,
         formula = "__" + lhs + "__ = " + rhs,
       ),
@@ -195,9 +191,7 @@ object ImplicitAx extends TacticProvider {
     val info = new DerivedAxiomInfo(
       canonicalName = name,
       display = AxiomDisplayInfo(
-        name = name,
-        nameAscii = name,
-        nameLong = name,
+        names = DisplayNames.singleName(name),
         level = DisplayLevel.Internal,
         formula = "__" + lhs + "__ <-> " + rhs,
       ),

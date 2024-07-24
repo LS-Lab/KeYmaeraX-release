@@ -72,7 +72,7 @@ case class ApplicableAxiomsResponse(
       "formula" -> JsString(formulaText),
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
-      "longName" -> JsString(info.display.nameLong),
+      "longName" -> JsString(info.display.names.nameLong),
       "defaultKeyPos" ->
         (info match {
           case pi: ProvableInfo =>
@@ -146,10 +146,10 @@ case class ApplicableAxiomsResponse(
     }
     JsObject(
       "id" -> new JsString(derivationInfo.codeName),
-      "name" -> new JsString(derivationInfo.display.name),
-      "asciiName" -> new JsString(derivationInfo.display.nameAscii),
+      "name" -> new JsString(derivationInfo.display.names.name),
+      "asciiName" -> new JsString(derivationInfo.display.names.nameAscii),
       "codeName" -> new JsString(derivationInfo.codeName),
-      "longName" -> new JsString(derivationInfo.display.nameLong),
+      "longName" -> new JsString(derivationInfo.display.names.nameLong),
       "displayLevel" -> new JsString(derivationInfo.display.level match {
         case DisplayLevel.Internal => "internal"
         case DisplayLevel.Browse => "browse"

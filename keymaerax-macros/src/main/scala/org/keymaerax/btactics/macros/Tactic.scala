@@ -276,15 +276,18 @@ object TacticMacro {
      */
 
     val name = AnnotationCommon.getName(args.name)(c)
-    val displayName = AnnotationCommon.getDisplayName(args.displayName, name)(c)
-    val displayNameAscii = AnnotationCommon.getDisplayNameAscii(args.displayNameAscii, displayName)(c)
-    val displayNameLong = AnnotationCommon.getDisplayNameLong(args.displayNameLong, displayName)(c)
 
     /*
      * Parse annotation arguments
      */
 
     val inputs: List[ArgInfo] = parseAIs(args.inputs)(c)
+
+    val displayNames = DisplayNames.createWithChecks(
+      name = args.displayName.getOrElse(name),
+      nameAscii = args.displayNameAscii,
+      nameLong = args.displayNameLong,
+    )
 
     val display = (
       inputs,
@@ -293,39 +296,19 @@ object TacticMacro {
       args.displayContextPremises,
       args.displayContextConclusion,
     ) match {
-      case (Nil, "", "", _, _) => SimpleDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
-          level = args.displayLevel,
-        )
+      case (Nil, "", "", _, _) => SimpleDisplayInfo(names = displayNames, level = args.displayLevel)
 
       case (Nil, "", concl, _, _) if concl != "" =>
-        AxiomDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
-          level = args.displayLevel,
-          formula = renderDisplayFormula(concl),
-        )
+        AxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = renderDisplayFormula(concl))
 
       case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty =>
-        InputAxiomDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
-          level = args.displayLevel,
-          formula = concl,
-          input = inputs,
-        )
+        InputAxiomDisplayInfo(names = displayNames, level = args.displayLevel, formula = concl, input = inputs)
 
       case (_, prem, concl, "", "") if concl != "" && prem != "" =>
         val premises = DisplaySequent.parseMany(args.displayPremises)
         val conclusion = DisplaySequent.parse(args.displayConclusion)
         RuleDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
+          names = displayNames,
           level = args.displayLevel,
           conclusion = conclusion,
           premises = premises,
@@ -338,9 +321,7 @@ object TacticMacro {
         val ctxPremises = DisplaySequent.parseMany(args.displayContextPremises)
         val ctxConclusion = DisplaySequent.parse(args.displayContextConclusion)
         TacticDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
+          names = displayNames,
           level = args.displayLevel,
           conclusion = conclusion,
           premises = premises,

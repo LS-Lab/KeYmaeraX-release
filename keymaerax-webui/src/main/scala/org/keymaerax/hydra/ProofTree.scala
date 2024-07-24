@@ -890,7 +890,7 @@ object AgendaItem {
   /** Creates a name from the deriviation info of `codeName`. */
   def nameOf(codeName: String): String = {
     Try(DerivationInfo.ofCodeName(codeName)).toOption match {
-      case Some(di) => di.display.name
+      case Some(di) => di.display.names.name
       case None => codeName
     }
   }

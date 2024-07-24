@@ -140,10 +140,6 @@ object ProofRuleMacro {
      */
 
     val name = AnnotationCommon.getName(args.name)(c)
-    val displayName = AnnotationCommon.getDisplayName(args.displayName, name)(c)
-    val displayNameAscii = AnnotationCommon.getDisplayNameAscii(args.displayNameAscii, displayName)(c)
-    val displayNameLong = AnnotationCommon.getDisplayNameLong(args.displayNameLong, displayName)(c)
-
     val canonicalName = tParams.head.asInstanceOf[Literal].value.value.asInstanceOf[String]
 
     /*
@@ -155,24 +151,21 @@ object ProofRuleMacro {
     val key = parsePos(args.key)(c)
     val recursor = parsePoses(args.recursor)(c)
 
-    val display = (premises, conclusionOpt) match {
-      case (Nil, None) => SimpleDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
-          level = args.displayLevel,
-        )
+    val displayNames = DisplayNames.createWithChecks(
+      name = args.displayName.getOrElse(name),
+      nameAscii = args.displayNameAscii,
+      nameLong = args.displayNameLong,
+    )
 
+    val display = (premises, conclusionOpt) match {
+      case (Nil, None) => SimpleDisplayInfo(names = displayNames, level = args.displayLevel)
       case (prem, Some(conc)) => RuleDisplayInfo(
-          name = displayName,
-          nameAscii = displayNameAscii,
-          nameLong = displayNameLong,
+          names = displayNames,
           level = args.displayLevel,
           conclusion = conc,
           premises = prem,
           inputGenerator = None,
         )
-
       case _ => c.abort(c.enclosingPosition, "@ProofRule with premises must have a conclusion")
     }
 
