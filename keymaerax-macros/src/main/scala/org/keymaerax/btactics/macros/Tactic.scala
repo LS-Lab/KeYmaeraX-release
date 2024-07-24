@@ -218,15 +218,12 @@ object TacticMacro {
       val returnType: Tree
       val body: Tree
     }
-    final case class DefinitionDefParams(
-        mods: Modifiers,
-        declName: TermName,
-        params: Seq[Tree],
-        returnType: Tree,
-        body: Tree,
-    ) extends Definition
-    final case class DefinitionDef(mods: Modifiers, declName: TermName, returnType: Tree, body: Tree) extends Definition
-    final case class DefinitionVal(mods: Modifiers, declName: TermName, returnType: Tree, body: Tree) extends Definition
+    object Definition {
+      case class DefParams(mods: Modifiers, declName: TermName, params: Seq[Tree], returnType: Tree, body: Tree)
+          extends Definition
+      case class Def(mods: Modifiers, declName: TermName, returnType: Tree, body: Tree) extends Definition
+      case class Val(mods: Modifiers, declName: TermName, returnType: Tree, body: Tree) extends Definition
+    }
 
     sealed trait Body {
       val rhs: Tree
@@ -244,9 +241,9 @@ object TacticMacro {
     // Annottee must be one of three possible definition styles
     val definition = annottee match {
       case q"$mods def $declName(..$params): $returnType = $body" =>
-        DefinitionDefParams(mods, declName, params, returnType, body)
-      case q"$mods def $declName: $returnType = $body" => DefinitionDef(mods, declName, returnType, body)
-      case q"$mods val $declName: $returnType = $body" => DefinitionVal(mods, declName, returnType, body)
+        Definition.DefParams(mods, declName, params, returnType, body)
+      case q"$mods def $declName: $returnType = $body" => Definition.Def(mods, declName, returnType, body)
+      case q"$mods val $declName: $returnType = $body" => Definition.Val(mods, declName, returnType, body)
       case _ => c.abort(c.enclosingPosition, "@Tactic must be applied to tactic definition")
     }
 
@@ -438,7 +435,7 @@ object TacticMacro {
     }
 
     val definitionArgs = definition match {
-      case d: DefinitionDefParams => d.params.map(getArgInfoForDefParam).toList
+      case d: Definition.DefParams => d.params.map(getArgInfoForDefParam).toList
       case _ => Nil
     }
 
@@ -658,15 +655,15 @@ object TacticMacro {
     // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of
     // registering the tactic info to the global tactic info table.
     val result = definition match {
-      case d: DefinitionDefParams => q"""
+      case d: Definition.DefParams => q"""
         $mods def ${d.declName}(..$definitionArgsExprs): ${d.returnType} =
           org.keymaerax.btactics.macros.DerivationInfo.registerL($baseTerm, $info)
       """
-      case d: DefinitionDef => q"""
+      case d: Definition.Def => q"""
         $mods def ${d.declName}: ${d.returnType} =
           org.keymaerax.btactics.macros.DerivationInfo.registerL($baseTerm, $info)
       """
-      case d: DefinitionVal => q"""
+      case d: Definition.Val => q"""
         $mods val ${d.declName}: ${d.returnType} =
           org.keymaerax.btactics.macros.DerivationInfo.registerL($baseTerm, $info)
       """
