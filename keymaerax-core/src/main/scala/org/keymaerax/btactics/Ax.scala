@@ -12,6 +12,7 @@ import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
+import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.infrastruct.{PosInExpr, RenUSubst}
 import org.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import org.keymaerax.parser.Declaration
@@ -123,8 +124,6 @@ object Ax extends Logging {
 
   /** Look up a core axiom from [[Provable.axioms]] and wrap it into a [[CoreAxiomInfo]] */
   private def coreAxiom(name: String): CoreAxiomInfo = { CoreAxiomInfo(name) }
-
-  private def coreRule(name: String): AxiomaticRuleInfo = { AxiomaticRuleInfo(name) }
 
   private val AUTO_INSERT: Boolean = true
 
@@ -294,25 +293,26 @@ object Ax extends Logging {
   // Core Axiomatic Rules   see [[AxiomBase]]
   // ***************
 
-  @ProofRule(name = "CQrule")
-  val CQrule: AxiomaticRuleInfo = coreRule("CQ equation congruence")
+  @Derivation
+  val CQrule: AxiomaticRuleInfo = AxiomaticRuleInfo.create(name = "CQrule", canonicalName = "CQ equation congruence")
 
-  @ProofRule(name = "CErule")
-  val CErule: AxiomaticRuleInfo = coreRule("CE congruence")
+  @Derivation
+  val CErule: AxiomaticRuleInfo = AxiomaticRuleInfo.create(name = "CErule", canonicalName = "CE congruence")
 
-  @ProofRule(name = "mondrule")
-  val mondrule: AxiomaticRuleInfo = coreRule("<> monotone")
+  @Derivation
+  val mondrule: AxiomaticRuleInfo = AxiomaticRuleInfo.create(name = "mondrule", canonicalName = "<> monotone")
 
-  @ProofRule(
+  @Derivation
+  val FPrule: AxiomaticRuleInfo = AxiomaticRuleInfo.create(
     name = "FPrule",
+    canonicalName = "FP fixpoint",
     displayLevel = DisplayLevel.Browse,
     displayPremises = "P | <a>Q |- Q",
     displayConclusion = "<a*>P |- Q",
   )
-  val FPrule: AxiomaticRuleInfo = coreRule("FP fixpoint")
 
-  @ProofRule(name = "conrule")
-  val conrule: AxiomaticRuleInfo = coreRule("con convergence")
+  @Derivation
+  val conrule: AxiomaticRuleInfo = AxiomaticRuleInfo.create(name = "conrule", canonicalName = "con convergence")
 
   // ***************
   // Core Axioms   see [[AxiomBase]]

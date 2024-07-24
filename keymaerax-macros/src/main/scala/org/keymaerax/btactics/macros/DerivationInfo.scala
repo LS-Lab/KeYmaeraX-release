@@ -5,7 +5,7 @@
 
 package org.keymaerax.btactics.macros
 
-import org.keymaerax.btactics.macros.AnnotationCommon.ExprPos
+import org.keymaerax.btactics.macros.AnnotationCommon.{parsePos, parsePoses, ExprPos}
 
 import java.util.Locale
 import scala.collection.immutable.{List, Nil}
@@ -396,12 +396,33 @@ case class AxiomaticRuleInfo(
 }
 
 object AxiomaticRuleInfo {
-  def apply(axiomName: String): AxiomaticRuleInfo = {
-    DerivationInfo.byCanonicalName(axiomName) match {
-      case info: AxiomaticRuleInfo => info
-      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a core rule")
-    }
-  }
+  def create(
+      name: String,
+      canonicalName: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayPremises: String = "",
+      displayConclusion: String = "",
+      unifier: Unifier = Unifier.Full,
+      key: String = "",
+      recursor: String = "*",
+  ): AxiomaticRuleInfo = AxiomaticRuleInfo(
+    canonicalName = canonicalName,
+    display = AnnotationCommon.ruleDisplayInfo(
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      premises = displayPremises,
+      conclusion = displayConclusion,
+    ),
+    codeName = name,
+    unifier = unifier,
+    theKey = parsePos(key),
+    theRecursor = parsePoses(recursor),
+  )
 }
 
 /**
