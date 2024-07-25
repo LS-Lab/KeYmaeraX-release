@@ -49,58 +49,12 @@ import scala.reflect.runtime.{universe => ru}
  * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS` because [[TactixLibrary]] extends
  * [[UnifyUSCalculus]].
  *
- * =Adding Derived Axioms and Derived Axiomatic Rules=
- *
- * Core Axioms are loaded from the core and their meta information is annotated in this file e.g. as follows:
- * {{{
- *   @Axiom(
- *     name = "choiceb",
- *     displayName = Some("[∪]"),
- *     displayNameAscii = Some("[++]"),
- *     displayConclusion = "__[a∪b]P__↔[a]P∧[b]P",
- *     key = "0",
- *     recursor = "0;1",
- *     unifier = Unifier.SurjectiveLinear,
- *   )
- *   val choiceb = coreAxiom("[++] choice")
- * }}}
- *
- * Derived Axioms are proved with a tactic and their meta information is annotated in this file e.g. as follows:
- * {{{
- *   @Axiom(
- *     name = "V",
- *     displayConclusion = "p→__[a]p__",
- *     key = "1",
- *     recursor = "*",
- *   )
- *   lazy val V = derivedAxiom("V vacuous",
- *     "p() -> [a{|^@|};]p()".asFormula,
- *     useAt(Ax.VK, PosInExpr(1::Nil))(1) &
- *     useAt(Ax.boxTrue)(1)
- *   )
- * }}}
- *
- * Derived Axiomatic Rules are derived with a tactic and their meta information is annotated in this file as follows:
- * {{{
- *   @ProofRule(
- *     name = "monb",
- *     displayName = Some("M[]"),
- *     displayPremises = "P |- Q",
- *     displayConclusion = "[a;]P |- [a;]Q",
- *   )
- *   lazy val monb = derivedRuleSequent("M[]",
- *     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
- *     someTactic)
- * }}}
- *
  * @author
  *   Andre Platzer
  * @see
  *   [[org.keymaerax.core.AxiomBase]]
  * @see
  *   [[org.keymaerax.btactics.macros.AxiomInfo]]
- * @see
- *   [[org.keymaerax.btactics.macros.Axiom]]
  * @see
  *   [[UnifyUSCalculus.matcherFor()]]
  * @note
