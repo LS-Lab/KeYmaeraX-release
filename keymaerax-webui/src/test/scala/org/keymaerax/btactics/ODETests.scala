@@ -24,6 +24,7 @@ import org.scalatest.time.SpanSugar._
 
 import scala.annotation.nowarn
 import scala.collection.immutable._
+import scala.io.Source
 import scala.language.postfixOps
 
 /** Tests automatic [[org.keymaerax.btactics.TactixLibrary.ODE]] differential equations proving. */
@@ -51,7 +52,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
       val modelContent = ArchiveParser
         .getEntry(
           "FM16/Tutorial Example 4",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
         )
         .get
         .fileContent

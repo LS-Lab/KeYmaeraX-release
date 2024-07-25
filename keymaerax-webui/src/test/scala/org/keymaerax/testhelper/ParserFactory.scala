@@ -8,6 +8,8 @@ package org.keymaerax.testhelper
 import org.keymaerax.core._
 import org.keymaerax.parser.ArchiveParser
 
+import scala.io.Source
+
 /**
  * Created by ran on 2/4/15.
  * @author
@@ -24,7 +26,7 @@ object ParserFactory {
    * @return
    *   The sequent.
    */
-  def parseToSequent(in: java.io.InputStream): Sequent = parseToSequent(io.Source.fromInputStream(in).mkString)
+  def parseToSequent(in: java.io.InputStream): Sequent = parseToSequent(Source.fromInputStream(in).mkString)
 
   /** Parses from a string, substitutes function declarations. */
   def parseToSequent(in: String): Sequent = {

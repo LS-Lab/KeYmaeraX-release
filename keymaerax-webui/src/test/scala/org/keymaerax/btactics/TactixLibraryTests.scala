@@ -26,6 +26,7 @@ import org.scalatest.time.SpanSugar._
 import scala.annotation.nowarn
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
 import scala.language.postfixOps
 import scala.reflect.io.File
 
@@ -751,7 +752,7 @@ class TactixLibraryTests extends TacticTestBase {
     val problem = ArchiveParser
       .getEntry(
         "Bouncing Ball",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kyx")).mkString,
       )
       .get
       .model
@@ -764,7 +765,7 @@ class TactixLibraryTests extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Benchmarks/Advanced/ETCS: Essentials",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString,
       )
       .get
 
@@ -776,7 +777,7 @@ class TactixLibraryTests extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Benchmarks/Advanced/ATC: 2 Aircraft Tangential Roundabout Maneuver",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/advanced.kyx")).mkString,
       )
       .get
 
@@ -790,7 +791,7 @@ class TactixLibraryTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "Benchmarks/Basic/STTT Tutorial: Example 3a",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString,
         )
         .get
 

@@ -17,6 +17,7 @@ import org.scalatest.LoneElement._
 
 import java.io.File
 import scala.collection.immutable.ListMap
+import scala.io.Source
 
 /**
  * Tests the C++ ModelPlex code generator.
@@ -334,7 +335,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "robix" should "generate C code for passivesafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety.kym")
-    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double A;
         |  long double B;
@@ -376,7 +377,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passivesafety_renamed" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety_renamed.kym")
-    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double A;
         |  long double B;
@@ -418,7 +419,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passivesafetyabs" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model
+    val monitorExp = ArchiveParser(Source.fromInputStream(inputFile).mkString).head.model
     val vars = Set(
       Variable("a"),
       Variable("dx"),
@@ -466,7 +467,7 @@ class CCodeGeneratorTests extends TacticTestBase {
   it should "generate metric C code for passivesafetyabs" in withMathematica { _ =>
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
     val monitorExp = ModelPlex
-      .toMetric(ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model.asInstanceOf[Formula])
+      .toMetric(ArchiveParser(Source.fromInputStream(inputFile).mkString).head.model.asInstanceOf[Formula])
     val vars = Set(
       Variable("a"),
       Variable("dx"),
@@ -522,12 +523,10 @@ class CCodeGeneratorTests extends TacticTestBase {
     KeymaeraxWebui
       .main(Array("-codegen", inputFileName, "-vars", "a,w,r,xo,yo,dxo,dyo", "-nointerval", "-out", outputFileName))
 
-    val expectedCCode = scala
-      .io
-      .Source
+    val expectedCCode = Source
       .fromFile("./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.c")
       .mkString
-    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
+    val actualFileContent = Source.fromFile(outputFileName).mkString
     println(actualFileContent)
 
     actualFileContent should include(expectedCCode)
@@ -535,7 +534,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passiveorientationsafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.kym")
-    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double A;
         |  long double V;
@@ -586,7 +585,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "Quadcopter" should "FEATURE_REQUEST: generate C code for hybridquadrotor" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.kym")
-    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double h;
         |  long double kd;
@@ -612,7 +611,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "RAL19/Theorem 1: Safety",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
           parseTactics = false,
         )
         .head
@@ -775,7 +774,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "RAL19/Robot preserves loop invariant",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ral/relative-full.kyx")).mkString,
         )
         .head
       val tactic = entry.tactics.head._3
@@ -813,7 +812,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "Compiled controller monitor" should "FEATURE_REQUEST: evaluate boolean correctly" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = ArchiveParser(io.Source.fromInputStream(inputFile).mkString).head.model
+    val monitorExp = ArchiveParser(Source.fromInputStream(inputFile).mkString).head.model
     val vars = List(
       "a",
       "dx",
@@ -862,9 +861,9 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     val file = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(Array(file))
-    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+    withClue(Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
+      Source.fromInputStream(p.getInputStream).mkString shouldBe
         "Controller chooses A\nReturned a=1.0\nController chooses A\nFallback returns -B\nReturned a=-2.0"
     }
   }
@@ -873,7 +872,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     // @todo mixed open/closed can evaluate to false at the boundary (e.g., x<=5 | x>6 turns into min(x-5,6-x)<0 == false for x=5)
     //      which is especially problematic when monitor contains equalities, e.g., x=5 | x>6
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = ModelPlex.toMetric(io.Source.fromInputStream(inputFile).mkString.asFormula)
+    val monitorExp = ModelPlex.toMetric(Source.fromInputStream(inputFile).mkString.asFormula)
     val vars = Set(
       Variable("a"),
       Variable("dx"),
@@ -914,9 +913,9 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     val file = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(Array(file))
-    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+    withClue(Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
+      Source.fromInputStream(p.getInputStream).mkString shouldBe
         "Controller chooses A\nReturned a=1.0\nController chooses A\nFallback returns -B\nReturned a=-2.0"
     }
   }
@@ -1182,9 +1181,9 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     val file = CodeGenTestTools.compileC(mainCode)
     val p = Runtime.getRuntime.exec(Array(file))
-    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+    withClue(Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe "Returned x=0.5\nReturned x=7.0"
+      Source.fromInputStream(p.getInputStream).mkString shouldBe "Returned x=0.5\nReturned x=7.0"
     }
   }
 
@@ -1217,9 +1216,9 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     val file = CodeGenTestTools.compileC(mainCode, Seq("-lmpfr", "-lgmp"))
     val p = Runtime.getRuntime.exec(Array(file))
-    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+    withClue(Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe "Returned x=0.5\nReturned x=7.0"
+      Source.fromInputStream(p.getInputStream).mkString shouldBe "Returned x=0.5\nReturned x=7.0"
     }
   }
 
@@ -1263,9 +1262,9 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     val file = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(Array(file))
-    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+    withClue(Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
+      Source.fromInputStream(p.getInputStream).mkString shouldBe
         """Choosing 2*0.2, result x=0.4
           |Choosing 2*0.4, result x=0.8
           |Choosing 2*0.8, result x=7.0
@@ -1368,9 +1367,9 @@ class CCodeGeneratorTests extends TacticTestBase {
   private def compileAndRun(code: String, expected: String) = {
     val file = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(Array(file))
-    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+    withClue(Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe expected
+      Source.fromInputStream(p.getInputStream).mkString shouldBe expected
     }
   }
 }

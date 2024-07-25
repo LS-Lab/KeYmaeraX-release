@@ -19,6 +19,7 @@ import org.keymaerax.testhelper.ParserFactory._
 import org.scalatest.LoneElement._
 
 import scala.annotation.nowarn
+import scala.io.Source
 import scala.language.postfixOps
 
 /**
@@ -84,12 +85,11 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   it should "stop after ODE to let users inspect a counterexample with false speed sb condition" in withQE { _ =>
-    val modelContent = io
-      .Source
+    val modelContent = Source
       .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyx"))
       .mkString
     val tactic = BelleParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyt"))
         .mkString
     )
@@ -208,7 +208,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val s = ArchiveParser
       .getEntry(
         "CPSWeek Tutorial Example 1",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
       )
       .get
       .model
@@ -217,12 +217,11 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   it should "find a hint for SB from parsed tactic" in withMathematica { _ =>
-    val modelContent = io
-      .Source
+    val modelContent = Source
       .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyx"))
       .mkString
     val tactic = BelleParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyt"))
         .mkString
     )
@@ -246,7 +245,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val harder = ArchiveParser
       .getEntry(
         "CPSWeek Tutorial Example 1",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
       )
       .get
       .model
@@ -259,7 +258,7 @@ class CpsWeekTutorial extends TacticTestBase {
       val s = ArchiveParser
         .getEntry(
           "CPSWeek Tutorial Example 4",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
         )
         .get
         .model
@@ -316,7 +315,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val s = ArchiveParser
       .getEntry(
         "CPSWeek Tutorial Example 3",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
       )
       .get
       .model
@@ -330,7 +329,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val s = ArchiveParser
       .getEntry(
         "CPSWeek Tutorial Example 2",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString,
       )
       .get
       .model

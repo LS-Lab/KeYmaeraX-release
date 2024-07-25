@@ -5,18 +5,17 @@
 
 package org.keymaerax.hydra
 
-import java.util.Calendar
 import org.keymaerax.Logging
-import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.bellerophon._
-import org.keymaerax.pt.ProvableSig
 import org.keymaerax.parser.{ArchiveParser, Declaration, ParsedArchiveEntry}
 import org.keymaerax.tacticsinterface.TraceRecordingListener
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
 
+import java.util.Calendar
 import scala.annotation.tailrec
 import scala.collection.immutable._
+import scala.io.Source
 import scala.util.Try
 
 /**
@@ -110,17 +109,17 @@ object DatabasePopulator extends Logging {
   def loadResource(url: String): String =
     if (url.startsWith("classpath:")) {
       val resource = getClass.getResourceAsStream(url.substring("classpath:".length))
-      if (resource != null) io.Source.fromInputStream(resource, org.keymaerax.core.ENCODING).mkString
+      if (resource != null) Source.fromInputStream(resource, org.keymaerax.core.ENCODING).mkString
       else if (url.startsWith("classpath:/keymaerax-projects"))
         loadResource(GITHUB_PROJECTS_RAW_PATH + url.substring("classpath:/keymaerax-projects".length))
       else throw new Exception(s"Example '$url' neither included in build nor available in projects repository")
     } else if (url.startsWith("file://")) {
       val path = url.stripPrefix("file://")
-      val source = io.Source.fromFile(path, org.keymaerax.core.ENCODING)
+      val source = Source.fromFile(path, org.keymaerax.core.ENCODING)
       try source.mkString
       finally source.close()
     } else {
-      val source = io.Source.fromURL(url, org.keymaerax.core.ENCODING)
+      val source = Source.fromURL(url, org.keymaerax.core.ENCODING)
       try source.mkString
       finally source.close()
     }

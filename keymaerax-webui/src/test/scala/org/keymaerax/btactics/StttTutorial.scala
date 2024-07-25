@@ -20,6 +20,7 @@ import org.scalatest.LoneElement._
 
 import scala.annotation.nowarn
 import scala.collection.immutable._
+import scala.io.Source
 import scala.language.postfixOps
 
 /**
@@ -36,7 +37,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 1",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -55,7 +56,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 1",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -69,7 +70,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 1",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -82,7 +83,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 1",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -95,7 +96,7 @@ class StttTutorial extends TacticTestBase {
   "Example 1a" should "be provable" in withQE { _ =>
     withDatabase { db =>
       val modelContent =
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
       val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & dC("v>=0".asFormula)(1) & Idioms.<(
         dC("x>=old(x)".asFormula)(1) &
           Idioms
@@ -110,7 +111,7 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with multi-arg invariant" in withQE { _ =>
     withDatabase { _ =>
       val modelContent =
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
       val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) &
         diffInvariant("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1) & dW(1) & SaturateTactic(alphaRule) &
         exhaustiveEqL2R(Symbol("L"), "x0=x_0".asFormula) & prop
@@ -126,7 +127,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 2",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -143,7 +144,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 2",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -156,7 +157,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 2",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -186,7 +187,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 3a",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -199,7 +200,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 3b",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -232,7 +233,7 @@ class StttTutorial extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 3b",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent
@@ -278,7 +279,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 4a",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -291,7 +292,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 4b",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -305,7 +306,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 4c",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -315,8 +316,7 @@ class StttTutorial extends TacticTestBase {
 
   "Example 5 with simple control" should "be provable" in withQE { _ =>
     withDatabase { db =>
-      val modelContent = io
-        .Source
+      val modelContent = Source
         .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.kyx"))
         .mkString
 
@@ -336,8 +336,7 @@ class StttTutorial extends TacticTestBase {
 
   it should "be provable automatically" in withQE { _ =>
     withDatabase { db =>
-      val modelContent = io
-        .Source
+      val modelContent = Source
         .fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.kyx"))
         .mkString
       db.proveBy(modelContent, master()) shouldBe Symbol("proved")
@@ -349,7 +348,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 5",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -362,7 +361,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 5",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -384,7 +383,7 @@ class StttTutorial extends TacticTestBase {
     val s = ArchiveParser
       .getEntry(
         "STTT16/Tutorial Example 5",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
       )
       .get
       .model
@@ -412,7 +411,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 6",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -425,7 +424,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 7",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -444,7 +443,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 9a",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -458,7 +457,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 9b",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -490,7 +489,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 10",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -537,7 +536,7 @@ class StttTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 10",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent

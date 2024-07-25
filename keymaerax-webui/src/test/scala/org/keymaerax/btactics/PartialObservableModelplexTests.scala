@@ -23,6 +23,7 @@ import org.keymaerax.tools.ext.{QETacticTool, SimplificationTool}
 import org.scalatest.LoneElement._
 
 import scala.collection.immutable.ListMap
+import scala.io.Source
 
 @SlowTest
 class PartialObservableModelplexTests extends TacticTestBase {
@@ -243,7 +244,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     tool =>
       val Some(curvedBot) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Curved Ground Robot Motion is Safe",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -254,7 +255,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       val approx = ModelPlex.createNonlinearModelApprox(curvedBot.name, tactic, curvedBot.defs)(curvedBot.model)
       val Some(approxEntry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Approximated Curved Ground Robot Motion is Safe",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -270,7 +271,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   it should "derive an approximated model monitor with unobservable parameter" in withMathematica { tool =>
     val Some(curvedBot) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Curved Ground Robot Motion with Curve Disturbance is Safe",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -296,7 +297,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       // @todo model is not proved yet
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Curved Ground Robot Motion with Piecewise Constant Actuator Disturbance is Safe",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -310,7 +311,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     // experiment: water tank original
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Water tank is safe",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -342,7 +343,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     // @note experiment: water tank + actuator
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -356,7 +357,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     withMathematica { tool =>
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -396,7 +397,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     withMathematica { tool =>
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -411,7 +412,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       // @todo extremely long
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Water tank with flow disturbance is safe",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -426,7 +427,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   it should "derive a model monitor from water tank with load measurement uncertainty" in withMathematica { tool =>
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Water tank with load measurement uncertainty is safe",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -443,7 +444,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       // @note experiment: water tank + sensor
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Water tank with load measurement uncertainty is safe (control choice exists)",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -457,7 +458,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
 
   it should "prove planar flight motion" in withMathematica { _ =>
     val entries = ArchiveParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString
     )
@@ -544,7 +545,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   it should "derive model monitor from approximated planar flight motion 2 simple" in withMathematica { tool =>
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -559,7 +560,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     // experiment: horizontal flight original
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -574,7 +575,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     withMathematica { tool =>
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple with Ownship Actuator Disturbance",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -595,7 +596,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       // experiment: horizontal flight + actuator
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple with Ownship Actuator Disturbance",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -614,7 +615,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     withMathematica { tool =>
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Planar Flight Motion Safety 2 Simple with Intruder Linear Velocity Uncertainty",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -635,7 +636,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       // experiment: horizontal flight + sensor
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Planar Flight Motion Safety 3 Simple with Intruder Linear Velocity Uncertainty",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -663,7 +664,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     TodoTest ignore withMathematica { tool =>
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Planar Flight Motion Safety with Ownship Angular Velocity Disturbance and Intruder Velocity Uncertainty",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -691,7 +692,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
   it should "prove LLC" in withMathematica { _ =>
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Local lane control safety",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -703,7 +704,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "ICFEM09/ETCS Essentials",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/etcs/etcs.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/etcs/etcs.kyx")).mkString,
       )
       .get
     val monitor = deriveMonitor(
@@ -721,7 +722,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     // experiment: train control + sensor
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/ETCS Essentials with train position uncertainty",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -739,7 +740,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       // experiment: train control + actuator
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/ETCS Essentials with train acceleration disturbance",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )
@@ -755,7 +756,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     // experiment: road traffic control original
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Variable Speed Limit is Safe",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -770,7 +771,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     // experiment: road traffic control + actuator
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Variable Speed Limit is Safe with Car Actuator Disturbance",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -786,7 +787,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     // experiment: road traffic control + sensor
     val Some(entry) = ArchiveParser.getEntry(
       "ModelPlex/Partial Observability/Variable Speed Limit is Safe with Car Position Uncertainty",
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
         .mkString,
     )
@@ -806,7 +807,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "IJRR17/Theorem 1: Static safety",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
       )
       .head
     deriveMonitor(entry, entry.tactics.find(_._1 == "Proof Theorem 1: Static safety").map(_._3), ListMap.empty, tool)
@@ -817,7 +818,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "IJRR17/Theorem 2: Passive safety",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
       )
       .head
     val unobservableVars = ListMap(
@@ -833,7 +834,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
       // experiment: robot + sensor
       val Some(entry) = ArchiveParser.getEntry(
         "ModelPlex/Partial Observability/Theorem 6: Passive safety despite location uncertainty",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/modelplex/partialobservability.kyx"))
           .mkString,
       )

@@ -21,6 +21,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import scala.collection.immutable._
+import scala.io.Source
 
 class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
   override def beforeAll(): Unit = {
@@ -496,15 +497,13 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
       "test.key" :: "unity.key" :: Nil
 
     forEvery(Table(("filename"), files: _*))({ fn =>
-      val src =
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + fn)).mkString
+      val src = Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + fn)).mkString
       ArchiveParser.parser(src) // test fails on exception.
     })
   }
 
   it should "parse predicates using functions" in {
-    val src = io
-      .Source
+    val src = Source
       .fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/functions.key"))
       .mkString
     ArchiveParser.parser(src)
@@ -541,8 +540,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     // ("UndeclaredVariables.key", "TODO") :: Nil //@note not yet caught (LAX?)
 
     forEvery(Table(("filename", "msg1", "msg2"), files: _*))({ (fn, m1, m2) =>
-      val src =
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + fn)).mkString
+      val src = Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + fn)).mkString
       val ex = the[ParseException] thrownBy ArchiveParser.parser(src)
       ex.getMessage should (startWith(m1) or startWith(m2))
     })
@@ -876,8 +874,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
       Nil
 
     for (testFile <- files) {
-      val src = io
-        .Source
+      val src = Source
         .fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positiveALP/" + testFile))
         .mkString
       try {

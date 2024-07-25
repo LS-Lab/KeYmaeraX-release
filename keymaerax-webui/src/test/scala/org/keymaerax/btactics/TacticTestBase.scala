@@ -37,6 +37,7 @@ import org.scalatest.{AppendedClues, BeforeAndAfterAll, BeforeAndAfterEach, Priv
 import java.io.File
 import scala.annotation.nowarn
 import scala.collection.immutable._
+import scala.io.Source
 
 /**
  * Base class for tactic tests.
@@ -485,7 +486,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
   /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
   def checkArchiveEntry(archive: String, entryName: String, tacticName: Option[String] = None): Unit = {
     val entry = ArchiveParser
-      .getEntry(entryName, io.Source.fromInputStream(getClass.getResourceAsStream(archive)).mkString)
+      .getEntry(entryName, Source.fromInputStream(getClass.getResourceAsStream(archive)).mkString)
       .get
 
     val tactic = tacticName match {
@@ -523,7 +524,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
 
   /** Checks all entries from a bundled archive. */
   def checkArchiveEntries(archive: String): Unit = {
-    val entries = ArchiveParser.parse(io.Source.fromInputStream(getClass.getResourceAsStream(archive)).mkString)
+    val entries = ArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream(archive)).mkString)
     checkArchiveEntries(entries)
   }
 

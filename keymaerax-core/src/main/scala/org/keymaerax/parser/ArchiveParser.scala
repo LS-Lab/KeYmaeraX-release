@@ -16,6 +16,7 @@ import org.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, Formu
 import java.io.InputStream
 import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
 
 /** Name is alphanumeric name and index. */
 case class Name(name: String, index: Option[Int] = None) {
@@ -561,11 +562,11 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def parseFromFile(file: String): List[ParsedArchiveEntry] = {
     file.split('#').toList match {
       case fileName :: Nil =>
-        val src = scala.io.Source.fromFile(fileName, org.keymaerax.core.ENCODING)
+        val src = Source.fromFile(fileName, org.keymaerax.core.ENCODING)
         try { parse(src.mkString) }
         finally { src.close() }
       case fileName :: entryName :: Nil =>
-        val src = scala.io.Source.fromFile(fileName, org.keymaerax.core.ENCODING)
+        val src = Source.fromFile(fileName, org.keymaerax.core.ENCODING)
         try {
           getEntry(entryName, src.mkString)
             .getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
@@ -582,7 +583,7 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
   }
 
   /** Returns the first entry in `in` as formula. */
-  def parseAsFormula(in: InputStream): Formula = parseAsFormula(io.Source.fromInputStream(in).mkString)
+  def parseAsFormula(in: InputStream): Formula = parseAsFormula(Source.fromInputStream(in).mkString)
 
   /** Reads a specific entry from the archive. */
   def getEntry(name: String, content: String, parseTactics: Boolean = true): Option[ParsedArchiveEntry] =

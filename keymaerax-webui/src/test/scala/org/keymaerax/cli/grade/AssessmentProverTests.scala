@@ -1976,7 +1976,7 @@ class AssessmentProverTests extends TacticTestBase {
       r != null,
       "Unable to find " + path + "; please check that keymaerax-webui/src/test/resources" + path + " exists",
     )
-    val source = io.Source.fromInputStream(r, "UTF-8")
+    val source = Source.fromInputStream(r, "UTF-8")
     val content =
       try source.mkString
       finally source.close()

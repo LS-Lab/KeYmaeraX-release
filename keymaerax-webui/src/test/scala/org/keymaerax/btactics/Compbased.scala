@@ -24,6 +24,7 @@ import org.scalatest.LoneElement._
 
 import scala.annotation.nowarn
 import scala.collection.immutable.{List, ListMap}
+import scala.io.Source
 import scala.language.postfixOps
 
 /**
@@ -131,7 +132,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Remote Control Contract Compliance",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
           .mkString,
       )
@@ -145,7 +146,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Obstacle Contract Compliance",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
           .mkString,
       )
@@ -251,7 +252,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Obstacle Contract Compliance",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
           .mkString,
       )
@@ -325,7 +326,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Robot Contract Compliance",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
           .mkString,
       )
@@ -339,7 +340,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Compatibility of Obstacle and Robot",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
           .mkString,
       )
@@ -353,7 +354,7 @@ class Compbased extends TacticTestBase {
     val entry1 = ArchiveParser
       .getEntry(
         "Communication Guarantee Safety",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
           .mkString,
       )
@@ -364,7 +365,7 @@ class Compbased extends TacticTestBase {
     val entry2 = ArchiveParser
       .getEntry(
         "Communication Guarantee Liveness",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
           .mkString,
       )
@@ -379,7 +380,7 @@ class Compbased extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "Remote-Controlled Robot System Avoids Obstacles",
-          io.Source
+          Source
             .fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx"))
             .mkString,
         )
@@ -411,7 +412,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Robot Component",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/robix/robot.kyx"))
           .mkString,
       )
@@ -423,7 +424,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Obstacle Component",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/robix/obstacle.kyx"))
           .mkString,
       )
@@ -508,7 +509,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Follower Component",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_follower.kyx"))
           .mkString,
       )
@@ -526,7 +527,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "Full System",
-        io.Source
+        Source
           .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_system.kyx"))
           .mkString,
       )

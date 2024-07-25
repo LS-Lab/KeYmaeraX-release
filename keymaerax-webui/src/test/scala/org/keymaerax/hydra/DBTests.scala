@@ -5,23 +5,12 @@
 
 package org.keymaerax.hydra
 
-import org.keymaerax.bellerophon.{
-  AppliedDependentPositionTactic,
-  AppliedDependentPositionTacticWithAppliedInput,
-  AppliedPositionTactic,
-  BelleExpr,
-  BranchTactic,
-  CaseTactic,
-  EitherTactic,
-  Find,
-  SaturateTactic,
-  SeqTactic,
-}
-import org.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.btactics.TacticTestBase
-import org.keymaerax.parser.{ArchiveParser, Declaration, UnknownLocation}
-import org.scalactic.Uniformity
+import org.keymaerax.parser.ArchiveParser
 import org.scalatest.prop.TableDrivenPropertyChecks._
+
+import scala.io.Source
 
 /**
  * Tests the database implementation.
@@ -36,7 +25,7 @@ class DBTests extends TacticTestBase {
         ("/examples/tutorials/sttt/sttt.kyx" :: "/examples/tutorials/cpsweek/cpsweek.kyx" ::
           "/examples/tutorials/fm/fm.kyx" :: "/examples/tutorials/basic/basictutorial.kyx" :: Nil)
           .map(getClass.getResourceAsStream(_))
-          .flatMap(i => ArchiveParser.parse(io.Source.fromInputStream(i).mkString))
+          .flatMap(i => ArchiveParser.parse(Source.fromInputStream(i).mkString))
           .flatMap(e => e.tactics.zipWithIndex.map(t => (e.name + " " + t._2, e.fileContent, t._1._3)))
 
       val tactics = Table(("name", "fileContent", "tactic"), entries: _*)

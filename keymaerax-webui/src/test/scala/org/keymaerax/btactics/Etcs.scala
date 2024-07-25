@@ -57,9 +57,7 @@ class Etcs extends TacticTestBase {
   "ETCS reactivity" should "prove lemma with tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyx"))
     val tactic = BelleParser(
-      io.Source
-        .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyt"))
-        .mkString
+      Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma.kyt")).mkString
     )
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
@@ -67,7 +65,7 @@ class Etcs extends TacticTestBase {
   it should "prove full lemma with tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma-full.kyx"))
     val tactic = BelleParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/reactivity-lemma-full.kyt"))
         .mkString
     )
@@ -93,7 +91,7 @@ class Etcs extends TacticTestBase {
   it should "prove essentials with tactic from file" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx"))
     val tactic = BelleParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyt"))
         .mkString
     )
@@ -104,7 +102,7 @@ class Etcs extends TacticTestBase {
     val s =
       parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyx"))
     val tactic = BelleParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyt"))
         .mkString
     )
@@ -126,10 +124,10 @@ class Etcs extends TacticTestBase {
       getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyx")
     )
     val tactic = BelleParser(
-      io.Source
-        .fromInputStream(getClass.getResourceAsStream(
-          "/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyt"
-        ))
+      Source
+        .fromInputStream(
+          getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/rbc-controllability-corollary.kyt")
+        )
         .mkString
     )
     proveBy(s, tactic) shouldBe Symbol("proved")
@@ -144,7 +142,7 @@ class Etcs extends TacticTestBase {
   it should "prove reactivity lemma with tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma.kyx"))
     val tactic = BelleParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma.kyt"))
         .mkString
     )
@@ -155,7 +153,7 @@ class Etcs extends TacticTestBase {
     val s =
       parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyx"))
     val tactic = BelleParser(
-      io.Source
+      Source
         .fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/reactivity-lemma-full.kyt"))
         .mkString
     )
@@ -205,7 +203,7 @@ class Etcs extends TacticTestBase {
 
 //  "ETCS ModelPlex" should "synthesize a ctrl monitor from essentials" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx")
-//    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (modelplexInput, _) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("SB"), Variable("v"),
 //      Variable("z"), Variable("t"), Variable("a"))
 //    val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & SimplifierV2.simpTac(1))
@@ -216,7 +214,7 @@ class Etcs extends TacticTestBase {
 //
 //  it should "synthesize simplified ctrl monitor from essentials" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx")
-//    val src = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val src = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (model,proof) = SimplifierV2.rewriteLoopAux(src,List(Variable("SB")))
 //    val (modelplexInput, _) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("v"), Variable("z"),
 //      Variable("t"), Variable("a"))
@@ -228,7 +226,7 @@ class Etcs extends TacticTestBase {
 //
 //  it should "synthesize a ctrl monitor from safety lemma" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma.kyx")
-//    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("vdes"), Variable("SB"), Variable("v"),
 //      Variable("em"), Variable("do"), Variable("z"), Variable("t"), Variable("mo"), Variable("m"), Variable("d"),
 //      Variable("a"))
@@ -242,7 +240,7 @@ class Etcs extends TacticTestBase {
 //
 //  it should "synthesize a simplified ctrl monitor from safety lemma" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma.kyx")
-//    val src = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val src = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (model,proof) = SimplifierV2.rewriteLoopAux(src,List(Variable("SB")))
 //    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("vdes"), Variable("v"),
 //      Variable("em"), Variable("do"), Variable("z"), Variable("t"), Variable("mo"), Variable("m"), Variable("d"),
@@ -258,7 +256,7 @@ class Etcs extends TacticTestBase {
 //
 //  it should "synthesize a model monitor from essentials" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-explicitode.kyx")
-//    val src = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val src = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (model,proof) = SimplifierV2.rewriteLoopAux(src, List(Variable("SB")))
 //    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("v"),
 //      Variable("z"), Variable("t"), Variable("a"))
@@ -274,7 +272,7 @@ class Etcs extends TacticTestBase {
 //
 //  "ETCS Euler ModelPlex" should "extract model monitor from detailed braking" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx")
-//    val src = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val src = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (model,proof) = SimplifierV2.rewriteLoopAux(src, List(Variable("SB")))
 //    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("do"),
 //      Variable("mo"), Variable("d"), Variable("m"), Variable("vdes"), Variable("em"), Variable("Ib"), Variable("Tw"),
@@ -320,7 +318,7 @@ class Etcs extends TacticTestBase {
 //
 //  "ETCS test case synthesis" should "derive controller tests from essentials" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx")
-//    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (modelplexInput, _) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("SB"), Variable("v"),
 //      Variable("z"), Variable("t"), Variable("a"))
 //    val fml = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
@@ -337,7 +335,7 @@ class Etcs extends TacticTestBase {
 //
 //  it should "derive model tests from essentials" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-explicitode.kyx")
-//    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val vars = StaticSemantics.boundVars(model).symbols.filter(_.isInstanceOf[BaseVariable]).toList
 //    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, vars:_*)
 //    val fml = proveBy(modelplexInput,
@@ -366,7 +364,7 @@ class Etcs extends TacticTestBase {
 //
 //  "ETCS code generation" should "synthesize C code from essentials ctrl monitor" in withMathematica { tool =>
 //    val in = getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials.kyx")
-//    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXProblemParser(Source.fromInputStream(in).mkString)
 //    val (modelplexInput, _) = ModelPlex.createMonitorSpecificationConjecture(model, Variable("SB"), Variable("v"),
 //      Variable("z"), Variable("t"), Variable("a"))
 //    val monitorCond = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & SimplifierV2.simpTac(1))

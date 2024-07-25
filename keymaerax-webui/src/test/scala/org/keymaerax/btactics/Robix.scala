@@ -21,6 +21,7 @@ import org.scalatest.LoneElement._
 
 import scala.annotation.nowarn
 import scala.collection.immutable.ListMap
+import scala.io.Source
 import scala.language.postfixOps
 
 /**
@@ -116,7 +117,7 @@ class Robix extends TacticTestBase {
   it should "synthesize a controller monitor" in withMathematica { tool =>
     val in = getClass
       .getResourceAsStream("/examples/casestudies/robix/staticsafetyabs_curvestraight_curvature_brakingonly.kyx")
-    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
       model,
       List(Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w")),
@@ -137,7 +138,7 @@ class Robix extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "IJRR17/Theorem 1: Static safety",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString,
       )
       .get
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])

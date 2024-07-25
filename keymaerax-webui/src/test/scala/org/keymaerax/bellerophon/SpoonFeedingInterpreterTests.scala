@@ -26,6 +26,7 @@ import org.scalatest.OptionValues._
 
 import scala.annotation.nowarn
 import scala.collection.immutable._
+import scala.io.Source
 import scala.language.{postfixOps, reflectiveCalls}
 
 /** Tests the spoon-feeding interpreter. Created by smitsch on 8/24/16. */
@@ -1355,7 +1356,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 1",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
         .fileContent
@@ -1383,7 +1384,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 2",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent
@@ -1429,7 +1430,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 3a",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent
@@ -1500,7 +1501,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 4a",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent
@@ -1544,7 +1545,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 4b",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent
@@ -1580,7 +1581,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 9b",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent
@@ -1655,7 +1656,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "STTT16/Tutorial Example 10",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent

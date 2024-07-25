@@ -17,6 +17,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery, whenever}
 import org.scalatest.prop.Tables._
 
 import scala.collection.immutable.{IndexedSeq, _}
+import scala.io.Source
 
 /** Continuous invariant generation tests. */
 class ContinuousInvariantTests extends TacticTestBase {
@@ -62,7 +63,7 @@ class ContinuousInvariantTests extends TacticTestBase {
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica {
     tool =>
       val entries = ArchiveParser.parse(
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
       )
       val annotatedInvariants: ConfigurableGenerator =
         TactixLibrary.invSupplier match { case gen: ConfigurableGenerator => gen }
@@ -106,7 +107,7 @@ class ContinuousInvariantTests extends TacticTestBase {
   it should "fast-check invariants with LZZ" taggedAs SlowTest in withMathematica { tool =>
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "-1")) {
       val entries = ArchiveParser.parse(
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
       )
       val annotatedInvariants: ConfigurableGenerator =
         TactixInit.invSupplier match { case gen: ConfigurableGenerator => gen }
@@ -135,7 +136,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "Benchmarks/Basic/STTT Tutorial: Example 9a",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString,
         )
         .head
 
@@ -160,7 +161,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "60",
     )) {
       val entries = ArchiveParser.parse(
-        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
+        Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
       )
       forEvery(Table(("Name", "Model", "Definitions"), entries.map(e => (e.name, e.model, e.defs)): _*)) {
         (name, model, defs) =>

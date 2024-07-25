@@ -12,6 +12,7 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.SlowTest
 
 import scala.annotation.nowarn
+import scala.io.Source
 import scala.language.postfixOps
 
 /**
@@ -28,7 +29,7 @@ class FMTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "FM16/Tutorial Example 1",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
         )
         .get
         .fileContent
@@ -41,7 +42,7 @@ class FMTutorial extends TacticTestBase {
       val entry = ArchiveParser
         .getEntry(
           "FM16/Tutorial Example 2",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
         )
         .get
       val modelContent = entry.fileContent
@@ -58,7 +59,7 @@ class FMTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "FM16/Tutorial Example 3",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
         )
         .get
         .fileContent
@@ -71,7 +72,7 @@ class FMTutorial extends TacticTestBase {
       val modelContent = ArchiveParser
         .getEntry(
           "FM16/Tutorial Example 4",
-          io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
+          Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
         )
         .get
         .fileContent
@@ -83,7 +84,7 @@ class FMTutorial extends TacticTestBase {
     val entry = ArchiveParser
       .getEntry(
         "FM16/Tutorial Example 5",
-        io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
+        Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString,
       )
       .get
     proveBy(entry.expandedModel.asInstanceOf[Formula], entry.tactics.head._3) shouldBe Symbol("proved")
