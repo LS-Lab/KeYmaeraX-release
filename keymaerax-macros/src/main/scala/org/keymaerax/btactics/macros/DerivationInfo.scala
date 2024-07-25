@@ -473,12 +473,6 @@ object DerivedRuleInfo {
     theRecursor = parsePoses(recursor),
   )
 
-  /** Retrieve meta-information on a rule by the given canonical name `ruleName` */
-  def apply(ruleName: String): DerivedRuleInfo = DerivationInfo.byCanonicalName(ruleName) match {
-    case info: DerivedRuleInfo => info
-    case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived rule")
-  }
-
   def allInfo: Map[String, DerivedRuleInfo] = DerivationInfo._derivedRuleInfo
 }
 

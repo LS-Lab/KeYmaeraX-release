@@ -648,7 +648,7 @@ class USubstTests extends TacticTestBase {
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(UnitPredicational("p_", AnyArg), fml), SubstitutionPair(sys, prog)))
-    val pr = DerivedRuleInfo("Goedel").provable(s)
+    val pr = Ax.Goedel.provable(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
@@ -660,7 +660,7 @@ class USubstTests extends TacticTestBase {
       SubstitutionPair(UnitPredicational("p_", AnyArg), fml) ::
         SubstitutionPair(sys, prog) :: Nil
     )
-    val pr = DerivedRuleInfo("Goedel").provable(s)
+    val pr = Ax.Goedel.provable(s)
     pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(Box(prog, fml)))
     pr.subgoals should be(List(Sequent(IndexedSeq(), IndexedSeq(fml))))
   }
@@ -704,7 +704,7 @@ class USubstTests extends TacticTestBase {
           SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
           SubstitutionPair(UnitPredicational("q_", AnyArg), prem2),
         ))
-        val pr = DerivedRuleInfo("[] monotone").provable(s)
+        val pr = Ax.monbaxiom.provable(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
         pr.subgoals should contain only Sequent(IndexedSeq(prem1), IndexedSeq(prem2))
       }
@@ -731,7 +731,7 @@ class USubstTests extends TacticTestBase {
         SubstitutionPair(UnitPredicational("p_", AnyArg), prem1),
         SubstitutionPair(UnitPredicational("q_", AnyArg), prem2),
       ))
-      val pr = DerivedRuleInfo("[] monotone").provable(s)
+      val pr = Ax.monbaxiom.provable(s)
       pr.conclusion shouldBe Sequent(IndexedSeq(concLhs), IndexedSeq(concRhs))
       pr.subgoals should contain only Sequent(IndexedSeq(prem1), IndexedSeq(prem2))
     }
@@ -891,7 +891,7 @@ class USubstTests extends TacticTestBase {
 
       withSafeClue("Random precontext " + prgString + "\n\n" + randClue) {
         val s = USubst(Seq(SubstitutionPair(sys, prog), SubstitutionPair(UnitPredicational("p_", AnyArg), prem)))
-        val pr = DerivedRuleInfo("Goedel").provable(s)
+        val pr = Ax.Goedel.provable(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
       }

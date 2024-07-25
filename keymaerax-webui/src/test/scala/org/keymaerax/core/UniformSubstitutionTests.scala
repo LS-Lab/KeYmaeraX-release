@@ -7,7 +7,6 @@ package org.keymaerax.core
 
 import org.keymaerax.btactics._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import org.keymaerax.btactics.macros._
 import org.keymaerax.infrastruct.SubstitutionHelper
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.{USubstTest, UsualTest}
@@ -1359,7 +1358,7 @@ class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
       SubstitutionPair(UnitPredicational("p_", AnyArg), "(-x)^2>=0".asFormula) ::
         SubstitutionPair(SystemConst("a_"), "x:=x-1;".asProgram) :: Nil
     )
-    val pr = DerivedRuleInfo("Goedel").provable(s)
+    val pr = Ax.Goedel.provable(s)
     pr.conclusion shouldBe conc
     pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
   }
