@@ -272,10 +272,12 @@ class USubstTests extends TacticTestBase {
 
   it should "not allow Anything-escalated substitutions on functions of something" taggedAs AdvocatusTest in {
     withMathematica { _ => // for AxiomInfo
-      val pr = DerivedAxiomInfo("V vacuous").provable(USubst(
-        SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "f(y)=0".asFormula) ::
-          SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil
-      ))
+      val pr = Ax
+        .V
+        .provable(USubst(
+          SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "f(y)=0".asFormula) ::
+            SubstitutionPair(SystemConst("a"), "x:=5;".asProgram) :: Nil
+        ))
       pr shouldBe Symbol("proved")
       pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("f(y)=0 -> [x:=5;]f(y)=0".asFormula))
       // this should not prove x=0->[x:=5;]x=0

@@ -433,14 +433,6 @@ object DerivedAxiomInfo {
     theRecursor = parsePoses(recursor),
   )
 
-  /** Retrieve meta-information on an axiom by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivedAxiomInfo = {
-    DerivationInfo.byCanonicalName(axiomName) match {
-      case info: DerivedAxiomInfo => info
-      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
-    }
-  }
-
   /** All registered derived axiom info by code name. */
   def allInfo: Map[String, DerivedAxiomInfo] = DerivationInfo._derivedAxiomInfo
 
