@@ -209,8 +209,8 @@ object Ax extends Logging {
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig): DerivedAxiomInfo = derivedFact(
-    DerivedAxiomInfo(canonicalName),
+  def derivedAxiomFromFact(info: DerivedAxiomInfo, derived: Formula, fact: ProvableSig): DerivedAxiomInfo = derivedFact(
+    info,
     fact,
   ) ensuring (
     info =>
@@ -1020,9 +1020,14 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "assignbeqy", displayName = Some("[:=]=y"), displayLevel = DisplayLevel.Internal)
+  @Derivation
   lazy val assignbeqy: DerivedAxiomInfo = derivedAxiomFromFact(
-    "[:=] assign equality y",
+    DerivedAxiomInfo.create(
+      name = "assignbeqy",
+      canonicalName = "[:=] assign equality y",
+      displayName = Some("[:=]=y"),
+      displayLevel = DisplayLevel.Internal,
+    ),
     "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
     ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable, "y_".asVariable, semantic = true)),
   )
@@ -1037,9 +1042,14 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "selfassignby", displayName = Some("[:=]y"), displayLevel = DisplayLevel.Internal)
+  @Derivation
   lazy val selfassignby: DerivedAxiomInfo = derivedAxiomFromFact(
-    "[:=] self assign y",
+    DerivedAxiomInfo.create(
+      name = "selfassignby",
+      canonicalName = "[:=] self assign y",
+      displayName = Some("[:=]y"),
+      displayLevel = DisplayLevel.Internal,
+    ),
     "[y_:=y_;]p(||) <-> p(||)".asFormula,
     ProvableSig.axioms("[:=] self assign")(URename("x_".asVariable, "y_".asVariable, semantic = true)),
   )
@@ -1055,15 +1065,16 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(
-    name = "DEsysy",
-    displayLevel = DisplayLevel.Internal,
-    displayConclusion = "__[{y'=F,c&Q}]P__↔[{c,y'=F&Q}][y':=f(x)]P",
-    key = "0",
-    recursor = "1;*",
-  )
+  @Derivation
   lazy val DEsysy: DerivedAxiomInfo = derivedAxiomFromFact(
-    "DE differential effect (system) y",
+    DerivedAxiomInfo.create(
+      name = "DEsysy",
+      canonicalName = "DE differential effect (system) y",
+      displayLevel = DisplayLevel.Internal,
+      displayConclusion = "__[{y'=F,c&Q}]P__↔[{c,y'=F&Q}][y':=f(x)]P",
+      key = "0",
+      recursor = "1;*",
+    ),
     "[{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)".asFormula,
     ProvableSig.axioms("DE differential effect (system)")(URename("x_".asVariable, "y_".asVariable, semantic = true)),
   )
@@ -1078,14 +1089,15 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(
-    name = "alldy",
-    displayName = Some("∀d"),
-    displayNameAscii = Some("alldy"),
-    displayLevel = DisplayLevel.Internal,
-  )
+  @Derivation
   lazy val alldy: DerivedAxiomInfo = derivedAxiomFromFact(
-    "all dual y",
+    DerivedAxiomInfo.create(
+      name = "alldy",
+      canonicalName = "all dual y",
+      displayName = Some("∀d"),
+      displayNameAscii = Some("alldy"),
+      displayLevel = DisplayLevel.Internal,
+    ),
     "(!\\exists y_ !p(||)) <-> \\forall y_ p(||)".asFormula,
     ProvableSig.axioms("all dual")(URename("x_".asVariable, "y_".asVariable, semantic = true)),
   )
@@ -1100,14 +1112,15 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(
-    name = "alldt",
-    displayName = Some("∀d"),
-    displayNameAscii = Some("alldt"),
-    displayLevel = DisplayLevel.Internal,
-  )
+  @Derivation
   lazy val alldt: DerivedAxiomInfo = derivedAxiomFromFact(
-    "all dual time",
+    DerivedAxiomInfo.create(
+      name = "alldt",
+      canonicalName = "all dual time",
+      displayName = Some("∀d"),
+      displayNameAscii = Some("alldt"),
+      displayLevel = DisplayLevel.Internal,
+    ),
     "(!\\exists t_ !p(||)) <-> \\forall t_ p(||)".asFormula,
     ProvableSig.axioms("all dual")(URename("x_".asVariable, "t_".asVariable, semantic = true)),
   )
@@ -1122,9 +1135,15 @@ object Ax extends Logging {
    * @note
    *   needs semantic renaming
    */
-  @Axiom(name = "ally", displayName = Some("∀y"), displayNameAscii = Some("ally"), displayLevel = DisplayLevel.Internal)
+  @Derivation
   lazy val ally: DerivedAxiomInfo = derivedAxiomFromFact(
-    "all eliminate y",
+    DerivedAxiomInfo.create(
+      name = "ally",
+      canonicalName = "all eliminate y",
+      displayName = Some("∀y"),
+      displayNameAscii = Some("ally"),
+      displayLevel = DisplayLevel.Internal,
+    ),
     "(\\forall y_ p(||)) -> p(||)".asFormula,
     ProvableSig.axioms("all eliminate")(URename("x_".asVariable, "y_".asVariable, semantic = true)),
   )

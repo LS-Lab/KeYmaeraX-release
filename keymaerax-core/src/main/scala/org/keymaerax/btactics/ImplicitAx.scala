@@ -76,7 +76,7 @@ object ImplicitAx extends TacticProvider {
       theKey = List(0),
       theRecursor = List(List(1)),
     )
-    DerivationInfo.registerR(Ax.derivedAxiomFromFact(name, p.conclusion.succ(0), p), info)
+    DerivationInfo.registerR(Ax.derivedAxiomFromFact(info, p.conclusion.succ(0), p), info)
   }
 
   // todo: for efficiency initialize ProvableInfo with pre-proved differential axioms
@@ -140,7 +140,7 @@ object ImplicitAx extends TacticProvider {
       theKey = List(0),
       theRecursor = List(List(1)),
     )
-    DerivationInfo.registerR(Ax.derivedAxiomFromFact(name, p.conclusion.succ(0), p), info)
+    DerivationInfo.registerR(Ax.derivedAxiomFromFact(info, p.conclusion.succ(0), p), info)
   }
 
   def getInitAx(f: Function): Option[ProvableInfo] = {
@@ -200,7 +200,7 @@ object ImplicitAx extends TacticProvider {
       theKey = List(0),
       theRecursor = List(List(1)),
     )
-    DerivationInfo.registerR(Ax.derivedAxiomFromFact(name, p.conclusion.succ(0), p), info)
+    DerivationInfo.registerR(Ax.derivedAxiomFromFact(info, p.conclusion.succ(0), p), info)
   }
 
   def getDefAx(f: Function): Option[ProvableInfo] = {
