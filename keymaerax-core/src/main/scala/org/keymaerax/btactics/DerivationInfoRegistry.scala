@@ -21,7 +21,6 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.language.implicitConversions
 import scala.reflect.runtime.{universe => ru}
-import scala.util.Try
 
 /**
  * Central list of all derivation steps (axioms, derived axioms, proof rules, tactics) with meta information of relevant
@@ -275,11 +274,6 @@ object DerivationInfoRegistry extends Logging {
       println()
     }
 
-    // Initialize derived axioms and rules, which automatically initializes their AxiomInfo and RuleInfo too
-    // To allow working with restricted functionality: continue initialization despite potential errors in
-    // deriving axioms, throw exception at end of initialization
-    val deriveErrors = Try(Ax.prepopulateDerivedLemmaDatabase()).toEither
-
     // Search and initialize tactic providers (provide @Tactic-annotated methods)
     val reflections = new Reflections("org.keymaerax.btactics")
     val tacticProviderTypes = reflections.get(Scanners.SubTypes.of(classOf[TacticProvider]).asClass())
@@ -310,7 +304,7 @@ object DerivationInfoRegistry extends Logging {
         if (!DerivationInfo._seenNames.contains(di.codeName)) {
           di match {
             // Axioms and rules are not tracked
-            case _: CoreAxiomInfo | _: AxiomaticRuleInfo | _: DerivedAxiomInfo => ()
+            case _: CoreAxiomInfo | _: DerivedAxiomInfo | _: AxiomaticRuleInfo | _: DerivedRuleInfo => ()
             case _ => unimplemented += di.codeName
           }
         }
@@ -321,10 +315,6 @@ object DerivationInfoRegistry extends Logging {
     )
     DerivationInfo._initStatus = DerivationInfo.InitComplete
     if (derivationErrors.nonEmpty) { throw derivationErrors.head._2 }
-    deriveErrors match {
-      case Left(t) => throw t
-      case _ => // nothing to do
-    }
   }
 
   ////////////////////////////////////////////////////////

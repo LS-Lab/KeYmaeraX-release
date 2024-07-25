@@ -22,9 +22,7 @@ import org.keymaerax.tools.ToolEvidence
 
 import scala.annotation.nowarn
 import scala.collection.immutable._
-import scala.collection.{immutable, mutable}
-import scala.reflect.runtime.universe.{Assign => _, _}
-import scala.reflect.runtime.{universe => ru}
+import scala.collection.immutable
 
 /**
  * Central Database of Derived Axioms and Derived Axiomatic Rules, including information about core axioms and axiomatic
@@ -202,46 +200,6 @@ object Ax extends Logging {
   private val v = Variable("x_", None, Real)
   private val anonv = ProgramConst("a_", Except(v :: Nil))
   private val Jany = UnitPredicational("J", AnyArg)
-
-  /** populates the derived lemma database with all of the lemmas in the case statement above. */
-  private[keymaerax] def prepopulateDerivedLemmaDatabase(): Unit = {
-    require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
-
-    val lemmas = getClass.getDeclaredFields.filter(f => classOf[StorableInfo].isAssignableFrom(f.getType))
-    val fns = lemmas.map(_.getName)
-
-    val mirror = ru.runtimeMirror(getClass.getClassLoader)
-    // access the singleton object
-    val moduleMirror = mirror.reflectModule(ru.typeOf[Ax.type].termSymbol.asModule)
-    val im = mirror.reflect(moduleMirror.instance)
-
-    // @note lazy vals have a "hidden" getter method that does the initialization
-    val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
-    val fieldMirrors = fields.map(im.reflectMethod)
-
-    val failures = mutable.Buffer.empty[(String, Throwable)]
-    fieldMirrors
-      .indices
-      .foreach(idx => {
-        try {
-          val fm = fieldMirrors(idx)
-          logger.info("Deriving: " + fm.symbol.fullName + "...")
-          fm()
-          logger.info("done")
-          DerivationInfo.seeName(fm.symbol.name.toString)
-        } catch {
-          case e: Throwable =>
-            failures += (fns(idx) -> e)
-            logger.warn("WARNING: Failed to add derived lemma.", e)
-        }
-      })
-    if (failures.nonEmpty) throw new Exception(
-      s"WARNING: Encountered ${failures.size} errors when trying to populate DerivedAxioms database. Unable to derive:\n" + failures
-        .map(_._1)
-        .mkString("\n"),
-      failures.head._2,
-    )
-  }
 
   // ***************
   // Core Axiomatic Rules   see [[AxiomBase]]

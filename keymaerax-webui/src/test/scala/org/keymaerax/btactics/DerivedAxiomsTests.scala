@@ -11,14 +11,12 @@ import org.keymaerax.btactics.Ax._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros.{ProvableInfo, StorableInfo}
 import org.keymaerax.core.Sequent
-import org.keymaerax.info.Version
 import org.keymaerax.lemma.LemmaDBFactory
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tagobjects.OptimisticTest
 import org.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 
-import java.io.{File, FileWriter, FilenameFilter}
 import java.lang.reflect.InvocationTargetException
 import scala.collection.immutable
 import scala.reflect.runtime.{universe => ru}
@@ -497,49 +495,6 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics = None) {
   it should "prove != sym" in withMathematica(initLibrary = false, testcode = { _ => check { equalSym } })
   it should "prove > antisym" in withMathematica(initLibrary = false, testcode = { _ => check { greaterNotSym } })
   it should "prove < antisym" in withMathematica(initLibrary = false, testcode = { _ => check { lessNotSym } })
-
-  // @note must be last to populate the lemma database during build
-  "The DerivedAxioms prepopulation procedure" should "not crash" ignore withMathematica(
-    initLibrary = false,
-    testcode = { _ =>
-      LemmaDBFactory.lemmaDB.deleteDatabase()
-      withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-        val writeEffect = true
-        // use a new instance of the DerivedAxioms singleton object to store all axioms to the lemma database
-        val c = Ax.getClass.getDeclaredConstructor()
-        c.setAccessible(true)
-        c.newInstance().asInstanceOf[Ax.type].prepopulateDerivedLemmaDatabase()
-
-        val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
-        // see [[FileLemmaDB.scala]] for path of actual lemma files
-        val lemmaFiles = new File(cache.getAbsolutePath + File.separator + "lemmadb")
-          .listFiles(new FilenameFilter() {
-            override def accept(dir: File, name: String): Boolean = name.endsWith(".alp")
-          })
-          .map(_.getName.stripSuffix(".alp"))
-        val infos = getDerivedAxiomsMirrors.map({ case (valName, m) => valName -> m().asInstanceOf[StorableInfo] })
-        // we allow lazy val forwarding, but all of them have to refer to the same lemma
-        val forwards = infos
-          .groupBy({ case (_, info) => info })
-          .filter((kv: (StorableInfo, Array[(String, StorableInfo)])) => kv._2.length > 1)
-        // the lemma database only stores the one lemma referred to from one or more lazy vals
-        lemmaFiles.length shouldBe lemmaFiles.distinct.length
-        // the lemma database stores all the distinct lemmas in DerivedAxioms
-        forwards.keys.map(_.storedName).toList.diff(lemmaFiles) shouldBe empty
-
-        if (writeEffect) {
-          val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
-          if (!versionFile.exists()) {
-            if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
-          }
-          assert(versionFile.exists())
-          val fw = new FileWriter(versionFile)
-          fw.write(Version.toString)
-          fw.close()
-        }
-      }
-    },
-  )
 
   /** Returns the reflection mirrors to access the lazy vals in DerivedAxioms. */
   private def getDerivedAxiomsMirrors = {
