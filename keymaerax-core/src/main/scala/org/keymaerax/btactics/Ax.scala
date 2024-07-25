@@ -125,10 +125,12 @@ object Ax extends Logging {
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  def derivedFact(name: String, fact: ProvableSig): DerivedAxiomInfo = {
-    val dai = DerivedAxiomInfo(name)
-    val lemmaName = dai.storedName
-    require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
+  def derivedFact(info: DerivedAxiomInfo, fact: ProvableSig): DerivedAxiomInfo = {
+    val lemmaName = info.storedName
+    require(
+      fact.isProved,
+      "only proved Provables would be accepted as derived axioms: " + info.canonicalName + " got\n" + fact,
+    )
     val npt = ElidingProvable(fact.underlyingProvable, fact.defs)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) { TermProvable(npt, AxiomTerm(lemmaName), fact.defs) }
@@ -150,9 +152,9 @@ object Ax extends Logging {
               case Some(storedLemma) =>
                 if (storedLemma != lemma) {
                   throw new IllegalStateException(
-                    "Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(
-                      lemmaName
-                    ) + " (lemma " + name + " stored in file name " + lemmaName + ") instead of " + lemma
+                    "Prover already has a different lemma filed under the same name " + derivedAxiomDB
+                      .get(lemmaName) + " (lemma " + info
+                      .canonicalName + " stored in file name " + lemmaName + ") instead of " + lemma
                   )
                 } else { lemma.name.get }
               case None => lemma.name.get
@@ -160,8 +162,8 @@ object Ax extends Logging {
           } else { derivedAxiomDB.add(lemma) }
         derivedAxiomDB.get(lemmaID).get
       }
-    dai.setLemma(insertedLemma)
-    dai
+    info.setLemma(insertedLemma)
+    info
   }
 
   def derivedRule(info: DerivedRuleInfo, fact: ProvableSig): DerivedRuleInfo = {
@@ -208,7 +210,7 @@ object Ax extends Logging {
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
   def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig): DerivedAxiomInfo = derivedFact(
-    canonicalName,
+    DerivedAxiomInfo(canonicalName),
     fact,
   ) ensuring (
     info =>
@@ -232,7 +234,7 @@ object Ax extends Logging {
           witness.isProved,
           "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness,
         )
-        derivedFact(canonicalName, witness).lemma
+        derivedFact(dai, witness).lemma
     }
     dai.setLemma(lemma)
     dai
@@ -1759,21 +1761,21 @@ object Ax extends Logging {
    * End.
    * }}}
    *
-   * @Derived
    * @see
    *   [[equalReflexive]]
    */
-  @Axiom(
-    name = "equivReflexive",
-    displayName = Some("↔R"),
-    displayNameAscii = Some("<->R"),
-    displayConclusion = "__p↔p__",
-    key = "",
-    recursor = "",
-    unifier = Unifier.Full,
-  )
+  @Derivation
   lazy val equivReflexive: DerivedAxiomInfo = derivedFact(
-    "<-> reflexive",
+    DerivedAxiomInfo.create(
+      name = "equivReflexive",
+      canonicalName = "<-> reflexive",
+      displayName = Some("↔R"),
+      displayNameAscii = Some("<->R"),
+      displayConclusion = "__p↔p__",
+      key = "",
+      recursor = "",
+      unifier = Unifier.Full,
+    ),
     DerivedAxiomProvableSig.startProof(
       Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)),
       Declaration(Map.empty),
@@ -1910,20 +1912,19 @@ object Ax extends Logging {
    *   (!(!p())) <-> p()
    * End.
    * }}}
-   *
-   * @Derived
    */
-  @Axiom(
-    name = "doubleNegation",
-    displayName = Some("¬¬"),
-    displayNameAscii = Some("!!"),
-    displayConclusion = "__¬¬p__↔p",
-    key = "0",
-    recursor = "*",
-    unifier = Unifier.SurjectiveLinear,
-  )
+  @Derivation
   lazy val doubleNegation: DerivedAxiomInfo = derivedFact(
-    "!! double negation",
+    DerivedAxiomInfo.create(
+      name = "doubleNegation",
+      canonicalName = "!! double negation",
+      displayName = Some("¬¬"),
+      displayNameAscii = Some("!!"),
+      displayConclusion = "__¬¬p__↔p",
+      key = "0",
+      recursor = "*",
+      unifier = Unifier.SurjectiveLinear,
+    ),
     DerivedAxiomProvableSig.startProof(
       Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)),
       Declaration(Map.empty),
@@ -6094,9 +6095,14 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @Axiom(name = "DvariableAxiom", displayName = Some("x'"), displayConclusion = "__(x)'__=x'")
+  @Derivation
   lazy val DvariableAxiom: DerivedAxiomInfo = derivedFact(
-    "x' derive variable",
+    DerivedAxiomInfo.create(
+      name = "DvariableAxiom",
+      canonicalName = "x' derive variable",
+      displayName = Some("x'"),
+      displayConclusion = "__(x)'__=x'",
+    ),
     DerivedAxiomProvableSig.startProof(
       Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)),
       Declaration(Map.empty),

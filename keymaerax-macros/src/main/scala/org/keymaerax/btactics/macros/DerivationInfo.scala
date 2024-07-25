@@ -404,6 +404,50 @@ case class DerivedAxiomInfo(
   override val numPositionArgs = 1
 }
 
+object DerivedAxiomInfo {
+  def create(
+      name: String,
+      canonicalName: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayConclusion: String = "",
+      unifier: Unifier = Unifier.Full,
+      inputs: String = "",
+      key: String = "0",
+      recursor: String = "",
+  ): DerivedAxiomInfo = DerivedAxiomInfo(
+    canonicalName = canonicalName,
+    display = AnnotationCommon.axiomDisplayInfo(
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      conclusion = displayConclusion,
+      inputs = inputs,
+    ),
+    codeName = name,
+    unifier = unifier,
+    theKey = parsePos(key),
+    theRecursor = parsePoses(recursor),
+  )
+
+  /** Retrieve meta-information on an axiom by the given canonical name `axiomName` */
+  def apply(axiomName: String): DerivedAxiomInfo = {
+    DerivationInfo.byCanonicalName(axiomName) match {
+      case info: DerivedAxiomInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
+    }
+  }
+
+  /** All registered derived axiom info by code name. */
+  def allInfo: Map[String, DerivedAxiomInfo] = DerivationInfo._derivedAxiomInfo
+
+  /** All registered derived axiom info by stored name. */
+  def allInfoByStoredName: Map[String, StorableInfo] = DerivationInfo._byStoredName
+}
+
 // axiomatic proof rules
 
 /**
@@ -586,31 +630,6 @@ case class InputTwoPositionTacticInfo(
     extends TacticInfo(codeName, display, theExpr, needsGenerator) {
   override val numPositionArgs = 2
 }
-
-object DerivedAxiomInfo {
-
-  /** Retrieve meta-information on an axiom by the given canonical name `axiomName` */
-  def locate(axiomName: String): Option[DerivedAxiomInfo] = DerivationInfo.byCanonicalName(axiomName) match {
-    case info: DerivedAxiomInfo => Some(info)
-    case _ => None
-  }
-
-  /** Retrieve meta-information on an axiom by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivedAxiomInfo = {
-    DerivationInfo.byCanonicalName(axiomName) match {
-      case info: DerivedAxiomInfo => info
-      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
-    }
-  }
-
-  /** All registered derived axiom info by code name. */
-  def allInfo: Map[String, DerivedAxiomInfo] = DerivationInfo._derivedAxiomInfo
-
-  /** All registered derived axiom info by stored name. */
-  def allInfoByStoredName: Map[String, StorableInfo] = DerivationInfo._byStoredName
-}
-
-// tactics
 
 object TacticInfo {
   def apply(tacticName: String): TacticInfo = DerivationInfo.byCodeName(tacticName) match {
