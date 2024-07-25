@@ -355,6 +355,36 @@ case class CoreAxiomInfo(
   override val numPositionArgs = 1
 }
 
+object CoreAxiomInfo {
+  def create(
+      name: String,
+      canonicalName: String,
+      displayName: Option[String] = None,
+      displayNameAscii: Option[String] = None,
+      displayNameLong: Option[String] = None,
+      displayLevel: DisplayLevel = DisplayLevel.Internal,
+      displayConclusion: String = "",
+      unifier: Unifier = Unifier.Full,
+      inputs: String = "",
+      key: String = "0",
+      recursor: String = "",
+  ): CoreAxiomInfo = CoreAxiomInfo(
+    canonicalName = canonicalName,
+    display = AnnotationCommon.axiomDisplayInfo(
+      name = displayName.getOrElse(name),
+      nameAscii = displayNameAscii,
+      nameLong = displayNameLong,
+      level = displayLevel,
+      conclusion = displayConclusion,
+      inputs = inputs,
+    ),
+    codeName = name,
+    unifier = unifier,
+    theKey = parsePos(key),
+    theRecursor = parsePoses(recursor),
+  )
+}
+
 /**
  * Information for a derived axiom proved from the core.
  * @see
@@ -648,21 +678,4 @@ object AxiomInfo {
   }
 
   def allInfo: Map[String, AxiomInfo] = DerivationInfo._axiomInfo
-}
-
-object CoreAxiomInfo {
-
-  /** Retrieve meta-information on a core axiom by the given canonical name `axiomName` */
-  def apply(axiomName: String): CoreAxiomInfo = DerivationInfo(axiomName) match {
-    case info: CoreAxiomInfo => info
-    case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a core axiom")
-  }
-
-  /** Retrieve meta-information on a core axiom by the given code name `codeName` */
-  def ofCodeName(codeName: String): CoreAxiomInfo = DerivationInfo.ofCodeName(codeName) match {
-    case info: CoreAxiomInfo => info
-    case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
-  }
-
-  def allInfo: Map[String, CoreAxiomInfo] = DerivationInfo._coreAxiomInfo
 }

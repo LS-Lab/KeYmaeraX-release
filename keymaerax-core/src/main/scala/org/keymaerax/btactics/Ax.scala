@@ -122,9 +122,6 @@ object Ax extends Logging {
 
   type LemmaID = String
 
-  /** Look up a core axiom from [[Provable.axioms]] and wrap it into a [[CoreAxiomInfo]] */
-  private def coreAxiom(name: String): CoreAxiomInfo = { CoreAxiomInfo(name) }
-
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
@@ -323,8 +320,10 @@ object Ax extends Logging {
   // Hybrid Programs / Hybrid Games
 
   // @note default key = 0::Nil, recursor = (Nil)::Nil for direct reduction of LHS to RHS without substructure.
-  @Axiom(
+  @Derivation
+  val diamond: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "diamond",
+    canonicalName = "<> diamond",
     displayName = Some("<·>"),
     displayNameAscii = Some("<.>"),
     displayLevel = DisplayLevel.All,
@@ -333,10 +332,11 @@ object Ax extends Logging {
     recursor = "*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val diamond: CoreAxiomInfo = coreAxiom("<> diamond")
 
-  @Axiom(
+  @Derivation
+  val assignbAxiom: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "assignbAxiom",
+    canonicalName = "[:=] assign",
     displayName = Some("[:=]"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[x:=e]p(x)__↔p(e)",
@@ -344,10 +344,11 @@ object Ax extends Logging {
     recursor = "*",
     unifier = Unifier.Full,
   )
-  val assignbAxiom: CoreAxiomInfo = coreAxiom("[:=] assign")
 
-  @Axiom(
+  @Derivation
+  val assignbeq: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "assignbeq",
+    canonicalName = "[:=] assign equality",
     displayName = Some("[:=]="),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[x:=e]P__↔∀x(x=e→P)",
@@ -355,23 +356,30 @@ object Ax extends Logging {
     recursor = "0.1;*",
     unifier = Unifier.SurjectiveLinearPretend,
   )
-  val assignbeq: CoreAxiomInfo = coreAxiom("[:=] assign equality")
 
-  @Axiom(name = "selfassignb", displayName = Some("[:=]"), displayConclusion = "__[x:=x]P__↔P")
-  val selfassignb: CoreAxiomInfo = coreAxiom("[:=] self assign")
+  @Derivation
+  val selfassignb: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "selfassignb",
+    canonicalName = "[:=] self assign",
+    displayName = Some("[:=]"),
+    displayConclusion = "__[x:=x]P__↔P",
+  )
 
-  @Axiom(
+  @Derivation
+  val Dassignb: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dassignb",
+    canonicalName = "[':=] differential assign",
     displayName = Some("[:=]"),
     displayConclusion = "__[x':=c]p(x')__↔p(c)",
     key = "0",
     recursor = "*",
     unifier = Unifier.Full,
   )
-  val Dassignb: CoreAxiomInfo = coreAxiom("[':=] differential assign")
 
-  @Axiom(
+  @Derivation
+  val Dassignbeq: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dassignbeq",
+    canonicalName = "[':=] assign equality",
     displayName = Some("[:=]="),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[x':=e]P__↔∀x'(x'=e→P)",
@@ -379,13 +387,19 @@ object Ax extends Logging {
     recursor = "0.1;*",
     unifier = Unifier.SurjectiveLinearPretend,
   )
-  val Dassignbeq: CoreAxiomInfo = coreAxiom("[':=] assign equality")
 
-  @Axiom(name = "Dselfassignb", displayName = Some("[':=]"), displayConclusion = "__[x':=x']P__↔P")
-  val Dselfassignb: CoreAxiomInfo = coreAxiom("[':=] self assign")
+  @Derivation
+  val Dselfassignb: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "Dselfassignb",
+    canonicalName = "[':=] self assign",
+    displayName = Some("[':=]"),
+    displayConclusion = "__[x':=x']P__↔P",
+  )
 
-  @Axiom(
+  @Derivation
+  val randomb: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "randomb",
+    canonicalName = "[:*] assign nondet",
     displayName = Some("[:*]"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[x:=*]P__↔∀x P",
@@ -393,10 +407,11 @@ object Ax extends Logging {
     recursor = "0;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val randomb: CoreAxiomInfo = coreAxiom("[:*] assign nondet")
 
-  @Axiom(
+  @Derivation
+  val testb: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "testb",
+    canonicalName = "[?] test",
     displayName = Some("[?]"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[?Q]P__↔(Q→P)",
@@ -404,10 +419,11 @@ object Ax extends Logging {
     recursor = "1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val testb: CoreAxiomInfo = coreAxiom("[?] test")
 
-  @Axiom(
+  @Derivation
+  val choiceb: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "choiceb",
+    canonicalName = "[++] choice",
     displayName = Some("[∪]"),
     displayNameAscii = Some("[++]"),
     displayLevel = DisplayLevel.All,
@@ -416,10 +432,11 @@ object Ax extends Logging {
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val choiceb: CoreAxiomInfo = coreAxiom("[++] choice")
 
-  @Axiom(
+  @Derivation
+  val composeb: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "composeb",
+    canonicalName = "[;] compose",
     displayName = Some("[;]"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[a;b]P__↔[a][b]P",
@@ -427,10 +444,11 @@ object Ax extends Logging {
     recursor = "1;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val composeb: CoreAxiomInfo = coreAxiom("[;] compose")
 
-  @Axiom(
+  @Derivation
+  val iterateb: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "iterateb",
+    canonicalName = "[*] iterate",
     displayName = Some("[*]"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[a*]P__↔P∧[a][a*]P",
@@ -438,10 +456,11 @@ object Ax extends Logging {
     recursor = "1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val iterateb: CoreAxiomInfo = coreAxiom("[*] iterate")
 
-  @Axiom(
+  @Derivation
+  val barcan: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "barcan",
+    canonicalName = "B Barcan",
     displayName = Some("B Barcan"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[a]∀x p(x)__ ↔∀x[a]p(x)  (x∉a)",
@@ -449,13 +468,14 @@ object Ax extends Logging {
     recursor = "0",
     unifier = Unifier.SurjectiveLinear,
   )
-  val barcan: CoreAxiomInfo = coreAxiom("B Barcan")
 
   // Differential Equations
 
   // @TODO: Old AxiomInfo calls DWeakening
-  @Axiom(
+  @Derivation
+  val DWbase: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DWbase",
+    canonicalName = "DW base",
     displayName = Some("DW base"),
     displayLevel = DisplayLevel.Internal,
     displayConclusion = "__[{x'=f(x)&Q}]Q__",
@@ -463,20 +483,22 @@ object Ax extends Logging {
     recursor = "",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DWbase: CoreAxiomInfo = coreAxiom("DW base")
 
-  @Axiom(
+  @Derivation
+  val DE: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DE",
+    canonicalName = "DE differential effect",
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P",
     key = "0",
     recursor = "1;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DE: CoreAxiomInfo = coreAxiom("DE differential effect")
 
-  @Axiom(
+  @Derivation
+  val DEs: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DEs",
+    canonicalName = "DE differential effect (system)",
     displayName = Some("DE"),
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P",
@@ -484,11 +506,12 @@ object Ax extends Logging {
     recursor = "1;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DEs: CoreAxiomInfo = coreAxiom("DE differential effect (system)")
 
   /* @todo soundness requires only vectorial x in p(||) */
-  @Axiom(
+  @Derivation
+  val DIequiv: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DIequiv",
+    canonicalName = "DI differential invariance",
     displayName = Some("DI"),
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')",
@@ -496,10 +519,11 @@ object Ax extends Logging {
     recursor = "*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DIequiv: CoreAxiomInfo = coreAxiom("DI differential invariance")
 
-  @Axiom(
+  @Derivation
+  val DGa: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DGa",
+    canonicalName = "DG differential ghost",
     displayName = Some("DG"),
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P",
@@ -507,21 +531,23 @@ object Ax extends Logging {
     recursor = "0;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DGa: CoreAxiomInfo = coreAxiom("DG differential ghost")
 
   // @todo name: why inverse instead of universal?
-  @Axiom(
+  @Derivation
+  val DGpp: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DGpp",
+    canonicalName = "DG inverse differential ghost",
     displayName = Some("DG inverse differential ghost"),
     displayConclusion = "__[{x'=f(x)&Q}]P__↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DGpp: CoreAxiomInfo = coreAxiom("DG inverse differential ghost")
 
-  @Axiom(
+  @Derivation
+  val DGi: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DGi",
+    canonicalName = "DG inverse differential ghost implicational",
     displayName = Some("DG inverse differential ghost implicational"),
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P",
@@ -529,30 +555,33 @@ object Ax extends Logging {
     recursor = "0;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DGi: CoreAxiomInfo = coreAxiom("DG inverse differential ghost implicational")
 
-  @Axiom(
+  @Derivation
+  val DGC: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DGC",
+    canonicalName = "DG differential ghost constant",
     displayName = Some("DG"),
     displayConclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=g()&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DGC: CoreAxiomInfo = coreAxiom("DG differential ghost constant")
 
-  @Axiom(
+  @Derivation
+  val DGCa: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DGCa",
+    canonicalName = "DG differential ghost constant all",
     displayName = Some("DGa"),
     displayConclusion = "__[{x'=f(x)&Q}]P__↔∀y [{x'=f(x),y'=g()&Q}]P",
     key = "0",
     recursor = "0;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val DGCa: CoreAxiomInfo = coreAxiom("DG differential ghost constant all")
 
-  @Axiom(
+  @Derivation
+  val DS: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DS",
+    canonicalName = "DS& differential equation solution",
     displayName = Some("DS&"),
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
@@ -560,67 +589,88 @@ object Ax extends Logging {
     recursor = "0.1.1;0.1;*",
     unifier = Unifier.SurjectiveLinearPretend,
   )
-  val DS: CoreAxiomInfo = coreAxiom("DS& differential equation solution")
 
   /* @todo: , commute should be derivable from this + ghost */
-  @Axiom(name = "commaSort", displayName = Some(","), unifier = Unifier.Linear)
-  val commaSort: CoreAxiomInfo = coreAxiom(", sort")
+  @Derivation
+  val commaSort: CoreAxiomInfo = CoreAxiomInfo
+    .create(name = "commaSort", canonicalName = ", sort", displayName = Some(","), unifier = Unifier.Linear)
 
-  @Axiom(name = "commaCommute", displayName = Some(","), unifier = Unifier.Linear, key = "0", recursor = "")
-  val commaCommute: CoreAxiomInfo = coreAxiom(", commute")
+  @Derivation
+  val commaCommute: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "commaCommute",
+    canonicalName = ", commute",
+    displayName = Some(","),
+    unifier = Unifier.Linear,
+    key = "0",
+    recursor = "",
+  )
 
-  @Axiom(name = "DX", key = "0", recursor = "1", unifier = Unifier.SurjectiveLinear)
-  val DX: CoreAxiomInfo = coreAxiom("DX differential skip")
+  @Derivation
+  val DX: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "DX",
+    canonicalName = "DX differential skip",
+    key = "0",
+    recursor = "1",
+    unifier = Unifier.SurjectiveLinear,
+  )
 
-  @Axiom(
+  @Derivation
+  val Dcomp: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dcomp",
+    canonicalName = "D[;] differential self compose",
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P",
     unifier = Unifier.Linear,
   )
-  val Dcomp: CoreAxiomInfo = coreAxiom("D[;] differential self compose")
 
-  @Axiom(
+  @Derivation
+  val DIogreater: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DIogreater",
+    canonicalName = "DIo open differential invariance >",
     displayName = Some("DIo >"),
     displayConclusion = "(__[{x'=f(x)&Q}]g(x)>h(x)__↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0",
     recursor = "*",
     unifier = Unifier.Linear,
   )
-  val DIogreater: CoreAxiomInfo = coreAxiom("DIo open differential invariance >")
 
-  @Axiom(
+  @Derivation
+  val DMP: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DMP",
+    canonicalName = "DMP differential modus ponens",
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)",
     inputs = "R:formula",
-    key = "1.1", /*@todo, recursor = (0::Nil)::(Nil)::Nil*/
+    key = "1.1",
+    // TODO recursor = (0::Nil)::(Nil)::Nil
   )
-  val DMP: CoreAxiomInfo = coreAxiom("DMP differential modus ponens")
 
-  @Axiom(
+  @Derivation
+  val Uniq: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Uniq",
+    canonicalName = "Uniq uniqueness",
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__",
     key = "1",
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Uniq: CoreAxiomInfo = coreAxiom("Uniq uniqueness")
 
   /* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
-  @Axiom(
+  @Derivation
+  val Cont: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Cont",
+    canonicalName = "Cont continuous existence",
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__",
     key = "1",
     recursor = "*",
   )
-  val Cont: CoreAxiomInfo = coreAxiom("Cont continuous existence")
 
-  @Axiom(
+  @Derivation
+  val RIclosedgeq: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "RIclosedgeq",
+    canonicalName = "RI& closed real induction >=",
     displayName = Some("RI& >="),
     displayLevel = DisplayLevel.Browse,
     displayConclusion =
@@ -628,92 +678,101 @@ object Ax extends Logging {
     key = "0",
     recursor = "1.1.1;1.1.0;1;0",
   )
-  val RIclosedgeq: CoreAxiomInfo = coreAxiom("RI& closed real induction >=")
 
-  @Axiom(
+  @Derivation
+  val RI: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "RI",
+    canonicalName = "RI& real induction",
     displayName = Some("RI&"),
     displayConclusion =
       "__[x'=f(x)&Q]P__ ↔ ∀s [t'=1,x'=f(x)&Q&(P|t=s)](t=s -> P & (<t'=1,x'=f(x)&(Q|t=s)>t!=s -> <t'=1,x'=f(x)&(P|t=s)>t!=s))",
     key = "0",
     recursor = "*",
   )
-  val RI: CoreAxiomInfo = coreAxiom("RI& real induction")
 
-  @Axiom(
+  @Derivation
+  val IVT: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "IVT",
+    canonicalName = "IVT",
     displayConclusion =
       "<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z&p(t,x))→t<=z→<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t=z∧<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z∧p(t,x))",
     unifier = Unifier.Full,
   )
-  val IVT: CoreAxiomInfo = coreAxiom("IVT")
 
-  @Axiom(
+  @Derivation
+  val DCC: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DCC",
+    canonicalName = "DCC",
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)",
     key = "1",
     recursor = "0",
     unifier = Unifier.Linear,
   )
-  val DCC: CoreAxiomInfo = coreAxiom("DCC")
 
   /* DIFFERENTIAL AXIOMS */
 
-  @Axiom(
+  @Derivation
+  val Dconst: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dconst",
+    canonicalName = "c()' derive constant fn",
     displayName = Some("c()'"),
     displayConclusion = "__(c)'__=0",
     unifier = Unifier.Linear,
     key = "0",
     recursor = "",
   )
-  val Dconst: CoreAxiomInfo = coreAxiom("c()' derive constant fn")
 
-  @Axiom(
+  @Derivation
+  val DvarAxiom: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "DvarAxiom",
+    canonicalName = "x' derive var",
     displayName = Some("x'"),
     displayConclusion = "__(x)'__=x'",
     unifier = Unifier.Linear,
     key = "0",
     recursor = "",
   )
-  val DvarAxiom: CoreAxiomInfo = coreAxiom("x' derive var")
 
   // @todo derivable by CET
-  @Axiom(
+  @Derivation
+  val Dneg: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dneg",
+    canonicalName = "-' derive neg",
     displayName = Some("-'"),
     displayConclusion = "__(-f(x))'__=-(f(x))'",
     key = "0",
     recursor = "0",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dneg: CoreAxiomInfo = coreAxiom("-' derive neg")
 
-  @Axiom(
+  @Derivation
+  val Dplus: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dplus",
+    canonicalName = "+' derive sum",
     displayName = Some("+'"),
     displayConclusion = "__(f(x)+g(x))'__=f(x)'+g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dplus: CoreAxiomInfo = coreAxiom("+' derive sum")
 
   // @todo derivable by CET
-  @Axiom(
+  @Derivation
+  val Dminus: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dminus",
+    canonicalName = "-' derive minus",
     displayName = Some("-'"),
     displayConclusion = "__(f(x)-g(x))'__=f(x)'-g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dminus: CoreAxiomInfo = coreAxiom("-' derive minus")
 
-  @Axiom(
+  @Derivation
+  val Dtimes: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dtimes",
+    canonicalName = "*' derive product",
     displayName = Some("·'"),
     displayNameAscii = Some("*'"),
     displayConclusion = "__(f(x)·g(x))'__=(f(x))'·g(x)+f(x)·(g(x))'",
@@ -721,40 +780,44 @@ object Ax extends Logging {
     recursor = "0.0;1.1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dtimes: CoreAxiomInfo = coreAxiom("*' derive product")
 
-  @Axiom(
+  @Derivation
+  val Dquotient: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dquotient",
+    canonicalName = "/' derive quotient",
     displayName = Some("/'"),
     displayConclusion = "__(f(g)/g(x))'__=(g(x)·(f(x))-f(x)·(g(x))')/g(x)<sup>2</sup>",
     key = "0",
     recursor = "0.0.0;0.1.1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dquotient: CoreAxiomInfo = coreAxiom("/' derive quotient")
 
-  @Axiom(
+  @Derivation
+  val Dcompose: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dcompose",
+    canonicalName = "chain rule",
     displayName = Some("∘'"),
     displayNameAscii = Some("o'"),
     displayConclusion = "[y:=g(x)][y':=1](__(f(g(x)))'__=(f(y))'·(g(x))'",
     key = "1.1.0",
     recursor = "1.1;1;*",
   )
-  val Dcompose: CoreAxiomInfo = coreAxiom("chain rule")
 
-  @Axiom(
+  @Derivation
+  val Dpower: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dpower",
+    canonicalName = "^' derive power",
     displayName = Some("^'"),
     displayConclusion = "__(f(g)^n)'__=n·f(g)^(n-1)·(f(g))'←n≠0",
     unifier = Unifier.Linear,
     key = "1.0",
     recursor = "1",
   )
-  val Dpower: CoreAxiomInfo = coreAxiom("^' derive power")
 
-  @Axiom(
+  @Derivation
+  val Dgreaterequal: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dgreaterequal",
+    canonicalName = ">=' derive >=",
     displayNameAscii = Some(">='"),
     displayName = Some("≥'"),
     displayConclusion = "__(f(x)≥g(x))'__↔f(x)'≥g(x)'",
@@ -762,20 +825,22 @@ object Ax extends Logging {
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dgreaterequal: CoreAxiomInfo = coreAxiom(">=' derive >=")
 
-  @Axiom(
+  @Derivation
+  val Dgreater: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dgreater",
+    canonicalName = ">' derive >",
     displayName = Some(">'"),
     displayConclusion = "__(f(x)>g(x))'__↔f(x)'≥g(x)'",
     key = "0",
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dgreater: CoreAxiomInfo = coreAxiom(">' derive >")
 
-  @Axiom(
+  @Derivation
+  val Dand: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dand",
+    canonicalName = "&' derive and",
     displayName = Some("∧'"),
     displayNameAscii = Some("&'"),
     displayConclusion = "__(P&Q)'__↔P'∧Q'",
@@ -783,10 +848,11 @@ object Ax extends Logging {
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dand: CoreAxiomInfo = coreAxiom("&' derive and")
 
-  @Axiom(
+  @Derivation
+  val Dor: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dor",
+    canonicalName = "|' derive or",
     displayName = Some("∨'"),
     displayNameAscii = Some("|'"),
     displayConclusion = "__(P|Q)'__↔P'∧Q'",
@@ -794,10 +860,11 @@ object Ax extends Logging {
     recursor = "0;1",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dor: CoreAxiomInfo = coreAxiom("|' derive or")
 
-  @Axiom(
+  @Derivation
+  val Dforall: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dforall",
+    canonicalName = "forall' derive forall",
     displayName = Some("∀'"),
     displayNameAscii = Some("all'"),
     displayConclusion = "__(∀x p(x))'__↔∀x (p(x))'",
@@ -805,10 +872,11 @@ object Ax extends Logging {
     recursor = "0",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dforall: CoreAxiomInfo = coreAxiom("forall' derive forall")
 
-  @Axiom(
+  @Derivation
+  val Dexists: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Dexists",
+    canonicalName = "exists' derive exists",
     displayName = Some("∃'"),
     displayNameAscii = Some("exists'"),
     displayConclusion = "__(∃x p(x))'__↔∀x (p(x))'",
@@ -816,12 +884,13 @@ object Ax extends Logging {
     recursor = "0",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Dexists: CoreAxiomInfo = coreAxiom("exists' derive exists")
 
   /* HYBRID PROGRAMS / GAMES */
 
-  @Axiom(
+  @Derivation
+  val duald: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "duald",
+    canonicalName = "<d> dual",
     displayName = Some("&langle;<sup>d</sup>&rangle;"),
     displayNameAscii = Some("<d>"),
     displayLevel = DisplayLevel.All,
@@ -830,20 +899,22 @@ object Ax extends Logging {
     recursor = "0",
     unifier = Unifier.SurjectiveLinear,
   )
-  val duald: CoreAxiomInfo = coreAxiom("<d> dual")
 
-  @Axiom(
+  @Derivation
+  val VK: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "VK",
+    canonicalName = "VK vacuous",
     displayLevel = DisplayLevel.Browse,
     displayConclusion = "(p→__[a]p__)←[a]⊤",
     key = "1.1",
     recursor = "*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val VK: CoreAxiomInfo = coreAxiom("VK vacuous")
 
-  @Axiom(
+  @Derivation
+  val boxTrueAxiom: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "boxTrueAxiom",
+    canonicalName = "[]T system",
     displayName = Some("[]T axiom"),
     displayLevel = DisplayLevel.All,
     displayConclusion = "__[a]⊤__",
@@ -851,21 +922,23 @@ object Ax extends Logging {
     recursor = "",
     unifier = Unifier.SurjectiveLinear,
   )
-  val boxTrueAxiom: CoreAxiomInfo = coreAxiom("[]T system")
 
-  @Axiom(
+  @Derivation
+  val K: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "K",
+    canonicalName = "K modal modus ponens",
     displayLevel = DisplayLevel.All,
     displayConclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
     key = "1",
     recursor = "*",
   )
-  val K: CoreAxiomInfo = coreAxiom("K modal modus ponens")
 
   // @note the tactic I has a name and belleExpr, but there's no tactic that simply applies the I-> axiom,
   // because its sole purpose is to derive the stronger equivalence form
-  @Axiom(
+  @Derivation
+  val Iind: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "Iind",
+    canonicalName = "I induction",
     displayName = Some("I<sub>→</sub>"),
     displayNameAscii = Some("Iind"),
     displayLevel = DisplayLevel.Internal,
@@ -874,13 +947,14 @@ object Ax extends Logging {
     recursor = "1;*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val Iind: CoreAxiomInfo = coreAxiom("I induction")
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
 
   /** all dual */
-  @Axiom(
+  @Derivation
+  val alld: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "alld",
+    canonicalName = "all dual",
     displayName = Some("∀d"),
     displayNameAscii = Some("alld"),
     displayLevel = DisplayLevel.All,
@@ -889,10 +963,11 @@ object Ax extends Logging {
     recursor = "*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val alld: CoreAxiomInfo = coreAxiom("all dual")
 
-  @Axiom(
+  @Derivation
+  val allPd: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "allPd",
+    canonicalName = "all prime dual",
     displayName = Some("∀'d"),
     displayNameAscii = Some("allPd"),
     displayLevel = DisplayLevel.All,
@@ -901,11 +976,12 @@ object Ax extends Logging {
     recursor = "*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val allPd: CoreAxiomInfo = coreAxiom("all prime dual")
 
   /** all eliminate */
-  @Axiom(
+  @Derivation
+  val alle: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "alle",
+    canonicalName = "all eliminate",
     displayName = Some("∀e"),
     displayNameAscii = Some("alle"),
     displayConclusion = "__∀x P__ → P",
@@ -913,10 +989,11 @@ object Ax extends Logging {
     recursor = "*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val alle: CoreAxiomInfo = coreAxiom("all eliminate")
 
-  @Axiom(
+  @Derivation
+  val alleprime: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "alleprime",
+    canonicalName = "all eliminate prime",
     displayName = Some("∀e'"),
     displayNameAscii = Some("allep"),
     displayConclusion = "__∀x' P__ → P",
@@ -924,7 +1001,6 @@ object Ax extends Logging {
     recursor = "*",
     unifier = Unifier.SurjectiveLinear,
   )
-  val alleprime: CoreAxiomInfo = coreAxiom("all eliminate prime")
 
   // ***************
   // Derived Axioms
