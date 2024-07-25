@@ -242,8 +242,8 @@ object Ax extends Logging {
   /**
    * Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available
    */
-  def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr): DerivedAxiomInfo =
-    derivedAxiom(DerivedAxiomInfo(name), Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic)
+  def derivedFormula(info: DerivedAxiomInfo, derived: Formula, tactic: => BelleExpr): DerivedAxiomInfo =
+    derivedAxiom(info, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic)
 
   private val v = Variable("x_", None, Real)
   private val anonv = ProgramConst("a_", Except(v :: Nil))
@@ -1456,16 +1456,17 @@ object Ax extends Logging {
    * @note
    *   Core axiom derivable thanks to [:=]= and [:=]
    */
-  @Axiom(
-    name = "allInst",
-    displayName = Some("∀inst"),
-    displayNameAscii = Some("allInst"),
-    displayConclusion = "__∀x p(x)__ → p(f())",
-    key = "0",
-    recursor = "*",
-  )
+  @Derivation
   lazy val allInst: DerivedAxiomInfo = derivedFormula(
-    "all instantiate",
+    DerivedAxiomInfo.create(
+      name = "allInst",
+      canonicalName = "all instantiate",
+      displayName = Some("∀inst"),
+      displayNameAscii = Some("allInst"),
+      displayConclusion = "__∀x p(x)__ → p(f())",
+      key = "0",
+      recursor = "*",
+    ),
     "(\\forall x_ p(x_)) -> p(f())".asFormula,
     cutR("(\\forall x_ (x_=f()->p(x_))) -> p(f())".asFormula)(1) < (
       useAt(assignbeq, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
@@ -1484,16 +1485,17 @@ object Ax extends Logging {
     //   \forall x p(x) -> p(f)
   )
 
-  @Axiom(
-    name = "allInstPrime",
-    displayName = Some("∀inst'"),
-    displayNameAscii = Some("allInstPrime"),
-    displayConclusion = "__∀x' p(x')__ → p(f())",
-    key = "0",
-    recursor = "*",
-  )
+  @Derivation
   lazy val allInstPrime: DerivedAxiomInfo = derivedFormula(
-    "all instantiate prime",
+    DerivedAxiomInfo.create(
+      name = "allInstPrime",
+      canonicalName = "all instantiate prime",
+      displayName = Some("∀inst'"),
+      displayNameAscii = Some("allInstPrime"),
+      displayConclusion = "__∀x' p(x')__ → p(f())",
+      key = "0",
+      recursor = "*",
+    ),
     "(\\forall x_' p(x_')) -> p(f())".asFormula,
     cutR("(\\forall x_' (x_'=f()->p(x_'))) -> p(f())".asFormula)(1) < (
       useAt(Dassignbeq, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
@@ -1813,14 +1815,32 @@ object Ax extends Logging {
   )
 
   /** Convert <-> to two implications: `(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())` */
-  @Axiom(name = "equivExpand", displayName = Some("↔2→←"), displayNameAscii = Some("<->2-><-"), unifier = Unifier.Full)
-  lazy val equivExpand: DerivedAxiomInfo =
-    derivedFormula("<-> expand", "(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())".asFormula, prop)
+  @Derivation
+  lazy val equivExpand: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "equivExpand",
+      canonicalName = "<-> expand",
+      displayName = Some("↔2→←"),
+      displayNameAscii = Some("<->2-><-"),
+      unifier = Unifier.Full,
+    ),
+    "(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())".asFormula,
+    prop,
+  )
 
   /** Convert <-> to two conjunctions: `(p_() <-> q_()) <-> (p_()&q_())|(!p_()&!q_())` */
-  @Axiom(name = "equivExpandAnd", displayName = Some("↔2∧"), displayNameAscii = Some("<->2&"), unifier = Unifier.Full)
-  lazy val equivExpandAnd: DerivedAxiomInfo =
-    derivedFormula("<-> expand and", "(p_() <-> q_()) <-> (p_()&q_())|(!p_()&!q_())".asFormula, prop)
+  @Derivation
+  lazy val equivExpandAnd: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "equivExpandAnd",
+      canonicalName = "<-> expand and",
+      displayName = Some("↔2∧"),
+      displayNameAscii = Some("<->2&"),
+      unifier = Unifier.Full,
+    ),
+    "(p_() <-> q_()) <-> (p_()&q_())|(!p_()&!q_())".asFormula,
+    prop,
+  )
 
   /**
    * {{{
@@ -1917,9 +1937,16 @@ object Ax extends Logging {
    *
    * @Derived
    */
-  @Axiom(name = "constCongruence", displayName = Some("CCE"), key = "1", recursor = "*", unifier = Unifier.Full)
+  @Derivation
   lazy val constCongruence: DerivedAxiomInfo = derivedFormula(
-    "const congruence",
+    DerivedAxiomInfo.create(
+      name = "constCongruence",
+      canonicalName = "const congruence",
+      displayName = Some("CCE"),
+      key = "1",
+      recursor = "*",
+      unifier = Unifier.Full,
+    ),
     "s() = t() -> ctxT_(s()) = ctxT_(t())".asFormula,
     allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
       by(proveBy(
@@ -1939,9 +1966,16 @@ object Ax extends Logging {
    *
    * @Derived
    */
-  @Axiom(name = "constFormulaCongruence", displayName = Some("CCQ"), key = "1", recursor = "*", unifier = Unifier.Full)
+  @Derivation
   lazy val constFormulaCongruence: DerivedAxiomInfo = derivedFormula(
-    "const formula congruence",
+    DerivedAxiomInfo.create(
+      name = "constFormulaCongruence",
+      canonicalName = "const formula congruence",
+      displayName = Some("CCQ"),
+      key = "1",
+      recursor = "*",
+      unifier = Unifier.Full,
+    ),
     "s() = t() -> (ctxF_(s()) <-> ctxF_(t()))".asFormula,
     allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
       by(proveBy(
@@ -2760,16 +2794,17 @@ object Ax extends Logging {
    * @see
    *   [[assignDual]]
    */
-  @Axiom(
-    name = "assignDual2",
-    displayName = Some("⟨:=⟩D"),
-    displayNameAscii = Some("<:=>D"),
-    displayConclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P",
-    key = "0",
-    recursor = "*",
-  )
+  @Derivation
   lazy val assignDual2: DerivedAxiomInfo = derivedFormula(
-    ":= assign dual 2",
+    DerivedAxiomInfo.create(
+      name = "assignDual2",
+      canonicalName = ":= assign dual 2",
+      displayName = Some("⟨:=⟩D"),
+      displayNameAscii = Some("<:=>D"),
+      displayConclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P",
+      key = "0",
+      recursor = "*",
+    ),
     "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
     useAt(selfassignb, PosInExpr(1 :: Nil))(1, 0 :: 1 :: Nil) &
       useAt(assigndAxiom)(1, 0 :: Nil) &
@@ -2780,9 +2815,9 @@ object Ax extends Logging {
     //      byUS(equivReflexiveAxiom)
   )
 
-  @Axiom(name = "DassignDual2", displayName = Some("':=D"))
+  @Derivation
   lazy val DassignDual2: DerivedAxiomInfo = derivedFormula(
-    "':= assign dual 2",
+    DerivedAxiomInfo.create(name = "DassignDual2", canonicalName = "':= assign dual 2", displayName = Some("':=D")),
     "<x_':=f();>p(||) <-> [x_':=f();]p(||)".asFormula,
     useAt(Dselfassignb, PosInExpr(1 :: Nil))(1, 0 :: 1 :: Nil) &
       useAt(DassigndAxiom)(1, 0 :: Nil) &
@@ -2853,9 +2888,14 @@ object Ax extends Logging {
    * @todo
    *   does not derive yet
    */
-  @Axiom(name = "assignbequalityexists", displayName = Some("[:=]"), displayNameAscii = Some("[:=] assign exists"))
+  @Derivation
   lazy val assignbequalityexists: DerivedAxiomInfo = derivedFormula(
-    "[:=] assign equality exists",
+    DerivedAxiomInfo.create(
+      name = "assignbequalityexists",
+      canonicalName = "[:=] assign equality exists",
+      displayName = Some("[:=]"),
+      displayNameAscii = Some("[:=] assign exists"),
+    ),
     "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
     useAt(assignDual2, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
       byUS(assigndEqualityAxiom),
@@ -2865,9 +2905,14 @@ object Ax extends Logging {
     //        useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
   )
 
-  @Axiom(name = "Dassignbequalityexists", displayName = Some("[':=]"), displayNameAscii = Some("[':=] assign exists"))
+  @Derivation
   lazy val Dassignbequalityexists: DerivedAxiomInfo = derivedFormula(
-    "[':=] assign equality exists",
+    DerivedAxiomInfo.create(
+      name = "Dassignbequalityexists",
+      canonicalName = "[':=] assign equality exists",
+      displayName = Some("[':=]"),
+      displayNameAscii = Some("[':=] assign exists"),
+    ),
     "[x_':=f();]p(||) <-> \\exists x_' (x_'=f() & p(||))".asFormula,
     useAt(DassignDual2, PosInExpr(1 :: Nil))(1, 0 :: Nil) & byUS(DassigndEqualityAxiom),
   )
@@ -3872,14 +3917,15 @@ object Ax extends Logging {
    * @see
    *   [[forallThenExists]]
    */
-  @Axiom(
-    name = "allThenExists",
-    displayName = Some("∀→∃"),
-    displayNameAscii = Some("allThenExists"),
-    displayConclusion = "∀x P → ∃x P",
-  )
+  @Derivation
   lazy val allThenExists: DerivedAxiomInfo = derivedFormula(
-    "all then exists",
+    DerivedAxiomInfo.create(
+      name = "allThenExists",
+      canonicalName = "all then exists",
+      displayName = Some("∀→∃"),
+      displayNameAscii = Some("allThenExists"),
+      displayConclusion = "∀x P → ∃x P",
+    ),
     "(\\forall x_ p_(||)) -> (\\exists x_ p_(||))".asFormula,
     useAt(existse, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
       useAt(alle, PosInExpr(0 :: Nil))(1, 0 :: Nil) &
@@ -6221,9 +6267,9 @@ object Ax extends Logging {
   )
 
   /** Dual version of initial-value theorem. */
-  @Axiom(name = "dualIVT", key = "1", unifier = Unifier.Linear)
+  @Derivation
   lazy val dualIVT: DerivedAxiomInfo = derivedFormula(
-    "dualIVT",
+    DerivedAxiomInfo.create(name = "dualIVT", canonicalName = "dualIVT", key = "1", unifier = Unifier.Linear),
     "[{c&q(||)}](f(||)>=z()->p(||)) <- (f(||)<=z() & [{c&q(||)}](f(||)=z()->[{c&q(||)}](f(||)>=z()->p(||))))".asFormula,
     implyR(1) & andL(-1) & useAt(box, PosInExpr(1 :: Nil))(-2) & useAt(box, PosInExpr(1 :: Nil))(1) &
       notL(-2) & notR(1) & useAt(notImply, PosInExpr(0 :: Nil))(-2, 1 :: Nil) &
@@ -6241,12 +6287,16 @@ object Ax extends Logging {
       ),
   )
 
-  @Axiom(name = "oneGeZero")
-  lazy val oneGeZero: DerivedAxiomInfo = derivedFormula("oneGeZero", "1>=0".asFormula, QE & done)
+  @Derivation
+  lazy val oneGeZero: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "oneGeZero", canonicalName = "oneGeZero"),
+    "1>=0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "timeCond")
+  @Derivation
   lazy val timeCond: DerivedAxiomInfo = derivedFormula(
-    "timeCond",
+    DerivedAxiomInfo.create(name = "timeCond", canonicalName = "timeCond"),
     "[{x_'=1, c{|x_|} & q(||)}](!x_ <= h() -> [{x_'=1, c{|x_|} & q(||)}](!x_ <= h()))".asFormula,
     generalize(True)(1) & Idioms.<(
       useAt(boxTrueAxiom)(1),
@@ -6262,9 +6312,9 @@ object Ax extends Logging {
       ),
   )
 
-  @Axiom(name = "timeStep", key = "1", unifier = Unifier.Linear)
+  @Derivation
   lazy val timeStep: DerivedAxiomInfo = derivedFormula(
-    "timeStep",
+    DerivedAxiomInfo.create(name = "timeStep", canonicalName = "timeStep", key = "1", unifier = Unifier.Linear),
     "[{x_'=1,c{|x_|}&q(||)}]p(||) <- (x_ <= h() & [{x_'=1,c{|x_|}&q(||)&x_<=h()}](p(||) & (x_=h()->[{x_'=1,c{|x_|}&q(||)&x_>=h()}]p(||))))"
       .asFormula,
     implyR(1) & andL(-1) &
@@ -6526,16 +6576,17 @@ object Ax extends Logging {
    * End.
    * }}}
    */
-  @Axiom(
-    name = "UniqIff",
-    displayName = Some("Uniq"),
-    displayConclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P ↔ __<x'=f(x)&Q∧R>P__",
-    key = "1",
-    recursor = "0;1",
-    unifier = Unifier.SurjectiveLinear,
-  )
+  @Derivation
   lazy val UniqIff: DerivedAxiomInfo = derivedFormula(
-    "Uniq uniqueness iff",
+    DerivedAxiomInfo.create(
+      name = "UniqIff",
+      canonicalName = "Uniq uniqueness iff",
+      displayName = Some("Uniq"),
+      displayConclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P ↔ __<x'=f(x)&Q∧R>P__",
+      key = "1",
+      recursor = "0;1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
     "<{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c&q(||) & r(||)}>p(||)".asFormula,
     equivR(1) < (
       implyRi & byUS(Uniq),
@@ -8823,115 +8874,188 @@ object Ax extends Logging {
 
   /** Polynomial Arithmetic [[org.keymaerax.btactics.PolynomialArithV2]] */
 
-  @Axiom(name = "eqNormalize", key = "0", recursor = "")
-  lazy val eqNormalize: DerivedAxiomInfo =
-    derivedFormula("eqNormalize", "s_() = t_() <-> s_() - t_() = 0".asFormula, QE)
+  @Derivation
+  lazy val eqNormalize: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "eqNormalize", canonicalName = "eqNormalize", key = "0", recursor = ""),
+    "s_() = t_() <-> s_() - t_() = 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "neNormalize", key = "0", recursor = "")
-  lazy val neNormalize: DerivedAxiomInfo =
-    derivedFormula("neNormalize", "s_() != t_() <-> s_() - t_() != 0".asFormula, QE)
+  @Derivation
+  lazy val neNormalize: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "neNormalize", canonicalName = "neNormalize", key = "0", recursor = ""),
+    "s_() != t_() <-> s_() - t_() != 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "gtNormalize", key = "0", recursor = "")
-  lazy val gtNormalize: DerivedAxiomInfo = derivedFormula("gtNormalize", "f_()>g_() <-> f_()-g_()>0".asFormula, QE)
+  @Derivation
+  lazy val gtNormalize: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "gtNormalize", canonicalName = "gtNormalize", key = "0", recursor = ""),
+    "f_()>g_() <-> f_()-g_()>0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "geNormalize", key = "0", recursor = "")
-  lazy val geNormalize: DerivedAxiomInfo = derivedFormula("geNormalize", "f_()>=g_() <-> f_()-g_()>=0".asFormula, QE)
+  @Derivation
+  lazy val geNormalize: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "geNormalize", canonicalName = "geNormalize", key = "0", recursor = ""),
+    "f_()>=g_() <-> f_()-g_()>=0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divNeEq")
-  lazy val divNeEq: DerivedAxiomInfo = derivedFormula("divNeEq", "G_()!=0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  @Derivation
+  lazy val divNeEq: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divNeEq", canonicalName = "divNeEq"),
+    "G_()!=0 -> F_()/G_() = 0 -> F_() = 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divNeNe")
-  lazy val divNeNe: DerivedAxiomInfo = derivedFormula("divNeNe", "G_()!=0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  @Derivation
+  lazy val divNeNe: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divNeNe", canonicalName = "divNeNe"),
+    "G_()!=0 -> F_()/G_() != 0 -> F_() != 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divGtEq")
-  lazy val divGtEq: DerivedAxiomInfo = derivedFormula("divGtEq", "G_()>0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  @Derivation
+  lazy val divGtEq: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divGtEq", canonicalName = "divGtEq"),
+    "G_()>0 -> F_()/G_() = 0 -> F_() = 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divLtEq")
-  lazy val divLtEq: DerivedAxiomInfo = derivedFormula("divLtEq", "G_()<0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  @Derivation
+  lazy val divLtEq: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divLtEq", canonicalName = "divLtEq"),
+    "G_()<0 -> F_()/G_() = 0 -> F_() = 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divGtNe")
-  lazy val divGtNe: DerivedAxiomInfo = derivedFormula("divGtNe", "G_()>0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  @Derivation
+  lazy val divGtNe: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divGtNe", canonicalName = "divGtNe"),
+    "G_()>0 -> F_()/G_() != 0 -> F_() != 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divLtNe")
-  lazy val divLtNe: DerivedAxiomInfo = derivedFormula("divLtNe", "G_()<0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  @Derivation
+  lazy val divLtNe: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divLtNe", canonicalName = "divLtNe"),
+    "G_()<0 -> F_()/G_() != 0 -> F_() != 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divGtGt")
-  lazy val divGtGt: DerivedAxiomInfo = derivedFormula("divGtGt", "G_()>0 -> F_()/G_() > 0 -> F_() > 0".asFormula, QE)
+  @Derivation
+  lazy val divGtGt: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divGtGt", canonicalName = "divGtGt"),
+    "G_()>0 -> F_()/G_() > 0 -> F_() > 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divLtGt")
-  lazy val divLtGt: DerivedAxiomInfo = derivedFormula("divLtGt", "G_()<0 -> F_()/G_() > 0 -> F_() < 0".asFormula, QE)
+  @Derivation
+  lazy val divLtGt: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divLtGt", canonicalName = "divLtGt"),
+    "G_()<0 -> F_()/G_() > 0 -> F_() < 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divGtGe")
-  lazy val divGtGe: DerivedAxiomInfo = derivedFormula("divGtGe", "G_()>0 -> F_()/G_() >= 0 -> F_() >= 0".asFormula, QE)
+  @Derivation
+  lazy val divGtGe: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divGtGe", canonicalName = "divGtGe"),
+    "G_()>0 -> F_()/G_() >= 0 -> F_() >= 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divLtGe")
-  lazy val divLtGe: DerivedAxiomInfo = derivedFormula("divLtGe", "G_()<0 -> F_()/G_() >= 0 -> F_() <= 0".asFormula, QE)
+  @Derivation
+  lazy val divLtGe: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divLtGe", canonicalName = "divLtGe"),
+    "G_()<0 -> F_()/G_() >= 0 -> F_() <= 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divGtLt")
-  lazy val divGtLt: DerivedAxiomInfo = derivedFormula("divGtLt", "G_()>0 -> F_()/G_() < 0 -> F_() < 0".asFormula, QE)
+  @Derivation
+  lazy val divGtLt: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divGtLt", canonicalName = "divGtLt"),
+    "G_()>0 -> F_()/G_() < 0 -> F_() < 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divLtLt")
-  lazy val divLtLt: DerivedAxiomInfo = derivedFormula("divLtLt", "G_()<0 -> F_()/G_() < 0 -> F_() > 0".asFormula, QE)
+  @Derivation
+  lazy val divLtLt: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divLtLt", canonicalName = "divLtLt"),
+    "G_()<0 -> F_()/G_() < 0 -> F_() > 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divGtLe")
-  lazy val divGtLe: DerivedAxiomInfo = derivedFormula("divGtLe", "G_()>0 -> F_()/G_() <= 0 -> F_() <= 0".asFormula, QE)
+  @Derivation
+  lazy val divGtLe: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divGtLe", canonicalName = "divGtLe"),
+    "G_()>0 -> F_()/G_() <= 0 -> F_() <= 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "divLtLe")
-  lazy val divLtLe: DerivedAxiomInfo = derivedFormula("divLtLe", "G_()<0 -> F_()/G_() <= 0 -> F_() >= 0".asFormula, QE)
+  @Derivation
+  lazy val divLtLe: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divLtLe", canonicalName = "divLtLe"),
+    "G_()<0 -> F_()/G_() <= 0 -> F_() >= 0".asFormula,
+    QE,
+  )
 
-  @Axiom(name = "coefficientTimesPrv")
+  @Derivation
   lazy val coefficientTimesPrv: DerivedAxiomInfo = derivedFormula(
-    "coefficientTimesPrv",
+    DerivedAxiomInfo.create(name = "coefficientTimesPrv", canonicalName = "coefficientTimesPrv"),
     ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rn_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
       "l_()*r_() = pn_()/pd_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "coefficientPlusPrv")
+  @Derivation
   lazy val coefficientPlusPrv: DerivedAxiomInfo = derivedFormula(
-    "coefficientPlusPrv",
+    DerivedAxiomInfo.create(name = "coefficientPlusPrv", canonicalName = "coefficientPlusPrv"),
     ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rd_() + rn_()*ld_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
       "l_()+r_() = pn_()/pd_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "coefficientNegPrv")
+  @Derivation
   lazy val coefficientNegPrv: DerivedAxiomInfo = derivedFormula(
-    "coefficientNegPrv",
+    DerivedAxiomInfo.create(name = "coefficientNegPrv", canonicalName = "coefficientNegPrv"),
     ("(x_() = xn_()/xd_() & ((-xn_()=nxn_() & xd_() != 0)<-> true)) ->" +
       "-x_() = nxn_()/xd_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "coefficientBigDecimalPrv")
+  @Derivation
   lazy val coefficientBigDecimalPrv: DerivedAxiomInfo = derivedFormula(
-    "coefficientBigDecimalPrv",
+    DerivedAxiomInfo.create(name = "coefficientBigDecimalPrv", canonicalName = "coefficientBigDecimalPrv"),
     ("(x_() = xn_()/xd_() & ((xn_()/xd_()=bd_() & xd_() != 0)<-> true)) ->" +
       "x_() = bd_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "plusTimes")
+  @Derivation
   lazy val plusTimes: DerivedAxiomInfo = derivedFormula(
-    "plusTimes",
+    DerivedAxiomInfo.create(name = "plusTimes", canonicalName = "plusTimes"),
     "l_() = a_()*b_() & r_() = c_()*b_() & a_() + c_() = d_() -> l_() + r_() = d_()*b_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "negTimes")
-  lazy val negTimes: DerivedAxiomInfo =
-    derivedFormula("negTimes", "l_() = a_()*b_() & -a_() = c_() -> -l_() = c_()*b_()".asFormula, QE & done)
+  @Derivation
+  lazy val negTimes: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "negTimes", canonicalName = "negTimes"),
+    "l_() = a_()*b_() & -a_() = c_() -> -l_() = c_()*b_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "powerLemma")
+  @Derivation
   lazy val powerLemma: DerivedAxiomInfo = derivedFormula(
-    "powerLemma",
+    DerivedAxiomInfo.create(name = "powerLemma", canonicalName = "powerLemma"),
     "(i_() >= 0 & j_() >= 0 & i_() + j_() = k_()) -> x_()^i_() * x_()^j_() = x_() ^ k_()".asFormula,
     prop & eqR2L(-3)(1) & cohideR(1) & QE & done,
   )
 
-  @Axiom(name = "monomialTimesLemma")
+  @Derivation
   lazy val monomialTimesLemma: DerivedAxiomInfo = derivedFormula(
-    "monomialTimesLemma",
+    DerivedAxiomInfo.create(name = "monomialTimesLemma", canonicalName = "monomialTimesLemma"),
     ("(l_() = cl_() * xls_() &" +
       " r_() = cr_() * xrs_() &" +
       " cl_() * cr_() = c_() &" +
@@ -8940,9 +9064,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "timesPowersBoth")
+  @Derivation
   lazy val timesPowersBoth: DerivedAxiomInfo = derivedFormula(
-    "timesPowersBoth",
+    DerivedAxiomInfo.create(name = "timesPowersBoth", canonicalName = "timesPowersBoth"),
     ("(((i_() >= 0 & j_() >= 0 & i_() + j_() = k_())<->true) & xs_() * ys_() = xys_())" +
       "->" +
       "(xs_() * x_()^i_()) * (ys_() * x_()^j_()) = xys_() * x_()^k_()").asFormula,
@@ -8952,133 +9076,146 @@ object Ax extends Logging {
     ),
   )
 
-  @Axiom(name = "timesPowersLeft")
+  @Derivation
   lazy val timesPowersLeft: DerivedAxiomInfo = derivedFormula(
-    "timesPowersLeft",
+    DerivedAxiomInfo.create(name = "timesPowersLeft", canonicalName = "timesPowersLeft"),
     "(xs_() * ys_() = xys_()) -> xs_() * x_() * (ys_()) = xys_() * x_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "timesPowersRight")
+  @Derivation
   lazy val timesPowersRight: DerivedAxiomInfo = derivedFormula(
-    "timesPowersRight",
+    DerivedAxiomInfo.create(name = "timesPowersRight", canonicalName = "timesPowersRight"),
     "(xs_() * ys_() = xys_()) -> xs_() * (ys_()*y_()) = xys_() * y_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "timesPowers1Right")
-  lazy val timesPowers1Right: DerivedAxiomInfo =
-    derivedFormula("timesPowers1Right", "xs_() * 1 = xs_()".asFormula, QE & done)
+  @Derivation
+  lazy val timesPowers1Right: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "timesPowers1Right", canonicalName = "timesPowers1Right"),
+    "xs_() * 1 = xs_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "timesPowers1Left")
-  lazy val timesPowers1Left: DerivedAxiomInfo =
-    derivedFormula("timesPowers1Left", "1 * ys_() = ys_()".asFormula, QE & done)
+  @Derivation
+  lazy val timesPowers1Left: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "timesPowers1Left", canonicalName = "timesPowers1Left"),
+    "1 * ys_() = ys_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "zez")
-  lazy val zez: DerivedAxiomInfo = derivedFormula("zez", "0 = 0".asFormula, byUS(Ax.equalReflexive))
+  @Derivation
+  lazy val zez: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "zez", canonicalName = "zez"),
+    "0 = 0".asFormula,
+    byUS(Ax.equalReflexive),
+  )
 
-  @Axiom(name = "emptySprout")
-  lazy val emptySprout: DerivedAxiomInfo =
-    derivedFormula("emptySprout", "s_() = 0 & t_() = u_() -> s_() + t_() = 0 + u_() + 0".asFormula, QE & done)
+  @Derivation
+  lazy val emptySprout: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "emptySprout", canonicalName = "emptySprout"),
+    "s_() = 0 & t_() = u_() -> s_() + t_() = 0 + u_() + 0".asFormula,
+    QE & done,
+  )
 
   // @todo: should these be constructed more systematically?! e.g., define common subformulas only once. would make the code more robust...
-  @Axiom(name = "branch2Left", displayName = Some("branch2Left "))
+  @Derivation
   lazy val branch2Left: DerivedAxiomInfo = derivedFormula(
-    "branch2Left ",
+    DerivedAxiomInfo.create(name = "branch2Left", canonicalName = "branch2Left ", displayName = Some("branch2Left ")),
     "t_() = l_() + v_() + r_() & l_() + x_() = lx_() -> t_() + x_() = lx_() + v_()  + r_() ".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch2Value")
+  @Derivation
   lazy val branch2Value: DerivedAxiomInfo = derivedFormula(
-    "branch2Value",
+    DerivedAxiomInfo.create(name = "branch2Value", canonicalName = "branch2Value"),
     "t_() = l_() + v_() + r_() & v_() + x_() = vx_() -> t_() + x_() = l_()  + vx_() + r_() ".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch2Right")
+  @Derivation
   lazy val branch2Right: DerivedAxiomInfo = derivedFormula(
-    "branch2Right",
+    DerivedAxiomInfo.create(name = "branch2Right", canonicalName = "branch2Right"),
     "t_() = l_() + v_() + r_() & r_() + x_() = rx_() -> t_() + x_() = l_()  + v_()  + rx_()".asFormula,
     QE & done,
   )
 
   /** @note for the Left case, could actually just use [[branch2Left]] */
-  @Axiom(name = "branch2GrowLeft")
+  @Derivation
   lazy val branch2GrowLeft: DerivedAxiomInfo = derivedFormula(
-    "branch2GrowLeft",
+    DerivedAxiomInfo.create(name = "branch2GrowLeft", canonicalName = "branch2GrowLeft"),
     "t_() = l_() + v_() + r_() & l_() + x_() = l1_() + lv_() + l2_() -> t_() + x_() = l1_() + lv_() + l2_() + v_() + r_()"
       .asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch2GrowRight")
+  @Derivation
   lazy val branch2GrowRight: DerivedAxiomInfo = derivedFormula(
-    "branch2GrowRight",
+    DerivedAxiomInfo.create(name = "branch2GrowRight", canonicalName = "branch2GrowRight"),
     "t_() = l_() + v_() + r_() & r_() + x_() = r1_() + rv_() + r2_() -> t_() + x_() = l_()                  + v_() + r1_() + rv_() + r2_()"
       .asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3Left")
+  @Derivation
   lazy val branch3Left: DerivedAxiomInfo = derivedFormula(
-    "branch3Left",
+    DerivedAxiomInfo.create(name = "branch3Left", canonicalName = "branch3Left"),
     "t_() = l_() + v_() + m_() + w_() + r_() & l_() + x_() = lx_() -> t_() + x_() = lx_() + v_()  + m_()  + w_()  + r_() "
       .asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3Value1")
+  @Derivation
   lazy val branch3Value1: DerivedAxiomInfo = derivedFormula(
-    "branch3Value1",
+    DerivedAxiomInfo.create(name = "branch3Value1", canonicalName = "branch3Value1"),
     "t_() = l_() + v_() + m_() + w_() + r_() & v_() + x_() = vx_() -> t_() + x_() = l_()  + vx_() + m_()  + w_()  + r_() "
       .asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3Mid")
+  @Derivation
   lazy val branch3Mid: DerivedAxiomInfo = derivedFormula(
-    "branch3Mid",
+    DerivedAxiomInfo.create(name = "branch3Mid", canonicalName = "branch3Mid"),
     "t_() = l_() + v_() + m_() + w_() + r_() & m_() + x_() = mx_() -> t_() + x_() = l_()  + v_()  + mx_() + w_()  + r_() "
       .asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3Value2")
+  @Derivation
   lazy val branch3Value2: DerivedAxiomInfo = derivedFormula(
-    "branch3Value2",
+    DerivedAxiomInfo.create(name = "branch3Value2", canonicalName = "branch3Value2"),
     "t_() = l_() + v_() + m_() + w_() + r_() & w_() + x_() = wx_() -> t_() + x_() = l_()  + v_()  + m_()  + wx_() + r_() "
       .asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3Right")
+  @Derivation
   lazy val branch3Right: DerivedAxiomInfo = derivedFormula(
-    "branch3Right",
+    DerivedAxiomInfo.create(name = "branch3Right", canonicalName = "branch3Right"),
     "t_() = l_() + v_() + m_() + w_() + r_() & r_() + x_() = rx_() -> t_() + x_() = l_()  + v_()  + m_()  + w_()  + rx_()"
       .asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3GrowLeft")
+  @Derivation
   lazy val branch3GrowLeft: DerivedAxiomInfo = derivedFormula(
-    "branch3GrowLeft",
+    DerivedAxiomInfo.create(name = "branch3GrowLeft", canonicalName = "branch3GrowLeft"),
     ("t_() = l_() + v_() + m_() + w_() + r_() & l_() + x_() = l1_() + lv_() + l2_() ->" +
       "t_() + x_() = (l1_() + lv_() + l2_()) + v_()  + (m_()  + w_()  + r_())").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3GrowMid")
+  @Derivation
   lazy val branch3GrowMid: DerivedAxiomInfo = derivedFormula(
-    "branch3GrowMid",
+    DerivedAxiomInfo.create(name = "branch3GrowMid", canonicalName = "branch3GrowMid"),
     ("t_() = l_() + v_() + m_() + w_() + r_() & m_() + x_() = m1_() + mv_() + m2_() ->" +
       "t_() + x_() = (l_() + v_() + m1_()) + mv_()  + (m2_()  + w_()  + r_())").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "branch3GrowRight")
+  @Derivation
   lazy val branch3GrowRight: DerivedAxiomInfo = derivedFormula(
-    "branch3GrowRight",
+    DerivedAxiomInfo.create(name = "branch3GrowRight", canonicalName = "branch3GrowRight"),
     ("t_() = l_() + v_() + m_() + w_() + r_() & r_() + x_() = r1_() + rv_() + r2_() ->" +
       "t_() + x_() = (l_() + v_() + m_()) + w_()  + (r1_()  + rv_()  + r2_())").asFormula,
     QE & done,
@@ -9086,21 +9223,24 @@ object Ax extends Logging {
 
   // Lemmas for Add
 
-  @Axiom(name = "plusEmpty")
-  lazy val plusEmpty: DerivedAxiomInfo =
-    derivedFormula("plusEmpty", "t_() = s_() & u_() = 0 -> t_() + u_() = s_()".asFormula, QE & done)
+  @Derivation
+  lazy val plusEmpty: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "plusEmpty", canonicalName = "plusEmpty"),
+    "t_() = s_() & u_() = 0 -> t_() + u_() = s_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "plusBranch2")
+  @Derivation
   lazy val plusBranch2: DerivedAxiomInfo = derivedFormula(
-    "plusBranch2",
+    DerivedAxiomInfo.create(name = "plusBranch2", canonicalName = "plusBranch2"),
     ("(s_() = l_() + v_() + r_() & t_() + l_() + v_() + r_() = sum_()) ->" +
       "t_() + s_() = sum_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "plusBranch3")
+  @Derivation
   lazy val plusBranch3: DerivedAxiomInfo = derivedFormula(
-    "plusBranch3",
+    DerivedAxiomInfo.create(name = "plusBranch3", canonicalName = "plusBranch3"),
     ("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() + l_() + v1_() + m_() + v2_() + r_() = sum_()) ->" +
       "t_() + s_() = sum_()").asFormula,
     QE & done,
@@ -9108,21 +9248,24 @@ object Ax extends Logging {
 
   // Lemmas for Minus
 
-  @Axiom(name = "minusEmpty")
-  lazy val minusEmpty: DerivedAxiomInfo =
-    derivedFormula("minusEmpty", "t_() = s_() & u_() = 0 -> t_() - u_() = s_()".asFormula, QE & done)
+  @Derivation
+  lazy val minusEmpty: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "minusEmpty", canonicalName = "minusEmpty"),
+    "t_() = s_() & u_() = 0 -> t_() - u_() = s_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "minusBranch2")
+  @Derivation
   lazy val minusBranch2: DerivedAxiomInfo = derivedFormula(
-    "minusBranch2",
+    DerivedAxiomInfo.create(name = "minusBranch2", canonicalName = "minusBranch2"),
     ("(s_() = l_() + v_() + r_() & t_() - l_() - v_() - r_() = sum_()) ->" +
       "t_() - s_() = sum_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "minusBranch3")
+  @Derivation
   lazy val minusBranch3: DerivedAxiomInfo = derivedFormula(
-    "minusBranch3",
+    DerivedAxiomInfo.create(name = "minusBranch3", canonicalName = "minusBranch3"),
     ("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() - l_() - v1_() - m_() - v2_() - r_() = sum_()) ->" +
       "t_() - s_() = sum_()").asFormula,
     QE & done,
@@ -9130,19 +9273,25 @@ object Ax extends Logging {
 
   // Lemmas for Minus Monomial
 
-  @Axiom(name = "plusMinus")
-  lazy val plusMinus: DerivedAxiomInfo =
-    derivedFormula("plusMinus", "t_() + (-x_()) = s_() -> t_() - x_() = s_()".asFormula, QE & done)
+  @Derivation
+  lazy val plusMinus: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "plusMinus", canonicalName = "plusMinus"),
+    "t_() + (-x_()) = s_() -> t_() - x_() = s_()".asFormula,
+    QE & done,
+  )
 
   // Lemmas for Times Monomial
 
-  @Axiom(name = "monTimesZero")
-  lazy val monTimesZero: DerivedAxiomInfo =
-    derivedFormula("monTimesZero", "t_() = 0 -> t_() * x_() = 0".asFormula, QE & done)
+  @Derivation
+  lazy val monTimesZero: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "monTimesZero", canonicalName = "monTimesZero"),
+    "t_() = 0 -> t_() * x_() = 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "monTimesBranch2")
+  @Derivation
   lazy val monTimesBranch2: DerivedAxiomInfo = derivedFormula(
-    "monTimesBranch2",
+    DerivedAxiomInfo.create(name = "monTimesBranch2", canonicalName = "monTimesBranch2"),
     ("(t_() = l_() + v_() + r_() &" +
       "l_() * x_() = lx_() &" +
       "v_() * x_() = vx_() &" +
@@ -9150,9 +9299,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "monTimesBranch3")
+  @Derivation
   lazy val monTimesBranch3: DerivedAxiomInfo = derivedFormula(
-    "monTimesBranch3",
+    DerivedAxiomInfo.create(name = "monTimesBranch3", canonicalName = "monTimesBranch3"),
     ("(t_() = l_() + v1_() + m_() + v2_() + r_() &" +
       "l_() * x_() = lx_() &" +
       "v1_() * x_() = v1x_() &" +
@@ -9164,21 +9313,24 @@ object Ax extends Logging {
 
   // Lemmas for Times
 
-  @Axiom(name = "timesEmpty")
-  lazy val timesEmpty: DerivedAxiomInfo =
-    derivedFormula("timesEmpty", "t_() = 0 -> t_() * u_() = 0".asFormula, QE & done)
+  @Derivation
+  lazy val timesEmpty: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "timesEmpty", canonicalName = "timesEmpty"),
+    "t_() = 0 -> t_() * u_() = 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "timesBranch2")
+  @Derivation
   lazy val timesBranch2: DerivedAxiomInfo = derivedFormula(
-    "timesBranch2",
+    DerivedAxiomInfo.create(name = "timesBranch2", canonicalName = "timesBranch2"),
     ("(t_() = l_() + v_() + r_() & l_()*u_() + u_() * v_() + r_()*u_() = sum_()) ->" +
       "t_() * u_() = sum_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "timesBranch3")
+  @Derivation
   lazy val timesBranch3: DerivedAxiomInfo = derivedFormula(
-    "timesBranch3",
+    DerivedAxiomInfo.create(name = "timesBranch3", canonicalName = "timesBranch3"),
     ("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_()*u_() + u_()*v1_() + m_()*u_() + u_()*v2_() + r_()*u_() = sum_()) ->" +
       "t_() * u_() = sum_()").asFormula,
     QE & done,
@@ -9186,17 +9338,23 @@ object Ax extends Logging {
 
   // Lemmas for Power
 
-  @Axiom(name = "powerZero")
-  lazy val powerZero: DerivedAxiomInfo =
-    derivedFormula("powerZero", "1 = one_() -> t_() ^ 0 = one_()".asFormula, QE & done)
+  @Derivation
+  lazy val powerZero: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "powerZero", canonicalName = "powerZero"),
+    "1 = one_() -> t_() ^ 0 = one_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "powerOne")
-  lazy val powerOne: DerivedAxiomInfo =
-    derivedFormula("powerOne", "t_() = s_() -> t_() ^ 1 = s_()".asFormula, QE & done)
+  @Derivation
+  lazy val powerOne: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "powerOne", canonicalName = "powerOne"),
+    "t_() = s_() -> t_() ^ 1 = s_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "powerEven")
+  @Derivation
   lazy val powerEven: DerivedAxiomInfo = derivedFormula(
-    "powerEven",
+    DerivedAxiomInfo.create(name = "powerEven", canonicalName = "powerEven"),
     ("((n_() = 2*m_() <-> true) & t_()^m_() = p_() & p_()*p_() = r_()) ->" +
       "t_() ^ n_() = r_()").asFormula,
     implyR(1) & andL(-1) & andL(-2) &
@@ -9206,9 +9364,9 @@ object Ax extends Logging {
         .<(QE & done, implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done),
   )
 
-  @Axiom(name = "powerOdd")
+  @Derivation
   lazy val powerOdd: DerivedAxiomInfo = derivedFormula(
-    "powerOdd",
+    DerivedAxiomInfo.create(name = "powerOdd", canonicalName = "powerOdd"),
     ("((n_() = 2*m_() + 1 <-> true) & t_()^m_() = p_() & p_()*p_()*t_() = r_()) ->" +
       "t_() ^ n_() = r_()").asFormula,
     implyR(1) & andL(-1) & andL(-2) &
@@ -9218,9 +9376,9 @@ object Ax extends Logging {
         .<(QE & done, implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done),
   )
 
-  @Axiom(name = "powerPoly")
+  @Derivation
   lazy val powerPoly: DerivedAxiomInfo = derivedFormula(
-    "powerPoly",
+    DerivedAxiomInfo.create(name = "powerPoly", canonicalName = "powerPoly"),
     "(q_() = i_() & p_()^i_() = r_()) -> p_()^q_() = r_()".asFormula,
     implyR(1) & andL(-1) &
       eqL2R(-1)(1, 0 :: 1 :: Nil) &
@@ -9230,34 +9388,47 @@ object Ax extends Logging {
 
   // Lemmas for division
 
-  @Axiom(name = "divideNumber")
-  lazy val divideNumber: DerivedAxiomInfo =
-    derivedFormula("divideNumber", "(q_() = i_() & p_()*(1/i_()) = r_()) -> p_()/q_() = r_()".asFormula, QE & done)
+  @Derivation
+  lazy val divideNumber: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divideNumber", canonicalName = "divideNumber"),
+    "(q_() = i_() & p_()*(1/i_()) = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "divideRat")
-  lazy val divideRat: DerivedAxiomInfo =
-    derivedFormula("divideRat", "(q_() = n_()/d_() & p_()*(d_()/n_()) = r_()) -> p_()/q_() = r_()".asFormula, QE & done)
+  @Derivation
+  lazy val divideRat: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divideRat", canonicalName = "divideRat"),
+    "(q_() = n_()/d_() & p_()*(d_()/n_()) = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "divideNeg")
-  lazy val divideNeg: DerivedAxiomInfo =
-    derivedFormula("divideNeg", "-(p_()/(-q_())) = r_() -> p_()/q_() = r_()".asFormula, QE & done)
+  @Derivation
+  lazy val divideNeg: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divideNeg", canonicalName = "divideNeg"),
+    "-(p_()/(-q_())) = r_() -> p_()/q_() = r_()".asFormula,
+    QE & done,
+  )
 
   // Lemmas for negation
 
-  @Axiom(name = "negateEmpty")
-  lazy val negateEmpty: DerivedAxiomInfo = derivedFormula("negateEmpty", "t_() = 0 -> -t_() = 0".asFormula, QE & done)
+  @Derivation
+  lazy val negateEmpty: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "negateEmpty", canonicalName = "negateEmpty"),
+    "t_() = 0 -> -t_() = 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "negateBranch2")
+  @Derivation
   lazy val negateBranch2: DerivedAxiomInfo = derivedFormula(
-    "negateBranch2",
+    DerivedAxiomInfo.create(name = "negateBranch2", canonicalName = "negateBranch2"),
     ("(t_() = l_() + v_() + r_() & -l_() = nl_() & -v_() = nv_() & -r_() = nr_()) ->" +
       "-t_() = nl_() + nv_() + nr_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "negateBranch3")
+  @Derivation
   lazy val negateBranch3: DerivedAxiomInfo = derivedFormula(
-    "negateBranch3",
+    DerivedAxiomInfo.create(name = "negateBranch3", canonicalName = "negateBranch3"),
     ("(t_() = l_() + v1_() + m_() + v2_() + r_() & -l_() = nl_() & -v1_() = nv1_() & -m_() = nm_() & -v2_() = nv2_() & -r_() = nr_()) ->" +
       "-t_() = nl_() + nv1_() + nm_() + nv2_() + nr_()").asFormula,
     QE & done,
@@ -9265,87 +9436,111 @@ object Ax extends Logging {
 
   // Lemmas for normalization
 
-  @Axiom(name = "normalizeCoeff0")
-  lazy val normalizeCoeff0: DerivedAxiomInfo =
-    derivedFormula("normalizeCoeff0", "(c_() = 0 / d_() ) -> c_() = 0".asFormula, QE & done)
+  @Derivation
+  lazy val normalizeCoeff0: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizeCoeff0", canonicalName = "normalizeCoeff0"),
+    "(c_() = 0 / d_() ) -> c_() = 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizeCoeff1")
-  lazy val normalizeCoeff1: DerivedAxiomInfo =
-    derivedFormula("normalizeCoeff1", "(c_() = n_() / 1 ) -> c_() = n_()".asFormula, QE & done)
+  @Derivation
+  lazy val normalizeCoeff1: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizeCoeff1", canonicalName = "normalizeCoeff1"),
+    "(c_() = n_() / 1 ) -> c_() = n_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizeMonom0")
-  lazy val normalizeMonom0: DerivedAxiomInfo =
-    derivedFormula("normalizeMonom0", "(x_() = c_() * ps_() & c_() = 0) -> x_() = 0".asFormula, QE & done)
+  @Derivation
+  lazy val normalizeMonom0: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizeMonom0", canonicalName = "normalizeMonom0"),
+    "(x_() = c_() * ps_() & c_() = 0) -> x_() = 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizeMonomCS")
+  @Derivation
   lazy val normalizeMonomCS: DerivedAxiomInfo = derivedFormula(
-    "normalizeMonomCS",
+    DerivedAxiomInfo.create(name = "normalizeMonomCS", canonicalName = "normalizeMonomCS"),
     ("(x_() = c_() * ps_() & c_() * ps_() = cps_()) ->" +
       "x_() = cps_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "normalizeMonomNCS")
+  @Derivation
   lazy val normalizeMonomNCS: DerivedAxiomInfo = derivedFormula(
-    "normalizeMonomNCS",
+    DerivedAxiomInfo.create(name = "normalizeMonomNCS", canonicalName = "normalizeMonomNCS"),
     ("(x_() = c_() * ps_() & -c_() = m_() & m_() * ps_() = cps_()) ->" +
       "x_() = -cps_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "normalizePowers1V")
-  lazy val normalizePowers1V: DerivedAxiomInfo =
-    derivedFormula("normalizePowers1V", "(c_() = 1) -> c_() * (1 * v_()^1) = v_()".asFormula, QE & done)
+  @Derivation
+  lazy val normalizePowers1V: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizePowers1V", canonicalName = "normalizePowers1V"),
+    "(c_() = 1) -> c_() * (1 * v_()^1) = v_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizePowers1R")
-  lazy val normalizePowers1R: DerivedAxiomInfo =
-    derivedFormula("normalizePowers1R", "(c_() = 1) -> c_() * (1 * t_()) = t_()".asFormula, QE & done)
+  @Derivation
+  lazy val normalizePowers1R: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizePowers1R", canonicalName = "normalizePowers1R"),
+    "(c_() = 1) -> c_() * (1 * t_()) = t_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizePowersC1")
-  lazy val normalizePowersC1: DerivedAxiomInfo =
-    derivedFormula("normalizePowersC1", "(c_() = d_()) -> c_() * 1 = d_()".asFormula, QE & done)
+  @Derivation
+  lazy val normalizePowersC1: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizePowersC1", canonicalName = "normalizePowersC1"),
+    "(c_() = d_()) -> c_() * 1 = d_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizePowersCV")
-  lazy val normalizePowersCV: DerivedAxiomInfo =
-    derivedFormula("normalizePowersCV", "(c_() = d_()) -> c_() * (1 * v_()^1) = d_()*v_()".asFormula, QE & done)
+  @Derivation
+  lazy val normalizePowersCV: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizePowersCV", canonicalName = "normalizePowersCV"),
+    "(c_() = d_()) -> c_() * (1 * v_()^1) = d_()*v_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizePowersCP")
-  lazy val normalizePowersCP: DerivedAxiomInfo =
-    derivedFormula("normalizePowersCP", "(c_() = d_()) -> c_() * (1 * t_()) = d_()*t_()".asFormula, QE & done)
+  @Derivation
+  lazy val normalizePowersCP: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "normalizePowersCP", canonicalName = "normalizePowersCP"),
+    "(c_() = d_()) -> c_() * (1 * t_()) = d_()*t_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "normalizePowersRV")
+  @Derivation
   lazy val normalizePowersRV: DerivedAxiomInfo = derivedFormula(
-    "normalizePowersRV",
+    DerivedAxiomInfo.create(name = "normalizePowersRV", canonicalName = "normalizePowersRV"),
     "(c_() * ps_() = cps_()) -> c_() * (ps_() * v_()^1) = cps_() * v_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "normalizePowersRP")
+  @Derivation
   lazy val normalizePowersRP: DerivedAxiomInfo = derivedFormula(
-    "normalizePowersRP",
+    DerivedAxiomInfo.create(name = "normalizePowersRP", canonicalName = "normalizePowersRP"),
     "(c_() * ps_() = cps_()) -> c_() * (ps_() * t_()) = cps_() * t_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "normalizeBranch2")
+  @Derivation
   lazy val normalizeBranch2: DerivedAxiomInfo = derivedFormula(
-    "normalizeBranch2",
+    DerivedAxiomInfo.create(name = "normalizeBranch2", canonicalName = "normalizeBranch2"),
     ("(t_() = l_() + v_() + r_() & l_() = ln_() & v_() = vn_() & r_() = rn_()) ->" +
       "t_() = ln_() + vn_() + rn_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "normalizeBranch3")
+  @Derivation
   lazy val normalizeBranch3: DerivedAxiomInfo = derivedFormula(
-    "normalizeBranch3",
+    DerivedAxiomInfo.create(name = "normalizeBranch3", canonicalName = "normalizeBranch3"),
     ("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = ln_() & v1_() = v1n_() & m_() = mn_() & v2_() = v2n_() & r_() = rn_()) ->" +
       "t_() = ln_() + v1n_() + mn_() + v2n_() + rn_()").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "reassocRight0")
+  @Derivation
   lazy val reassocRight0: DerivedAxiomInfo = derivedFormula(
-    "reassocRight0",
+    DerivedAxiomInfo.create(name = "reassocRight0", canonicalName = "reassocRight0"),
     ("(" +
       "t_() = l_() + r_() &" +
       "r_() = 0   &" +
@@ -9355,9 +9550,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "reassocRightPlus")
+  @Derivation
   lazy val reassocRightPlus: DerivedAxiomInfo = derivedFormula(
-    "reassocRightPlus",
+    DerivedAxiomInfo.create(name = "reassocRightPlus", canonicalName = "reassocRightPlus"),
     ("(" +
       "t_() = l_() + r_() &" +
       "r_() = rs_() + rr_() &" +
@@ -9367,9 +9562,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "reassocLeft0RightConst")
+  @Derivation
   lazy val reassocLeft0RightConst: DerivedAxiomInfo = derivedFormula(
-    "reassocLeft0RightConst",
+    DerivedAxiomInfo.create(name = "reassocLeft0RightConst", canonicalName = "reassocLeft0RightConst"),
     ("(" +
       "t_() = l_() + r_() &" +
       "r_() = c_() &" +
@@ -9379,9 +9574,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "reassocRightConst")
+  @Derivation
   lazy val reassocRightConst: DerivedAxiomInfo = derivedFormula(
-    "reassocRightConst",
+    DerivedAxiomInfo.create(name = "reassocRightConst", canonicalName = "reassocRightConst"),
     ("(" +
       "t_() = l_() + r_() &" +
       "r_() = c_() &" +
@@ -9393,14 +9588,17 @@ object Ax extends Logging {
 
   // lemmas to prove equality
 
-  @Axiom(name = "equalityBySubtraction")
-  lazy val equalityBySubtraction: DerivedAxiomInfo =
-    derivedFormula("equalityBySubtraction", "t_() - s_() = 0 -> t_() = s_()".asFormula, QE & done)
+  @Derivation
+  lazy val equalityBySubtraction: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "equalityBySubtraction", canonicalName = "equalityBySubtraction"),
+    "t_() - s_() = 0 -> t_() = s_()".asFormula,
+    QE & done,
+  )
 
   // Lemmas for partition
-  @Axiom(name = "partition2")
+  @Derivation
   lazy val partition2: DerivedAxiomInfo = derivedFormula(
-    "partition2",
+    DerivedAxiomInfo.create(name = "partition2", canonicalName = "partition2"),
     "(t_() = r_() & t1_() = r1_() & t2_() = r2_() & t_() - t1_() - t2_() = 0) -> t_() = t1_() + t2_()".asFormula,
     QE & done,
   )
@@ -9414,9 +9612,9 @@ object Ax extends Logging {
   def splitCoefficientNumericCondition(n: Term, d: Term, n1: Term, d1: Term, n2: Term, d2: Term): Formula =
     And(Equal(Times(Times(n, d1), d2), Times(d, Plus(Times(d1, n2), Times(d2, n1)))), And(nz(d), And(nz(d1), nz(d2))))
 
-  @Axiom(name = "splitCoefficient")
+  @Derivation
   lazy val splitCoefficient: DerivedAxiomInfo = derivedFormula(
-    "splitCoefficient",
+    DerivedAxiomInfo.create(name = "splitCoefficient", canonicalName = "splitCoefficient"),
     Imply(
       And(
         "c_() = n_()/d_()".asFormula,
@@ -9437,45 +9635,57 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "splitMonomial")
+  @Derivation
   lazy val splitMonomial: DerivedAxiomInfo = derivedFormula(
-    "splitMonomial",
+    DerivedAxiomInfo.create(name = "splitMonomial", canonicalName = "splitMonomial"),
     "(c_() = c1_() + c2_() & m_() = c_() * x_()) -> m_() = c1_() * x_() + c2_() * x_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "splitEmpty", displayName = Some("splitEmpty "))
-  lazy val splitEmpty: DerivedAxiomInfo = derivedFormula("splitEmpty ", "t_() = 0 -> t_() = 0 + 0".asFormula, QE & done)
+  @Derivation
+  lazy val splitEmpty: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "splitEmpty", canonicalName = "splitEmpty ", displayName = Some("splitEmpty ")),
+    "t_() = 0 -> t_() = 0 + 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "splitBranch2", displayName = Some("splitBranch2 "))
+  @Derivation
   lazy val splitBranch2: DerivedAxiomInfo = derivedFormula(
-    "splitBranch2 ",
+    DerivedAxiomInfo
+      .create(name = "splitBranch2", canonicalName = "splitBranch2 ", displayName = Some("splitBranch2 ")),
     ("(t_() = l_() + v_() + r_() & l_() = l1_() + l2_() & v_() = v1_() + v2_() & r_() = r1_() + r2_())" +
       "->" +
       "t_() = (l1_() + v1_() + r1_()) + (l2_() + v2_() + r2_())").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "splitBranch3", displayName = Some("splitBranch3 "))
+  @Derivation
   lazy val splitBranch3: DerivedAxiomInfo = derivedFormula(
-    "splitBranch3 ",
+    DerivedAxiomInfo
+      .create(name = "splitBranch3", canonicalName = "splitBranch3 ", displayName = Some("splitBranch3 ")),
     ("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = l1_() + l2_() & v1_() = v11_() + v12_() & m_() = m1_() + m2_() & v2_() = v21_() + v22_() & r_() = r1_() + r2_())" +
       "->" +
       "t_() = (l1_() + v11_() + m1_() + v21_() + r1_()) + (l2_() + v12_() + m2_() + v22_() + r2_())").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "varPowerLemma")
-  lazy val varPowerLemma: DerivedAxiomInfo =
-    derivedFormula("varPowerLemma", "v_()^n_() = 0 + 1 / 1 * (1 * v_()^n_()) + 0".asFormula, QE & done)
+  @Derivation
+  lazy val varPowerLemma: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "varPowerLemma", canonicalName = "varPowerLemma"),
+    "v_()^n_() = 0 + 1 / 1 * (1 * v_()^n_()) + 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "varLemma")
-  lazy val varLemma: DerivedAxiomInfo =
-    derivedFormula("varLemma", "v_() = 0 + 1 / 1 * (1 * v_()^1) + 0".asFormula, QE & done)
+  @Derivation
+  lazy val varLemma: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "varLemma", canonicalName = "varLemma"),
+    "v_() = 0 + 1 / 1 * (1 * v_()^1) + 0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "constLemma")
+  @Derivation
   lazy val constLemma: DerivedAxiomInfo = derivedFormula(
-    "constLemma",
+    DerivedAxiomInfo.create(name = "constLemma", canonicalName = "constLemma"),
     Equal(
       "n_()".asTerm,
       Seq(Number(0), Times(Divide("n_()".asTerm, Number(1)), Number(1)), Number(0)).reduceLeft(Plus),
@@ -9483,22 +9693,25 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "rationalLemma")
+  @Derivation
   lazy val rationalLemma: DerivedAxiomInfo = derivedFormula(
-    "rationalLemma",
+    DerivedAxiomInfo.create(name = "rationalLemma", canonicalName = "rationalLemma"),
     Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus)),
     QE & done,
   )
 
   // Power of Divide
 
-  @Axiom(name = "powerDivide0")
-  lazy val powerDivide0: DerivedAxiomInfo =
-    derivedFormula("powerDivide0", "(x_()/y_()) ^ 0 = x_()^0 / y_()^0".asFormula, QE & done)
+  @Derivation
+  lazy val powerDivide0: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "powerDivide0", canonicalName = "powerDivide0"),
+    "(x_()/y_()) ^ 0 = x_()^0 / y_()^0".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "powerDivideEven")
+  @Derivation
   lazy val powerDivideEven: DerivedAxiomInfo = derivedFormula(
-    "powerDivideEven",
+    DerivedAxiomInfo.create(name = "powerDivideEven", canonicalName = "powerDivideEven"),
     ("(" +
       " (n_() = 2*m_() <-> true) &" +
       " (x_()/y_())^m_() = x_() ^ m_() / y_() ^ m_()" +
@@ -9560,9 +9773,9 @@ object Ax extends Logging {
       ),
   )
 
-  @Axiom(name = "powerDivideOdd")
+  @Derivation
   lazy val powerDivideOdd: DerivedAxiomInfo = derivedFormula(
-    "powerDivideOdd",
+    DerivedAxiomInfo.create(name = "powerDivideOdd", canonicalName = "powerDivideOdd"),
     ("((n_() = 2*m_()+1 <-> true) & (x_()/y_())^m_() = x_() ^ m_() / y_() ^ m_()) ->" +
       "(x_()/y_())^n_() = x_()^n_() / y_()^n_()").asFormula,
     prop &
@@ -9612,9 +9825,9 @@ object Ax extends Logging {
 
   // Lemmas for rational forms
 
-  @Axiom(name = "ratFormAdd")
+  @Derivation
   lazy val ratFormAdd: DerivedAxiomInfo = derivedFormula(
-    "ratFormAdd",
+    DerivedAxiomInfo.create(name = "ratFormAdd", canonicalName = "ratFormAdd"),
     ("(x_() = nx_() / dx_() &" +
       "y_() = ny_() / dy_() &" +
       "gcd_() * rx_() = dx_() &" +
@@ -9629,9 +9842,9 @@ object Ax extends Logging {
       QE & done,
   )
 
-  @Axiom(name = "ratFormMinus")
+  @Derivation
   lazy val ratFormMinus: DerivedAxiomInfo = derivedFormula(
-    "ratFormMinus",
+    DerivedAxiomInfo.create(name = "ratFormMinus", canonicalName = "ratFormMinus"),
     ("(x_() = nx_() / dx_() &" +
       "y_() = ny_() / dy_() &" +
       "gcd_() * rx_() = dx_() &" +
@@ -9646,9 +9859,9 @@ object Ax extends Logging {
       QE & done,
   )
 
-  @Axiom(name = "ratFormDivide")
+  @Derivation
   lazy val ratFormDivide: DerivedAxiomInfo = derivedFormula(
-    "ratFormDivide",
+    DerivedAxiomInfo.create(name = "ratFormDivide", canonicalName = "ratFormDivide"),
     ("(x_() = nx_() / dx_() &" +
       "y_() = ny_() / dy_() &" +
       "nx_() * dy_() = nz_() &" +
@@ -9661,9 +9874,9 @@ object Ax extends Logging {
       QE & done,
   )
 
-  @Axiom(name = "ratFormTimes")
+  @Derivation
   lazy val ratFormTimes: DerivedAxiomInfo = derivedFormula(
-    "ratFormTimes",
+    DerivedAxiomInfo.create(name = "ratFormTimes", canonicalName = "ratFormTimes"),
     ("(x_() = nx_() / dx_() &" +
       "y_() = ny_() / dy_() &" +
       "nx_() * ny_() = nz_() &" +
@@ -9676,9 +9889,9 @@ object Ax extends Logging {
       QE & done,
   )
 
-  @Axiom(name = "ratFormPower")
+  @Derivation
   lazy val ratFormPower: DerivedAxiomInfo = derivedFormula(
-    "ratFormPower",
+    DerivedAxiomInfo.create(name = "ratFormPower", canonicalName = "ratFormPower"),
     ("(x_() = nx_() / dx_() &" +
       "y_() = ny_() / dy_() &" +
       "ny_() / dy_() = m_() & " +
@@ -9693,9 +9906,9 @@ object Ax extends Logging {
       cohideR(1) & byUS(Ax.equalReflexive),
   )
 
-  @Axiom(name = "ratFormNeg")
+  @Derivation
   lazy val ratFormNeg: DerivedAxiomInfo = derivedFormula(
-    "ratFormNeg",
+    DerivedAxiomInfo.create(name = "ratFormNeg", canonicalName = "ratFormNeg"),
     ("(x_() = nx_() / dx_() &" +
       "-nx_() = nz_())" +
       "->" +
@@ -9706,15 +9919,18 @@ object Ax extends Logging {
       QE & done,
   )
 
-  @Axiom(name = "divideIdentity")
-  lazy val divideIdentity: DerivedAxiomInfo =
-    derivedFormula("divideIdentity", "(x_() = y_() & 1 = z_()) -> x_() = y_() / z_()".asFormula, QE & done)
+  @Derivation
+  lazy val divideIdentity: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "divideIdentity", canonicalName = "divideIdentity"),
+    "(x_() = y_() & 1 = z_()) -> x_() = y_() / z_()".asFormula,
+    QE & done,
+  )
 
   // Taylor Model Arithmetic [[org.keymaerax.btactics.TaylorModelArith]]
 
-  @Axiom(name = "taylorModelPlusPrv")
+  @Derivation
   lazy val taylorModelPlusPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelPlusPrv",
+    DerivedAxiomInfo.create(name = "taylorModelPlusPrv", canonicalName = "taylorModelPlusPrv"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
       "poly1_() + poly2_() = poly_() &" +
@@ -9725,9 +9941,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "taylorModelMinusPrv")
+  @Derivation
   lazy val taylorModelMinusPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelMinusPrv",
+    DerivedAxiomInfo.create(name = "taylorModelMinusPrv", canonicalName = "taylorModelMinusPrv"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
       "poly1_() - poly2_() = poly_() &" +
@@ -9738,9 +9954,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "taylorModelCollectPrv")
+  @Derivation
   lazy val taylorModelCollectPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelCollectPrv",
+    DerivedAxiomInfo.create(name = "taylorModelCollectPrv", canonicalName = "taylorModelCollectPrv"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "poly1_() = polyLow_() + polyHigh_() &" +
       "polyLow_() = poly_() &" +
@@ -9752,9 +9968,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "taylorModelPartitionPrv1")
+  @Derivation
   lazy val taylorModelPartitionPrv1: DerivedAxiomInfo = derivedFormula(
-    "taylorModelPartitionPrv1",
+    DerivedAxiomInfo.create(name = "taylorModelPartitionPrv1", canonicalName = "taylorModelPartitionPrv1"),
     ("((\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "poly_() = polyTrue_() + polyFalse_() & " +
       "newElem_() = elem_() - polyTrue_() & " +
@@ -9764,9 +9980,9 @@ object Ax extends Logging {
       "\\exists err_ (elem_() = poly1_() + err_ & 0 <= err_ & err_ <= 0)").asFormula,
     QE & done,
   )
-  @Axiom(name = "taylorModelPartitionPrv2")
+  @Derivation
   lazy val taylorModelPartitionPrv2: DerivedAxiomInfo = derivedFormula(
-    "taylorModelPartitionPrv2",
+    DerivedAxiomInfo.create(name = "taylorModelPartitionPrv2", canonicalName = "taylorModelPartitionPrv2"),
     ("((\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "poly_() = polyTrue_() + polyFalse_() & " +
       "newElem_() = elem_() - polyTrue_() & " +
@@ -9777,18 +9993,18 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "taylorModelTransElem")
+  @Derivation
   lazy val taylorModelTransElem: DerivedAxiomInfo = derivedFormula(
-    "taylorModelTransElem",
+    DerivedAxiomInfo.create(name = "taylorModelTransElem", canonicalName = "taylorModelTransElem"),
     ("((\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "elem1_() = elem_()) ->" +
       "\\exists err_ (elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "taylorModelIntervalPrv")
+  @Derivation
   lazy val taylorModelIntervalPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelIntervalPrv",
+    DerivedAxiomInfo.create(name = "taylorModelIntervalPrv", canonicalName = "taylorModelIntervalPrv"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "poly1_() = rem_() &" +
       "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
@@ -9798,16 +10014,16 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "taylorModelEmptyIntervalPrv")
+  @Derivation
   lazy val taylorModelEmptyIntervalPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelEmptyIntervalPrv",
+    DerivedAxiomInfo.create(name = "taylorModelEmptyIntervalPrv", canonicalName = "taylorModelEmptyIntervalPrv"),
     "(\\exists err_ (elem1_() = poly1_() + err_ & 0 <= err_ & err_ <= 0)) -> elem1_() = poly1_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "taylorModelTimesPrv")
+  @Derivation
   lazy val taylorModelTimesPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelTimesPrv",
+    DerivedAxiomInfo.create(name = "taylorModelTimesPrv", canonicalName = "taylorModelTimesPrv"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
       "poly1_() * poly2_() = polyLow_() + polyHigh_() &" +
@@ -9823,9 +10039,9 @@ object Ax extends Logging {
       existsR("rem_() + err__0 * poly2_() + err_ * poly1_() + err__0 * err_".asTerm)(1) & QE & done,
   )
 
-  @Axiom(name = "taylorModelDivideExactPrv")
+  @Derivation
   lazy val taylorModelDivideExactPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelDivideExactPrv",
+    DerivedAxiomInfo.create(name = "taylorModelDivideExactPrv", canonicalName = "taylorModelDivideExactPrv"),
     ("((\\exists err_ (elem1_() * inv_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "elem1_()/elem2_() = elem1_() * inv_()" +
       ") ->" +
@@ -9833,9 +10049,12 @@ object Ax extends Logging {
     implyR(1) & andL(-1) & eqL2R(-2)(1) & id,
   )
 
-  @Axiom(name = "taylorModelSquarePrv")
+  @Derivation
   lazy val taylorModelSquarePrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelSquarePrv", // @todo: is there a better scheme than just multiplication?
+    DerivedAxiomInfo.create(
+      name = "taylorModelSquarePrv",
+      canonicalName = "taylorModelSquarePrv",
+    ), // @todo: is there a better scheme than just multiplication?
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "poly1_()^2 = polyLow_() + polyHigh_() &" +
       "polyLow_() = poly_() &" +
@@ -9848,18 +10067,18 @@ object Ax extends Logging {
       existsR("rem_() + 2 * err_ * poly1_() + err_^2".asTerm)(1) & QE & done,
   )
 
-  @Axiom(name = "taylorModelPowerOne")
+  @Derivation
   lazy val taylorModelPowerOne: DerivedAxiomInfo = derivedFormula(
-    "taylorModelPowerOne",
+    DerivedAxiomInfo.create(name = "taylorModelPowerOne", canonicalName = "taylorModelPowerOne"),
     ("(\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_()))" +
       " ->" +
       "\\exists err_ (elem1_()^1 = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "taylorModelPowerEven")
+  @Derivation
   lazy val taylorModelPowerEven: DerivedAxiomInfo = derivedFormula(
-    "taylorModelPowerEven",
+    DerivedAxiomInfo.create(name = "taylorModelPowerEven", canonicalName = "taylorModelPowerEven"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ ((elem1_()^m_())^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "(n_() = 2*m_() <-> true)" +
@@ -9872,9 +10091,9 @@ object Ax extends Logging {
     ),
   )
 
-  @Axiom(name = "taylorModelPowerOdd")
+  @Derivation
   lazy val taylorModelPowerOdd: DerivedAxiomInfo = derivedFormula(
-    "taylorModelPowerOdd",
+    DerivedAxiomInfo.create(name = "taylorModelPowerOdd", canonicalName = "taylorModelPowerOdd"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ ((elem1_()^m_())^2*elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "(n_() = 2*m_() + 1 <-> true)" +
@@ -9887,9 +10106,9 @@ object Ax extends Logging {
     ),
   )
 
-  @Axiom(name = "taylorModelNegPrv")
+  @Derivation
   lazy val taylorModelNegPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelNegPrv",
+    DerivedAxiomInfo.create(name = "taylorModelNegPrv", canonicalName = "taylorModelNegPrv"),
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "-poly1_() = poly_() &" +
       "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
@@ -9899,17 +10118,17 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "taylorModelExactPrv")
+  @Derivation
   lazy val taylorModelExactPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelExactPrv",
+    DerivedAxiomInfo.create(name = "taylorModelExactPrv", canonicalName = "taylorModelExactPrv"),
     ("elem_() = poly_() ->" +
       "\\exists err_ (elem_() = poly_() + err_ & 0 <= err_ & err_ <= 0)").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "taylorModelApproxPrv")
+  @Derivation
   lazy val taylorModelApproxPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelApproxPrv",
+    DerivedAxiomInfo.create(name = "taylorModelApproxPrv", canonicalName = "taylorModelApproxPrv"),
     ("(" +
       "\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_()) &" +
       "poly_() = poly1_() + poly2_() &" +
@@ -9922,9 +10141,9 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "taylorModelEvalPrv")
+  @Derivation
   lazy val taylorModelEvalPrv: DerivedAxiomInfo = derivedFormula(
-    "taylorModelEvalPrv",
+    DerivedAxiomInfo.create(name = "taylorModelEvalPrv", canonicalName = "taylorModelEvalPrv"),
     ("(" +
       "\\exists err_ (elem_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_()) &" +
       "poly1_() = polyrep_() &" +
@@ -9936,46 +10155,46 @@ object Ax extends Logging {
     QE & done,
   )
 
-  @Axiom(name = "refineTmExists")
+  @Derivation
   lazy val refineTmExists: DerivedAxiomInfo = derivedFormula(
-    "refineTmExists",
+    DerivedAxiomInfo.create(name = "refineTmExists", canonicalName = "refineTmExists"),
     "(\\forall err_ (P(err_) -> Q(err_))) -> ((\\exists x_ P(x_)) -> (\\exists err_ Q(err_)))".asFormula,
     implyR(1) & implyR(1) & existsL(-2) & existsR("x_".asVariable)(1) & allL("x_".asVariable)(-1) & prop & done,
   )
 
-  @Axiom(name = "taylorModelIntervalLe")
+  @Derivation
   lazy val taylorModelIntervalLe: DerivedAxiomInfo = derivedFormula(
-    "taylorModelIntervalLe",
+    DerivedAxiomInfo.create(name = "taylorModelIntervalLe", canonicalName = "taylorModelIntervalLe"),
     "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (u_() <= 0 <-> true)) -> f_() <= g_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "taylorModelIntervalLt")
+  @Derivation
   lazy val taylorModelIntervalLt: DerivedAxiomInfo = derivedFormula(
-    "taylorModelIntervalLt",
+    DerivedAxiomInfo.create(name = "taylorModelIntervalLt", canonicalName = "taylorModelIntervalLt"),
     "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (u_() < 0 <-> true)) -> f_() < g_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "taylorModelIntervalGe")
+  @Derivation
   lazy val taylorModelIntervalGe: DerivedAxiomInfo = derivedFormula(
-    "taylorModelIntervalGe",
+    DerivedAxiomInfo.create(name = "taylorModelIntervalGe", canonicalName = "taylorModelIntervalGe"),
     "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (l_() >= 0 <-> true)) -> f_() >= g_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "taylorModelIntervalGt")
+  @Derivation
   lazy val taylorModelIntervalGt: DerivedAxiomInfo = derivedFormula(
-    "taylorModelIntervalGt",
+    DerivedAxiomInfo.create(name = "taylorModelIntervalGt", canonicalName = "taylorModelIntervalGt"),
     "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (l_() > 0 <-> true)) -> f_() > g_()".asFormula,
     QE & done,
   )
 
   // Taylor Model [[org.keymaerax.btactics.TaylorModelTactics]]
 
-  @Axiom(name = "unfoldExistsLemma")
+  @Derivation
   lazy val unfoldExistsLemma: DerivedAxiomInfo = derivedFormula(
-    "unfoldExistsLemma",
+    DerivedAxiomInfo.create(name = "unfoldExistsLemma", canonicalName = "unfoldExistsLemma"),
     "\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula,
     prop & Idioms.<(
       existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms
@@ -9984,98 +10203,132 @@ object Ax extends Logging {
     ),
   )
 
-  @Axiom(name = "foldAndLessEqExistsLemma")
+  @Derivation
   lazy val foldAndLessEqExistsLemma: DerivedAxiomInfo = derivedFormula(
-    "foldAndLessEqExistsLemma",
+    DerivedAxiomInfo.create(name = "foldAndLessEqExistsLemma", canonicalName = "foldAndLessEqExistsLemma"),
     ("(a() <= x_ - b() & x_ - b() <= c()) <->" +
       "(\\exists xr_ (x_ = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula,
     QE & done,
   )
 
-  @Axiom(name = "leTimesMonoLemma")
+  @Derivation
   lazy val leTimesMonoLemma: DerivedAxiomInfo = derivedFormula(
-    "leTimesMonoLemma",
+    DerivedAxiomInfo.create(name = "leTimesMonoLemma", canonicalName = "leTimesMonoLemma"),
     "0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() + cU_() -> R_() <= max((0,h_() * U_())) + cU_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "timesLeMonoLemma")
+  @Derivation
   lazy val timesLeMonoLemma: DerivedAxiomInfo = derivedFormula(
-    "timesLeMonoLemma",
+    DerivedAxiomInfo.create(name = "timesLeMonoLemma", canonicalName = "timesLeMonoLemma"),
     "0 <= t_() & t_() <= h_() -> t_() * L_() + cL_() <= U_() -> min((0,h_() * L_())) + cL_() <= U_()".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "minGtNorm")
-  lazy val minGtNorm: DerivedAxiomInfo =
-    derivedFormula("minGtNorm", "min((f_(),g_()))>h_()<->(f_()>h_()&g_()>h_())".asFormula, QE & done)
+  @Derivation
+  lazy val minGtNorm: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "minGtNorm", canonicalName = "minGtNorm"),
+    "min((f_(),g_()))>h_()<->(f_()>h_()&g_()>h_())".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "minLeNorm")
-  lazy val minLeNorm: DerivedAxiomInfo =
-    derivedFormula("minLeNorm", "min((f_(),g_()))<=h_()<->(f_()<=h_()|g_()<=h_())".asFormula, QE & done)
+  @Derivation
+  lazy val minLeNorm: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "minLeNorm", canonicalName = "minLeNorm"),
+    "min((f_(),g_()))<=h_()<->(f_()<=h_()|g_()<=h_())".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "minGeNorm")
-  lazy val minGeNorm: DerivedAxiomInfo =
-    derivedFormula("minGeNorm", "min((f_(),g_()))>=h_()<->(f_()>=h_()&g_()>=h_())".asFormula, QE & done)
+  @Derivation
+  lazy val minGeNorm: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "minGeNorm", canonicalName = "minGeNorm"),
+    "min((f_(),g_()))>=h_()<->(f_()>=h_()&g_()>=h_())".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "leMaxNorm")
-  lazy val leMaxNorm: DerivedAxiomInfo =
-    derivedFormula("leMaxNorm", "h_()<=max((f_(),g_()))<->(h_()<=f_()|h_()<=g_())".asFormula, QE & done)
+  @Derivation
+  lazy val leMaxNorm: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "leMaxNorm", canonicalName = "leMaxNorm"),
+    "h_()<=max((f_(),g_()))<->(h_()<=f_()|h_()<=g_())".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "trivialInequality")
-  lazy val trivialInequality: DerivedAxiomInfo =
-    derivedFormula("trivialInequality", "(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
+  @Derivation
+  lazy val trivialInequality: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "trivialInequality", canonicalName = "trivialInequality"),
+    "(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "refineConjunction")
+  @Derivation
   lazy val refineConjunction: DerivedAxiomInfo = derivedFormula(
-    "refineConjunction",
+    DerivedAxiomInfo.create(name = "refineConjunction", canonicalName = "refineConjunction"),
     "((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula,
     prop & done,
   )
 
-  @Axiom(name = "refineLe1")
-  lazy val refineLe1: DerivedAxiomInfo =
-    derivedFormula("refineLe1", "g()<=h()->(f()<=g()->f()<=h())".asFormula, QE & done)
+  @Derivation
+  lazy val refineLe1: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "refineLe1", canonicalName = "refineLe1"),
+    "g()<=h()->(f()<=g()->f()<=h())".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "refineLe2")
-  lazy val refineLe2: DerivedAxiomInfo =
-    derivedFormula("refineLe2", "h()<=f()->(f()<=g()->h()<=g())".asFormula, QE & done)
+  @Derivation
+  lazy val refineLe2: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "refineLe2", canonicalName = "refineLe2"),
+    "h()<=f()->(f()<=g()->h()<=g())".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "trivialRefineLtGt")
+  @Derivation
   lazy val trivialRefineLtGt: DerivedAxiomInfo = derivedFormula(
-    "trivialRefineLtGt",
+    DerivedAxiomInfo.create(name = "trivialRefineLtGt", canonicalName = "trivialRefineLtGt"),
     "(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "trivialRefineGeLe")
+  @Derivation
   lazy val trivialRefineGeLe: DerivedAxiomInfo = derivedFormula(
-    "trivialRefineGeLe",
+    DerivedAxiomInfo.create(name = "trivialRefineGeLe", canonicalName = "trivialRefineGeLe"),
     "(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula,
     QE & done,
   )
 
-  @Axiom(name = "eqAddIff")
-  lazy val eqAddIff: DerivedAxiomInfo =
-    derivedFormula("eqAddIff", "f_() = g_() + h_() <-> h_() = f_() - g_()".asFormula, QE & done)
+  @Derivation
+  lazy val eqAddIff: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "eqAddIff", canonicalName = "eqAddIff"),
+    "f_() = g_() + h_() <-> h_() = f_() - g_()".asFormula,
+    QE & done,
+  )
 
-  @Axiom(name = "plusDiffRefl")
-  lazy val plusDiffRefl: DerivedAxiomInfo =
-    derivedFormula("plusDiffRefl", "f_() = g_() + (f_() - g_())".asFormula, QE & done)
+  @Derivation
+  lazy val plusDiffRefl: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "plusDiffRefl", canonicalName = "plusDiffRefl"),
+    "f_() = g_() + (f_() - g_())".asFormula,
+    QE & done,
+  )
 
   // ODELiveness
 
-  @Axiom(name = "TExge")
-  lazy val TExge: DerivedAxiomInfo =
-    derivedFormula("TExge", "<{gextimevar_'=1}> (gextimevar_ >= p())".asFormula, solve(1) & QE & done)
+  @Derivation
+  lazy val TExge: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "TExge", canonicalName = "TExge"),
+    "<{gextimevar_'=1}> (gextimevar_ >= p())".asFormula,
+    solve(1) & QE & done,
+  )
 
-  @Axiom(name = "TExgt")
-  lazy val TExgt: DerivedAxiomInfo =
-    derivedFormula("TExgt", "<{gextimevar_'=1}> (gextimevar_ > p())".asFormula, solve(1) & QE & done)
+  @Derivation
+  lazy val TExgt: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(name = "TExgt", canonicalName = "TExgt"),
+    "<{gextimevar_'=1}> (gextimevar_ > p())".asFormula,
+    solve(1) & QE & done,
+  )
 
-  @Axiom(name = "commaCommuteD", displayName = Some(", commute diamond"))
+  @Derivation
   lazy val commaCommuteD: DerivedAxiomInfo = derivedFormula(
-    "commaCommuteD",
+    DerivedAxiomInfo
+      .create(name = "commaCommuteD", canonicalName = "commaCommuteD", displayName = Some(", commute diamond")),
     "<{c,d&q(||)}>p(||) <-> <{d,c&q(||)}>p(||)".asFormula,
     prop < (
       useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1) & useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) &
