@@ -194,17 +194,6 @@ object AnnotationCommon {
     }
   }
 
-  def astForUnifier(unifier: Unifier)(implicit c: blackbox.Context): c.universe.Tree = {
-    import c.universe._
-    unifier match {
-      case Unifier.Full => q"org.keymaerax.btactics.macros.Unifier.Full"
-      case Unifier.Linear => q"org.keymaerax.btactics.macros.Unifier.Linear"
-      case Unifier.Surjective => q"org.keymaerax.btactics.macros.Unifier.Surjective"
-      case Unifier.SurjectiveLinear => q"org.keymaerax.btactics.macros.Unifier.SurjectiveLinear"
-      case Unifier.SurjectiveLinearPretend => q"org.keymaerax.btactics.macros.Unifier.SurjectiveLinearPretend"
-    }
-  }
-
   /** Elaborate the display formula from a raw unicode string that may contain HTML tags to HTML. */
   // TODO Figure out how to get rid of this
   def renderDisplayFormula(displayFormula: String) = displayFormula
