@@ -50,7 +50,7 @@ private[parser] case class Expr(expr: Expression, loc: Location) extends Item {
  * Parts of expressions that are partially recognized on the parser item stack but not parsed to a proper Expression yet
  * so merely stashed for later.
  */
-private[parser] case class RecognizedQuant[T <: Expression](v: List[T]) extends Item {
+private[parser] case class RecognizedQuant(v: List[Variable]) extends Item {
   // @NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
   override def toString: String = "Rec(" + v.map(KeYmaeraXPrettyPrinter.stringify).mkString(",") + ")"
 }
@@ -489,20 +489,20 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         else errormsg(st, "requires an operator that supports annotation")
 
       // special quantifier notation
-      case r :+ (tok1 @ Token(FORALL, sl)) :+ RecognizedQuant(vs: List[Expression]) :+ Expr(f1: Formula, el) =>
+      case r :+ (tok1 @ Token(FORALL, sl)) :+ RecognizedQuant(vs) :+ Expr(f1: Formula, el) =>
         reduce(st, 3, vs.foldLeft[Expression](f1)((f, v) => OpSpec.sForall.const(tok1.tok.img, v, f)), sl.spanTo(el), r)
 
-      case r :+ (tok1 @ Token(EXISTS, sl)) :+ RecognizedQuant(vs: List[Expression]) :+ Expr(f1: Formula, el) =>
+      case r :+ (tok1 @ Token(EXISTS, sl)) :+ RecognizedQuant(vs) :+ Expr(f1: Formula, el) =>
         reduce(st, 3, vs.foldLeft[Expression](f1)((f, v) => OpSpec.sExists.const(tok1.tok.img, v, f)), sl.spanTo(el), r)
 
       // special case typing to force elaboration of quantifiers at the end
-      case r :+ (tok1 @ Token(FORALL | EXISTS, sl)) :+ (tok2 @ RecognizedQuant(_: List[Expression])) :+ Expr(e1, el)
+      case r :+ (tok1 @ Token(FORALL | EXISTS, sl)) :+ (tok2 @ RecognizedQuant(_)) :+ Expr(e1, el)
           if (la == EOF || la == RPAREN || la == RBRACE || la == SEMI || formulaBinOp(la)) && e1.kind != FormulaKind =>
         // @todo assert(!formulaBinOp(la) || quantifier binds stronger than la)
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, FormulaKind, e1, lax), sl.spanTo(el), r :+ tok1 :+ tok2)
 
       // ordinary identifiers disambiguate quantifiers versus predicate/function/predicational versus variable
-      case r :+ (tok1 @ Token(FORALL | EXISTS, _)) :+ RecognizedQuant(vs: List[Expression]) :+ Token(COMMA, _) :+ Token(
+      case r :+ (tok1 @ Token(FORALL | EXISTS, _)) :+ RecognizedQuant(vs) :+ Token(COMMA, _) :+ Token(
             IDENT(name, idx),
             _,
           ) =>
