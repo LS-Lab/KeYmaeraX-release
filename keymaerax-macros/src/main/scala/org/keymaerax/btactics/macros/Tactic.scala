@@ -164,7 +164,6 @@ object TacticMacro {
     "DependentTactic",
     "DependentPositionTactic",
     "DependentTwoPositionTactic",
-    "InputPositionTactic",
     "BuiltInLeftTactic",
     "BuiltInRightTactic",
     "BuiltInTactic",
@@ -172,21 +171,14 @@ object TacticMacro {
     "CoreLeftTactic",
     "CoreRightTactic",
     "BuiltInTwoPositionTactic",
-    "InputTwoPositionTactic",
     "InputTactic",
     "StringInputTactic",
     "DependentPositionWithAppliedInputTactic",
-    "AppliedBuiltInTwoPositionTactic",
     "BelleExpr",
   ).sorted
 
-  val KNOWN_TACTIC_TYPES_WITH_INPUT: List[String] = List(
-    "InputPositionTactic",
-    "InputTwoPositionTactic",
-    "InputTactic",
-    "StringInputTactic",
-    "DependentPositionWithAppliedInputTactic",
-  ).sorted
+  val KNOWN_TACTIC_TYPES_WITH_INPUT: List[String] =
+    List("InputTactic", "StringInputTactic", "DependentPositionWithAppliedInputTactic").sorted
 
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
