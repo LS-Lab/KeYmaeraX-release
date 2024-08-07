@@ -414,15 +414,11 @@ object TacticMacro {
       c.abort(c.enclosingPosition, "@Tactic detected tactic with inputs but the return type is no input tactic type")
     }
 
-    // Previously, the Tactic macro code tried to ensure that, if a GeneratorArg existed, it was the last argument.
-    // However, this check was buggy and would allow GeneratorArgs in any position.
-    // The commented-out code below is a fixed version of this check.
-    // It is commented out because two tactics in TactixLibrary don't comply with this rule.
-    // TODO Uncomment this code and fix the tactics
-    // if (definitionArgs.dropRight(1).exists(_.isInstanceOf[GeneratorArg])) {
-    //   c.abort(c.enclosingPosition, "Generator argument to tactic must appear after all expression arguments")
-    // }
-    val generatorDefArg = definitionArgs.find(_.isInstanceOf[GeneratorArg])
+    // A GeneratorArg, if it exists, must be the first argument. No other argument may be a GeneratorArg.
+    if (definitionArgs.drop(1).exists(_.isInstanceOf[GeneratorArg])) {
+      c.abort(c.enclosingPosition, "Generator argument to tactic must be the first argument")
+    }
+    val generatorDefArg = definitionArgs.headOption.filter(_.isInstanceOf[GeneratorArg])
 
     /*
      * The rest
