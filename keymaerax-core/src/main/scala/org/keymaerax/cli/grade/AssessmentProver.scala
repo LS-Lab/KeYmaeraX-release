@@ -17,13 +17,13 @@ import org.keymaerax.bellerophon.{
   SeqTactic,
   TacticInapplicableFailure,
 }
-import org.keymaerax.btactics.InvariantGenerator.AnnotationProofHint
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.{
   Ax,
   ConfigurableGenerator,
   DebuggingTactics,
   FixedGenerator,
+  InvariantHint,
   PolynomialArithV2,
   SimplifierV3,
   TacticFactory,
@@ -753,8 +753,9 @@ object AssessmentProver {
                 .parser
                 .setAnnotationListener((p: Program, inv: Formula) =>
                   generator.products +=
-                    (p -> (generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard = true))))
-                      .distinct)
+                    (p ->
+                      (generator.products.getOrElse(p, Nil) :+ (inv, Some(InvariantHint.Annotation(tryHard = true))))
+                        .distinct)
                 )
               TactixInit.invSupplier = generator
               val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]

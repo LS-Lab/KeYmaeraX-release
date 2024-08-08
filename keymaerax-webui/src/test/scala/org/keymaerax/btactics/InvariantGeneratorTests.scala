@@ -7,7 +7,6 @@ package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.DependentPositionTactic
-import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import org.keymaerax.btactics.NonlinearExamplesTests._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
@@ -173,7 +172,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
       .pegasusInvariants
       .generate("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0), Declaration(Map.empty))
     gen should not be Symbol("empty")
-    gen.head shouldBe ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PostInv"))))
+    gen.head shouldBe ("true".asFormula, Some(InvariantHint.Pegasus(isInvariant = true, Some("PostInv"))))
   }
 
   it should "split formulas correctly" in withTactics {
@@ -205,9 +204,9 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     // @note produces 8*y>=1, x*y>y^3, but 8*y>=1 only provable if we know x>y^2
     InvariantGenerator.pegasusInvariants.generate(s, SuccPos(0), Declaration(Map.empty)).toList should
       contain theSameElementsInOrderAs List(
-        "x*y>y^3".asFormula -> PegasusProofHint(isInvariant = true, None),
-        "8*y>=1".asFormula -> PegasusProofHint(isInvariant = true, None),
-        "x*y>y^3 & 8*y>=1".asFormula -> PegasusProofHint(isInvariant = true, None),
+        "x*y>y^3".asFormula -> InvariantHint.Pegasus(isInvariant = true, None),
+        "8*y>=1".asFormula -> InvariantHint.Pegasus(isInvariant = true, None),
+        "x*y>y^3 & 8*y>=1".asFormula -> InvariantHint.Pegasus(isInvariant = true, None),
       )
   }
 
@@ -236,10 +235,10 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     val s = "==> [{x'=3}@invariant(x>=old(x))]x>=0".asSequent
     val expectedInvs =
       if (tool.name == "Mathematica") List(
-        ("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true))),
-        ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PreNoImpPost")))),
+        ("x>=old(x)".asFormula, Some(InvariantHint.Annotation(tryHard = true))),
+        ("true".asFormula, Some(InvariantHint.Pegasus(isInvariant = true, Some("PreNoImpPost")))),
       )
-      else List(("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true))))
+      else List(("x>=old(x)".asFormula, Some(InvariantHint.Annotation(tryHard = true))))
     val invs =
       TactixLibrary.invGenerator.generate("==> [{x'=3}]x>=0".asSequent, SuccPosition(1), Declaration(Map.empty))
     invs should contain theSameElementsInOrderAs expectedInvs
@@ -253,10 +252,10 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     "y>0 ==> [{x:=2; ++ x:=(-2);}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=(-2)*y -> y<=old(y)))}]y>0".asSequent
     def expectedInvs(inv: String) =
       if (tool.name == "Mathematica") List(
-        (inv.asFormula, Some(AnnotationProofHint(tryHard = true))),
-        ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PreNoImpPost")))),
+        (inv.asFormula, Some(InvariantHint.Annotation(tryHard = true))),
+        ("true".asFormula, Some(InvariantHint.Pegasus(isInvariant = true, Some("PreNoImpPost")))),
       )
-      else List((inv.asFormula, Some(AnnotationProofHint(tryHard = true))))
+      else List((inv.asFormula, Some(InvariantHint.Annotation(tryHard = true))))
 
     TactixLibrary
       .invGenerator
@@ -274,10 +273,10 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
       "y>0 ==> [{x:=2; ++ x:=-2;}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=-2*y -> y<=old(y)))}]y>0".asSequent
       def expectedInvs(inv: String) =
         if (tool.name == "Mathematica") List(
-          (inv.asFormula, Some(AnnotationProofHint(tryHard = true))),
-          ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PreNoImpPost")))),
+          (inv.asFormula, Some(InvariantHint.Annotation(tryHard = true))),
+          ("true".asFormula, Some(InvariantHint.Pegasus(isInvariant = true, Some("PreNoImpPost")))),
         )
-        else List((inv.asFormula, Some(AnnotationProofHint(tryHard = true))))
+        else List((inv.asFormula, Some(InvariantHint.Annotation(tryHard = true))))
 
       TactixLibrary
         .invGenerator
@@ -295,12 +294,12 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0")) {
       InvariantGenerator.pegasusInvariants.generate(seq, SuccPosition(1), Declaration(Map.empty)).toList should
         contain theSameElementsInOrderAs
-        ("x^2+y^2<=2".asFormula -> Some(PegasusProofHint(isInvariant = true, None)) :: Nil)
+        ("x^2+y^2<=2".asFormula -> Some(InvariantHint.Pegasus(isInvariant = true, None)) :: Nil)
     }
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "5")) {
       InvariantGenerator.pegasusInvariants.generate(seq, SuccPosition(1), Declaration(Map.empty)).toList should
         contain theSameElementsInOrderAs
-        ("true".asFormula -> Some(PegasusProofHint(isInvariant = true, Some("PostInv")))) :: Nil
+        ("true".asFormula -> Some(InvariantHint.Pegasus(isInvariant = true, Some("PostInv")))) :: Nil
     }
   }
 
@@ -902,7 +901,7 @@ class NonlinearExamplesTester(
             if (candidates.nonEmpty) {
               println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))
               val pegasusInvariant = candidates.forall({
-                case (_, Some(PegasusProofHint(isInvariant, _))) => isInvariant
+                case (_, Some(InvariantHint.Pegasus(isInvariant, _))) => isInvariant
                 case _ => false
               })
               val strippedCandidates = if (stripProofHints) stripHints(candidates) else candidates
@@ -990,9 +989,7 @@ class NonlinearExamplesTester(
   }
 
   /** Removes all proof hints from invariant candidates and merges diff-cut chains into a single simplified formula. */
-  private def stripHints(
-      candidates: List[(Formula, Option[InvariantGenerator.ProofHint])]
-  ): List[(Formula, Option[InvariantGenerator.ProofHint])] = {
+  private def stripHints(candidates: List[(Formula, Option[InvariantHint])]): List[(Formula, Option[InvariantHint])] = {
     // strip hints and merge diff cut chain
     val stripMerged = candidates.map(_._1).reduce(And)
     val simplified = SimplifierV3

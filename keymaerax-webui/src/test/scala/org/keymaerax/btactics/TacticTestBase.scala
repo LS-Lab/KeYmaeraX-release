@@ -14,7 +14,6 @@ import org.keymaerax.bellerophon.IOListeners.{
 }
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics.InvariantGenerator.AnnotationProofHint
 import org.keymaerax.core._
 import org.keymaerax.hydra._
 import org.keymaerax.infrastruct.Augmentors._
@@ -313,7 +312,8 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
         generator.products +=
-          (p -> (generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard = true)))).distinct)
+          (p -> (generator.products.getOrElse(p, Nil) :+ (inv, Some(InvariantHint.Annotation(tryHard = true))))
+            .distinct)
       )
     TactixInit.invSupplier = generator
     // reinitialize with empty caches for test case separation

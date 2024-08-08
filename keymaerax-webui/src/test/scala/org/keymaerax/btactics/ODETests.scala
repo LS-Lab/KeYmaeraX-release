@@ -8,7 +8,6 @@ package org.keymaerax.btactics
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.FOQuantifierTactics.universalGen
-import org.keymaerax.btactics.InvariantGenerator.AnnotationProofHint
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
@@ -95,7 +94,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
       """.stripMargin.asFormula
 
     TactixInit.differentialInvGenerator = new FixedGenerator(
-      ("x^2 + x*y + y^2 - 111/59 <= 0".asFormula -> Some(AnnotationProofHint(tryHard = false))) :: Nil
+      ("x^2 + x*y + y^2 - 111/59 <= 0".asFormula -> Some(InvariantHint.Annotation(tryHard = false))) :: Nil
     )
     proveBy(fml, implyR(1) & ODE(1)) shouldBe Symbol("proved")
   }

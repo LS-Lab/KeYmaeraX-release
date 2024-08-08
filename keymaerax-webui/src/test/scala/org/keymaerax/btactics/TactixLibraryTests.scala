@@ -256,7 +256,7 @@ class TactixLibraryTests extends TacticTestBase {
     val invs = ListBuffer.empty[(Sequent, Position)]
     val boundedInvGen = new InvariantGenerator {
       override def generate(sequent: Sequent, position: Position, declaration: Declaration)
-          : LazyList[(Formula, Option[InvariantGenerator.ProofHint])] = {
+          : LazyList[(Formula, Option[InvariantHint])] = {
         !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question
         invs += (sequent -> position)
         invGenerator.generate(sequent, position, declaration)
@@ -275,7 +275,7 @@ class TactixLibraryTests extends TacticTestBase {
     val invs = ListBuffer.empty[(Sequent, Position)]
     val boundedInvGen = new InvariantGenerator {
       override def generate(sequent: Sequent, position: Position, declaration: Declaration)
-          : LazyList[(Formula, Option[InvariantGenerator.ProofHint])] = {
+          : LazyList[(Formula, Option[InvariantHint])] = {
         !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question
         invs += (sequent -> position)
         invGenerator.generate(sequent, position, declaration)

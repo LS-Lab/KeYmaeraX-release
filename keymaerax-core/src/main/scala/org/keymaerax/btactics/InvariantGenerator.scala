@@ -6,7 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Logging
-import org.keymaerax.bellerophon.{BelleExpr, BelleNoProgress, ProverSetupException}
+import org.keymaerax.bellerophon.{BelleNoProgress, ProverSetupException}
 import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
@@ -23,6 +23,20 @@ import org.keymaerax.tools.ToolException
 
 import scala.annotation.nowarn
 import scala.util.Try
+
+/** A proof hint on how to use an invariant. */
+sealed trait InvariantHint
+object InvariantHint {
+
+  /** A tactic proof hint. */
+  case class BelleExpr(t: BelleExpr) extends InvariantHint
+
+  /** Proof hint from Pegasus */
+  case class Pegasus(isInvariant: Boolean, t: Option[String]) extends InvariantHint
+
+  /** Proof hint from annotation */
+  case class Annotation(tryHard: Boolean) extends InvariantHint
+}
 
 /**
  * Invariant generator.
@@ -170,20 +184,7 @@ class ConfigurableGenerator(
  *   Formal Methods in System Design, 35(1), pp. 98-120, 2009
  */
 object InvariantGenerator extends Logging {
-
-  /** A proof hint on how to use an invariant. */
-  abstract class ProofHint
-
-  /** A tactic proof hint. */
-  case class BelleExprProofHint(t: BelleExpr) extends ProofHint
-
-  /** Proof hint from Pegasus */
-  case class PegasusProofHint(isInvariant: Boolean, t: Option[String]) extends ProofHint
-
-  /** Proof hint from annotation */
-  case class AnnotationProofHint(tryHard: Boolean) extends ProofHint
-
-  type GenProduct = (Formula, Option[ProofHint])
+  type GenProduct = (Formula, Option[InvariantHint])
 
   /**
    * A relevance filtering tool for dependency-optimized invariant and differential invariant generation based on the
@@ -416,14 +417,17 @@ object InvariantGenerator extends Logging {
             lazy val invs: Seq[GenProduct] =
               if (includeCandidates) {
                 pegasusInvs.flatMap({
-                  case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
-                  case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
+                  case Left(l) => l.map(i => i._1 -> Some(InvariantHint.Pegasus(isInvariant = true, proofHint(i._2))))
+                  case Right(r) => r.map(i => i._1 -> Some(InvariantHint.Pegasus(isInvariant = false, proofHint(i._2))))
                 })
               } else {
                 pegasusInvs
                   .filter(_.isLeft)
                   .flatMap(
-                    _.left.toOption.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
+                    _.left
+                      .toOption
+                      .get
+                      .map(i => i._1 -> Some(InvariantHint.Pegasus(isInvariant = true, proofHint(i._2))))
                   )
               }
             invs.to(LazyList).distinct

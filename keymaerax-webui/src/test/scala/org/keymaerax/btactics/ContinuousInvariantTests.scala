@@ -6,7 +6,6 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
-import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
@@ -28,15 +27,15 @@ class ContinuousInvariantTests extends TacticTestBase {
   "Continuous invariant lookup" should "provide a simple invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1)]x>0".asSequent
     TactixLibrary.invGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)) should
-      contain theSameElementsInOrderAs (("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
+      contain theSameElementsInOrderAs (("x>1".asFormula, Some(InvariantHint.Annotation(tryHard = true))) :: Nil)
   }
 
   it should "provide a conditional invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1, (x'=2 -> x>2), (x'=3 -> x>5))]x>0".asSequent
     TactixLibrary.invGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)) should
       contain theSameElementsInOrderAs
-      (("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) ::
-        ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
+      (("x>1".asFormula, Some(InvariantHint.Annotation(tryHard = true))) ::
+        ("x>2".asFormula, Some(InvariantHint.Annotation(tryHard = true))) :: Nil)
   }
 
   "Continuous invariant generation" should "generate a simple invariant" taggedAs IgnoreInBuildTest in
@@ -56,7 +55,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       pegasusInvariants should have size 3
       val invariants = pegasusInvariants.take(pegasusInvariants.size - 1)
       val candidate = pegasusInvariants.last
-      candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant = true, None))
+      candidate shouldBe invariants.map(_._1).reduce(And) -> Some(InvariantHint.Pegasus(isInvariant = true, None))
     }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica {

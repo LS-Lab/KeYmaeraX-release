@@ -1425,17 +1425,14 @@ object TactixLibrary
         c.products ++
           c.products
             .map(p =>
-              substs.foldRight[(Expression, Seq[(Formula, Option[InvariantGenerator.ProofHint])])](p)({ case (s, p) =>
+              substs.foldRight[(Expression, Seq[(Formula, Option[InvariantHint])])](p)({ case (s, p) =>
                 s(p._1) -> p._2.map({ case (f: Formula, h) => s(f) -> h })
               })
             )
       )
     case c: FixedGenerator => FixedGenerator(
         c.list ++
-          c.list
-            .map(p =>
-              substs.foldRight[(Formula, Option[InvariantGenerator.ProofHint])](p)({ case (s, p) => s(p._1) -> p._2 })
-            )
+          c.list.map(p => substs.foldRight[(Formula, Option[InvariantHint])](p)({ case (s, p) => s(p._1) -> p._2 }))
       )
     case _ => generator // other generators do not include predefined invariants; they produce their results when asked
   }

@@ -10,7 +10,7 @@ import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
 import org.keymaerax.btactics.Idioms._
-import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
+import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.SimplifierV3._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
@@ -1460,20 +1460,20 @@ private object DifferentialTactics extends TacticProvider with Logging {
         () => invariantCandidates,
         (prod: GenProduct) =>
           prod match {
-            case (True, Some(PegasusProofHint(true, Some("PreInv")))) =>
+            case (True, Some(InvariantHint.Pegasus(true, Some("PreInv")))) =>
               val preInv = (if (pos.isAnte) seq.updated(pos.top, True) else seq.updated(pos.top, False)).toFormula
               val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
               diffCut(preInv)(pos) & Idioms.doIfElse(_.subgoals.size == 2)(
                 <(skip, odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done),
                 throw new BelleNoProgress("Pre-invariant already present in evolution domain constraint"),
               )
-            case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
+            case (True, Some(InvariantHint.Pegasus(true, Some("PostInv")))) =>
               odeInvariant(tryHard = true, useDw = true)(pos) & done
-            case (True, Some(PegasusProofHint(true, Some("DomImpPost")))) =>
+            case (True, Some(InvariantHint.Pegasus(true, Some("DomImpPost")))) =>
               DifferentialTactics.DconstV(pos) & DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
-            case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
+            case (True, Some(InvariantHint.Pegasus(true, Some("PreDomFalse")))) =>
               diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
-            case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) =>
+            case (True, Some(InvariantHint.Pegasus(true, Some("PreNoImpPost")))) =>
               throw BelleCEX("ODE postcondition does not overlap with precondition", Map.empty, seq)
             case (inv, proofHint) =>
               // @todo workaround for diffCut/useAt unstable positioning
@@ -1484,16 +1484,16 @@ private object DifferentialTactics extends TacticProvider with Logging {
                   <(
                     skip,
                     proofHint match {
-                      case Some(PegasusProofHint(_, Some("Barrier"))) => dgDbxAuto(afterCutPos) & done |
+                      case Some(InvariantHint.Pegasus(_, Some("Barrier"))) => dgDbxAuto(afterCutPos) & done |
                           dgBarrier(afterCutPos) & done |
                           odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(PegasusProofHint(_, Some("Darboux"))) => dgDbxAuto(afterCutPos) & done |
+                      case Some(InvariantHint.Pegasus(_, Some("Darboux"))) => dgDbxAuto(afterCutPos) & done |
                           odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(PegasusProofHint(_, Some("FirstIntegral"))) => diffInd()(afterCutPos) & done |
+                      case Some(InvariantHint.Pegasus(_, Some("FirstIntegral"))) => diffInd()(afterCutPos) & done |
                           odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(PegasusProofHint(_, _)) =>
+                      case Some(InvariantHint.Pegasus(_, _)) =>
                         odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(AnnotationProofHint(tryHard)) =>
+                      case Some(InvariantHint.Annotation(tryHard)) =>
                         odeInvariant(tryHard = tryHard, useDw = false)(afterCutPos) & done
                       case _ => odeInvariant(tryHard = false, useDw = false)(afterCutPos) & done
                     },
