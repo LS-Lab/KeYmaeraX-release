@@ -164,7 +164,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String)
     Parser
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
-        generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None)))
+        generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ Invariant(inv)))
       )
     val entry = ArchiveParser.parseProblem(model, parseTactics = false)
     TactixInit.invSupplier = generator

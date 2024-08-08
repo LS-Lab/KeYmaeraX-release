@@ -10,7 +10,6 @@ import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
 import org.keymaerax.btactics.Idioms._
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.SimplifierV3._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
@@ -1375,19 +1374,17 @@ private object DifferentialTactics extends TacticProvider with Logging {
             logger.warn(
               "Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err
             )
-            LazyList[GenProduct]()
+            LazyList[Invariant]()
         }
 
       // Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
       // Fails if the invariant cannot be established by proveWithoutCuts.
-      val addInvariant = ChooseSome(
+      val addInvariant = ChooseSome[Invariant](
         () => invariantCandidates.iterator,
-        (prod: GenProduct) =>
-          prod match {
-            case (inv, _) => DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
-                /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-                diffCut(inv)(pos) < (skip, proveInvariant(pos) & done)
-          },
+        inv =>
+          DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
+            /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+            diffCut(inv.formula)(pos) < (skip, proveInvariant(pos) & done),
       )
 
       // If lateSolve is true then diffSolve will be run last, if at all.
@@ -1452,60 +1449,59 @@ private object DifferentialTactics extends TacticProvider with Logging {
    * cannot find a proof.
    */
   // was named "ODE"
-  private def fastODE(invariantCandidates: => Iterator[GenProduct])(finish: BelleExpr): DependentPositionTactic =
+  private def fastODE(invariantCandidates: => Iterator[Invariant])(finish: BelleExpr): DependentPositionTactic =
     anon((pos: Position, seq: Sequent) => {
       // Adds invariants to the system's evolution domain constraint and tries to establish them via odeInvariant.
       // Fails if the invariants cannot be established by odeInvariant.
-      val addInvariant = ChooseSome(
+      val addInvariant = ChooseSome[Invariant](
         () => invariantCandidates,
-        (prod: GenProduct) =>
-          prod match {
-            case (True, Some(InvariantHint.Pegasus(true, Some("PreInv")))) =>
-              val preInv = (if (pos.isAnte) seq.updated(pos.top, True) else seq.updated(pos.top, False)).toFormula
-              val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
-              diffCut(preInv)(pos) & Idioms.doIfElse(_.subgoals.size == 2)(
-                <(skip, odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done),
-                throw new BelleNoProgress("Pre-invariant already present in evolution domain constraint"),
-              )
-            case (True, Some(InvariantHint.Pegasus(true, Some("PostInv")))) =>
-              odeInvariant(tryHard = true, useDw = true)(pos) & done
-            case (True, Some(InvariantHint.Pegasus(true, Some("DomImpPost")))) =>
-              DifferentialTactics.DconstV(pos) & DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
-            case (True, Some(InvariantHint.Pegasus(true, Some("PreDomFalse")))) =>
-              diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
-            case (True, Some(InvariantHint.Pegasus(true, Some("PreNoImpPost")))) =>
-              throw BelleCEX("ODE postcondition does not overlap with precondition", Map.empty, seq)
-            case (inv, proofHint) =>
-              // @todo workaround for diffCut/useAt unstable positioning
-              val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
-              DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
-                /*@note diffCut skips previously cut in invs, fail with BelleNoProgress and try the next candidate */
-                diffCut(inv)(pos) & Idioms.doIfElse(_.subgoals.size == 2)(
-                  <(
-                    skip,
-                    proofHint match {
-                      case Some(InvariantHint.Pegasus(_, Some("Barrier"))) => dgDbxAuto(afterCutPos) & done |
-                          dgBarrier(afterCutPos) & done |
-                          odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(InvariantHint.Pegasus(_, Some("Darboux"))) => dgDbxAuto(afterCutPos) & done |
-                          odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(InvariantHint.Pegasus(_, Some("FirstIntegral"))) => diffInd()(afterCutPos) & done |
-                          odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(InvariantHint.Pegasus(_, _)) =>
+        {
+          case Invariant(True, Some(InvariantHint.Pegasus(true, Some("PreInv")))) =>
+            val preInv = (if (pos.isAnte) seq.updated(pos.top, True) else seq.updated(pos.top, False)).toFormula
+            val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
+            diffCut(preInv)(pos) & Idioms.doIfElse(_.subgoals.size == 2)(
+              <(skip, odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done),
+              throw new BelleNoProgress("Pre-invariant already present in evolution domain constraint"),
+            )
+          case Invariant(True, Some(InvariantHint.Pegasus(true, Some("PostInv")))) =>
+            odeInvariant(tryHard = true, useDw = true)(pos) & done
+          case Invariant(True, Some(InvariantHint.Pegasus(true, Some("DomImpPost")))) =>
+            DifferentialTactics.DconstV(pos) & DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
+          case Invariant(True, Some(InvariantHint.Pegasus(true, Some("PreDomFalse")))) =>
+            diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
+          case Invariant(True, Some(InvariantHint.Pegasus(true, Some("PreNoImpPost")))) =>
+            throw BelleCEX("ODE postcondition does not overlap with precondition", Map.empty, seq)
+          case Invariant(inv, proofHint) =>
+            // @todo workaround for diffCut/useAt unstable positioning
+            val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
+            DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
+              /*@note diffCut skips previously cut in invs, fail with BelleNoProgress and try the next candidate */
+              diffCut(inv)(pos) & Idioms.doIfElse(_.subgoals.size == 2)(
+                <(
+                  skip,
+                  proofHint match {
+                    case Some(InvariantHint.Pegasus(_, Some("Barrier"))) => dgDbxAuto(afterCutPos) & done |
+                        dgBarrier(afterCutPos) & done |
                         odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-                      case Some(InvariantHint.Annotation(tryHard)) =>
-                        odeInvariant(tryHard = tryHard, useDw = false)(afterCutPos) & done
-                      case _ => odeInvariant(tryHard = false, useDw = false)(afterCutPos) & done
-                    },
-                  ),
-                  throw new BelleNoProgress("Invariant already present in evolution domain constraint"),
-                ) &
-                // continue outside <(skip, ...) so that cut is proved before used
-                (odeInvariant()(pos) & done | fastODE(invariantCandidates)(finish)(
-                  pos
-                ) /* with next option from iterator */ ) &
-                DebuggingTactics.debug("[ODE] Inv Candidate done")
-          },
+                    case Some(InvariantHint.Pegasus(_, Some("Darboux"))) => dgDbxAuto(afterCutPos) & done |
+                        odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
+                    case Some(InvariantHint.Pegasus(_, Some("FirstIntegral"))) => diffInd()(afterCutPos) & done |
+                        odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
+                    case Some(InvariantHint.Pegasus(_, _)) =>
+                      odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
+                    case Some(InvariantHint.Annotation(tryHard)) =>
+                      odeInvariant(tryHard = tryHard, useDw = false)(afterCutPos) & done
+                    case _ => odeInvariant(tryHard = false, useDw = false)(afterCutPos) & done
+                  },
+                ),
+                throw new BelleNoProgress("Invariant already present in evolution domain constraint"),
+              ) &
+              // continue outside <(skip, ...) so that cut is proved before used
+              (odeInvariant()(pos) & done | fastODE(invariantCandidates)(finish)(
+                pos
+              ) /* with next option from iterator */ ) &
+              DebuggingTactics.debug("[ODE] Inv Candidate done")
+        },
       )
 
       addInvariant | finish
@@ -1543,7 +1539,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
     def odeWithInvgen(
         sys: ODESystem,
         generator: InvariantGenerator,
-        onGeneratorError: Throwable => LazyList[GenProduct],
+        onGeneratorError: Throwable => LazyList[Invariant],
     ): DependentPositionTactic = fastODE(try { generator.generate(seq, pos, defs).iterator }
     catch {
       case ex: Exception =>
@@ -1610,7 +1606,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
                         ex,
                       ),
                   )(pos),
-                  odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => LazyList[GenProduct]())(
+                  odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => LazyList[Invariant]())(
                     pos
                   ),
                 )(pos)
@@ -2352,10 +2348,10 @@ private object DifferentialTactics extends TacticProvider with Logging {
     // Assume that Pegasus hands us back a diffcut chain
     invs.headOption match {
       case None => throw new BelleNoProgress(s"Pegasus failed to generate an invariant")
-      case Some((True, _)) => diffWeakenG(pos) & timeoutQE & done
+      case Some(Invariant(True, _)) => diffWeakenG(pos) & timeoutQE & done
       case _ => invs.foldRight(diffWeakenG(pos) & timeoutQE & done)((fml, tac) =>
           // DebuggingTactics.print("DC chain: "+fml) &
-          DC(fml._1)(pos) < (
+          DC(fml.formula)(pos) < (
             tac,
             (
               // note: repeated dW&QE not needed if Pegasus reports a correct dC chain

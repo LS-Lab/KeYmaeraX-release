@@ -216,7 +216,7 @@ class TactixLibraryTests extends TacticTestBase {
 
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).map(_ -> None).to(LazyList)
+    val invs = LazyList("x>=-1", "x=5", "x>=0", "x=7").map(i => Invariant(i.asFormula))
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     // @note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => Nil.to(LazyList))(1)) shouldBe Symbol("proved")
@@ -255,8 +255,7 @@ class TactixLibraryTests extends TacticTestBase {
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
     val boundedInvGen = new InvariantGenerator {
-      override def generate(sequent: Sequent, position: Position, declaration: Declaration)
-          : LazyList[(Formula, Option[InvariantHint])] = {
+      override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant] = {
         !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question
         invs += (sequent -> position)
         invGenerator.generate(sequent, position, declaration)
@@ -274,8 +273,7 @@ class TactixLibraryTests extends TacticTestBase {
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
     val boundedInvGen = new InvariantGenerator {
-      override def generate(sequent: Sequent, position: Position, declaration: Declaration)
-          : LazyList[(Formula, Option[InvariantHint])] = {
+      override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant] = {
         !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question
         invs += (sequent -> position)
         invGenerator.generate(sequent, position, declaration)
@@ -287,28 +285,27 @@ class TactixLibraryTests extends TacticTestBase {
 
   "SnR Loop Invariant" should "by loopSR find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
-    val proof = proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1))
+    val invs = LazyList(".>=-1", ".=5", ".>=0").map(i => Invariant(i.asFormula))
+    val proof = proveBy(fml, implyR(1) & loopSR((_, _, _) => invs)(1))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs)(1)) shouldBe Symbol("proved")
   }
 
   it should "FEATURE_REQUEST: by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" taggedAs TodoTest in
     withMathematica { _ =>
       // @todo no ODE so loopPostMaster gives up even though postcondition is invariant
       val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-      val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
-      val proof = proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).to(LazyList))(1))
+      val invs = LazyList(".>=-1", ".=5", ".>=0").map(i => Invariant(i.asFormula))
+      val proof = proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1))
       proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
       proof shouldBe Symbol("proved")
-      proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe
-        Symbol("proved")
+      proveBy(fml, implyR(1) & loopPostMaster((_, _, _) => invs)(1)) shouldBe Symbol("proved")
     }
 
   it should "find by assignb an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val invs = List(".>=-1", ".=5", ".>=0").map(_.asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(
       fml,
@@ -321,12 +318,12 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(Invariant(_)).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find by step an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val invs = List(".>=-1", ".=5", ".>=0").map(_.asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(
       fml,
@@ -339,12 +336,12 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(Invariant(_)).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   it should "find by chase an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val invs = List(".>=-1", ".=5", ".>=0").map(_.asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(
       fml,
@@ -357,7 +354,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe Symbol("proved")
-    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(_ -> None).to(LazyList))(1)) shouldBe Symbol("proved")
+    proveBy(fml, implyR(1) & loopSR((_, _, _) => invs.map(Invariant(_)).to(LazyList))(1)) shouldBe Symbol("proved")
   }
 
   "Normalize" should "prove simple formula" in {

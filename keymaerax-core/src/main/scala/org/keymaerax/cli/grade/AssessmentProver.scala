@@ -23,6 +23,7 @@ import org.keymaerax.btactics.{
   ConfigurableGenerator,
   DebuggingTactics,
   FixedGenerator,
+  Invariant,
   InvariantHint,
   PolynomialArithV2,
   SimplifierV3,
@@ -754,8 +755,8 @@ object AssessmentProver {
                 .setAnnotationListener((p: Program, inv: Formula) =>
                   generator.products +=
                     (p ->
-                      (generator.products.getOrElse(p, Nil) :+ (inv, Some(InvariantHint.Annotation(tryHard = true))))
-                        .distinct)
+                      (generator.products.getOrElse(p, Nil) :+
+                        Invariant(inv, Some(InvariantHint.Annotation(tryHard = true)))).distinct)
                 )
               TactixInit.invSupplier = generator
               val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]

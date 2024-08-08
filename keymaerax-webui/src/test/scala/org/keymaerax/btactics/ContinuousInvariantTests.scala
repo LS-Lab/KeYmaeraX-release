@@ -27,15 +27,16 @@ class ContinuousInvariantTests extends TacticTestBase {
   "Continuous invariant lookup" should "provide a simple invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1)]x>0".asSequent
     TactixLibrary.invGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)) should
-      contain theSameElementsInOrderAs (("x>1".asFormula, Some(InvariantHint.Annotation(tryHard = true))) :: Nil)
+      contain theSameElementsInOrderAs List(Invariant("x>1".asFormula, Some(InvariantHint.Annotation(tryHard = true))))
   }
 
   it should "provide a conditional invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1, (x'=2 -> x>2), (x'=3 -> x>5))]x>0".asSequent
     TactixLibrary.invGenerator.generate(problem, SuccPos(0), Declaration(Map.empty)) should
-      contain theSameElementsInOrderAs
-      (("x>1".asFormula, Some(InvariantHint.Annotation(tryHard = true))) ::
-        ("x>2".asFormula, Some(InvariantHint.Annotation(tryHard = true))) :: Nil)
+      contain theSameElementsInOrderAs List(
+        Invariant("x>1".asFormula, Some(InvariantHint.Annotation(tryHard = true))),
+        Invariant("x>2".asFormula, Some(InvariantHint.Annotation(tryHard = true))),
+      )
   }
 
   "Continuous invariant generation" should "generate a simple invariant" taggedAs IgnoreInBuildTest in
@@ -55,7 +56,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       pegasusInvariants should have size 3
       val invariants = pegasusInvariants.take(pegasusInvariants.size - 1)
       val candidate = pegasusInvariants.last
-      candidate shouldBe invariants.map(_._1).reduce(And) -> Some(InvariantHint.Pegasus(isInvariant = true, None))
+      candidate shouldBe invariants.map(_.formula).reduce(And) -> Some(InvariantHint.Pegasus(isInvariant = true, None))
     }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica {
@@ -86,10 +87,10 @@ class ContinuousInvariantTests extends TacticTestBase {
               .pegasusInvariants
               .generate(Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
 
-            println("  generated: " + invariants.toList.map(i => s"${i._1}(${i._2})").mkString(", "))
+            println("  generated: " + invariants.toList.mkString(", "))
 
             annotatedInvariants.products.get(ode) match {
-              case Some(invs) => invariants.map(_._1) should contain theSameElementsInOrderAs invs.map(_._1)
+              case Some(invs) => invariants.map(_.formula) should contain theSameElementsInOrderAs invs.map(_.formula)
               case None =>
                 // @note invariant generator did not produce an invariant before, not expected to produce one now. Test will
                 // fail if invariant generator improves and finds an invariant.
@@ -120,7 +121,7 @@ class ContinuousInvariantTests extends TacticTestBase {
           println("\n" + name)
           val Imply(_, Box(ode @ ODESystem(_, _), _)) = model
           annotatedInvariants.products.get(ode) match {
-            case Some(invs) => tool.lzzCheck(ode, invs.map(_._1).reduce(And)) shouldBe true
+            case Some(invs) => tool.lzzCheck(ode, invs.map(_.formula).reduce(And)) shouldBe true
             case None => // no invariant to fast-check
           }
           println(name + " done")
@@ -169,7 +170,7 @@ class ContinuousInvariantTests extends TacticTestBase {
             val invariants = InvariantGenerator
               .pegasusInvariants
               .generate(Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0), defs)
-            println("  generated: " + invariants.toList.map(i => s"${i._1}(${i._2})").mkString(", "))
+            println("  generated: " + invariants.toList.mkString(", "))
             TactixInit.invSupplier = FixedGenerator(Nil)
             TactixInit.loopInvGenerator = FixedGenerator(Nil)
             TactixInit.differentialInvGenerator = FixedGenerator(invariants.toList)

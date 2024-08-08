@@ -5,8 +5,7 @@
 
 package org.keymaerax.hydra.requests.proofs
 
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
-import org.keymaerax.btactics.{ConfigurableGenerator, TactixInit, TactixLibrary}
+import org.keymaerax.btactics.{ConfigurableGenerator, Invariant, TactixInit, TactixLibrary}
 import org.keymaerax.core.{insist, CoreException, Expression, Formula, Program}
 import org.keymaerax.hydra.responses.proofs.OpenProofResponse
 import org.keymaerax.hydra.{
@@ -51,11 +50,11 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             // duplicate check to above
             new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")
           case Some(mId) =>
-            var products: Map[Expression, Seq[GenProduct]] = Map[Expression, Seq[GenProduct]]()
+            var products: Map[Expression, Seq[Invariant]] = Map[Expression, Seq[Invariant]]()
             Parser
               .parser
               .setAnnotationListener((p: Program, inv: Formula) =>
-                products += (p -> (products.getOrElse(p, Nil) :+ (inv, None)))
+                products += (p -> (products.getOrElse(p, Nil) :+ Invariant(inv)))
               )
             val problem = ArchiveParser.parseProblem(db.getModel(mId).keyFile)
             // @note add unexpanded (but elaborated) form, and fully expanded form to generator; generator itself also uses unification

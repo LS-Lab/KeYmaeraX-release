@@ -44,7 +44,7 @@ object InvariantProvers {
     anon((pos: Position, seq: Sequent, defs: Declaration) =>
       Augmentors.SequentAugmentor(seq)(pos) match {
         case loopfml @ Box(prog, post) =>
-          val cand: Iterator[Formula] = gen.generate(seq, pos, defs).iterator.map(_._1)
+          val cand: Iterator[Formula] = gen.generate(seq, pos, defs).iterator.map(_.formula)
           val bounds: List[Variable] =
             if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
               StaticSemantics.boundVars(loopfml).toSet.toList
@@ -134,21 +134,27 @@ object InvariantProvers {
               DifferentialTactics.isODE,
               DifferentialTactics.mathematicaODE(pos) |
                 // augment loop invariant to local ODE invariant if possible
-                (anon((pos: Position, seq: Sequent) => {
-                  val odePost = seq.sub(pos ++ PosInExpr(1 :: Nil))
-                  // no need to try same invariant again if odeInvariant(pos) already failed
-                  // @todo optimize: if the invariant generator were correct, could restrict to its first element
-                  ChooseSome(
-                    () =>
-                      gen.generate(seq, pos, defs).iterator.map(_._1).filterNot(localInv => odePost.contains(localInv)),
-                    (localInv: Formula) => {
-                      logger.debug("loopPostMaster local " + localInv)
-                      DebuggingTactics
-                        .debug("local") & dC(localInv)(pos) < (dW(pos) & QE, DifferentialTactics.mathematicaODE(pos)) &
-                        done & DebuggingTactics.debug("success")
-                    },
-                  )
-                }))(pos),
+                (
+                  anon((pos: Position, seq: Sequent) => {
+                    val odePost = seq.sub(pos ++ PosInExpr(1 :: Nil))
+                    // no need to try same invariant again if odeInvariant(pos) already failed
+                    // @todo optimize: if the invariant generator were correct, could restrict to its first element
+                    ChooseSome(
+                      () =>
+                        gen
+                          .generate(seq, pos, defs)
+                          .iterator
+                          .map(_.formula)
+                          .filterNot(localInv => odePost.contains(localInv)),
+                      (localInv: Formula) => {
+                        logger.debug("loopPostMaster local " + localInv)
+                        DebuggingTactics.debug("local") &
+                          dC(localInv)(pos) < (dW(pos) & QE, DifferentialTactics.mathematicaODE(pos)) & done &
+                          DebuggingTactics.debug("success")
+                      },
+                    )
+                  })
+                )(pos),
               QE,
             )(pos)
           ) & done
@@ -184,7 +190,7 @@ object InvariantProvers {
                   logger.debug("loopPostMaster progressing")
                   val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
 
-                  val generator = gen.generate(assumeMoreSeq, pos, defs).map(_._1)
+                  val generator = gen.generate(assumeMoreSeq, pos, defs).map(_.formula)
                   // keep iterating remembered iterator (otherwise generator restarts from the beginning)
                   if (!generators.contains(assumeMoreSeq)) generators.put(assumeMoreSeq, generator.iterator)
                   val candidates = generators(assumeMoreSeq)

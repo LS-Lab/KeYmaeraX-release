@@ -186,7 +186,8 @@ object KeYmaeraXTool extends Tool {
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
         generator.products +=
-          (p -> (generator.products.getOrElse(p, Nil) :+ (inv, Some(InvariantHint.Annotation(tryHard = true)))))
+          (p ->
+            (generator.products.getOrElse(p, Nil) :+ Invariant(inv, Some(InvariantHint.Annotation(tryHard = true)))))
       )
     TactixInit.invSupplier = generator
 

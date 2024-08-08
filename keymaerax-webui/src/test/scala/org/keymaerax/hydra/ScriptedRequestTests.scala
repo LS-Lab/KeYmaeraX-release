@@ -10,7 +10,14 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros._
-import org.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{
+  ConfigurableGenerator,
+  FixedGenerator,
+  Invariant,
+  InvariantGenerator,
+  TacticTestBase,
+  TactixLibrary,
+}
 import org.keymaerax.core.{Expression, Formula, Real}
 import org.keymaerax.hydra.requests.models.{GetModelListRequest, ListExamplesRequest, UploadArchiveRequest}
 import org.keymaerax.hydra.requests.proofs.{
@@ -1013,9 +1020,9 @@ class ScriptedRequestTests extends TacticTestBase {
                 val session = SessionManager.session(t)
                 session(proofId).asInstanceOf[ProofSession].invSupplier match {
                   case s: ConfigurableGenerator => s.products shouldBe Map(
-                      "{x:=2;}*".asProgram -> (("x=2".asFormula, None) :: Nil),
-                      "{x:=x+1; a{|^@|};}*".asProgram -> (("x>=0".asFormula, None) :: Nil),
-                      "{x:=x+1; {x:=2;}*}*".asProgram -> (("x>=0".asFormula, None) :: Nil),
+                      "{x:=2;}*".asProgram -> List(Invariant("x=2".asFormula)),
+                      "{x:=x+1; a{|^@|};}*".asProgram -> List(Invariant("x>=0".asFormula)),
+                      "{x:=x+1; {x:=2;}*}*".asProgram -> List(Invariant("x>=0".asFormula)),
                     )
                 }
             }

@@ -8,7 +8,6 @@ package org.keymaerax.btactics
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Idioms.mapSubpositions
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TacticHelper.timed
 import org.keymaerax.btactics.TactixLibrary._
@@ -418,7 +417,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def proofListener(name: String, senseVars: Set[Variable], x0: Map[Variable, Term], defs: Declaration) =
     new IOListener() {
-      var invariant: Option[GenProduct] = None
+      var invariant: Option[Invariant] = None
       // initial condition and differential invariants per ODE
       var diffInvariants: ListMap[DifferentialProgram, (Formula, Formula)] = ListMap()
       var inDW = false
@@ -442,9 +441,9 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
               inDW = true
           }
         case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "throughout" =>
-          invariant = Some(t.pt.inputs.head.asInstanceOf[Formula] -> None)
+          invariant = Some(Invariant(t.pt.inputs.head.asInstanceOf[Formula]))
         case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "loop" && invariant.isEmpty =>
-          invariant = Some(t.pt.inputs.head.asInstanceOf[Formula] -> None)
+          invariant = Some(Invariant(t.pt.inputs.head.asInstanceOf[Formula]))
         case t: AppliedDependentPositionTactic if t.pt.name == "loopAuto" && invariant.isEmpty =>
           input match {
             case BelleProvable(p, _) => invariant = TactixLibrary
@@ -776,7 +775,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       "Proof of model " + name + " does not provide sufficient insight abstracting from the ODE dynamics. Please use differential weakening dW in the proof.",
     )
 
-    val inv = replace(pl.invariant.get._1, consts)
+    val inv = replace(pl.invariant.get.formula, consts)
 
     val diffInvConjuncts = FormulaTools.conjuncts(combineDiffInvariants(pl.diffInvariants.toList, plant, x0)) :+ q
     val rep1 = diffInvConjuncts.map(replace(_, sensePostVars))

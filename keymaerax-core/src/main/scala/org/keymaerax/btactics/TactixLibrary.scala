@@ -479,7 +479,7 @@ object TactixLibrary
             // @note bypass all other invariant generators except the annotated invariants, pass on to loop
             ChooseSome(
               () =>
-                try { gen.generate(seq, pos, defs).iterator.map(_._1) }
+                try { gen.generate(seq, pos, defs).iterator.map(_.formula) }
                 catch {
                   case err: Exception =>
                     logger.warn("ChooseSome: error listing options " + err, err)
@@ -569,7 +569,7 @@ object TactixLibrary
   def loop(gen: InvariantGenerator): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = loop(nextOrElse(
-        gen.generate(sequent, pos, defs).map(_._1).iterator,
+        gen.generate(sequent, pos, defs).map(_.formula).iterator,
         throw new BelleNoProgress(
           "Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos
         ),
@@ -601,7 +601,7 @@ object TactixLibrary
               // @note bypass all other invariant generators except the annotated invariants, pass on to loop
               ChooseSome(
                 () =>
-                  try { invSupplier.generate(seq, pos, defs).iterator.map(_._1) }
+                  try { invSupplier.generate(seq, pos, defs).iterator.map(_.formula) }
                   catch {
                     case err: Exception =>
                       logger.warn("ChooseSome: error listing options " + err, err)
@@ -614,7 +614,7 @@ object TactixLibrary
 //@todo     loopPostMaster(gen)(pos) & done ||
               ChooseSome(
                 () =>
-                  try { gen.generate(seq, pos, defs).iterator.map(_._1) }
+                  try { gen.generate(seq, pos, defs).iterator.map(_.formula) }
                   catch {
                     case err: Exception =>
                       logger.warn("ChooseSome: error listing options " + err, err)
@@ -732,7 +732,7 @@ object TactixLibrary
         // @todo problematic if ODE is used in a scripted proof but also annotations are present!
         invs
           .map(inv =>
-            dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
+            dC(inv.formula)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
               skip,
               // @todo pass invariant supplier to tactics via interpreter (as part of BelleProvable)
               (if (pos.isTopLevel) SaturateTactic(
@@ -744,7 +744,7 @@ object TactixLibrary
                   0,
                   details =>
                     new UnprovableAnnotatedInvariant(
-                      "User-supplied invariant " + inv._1.prettyString +
+                      "User-supplied invariant " + inv.formula.prettyString +
                         " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" +
                         details
                     ),
@@ -1425,14 +1425,13 @@ object TactixLibrary
         c.products ++
           c.products
             .map(p =>
-              substs.foldRight[(Expression, Seq[(Formula, Option[InvariantHint])])](p)({ case (s, p) =>
-                s(p._1) -> p._2.map({ case (f: Formula, h) => s(f) -> h })
+              substs.foldRight[(Expression, Seq[Invariant])](p)({ case (s, p) =>
+                s(p._1) -> p._2.map(i => i.copy(formula = s(i.formula)))
               })
             )
       )
     case c: FixedGenerator => FixedGenerator(
-        c.list ++
-          c.list.map(p => substs.foldRight[(Formula, Option[InvariantHint])](p)({ case (s, p) => s(p._1) -> p._2 }))
+        c.list ++ c.list.map(p => substs.foldRight[Invariant](p)({ case (s, p) => p.copy(formula = s(p.formula)) }))
       )
     case _ => generator // other generators do not include predefined invariants; they produce their results when asked
   }

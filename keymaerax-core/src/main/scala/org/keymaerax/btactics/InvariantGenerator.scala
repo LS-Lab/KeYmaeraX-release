@@ -38,6 +38,8 @@ object InvariantHint {
   case class Annotation(tryHard: Boolean) extends InvariantHint
 }
 
+case class Invariant(formula: Formula, hint: Option[InvariantHint] = None)
+
 /**
  * Invariant generator.
  *
@@ -52,36 +54,27 @@ trait InvariantGenerator {
    * @author
    *   Stefan Mitsch
    */
-  def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[InvariantGenerator.GenProduct]
+  def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant]
 }
 
 /** Generator always providing a fixed list as output. */
-case class FixedGenerator(list: List[InvariantGenerator.GenProduct]) extends InvariantGenerator {
-  override def generate(
-      sequent: Sequent,
-      position: Position,
-      declaration: Declaration,
-  ): LazyList[InvariantGenerator.GenProduct] = list.to(LazyList)
+case class FixedGenerator(list: List[Invariant]) extends InvariantGenerator {
+  override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant] = list
+    .to(LazyList)
 }
 
 object ConfigurableGenerator {
 
   /** Creates a generator that has `products` in verbatim form and fully expanded according to `defs`. */
-  def create(products: Map[Expression, Seq[InvariantGenerator.GenProduct]], defs: Declaration): ConfigurableGenerator =
+  def create(products: Map[Expression, Seq[Invariant]], defs: Declaration): ConfigurableGenerator =
     new ConfigurableGenerator(products.map({ case (k, v) =>
       defs.elaborateToSystemConsts(defs.elaborateToFunctions(k)) ->
-        v.map({
-            case (f: Expression, h) => defs.elaborateToSystemConsts(defs.elaborateToFunctions(f)) -> h
-            case v => v
-          })
-          .distinct
+        v.map(i => i.copy(formula = defs.elaborateToSystemConsts(defs.elaborateToFunctions(i.formula)))).distinct
     }) ++ products.map({ case (k, v) =>
       defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(k))) ->
-        v.map({
-            case (f: Expression, h) =>
-              defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(f))) -> h
-            case v => v
-          })
+        v.map(i =>
+            i.copy(formula = defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(i.formula))))
+          )
           .distinct
     }))
 }
@@ -91,25 +84,20 @@ object ConfigurableGenerator {
  * @author
  *   Stefan Mitsch
  */
-class ConfigurableGenerator(
-    var products: Map[Expression, Seq[InvariantGenerator.GenProduct]] =
-      Map[Expression, Seq[InvariantGenerator.GenProduct]]()
-) extends InvariantGenerator {
-  override def generate(
-      sequent: Sequent,
-      position: Position,
-      declaration: Declaration,
-  ): LazyList[InvariantGenerator.GenProduct] = sequent.sub(position) match {
-    case Some(Box(prg, _)) => findPrgProducts(prg)
-    case Some(Diamond(prg, _)) => findPrgProducts(prg)
-    case Some(f) => products.getOrElse(f, Nil).distinct.to(LazyList)
-    case None => Nil.to(LazyList)
-  }
+class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[Expression, Seq[Invariant]]())
+    extends InvariantGenerator {
+  override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant] =
+    sequent.sub(position) match {
+      case Some(Box(prg, _)) => findPrgProducts(prg)
+      case Some(Diamond(prg, _)) => findPrgProducts(prg)
+      case Some(f) => products.getOrElse(f, Nil).distinct.to(LazyList)
+      case None => Nil.to(LazyList)
+    }
 
   /**
    * Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint.
    */
-  private def findPrgProducts(prg: Program): LazyList[InvariantGenerator.GenProduct] = prg match {
+  private def findPrgProducts(prg: Program): LazyList[Invariant] = prg match {
     case sys @ ODESystem(ode, _) =>
       val odeProducts = products.find({
         case (ODESystem(key, _), _) => ode == key
@@ -138,7 +126,7 @@ class ConfigurableGenerator(
    * Finds products that match the ODE `ode` by shape and with a condition that matches. For example, v'=A matches
    * v'=a@invariant(v'=A->v>=old(v), v'=-2 -> v<=old(v)).
    */
-  private def findConditionalDiffInv(ode: ODESystem): Seq[InvariantGenerator.GenProduct] = {
+  private def findConditionalDiffInv(ode: ODESystem): Seq[Invariant] = {
     // @note UnificationMatch and RenUSubst won't allow numbers, use own naive subst in these cases
     products
       .find({
@@ -157,14 +145,12 @@ class ConfigurableGenerator(
   }
 
   /** Extracts the right-hand side of a conditional differential invariant. */
-  private def extractConditionalDiffInv(
-      odeAtoms: List[AtomicODE],
-      product: InvariantGenerator.GenProduct,
-  ): Option[InvariantGenerator.GenProduct] = product match {
-    case (Imply(Equal(xp: DifferentialSymbol, e), invCandidate), hint) =>
-      if (odeAtoms.exists(a => a.xp == xp && a.e == e)) Some((invCandidate, hint)) else None
-    case _ => Some(product)
-  }
+  private def extractConditionalDiffInv(odeAtoms: List[AtomicODE], product: Invariant): Option[Invariant] =
+    product match {
+      case Invariant(Imply(Equal(xp: DifferentialSymbol, e), invCandidate), hint) =>
+        if (odeAtoms.exists(a => a.xp == xp && a.e == e)) Some(Invariant(invCandidate, hint)) else None
+      case _ => Some(product)
+    }
 }
 
 /**
@@ -184,7 +170,6 @@ class ConfigurableGenerator(
  *   Formal Methods in System Design, 35(1), pp. 98-120, 2009
  */
 object InvariantGenerator extends Logging {
-  type GenProduct = (Formula, Option[InvariantHint])
 
   /**
    * A relevance filtering tool for dependency-optimized invariant and differential invariant generation based on the
@@ -224,12 +209,12 @@ object InvariantGenerator extends Logging {
         .distinct
         // new invariants only that aren't in the evolution domain constraint yet
         // @note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
-        .filter(prod => (allowPost || prod._1 != post) && !evos.contains(prod._1))
+        .filter(inv => (allowPost || inv.formula != post) && !evos.contains(inv.formula))
         // filter out constants
         // filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(bounds).isEmpty)
         // candidates with knowledge about missing variables
         // @todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
-        .filter(prod => StaticSemantics.freeVars(prod._1).symbols.intersect(missing).nonEmpty)
+        .filter(inv => StaticSemantics.freeVars(inv.formula).symbols.intersect(missing).nonEmpty)
       // @todo could check that it's not a tautology using RCF or check that it's not provable by DW
       // @todo postpone and try later candidates not covering all their dependencies (given the knowledge)
       //        filter(fml => {
@@ -306,11 +291,11 @@ object InvariantGenerator extends Logging {
       .generate(sequent, pos, defs)
       // sort by dependency order
       // @todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
-      .sortWith((a: GenProduct, b: GenProduct) =>
+      .sortWith((a: Invariant, b: Invariant) =>
         // @todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
         // @todo improve sorting to take dependency cluster into account, too.
-        if (a._1.isFOL == b._1.isFOL) depCompare(a._1, b._1)
-        else a._1.isFOL // @note a.isFOL != b.isFOL, FOL are smaller than non-FOL formulas
+        if (a.formula.isFOL == b.formula.isFOL) depCompare(a.formula, b.formula)
+        else a.formula.isFOL // @note a.isFOL != b.isFOL, FOL are smaller than non-FOL formulas
       )
   }
 
@@ -387,12 +372,12 @@ object InvariantGenerator extends Logging {
       case Some(Box(_: ODESystem, post)) => FormulaTools
           .conjuncts(post +: defs.exhaustiveSubst(sequent).ante.toList)
           .distinct
-          .map(_ -> None)
+          .map(Invariant(_))
           .to(LazyList)
           .distinct
       case Some(Box(l: Loop, post)) =>
         val combined = combinedAssumptions(l, post).distinct
-        (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(_ -> None).to(LazyList).distinct
+        (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(Invariant(_)).to(LazyList).distinct
       case Some(_) => throw new IllegalArgumentException(
           "ill-positioned " + pos + " does not give a differential equation or loop in " + sequent
         )
@@ -414,11 +399,13 @@ object InvariantGenerator extends Logging {
               val assumptions = if (succFmls.isEmpty) sequent.ante else sequent.ante :+ Not(succFmls.reduceRight(Or))
               tool.invgen(ode, assumptions, post)
             }
-            lazy val invs: Seq[GenProduct] =
+            lazy val invs: Seq[Invariant] =
               if (includeCandidates) {
                 pegasusInvs.flatMap({
-                  case Left(l) => l.map(i => i._1 -> Some(InvariantHint.Pegasus(isInvariant = true, proofHint(i._2))))
-                  case Right(r) => r.map(i => i._1 -> Some(InvariantHint.Pegasus(isInvariant = false, proofHint(i._2))))
+                  case Left(l) =>
+                    l.map(i => Invariant(i._1, Some(InvariantHint.Pegasus(isInvariant = true, proofHint(i._2)))))
+                  case Right(r) =>
+                    r.map(i => Invariant(i._1, Some(InvariantHint.Pegasus(isInvariant = false, proofHint(i._2)))))
                 })
               } else {
                 pegasusInvs
@@ -427,7 +414,7 @@ object InvariantGenerator extends Logging {
                     _.left
                       .toOption
                       .get
-                      .map(i => i._1 -> Some(InvariantHint.Pegasus(isInvariant = true, proofHint(i._2))))
+                      .map(i => Invariant(i._1, Some(InvariantHint.Pegasus(isInvariant = true, proofHint(i._2)))))
                   )
               }
             invs.to(LazyList).distinct
@@ -485,7 +472,7 @@ object InvariantGenerator extends Logging {
           List(Equal(inv, initial), GreaterEqual(inv, initial), LessEqual(inv, initial))
             .filter(cand => !evos.contains(cand))
         })
-        .map(_ -> None)
+        .map(Invariant(_))
         .distinct
     } catch { case ex: ToolException => throw new BelleNoProgress("inverseCharacteristic generation unsuccessful", ex) }
   }
@@ -497,7 +484,7 @@ object InvariantGenerator extends Logging {
    *   Andre Platzer
    */
   def cached(generator: InvariantGenerator): InvariantGenerator = {
-    val cache: scala.collection.mutable.Map[Box, LazyList[GenProduct]] = new scala.collection.mutable.LinkedHashMap()
+    val cache: scala.collection.mutable.Map[Box, LazyList[Invariant]] = new scala.collection.mutable.LinkedHashMap()
     (sequent, pos, defs) => {
       val box = sequent.sub(pos) match {
         case Some(Box(ODESystem(ode, And(True, q)), pf)) => Box(ODESystem(ode, q), pf)

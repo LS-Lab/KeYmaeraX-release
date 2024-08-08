@@ -385,10 +385,10 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
             val candidates = InvariantGenerator.pegasusCandidates.generate(seq, SuccPos(0), defs).toList
             val invGenEnd = System.currentTimeMillis()
             println(s"Done generating (${invGenEnd - invGenStart}ms: ${candidates
-                .map(c => c._1.prettyString + " (proof hint " + c._2 + ")")
+                .map(c => c.formula.prettyString + " (proof hint " + c.hint + ")")
                 .mkString(",")}) $name")
             if (candidates.nonEmpty) {
-              println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))
+              println(s"Checking $name with candidates " + candidates.map(_.formula.prettyString).mkString(","))
               // @note invSupplier is expected to a diff-cut chain and fails if they are not provable in exactly the presented order;
               // a generator can provide candidates, unprovable candidates are skipped
               TactixInit.invSupplier = FixedGenerator(Nil)
@@ -512,7 +512,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
     Parser
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
-        generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None)))
+        generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ Invariant(inv)))
       )
     val entry = ArchiveParser.parser(modelContent).head
     TactixInit.invSupplier = generator
