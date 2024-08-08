@@ -5,7 +5,6 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.btactics.ConfigurableGenerator
 import org.keymaerax.core._
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.{Configuration, FileConfiguration}
@@ -26,12 +25,10 @@ class SystemTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
   override def beforeEach(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-    val generator = new ConfigurableGenerator[Formula]()
+    var products: Map[Expression, Seq[Formula]] = Map()
     Parser
       .parser
-      .setAnnotationListener((p: Program, inv: Formula) =>
-        generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv))
-      )
+      .setAnnotationListener((p: Program, inv: Formula) => products += (p -> (products.getOrElse(p, Nil) :+ inv)))
   }
 
   /* Test teardown */

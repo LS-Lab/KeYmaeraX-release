@@ -7,7 +7,6 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.DLBySubst.{assignbExists, cexLoop}
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
 import org.keymaerax.hydra.DbProofTree
@@ -628,7 +627,7 @@ class DLTests extends TacticTestBase {
     val succ @ Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula
     val result = proveBy(
       Sequent(IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
-      loop(new ConfigurableGenerator[GenProduct](Map((prg, ("x>1".asFormula -> None) :: Nil))))(1),
+      loop(new ConfigurableGenerator(Map((prg, ("x>1".asFormula -> None) :: Nil))))(1),
     )
 
     result.subgoals should have size 3
@@ -875,7 +874,7 @@ class DLTests extends TacticTestBase {
     val succ @ Box(prg, _) = "[{x:=A+B+1;}*]x>0".asFormula
     val result = proveBy(
       s"A>0, x>2, !B<=0 ==> C<1, ${succ.prettyString}, D<1".asSequent,
-      loop(new ConfigurableGenerator[GenProduct](Map((prg, ("x>1".asFormula, None) :: Nil))))(2),
+      loop(new ConfigurableGenerator(Map((prg, ("x>1".asFormula, None) :: Nil))))(2),
     )
 
     result.subgoals should have size 3

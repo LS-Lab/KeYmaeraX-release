@@ -83,7 +83,7 @@ object DerivationInfoRegistry extends Logging {
       case "String" => ""
       case "Variable" => Variable("x")
       case "Formula" => True
-      case "Generator" => FixedGenerator(Nil)
+      case "InvariantGenerator" => FixedGenerator(Nil)
       case "SubstitutionPair" => SubstitutionPair(Nothing, Nothing)
       case "PosInExpr" => PosInExpr()
       case "Option" => None

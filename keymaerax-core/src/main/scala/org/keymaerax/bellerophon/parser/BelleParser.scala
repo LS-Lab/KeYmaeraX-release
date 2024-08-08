@@ -7,7 +7,6 @@ package org.keymaerax.bellerophon.parser
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BelleLexer.TokenStream
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
@@ -79,7 +78,7 @@ object BelleParser extends TacticParser with Logging {
    */
   def parseWithInvGen(
       s: String,
-      g: Option[Generator[GenProduct]] = None,
+      g: Option[InvariantGenerator] = None,
       defs: Declaration = Declaration(Map.empty),
       expandAll: Boolean = false,
   ): BelleExpr = firstUnacceptableCharacter(s) match {
@@ -187,7 +186,7 @@ object BelleParser extends TacticParser with Logging {
   def parseTokenStream(
       toks: TokenStream,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator[GenProduct]],
+      g: Option[InvariantGenerator],
       defs: Declaration,
       expandAll: Boolean,
   ): BelleExpr = {
@@ -204,7 +203,7 @@ object BelleParser extends TacticParser with Logging {
   private def parseLoop(
       st: ParserState,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator[GenProduct]],
+      g: Option[InvariantGenerator],
       defs: Declaration,
       expandAll: Boolean,
   ): ParserState = {
@@ -220,7 +219,7 @@ object BelleParser extends TacticParser with Logging {
   private def parseInnerExpr(
       tokens: List[BelleToken],
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator[GenProduct]],
+      g: Option[InvariantGenerator],
       defs: Declaration,
       expandAll: Boolean,
   ): (BelleExpr, Location, List[BelleToken]) = tokens match {
@@ -252,7 +251,7 @@ object BelleParser extends TacticParser with Logging {
   private def parseStep(
       st: ParserState,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator[GenProduct]],
+      g: Option[InvariantGenerator],
       defs: Declaration,
       expandAll: Boolean,
   ): ParserState = {
@@ -635,7 +634,7 @@ object BelleParser extends TacticParser with Logging {
       args: Option[List[TacticArg]],
       location: Location,
       tacticDefs: DefScope[String, DefTactic],
-      g: Option[Generator[GenProduct]],
+      g: Option[InvariantGenerator],
       defs: Declaration,
       expandAll: Boolean,
   ): BelleExpr = {

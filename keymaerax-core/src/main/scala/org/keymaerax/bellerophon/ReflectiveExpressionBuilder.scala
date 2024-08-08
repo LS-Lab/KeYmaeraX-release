@@ -6,7 +6,6 @@
 package org.keymaerax.bellerophon
 
 import org.keymaerax.Logging
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
@@ -30,17 +29,17 @@ object ReflectiveExpressionBuilder extends Logging {
   def build(
       info: DerivationInfo,
       args: List[Either[Seq[Any], PositionLocator]],
-      generator: Option[Generator[GenProduct]],
+      generator: Option[InvariantGenerator],
       defs: Declaration,
   ): BelleExpr = {
     val posArgs = args.flatMap(_.toOption)
     val withGenerator =
       if (info.needsGenerator) {
         generator match {
-          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator[GenProduct] => Any](theGenerator)
+          case Some(theGenerator) => info.belleExpr.asInstanceOf[InvariantGenerator => Any](theGenerator)
           case None =>
             logger.debug(s"Need a generator for tactic ${info.codeName} but none was provided; switching to default.")
-            info.belleExpr.asInstanceOf[Generator[GenProduct] => Any](TactixLibrary.invGenerator)
+            info.belleExpr.asInstanceOf[InvariantGenerator => Any](TactixLibrary.invGenerator)
         }
       } else { info.belleExpr }
     val expressionArgs = args
@@ -168,7 +167,7 @@ object ReflectiveExpressionBuilder extends Logging {
   def apply(
       name: String,
       arguments: List[Either[Seq[Any], PositionLocator]] = Nil,
-      generator: Option[Generator[GenProduct]],
+      generator: Option[InvariantGenerator],
       defs: Declaration,
   ): BelleExpr = {
     if (!DerivationInfo.hasCodeName(name)) {

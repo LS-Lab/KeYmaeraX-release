@@ -7,7 +7,6 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Idioms.?
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.{SequentAugmentor, _}
@@ -41,7 +40,7 @@ object InvariantProvers {
    *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Example 32.
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
-  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic =
+  def loopSR(gen: InvariantGenerator): DependentPositionTactic =
     anon((pos: Position, seq: Sequent, defs: Declaration) =>
       Augmentors.SequentAugmentor(seq)(pos) match {
         case loopfml @ Box(prog, post) =>
@@ -94,7 +93,7 @@ object InvariantProvers {
   }
 
   /** [[TactixLibrary.loopPostMaster()]]. */
-  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic =
+  def loopPostMaster(gen: InvariantGenerator): DependentPositionTactic =
     anon((pos: Position, seq: Sequent, defs: Declaration) =>
       Augmentors.SequentAugmentor(seq)(pos) match {
         case loopfml @ Box(prog, post) =>

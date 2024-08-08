@@ -7,7 +7,6 @@ package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.TacticInfo
@@ -255,7 +254,7 @@ class TactixLibraryTests extends TacticTestBase {
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
-    val boundedInvGen = new Generator[GenProduct] {
+    val boundedInvGen = new InvariantGenerator {
       override def generate(sequent: Sequent, position: Position, declaration: Declaration)
           : LazyList[(Formula, Option[InvariantGenerator.ProofHint])] = {
         !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question
@@ -274,7 +273,7 @@ class TactixLibraryTests extends TacticTestBase {
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     val invs = ListBuffer.empty[(Sequent, Position)]
-    val boundedInvGen = new Generator[GenProduct] {
+    val boundedInvGen = new InvariantGenerator {
       override def generate(sequent: Sequent, position: Position, declaration: Declaration)
           : LazyList[(Formula, Option[InvariantGenerator.ProofHint])] = {
         !invs.contains((sequent, position)) // loopPostMaster shouldn't ask repeatedly the same question

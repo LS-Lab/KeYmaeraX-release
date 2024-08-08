@@ -6,7 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
-import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
+import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
@@ -64,8 +64,8 @@ class ContinuousInvariantTests extends TacticTestBase {
       val entries = ArchiveParser.parse(
         io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
       )
-      val annotatedInvariants: ConfigurableGenerator[GenProduct] =
-        TactixLibrary.invSupplier match { case gen: ConfigurableGenerator[GenProduct] => gen }
+      val annotatedInvariants: ConfigurableGenerator =
+        TactixLibrary.invSupplier match { case gen: ConfigurableGenerator => gen }
       TactixInit.invSupplier = FixedGenerator(Nil)
       withTemporaryConfig(Map(
         Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
@@ -108,8 +108,8 @@ class ContinuousInvariantTests extends TacticTestBase {
       val entries = ArchiveParser.parse(
         io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString
       )
-      val annotatedInvariants: ConfigurableGenerator[GenProduct] =
-        TactixInit.invSupplier match { case gen: ConfigurableGenerator[GenProduct] => gen }
+      val annotatedInvariants: ConfigurableGenerator =
+        TactixInit.invSupplier match { case gen: ConfigurableGenerator => gen }
 
       // forEvery swallows test timeout of failAfter; failAfter signaler interrupts thread, which we pick up with whenever
       // to skip the remaining entries

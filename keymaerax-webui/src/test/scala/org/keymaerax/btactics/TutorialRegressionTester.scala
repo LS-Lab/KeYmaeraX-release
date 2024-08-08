@@ -7,7 +7,6 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.core.{Formula, Program}
 import org.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import org.keymaerax.hydra.{DatabasePopulator, TempDBTools}
@@ -159,9 +158,9 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String)
   }
 
   /** Parse a problem file to find declarations and invariant annotations */
-  private def parseProblem(model: String): (Declaration, Generator[GenProduct]) = {
+  private def parseProblem(model: String): (Declaration, InvariantGenerator) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
-    val generator = new ConfigurableGenerator[GenProduct]()
+    val generator = new ConfigurableGenerator()
     Parser
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>

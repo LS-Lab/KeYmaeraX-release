@@ -28,7 +28,7 @@ object BelleExpr {
   // Don't persist generator arguments
   private[bellerophon] def persistable[T](args: Seq[T]): Seq[T] = {
     args.filter {
-      case _: Generator[_] => false
+      case _: InvariantGenerator => false
       case _ => true
     }
   }

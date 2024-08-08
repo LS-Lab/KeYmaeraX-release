@@ -8,7 +8,6 @@ package org.keymaerax.btactics
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.TacticStatistics
 import org.keymaerax.btactics.BenchmarkTests._
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Program, Sequent, SuccPos}
 import org.keymaerax.hydra.DatabasePopulator
 import org.keymaerax.hydra.DatabasePopulator.TutorialEntry
@@ -509,7 +508,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
   /** Parse model and add proof hint annotations to invariant generator. */
   private def parseWithHints(modelContent: String): (Formula, Declaration) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
-    val generator = new ConfigurableGenerator[GenProduct]()
+    val generator = new ConfigurableGenerator()
     Parser
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>

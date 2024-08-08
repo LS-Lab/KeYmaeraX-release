@@ -17,7 +17,7 @@ import org.keymaerax.bellerophon.{
   SeqTactic,
   TacticInapplicableFailure,
 }
-import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
+import org.keymaerax.btactics.InvariantGenerator.AnnotationProofHint
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.{
   Ax,
@@ -748,7 +748,7 @@ object AssessmentProver {
 
           def runBelleProof(question: String, answers: List[String]): Either[ProvableSig, String] = {
             run(() => {
-              val generator = new ConfigurableGenerator[GenProduct]()
+              val generator = new ConfigurableGenerator()
               Parser
                 .parser
                 .setAnnotationListener((p: Program, inv: Formula) =>

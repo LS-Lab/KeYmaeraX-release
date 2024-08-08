@@ -8,10 +8,9 @@ package org.keymaerax.hydra
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros._
-import org.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, Generator, TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticTestBase, TactixLibrary}
 import org.keymaerax.core.{Expression, Formula, Real}
 import org.keymaerax.hydra.requests.models.{GetModelListRequest, ListExamplesRequest, UploadArchiveRequest}
 import org.keymaerax.hydra.requests.proofs.{
@@ -1013,7 +1012,7 @@ class ScriptedRequestTests extends TacticTestBase {
               case OpenProofResponse(_, _) =>
                 val session = SessionManager.session(t)
                 session(proofId).asInstanceOf[ProofSession].invSupplier match {
-                  case s: ConfigurableGenerator[GenProduct] => s.products shouldBe Map(
+                  case s: ConfigurableGenerator => s.products shouldBe Map(
                       "{x:=2;}*".asProgram -> (("x=2".asFormula, None) :: Nil),
                       "{x:=x+1; a{|^@|};}*".asProgram -> (("x>=0".asFormula, None) :: Nil),
                       "{x:=x+1; {x:=2;}*}*".asProgram -> (("x>=0".asFormula, None) :: Nil),
@@ -1158,7 +1157,7 @@ class ScriptedRequestTests extends TacticTestBase {
               es.asInstanceOf[List[Expression]].map(_.prettyString).mkString(","),
               Some(expectedInputs(i)),
             ))
-          case (_: Generator[_], _) => None // @todo pass on once supported
+          case (_: InvariantGenerator, _) => None // @todo pass on once supported
           case (Some(e: Expression), i) => Some(BelleTermInput(e.prettyString, Some(expectedInputs(i))))
           case (Some(es: List[_]), i) => Some(BelleTermInput(
               es.asInstanceOf[List[Expression]].map(_.prettyString).mkString(","),

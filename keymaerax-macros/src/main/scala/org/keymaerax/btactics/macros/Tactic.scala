@@ -425,7 +425,7 @@ object TacticMacro {
       val valDef = param.asInstanceOf[ValDef]
       val name = valDef.name.decodedName.toString
       valDef.tpt match {
-        case tq"Generator[GenProduct]" => GeneratorArg(name)
+        case tq"InvariantGenerator" => GeneratorArg(name)
         case tq"Formula" => FormulaArg(name)
         case tq"Expression" => ExpressionArg(name)
         case tq"Term" => TermArg(name)
@@ -469,8 +469,7 @@ object TacticMacro {
     // Scala types corresponding to tactic inputs
     def typeName(ai: ArgInfo): Tree = {
       ai match {
-        case _: GeneratorArg =>
-          tq"org.keymaerax.btactics.Generator[org.keymaerax.btactics.InvariantGenerator.GenProduct]"
+        case _: GeneratorArg => tq"org.keymaerax.btactics.InvariantGenerator"
         case _: FormulaArg => tq"org.keymaerax.core.Formula"
         case _: StringArg => tq"String"
         case _: NumberArg => tq"org.keymaerax.core.Number"

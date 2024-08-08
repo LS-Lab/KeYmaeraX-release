@@ -1542,7 +1542,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
 
     def odeWithInvgen(
         sys: ODESystem,
-        generator: Generator[GenProduct],
+        generator: InvariantGenerator,
         onGeneratorError: Throwable => LazyList[GenProduct],
     ): DependentPositionTactic = fastODE(try { generator.generate(seq, pos, defs).iterator }
     catch {

@@ -7,7 +7,6 @@ package org.keymaerax.hydra
 
 import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
@@ -86,8 +85,8 @@ abstract class UserRequest(userId: String, dataPermission: String => Boolean) ex
 /** A proof session storing information between requests. */
 case class ProofSession(
     proofId: String,
-    invGenerator: Generator[GenProduct],
-    var invSupplier: Generator[GenProduct],
+    invGenerator: InvariantGenerator,
+    var invSupplier: InvariantGenerator,
     defs: Declaration,
 )
 
@@ -288,7 +287,7 @@ object RequestHelper {
       .toMap
     // @note TactixInit.invSupplier, once non-empty, is proofSession.invSupplier + invariants discovered when executing tactics
     val mergedInvSupplier = TactixInit.invSupplier match {
-      case ts: ConfigurableGenerator[GenProduct] => if (ts.products.nonEmpty) ts else proofSession.invSupplier
+      case ts: ConfigurableGenerator => if (ts.products.nonEmpty) ts else proofSession.invSupplier
       case ts => ts
     }
     proofSession

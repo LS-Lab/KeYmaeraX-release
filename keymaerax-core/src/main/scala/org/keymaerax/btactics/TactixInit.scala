@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.core.{Box, Loop, ODESystem}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 
@@ -22,7 +21,7 @@ object TactixInit {
    * @see
    *   [[InvariantGenerator]]
    */
-  var invSupplier: Generator[GenProduct] = FixedGenerator(Nil)
+  var invSupplier: InvariantGenerator = FixedGenerator(Nil)
 
   /**
    * Default generator for loop invariants to use.
@@ -31,7 +30,7 @@ object TactixInit {
    * @see
    *   [[InvariantGenerator]]
    */
-  var loopInvGenerator: Generator[GenProduct] =
+  var loopInvGenerator: InvariantGenerator =
     InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator) // @note asks invSupplier
   // reinitialize with empty caches for test case separation
   /**
@@ -41,7 +40,7 @@ object TactixInit {
    * @see
    *   [[InvariantGenerator]]
    */
-  var differentialInvGenerator: Generator[GenProduct] = InvariantGenerator
+  var differentialInvGenerator: InvariantGenerator = InvariantGenerator
     .cached(InvariantGenerator.differentialInvariantGenerator) // @note asks invSupplier
 
   /**
@@ -49,7 +48,7 @@ object TactixInit {
    * @see
    *   [[InvariantGenerator]]
    */
-  val invGenerator: Generator[GenProduct] = (sequent, pos, defs) =>
+  val invGenerator: InvariantGenerator = (sequent, pos, defs) =>
     sequent.sub(pos) match {
       case Some(Box(_: ODESystem, _)) => differentialInvGenerator.generate(sequent, pos, defs)
       case Some(Box(_: Loop, _)) => loopInvGenerator.generate(sequent, pos, defs)

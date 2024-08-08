@@ -10,7 +10,6 @@ import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.DifferentialTactics.{dgDbx, dgDbxAuto}
 import org.keymaerax.btactics.Idioms.{?, must}
-import org.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
 import org.keymaerax.btactics.macros.{DerivationInfo, DisplayLevelAll, DisplayLevelBrowse, DisplayLevelMenu, Tactic}
@@ -113,7 +112,7 @@ object TactixLibrary
    * @see
    *   [[InvariantGenerator]]
    */
-  def invSupplier: Generator[GenProduct] = TactixInit.invSupplier
+  def invSupplier: InvariantGenerator = TactixInit.invSupplier
 
   /**
    * Default generator for loop invariants to use.
@@ -122,7 +121,7 @@ object TactixLibrary
    * @see
    *   [[InvariantGenerator]]
    */
-  def loopInvGenerator: Generator[GenProduct] = TactixInit.loopInvGenerator
+  def loopInvGenerator: InvariantGenerator = TactixInit.loopInvGenerator
 
   /**
    * Default generator for differential invariants to use.
@@ -131,14 +130,14 @@ object TactixLibrary
    * @see
    *   [[InvariantGenerator]]
    */
-  def differentialInvGenerator: Generator[GenProduct] = TactixInit.differentialInvGenerator
+  def differentialInvGenerator: InvariantGenerator = TactixInit.differentialInvGenerator
 
   /**
    * Default generator that provides loop invariants and differential invariants to use.
    * @see
    *   [[InvariantGenerator]]
    */
-  val invGenerator: Generator[GenProduct] = TactixInit.invGenerator
+  val invGenerator: InvariantGenerator = TactixInit.invGenerator
 
   // Hilbert calculus axioms @see [[HilbertCalculus]]
   // Propositional/first-order sequent calculus @see [[SequentCalculus]]
@@ -437,7 +436,7 @@ object TactixLibrary
    *   [[autoClose]]
    */
   @deprecated("Use auto instead")
-  def master(gen: Generator[GenProduct] = invGenerator, keepQEFalse: Boolean = true): BelleExpr =
+  def master(gen: InvariantGenerator = invGenerator, keepQEFalse: Boolean = true): BelleExpr =
     auto(gen, if (keepQEFalse) None else Some(False))
 
   /**
@@ -448,10 +447,10 @@ object TactixLibrary
    *   [[autoClose]]
    */
   @Tactic(name = "auto", displayNameLong = Some("Unfold Automatically"))
-  def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic =
+  def auto(generator: InvariantGenerator, keepQEFalse: Option[Formula] = None): InputTactic =
     inputanon { autoImpl(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True) }
   @Tactic(name = "master", displayNameLong = Some("Unfold Automatically")) @deprecated("Use auto instead")
-  def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic =
+  def masterX(generator: InvariantGenerator, keepQEFalse: Option[Formula] = None): InputTactic =
     auto(generator, keepQEFalse)
 
   /**
@@ -471,12 +470,11 @@ object TactixLibrary
    * using ODE invariant generators in absence of annotated invariants and when they close goals.
    */
   @Tactic(name = "explore", displayNameLong = Some("Explore Provability"), revealInternalSteps = true)
-  def explore(gen: Generator[GenProduct]): InputTactic = inputanon {
+  def explore(gen: InvariantGenerator): InputTactic = inputanon {
     autoImpl(
       anon((pos: Position, seq: Sequent, defs: Declaration) =>
         (gen, seq.sub(pos)) match {
-          case (cgen: ConfigurableGenerator[GenProduct], Some(Box(Loop(_), _)))
-              if cgen.generate(seq, pos, defs).nonEmpty =>
+          case (cgen: ConfigurableGenerator, Some(Box(Loop(_), _))) if cgen.generate(seq, pos, defs).nonEmpty =>
             logger.info("Explore uses loop with annotated invariant")
             // @note bypass all other invariant generators except the annotated invariants, pass on to loop
             ChooseSome(
@@ -568,7 +566,7 @@ object TactixLibrary
    * @see
    *   [[HybridProgramCalculus.loop(Formula)]]
    */
-  def loop(gen: Generator[GenProduct]): DependentPositionTactic = new DependentPositionTactic("I gen") {
+  def loop(gen: InvariantGenerator): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = loop(nextOrElse(
         gen.generate(sequent, pos, defs).map(_._1).iterator,
@@ -584,7 +582,7 @@ object TactixLibrary
     displayNameLong = Some("Loop with Invariant Automation"),
     displayConclusion = "Γ |- [a*]P, Δ",
   )
-  def loopautoX(gen: Generator[GenProduct]): DependentPositionWithAppliedInputTactic =
+  def loopautoX(gen: InvariantGenerator): DependentPositionWithAppliedInputTactic =
     inputanon { (pos: Position, seq: Sequent) => loopauto(gen)(pos) }
 
   /**
@@ -592,14 +590,13 @@ object TactixLibrary
    * @see
    *   [[HybridProgramCalculus.loop(Formula)]]
    */
-  def loopauto(gen: Generator[GenProduct] = loopInvGenerator): DependentPositionTactic =
+  def loopauto(gen: InvariantGenerator = loopInvGenerator): DependentPositionTactic =
     anon((pos: Position, seq: Sequent, defs: Declaration) =>
       seq.sub(pos) match {
         case Some(Box(Loop(_), _) | Diamond(Loop(_), _)) =>
           // @hack invSupplier collects invariant annotation during parsing; prefer those over the ones generated by loopPostMaster
           (invSupplier, seq.sub(pos)) match {
-            case (cgen: ConfigurableGenerator[GenProduct], Some(Box(Loop(_), _)))
-                if cgen.generate(seq, pos, defs).nonEmpty =>
+            case (cgen: ConfigurableGenerator, Some(Box(Loop(_), _))) if cgen.generate(seq, pos, defs).nonEmpty =>
               logger.info("LoopAuto uses loop with annotated invariant")
               // @note bypass all other invariant generators except the annotated invariants, pass on to loop
               ChooseSome(
@@ -641,7 +638,7 @@ object TactixLibrary
    *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
    *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Example 32.
    */
-  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic = InvariantProvers.loopSR(gen)
+  def loopSR(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopSR(gen)
 
   /**
    * loopPostMaster: search-and-rescue style automatic loop induction based on successive generator gen. Uses
@@ -656,7 +653,7 @@ object TactixLibrary
    *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
    *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Example 32.
    */
-  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
+  def loopPostMaster(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
 
   /**
    * I: prove a property of a loop [{a}*]P by induction axiom as P & [{a}*](P->[a]P) for hybrid systems.
@@ -1423,11 +1420,8 @@ object TactixLibrary
    * Applies substitutions `substs` to the products of `generator` and returns a new generator that includes both
    * original and substituted products
    */
-  def substGenerator(
-      generator: Generator[(Formula, Option[InvariantGenerator.ProofHint])],
-      substs: List[USubst],
-  ): Generator[(Formula, Option[InvariantGenerator.ProofHint])] = generator match {
-    case c: ConfigurableGenerator[(Formula, Option[InvariantGenerator.ProofHint])] => new ConfigurableGenerator(
+  def substGenerator(generator: InvariantGenerator, substs: List[USubst]): InvariantGenerator = generator match {
+    case c: ConfigurableGenerator => new ConfigurableGenerator(
         c.products ++
           c.products
             .map(p =>
@@ -1436,7 +1430,7 @@ object TactixLibrary
               })
             )
       )
-    case c: FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])] => FixedGenerator(
+    case c: FixedGenerator => FixedGenerator(
         c.list ++
           c.list
             .map(p =>

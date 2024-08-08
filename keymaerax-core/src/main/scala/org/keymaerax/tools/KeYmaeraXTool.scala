@@ -10,7 +10,7 @@ import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import org.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
+import org.keymaerax.btactics.InvariantGenerator.AnnotationProofHint
 import org.keymaerax.btactics._
 import org.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
@@ -182,7 +182,7 @@ object KeYmaeraXTool extends Tool {
       }
     }
 
-    val generator = new ConfigurableGenerator[GenProduct]()
+    val generator = new ConfigurableGenerator()
     Parser
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
