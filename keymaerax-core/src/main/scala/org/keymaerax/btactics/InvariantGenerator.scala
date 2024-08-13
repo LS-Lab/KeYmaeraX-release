@@ -49,7 +49,7 @@ case class Invariant(formula: Formula, hint: Option[InvariantHint] = None)
 trait InvariantGenerator {
 
   /**
-   * Generate multiple objects of type `A` to try. Results do not necessarily have to be deterministic.
+   * Generate multiple [[Invariant]]s to try. Results do not necessarily have to be deterministic.
    *
    * @author
    *   Stefan Mitsch
@@ -57,7 +57,7 @@ trait InvariantGenerator {
   def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant]
 }
 
-/** Generator always providing a fixed list as output. */
+/** Generator always providing a fixed list of [[Invariant]]s as output. */
 case class FixedGenerator(list: List[Invariant]) extends InvariantGenerator {
   override def generate(sequent: Sequent, position: Position, declaration: Declaration): LazyList[Invariant] = list
     .to(LazyList)
