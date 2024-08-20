@@ -634,6 +634,7 @@ class DLParser extends Parser {
   })
 
   /** Parses a program comparison */
+  @nowarn("msg=match may not be exhaustive")
   def programComparison[$: P]: P[ProgramComparison] = P((program ~/ programComparator.! ~ program).map {
     case (left, "<=", right) => Refinement(left, right)
     case (left, "==", right) => ProgramEquivalence(left, right)
