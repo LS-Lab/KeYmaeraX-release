@@ -29,8 +29,6 @@ import org.keymaerax.{Configuration, FileConfiguration}
 
 import java.io.PrintWriter
 import scala.collection.immutable.{List, Nil}
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.reflect.io.File
 
 /** Command-line interface for the KeYmaera X webui jar. */
@@ -45,7 +43,12 @@ object KeymaeraxWebui {
     try {
       KeymaeraxCore.initializeConfig(options)
       runCommand(options)
-    } finally { KeymaeraxCore.shutdownProver() }
+    } finally {
+      options.command match {
+        case Some(Command.Ui) | None => () // The server is still running, so don't shut down the prover yet.
+        case _ => KeymaeraxCore.shutdownProver()
+      }
+    }
   }
 
   def runCommand(options: Options): Unit = options.command.getOrElse(Command.Ui) match {
@@ -97,7 +100,7 @@ object KeymaeraxWebui {
       LemmaCacheChecks.clearCacheIfDeprecated()
       LoadingDialogFactory().addToStatus(10, Some("Checking port..."))
       PortChecks.ensureWebuiPortCanBeBoundOrExit()
-      Await.result(org.keymaerax.hydra.NonSSLBoot.run(options), Duration.Inf)
+      org.keymaerax.hydra.NonSSLBoot.run(options)
     case _ => org.keymaerax.cli.KeymaeraxCore.runCommand(options)
   }
 
