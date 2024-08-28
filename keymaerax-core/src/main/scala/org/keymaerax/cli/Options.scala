@@ -116,7 +116,6 @@ case class Options(
     mathkernel: Option[String] = None,
     open: Option[String] = None,
     parallelqe: Option[Boolean] = None,
-    parserClass: Option[String] = None,
     qemethod: Option[QeMethod.Value] = None,
     tool: Option[ToolName.Value] = None,
     z3Path: Option[String] = None,
@@ -252,7 +251,6 @@ object Options {
             |Default: false (unless configured in keymaerax.conf)
             |""".stripMargin
         )),
-      opt[String]("parserClass").action((x, o) => o.copy(parserClass = Some(x))),
       opt[QeMethod.Value]("qemethod")
         .action((x, o) => o.copy(qemethod = Some(x)))
         .valueName("<method>")

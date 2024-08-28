@@ -58,8 +58,6 @@ object KeymaeraxCore {
 
   /** Set up values in the global config based on command-line options. */
   def initializeConfig(options: Options): Unit = {
-    for (value <- options.parserClass) { Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false) }
-
     for (value <- options.mathkernel) {
       if (Files.exists(Paths.get(value))) {
         Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, value, saveToFile = false)
