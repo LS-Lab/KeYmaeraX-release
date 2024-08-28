@@ -5,7 +5,6 @@
 
 package org.keymaerax.hydra
 
-import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.btactics.TactixLibrary._
@@ -1055,99 +1054,94 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   // @note old parser cannot parse implicit definitions
-  "Shipped tutorial import" should "import all tutorials correctly" in
-    withTemporaryConfig(Map(Configuration.Keys.CHECK_AGAINST_PARSER -> "")) {
-      // re-initialize the parser (DLParser singleton may have check-against set by previous test cases)
-      val c = DLParser.getClass.getDeclaredConstructor()
-      c.setAccessible(true)
-      c.newInstance()
-      Parser.setParser(DLParser)
-      withTactics { withDatabase { importExamplesIntoDB } }
-    }
+  "Shipped tutorial import" should "import all tutorials correctly" in {
+    // re-initialize the parser (DLParser singleton may have check-against set by previous test cases)
+    val c = DLParser.getClass.getDeclaredConstructor()
+    c.setAccessible(true)
+    c.newInstance()
+    Parser.setParser(DLParser)
+    withTactics { withDatabase { importExamplesIntoDB } }
+  }
 
-  it should "execute all imported tutorial tactics correctly" taggedAs SlowTest in
-    withTemporaryConfig(Map(Configuration.Keys.CHECK_AGAINST_PARSER -> "")) {
-      withMathematica { tool =>
-        withDatabase { db =>
-          // re-initialize the parser (DLParser singleton may have check-against set by previous test cases)
-          val c = DLParser.getClass.getDeclaredConstructor()
-          c.setAccessible(true)
-          c.newInstance()
-          Parser.setParser(DLParser)
+  it should "execute all imported tutorial tactics correctly" taggedAs SlowTest in {
+    withMathematica { tool =>
+      withDatabase { db =>
+        // re-initialize the parser (DLParser singleton may have check-against set by previous test cases)
+        val c = DLParser.getClass.getDeclaredConstructor()
+        c.setAccessible(true)
+        c.newInstance()
+        Parser.setParser(DLParser)
 
-          val userName = "maxLevelUser"
-          // import all tutorials, creates user too
-          importExamplesIntoDB(db)
-          val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
-          val models = new GetModelListRequest(db.db, userName, None).getResultingResponse(t).getJson
-          val modelInfos = models
-            .asInstanceOf[JsArray]
-            .elements
-            .filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value)
-            .map(m =>
-              m.asJsObject.fields("name").asInstanceOf[JsString].value ->
-                m.asJsObject.fields("id").asInstanceOf[JsString].value
-            )
-          modelInfos should have size 95 // change when ListExamplesRequest is updated
+        val userName = "maxLevelUser"
+        // import all tutorials, creates user too
+        importExamplesIntoDB(db)
+        val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
+        val models = new GetModelListRequest(db.db, userName, None).getResultingResponse(t).getJson
+        val modelInfos = models
+          .asInstanceOf[JsArray]
+          .elements
+          .filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value)
+          .map(m =>
+            m.asJsObject.fields("name").asInstanceOf[JsString].value ->
+              m.asJsObject.fields("id").asInstanceOf[JsString].value
+          )
+        modelInfos should have size 95 // change when ListExamplesRequest is updated
 
-          val modelInfosTable = Table(("name", "id"), modelInfos: _*)
-          forEvery(modelInfosTable) { (name, id) =>
-            whenever(tool.isInitialized) {
-              val start = System.currentTimeMillis()
-              println("Importing and opening " + name + "...")
-              val r1 = new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponse(t)
-              r1 shouldBe a[CreatedIdResponse] withClue r1.getJson.prettyPrint
-              val proofId = r1.getJson.asJsObject.fields("id").asInstanceOf[JsString].value
-              val r2 = new OpenProofRequest(db.db, userName, proofId).getResultingResponse(t)
-              r2 shouldBe a[OpenProofResponse] withClue r2.getJson.prettyPrint
-              val r3 = new InitializeProofFromTacticRequest(db.db, userName, proofId).getResultingResponse(t)
-              r3 shouldBe a[RunBelleTermResponse] withClue r3.getJson.prettyPrint
-              val nodeId = r3.getJson.asJsObject.fields("nodeId").asInstanceOf[JsString].value
-              val taskId = r3.getJson.asJsObject.fields("taskId").asInstanceOf[JsString].value
-              var status = "running"
-              do {
-                val r4 = new TaskStatusRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponse(t)
-                r4 shouldBe a[TaskStatusResponse] withClue r4.getJson.prettyPrint
-                status = r4.getJson.asJsObject.fields("status").asInstanceOf[JsString].value
-              } while (status != "done")
-              new TaskResultRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponse(t) match {
-                case _: TaskResultResponse => // ok
-                case e: ErrorResponse => fail(e.msg, e.exn)
-              }
-              val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponse(t)
-              r5 shouldBe a[AgendaAwesomeResponse] withClue r5.getJson.prettyPrint
-              val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
-              ArchiveParser.tacticParser(db.db.getModel(id).tactic.get) match {
-                case _: PartialTactic => r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe
-                    false withClue "closed"
-                case _ =>
-                  val tacticText =
-                    if (r5.getJson.asJsObject.fields("agendaItems").asJsObject.fields.nonEmpty) {
-                      val tr = new ExtractTacticRequest(db.db, userName, proofId, verbose = true)
-                        .getResultingResponse(t)
-                      tr.getJson.asJsObject.fields("tacticText")
-                    } else "<unknown>"
-                  r5.getJson.asJsObject.fields("agendaItems").asJsObject.fields shouldBe empty withClue tacticText
-                  r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue "closed"
-                  val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponse(t)
-                  r6 shouldBe a[ProofVerificationResponse] withClue r6.getJson.prettyPrint
-                  r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
-                  r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue
-                    "isProved"
-                  val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
-                  // double check extracted tactic
-                  println("Reproving extracted tactic...")
-                  val extractedTactic = ArchiveParser.tacticParser(extractedTacticString, entry.defs)
-                  proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe
-                    Symbol("proved")
-                  println("Done reproving")
-              }
-              println("Done (" + (System.currentTimeMillis() - start) / 1000 + "s)")
+        val modelInfosTable = Table(("name", "id"), modelInfos: _*)
+        forEvery(modelInfosTable) { (name, id) =>
+          whenever(tool.isInitialized) {
+            val start = System.currentTimeMillis()
+            println("Importing and opening " + name + "...")
+            val r1 = new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponse(t)
+            r1 shouldBe a[CreatedIdResponse] withClue r1.getJson.prettyPrint
+            val proofId = r1.getJson.asJsObject.fields("id").asInstanceOf[JsString].value
+            val r2 = new OpenProofRequest(db.db, userName, proofId).getResultingResponse(t)
+            r2 shouldBe a[OpenProofResponse] withClue r2.getJson.prettyPrint
+            val r3 = new InitializeProofFromTacticRequest(db.db, userName, proofId).getResultingResponse(t)
+            r3 shouldBe a[RunBelleTermResponse] withClue r3.getJson.prettyPrint
+            val nodeId = r3.getJson.asJsObject.fields("nodeId").asInstanceOf[JsString].value
+            val taskId = r3.getJson.asJsObject.fields("taskId").asInstanceOf[JsString].value
+            var status = "running"
+            do {
+              val r4 = new TaskStatusRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponse(t)
+              r4 shouldBe a[TaskStatusResponse] withClue r4.getJson.prettyPrint
+              status = r4.getJson.asJsObject.fields("status").asInstanceOf[JsString].value
+            } while (status != "done")
+            new TaskResultRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponse(t) match {
+              case _: TaskResultResponse => // ok
+              case e: ErrorResponse => fail(e.msg, e.exn)
             }
+            val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponse(t)
+            r5 shouldBe a[AgendaAwesomeResponse] withClue r5.getJson.prettyPrint
+            val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
+            ArchiveParser.tacticParser(db.db.getModel(id).tactic.get) match {
+              case _: PartialTactic => r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe
+                  false withClue "closed"
+              case _ =>
+                val tacticText =
+                  if (r5.getJson.asJsObject.fields("agendaItems").asJsObject.fields.nonEmpty) {
+                    val tr = new ExtractTacticRequest(db.db, userName, proofId, verbose = true).getResultingResponse(t)
+                    tr.getJson.asJsObject.fields("tacticText")
+                  } else "<unknown>"
+                r5.getJson.asJsObject.fields("agendaItems").asJsObject.fields shouldBe empty withClue tacticText
+                r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue "closed"
+                val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponse(t)
+                r6 shouldBe a[ProofVerificationResponse] withClue r6.getJson.prettyPrint
+                r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
+                r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue "isProved"
+                val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
+                // double check extracted tactic
+                println("Reproving extracted tactic...")
+                val extractedTactic = ArchiveParser.tacticParser(extractedTacticString, entry.defs)
+                proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe Symbol("proved")
+                println("Done reproving")
+            }
+            println("Done (" + (System.currentTimeMillis() - start) / 1000 + "s)")
           }
         }
       }
     }
+  }
 
   private def runTactic(db: TempDBTools, token: SessionToken, proofId: Int)(
       nodeId: String,
