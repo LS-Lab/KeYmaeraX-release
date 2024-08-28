@@ -9,11 +9,10 @@ package org.keymaerax.tools
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import org.keymaerax.bellerophon._
-import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import org.keymaerax.btactics._
 import org.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import org.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXArchiveParser, Parser}
+import org.keymaerax.parser.Parser
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -58,15 +57,6 @@ object KeYmaeraXTool extends Tool {
       // @note Careful, this disables contract checking in printing!
       PrettyPrinter.setPrinter(org.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter.pp)
     else PrettyPrinter.setPrinter(org.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
-
-    ArchiveParser.setParser(Configuration.getString(Configuration.Keys.PARSER) match {
-      case Some("KeYmaeraXParser") | None => KeYmaeraXArchiveParser
-      case Some("DLParser") => new DLArchiveParser(
-          new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))
-        )
-      case Some(p) =>
-        throw new ProverSetupException("Unknown parser " + p + "; please use one of 'KeYmaeraXParser' or 'DLParser'")
-    })
 
     val LOG_EARLIEST_QE = Configuration.getBoolean(Configuration.Keys.LOG_ALL_FO).getOrElse(false)
     val LOG_QE = Configuration.getBoolean(Configuration.Keys.LOG_QE).getOrElse(false)

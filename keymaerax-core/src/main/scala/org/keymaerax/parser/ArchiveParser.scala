@@ -5,8 +5,9 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.bellerophon.parser.TacticParser
-import org.keymaerax.bellerophon.{BelleExpr, ProverSetupException}
+import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser, TacticParser}
+import org.keymaerax.bellerophon.{BelleExpr, ReflectiveExpressionBuilder}
+import org.keymaerax.btactics.TactixInit
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -608,19 +609,9 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
 }
 
 object ArchiveParser extends ArchiveParser {
-  /* @note mutable state for switching out the default parser. */
-  private[this] var p: ArchiveParser = _
-
-  /** The parser that is presently used per default. */
-  def parser: ArchiveParser = {
-    if (p != null) p
-    else throw new ProverSetupException(
-      "No archive parser set. Please check the command line during startup for error messages."
-    )
-  }
-
-  /** Set a new parser. */
-  def setParser(parser: ArchiveParser): Unit = { p = parser }
+  val parser: ArchiveParser = new DLArchiveParser(
+    new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))
+  )
 
   /** @inheritdoc */
   override protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = parser

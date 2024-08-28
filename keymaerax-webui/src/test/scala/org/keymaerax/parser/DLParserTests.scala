@@ -5,9 +5,6 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.bellerophon.ReflectiveExpressionBuilder
-import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import org.keymaerax.btactics.TactixInit
 import org.keymaerax.core._
 import org.keymaerax.parser.ParseExceptionMatchers.pointAt
 import org.keymaerax.{Configuration, FileConfiguration}
@@ -27,9 +24,6 @@ class DLParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach wi
 
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
-    ArchiveParser.setParser(new DLArchiveParser(
-      new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))
-    ))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
   }
 

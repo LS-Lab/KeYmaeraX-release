@@ -5,11 +5,9 @@
 
 package org.keymaerax.infrastruct
 
-import org.keymaerax.bellerophon.ReflectiveExpressionBuilder
-import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import org.keymaerax.core.{Choice, DotFormula, DotTerm, PrettyPrinter, Test, True}
+import org.keymaerax.parser.KeYmaeraXPrettyPrinter
 import org.keymaerax.parser.StringConverter.StringToStringConverter
-import org.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXPrettyPrinter}
 import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.{Configuration, FileConfiguration}
 import org.scalatest.BeforeAndAfterEach
@@ -21,8 +19,6 @@ class ContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 
   override protected def beforeEach(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
-    ArchiveParser
-      .setParser(new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, None, _))))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 

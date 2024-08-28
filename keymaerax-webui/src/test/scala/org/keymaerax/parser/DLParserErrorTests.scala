@@ -5,9 +5,7 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.bellerophon.ReflectiveExpressionBuilder
-import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import org.keymaerax.btactics.{FixedGenerator, ToolProvider, Z3ToolProvider}
+import org.keymaerax.btactics.{ToolProvider, Z3ToolProvider}
 import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.tools.KeYmaeraXTool
 import org.keymaerax.{Configuration, FileConfiguration}
@@ -15,8 +13,6 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-
-import scala.collection.immutable._
 
 class DLParserErrorTests
     extends AnyFlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
@@ -26,9 +22,6 @@ class DLParserErrorTests
     ToolProvider.setProvider(new Z3ToolProvider)
     ToolProvider.init()
     KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
-    ArchiveParser.setParser(new DLArchiveParser(
-      new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
-    ))
   }
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
