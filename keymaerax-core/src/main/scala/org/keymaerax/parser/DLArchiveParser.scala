@@ -43,8 +43,6 @@ import scala.tools.nsc.io.File
  *   Andre Platzer
  * @see
  *   [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
- * @see
- *   [[KeYmaeraXArchiveParser]]
  */
 class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
