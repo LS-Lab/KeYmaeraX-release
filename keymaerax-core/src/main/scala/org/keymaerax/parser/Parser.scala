@@ -15,7 +15,6 @@
 package org.keymaerax.parser
 
 import org.keymaerax.Configuration
-import org.keymaerax.bellerophon.ProverSetupException
 import org.keymaerax.core._
 
 import scala.util.Try
@@ -117,8 +116,7 @@ trait Parser extends (String => Expression) {
 }
 
 object Parser extends (String => Expression) {
-  /* @note mutable state for switching out the default parser. */
-  private[this] var p: Parser = ParserInit.fromConfig()
+  val parser: Parser = new DLParser
 
   /**
    * `true` has unary negation `-` bind weakly like binary subtraction. `false` has unary negation `-` bind strong just
@@ -131,16 +129,6 @@ object Parser extends (String => Expression) {
    * handled like unary `-`.
    */
   val numNeg: Boolean = OpSpec.negativeNumber
-
-  /** The parser that is presently used per default. */
-  def parser: Parser = {
-    if (p != null) p
-    else
-      throw new ProverSetupException("No parser set. Please check the command line during startup for error messages.")
-  }
-
-  /** Set a new parser. */
-  def setParser(parser: Parser): Unit = { p = parser }
 
   /** Parses `input`. */
   override def apply(input: String): Expression = parser(input)

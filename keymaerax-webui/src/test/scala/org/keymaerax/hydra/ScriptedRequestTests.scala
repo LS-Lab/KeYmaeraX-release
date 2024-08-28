@@ -47,7 +47,7 @@ import org.keymaerax.hydra.responses.proofs.{
 }
 import org.keymaerax.infrastruct.SuccPosition
 import org.keymaerax.parser.StringConverter._
-import org.keymaerax.parser.{ArchiveParser, DLParser, Declaration, Name, Parser, Region, Signature, UnknownLocation}
+import org.keymaerax.parser.{ArchiveParser, DLParser, Declaration, Name, Region, Signature, UnknownLocation}
 import org.keymaerax.tagobjects.{SlowTest, TodoTest}
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
@@ -1059,7 +1059,6 @@ class ScriptedRequestTests extends TacticTestBase {
     val c = DLParser.getClass.getDeclaredConstructor()
     c.setAccessible(true)
     c.newInstance()
-    Parser.setParser(DLParser)
     withTactics { withDatabase { importExamplesIntoDB } }
   }
 
@@ -1070,7 +1069,6 @@ class ScriptedRequestTests extends TacticTestBase {
         val c = DLParser.getClass.getDeclaredConstructor()
         c.setAccessible(true)
         c.newInstance()
-        Parser.setParser(DLParser)
 
         val userName = "maxLevelUser"
         // import all tutorials, creates user too

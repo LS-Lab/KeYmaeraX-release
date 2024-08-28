@@ -26,7 +26,6 @@ class DLParserErrorTests
     ToolProvider.setProvider(new Z3ToolProvider)
     ToolProvider.init()
     KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
-    Parser.setParser(DLParser)
     ArchiveParser.setParser(new DLArchiveParser(
       new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
     ))
