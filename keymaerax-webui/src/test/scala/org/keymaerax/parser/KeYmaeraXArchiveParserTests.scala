@@ -475,12 +475,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val archiveParser = new DLArchiveParser(
       new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
     )
-    DLParser.parseValue("HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (
+    DLParser.runParser(archiveParser.progDef(_))("HP a ::= { x:=x+1; };") shouldBe (
       Name("a", None), Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 1, 1, 21))
     )
-    DLParser.parseValue(
-      "Definitions HP a ::= { x:=x+1; }; End.",
-      archiveParser.definitions(Declaration(Map.empty))(_),
+    DLParser.runParser(archiveParser.definitions(Declaration(Map.empty))(_))(
+      "Definitions HP a ::= { x:=x+1; }; End."
     ) shouldBe Declaration(
       Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asProgram)), Region(1, 12, 1, 34)))
     )
