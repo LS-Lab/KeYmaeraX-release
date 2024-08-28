@@ -97,6 +97,14 @@ object DLParser extends DLParser {
     ).inInput(inputString, None)
   }
 
+  private[keymaerax] def runParser[A](parser: P[_] => P[A])(input: String): A = {
+    val cleanedInput = ParserHelper.checkUnicode(ParserHelper.removeBOM(input))
+    fastparse.parse(cleanedInput, parser) match {
+      case Parsed.Success(value, _) => value
+      case failure: Parsed.Failure => throw parseException(failure)
+    }
+  }
+
   /** parse from a parser with more friendly error reporting */
   private[keymaerax] def parseValue[T](input: String, parser: P[_] => P[T]): T =
     fastparse.parse(input, parser(_)) match {
@@ -135,8 +143,6 @@ object DLParser extends DLParser {
  *   [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
  */
 class DLParser extends Parser {
-  import DLParser.parseException
-  private val checkAgainst: Option[Parser] = ParserInit.checkAgainstFromConfig()
 
   /**
    * Parse the input string in the concrete syntax as a differential dynamic logic expression
@@ -150,72 +156,26 @@ class DLParser extends Parser {
    */
   override def apply(input: String): Expression = exprParser(ParserHelper.checkUnicode(ParserHelper.removeBOM(input)))
 
-  private def parseAndCompare[A](
-      newParser: P[_] => P[A],
-      checkAgainst: Option[String => A],
-      name: String,
-  ): String => A = s => {
-    val newres = fastparse.parse(ParserHelper.checkUnicode(ParserHelper.removeBOM(s)), newParser(_)) match {
-      case Parsed.Success(value, _) => Right(value)
-      case f: Parsed.Failure => Left(parseException(f))
-    }
-    checkAgainst match {
-      case Some(p) =>
-        val oldres =
-          try { Right(p(s)) }
-          catch { case e: Throwable => Left(e) }
-        if (oldres != newres && (oldres.isRight || newres.isRight)) {
-          println(s"Parser disagreement ($name): `$s`")
-          println(s"KYXParser:\n${oldres match {
-              case Left(x) => x.toString
-              case Right(x: Expression) => KeYmaeraXNoContractPrettyPrinter(x)
-              case Right(x) => x.toString
-            }}")
-          println(s"DLParser:\n${newres match {
-              case Left(x) => x.toString
-              case Right(x: Expression) => KeYmaeraXNoContractPrettyPrinter(x)
-              case Right(x) => x.toString
-            }}")
-        }
-      case None => // nothing to do
-    }
-
-    newres match {
-      case Left(e) => throw e
-      case Right(res) => res
-    }
-  }
-
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
-  val exprParser: String => Expression = parseAndCompare(fullExpression(_), checkAgainst.map(_.apply), "expression")
+  val exprParser: String => Expression = DLParser.runParser(fullExpression(_))
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic term */
-  override val termParser: String => Term = parseAndCompare(fullTerm(_), checkAgainst.map(_.termParser), "term")
+  override val termParser: String => Term = DLParser.runParser(fullTerm(_))
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
-  override val formulaParser: String => Formula =
-    parseAndCompare(fullFormula(_), checkAgainst.map(_.formulaParser), "formula")
+  override val formulaParser: String => Formula = DLParser.runParser(fullFormula(_))
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic program */
-  override val programParser: String => Program =
-    parseAndCompare(fullProgram(_), checkAgainst.map(_.programParser), "program")
+  override val programParser: String => Program = DLParser.runParser(fullProgram(_))
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
-  override val differentialProgramParser: String => DifferentialProgram =
-    parseAndCompare(fullDifferentialProgram(_), checkAgainst.map(_.differentialProgramParser), "diff. program")
+  override val differentialProgramParser: String => DifferentialProgram = DLParser.runParser(fullDifferentialProgram(_))
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic sequent. */
-  override val sequentParser: String => Sequent =
-    parseAndCompare(fullSequent(_), checkAgainst.map(_.sequentParser), "sequent")
-
-  /* TODO: Unused
-  /** Parse the input string in the concrete syntax as a ;; separated list fof differential dynamic logic sequents . */
-  val sequentListParser: String => List[Sequent] = parseAndCompare(fullSequentList(_), KeYmaeraXParser.sequentListParser, "term")
-   */
+  override val sequentParser: String => Sequent = DLParser.runParser(fullSequent(_))
 
   /** Parse the input string in the concrete syntax as a stored list of differential dynamic logic sequents. */
-  override val storedInferenceParser: String => List[Sequent] =
-    parseAndCompare(storedProvable(_), checkAgainst.map(_.storedInferenceParser), "provable")
+  override val storedInferenceParser: String => List[Sequent] = DLParser.runParser(storedProvable(_))
 
   /**
    * A pretty-printer that can write the output that this parser reads
