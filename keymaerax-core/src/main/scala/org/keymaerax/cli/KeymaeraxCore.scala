@@ -154,7 +154,9 @@ object KeymaeraxCore {
         )
       // Unknown or no commands
       case Some(command) => println("WARNING: Unknown command " + command)
-      case None => options.printUsageAndExitWithError()
+      case None =>
+        println("ERROR: No command specified")
+        options.printUsageAndExitWithError()
     }
   }
 

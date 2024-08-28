@@ -48,8 +48,8 @@ object KeymaeraxWebui {
     } finally { KeymaeraxCore.shutdownProver() }
   }
 
-  def runCommand(options: Options): Unit = options.command match {
-    case Some(cmd: Command.Codegen) =>
+  def runCommand(options: Options): Unit = options.command.getOrElse(Command.Ui) match {
+    case cmd: Command.Codegen =>
       // Quantitative ModelPlex uses Mathematica to simplify formulas
       val tool = if (cmd.quantitative) ToolName.Mathematica else ToolName.Z3
       val toolConfig = KeymaeraxCore.toolConfigFromFile(tool)
@@ -63,7 +63,7 @@ object KeymaeraxWebui {
         vars = vars,
         args = options.args,
       )
-    case Some(cmd: Command.Modelplex) =>
+    case cmd: Command.Modelplex =>
       KeymaeraxCore.initializeProver(
         KeymaeraxCore.combineToolConfigs(options.toToolConfig, KeymaeraxCore.toolConfigFromFile(ToolName.Z3))
       )
@@ -78,19 +78,19 @@ object KeymaeraxWebui {
         fallback = cmd.fallback,
         args = options.args,
       )
-    case Some(cmd: Command.Repl) =>
+    case cmd: Command.Repl =>
       KeymaeraxCore.initializeProver(
         KeymaeraxCore.combineToolConfigs(options.toToolConfig, KeymaeraxCore.toolConfigFromFile(ToolName.Z3))
       )
       repl(model = cmd.model, tactic = cmd.tactic, scaladefs = cmd.scaladefs)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
-    case Some(cmd: Command.ConvertTactics) =>
+    case cmd: Command.ConvertTactics =>
       if (cmd.out.isEmpty) options.printUsageAndExitWithError()
       KeymaeraxCore.initializeProver(
         KeymaeraxCore.combineToolConfigs(options.toToolConfig, KeymaeraxCore.toolConfigFromFile(ToolName.Z3))
       )
       convertTactics(in = cmd.in, out = cmd.out, conversion = cmd.conversion)
-    case Some(Command.Ui) =>
+    case Command.Ui =>
       LoadingDialogFactory()
       DatabaseChecks.exitIfDeprecated()
       LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
