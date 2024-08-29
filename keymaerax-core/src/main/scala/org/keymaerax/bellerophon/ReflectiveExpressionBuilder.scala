@@ -83,13 +83,8 @@ object ReflectiveExpressionBuilder extends Logging {
         expr.asInstanceOf[TypedFunc[Option[PosInExpr], _]](Some(pie))
       case (expr: TypedFunc[_, _], fmls: Seq[_]) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe =>
         expr.asInstanceOf[TypedFunc[Seq[Expression], _]](fmls.asInstanceOf[Seq[Expression]])
-      case (expr: TypedFunc[_, _], fml: Expression) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe =>
-        expr.asInstanceOf[TypedFunc[Seq[Expression], _]](Seq(fml))
       case (expr: TypedFunc[_, _], ex: Seq[_]) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe =>
         expr.asInstanceOf[TypedFunc[Seq[SubstitutionPair], _]](ex.asInstanceOf[Seq[SubstitutionPair]])
-      case (expr: TypedFunc[_, _], (ex: SubstitutionPair) :: Nil)
-          if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe =>
-        expr.asInstanceOf[TypedFunc[Seq[SubstitutionPair], _]](Seq(ex))
       case (expr: TypedFunc[_, _], _) => throw ParseException(
           s"Expected argument of type ${expr.argType}, but got " + expr.getClass.getSimpleName,
           UnknownLocation,
