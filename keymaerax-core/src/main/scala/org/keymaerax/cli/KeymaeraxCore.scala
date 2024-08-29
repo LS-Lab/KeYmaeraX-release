@@ -50,10 +50,15 @@ object KeymaeraxCore {
     Configuration.setConfiguration(FileConfiguration)
     GlobalLockChecks.acquireGlobalLockFileOrExit()
 
-    try {
-      initializeConfig(options)
-      runCommand(options)
-    } finally { shutdownProver() }
+    // @note just in case the user shuts down the prover from the command line
+    Runtime
+      .getRuntime
+      .addShutdownHook(new Thread() {
+        override def run(): Unit = { shutdownProver() }
+      })
+
+    initializeConfig(options)
+    runCommand(options)
   }
 
   /** Set up values in the global config based on command-line options. */
@@ -165,12 +170,6 @@ object KeymaeraxCore {
 
     KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
 
-    // @note just in case the user shuts down the prover from the command line
-    Runtime
-      .getRuntime
-      .addShutdownHook(new Thread() {
-        override def run(): Unit = { shutdownProver() }
-      })
   }
 
   /** Initializes the backend solvers. */

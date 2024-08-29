@@ -40,15 +40,15 @@ object KeymaeraxWebui {
     Configuration.setConfiguration(FileConfiguration)
     GlobalLockChecks.acquireGlobalLockFileOrExit(graphical = true)
 
-    try {
-      KeymaeraxCore.initializeConfig(options)
-      runCommand(options)
-    } finally {
-      options.command match {
-        case Some(Command.Ui) | None => () // The server is still running, so don't shut down the prover yet.
-        case _ => KeymaeraxCore.shutdownProver()
-      }
-    }
+    // @note just in case the user shuts down the prover from the command line
+    Runtime
+      .getRuntime
+      .addShutdownHook(new Thread() {
+        override def run(): Unit = { KeymaeraxCore.shutdownProver() }
+      })
+
+    KeymaeraxCore.initializeConfig(options)
+    runCommand(options)
   }
 
   def runCommand(options: Options): Unit = options.command.getOrElse(Command.Ui) match {
