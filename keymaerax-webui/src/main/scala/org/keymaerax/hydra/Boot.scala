@@ -26,7 +26,6 @@ import scala.language.postfixOps
  */
 object NonSSLBoot extends Logging {
   def run(options: Options) = {
-    Configuration.setConfiguration(FileConfiguration)
 
     // Initialize all tools.
     val url = HyDRAInitializer.run(options, HyDRAServerConfig.database)

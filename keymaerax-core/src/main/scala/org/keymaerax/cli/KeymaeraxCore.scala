@@ -160,7 +160,6 @@ object KeymaeraxCore {
 
   /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
   def initializeProver(options: ToolConfiguration): Unit = {
-    Configuration.setConfiguration(FileConfiguration)
 
     initializeBackend(options)
 
