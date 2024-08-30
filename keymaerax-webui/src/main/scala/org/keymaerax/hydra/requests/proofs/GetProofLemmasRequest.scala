@@ -5,11 +5,11 @@
 
 package org.keymaerax.hydra.requests.proofs
 
+import org.keymaerax.GlobalState
 import org.keymaerax.core.{Formula, Sequent}
 import org.keymaerax.hydra.responses.proofs.ProofLemmasResponse
 import org.keymaerax.hydra.{DBAbstraction, ModelPOJO, ProofPOJO, ReadRequest, Response, UserProofRequest}
 import org.keymaerax.lemma.LemmaDBFactory
-import org.keymaerax.parser.ArchiveParser
 
 import java.io.File
 import scala.collection.immutable.{IndexedSeq, List, Nil}
@@ -42,9 +42,10 @@ class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String)
             val modelConc = e
               ._1
               .defs
-              .exhaustiveSubst(
-                Sequent(IndexedSeq(), IndexedSeq(ArchiveParser.parser(e._1.keyFile).head.model.asInstanceOf[Formula]))
-              )
+              .exhaustiveSubst(Sequent(
+                IndexedSeq(),
+                IndexedSeq(GlobalState.archiveParser(e._1.keyFile).head.model.asInstanceOf[Formula]),
+              ))
             lemmaConc != modelConc // outdated or unexpected if different conclusion
           case None => true
         }

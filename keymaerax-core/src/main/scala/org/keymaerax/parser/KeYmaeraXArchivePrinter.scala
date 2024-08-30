@@ -5,6 +5,7 @@
 
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.core._
 import org.keymaerax.info.Version
 import org.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
@@ -414,7 +415,8 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
 
       if (withComments) {
         assert(
-          ArchiveParser.parser(printed).map(_.model) == ArchiveParser.parser(entry.problemContent).map(_.model),
+          GlobalState.archiveParser(printed).map(_.model) ==
+            GlobalState.archiveParser(entry.problemContent).map(_.model),
           "Expected printed entry and stored problem content to reparse to same model",
         )
 

@@ -5,6 +5,7 @@
 
 package org.keymaerax.bellerophon
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.{
@@ -3107,8 +3108,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   "Delayed substitution" should "support introducing variables for function symbols of closed provables" in withMathematica {
     _ =>
       withDatabase { db =>
-        val entry = ArchiveParser
-          .parser(
+        val entry = GlobalState
+          .archiveParser(
             """ArchiveEntry "Delayed Substitution from dIRule"
               |ProgramVariables Real x, y, r; End.
               |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.
@@ -3142,8 +3143,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work if steps modify the subgoal and dIRule constifies after" in withMathematica { _ =>
     withDatabase { db =>
-      val entry = ArchiveParser
-        .parser(
+      val entry = GlobalState
+        .archiveParser(
           """ArchiveEntry "Delayed Substitution from dIRule"
             |ProgramVariables Real x, y, r; End.
             |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.
@@ -3178,8 +3179,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "support unfinished dIRule if sole open goal" in withMathematica { _ =>
     withDatabase { db =>
-      val entry = ArchiveParser
-        .parser(
+      val entry = GlobalState
+        .archiveParser(
           """ArchiveEntry "Delayed Substitution from dIRule"
             |ProgramVariables Real x, y, r; End.
             |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.
@@ -3205,8 +3206,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "FEATURE_REQUEST: expand definitions after applying backsubstitutions from constification" taggedAs TodoTest in withMathematica {
     _ =>
       withDatabase { db =>
-        val entry = ArchiveParser
-          .parser(
+        val entry = GlobalState
+          .archiveParser(
             """ArchiveEntry "Delayed Substitution from dIRule"
               |Definitions Real sqsum(Real x, Real y) = x^2+y^2; End.
               |ProgramVariables Real x, y, r; End.
@@ -3255,8 +3256,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "FEATURE_REQUEST: expand definitions exhaustively after applying backsubstitutions from constification" taggedAs TodoTest in withMathematica {
     _ =>
       withDatabase { db =>
-        val entry = ArchiveParser
-          .parser(
+        val entry = GlobalState
+          .archiveParser(
             """ArchiveEntry "Delayed Substitution from dIRule"
               |Definitions Real dosqsum(Real x, Real y) = x^2+y^2; Real sqsum(Real x, Real y) = dosqsum(x,y); End.
               |ProgramVariables Real x, y, r; End.
@@ -3304,8 +3305,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "support nested constifications" in withMathematica { _ =>
     withDatabase { db =>
-      val entry = ArchiveParser
-        .parser(
+      val entry = GlobalState
+        .archiveParser(
           """ArchiveEntry "Delayed Substitution from dIRule"
             |ProgramVariables Real x, y, r, s; End.
             |Problem x^2+y^2+s=r -> [{x'=r*y,y'=-r*x}]x^2+y^2+s=r End.
@@ -3438,8 +3439,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "FEATURE_REQUEST: return delayed substitution on unfinished dIRule when mixed with unconstified branches" taggedAs TodoTest in withMathematica {
     _ =>
       withDatabase { db =>
-        val entry = ArchiveParser
-          .parser(
+        val entry = GlobalState
+          .archiveParser(
             """ArchiveEntry "Delayed Substitution from dIRule"
               |ProgramVariables Real x, y, r; End.
               |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.

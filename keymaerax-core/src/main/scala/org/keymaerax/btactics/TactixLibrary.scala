@@ -5,6 +5,7 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.btactics.ArithmeticSimplification.smartHide
@@ -17,8 +18,8 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, RestrictedBiDiUnificationMatch}
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import org.keymaerax.parser.Declaration
 import org.keymaerax.parser.StringConverter.StringToStringConverter
-import org.keymaerax.parser.{ArchiveParser, Declaration}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
 import org.keymaerax.tools.ext.{AllOf, Atom, Mathematica, OneOf}
@@ -1611,7 +1612,7 @@ object TactixLibrary
           val model = info.find(_._1 == "model")
           (model, tactic) match {
             case (Some(model), Some(tactic)) =>
-              val defs = ArchiveParser.parser(model._2).head.defs
+              val defs = GlobalState.archiveParser(model._2).head.defs
               if (tactic.contains("expandAllDefs")) { defs.substs }
               else {
                 val subst1 =

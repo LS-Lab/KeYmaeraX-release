@@ -5,14 +5,9 @@
 
 package org.keymaerax.hydra
 
+import org.keymaerax.GlobalState
 import org.keymaerax.btactics.TactixLibrary
-import org.keymaerax.parser.{
-  ArchiveParser,
-  KeYmaeraXArchivePrinter,
-  ParseException,
-  ParsedArchiveEntry,
-  PrettierPrintFormatProvider,
-}
+import org.keymaerax.parser.{KeYmaeraXArchivePrinter, ParseException, ParsedArchiveEntry, PrettierPrintFormatProvider}
 
 import scala.annotation.nowarn
 import scala.collection.immutable.{::, List, Nil}
@@ -21,7 +16,7 @@ object ArchiveEntryPrinter {
   @nowarn("msg=match may not be exhaustive")
   def archiveEntry(modelInfo: ModelPOJO, tactics: List[(String, String)], withComments: Boolean): String =
     try {
-      ArchiveParser.parser(modelInfo.keyFile) match {
+      GlobalState.archiveParser(modelInfo.keyFile) match {
         case (entry @ ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
           new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(
             replaceInfo(entry, modelInfo.name, tactics)

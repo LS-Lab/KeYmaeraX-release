@@ -6,9 +6,8 @@
 package org.keymaerax.parser
 
 import org.keymaerax.GlobalState
-import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser, TacticParser}
-import org.keymaerax.bellerophon.{BelleExpr, ReflectiveExpressionBuilder}
-import org.keymaerax.btactics.TactixInit
+import org.keymaerax.bellerophon.BelleExpr
+import org.keymaerax.bellerophon.parser.TacticParser
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -612,25 +611,17 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
 }
 
 object ArchiveParser extends ArchiveParser {
-  val parser: ArchiveParser = new DLArchiveParser(
-    new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))
-  )
-
-  /** @inheritdoc */
-  override protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = parser
+  override protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = GlobalState
+    .archiveParser
     .doParse(input, parseTactics)
 
-  /** @inheritdoc */
-  override def parseFromFile(file: String): List[ParsedArchiveEntry] = parser.parseFromFile(file)
+  override def parseFromFile(file: String): List[ParsedArchiveEntry] = GlobalState.archiveParser.parseFromFile(file)
 
-  /** @inheritdoc */
-  override def exprParser: Parser = parser.exprParser
+  override def exprParser: Parser = GlobalState.archiveParser.exprParser
 
-  /** @inheritdoc */
-  override def tacticParser: TacticParser = parser.tacticParser
+  override def tacticParser: TacticParser = GlobalState.archiveParser.tacticParser
 
-  /** @inheritdoc */
-  override def definitionsPackageParser: String => Declaration = parser.definitionsPackageParser
+  override def definitionsPackageParser: String => Declaration = GlobalState.archiveParser.definitionsPackageParser
 
   private[parser] object BuiltinAnnotationDefinitions {
     val defs: Declaration = Declaration(Map(

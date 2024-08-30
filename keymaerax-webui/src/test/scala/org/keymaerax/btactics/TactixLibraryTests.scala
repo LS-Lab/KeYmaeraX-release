@@ -725,8 +725,8 @@ class TactixLibraryTests extends TacticTestBase {
   )
 
   it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
-    val problem = ArchiveParser
-      .parser(
+    val problem = GlobalState
+      .archiveParser(
         """Theorem ""
           |Problem
           |x < -4

@@ -5,7 +5,10 @@
 
 package org.keymaerax
 
-import org.keymaerax.parser.DLParser
+import org.keymaerax.bellerophon.ReflectiveExpressionBuilder
+import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
+import org.keymaerax.btactics.TactixInit
+import org.keymaerax.parser.{ArchiveParser, DLArchiveParser, DLParser}
 
 /**
  * This object aims to centralize as much global state as possible, with the ultimate goal of eliminating global state.
@@ -19,11 +22,14 @@ import org.keymaerax.parser.DLParser
  *   - [[org.keymaerax.btactics.TactixInit]]
  *   - [[org.keymaerax.btactics.ToolProvider]]
  *   - [[org.keymaerax.core.PrettyPrinter]]
- *   - [[org.keymaerax.parser.ArchiveParser]]
  *
  * If you stumble across any other global state, add it to the list!
  */
 
 object GlobalState {
   val parser = new DLParser
+
+  val archiveParser: ArchiveParser = new DLArchiveParser(
+    new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(TactixInit.invGenerator), _))
+  )
 }

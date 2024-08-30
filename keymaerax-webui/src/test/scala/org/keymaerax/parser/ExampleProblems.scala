@@ -41,7 +41,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
         |End. End.""".stripMargin
     }
 
-    val ex = the[ParseException] thrownBy ArchiveParser.parser(f)
+    val ex = the[ParseException] thrownBy GlobalState.archiveParser(f)
     ex.found should (be("x") or be("\"x; y := 2y\""))
     ex.expect should
       (be("Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term") or
@@ -134,7 +134,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
         |""".stripMargin
     }
 
-    val result = ArchiveParser.parser(theProblem)
+    val result = GlobalState.archiveParser(theProblem)
     result should have size 1
     result.head.model shouldBe "x > 0 -> [x := x + 1;] x > 0".asFormula
   }
@@ -155,7 +155,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
          |""".stripMargin
     }
 
-    ArchiveParser.parser(declProblem).head.model shouldBe Parser(problem)
+    GlobalState.archiveParser(declProblem).head.model shouldBe Parser(problem)
   }
 
   "Interpretation parser" should "parse simple function declarations" in {

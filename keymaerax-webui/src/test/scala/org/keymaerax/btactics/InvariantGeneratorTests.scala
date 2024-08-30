@@ -11,8 +11,8 @@ import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
 import org.keymaerax.hydra.DatabasePopulator
 import org.keymaerax.infrastruct.{FormulaTools, SuccPosition}
+import org.keymaerax.parser.Declaration
 import org.keymaerax.parser.StringConverter._
-import org.keymaerax.parser.{ArchiveParser, Declaration}
 import org.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 import org.keymaerax.tags.{ExtremeTest, UsualTest}
 import org.keymaerax.tools.ext.{MathematicaInvGenTool, PlotConverter}
@@ -997,7 +997,7 @@ class NonlinearExamplesTester(
     TactixInit.invSupplier = FixedGenerator(Nil)
     TactixInit.differentialInvGenerator = FixedGenerator(Nil)
     GlobalState.parser.setAnnotationListener((_: Program, _: Formula) => {})
-    val entry = ArchiveParser.parser(modelContent).head
+    val entry = GlobalState.archiveParser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
 

@@ -514,7 +514,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
       .setAnnotationListener((p: Program, inv: Formula) =>
         generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ Invariant(inv)))
       )
-    val entry = ArchiveParser.parser(modelContent).head
+    val entry = GlobalState.archiveParser(modelContent).head
     TactixInit.invSupplier = generator
     TactixInit.differentialInvGenerator = FixedGenerator(Nil)
     TactixInit.loopInvGenerator = FixedGenerator(Nil)
@@ -530,7 +530,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
     TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
     TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     GlobalState.parser.setAnnotationListener((_: Program, _: Formula) => {})
-    val entry = ArchiveParser.parser(modelContent).head
+    val entry = GlobalState.archiveParser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
 

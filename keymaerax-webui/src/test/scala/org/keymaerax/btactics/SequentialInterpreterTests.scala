@@ -5,6 +5,7 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.DebuggingTactics.error
 import org.keymaerax.btactics.TacticFactory.anon
@@ -755,8 +756,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "Tactics with delayed substitution" should "replay expandAll" in withMathematica { _ =>
-    val entry = ArchiveParser
-      .parser(
+    val entry = GlobalState
+      .archiveParser(
         """ArchiveEntry "Delayed Substitution"
           |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
           |ProgramVariables Real x; Real y; End.
@@ -785,8 +786,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "replay when expanded on branches" in withMathematica { _ =>
-    val entry = ArchiveParser
-      .parser(
+    val entry = GlobalState
+      .archiveParser(
         """ArchiveEntry "Delayed Substitution"
           |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
           |ProgramVariables Real x; Real y; End.
@@ -822,8 +823,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "replay when expanded only on some branches" in withMathematica { _ =>
-    val entry = ArchiveParser
-      .parser(
+    val entry = GlobalState
+      .archiveParser(
         """ArchiveEntry "Delayed Substitution"
           |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
           |ProgramVariables Real x; Real y; End.
@@ -861,8 +862,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "support introducing variables for function symbols of closed provables" in withMathematica { _ =>
-    val entry = ArchiveParser
-      .parser(
+    val entry = GlobalState
+      .archiveParser(
         """ArchiveEntry "Delayed Substitution from dIRule"
           |ProgramVariables Real x, y, r; End.
           |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.

@@ -48,8 +48,8 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                               |Problem [x := $s;]x > 3 End.
                               |End.
       """.stripMargin
-    ArchiveParser.parser(input("1")) // the problem should be exactly the fact that we pass in some unicode.
-    a[Exception] shouldBe thrownBy(ArchiveParser.parser("\\u03C0"))
+    GlobalState.archiveParser(input("1")) // the problem should be exactly the fact that we pass in some unicode.
+    a[Exception] shouldBe thrownBy(GlobalState.archiveParser("\\u03C0"))
   }
 
   it should "parse nullary predicate definitions" in {
@@ -66,7 +66,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                   |End.
     """.stripMargin
-    val entry = ArchiveParser.parser(input).loneElement
+    val entry = GlobalState.archiveParser(input).loneElement
     entry.defs.decls(Name("J", None)).interpretation.toOption.value.value shouldBe "1>=0".asFormula
     entry.model shouldBe "J() -> [{x:=x+1;}*]J()".asFormula
   }
@@ -85,7 +85,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                   |End.
     """.stripMargin
-    val entry = ArchiveParser.parser(input).loneElement
+    val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("J", None))) { case Signature(domain, sort, argNames, expr, _) =>
       domain.value shouldBe Real
       sort shouldBe Bool
@@ -109,7 +109,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                   |End.
     """.stripMargin
-    val entry = ArchiveParser.parser(input).loneElement
+    val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("J", None))) { case Signature(domain, sort, argNames, expr, _) =>
       domain.value shouldBe Tuple(Real, Real)
       sort shouldBe Bool
@@ -133,7 +133,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                   |End.
     """.stripMargin
-    val entry = ArchiveParser.parser(input).loneElement
+    val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("prg", None))) { case Signature(domain, sort, argNames, expr, _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
@@ -154,7 +154,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                 """.stripMargin
 
-    val ex = the[ParseException] thrownBy ArchiveParser.parser(input)
+    val ex = the[ParseException] thrownBy GlobalState.archiveParser(input)
 
     ex should pointAt(4, 1)
     ex should mention("ProgramVariables")
@@ -175,7 +175,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                   |End.
                 """.stripMargin
-    the[ParseException] thrownBy ArchiveParser.parser(input) should
+    the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
         """4:1 Unexpected token in definition
           |Found:    End at 4:1 to 4:3
@@ -200,7 +200,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                   |End.
                 """.stripMargin
-    the[ParseException] thrownBy ArchiveParser.parser(input) should
+    the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
         """4:1 Unexpected token in program definition
           |Found:    End at 4:1 to 4:3
@@ -225,7 +225,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
                   |End.
                 """.stripMargin
-    the[ParseException] thrownBy ArchiveParser.parser(input) should
+    the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
         """3:14 Missing program definition start delimiter
           |Found:    ID("x") at 3:14
@@ -498,7 +498,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
 
     forEvery(Table(("filename"), files: _*))({ fn =>
       val src = Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + fn)).mkString
-      ArchiveParser.parser(src) // test fails on exception.
+      GlobalState.archiveParser(src) // test fails on exception.
     })
   }
 
@@ -506,7 +506,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val src = Source
       .fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/functions.key"))
       .mkString
-    ArchiveParser.parser(src)
+    GlobalState.archiveParser(src)
   }
 
   it should "not parse any negative examples" in {
@@ -541,7 +541,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
 
     forEvery(Table(("filename", "msg1", "msg2"), files: _*))({ (fn, m1, m2) =>
       val src = Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + fn)).mkString
-      val ex = the[ParseException] thrownBy ArchiveParser.parser(src)
+      val ex = the[ParseException] thrownBy GlobalState.archiveParser(src)
       ex.getMessage should (startWith(m1) or startWith(m2))
     })
   }
@@ -554,7 +554,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
       """.stripMargin
 
-    val fml = ArchiveParser.parser(input).loneElement.model
+    val fml = GlobalState.archiveParser(input).loneElement.model
     val x = Variable("x")
     val a = FuncOf(Function("A", None, Unit, Real), Nothing)
     fml shouldBe Imply(GreaterEqual(a, Number(0)), Box(Assign(x, a), GreaterEqual(x, Number(0))))
@@ -568,7 +568,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
                   |End.
       """.stripMargin
 
-    the[ParseException] thrownBy ArchiveParser.parser(input) should have message
+    the[ParseException] thrownBy GlobalState.archiveParser(input) should have message
       """<somewhere> Unable to elaborate to function symbols: Elaboration tried replacing A in literal bound occurrence inside A>=0->[x:=A;A:=2;]x>=0
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
@@ -674,7 +674,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val listener = mock[(Program, Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+    GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
   it should "report functions non-expanded" in {
@@ -683,7 +683,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val listener = mock[(Program, Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+    GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
   it should "report functions non-expanded (2)" in {
@@ -692,7 +692,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val listener = mock[(Program, Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+    GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
   it should "FEATURE_REQUEST: detect cycles when expanding functions recursively to their definition" taggedAs
@@ -702,7 +702,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
       val listener = mock[(Program, Formula) => Unit]
       (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
       GlobalState.parser.setAnnotationListener(listener)
-      ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+      GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
     }
 
   it should "add () and report functions non-expanded" in {
@@ -711,13 +711,13 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val listener = mock[(Program, Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+    GlobalState.archiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
   it should "not expand properties to their definition" in {
     val input =
       "ArchiveEntry \"Test\" Definitions Bool init() <-> x>=2; Bool safe(Real x) <-> x=0; End. ProgramVariables Real x; End. Problem init() -> [{x:=x+1;}*]safe(x) End. End."
-    val entry = ArchiveParser.parser(input).loneElement
+    val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("init", None))) { case Signature(domain, sort, argNames, expr, _) =>
       domain.value shouldBe Unit
       sort shouldBe Bool
@@ -739,7 +739,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val listener = mock[(Program, Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    GlobalState.archiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
   it should "report functions in properties non-expanded" in {
@@ -748,7 +748,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val listener = mock[(Program, Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
-    ArchiveParser.parser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    GlobalState.archiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
   it should "add () to functions in properties" in {
@@ -757,7 +757,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
     val listener = mock[(Program, Formula) => Unit]
     (listener.apply _).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once()
     GlobalState.parser.setAnnotationListener(listener)
-    val entry = ArchiveParser.parser(input).loneElement
+    val entry = GlobalState.archiveParser(input).loneElement
     inside(entry.defs.decls(Name("inv", None))) { case Signature(domain, sort, argNames, expr, _) =>
       domain.value shouldBe Unit
       sort shouldBe Bool
@@ -776,7 +776,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   it should "complain about sort mismatches in function declaration and operator" in {
     val input =
       "ArchiveEntry \"Test\" Definitions Real y() <-> 3+7; End. ProgramVariables Real x; End. Problem x>=2 -> x>=0 End. End."
-    the[ParseException] thrownBy ArchiveParser.parser(input) should
+    the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
         """1:42 Function must be defined by equality
           |Found:    <-> at 1:42 to 1:44
@@ -791,7 +791,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   it should "complain about sort mismatches" in {
     val input =
       "ArchiveEntry \"Test\" Definitions Real y() = 3>2; End. ProgramVariables Real x; End. Problem x>=2 -> x>=0 End. End."
-    the[ParseException] thrownBy ArchiveParser.parser(input) should
+    the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
         """1:44 Expected a Term but got the Formula 3>2
           |Found:    3>2 at 1:44 to 1:46
@@ -805,7 +805,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
   it should "complain about non-delimited definitions" in {
     val input =
       "ArchiveEntry \"Test\" Definitions Real y() = (3>2; End. ProgramVariables Real x; End. Problem x>=2 -> x>=0 End. End."
-    the[ParseException] thrownBy ArchiveParser.parser(input) should
+    the[ParseException] thrownBy GlobalState.archiveParser(input) should
       (have message
         """1:44 Imbalanced parenthesis
           |Found:    ( at 1:44

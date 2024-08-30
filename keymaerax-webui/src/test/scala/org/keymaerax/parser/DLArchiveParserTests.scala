@@ -1783,8 +1783,8 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   "Examples" should "parse example archive LFCPS 05: Short Bouncing Ball" in {
-    val parsed = ArchiveParser
-      .parser
+    val parsed = GlobalState
+      .archiveParser
       .parse(
         raw"""
              |ArchiveEntry "05: Short Bouncing Ball: single hop"
@@ -1840,8 +1840,8 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse example archive LFCPS 07: Bouncing Ball" in {
-    ArchiveParser
-      .parser
+    GlobalState
+      .archiveParser
       .parse(
         raw"""ArchiveEntry "07: Bouncing Ball"
              |Description "7.4: Acrophobic Bouncing Ball".
@@ -1993,8 +1993,8 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse iteratedexp.kyx from implicit functions paper" in {
-    ArchiveParser
-      .parser
+    GlobalState
+      .archiveParser
       .parse(
         raw"""Theorem "double iterated exponential"
              |
@@ -2059,8 +2059,8 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse FIDE21/01 exponential decay" in {
-    ArchiveParser
-      .parser
+    GlobalState
+      .archiveParser
       .parse(
         raw"""Lemma "FIDE21/01-Exponential decay"
              |  ProgramVariables

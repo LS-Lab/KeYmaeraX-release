@@ -5,6 +5,7 @@
 
 package org.keymaerax.hydra.responses.models
 
+import org.keymaerax.GlobalState
 import org.keymaerax.hydra.{ModelPOJO, Response}
 import org.keymaerax.parser.{ArchiveParser, ParseException}
 import spray.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue}
@@ -12,7 +13,7 @@ import spray.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue}
 class GetModelResponse(model: ModelPOJO) extends Response {
 
   private def illustrationLinks(): List[String] =
-    try { ArchiveParser.parser(model.keyFile).flatMap(_.info.get("Illustration")) }
+    try { GlobalState.archiveParser(model.keyFile).flatMap(_.info.get("Illustration")) }
     catch { case _: ParseException => Nil }
 
   def getJson: JsValue = JsObject(

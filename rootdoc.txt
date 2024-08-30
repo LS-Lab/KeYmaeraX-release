@@ -26,7 +26,6 @@ Main documentation entry points for KeYmaera X API:
       - [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
       - `[[org.keymaerax.parser.KeYmaeraXPrettyPrinter KeYmaeraXPrettyPrinter]]` - Pretty printer producing concrete KeYmaera X syntax
       - `[[org.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]` - Parser reading concrete KeYmaera X syntax
-      - `[[org.keymaerax.parser.ArchiveParser ArchiveParser]]` - Parser reading KeYmaera X model and proof archive `.kyx` files
       - `[[org.keymaerax.parser.DLParser DLParser]]` - Combinator parser reading concrete KeYmaera X syntax
       - `[[org.keymaerax.parser.DLArchiveParser DLArchiveParser]]` - Combinator parser reading KeYmaera X model and proof archive `.kyx` files
 

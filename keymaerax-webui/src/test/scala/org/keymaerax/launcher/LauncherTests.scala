@@ -5,6 +5,7 @@
 
 package org.keymaerax.launcher
 
+import org.keymaerax.GlobalState
 import org.keymaerax.btactics.TacticTestBase
 import org.keymaerax.core.{Formula, Sequent}
 import org.keymaerax.parser.{
@@ -75,7 +76,7 @@ class LauncherTests extends TacticTestBase {
       .loneElement
       .asInstanceOf[ToolEvidence]
       .info
-    ArchiveParser.parser(model).loneElement.expandedModel shouldBe conjecture.expandedModel
+    GlobalState.archiveParser(model).loneElement.expandedModel shouldBe conjecture.expandedModel
     tactic shouldBe "master"
     proof shouldBe empty // proof term not exported
   }
@@ -145,7 +146,7 @@ class LauncherTests extends TacticTestBase {
           Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
         val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
           exported._3.loneElement.asInstanceOf[ToolEvidence].info
-        val entry = ArchiveParser.parser(model).loneElement
+        val entry = GlobalState.archiveParser(model).loneElement
         entry.name shouldBe conjecture.name
         entry.expandedModel shouldBe conjecture.expandedModel
         tactic shouldBe "master()"

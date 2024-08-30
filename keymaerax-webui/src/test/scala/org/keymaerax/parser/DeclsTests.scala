@@ -5,6 +5,7 @@
 
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
@@ -146,7 +147,7 @@ class DeclsTests extends TacticTestBase {
         |""".stripMargin
     }
 
-    val parsed = ArchiveParser.parser(input).loneElement
+    val parsed = GlobalState.archiveParser(input).loneElement
     parsed.defs.decls.loneElement._2 match {
       case Signature(Some(domain), codomain, _, Right(Some(interpretation)), _) =>
         domain shouldBe Tuple(Real, Tuple(Real, Real))
@@ -172,7 +173,7 @@ class DeclsTests extends TacticTestBase {
         |""".stripMargin
     }
 
-    val parsed = ArchiveParser.parser(input).loneElement
+    val parsed = GlobalState.archiveParser(input).loneElement
     parsed.defs.subst shouldBe USubst(
       SubstitutionPair(
         FuncOf(Function("max", None, Tuple(Real, Real), Real), "(._1,._2)".asTerm),
