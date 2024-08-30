@@ -40,6 +40,7 @@ import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.sys.ShutdownHookThread
 
 /** Command-line interface for the KeYmaera X core jar. */
 object KeymaeraxCore {
@@ -50,12 +51,8 @@ object KeymaeraxCore {
     Configuration.setConfiguration(FileConfiguration)
     GlobalLockChecks.acquireGlobalLockFileOrExit()
 
-    // @note just in case the user shuts down the prover from the command line
-    Runtime
-      .getRuntime
-      .addShutdownHook(new Thread() {
-        override def run(): Unit = { shutdownProver() }
-      })
+    // Try graceful shutdown if possible
+    ShutdownHookThread(shutdownProver())
 
     initializeConfig(options)
     runCommand(options)

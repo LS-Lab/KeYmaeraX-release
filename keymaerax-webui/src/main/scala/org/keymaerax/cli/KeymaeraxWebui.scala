@@ -30,6 +30,7 @@ import org.keymaerax.{Configuration, FileConfiguration}
 import java.io.PrintWriter
 import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
+import scala.sys.ShutdownHookThread
 
 /** Command-line interface for the KeYmaera X webui jar. */
 object KeymaeraxWebui {
@@ -40,12 +41,8 @@ object KeymaeraxWebui {
     Configuration.setConfiguration(FileConfiguration)
     GlobalLockChecks.acquireGlobalLockFileOrExit(graphical = true)
 
-    // @note just in case the user shuts down the prover from the command line
-    Runtime
-      .getRuntime
-      .addShutdownHook(new Thread() {
-        override def run(): Unit = { KeymaeraxCore.shutdownProver() }
-      })
+    // Try graceful shutdown if possible
+    ShutdownHookThread(KeymaeraxCore.shutdownProver())
 
     KeymaeraxCore.initializeConfig(options)
     runCommand(options)
