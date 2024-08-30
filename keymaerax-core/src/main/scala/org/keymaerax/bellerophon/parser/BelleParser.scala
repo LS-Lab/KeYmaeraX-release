@@ -13,7 +13,7 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser.{COLON => _, COMMA => _, Declaration, EOF => _, IDENT => _, _}
-import org.keymaerax.{Configuration, Logging}
+import org.keymaerax.{Configuration, GlobalState, Logging}
 
 import scala.annotation.{nowarn, tailrec}
 import scala.util.matching.Regex
@@ -55,7 +55,7 @@ object BelleParser extends TacticParser with Logging {
   }
 
   override val tacticParser: String => BelleExpr = this
-  override val expressionParser: Parser = Parser.parser
+  override val expressionParser: Parser = GlobalState.parser
   override val printer: BelleExpr => String = BellePrettyPrinter
 
   /** @inheritdoc */
@@ -467,8 +467,8 @@ object BelleParser extends TacticParser with Logging {
               .map(_.trim)
               .toList match {
               case LIST_END :: Nil => Nil // explicit empty list
-              case head :: Nil => Parser.parser.formulaParser(head) :: Nil // single-element lists without :: nil
-              case scala.collection.:+(args, LIST_END) => args.map(Parser.parser.formulaParser) // all other lists
+              case head :: Nil => GlobalState.parser.formulaParser(head) :: Nil // single-element lists without :: nil
+              case scala.collection.:+(args, LIST_END) => args.map(GlobalState.parser.formulaParser) // all other lists
               case l => throw ParseException(
                   "Formula list in " + USING.img + SPACE + DOUBLE_QUOTE + l.mkString(DOUBLE_COLON) + DOUBLE_QUOTE +
                     " must end in " + DOUBLE_COLON + SPACE + LIST_END,

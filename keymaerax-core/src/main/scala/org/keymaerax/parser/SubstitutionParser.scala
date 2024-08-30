@@ -5,6 +5,7 @@
 
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.core.{CoreException, Expression, FormulaKind, SubstitutionPair, TermKind}
 
 import scala.annotation.nowarn
@@ -34,9 +35,9 @@ object SubstitutionParser {
       }
     val what =
       try {
-        if (repl.kind == FormulaKind) Parser.parser.formulaParser(exprs(0))
-        else if (repl.kind == TermKind) Parser.parser.termParser(exprs(0))
-        else Parser.parser.programParser(exprs(0))
+        if (repl.kind == FormulaKind) GlobalState.parser.formulaParser(exprs(0))
+        else if (repl.kind == TermKind) GlobalState.parser.termParser(exprs(0))
+        else GlobalState.parser.programParser(exprs(0))
       } catch {
         case ex: ParseException =>
           if (s.startsWith("(")) throw ex.copy(loc = Region(ex.loc.begin.line, ex.loc.begin.column + 1)) else throw ex

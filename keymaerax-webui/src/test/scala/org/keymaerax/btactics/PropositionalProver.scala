@@ -5,11 +5,11 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.GlobalState
+import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.tags.SummaryTest
 
 import scala.collection.immutable._
-import TactixLibrary._
-import org.keymaerax.parser.Parser
 
 /**
  * Automatic Propositional Prover tests.
@@ -75,7 +75,7 @@ class PropositionalProver extends TacticTestBase {
 
   "prop" should "prove list of simple propositional tautologies" in withTactics {
     for (s <- propFacts) {
-      val fact = Parser.parser.formulaParser(s)
+      val fact = GlobalState.parser.formulaParser(s)
       TactixLibrary.proveBy(fact, prop) shouldBe Symbol("proved")
     }
   }

@@ -5,6 +5,7 @@
 
 package org.keymaerax.cli
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.bellerophon.{
@@ -19,7 +20,7 @@ import org.keymaerax.btactics.{TactixLibrary, ToolProvider}
 import org.keymaerax.core.{insist, False, Formula, PrettyPrinter, Sequent, USubst}
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import org.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXExtendedLemmaParser, ParsedArchiveEntry, Parser}
+import org.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXExtendedLemmaParser, ParsedArchiveEntry}
 import org.keymaerax.pt.{IsabelleConverter, ProvableSig, TermProvable}
 import org.keymaerax.tools.ToolEvidence
 import org.slf4j.{LoggerFactory, MarkerFactory}
@@ -101,7 +102,7 @@ object KeYmaeraXProofChecker {
           assert(witness.subgoals.isEmpty)
           val expected = inputSequent.exhaustiveSubst(USubst(defs.substs))
           // @note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
-          insist(Parser.parser.formulaParser(PrettyPrinter.printer(input)) == input, "parse of print is identity")
+          insist(GlobalState.parser.formulaParser(PrettyPrinter.printer(input)) == input, "parse of print is identity")
           // @note assert(witness.isProved, "Successful proof certificate") already checked in line above
           insist(
             witness.proved == expected,

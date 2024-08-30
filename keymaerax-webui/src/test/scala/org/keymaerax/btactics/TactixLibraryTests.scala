@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.Configuration
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
@@ -14,11 +13,12 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import org.keymaerax.parser.StringConverter._
-import org.keymaerax.parser.{ArchiveParser, Declaration, Parser}
+import org.keymaerax.parser.{ArchiveParser, Declaration}
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tagobjects.{IgnoreInBuildTest, SlowTest, TodoTest}
 import org.keymaerax.tags.{SummaryTest, UsualTest}
 import org.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
+import org.keymaerax.{Configuration, GlobalState}
 import org.scalatest.LoneElement._
 import org.scalatest.OptionValues._
 import org.scalatest.time.SpanSugar._
@@ -761,7 +761,7 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   it should "prove ETCS fully automatically" in withMathematica { _ =>
-    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) // @note ignore annotations
+    GlobalState.parser.setAnnotationListener((_: Program, _: Formula) => {}) // @note ignore annotations
     val entry = ArchiveParser
       .getEntry(
         "Benchmarks/Advanced/ETCS: Essentials",
@@ -773,7 +773,7 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   it should "prove ATC-2 fully automatically" in withMathematica { _ =>
-    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) // @note ignore annotations
+    GlobalState.parser.setAnnotationListener((_: Program, _: Formula) => {}) // @note ignore annotations
     val entry = ArchiveParser
       .getEntry(
         "Benchmarks/Advanced/ATC: 2 Aircraft Tangential Roundabout Maneuver",
@@ -787,7 +787,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "FEATURE_REQUEST: prove an event-triggered system fully automatically" taggedAs TodoTest in
     withMathematica { _ =>
       // @todo better loop invariant generator needed (revisit loopPostMaster)
-      Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) // @note ignore annotations
+      GlobalState.parser.setAnnotationListener((_: Program, _: Formula) => {}) // @note ignore annotations
       val entry = ArchiveParser
         .getEntry(
           "Benchmarks/Basic/STTT Tutorial: Example 3a",

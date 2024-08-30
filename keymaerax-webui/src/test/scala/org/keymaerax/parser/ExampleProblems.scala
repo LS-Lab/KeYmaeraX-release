@@ -8,7 +8,7 @@ package org.keymaerax.parser
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tools.KeYmaeraXTool
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 import org.scalatest.OptionValues._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -24,7 +24,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
     Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = false)
   }
-  override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
+  override def afterEach(): Unit = { GlobalState.parser.setAnnotationListener((_, _) => {}) }
 
   "parser line messages" should "be properly offset" in {
     val f = {
@@ -239,7 +239,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
         argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
         interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
-    entry.model shouldBe Parser.parser("f(2,3,4)>3")
+    entry.model shouldBe GlobalState.parser("f(2,3,4)>3")
   }
 
   it should "detect undeclared arguments" in {
@@ -285,7 +285,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
         argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
         interpretation.value shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
     }
-    entry.model shouldBe Parser.parser("f(2,3,4)>3")
+    entry.model shouldBe GlobalState.parser("f(2,3,4)>3")
   }
 
   it should "not confuse arguments of same name across definitions" in {
@@ -469,7 +469,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
     }
 
     val annotations = ListBuffer.empty[(Program, Formula)]
-    Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
+    GlobalState.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
     entry.defs.decls(Name("a", None)) match {
@@ -513,7 +513,7 @@ class ExampleProblems extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
     }
 
     val annotations = ListBuffer.empty[(Program, Formula)]
-    Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
+    GlobalState.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
     val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key Name("a", None)
     entry.defs.decls(Name("a", None)) match {

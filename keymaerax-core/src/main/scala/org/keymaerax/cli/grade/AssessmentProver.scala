@@ -5,6 +5,7 @@
 
 package org.keymaerax.cli.grade
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.bellerophon.{
   BelleExpr,
@@ -46,7 +47,6 @@ import org.keymaerax.parser.{
   KeYmaeraXArchivePrinter,
   ParseException,
   ParsedArchiveEntry,
-  Parser,
   PrettierPrintFormatProvider,
 }
 import org.keymaerax.pt.ProvableSig
@@ -478,7 +478,7 @@ object AssessmentProver {
             case Some(q) =>
               def runQE(question: String, answers: List[String]) = {
                 run(() => {
-                  val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
+                  val m = expand(question, answers, GlobalState.parser).asInstanceOf[Formula]
                   KeYmaeraXProofChecker(5.seconds, Declaration(Map.empty))(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
                 })
               }
@@ -541,7 +541,7 @@ object AssessmentProver {
             case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
           }
         case Modes.DI => args.get("question") match {
-            case Some(q) => Parser.parser.programParser(q) match {
+            case Some(q) => GlobalState.parser.programParser(q) match {
                 case ode: ODESystem => have match {
                     case h: ExpressionArtifact => h.expr match {
                         case hf: Formula => run(() => dICheck(ode, hf))
@@ -584,31 +584,31 @@ object AssessmentProver {
               }
           }
         case Modes.LOOP =>
-          val invArg = args.get("inv").map(Parser.parser.formulaParser)
+          val invArg = args.get("inv").map(GlobalState.parser.formulaParser)
           args.get("question") match {
             case Some(q) => have match {
                 case h: ExpressionArtifact => h.expr match {
                     case hf: Formula =>
                       var inv: Option[Formula] = None
-                      Parser
+                      GlobalState
                         .parser
                         .setAnnotationListener({
                           case (_: Loop, f) => inv = Some(f)
                           case _ =>
                         })
-                      val m = expand(q, hf.prettyString :: Nil, Parser.parser.formulaParser)
+                      val m = expand(q, hf.prettyString :: Nil, GlobalState.parser.formulaParser)
                       run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(hf))))
                     case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
                   }
                 case ListExpressionArtifact(h) =>
                   var inv: Option[Formula] = None
-                  Parser
+                  GlobalState
                     .parser
                     .setAnnotationListener({
                       case (_: Loop, f) => inv = Some(f)
                       case _ =>
                     })
-                  val m = expand(q, h.map(_.prettyString), Parser.parser.formulaParser)
+                  val m = expand(q, h.map(_.prettyString), GlobalState.parser.formulaParser)
                   run(() =>
                     loopCheck(
                       m,
@@ -750,7 +750,7 @@ object AssessmentProver {
           def runBelleProof(question: String, answers: List[String]): Either[ProvableSig, String] = {
             run(() => {
               val generator = new ConfigurableGenerator()
-              Parser
+              GlobalState
                 .parser
                 .setAnnotationListener((p: Program, inv: Formula) =>
                   generator.products +=
@@ -759,7 +759,7 @@ object AssessmentProver {
                         Invariant(inv, Some(InvariantHint.Annotation(tryHard = true)))).distinct)
                 )
               TactixInit.invSupplier = generator
-              val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
+              val m = expand(question, answers, GlobalState.parser).asInstanceOf[Formula]
               val t = expand(args("tactic"), answers, BelleParser)
               val p = prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
               // tactics that end in assert are checking whether or not the proof ends in a certain state; all others

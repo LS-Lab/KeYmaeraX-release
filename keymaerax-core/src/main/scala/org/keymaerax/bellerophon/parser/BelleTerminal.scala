@@ -5,8 +5,9 @@
 
 package org.keymaerax.bellerophon.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.PositionLocator
-import org.keymaerax.core.{Expression, Formula, Program, SubstitutionPair, Term}
+import org.keymaerax.core.{Expression, SubstitutionPair}
 import org.keymaerax.infrastruct.{FormulaTools, PosInExpr}
 import org.keymaerax.parser.{LexException, Parser, UnknownLocation}
 
@@ -194,7 +195,7 @@ private case class EXPRESSION(override val exprString: String, override val deli
       exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
       s"EXPRESSION.regexp should ensure delimited expression begin and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString",
     )
-    Parser.parser(undelimitedExprString)
+    GlobalState.parser(undelimitedExprString)
   }
 }
 

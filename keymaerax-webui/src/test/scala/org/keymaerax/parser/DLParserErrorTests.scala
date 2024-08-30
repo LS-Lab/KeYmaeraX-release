@@ -8,7 +8,7 @@ package org.keymaerax.parser
 import org.keymaerax.btactics.{ToolProvider, Z3ToolProvider}
 import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.tools.KeYmaeraXTool
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -23,7 +23,7 @@ class DLParserErrorTests
     ToolProvider.init()
     KeYmaeraXTool.init(interpreter = KeYmaeraXTool.InterpreterChoice.LazySequential, initDerivationInfoRegistry = true)
   }
-  override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
+  override def afterEach(): Unit = { GlobalState.parser.setAnnotationListener((_, _) => {}) }
 
   // General goal:
   // Expected: "human-readable message, not necessarily most detailed/accurate follow sets"
@@ -32,7 +32,7 @@ class DLParserErrorTests
 
   "dL parser" should "report expected term on rhs" in {
     val input = "(( (( f_() )) + #"
-    val ex = the[ParseException] thrownBy Parser.parser.termParser(input)
+    val ex = the[ParseException] thrownBy GlobalState.parser.termParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
     ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"
@@ -40,7 +40,7 @@ class DLParserErrorTests
 
   it should "report expected term on rhs FROM FORMULA" in {
     val input = "(( (( f_() )) + #"
-    val ex = the[ParseException] thrownBy Parser.parser.formulaParser(input)
+    val ex = the[ParseException] thrownBy GlobalState.parser.formulaParser(input)
     ex.msg shouldBe "Error parsing term at 1:4"
     ex.found shouldBe "\"#\""
     ex.expect shouldBe "(number | dot | function | unitFunctional | variable | termList | \"__________\" | \"-\")"

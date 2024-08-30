@@ -5,6 +5,7 @@
 
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.{BelleExpr, BelleLabel, BelleTopLevelLabel}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
@@ -33,7 +34,7 @@ class StringConverter(val s: String) {
 
   /** Converts to a term. */
   def asTerm: Term = asTerm(InterpretedSymbols.mathKyxDefs)
-  def asTerm(defs: Declaration): Term = elaborate(defs)(Parser.parser.termParser(s))
+  def asTerm(defs: Declaration): Term = elaborate(defs)(GlobalState.parser.termParser(s))
   def asPlainTerm: Term = asTerm(Declaration(Map.empty))
 
   /** Converts to a named symbol. */
@@ -45,14 +46,14 @@ class StringConverter(val s: String) {
   def asPlainNamedSymbol: NamedSymbol = asNamedSymbol(Declaration(Map.empty))
 
   /** Converts to a variable. */
-  def asVariable: Variable = Parser.parser.termParser(s) match {
+  def asVariable: Variable = GlobalState.parser.termParser(s) match {
     case v: Variable => v
     case _ => throw new IllegalArgumentException("Input " + s + " is not a variable")
   }
 
   /** Converts to a function symbol (elaborates variables). */
   def asFunction: Function = asFunction(InterpretedSymbols.mathKyxDefs)
-  def asFunction(defs: Declaration): Function = elaborate(defs)(Parser.parser.termParser(s) match {
+  def asFunction(defs: Declaration): Function = elaborate(defs)(GlobalState.parser.termParser(s) match {
     case v: Variable => Function(v.name, v.index, Unit, Real, interp = None)
     case FuncOf(f, _) => f
     case _ => throw new IllegalArgumentException("Input " + s + " is not a function")
@@ -63,7 +64,7 @@ class StringConverter(val s: String) {
   def asFormula: Formula = asFormula(InterpretedSymbols.mathKyxDefs)
 
   /** Converst to a formula using the definitions `defs`. */
-  def asFormula(defs: Declaration): Formula = elaborate(defs)(Parser.parser.formulaParser(s))
+  def asFormula(defs: Declaration): Formula = elaborate(defs)(GlobalState.parser.formulaParser(s))
   def asPlainFormula: Formula = asFormula(Declaration(Map.empty))
 
   /** Converts to a list of formulas (formulas comma-separated in input). */
@@ -72,13 +73,13 @@ class StringConverter(val s: String) {
 
   /** Converts to a program or game. */
   def asProgram: Program = asProgram(InterpretedSymbols.mathKyxDefs)
-  def asProgram(defs: Declaration): Program = elaborate(defs)(Parser.parser.programParser(s))
+  def asProgram(defs: Declaration): Program = elaborate(defs)(GlobalState.parser.programParser(s))
   def asPlainProgram: Program = asProgram(Declaration(Map.empty))
 
   /** Converts to a differential program. */
   def asDifferentialProgram: DifferentialProgram = asDifferentialProgram(InterpretedSymbols.mathKyxDefs)
   def asDifferentialProgram(defs: Declaration): DifferentialProgram =
-    elaborate(defs)(Parser.parser.differentialProgramParser(s))
+    elaborate(defs)(GlobalState.parser.differentialProgramParser(s))
   def asPlainDifferentialProgram: DifferentialProgram = asDifferentialProgram(Declaration(Map.empty))
 
   /** Converts to a tactic. */
@@ -90,7 +91,7 @@ class StringConverter(val s: String) {
   /** Converts to a sequent. */
   def asSequent: Sequent = asSequent(InterpretedSymbols.mathKyxDefs)
   def asSequent(defs: Declaration): Sequent = {
-    val seq = Parser.parser.sequentParser(s)
+    val seq = GlobalState.parser.sequentParser(s)
     Sequent(seq.ante.map(f => elaborate(defs)(f)), seq.succ.map(f => elaborate(defs)(f)))
   }
   def asPlainSequent: Sequent = asSequent(Declaration(Map.empty))

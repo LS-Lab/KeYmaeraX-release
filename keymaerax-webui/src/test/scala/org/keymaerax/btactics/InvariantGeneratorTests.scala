@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.DependentPositionTactic
 import org.keymaerax.btactics.NonlinearExamplesTests._
 import org.keymaerax.btactics.TactixLibrary._
@@ -13,12 +12,13 @@ import org.keymaerax.core._
 import org.keymaerax.hydra.DatabasePopulator
 import org.keymaerax.infrastruct.{FormulaTools, SuccPosition}
 import org.keymaerax.parser.StringConverter._
-import org.keymaerax.parser.{ArchiveParser, Declaration, Parser}
+import org.keymaerax.parser.{ArchiveParser, Declaration}
 import org.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 import org.keymaerax.tags.{ExtremeTest, UsualTest}
 import org.keymaerax.tools.ext.{MathematicaInvGenTool, PlotConverter}
 import org.keymaerax.tools.install.ToolConfiguration
 import org.keymaerax.tools.{ToolName, ToolOperationManagement}
+import org.keymaerax.{Configuration, GlobalState}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{Seconds, Span}
@@ -996,7 +996,7 @@ class NonlinearExamplesTester(
   private def parseStripHints(modelContent: String): (Formula, Declaration) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
     TactixInit.differentialInvGenerator = FixedGenerator(Nil)
-    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {})
+    GlobalState.parser.setAnnotationListener((_: Program, _: Formula) => {})
     val entry = ArchiveParser.parser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)
   }

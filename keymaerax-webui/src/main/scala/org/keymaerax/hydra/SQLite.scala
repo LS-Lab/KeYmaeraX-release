@@ -6,12 +6,13 @@
 /** @note Code Review 2016-08-02 LemmaDB aspects only */
 package org.keymaerax.hydra
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.BelleExpr
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.core._
 import org.keymaerax.info.VersionNumber
 import org.keymaerax.lemma._
-import org.keymaerax.parser.{ArchiveParser, Parser}
+import org.keymaerax.parser.ArchiveParser
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
 import org.sqlite.SQLiteConfig.{JournalMode, SynchronousMode}
@@ -441,7 +442,9 @@ object SQLite {
     final override def getInvariants(modelId: Int): Map[Expression, Formula] = {
       val model = getModel(modelId)
       var invariants: Map[Expression, Formula] = Map.empty
-      Parser.parser.setAnnotationListener { case (program, formula) => invariants = invariants.+((program, formula)) }
+      GlobalState
+        .parser
+        .setAnnotationListener { case (program, formula) => invariants = invariants.+((program, formula)) }
       ArchiveParser.parseAsFormula(model.keyFile)
       invariants
     }

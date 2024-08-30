@@ -20,7 +20,6 @@ import org.keymaerax.parser.DLParser
  *   - [[org.keymaerax.btactics.ToolProvider]]
  *   - [[org.keymaerax.core.PrettyPrinter]]
  *   - [[org.keymaerax.parser.ArchiveParser]]
- *   - [[org.keymaerax.parser.Parser]]
  *
  * If you stumble across any other global state, add it to the list!
  */

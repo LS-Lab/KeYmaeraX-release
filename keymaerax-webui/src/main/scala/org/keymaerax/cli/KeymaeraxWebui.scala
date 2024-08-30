@@ -25,7 +25,7 @@ import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser._
 import org.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 import org.keymaerax.tools.{ToolEvidence, ToolName}
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 
 import java.io.PrintWriter
 import scala.collection.immutable.{List, Nil}
@@ -103,7 +103,7 @@ object KeymaeraxWebui {
 
   private def makeVariables(varNames: Seq[String]): Seq[BaseVariable] = {
     varNames.map(vn =>
-      Parser.parser(vn) match {
+      GlobalState.parser(vn) match {
         case v: BaseVariable => v
         case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
       }

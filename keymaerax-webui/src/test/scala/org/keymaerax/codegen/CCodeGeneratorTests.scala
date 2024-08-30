@@ -5,12 +5,13 @@
 
 package org.keymaerax.codegen
 
+import org.keymaerax.GlobalState
 import org.keymaerax.btactics._
 import org.keymaerax.cli.KeymaeraxWebui
 import org.keymaerax.core.{BaseVariable, Equiv, Formula, NamedSymbol, Sequent, True, Variable}
 import org.keymaerax.infrastruct.FormulaTools
 import org.keymaerax.parser.StringConverter._
-import org.keymaerax.parser.{ArchiveParser, Declaration, Parser}
+import org.keymaerax.parser.{ArchiveParser, Declaration}
 import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.tags.IgnoreInBuildTest
 import org.scalatest.LoneElement._
@@ -335,7 +336,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "robix" should "generate C code for passivesafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety.kym")
-    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
+    val monitorExp = GlobalState.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double A;
         |  long double B;
@@ -377,7 +378,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passivesafety_renamed" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety_renamed.kym")
-    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
+    val monitorExp = GlobalState.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double A;
         |  long double B;
@@ -534,7 +535,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passiveorientationsafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.kym")
-    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
+    val monitorExp = GlobalState.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double A;
         |  long double V;
@@ -585,7 +586,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "Quadcopter" should "FEATURE_REQUEST: generate C code for hybridquadrotor" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.kym")
-    val monitorExp = Parser.parser(Source.fromInputStream(inputFile).mkString)
+    val monitorExp = GlobalState.parser(Source.fromInputStream(inputFile).mkString)
     val paramDecls = {
       """long double h;
         |  long double kd;

@@ -5,13 +5,14 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import org.keymaerax.bellerophon._
 import org.keymaerax.core.{Formula, Program}
 import org.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import org.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import org.keymaerax.parser.{ArchiveParser, Declaration, Parser}
+import org.keymaerax.parser.{ArchiveParser, Declaration}
 import org.keymaerax.tags.{ExtremeTest, SlowTest}
 import org.keymaerax.tools.{Tool, ToolEvidence}
 import org.scalatest.AppendedClues
@@ -161,7 +162,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String)
   private def parseProblem(model: String): (Declaration, InvariantGenerator) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
     val generator = new ConfigurableGenerator()
-    Parser
+    GlobalState
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
         generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ Invariant(inv)))
@@ -170,7 +171,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String)
     TactixInit.invSupplier = generator
     TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
     TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
-    Parser
+    GlobalState
       .parser
       .setAnnotationListener((_: Program, _: Formula) => {}) // @note cleanup for separation between tutorial entries
     (entry.defs, generator)

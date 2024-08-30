@@ -15,10 +15,11 @@
  */
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.core._
-import org.keymaerax.parser.OpSpec.op
 import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.infrastruct.PosInExpr.HereP
+import org.keymaerax.parser.OpSpec.op
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
@@ -130,10 +131,9 @@ trait BasePrettyPrinter extends PrettyPrinter {
  */
 object FullPrettyPrinter extends BasePrettyPrinter {
 
-  import OpSpec.op
-  import OpSpec.statementSemicolon
+  import OpSpec.{op, statementSemicolon}
 
-  val parser: Parser = Parser.parser
+  val parser: Parser = GlobalState.parser
   val fullPrinter: (Expression => String) = this
 
   /** Pretty-print term to a string but without contract checking! */
@@ -258,10 +258,9 @@ object FullPrettyPrinter extends BasePrettyPrinter {
  */
 class KeYmaeraXPrinter extends BasePrettyPrinter {
 
-  import OpSpec.op
-  import OpSpec.statementSemicolon
+  import OpSpec.{op, statementSemicolon}
 
-  lazy val parser: Parser = Parser.parser
+  lazy val parser: Parser = GlobalState.parser
   val fullPrinter: (Expression => String) = FullPrettyPrinter
 
   /** Pretty-print term to a string but without contract checking! */

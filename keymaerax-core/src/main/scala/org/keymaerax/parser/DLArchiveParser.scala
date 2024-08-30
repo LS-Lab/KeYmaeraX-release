@@ -122,9 +122,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Parse a single archive entry without source. */
   def archiveEntryNoSource[$: P](shared: Option[Declaration]): P[ParsedArchiveEntry] = {
-    val al = Parser.parser.annotationListener
+    val al = expParser.annotationListener
     val annotations = ListBuffer.empty[(Program, Formula)]
-    Parser.parser.setAnnotationListener((p: Program, f: Formula) => annotations.append((p, f)))
+    expParser.setAnnotationListener((p: Program, f: Formula) => annotations.append((p, f)))
     try {
       (archiveStart ~~/ blank ~ (label ~ ":").? ~ string ~ metaInfo ~
         (for {
@@ -134,11 +134,9 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
               tacticProof(shared.map(_ ++ archiveDecls).getOrElse(archiveDecls)).rep
         } yield (archiveDecls, rest)) ~ metaInfo ~ ("End" ~ label.? ~ ".")).flatMapX({
         case (kind, label, name, meta, (decl, (prob, probString, tacs)), moremeta, endlabel) =>
-          Parser
-            .parser
-            .setAnnotationListener(
-              al
-            ) // @note done parsing annotations; reset annotation listeners because elaborate may access them
+          expParser.setAnnotationListener(
+            al
+          ) // @note done parsing annotations; reset annotation listeners because elaborate may access them
           if (endlabel.isDefined && endlabel != label)
             Fail.opaque("end label: " + endlabel + " is optional but should be the same as the start label: " + label)
           else {
@@ -165,7 +163,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
             Pass(result)
           }
       })
-    } finally { Parser.parser.setAnnotationListener(al) }
+    } finally { expParser.setAnnotationListener(al) }
   }
 
   /** Parses a single archive entry */

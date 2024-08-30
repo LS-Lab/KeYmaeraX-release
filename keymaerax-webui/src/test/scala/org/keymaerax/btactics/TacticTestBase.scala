@@ -18,7 +18,7 @@ import org.keymaerax.core._
 import org.keymaerax.hydra._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import org.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParsedArchiveEntry, Parser}
+import org.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParsedArchiveEntry}
 import org.keymaerax.pt.{ElidingProvable, ProvableSig}
 import org.keymaerax.tags.{ExtremeTest, SlowTest}
 import org.keymaerax.tools._
@@ -26,7 +26,7 @@ import org.keymaerax.tools.ext.{JLinkMathematicaLink, Mathematica, QETacticTool,
 import org.keymaerax.tools.install.ToolConfiguration
 import org.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import org.keymaerax.tools.qe.{K2MConverter, M2KConverter}
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest.concurrent.{Signaler, TimeLimitedTests, TimeLimits}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -309,7 +309,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None)
     BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator()
-    Parser
+    GlobalState
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
         generator.products +=

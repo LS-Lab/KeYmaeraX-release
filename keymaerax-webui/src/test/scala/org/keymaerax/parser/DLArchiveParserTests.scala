@@ -29,7 +29,7 @@ import org.scalatest.matchers.{MatchResult, Matcher}
  */
 class DLArchiveParserTests extends TacticTestBase {
 
-  override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
+  override def afterEach(): Unit = { GlobalState.parser.setAnnotationListener((_, _) => {}) }
 
   private def parse(input: String): List[ParsedArchiveEntry] = ArchiveParser.parse(input)
 
@@ -1582,7 +1582,7 @@ class DLArchiveParserTests extends TacticTestBase {
   "implicit definitions" should "parse implicit ODE function definition" in {
     val (sin1, cos1) = {
       val fns = ODEToInterpreted.fromProgram(
-        Parser.parser.programParser("{{sin1:=0;cos1:=1;t:=0;}; {t'=1, sin1'=cos1, cos1'=-sin1}}"),
+        GlobalState.parser.programParser("{{sin1:=0;cos1:=1;t:=0;}; {t'=1, sin1'=cos1, cos1'=-sin1}}"),
         "t".asVariable,
       )
       (fns(0), fns(1))
@@ -1590,7 +1590,7 @@ class DLArchiveParserTests extends TacticTestBase {
 
     val tanh = {
       val fns = ODEToInterpreted
-        .fromProgram(Parser.parser.programParser("{{tanh:=0; x:=0;}; {tanh'=1-tanh^2,x'=1}}"), "x".asVariable)
+        .fromProgram(GlobalState.parser.programParser("{{tanh:=0; x:=0;}; {tanh'=1-tanh^2,x'=1}}"), "x".asVariable)
       fns(0)
     }
 
@@ -1667,7 +1667,7 @@ class DLArchiveParserTests extends TacticTestBase {
   it should "allow explicit initial times" in {
     {
       val fns = ODEToInterpreted
-        .fromProgram(Parser.parser.programParser("{{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}}"), "s".asVariable)
+        .fromProgram(GlobalState.parser.programParser("{{s:=-2;exp1:=1;}; {s'=1,exp1'=exp1}}"), "s".asVariable)
       fns(0)
     }
 

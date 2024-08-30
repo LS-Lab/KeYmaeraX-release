@@ -9,7 +9,7 @@ import org.keymaerax.core._
 import org.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
 import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.tools.KeYmaeraXTool
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -32,7 +32,7 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
   }
 
   override def beforeEach(): Unit = {
-    parser = Parser.parser
+    parser = GlobalState.parser
     pp = KeYmaeraXPrettyPrinter
   }
 

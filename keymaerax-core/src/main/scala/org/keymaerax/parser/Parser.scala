@@ -14,8 +14,8 @@
  */
 package org.keymaerax.parser
 
-import org.keymaerax.Configuration
 import org.keymaerax.core._
+import org.keymaerax.{Configuration, GlobalState}
 
 import scala.util.Try
 
@@ -116,7 +116,6 @@ trait Parser extends (String => Expression) {
 }
 
 object Parser extends (String => Expression) {
-  val parser: Parser = new DLParser
 
   /**
    * `true` has unary negation `-` bind weakly like binary subtraction. `false` has unary negation `-` bind strong just
@@ -131,7 +130,7 @@ object Parser extends (String => Expression) {
   val numNeg: Boolean = OpSpec.negativeNumber
 
   /** Parses `input`. */
-  override def apply(input: String): Expression = parser(input)
+  override def apply(input: String): Expression = GlobalState.parser(input)
 
   /** Parses a comma-separated list of expressions. */
   def parseExpressionList(s: String): List[Expression] = {

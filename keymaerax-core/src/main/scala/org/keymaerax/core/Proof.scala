@@ -39,7 +39,7 @@
  */
 package org.keymaerax.core
 
-import org.keymaerax.parser.Parser
+import org.keymaerax.GlobalState
 
 import java.security.MessageDigest
 import scala.annotation.nowarn
@@ -1025,7 +1025,7 @@ object Provable {
     if (separator < 0) throw new ProvableStorageException("syntactically ill-formed format", storedProvable)
     val storedChecksum = storedProvable.substring(separator + 2)
     val remainder = storedProvable.substring(0, separator)
-    (try { Parser.parser.storedInferenceParser(remainder) }
+    (try { GlobalState.parser.storedInferenceParser(remainder) }
     catch {
       case ex: Exception =>
         throw new ProvableStorageException("cannot be parsed: " + ex.toString, storedProvable).initCause(ex)

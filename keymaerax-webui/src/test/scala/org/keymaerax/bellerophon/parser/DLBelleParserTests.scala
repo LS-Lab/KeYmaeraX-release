@@ -30,14 +30,13 @@ import org.keymaerax.parser.{
   Declaration,
   Name,
   ParseException,
-  Parser,
   Signature,
   TacticReservedSymbols,
   UnknownLocation,
 }
 import org.keymaerax.tagobjects.TodoTest
 import org.keymaerax.tools.KeYmaeraXTool
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 import org.scalatest.flatspec.AnyFlatSpec
@@ -60,7 +59,7 @@ class DLBelleParserTests
 
   override def beforeEach(): Unit = { parser.setDefs(Declaration(Map.empty)) }
 
-  override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
+  override def afterEach(): Unit = { GlobalState.parser.setAnnotationListener((_, _) => {}) }
 
   private var parser: DLBelleParser = _
   private def parse(input: String, defs: Declaration = BuiltinSymbols.all) = parser(input, defs)

@@ -5,6 +5,7 @@
 
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser, TacticParser}
 import org.keymaerax.bellerophon.{BelleExpr, ReflectiveExpressionBuilder}
 import org.keymaerax.btactics.TactixInit
@@ -552,7 +553,8 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
       if (e.defs.decls.isEmpty) ArchiveParser.elaborate(e.copy(defs = ArchiveParser.declarationsOf(e.model)))
       else ArchiveParser.elaborate(e)
     )
-    result.foreach(_.annotations.foreach({ case (p: Program, f: Formula) => Parser.parser.annotationListener(p, f) }))
+    result
+      .foreach(_.annotations.foreach({ case (p: Program, f: Formula) => GlobalState.parser.annotationListener(p, f) }))
     result
   }
   protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry]

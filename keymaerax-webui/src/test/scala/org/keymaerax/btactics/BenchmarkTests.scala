@@ -5,7 +5,6 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.TacticStatistics
 import org.keymaerax.btactics.BenchmarkTests._
 import org.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Program, Sequent, SuccPos}
@@ -14,6 +13,7 @@ import org.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import org.keymaerax.parser._
 import org.keymaerax.tags.ExtremeTest
 import org.keymaerax.tools.ToolOperationManagement
+import org.keymaerax.{Configuration, GlobalState}
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.{Seconds, Span}
@@ -509,7 +509,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
   private def parseWithHints(modelContent: String): (Formula, Declaration) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
     val generator = new ConfigurableGenerator()
-    Parser
+    GlobalState
       .parser
       .setAnnotationListener((p: Program, inv: Formula) =>
         generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ Invariant(inv)))
@@ -518,7 +518,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
     TactixInit.invSupplier = generator
     TactixInit.differentialInvGenerator = FixedGenerator(Nil)
     TactixInit.loopInvGenerator = FixedGenerator(Nil)
-    Parser
+    GlobalState
       .parser
       .setAnnotationListener((_: Program, _: Formula) => {}) // @note cleanup for separation between tutorial entries
     (entry.model.asInstanceOf[Formula], entry.defs)
@@ -529,7 +529,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
     TactixInit.invSupplier = FixedGenerator(Nil)
     TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
     TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
-    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {})
+    GlobalState.parser.setAnnotationListener((_: Program, _: Formula) => {})
     val entry = ArchiveParser.parser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)
   }

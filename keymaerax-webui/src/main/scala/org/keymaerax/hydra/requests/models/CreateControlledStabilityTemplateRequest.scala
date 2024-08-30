@@ -5,6 +5,7 @@
 
 package org.keymaerax.hydra.requests.models
 
+import org.keymaerax.GlobalState
 import org.keymaerax.btactics.SwitchedSystems._
 import org.keymaerax.core.{
   Choice,
@@ -25,7 +26,6 @@ import org.keymaerax.core.{
 }
 import org.keymaerax.hydra._
 import org.keymaerax.hydra.responses.models.GetControlledStabilityTemplateResponse
-import org.keymaerax.parser.Parser
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import spray.json.DefaultJsonProtocol._
 import spray.json.JsArray
@@ -55,7 +55,10 @@ class CreateControlledStabilityTemplateRequest(
         val ttext = t.fields("text").convertTo[String]
         (
           t.fields("start").convertTo[String],
-          (t.fields("end").convertTo[String], if (ttext.isEmpty) Test(True) else Parser.parser.programParser(ttext)),
+          (
+            t.fields("end").convertTo[String],
+            if (ttext.isEmpty) Test(True) else GlobalState.parser.programParser(ttext),
+          ),
         )
       })
       .groupBy(_._1)
@@ -69,7 +72,7 @@ class CreateControlledStabilityTemplateRequest(
         val mid = m.fields("id").convertTo[String]
         val prg = m.fields("text").convertTo[String].trim match {
           case "" => Test(True)
-          case s => Parser.parser.programParser("{" + s + "}")
+          case s => GlobalState.parser.programParser("{" + s + "}")
         }
         (mid, prg, transitionsByVertex.getOrElse(mid, List.empty))
       })

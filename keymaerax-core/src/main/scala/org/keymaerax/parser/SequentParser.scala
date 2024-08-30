@@ -5,6 +5,7 @@
 
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.core.{Formula, Sequent}
 
 /** Parses sequents of the form ```ante_1, ante_2, ..., ante_n ==> succ_1, ..., succ_n```. */
@@ -19,10 +20,10 @@ object SequentParser {
       .split(FML_SPLITTER)
       .foldLeft[(List[Formula], String)](List.empty, "")({ case ((fmls, acc), next) =>
         val fmlCandidate = acc + (if (acc.nonEmpty) "," else "") + next
-        try { (fmls :+ Parser.parser.formulaParser(fmlCandidate), "") }
+        try { (fmls :+ GlobalState.parser.formulaParser(fmlCandidate), "") }
         catch { case _: ParseException => (fmls, fmlCandidate) }
       })
-    if (unparseable.nonEmpty) List(Parser.parser.formulaParser(unparseable)) // @note will throw ParseException
+    if (unparseable.nonEmpty) List(GlobalState.parser.formulaParser(unparseable)) // @note will throw ParseException
     else fmls
   }
 

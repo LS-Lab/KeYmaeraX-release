@@ -5,12 +5,12 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.macros.ProvableInfo
 import org.keymaerax.core._
 import org.keymaerax.infrastruct._
-import org.keymaerax.parser.Parser
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tagobjects.TodoTest
@@ -816,7 +816,9 @@ class HilbertTests extends TacticTestBase {
       Ax.dDX,
       PosInExpr(0 :: Nil),
       (us: RenUSubst) =>
-        us ++ RenUSubst(Seq((DifferentialProgramConst("c", AnyArg), Parser.parser.differentialProgramParser("x'=2")))),
+        us ++ RenUSubst(
+          Seq((DifferentialProgramConst("c", AnyArg), GlobalState.parser.differentialProgramParser("x'=2")))
+        ),
     )(SuccPosition(1, Nil))(ProvableSig.startPlainProof(Sequent(IndexedSeq(), IndexedSeq("(true&x=y)".asFormula))))
       .conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y".asFormula))
   }

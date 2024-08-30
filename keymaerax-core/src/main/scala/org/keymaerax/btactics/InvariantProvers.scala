@@ -5,13 +5,14 @@
 
 package org.keymaerax.btactics
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Idioms.?
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.{SequentAugmentor, _}
 import org.keymaerax.infrastruct.{Augmentors, DependencyAnalysis, PosInExpr, Position}
-import org.keymaerax.parser.{Declaration, Parser}
+import org.keymaerax.parser.Declaration
 import org.keymaerax.pt.ProvableSig
 import org.slf4j.LoggerFactory
 
@@ -53,7 +54,7 @@ object InvariantProvers {
           val subst: USubst =
             if (bounds.length == 1) USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
             else USubst(bounds.map(xi => { i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi) }))
-          val jj: Formula = Parser
+          val jj: Formula = GlobalState
             .parser
             .formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.what.prettyString).mkString(",") + ")")
           SearchAndRescueAgain(

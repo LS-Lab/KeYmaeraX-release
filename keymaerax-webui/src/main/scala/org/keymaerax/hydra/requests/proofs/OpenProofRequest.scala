@@ -5,6 +5,7 @@
 
 package org.keymaerax.hydra.requests.proofs
 
+import org.keymaerax.GlobalState
 import org.keymaerax.btactics.{ConfigurableGenerator, Invariant, TactixInit, TactixLibrary}
 import org.keymaerax.core.{insist, CoreException, Expression, Formula, Program}
 import org.keymaerax.hydra.responses.proofs.OpenProofResponse
@@ -17,7 +18,7 @@ import org.keymaerax.hydra.{
   Response,
   UserRequest,
 }
-import org.keymaerax.parser.{ArchiveParser, Parser}
+import org.keymaerax.parser.ArchiveParser
 
 import scala.collection.immutable.{Map, Nil, Seq}
 import scala.util.Try
@@ -51,7 +52,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")
           case Some(mId) =>
             var products: Map[Expression, Seq[Invariant]] = Map[Expression, Seq[Invariant]]()
-            Parser
+            GlobalState
               .parser
               .setAnnotationListener((p: Program, inv: Formula) =>
                 products += (p -> (products.getOrElse(p, Nil) :+ Invariant(inv)))

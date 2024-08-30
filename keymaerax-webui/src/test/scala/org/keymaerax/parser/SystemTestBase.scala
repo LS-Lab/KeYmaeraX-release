@@ -7,7 +7,7 @@ package org.keymaerax.parser
 
 import org.keymaerax.core._
 import org.keymaerax.pt.ProvableSig
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.LoneElement._
@@ -26,7 +26,7 @@ class SystemTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
     Configuration.setConfiguration(FileConfiguration)
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     var products: Map[Expression, Seq[Formula]] = Map()
-    Parser
+    GlobalState
       .parser
       .setAnnotationListener((p: Program, inv: Formula) => products += (p -> (products.getOrElse(p, Nil) :+ inv)))
   }
