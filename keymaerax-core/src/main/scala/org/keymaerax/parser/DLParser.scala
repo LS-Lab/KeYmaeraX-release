@@ -43,7 +43,7 @@ import scala.collection.immutable._
  * @see
  *   [[KeYmaeraXParser]]
  */
-object DLParser extends DLParser {
+object DLParser {
   assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
   assert(
     !OpSpec.negativeNumber,

@@ -10,7 +10,7 @@ import org.keymaerax.core._
 import org.keymaerax.tagobjects.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 import org.keymaerax.testhelper.CustomAssertions.withSafeClue
 import org.keymaerax.tools.KeYmaeraXTool
-import org.keymaerax.{Configuration, FileConfiguration}
+import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -25,7 +25,7 @@ class KeYmaeraXRandomParserTests
     extends RandomParserTests(
       {
         Configuration.setConfiguration(FileConfiguration)
-        if (false) KeYmaeraXParser.formulaParser else DLParser.formulaParser
+        if (false) KeYmaeraXParser.formulaParser else GlobalState.parser.formulaParser
       },
       new RandomFormula(),
     )
@@ -33,7 +33,7 @@ class KeYmaeraXDeterministicParserTests
     extends RandomParserTests(
       {
         Configuration.setConfiguration(FileConfiguration)
-        if (false) KeYmaeraXParser.formulaParser else DLParser.formulaParser
+        if (false) KeYmaeraXParser.formulaParser else GlobalState.parser.formulaParser
       },
       new RandomFormula(seed = 0),
     )

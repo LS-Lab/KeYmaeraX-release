@@ -6,10 +6,11 @@
 /** Mock Bellerophon tactic parser for JS compilation */
 package org.keymaerax.bellerophon.parser
 
+import fastparse._
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.parser.DLParser.parseException
-import org.keymaerax.parser.{DLParser, Declaration, Parser}
-import fastparse._
+import org.keymaerax.parser.{Declaration, Parser}
 
 import scala.collection.immutable._
 
@@ -24,7 +25,7 @@ class DLMockBelleParser(
   private var defs: Declaration = Declaration(Map.empty)
 
   override val tacticParser: String => BelleExpr = this
-  override val expressionParser: Parser = DLParser
+  override val expressionParser: Parser = GlobalState.parser
 
   /** @inheritdoc */
   override def apply(input: String, defs: Declaration): BelleExpr = {

@@ -5,10 +5,11 @@
 
 package org.keymaerax.parser
 
-import org.keymaerax.core.Formula
-import org.keymaerax.parser.DLParser.parseException
 import fastparse.JavaWhitespace._
 import fastparse._
+import org.keymaerax.GlobalState
+import org.keymaerax.core.Formula
+import org.keymaerax.parser.DLParser.parseException
 
 import scala.collection.immutable._
 
@@ -20,7 +21,6 @@ import scala.collection.immutable._
  *   [[KeYmaeraXAxiomParser]]
  */
 object DLAxiomParser extends (String => List[(String, Formula)]) {
-  import DLParser.string
   private val checkAgainst: Option[String => List[(String, Formula)]] = Some(KeYmaeraXAxiomParser)
 
   /**
@@ -62,11 +62,11 @@ object DLAxiomParser extends (String => List[(String, Formula)]) {
   }
 
   /** axiom: Parses a dL axiom. */
-  def axiom[$: P]: P[(String, Formula)] = P("Axiom" ~ string ~ formula ~ "End.")
+  def axiom[$: P]: P[(String, Formula)] = P("Axiom" ~ GlobalState.parser.string ~ formula ~ "End.")
 
   /** axiom: Parses a dL axiom. */
   def axiomList[$: P]: P[List[(String, Formula)]] = P(Start ~ axiom.rep(1) ~ End).map(_.toList)
 
   /** formula: Parses a dL formula via [[DLParser.formula]]. */
-  private def formula[$: P]: P[Formula] = DLParser.formula
+  private def formula[$: P]: P[Formula] = GlobalState.parser.formula
 }

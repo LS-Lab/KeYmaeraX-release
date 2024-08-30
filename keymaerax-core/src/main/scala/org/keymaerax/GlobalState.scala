@@ -5,6 +5,8 @@
 
 package org.keymaerax
 
+import org.keymaerax.parser.DLParser
+
 /**
  * This object aims to centralize as much global state as possible, with the ultimate goal of eliminating global state.
  * Even if global state can't be fully eliminated, having a central place where it is accessed and modified should help
@@ -18,10 +20,11 @@ package org.keymaerax
  *   - [[org.keymaerax.btactics.ToolProvider]]
  *   - [[org.keymaerax.core.PrettyPrinter]]
  *   - [[org.keymaerax.parser.ArchiveParser]]
- *   - [[org.keymaerax.parser.DLParser]]
  *   - [[org.keymaerax.parser.Parser]]
  *
  * If you stumble across any other global state, add it to the list!
  */
 
-object GlobalState {}
+object GlobalState {
+  val parser = new DLParser
+}

@@ -15,6 +15,7 @@
 package org.keymaerax.bellerophon.parser
 
 import fastparse._
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.macros.{
   ArgInfo,
@@ -35,8 +36,8 @@ import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import org.keymaerax.infrastruct.PosInExpr.HereP
 import org.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
-import org.keymaerax.parser.DLParser.{fullExpression, fullFormula, parseException}
-import org.keymaerax.parser.{DLParser, Declaration, ParseException, Parser, TacticReservedSymbols}
+import org.keymaerax.parser.DLParser.parseException
+import org.keymaerax.parser.{Declaration, ParseException, Parser, TacticReservedSymbols}
 
 import scala.annotation.nowarn
 import scala.collection.immutable._
@@ -65,13 +66,13 @@ class DLBelleParser(
   private def defs: Declaration = _defs.addNew(TacticReservedSymbols.asDecl)
 
   /** Which formula/term/program parser this archive parser uses. */
-  private val expParser = DLParser
+  private val expParser = GlobalState.parser
 
   /** Stores defined tactics. */
   private val tactics = scala.collection.mutable.Map.empty[String, DefTactic]
 
   override val tacticParser: String => BelleExpr = this
-  override val expressionParser: Parser = DLParser
+  override val expressionParser: Parser = GlobalState.parser
 
   /** @inheritdoc */
   override def apply(input: String, defs: Declaration): BelleExpr = {
@@ -173,7 +174,7 @@ class DLBelleParser(
     // BUT perhaps the left side is ambiguous and the right side is a formula. So in
     // this case both must be false. :(
     (NoCut(formula ~ "~>" ~ formula) | term(false) ~ "~>" ~ term(false) |
-      (DLParser.systemSymbol | DLParser.programSymbol) ~ "~>" ~ program)
+      (GlobalState.parser.systemSymbol | GlobalState.parser.programSymbol) ~ "~>" ~ program)
       .map(pair => pair._1.implicitSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(pair._2))))
   )
 
@@ -193,14 +194,14 @@ class DLBelleParser(
     case _: FormulaArg => formula.map(f => List(defs.elaborateFull(f)))
     case _: TermArg => term(true).map(t => List(defs.elaborateFull(t)))
     case _: ExpressionArg => expression.map(e => List(defs.elaborateFull(e)))
-    case _: VariableArg => DLParser.variable.map(List(_))
+    case _: VariableArg => GlobalState.parser.variable.map(List(_))
     case _: GeneratorArg => Fail.opaque("unimplemented: generator argument")
-    case _: StringArg => DLParser.stringInterior.map(List(_))
+    case _: StringArg => GlobalState.parser.stringInterior.map(List(_))
     case _: SubstitutionArg => (("(" ~/ substPair ~ ")") | substPair).map(List(_))
     case _: PosInExprArg => posInExpr.map(List(_))
     case _: OptionArg => Fail.opaque("Optional argument cannot appear recursively in a different argument type")
     case ListArg(arg) => argList(argumentInterior(arg)).map(_.flatten)
-    case _: NumberArg => DLParser.numberLiteral.map(List(_))
+    case _: NumberArg => GlobalState.parser.numberLiteral.map(List(_))
   })
 
   def argument[$: P](argInfo: ArgInfo): P[Seq[Any]] =
@@ -279,7 +280,7 @@ class DLBelleParser(
 
   def builtinTactic[$: P]: P[BelleExpr] = ("doall" ~ "(" ~/ tactic ~ ")")
     .map(OnAll) | ("partial" ~ "(" ~/ tactic ~ ")").map(PartialTactic(_, None)) |
-    ("let" ~ "(" ~ "\"" ~/ DLParser.comparison ~ "\"" ~ ")" ~ "in" ~ "(" ~/ tactic ~ ")").flatMap({
+    ("let" ~ "(" ~ "\"" ~/ GlobalState.parser.comparison ~ "\"" ~ ")" ~ "in" ~ "(" ~/ tactic ~ ")").flatMap({
       case (Equal(l, r), t) => Pass(Let(l, r, t))
       case (c, _) => Fail("Abbreviation of the shape f()=e (but got " + c.prettyString + ")")
     }) | ("tactic" ~ tacticSymbol ~ "as" ~/ baseTac).flatMapX({ case (s, t) =>
@@ -356,7 +357,7 @@ class DLBelleParser(
         // str contains no hashes, just return Here for PosIn.
         // str can be any expression, including a term (or a program), e.g. "x" in `2.1==x`.
         // Potentially unsafe for ambiguous "p()" with an archive without definition
-        return fastparse.parse(str, fullExpression(_)) match {
+        return fastparse.parse(str, GlobalState.parser.fullExpression(_)) match {
           case Parsed.Success(value, _) => Pass((defs.elaborateFull(value), HereP))
           case _: Parsed.Failure => Fail
         }
@@ -376,8 +377,8 @@ class DLBelleParser(
 
       // subExpr need to have the correct sort without ambiguity between predicate and function
       // elaborateFull would also work (if used consistently) but more costly
-      val subExpr = fastparse.parse(betweenHashes, fullExpression(_)) match {
-        case Parsed.Success(e, _) => defs.elaborateToFunctions(e)
+      val subExpr = fastparse.parse(betweenHashes, GlobalState.parser.fullExpression(_)) match {
+        case Parsed.Success(e, _) => defs.elaborateToFunctions[Expression](e)
         case _: Parsed.Failure => return Fail
       }
 
@@ -388,7 +389,7 @@ class DLBelleParser(
       }
       val strWithoutHashes = beforeHashes + lp + betweenHashes + rp + afterHashes
 
-      val reparsedSubExpr = fastparse.parse(strWithoutHashes, fullFormula(_)) match {
+      val reparsedSubExpr = fastparse.parse(strWithoutHashes, GlobalState.parser.fullFormula(_)) match {
         case Parsed.Success(expr, _) => expr
         case _: Parsed.Failure => return Fail
       }
@@ -399,7 +400,7 @@ class DLBelleParser(
           // mark with "hash" placeholder function/predicate/program depending on subExpr sort
           val (markedStr, placeholder) = PositionLocator
             .withMarkers(strWithoutHashes, subExpr, hashStart, hashEnd - hashStart + 1)
-          val markedExpr = fastparse.parse(markedStr, fullFormula(_)).get.value
+          val markedExpr = fastparse.parse(markedStr, GlobalState.parser.fullFormula(_)).get.value
           FormulaTools.posOf(markedExpr, placeholder)
         } else {
           // reparsedSubExpr need to be elaborated consistently with subExpr

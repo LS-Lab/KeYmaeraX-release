@@ -7,12 +7,12 @@ package org.keymaerax.parser
 
 import fastparse.JavaWhitespace.whitespace
 import fastparse._
-import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.BelleExpr
 import org.keymaerax.bellerophon.parser.{DLTacticParser, TacticParser}
 import org.keymaerax.core._
 import org.keymaerax.parser.DLParser.parseException
 import org.keymaerax.parser.ODEToInterpreted.FromProgramException
+import org.keymaerax.{Configuration, GlobalState}
 
 import java.io.FileInputStream
 import scala.collection.immutable._
@@ -47,7 +47,7 @@ import scala.tools.nsc.io.File
 class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Which formula/term/program parser this archive parser uses. */
-  private val expParser = DLParser
+  private val expParser = GlobalState.parser
 
   /** @inheritdoc */
   override protected def doParse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = archiveParser(input)

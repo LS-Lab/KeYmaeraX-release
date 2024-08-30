@@ -5,6 +5,7 @@
 
 package org.keymaerax.parser
 
+import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import org.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, Find, OnAll, ReflectiveExpressionBuilder, Using}
 import org.keymaerax.btactics.TactixLibrary._
@@ -310,8 +311,11 @@ class DLArchiveParserTests extends TacticTestBase {
   }
 
   it should "parse an isolated simple definition assignment" in {
-    DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"), Plus(Variable("x"), Number(BigDecimal(1))))
-    DLParser.programParser("{ x:=x+1; }") shouldBe DLParser.programParser("x:=x+1;")
+    GlobalState.parser.programParser("x:=x+1;") shouldBe Assign(
+      Variable("x"),
+      Plus(Variable("x"), Number(BigDecimal(1))),
+    )
+    GlobalState.parser.programParser("{ x:=x+1; }") shouldBe GlobalState.parser.programParser("x:=x+1;")
     val archiveParser = new DLArchiveParser(
       new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
     )
