@@ -33,7 +33,7 @@ KeYmaera X also supports the verification of _hybrid games_ in _differential gam
   or [Wolfram Engine](http://www.wolfram.com/engine/).
   See below for more details on the different arithmetic solvers.
 
-3. Download the file [keymaerax.jar](https://keymaeraX.org/keymaerax.jar)
+3. Download the file [keymaerax.jar](https://keymaerax.org/keymaerax.jar)
 
 4. Configure KeYmaera X according to the **Configuration** section below.
 
