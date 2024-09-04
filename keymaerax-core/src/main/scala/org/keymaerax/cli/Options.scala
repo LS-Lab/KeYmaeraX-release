@@ -35,7 +35,6 @@ object Command {
   case class Prove(
       in: String = null,
       out: Option[String] = None,
-      ptOut: Option[String] = None,
       conjecture: Option[String] = None,
       tactic: Option[String] = None,
       tacticName: Option[String] = None,
@@ -65,9 +64,7 @@ object Command {
   case class Modelplex(
       in: String = null,
       out: Option[String] = None,
-      ptOut: Option[String] = None,
       vars: Option[Seq[String]] = None,
-      verify: Boolean = false,
       sandbox: Boolean = false,
       monitor: Option[ModelPlexKind.Value] = None,
       fallback: Option[String] = None,
@@ -290,10 +287,6 @@ object Options {
             .optional()
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(out = Some(x))))
             .text(wrap("Output proof file (defaults to input file with .kyp suffix).")),
-          opt[String]("pt-out")
-            .action((x, o) => o.updateCommand[Command.Prove](_.copy(ptOut = Some(x))))
-            .valueName("<file>")
-            .text(wrap("Output proof term s-expression into a file.")),
           opt[String]("conjecture")
             .action((x, o) => o.updateCommand[Command.Prove](_.copy(conjecture = Some(x))))
             .valueName("<file>")
@@ -459,14 +452,10 @@ object Options {
             .optional()
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(out = Some(x))))
             .text(wrap("Output file.")),
-          opt[String]("pt-out")
-            .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(ptOut = Some(x))))
-            .valueName("<file>"),
           opt[Seq[String]]("vars")
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(vars = Some(x))))
             .valueName("<vars>")
             .text(wrap("Use ordered comma-separated list of variables, treating others as constant functions.")),
-          opt[Unit]("verify").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(verify = true))),
           opt[Unit]("sandbox").action((_, o) => o.updateCommand[Command.Modelplex](_.copy(sandbox = true))),
           opt[ModelPlexKind.Value]("monitor")
             .action((x, o) => o.updateCommand[Command.Modelplex](_.copy(monitor = Some(x))))

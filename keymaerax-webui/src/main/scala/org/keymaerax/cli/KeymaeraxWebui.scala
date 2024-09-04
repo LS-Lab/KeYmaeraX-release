@@ -23,7 +23,7 @@ import org.keymaerax.info.TechnicalName
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.parser._
-import org.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
+import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.{ToolEvidence, ToolName}
 import org.keymaerax.{Configuration, FileConfiguration, GlobalState}
 
@@ -70,9 +70,7 @@ object KeymaeraxWebui {
       modelplex(
         in = cmd.in,
         out = cmd.out,
-        ptOut = cmd.ptOut,
         vars = cmd.vars,
-        verify = cmd.verify,
         sandbox = cmd.sandbox,
         monitor = cmd.monitor,
         fallback = cmd.fallback,
@@ -124,36 +122,16 @@ object KeymaeraxWebui {
   def modelplex(
       in: String,
       out: Option[String],
-      ptOut: Option[String],
       vars: Option[Seq[String]],
-      verify: Boolean,
       sandbox: Boolean,
       monitor: Option[ModelPlexKind.Value],
       fallback: Option[String],
       args: Seq[String],
   ): Unit = {
-    // @TODO remove option, hol config no longer necessary
-    if (ptOut.isDefined) {
-      // @TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
-      ProvableSig.PROOF_TERMS_ENABLED = false
-    } else { ProvableSig.PROOF_TERMS_ENABLED = false }
+    ProvableSig.PROOF_TERMS_ENABLED = false
 
     val inputEntry = ArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
-
-    val verifyOption: Option[ProvableSig => Unit] =
-      if (verify) {
-        Some({
-          case ptp: TermProvable =>
-            val conv = new IsabelleConverter(ptp.pt)
-            val source = conv.sexp
-            val pwPt = new PrintWriter(ptOut.get + ".pt")
-            pwPt.write(source)
-            pwPt.close()
-          case _: ProvableSig => ()
-        })
-      } else Some(_ => ())
-    // val isarOption = options.getOrElse('isar,false).asInstanceOf[Boolean]
 
     val inputFileName = in.split('#')(0).dropRight(4)
 
@@ -253,12 +231,12 @@ object KeymaeraxWebui {
     } else if (vars.isDefined) {
       val parsedVars = makeVariables(vars.get).toList
       val kind = monitor.getOrElse(ModelPlexKind.Model)
-      val result = ModelPlex(parsedVars, kind, verifyOption)(inputModel)
-      printModelplexResult(inputModel, result, outputFileName, ptOut, vars = vars, args = args)
+      val result = ModelPlex(parsedVars, kind)(inputModel)
+      printModelplexResult(inputModel, result, outputFileName, vars = vars, args = args)
     } else {
       val kind = monitor.getOrElse(ModelPlexKind.Model)
-      val result = ModelPlex(inputModel, kind, verifyOption)
-      printModelplexResult(inputModel, result, outputFileName, ptOut, vars = vars, args = args)
+      val result = ModelPlex(inputModel, kind)
+      printModelplexResult(inputModel, result, outputFileName, vars = vars, args = args)
     }
   }
 
@@ -266,7 +244,6 @@ object KeymaeraxWebui {
       model: Formula,
       fml: Formula,
       outputFileName: String,
-      ptOut: Option[String],
       vars: Option[Seq[String]],
       args: Seq[String],
   ): Unit = {
@@ -284,19 +261,6 @@ object KeymaeraxWebui {
     )
     pw.write(output)
     pw.close()
-
-    ptOut match {
-      case Some(path: String) =>
-        val pwHOL = new PrintWriter(outputFileName + ".holconfiggen")
-        // @TODO: Robustify
-        val Imply(init, Box(Compose(Test(bounds), Loop(Compose(ctrl, plant))), safe)) = model
-        val consts = StaticSemantics.signature(model)
-        val parsedVars = makeVariables(vars.get).toList
-        pwHOL.write(HOLConverter.configFile(consts, parsedVars, bounds, init, fml))
-        pwHOL.close()
-
-      case None => ()
-    }
   }
 
   def repl(model: String, tactic: Option[String], scaladefs: Option[String]): Unit = {

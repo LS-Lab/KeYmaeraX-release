@@ -21,7 +21,7 @@ import org.keymaerax.core.{insist, False, Formula, PrettyPrinter, Sequent, USubs
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import org.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXExtendedLemmaParser, ParsedArchiveEntry}
-import org.keymaerax.pt.{IsabelleConverter, ProvableSig, TermProvable}
+import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.ToolEvidence
 import org.slf4j.{LoggerFactory, MarkerFactory}
 
@@ -244,7 +244,6 @@ object KeYmaeraXProofChecker {
   def prove(
       in: String,
       out: Option[String],
-      ptOut: Option[String],
       conjecture: Option[String],
       tactic: Option[String],
       tacticName: Option[String],
@@ -253,7 +252,7 @@ object KeYmaeraXProofChecker {
       statistics: StatisticsPrinter.Value,
       args: Seq[String],
   ): Unit = {
-    ProvableSig.PROOF_TERMS_ENABLED = ptOut.isDefined
+    ProvableSig.PROOF_TERMS_ENABLED = false
 
     val inFiles = findFiles(in)
     val archiveContent = inFiles
@@ -320,7 +319,6 @@ object KeYmaeraXProofChecker {
               ._1,
           ),
           outputFileNames(path)(entry),
-          ptOut = ptOut,
           tactic = tactic,
           tacticName = tacticName,
           timeout = timeout,
@@ -358,27 +356,12 @@ object KeYmaeraXProofChecker {
       path: Path,
       entry: ParsedArchiveEntry,
       outputFileName: String,
-      ptOut: Option[String],
       tactic: Option[String],
       tacticName: Option[String],
       timeout: Duration,
       verbose: Boolean,
       args: Seq[String],
   ): List[ProofStatistics] = {
-    def savePt(pt: ProvableSig): Unit = {
-      (pt, ptOut) match {
-        case (ptp: TermProvable, Some(path: String)) =>
-          val conv = new IsabelleConverter(ptp.pt)
-          val source = conv.sexp
-          val writer = new PrintWriter(path)
-          writer.write(source)
-          writer.close()
-        case (_: TermProvable, None) =>
-          assert(assertion = false, "Proof term output path specified but proof did not contain proof term")
-        case (_, None) => ()
-      }
-    }
-
     val tacticString = tactic.map(readTactic(_, entry.defs))
 
     // @note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
@@ -428,8 +411,7 @@ object KeYmaeraXProofChecker {
           println("Done " + path + "#" + entry.name + " (" + proofStat.status + ")")
 
           proofStat.witness match {
-            case Some(proof) =>
-              if (entry.kind == "lemma") {
+            case Some(proof) => if (entry.kind == "lemma") {
                 val lemmaName = "user" + File.separator + entry.name
                 if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
                 val evidence = Lemma.requiredEvidence(
@@ -440,7 +422,6 @@ object KeYmaeraXProofChecker {
                 )
                 LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
               }
-              savePt(proof)
             case None => // nothing to do
           }
           proofStat

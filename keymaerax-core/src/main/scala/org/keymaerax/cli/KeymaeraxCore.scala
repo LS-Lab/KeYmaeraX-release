@@ -122,7 +122,6 @@ object KeymaeraxCore {
         KeYmaeraXProofChecker.prove(
           in = cmd.in,
           out = cmd.out,
-          ptOut = cmd.ptOut,
           conjecture = cmd.conjecture,
           tactic = cmd.tactic,
           tacticName = cmd.tacticName,
