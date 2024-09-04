@@ -295,7 +295,7 @@ object Options {
             .valueName("<file>")
             .text(wrap("Output proof term s-expression into a file.")),
           opt[String]("conjecture")
-            .action((x, o) => o.updateCommand[Command.Prove](_.copy(ptOut = Some(x))))
+            .action((x, o) => o.updateCommand[Command.Prove](_.copy(conjecture = Some(x))))
             .valueName("<file>")
             .text(wrap(
               """Conjecture file to replace the model in the input file with
