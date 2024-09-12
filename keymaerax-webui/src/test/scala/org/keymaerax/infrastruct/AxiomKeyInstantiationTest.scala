@@ -11,7 +11,6 @@ import org.keymaerax.btactics.macros._
 import org.keymaerax.core.{CoreException, Formula}
 import org.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import org.keymaerax.parser.StringConverter._
-import org.keymaerax.parser.SystemTestBase
 import org.keymaerax.tagobjects.{IgnoreInBuildTest, TodoTest}
 import org.keymaerax.tags.CheckinTest
 import org.keymaerax.testhelper.CustomAssertions._
@@ -31,17 +30,13 @@ import org.scalatest.BeforeAndAfterAll
  * @see
  *   [[AxiomInfo.unifier]]
  */
+// Some tests require z3 to compute DerivationInfo, by proving the derived axioms not already in the lemma database.
 @CheckinTest
-class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
+class AxiomKeyInstantiationTest extends TacticTestBase(Some("z3")) with BeforeAndAfterAll {
 
   private val randomTrials = 2
   private val randomComplexity = 4
   private val rand = new RandomFormula()
-
-  override def beforeAll(): Unit = {
-    // the tests in here rely on a populated lemma database, since otherwise some of them require QE (depends on the queried axiom).
-    new DerivedAxiomsTests().execute("The DerivedAxioms prepopulation procedure should not crash")
-  }
 
   /** Match given axiom directly against the given instance in full. */
   private def matchDirect(axiom: AxiomInfo, instance: Formula): Boolean = {
