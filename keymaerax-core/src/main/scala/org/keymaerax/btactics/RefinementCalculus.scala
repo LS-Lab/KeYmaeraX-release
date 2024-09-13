@@ -6,14 +6,17 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, TacticInapplicableFailure}
-import org.keymaerax.btactics.Derive.useAt
+import org.keymaerax.btactics.Ax._
+import org.keymaerax.btactics.SimplifierV3.simplify
 import org.keymaerax.btactics.TacticFactory.inputanon
-import org.keymaerax.btactics.macros.{CoreAxiomInfo, DisplayLevel, Tactic, Unifier}
+import org.keymaerax.btactics.TactixLibrary.{id, implyL, implyR, prop, useAt, DW, G}
+import org.keymaerax.btactics.macros.{CoreAxiomInfo, DerivedAxiomInfo, DisplayLevel, Tactic, Unifier}
 import org.keymaerax.core.btactics.annotations.Derivation
 import org.keymaerax.core.{Expression, Program, Refinement, Sequent, SubstitutionPair, SystemConst, USubst}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.FormulaTools.dualFree
 import org.keymaerax.infrastruct.{PosInExpr, Position}
+import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
 
 import scala.reflect.runtime.universe
@@ -440,4 +443,62 @@ object RefinementCalculus extends TacticProvider {
       case _ => throw new TacticInapplicableFailure(c.toString + " should be a program")
     }
   }
+
+  /** derived axioms */
+  @Derivation
+  val refDiamond: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "refDiamond",
+      canonicalName = "refinement diamond",
+      displayName = Some("Ref Diamond"),
+      displayConclusion = "a <= b -> __&langle;a&rangle;P -> &langle;b&rangle;P__",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.Surjective,
+    ),
+    "a{|^@|}; <= b{|^@|}; -> (<a{|^@|};>p(||) -> <b{|^@|};>p(||))".asFormula,
+    useAt(diamond, PosInExpr(1 :: Nil))(Position(1, 1 :: 0 :: Nil)) &
+      useAt(diamond, PosInExpr(1 :: Nil))(Position(1, 1 :: 1 :: Nil)) &
+      useAt(converseImply, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & useAt(refBox)(Position(1, 1 :: Nil)) & prop,
+  )
+
+  // Congruence derived axioms
+  // derived axioms used in CMonPrg (so useAt implicitely), thus given as Provables not lemmas, just in case to avoid dependencies
+  // CMon seems to use lemmas just fine, so it may not be required
+
+  lazy val congrChoiceL: ProvableSig = TactixLibrary.proveBy(
+    "a{|^@|};<= b{|^@|}; -> a{|^@|};++c{|^@|};<= b{|^@|};++c{|^@|};".asFormula,
+    useAt(refChoiceL)(Position(1, 1 :: Nil)) & useAt(refChoiceR)(Position(1, 1 :: 1 :: Nil)) &
+      useAt(refChoiceR)(Position(1, 1 :: 0 :: Nil)) & useAt(refRefl)(Position(1, 1 :: 1 :: 1 :: Nil)) & prop,
+  )
+
+  lazy val congrChoiceR: ProvableSig = TactixLibrary.proveBy(
+    "a{|^@|};<= b{|^@|}; -> c{|^@|};++a{|^@|};<= c{|^@|};++b{|^@|};".asFormula,
+    useAt(refChoiceL)(Position(1, 1 :: Nil)) & useAt(refChoiceR)(Position(1, 1 :: 1 :: Nil)) &
+      useAt(refChoiceR)(Position(1, 1 :: 0 :: Nil)) & useAt(refRefl)(Position(1, 1 :: 0 :: 0 :: Nil)) & prop,
+  )
+
+  lazy val congrSeqL: ProvableSig = TactixLibrary.proveBy(
+    "a{|^@|};<= b{|^@|}; -> a{|^@|};c{|^@|};<= b{|^@|};c{|^@|};".asFormula,
+    useAt(refSeq)(Position(1, 1 :: Nil)) & useAt(refRefl)(Position(1, 1 :: 1 :: 1 :: Nil)) &
+      TactixLibrary.boxTrue(Position(1, 1 :: 1 :: Nil)) & prop,
+  )
+
+  lazy val congrSeqR: ProvableSig = TactixLibrary.proveBy(
+    "[c{|^@|};]a{|^@|};<= b{|^@|}; -> c{|^@|};a{|^@|};<= c{|^@|};b{|^@|};".asFormula,
+    useAt(refSeq)(Position(1, 1 :: Nil)) & useAt(refRefl)(Position(1, 1 :: 0 :: Nil)) & prop,
+  )
+
+  lazy val congrODEDom: ProvableSig = TactixLibrary.proveBy(
+    "[{x'=f(x)&p(x)}](p(x)->q(x))->{{x'=f(x)&p(x)}}<={{x'=f(x)&q(x)}}".asFormula,
+    useAt(refOde)(Position(1, 1 :: Nil)) & useAt(K, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)) & implyR(Position(1)) &
+      implyL(Position(-1)) < (DW(2) & G(2) & prop, simplify(Position(1, 1 :: Nil)) & id),
+  )
+
+  lazy val congrODEDoms: ProvableSig = TactixLibrary.proveBy(
+    "[{x'=f(||),c&p(||)}](p(||)->q(||))->{{x'=f(||),c&p(||)}}<={{x'=f(||),c&q(||)}}".asFormula,
+    useAt(refOdes)(Position(1, 1 :: Nil)) & useAt(K, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)) & implyR(Position(1)) &
+      implyL(Position(-1)) < (DW(2) & G(2) & prop, simplify(Position(1, 1 :: Nil)) & id),
+  )
+
 }

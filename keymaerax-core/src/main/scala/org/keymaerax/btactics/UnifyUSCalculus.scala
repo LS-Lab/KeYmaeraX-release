@@ -2328,6 +2328,40 @@ trait UnifyUSCalculus {
               0,
             ))(monStep(Context(c), mon), 0)
 
+          case Box(c, p) if !symbols(p).contains(DotFormula) =>
+            // @note rotate substitution into same order as current ante/succ
+            // bleft and bright are reversed because Box flips polarities for programs
+            val (bright, bleft) =
+              if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
+            ProvableSig.startProof(Sequent(ante, succ), mon.defs)(CutRight(ante.head, SuccPos(0)), 0)(
+              Close(AntePos(0), SuccPos(0)),
+              0,
+            )(CoHideRight(SuccPos(0)), 0)(CutRight(Refinement(Context(c)(bleft), Context(c)(bright)), SuccPos(0)), 0)(
+              RefinementCalculus.refBox
+                .provable(USubst(List(
+                  SubstitutionPair(SystemConst("a"), Context(c)(bleft)),
+                  SubstitutionPair(SystemConst("b"), Context(c)(bright)),
+                  SubstitutionPair(UnitPredicational("p", AnyArg), p),
+                ))),
+              1,
+            )(CMonPrg(Context(c))(mon), 0)
+
+          case Diamond(c, p) if !symbols(p).contains(DotFormula) =>
+            // @note rotate substitution into same order as current ante/succ
+            val (dleft, dright) =
+              if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
+            ProvableSig.startProof(Sequent(ante, succ), mon.defs)(CutRight(ante.head, SuccPos(0)), 0)(
+              Close(AntePos(0), SuccPos(0)),
+              0,
+            )(CoHideRight(SuccPos(0)), 0)(CutRight(Refinement(Context(c)(dleft), Context(c)(dright)), SuccPos(0)), 0)(
+              RefinementCalculus.refDiamond.provable(USubst(List(
+                SubstitutionPair(SystemConst("a"), Context(c)(dleft)),
+                SubstitutionPair(SystemConst("b"), Context(c)(dright)),
+                SubstitutionPair(UnitPredicational("p", AnyArg), p),
+              ))),
+              1,
+            )(CMonPrg(Context(c))(mon), 0)
+
           case m: Modal if symbols(m.program).contains(DotFormula) =>
             // @todo implement good cases. For example nibble of assign on both sides. Or random. Or ....
             throw new ProverException(
@@ -2462,6 +2496,56 @@ trait UnifyUSCalculus {
               ProvableSig.startProof(Sequent(ante, succ), mon.defs)(NotLeft(AntePos(0)), 0)(NotRight(SuccPos(0)), 0)
             )(monStep(Context(c), mon), 0)
 
+          case Refinement(a, c) if !symbols(a).contains(DotFormula) => {
+            // @note rotate substitution into same order as current ante/succ
+            val (rleft, rright) =
+              if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
+            ProvableSig.startProof(Sequent(ante, succ), mon.defs)(
+              CutRight(And(ante.head, Refinement(Context(c)(rleft), Context(c)(rright))), SuccPos(0)),
+              0,
+            )(CoHideRight(SuccPos(0)), 1)(
+              ProvableSig.axioms("refinement transitive")(USubst(List( // a; <= c; <= b;
+                SubstitutionPair(SystemConst("a"), a),
+                SubstitutionPair(SystemConst("c"), Context(c)(rleft)),
+                SubstitutionPair(SystemConst("b"), Context(c)(rright)),
+              ))),
+              1,
+            )(AndRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0)(CoHideRight(SuccPos(0)), 0)(
+              CMonPrg(Context(c))(mon),
+              0,
+            )
+          }
+
+          case Refinement(c, b) if !symbols(b).contains(DotFormula) => {
+            // rright and rleft are reversed as left-hand side refinement flips polarities
+            // @note rotate substitution into same order as current ante/succ
+            val (rright, rleft) =
+              if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
+            ProvableSig.startProof(Sequent(ante, succ), mon.defs)(
+              CutRight(And(Refinement(Context(c)(rleft), Context(c)(rright)), ante.head), SuccPos(0)),
+              0,
+            )(CoHideRight(SuccPos(0)), 1)(
+              ProvableSig.axioms("refinement transitive")(USubst(List( // a; <= c; <= b;
+                SubstitutionPair(SystemConst("a"), Context(c)(rleft)),
+                SubstitutionPair(SystemConst("c"), Context(c)(rright)),
+                SubstitutionPair(SystemConst("b"), b),
+              ))),
+              1,
+            )(AndRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 1)(CoHideRight(SuccPos(0)), 0)(
+              CMonPrg(Context(c))(mon),
+              0,
+            )
+          }
+
+          case ProgramEquivalence(a, b) =>
+            Predef.assert(
+              symbols(a).contains(DotFormula) || symbols(b).contains(DotFormula),
+              "proper contexts have dots somewhere " + C,
+            )
+            throw new ProverException(
+              "No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
+            )
+
           case _ => throw new ProverException(
               "Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
             )
@@ -2478,6 +2562,206 @@ trait UnifyUSCalculus {
       )
     }
     monStep(C, impl)
+  }
+
+  /**
+   * CMonPrg(C) will wrap any refinement `left <= right` fact it gets within a (positive or negative) context C by
+   * monotonicity.
+   * {{{
+   *      |- k <= o
+   *   --------------- CMonPrg if C{⎵} of positive polarity
+   *   |- C{k} <= C{o}
+   * }}}
+   *
+   * @note
+   *   The direction in the conclusion switches for negative polarity C{⎵}
+   * @author
+   *   Enguerrand Prebet
+   * @see
+   *   [[UnifyUSCalculus.CMon(Context)]]
+   */
+  def CMonPrg(C: Context[Program]): ForwardTactic = pr => {
+    import Context.DotProgram
+    val dot: NamedSymbol =
+      if (C.isFormulaContext) {
+        require(
+          pr.conclusion.ante.length == 1 && pr.conclusion.succ.length == 1,
+          "expected equivalence shape with exactly one antecedent and exactly one succedent " + pr,
+        )
+        DotFormula
+      } else {
+        throw new IllegalArgumentException(s"Formula context expected to make use of equivalences with CE ${C}")
+      }
+
+    // monPrgStep additionally returns the two programs in conclusion as they are harder to extract without warning
+    // than their formula equivalent.
+    def monPrgStep(C: Context[Program]): (ProvableSig, Program, Program) = {
+      C.ctx match {
+        case Test(c) =>
+          val ctxt = Context(Test(DotFormula))
+          val rec = CMon(Context(c))(pr)
+          val (rleft, rright) = (rec.conclusion.ante.head, rec.conclusion.succ.head)
+          val (ante, succ) = (ctxt(rleft), ctxt(rright))
+          (
+            ProvableSig.startProof(Refinement(ante, succ), pr.defs)(CutRight(Imply(rleft, rright), SuccPos(0)), 0)(
+              EquivifyRight(SuccPos(0)),
+              1,
+            )(CommuteEquivRight(SuccPos(0)), 1)(
+              RefinementCalculus.refTest
+                .provable(USubst(List(
+                  SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), rleft),
+                  SubstitutionPair(PredOf(Function("q", None, Unit, Bool), Nothing), rright),
+                ))),
+              1,
+            )(ImplyRight(SuccPos(0)), 0)(rec, 0),
+            ante,
+            succ,
+          )
+        case Choice(c, a) if !symbols(a).contains(dot) =>
+          val ctxt = Context(Choice(DotProgram, a))
+          val (rec, rleft, rright) = monPrgStep(Context(c))
+          val (ante, succ) = (ctxt(rleft), ctxt(rright))
+          (
+            ProvableSig.startProof(Refinement(ante, succ), pr.defs)(CutRight(Refinement(rleft, rright), SuccPos(0)), 0)(
+              RefinementCalculus.congrChoiceL(USubst(List(
+                SubstitutionPair(SystemConst("a"), rleft),
+                SubstitutionPair(SystemConst("b"), rright),
+                SubstitutionPair(SystemConst("c"), a),
+              ))),
+              1,
+            )(rec, 0),
+            ante,
+            succ,
+          )
+        case Choice(a, c) if !symbols(a).contains(dot) =>
+          val ctxt = Context(Choice(a, DotProgram))
+          val (rec, rleft, rright) = monPrgStep(Context(c))
+          val (ante, succ) = (ctxt(rleft), ctxt(rright))
+          (
+            ProvableSig.startProof(Refinement(ante, succ), pr.defs)(CutRight(Refinement(rleft, rright), SuccPos(0)), 0)(
+              RefinementCalculus.congrChoiceR(USubst(List(
+                SubstitutionPair(SystemConst("a"), rleft),
+                SubstitutionPair(SystemConst("b"), rright),
+                SubstitutionPair(SystemConst("c"), a),
+              ))),
+              1,
+            )(rec, 0),
+            ante,
+            succ,
+          )
+        case Compose(c, a) if !symbols(a).contains(dot) =>
+          val ctxt = Context(Compose(DotProgram, a))
+          val (rec, rleft, rright) = monPrgStep(Context(c))
+          val (ante, succ) = (ctxt(rleft), ctxt(rright))
+          (
+            ProvableSig.startProof(Refinement(ante, succ), pr.defs)(CutRight(Refinement(rleft, rright), SuccPos(0)), 0)(
+              RefinementCalculus.congrSeqL(USubst(List(
+                SubstitutionPair(SystemConst("a"), rleft),
+                SubstitutionPair(SystemConst("b"), rright),
+                SubstitutionPair(SystemConst("c"), a),
+              ))),
+              1,
+            )(rec, 0),
+            ante,
+            succ,
+          )
+        case Compose(a, c) if !symbols(a).contains(dot) =>
+          val ctxt = Context(Compose(a, DotProgram))
+          val (rec, rleft, rright) = monPrgStep(Context(c))
+          val (ante, succ) = (ctxt(rleft), ctxt(rright))
+          (
+            ProvableSig
+              .startProof(Refinement(ante, succ), pr.defs)(CutRight(Box(a, Refinement(rleft, rright)), SuccPos(0)), 0)(
+                RefinementCalculus.congrSeqR(USubst(List(
+                  SubstitutionPair(SystemConst("a"), rleft),
+                  SubstitutionPair(SystemConst("b"), rright),
+                  SubstitutionPair(SystemConst("c"), a),
+                ))),
+                1,
+              )(
+                Ax.Goedel
+                  .provable(USubst(List(
+                    SubstitutionPair(SystemConst("a_"), a),
+                    SubstitutionPair(UnitPredicational("p_", AnyArg), Refinement(rleft, rright)),
+                  ))),
+                0,
+              )(rec, 0),
+            ante,
+            succ,
+          )
+        case Loop(c) =>
+          val ctxt = Context(Loop(DotProgram))
+          val (rec, rleft, rright) = monPrgStep(Context(c))
+          val (ante, succ) = (ctxt(rleft), ctxt(rright))
+          (
+            ProvableSig.startProof(Refinement(ante, succ), pr.defs)(
+              CutRight(Box(ante, Refinement(rleft, rright)), SuccPos(0)),
+              0,
+            )(
+              RefinementCalculus.refUnloop
+                .provable(USubst(
+                  List(SubstitutionPair(SystemConst("a"), rleft), SubstitutionPair(SystemConst("b"), rright))
+                )),
+              1,
+            )(
+              Ax.Goedel
+                .provable(USubst(List(
+                  SubstitutionPair(SystemConst("a_"), ante),
+                  SubstitutionPair(UnitPredicational("p_", AnyArg), Refinement(rleft, rright)),
+                ))),
+              0,
+            )(rec, 0),
+            ante,
+            succ,
+          )
+        case ODESystem(d, c) =>
+          val ctxt = Context(ODESystem(d, DotFormula))
+          val rec = CMon(Context(c))(pr)
+          val (rleft, rright) = (Context(c)(pr.conclusion.ante.head), Context(c)(pr.conclusion.succ.head))
+          val (ante, succ) = (ctxt(rleft), ctxt(rright))
+          (
+            ProvableSig
+              .startProof(Refinement(ante, succ), pr.defs)(CutRight(Box(ante, Imply(rleft, rright)), SuccPos(0)), 0)(
+                d match { // The axiom to use depends on whether the ODE is uni/multivariate
+                  case AtomicODE(DifferentialSymbol(x), t) =>
+                    RefinementCalculus.congrODEDom(URename(Variable("x"), x))(USubst(List(
+                      SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), t.replaceFree(x, DotTerm())),
+                      SubstitutionPair(
+                        PredOf(Function("p", None, Real, Bool), DotTerm()),
+                        rleft.replaceFree(x, DotTerm()),
+                      ),
+                      SubstitutionPair(
+                        PredOf(Function("q", None, Real, Bool), DotTerm()),
+                        rright.replaceFree(x, DotTerm()),
+                      ),
+                    )))
+                  case DifferentialProduct(AtomicODE(DifferentialSymbol(x), t), c) =>
+                    RefinementCalculus.congrODEDoms(URename(Variable("x"), x, semantic = true))(USubst(List(
+                      SubstitutionPair(UnitFunctional("f", AnyArg, Real), t),
+                      SubstitutionPair(UnitPredicational("p", AnyArg), rleft),
+                      SubstitutionPair(UnitPredicational("q", AnyArg), rright),
+                      SubstitutionPair(DifferentialProgramConst("c"), c),
+                    )))
+                  case _ =>
+                    throw new NotImplementedError(s"Context differential equations may not be symbols, but is ${d}")
+                },
+                1,
+              )(
+                Ax.Goedel
+                  .provable(USubst(List(
+                    SubstitutionPair(SystemConst("a_"), ante),
+                    SubstitutionPair(UnitPredicational("p_", AnyArg), Imply(rleft, rright)),
+                  ))),
+                0,
+              )(ImplyRight(SuccPos(0)), 0)(rec, 0),
+            ante,
+            succ,
+          )
+        case Choice(_, _) | Compose(_, _) =>
+          throw new TacticAssertionError(s"Context should contain only one DotFormula, but is ${C}")
+      }
+    } ensures { r => r._1.conclusion.succ.head == Refinement(r._2, r._3) }
+    monPrgStep(C)._1
   }
 
   // Forward axiom usage implementation
