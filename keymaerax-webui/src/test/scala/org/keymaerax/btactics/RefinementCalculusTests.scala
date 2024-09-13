@@ -6,13 +6,27 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.TacticInapplicableFailure
+import org.keymaerax.btactics.Ax.timesInverse
 import org.keymaerax.btactics.RefinementCalculus.*
+import org.keymaerax.btactics.UnifyUSCalculus.useAt
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
+import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 
 class RefinementCalculusTests extends TacticTestBase {
   "Auxiliary axioms" should "prove" in {
-    val axioms = List(refDiamond.provable, hideChoiceL.provable, hideChoiceR.provable, refEq, prgEqSym)
+    val axioms = List(
+      congrChoiceL,
+      congrChoiceR,
+      congrSeqL,
+      congrSeqR,
+      congrODEDom,
+      refDiamond.provable,
+      hideChoiceL.provable,
+      hideChoiceR.provable,
+      refEq,
+      prgEqSym,
+    )
     axioms.map(axiom => axiom.isProved shouldBe true)
   }
 
@@ -42,5 +56,73 @@ class RefinementCalculusTests extends TacticTestBase {
     val e = the[TacticInapplicableFailure] thrownBy
       TactixLibrary.proveBy("{x'=y, y'=-x, v'=1 & x>=0} == {x'=y+0, y'=-1*x, t'=(-1)^2 & x>=0}".asFormula, refOde(1))
     e.getMessage shouldBe "ODEs do not have compatible variables: v' and t'"
+  }
+
+  "useAt" should "transform formulas within discrete programs" in {
+    val pr = TactixLibrary.proveBy(
+      "[{y:=0;++x:=*;{?(true -> x!=0);++?x=0;};x:=*;}*]y>0".asFormula,
+      useAt(timesInverse)(Position(1, List(0, 0, 1, 1, 0, 0, 0, 1))),
+    )
+    pr.subgoals.head shouldBe " ==> [{y:=0;++x:=*;{?(true -> x*(x^(-1)) = 1);++?x=0;};x:=*;}*]y>0".asSequent
+
+    val pr2 = TactixLibrary.proveBy(
+      "<{y:=0;++x:=*;{?(true -> x*(x^(-1)) = 1);++?x=0;};x:=*;}*>y>0".asFormula,
+      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 0, 1, 1, 0, 0, 0, 1))),
+    )
+    pr2.subgoals.head shouldBe " ==> <{y:=0;++x:=*;{?(true -> x!= 0);++?x=0;};x:=*;}*>y>0".asSequent
+
+    val pr3 = TactixLibrary.proveBy(
+      "[{y:=0;++x:=*;{?(x*(x^(-1)) = 1 -> true);++?x=0;};x:=*;}*]y>0".asFormula,
+      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 0, 1, 1, 0, 0, 0, 0))),
+    )
+    pr3.subgoals.head shouldBe " ==> [{y:=0;++x:=*;{?(x!=0 -> true);++?x=0;};x:=*;}*]y>0".asSequent
+
+    val pr4 = TactixLibrary.proveBy(
+      "<{y:=0;++x:=*;{?(x!=0 -> true);++?x=0;};x:=*;}*>y>0".asFormula,
+      useAt(timesInverse)(Position(1, List(0, 0, 1, 1, 0, 0, 0, 0))),
+    )
+    pr4.subgoals.head shouldBe " ==> <{y:=0;++x:=*;{?(x*(x^(-1)) = 1 -> true);++?x=0;};x:=*;}*>y>0".asSequent
+
+  }
+
+  it should "transform formulas in domain" in {
+    val pr = TactixLibrary
+      .proveBy("[{x' = y^2 & true -> x!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+    pr.subgoals.head shouldBe " ==> [{x' = y^2 & true -> x*(x^(-1)) = 1}]y>0".asSequent
+
+    val pr2 = TactixLibrary
+      .proveBy("[{y' = y^2 & true -> y!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+    pr2.subgoals.head shouldBe " ==> [{y' = y^2 & true -> y*(y^(-1)) = 1}]y>0".asSequent
+
+    val pr3 = TactixLibrary.proveBy(
+      "<{x' = y^2 & true -> x*(x^(-1)) = 1}>y>0".asFormula,
+      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 1, 1))),
+    )
+    pr3.subgoals.head shouldBe " ==> <{x' = y^2 & true -> x!= 0}>y>0".asSequent
+
+    val prs = TactixLibrary
+      .proveBy("[{x' = y^2, y' = 1 & true -> x!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+    prs.subgoals.head shouldBe " ==> [{x' = y^2, y' = 1 & true -> x*(x^(-1)) = 1}]y>0".asSequent
+
+    val pr2s = TactixLibrary
+      .proveBy("[{z' = y^2, y' = 1 & true -> z!=0}]y>0".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 1))))
+    pr2s.subgoals.head shouldBe " ==> [{z' = y^2, y' = 1 & true -> z*(z^(-1)) = 1}]y>0".asSequent
+
+    val pr3s = TactixLibrary.proveBy(
+      "<{x' = y^2, y' = 1 & true -> x*(x^(-1)) = 1}>y>0".asFormula,
+      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(0, 1, 1))),
+    )
+    pr3s.subgoals.head shouldBe " ==> <{x' = y^2, y' = 1 & true -> x!= 0}>y>0".asSequent
+  }
+
+  it should "transform formulas in refinements" in {
+    val pr = TactixLibrary.proveBy(
+      "?x=0; <= x:=0;?x*(x^(-1)) = 1;".asFormula,
+      useAt(timesInverse, PosInExpr(1 :: Nil))(Position(1, List(1, 1, 0))),
+    )
+    pr.subgoals.head shouldBe " ==> ?x=0; <= x:=0;?x!=0;".asSequent
+
+    val pr2 = TactixLibrary.proveBy("x:=0;?x!=0; <= ?x=0;".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 0))))
+    pr2.subgoals.head shouldBe " ==> x:=0;?x*(x^(-1)) = 1; <= ?x=0;".asSequent
   }
 }

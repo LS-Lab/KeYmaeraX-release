@@ -457,6 +457,38 @@ object RefinementCalculus {
     unifier = Unifier.Full,
   )
 
+  // Congruence derived axioms
+  // derived axioms used in CMonPrg (so useAt implicitely), thus given as Provables not lemmas, just in case to avoid dependencies
+  // CMon seems to use lemmas just fine, so it may not be required
+
+  lazy val congrChoiceL: ProvableSig = TactixLibrary.proveBy(
+    "a{|^@|};<= b{|^@|}; -> a{|^@|};++c{|^@|};<= b{|^@|};++c{|^@|};".asFormula,
+    useAt(refChoiceL)(1, 1 :: Nil) & useAt(refChoiceR)(1, 1 :: 1 :: Nil) & useAt(refChoiceR)(1, 1 :: 0 :: Nil) &
+      useAt(refRefl)(1, 1 :: 1 :: 1 :: Nil) & prop,
+  )
+
+  lazy val congrChoiceR: ProvableSig = TactixLibrary.proveBy(
+    "a{|^@|};<= b{|^@|}; -> c{|^@|};++a{|^@|};<= c{|^@|};++b{|^@|};".asFormula,
+    useAt(refChoiceL)(1, 1 :: Nil) & useAt(refChoiceR)(1, 1 :: 1 :: Nil) & useAt(refChoiceR)(1, 1 :: 0 :: Nil) &
+      useAt(refRefl)(1, 1 :: 0 :: 0 :: Nil) & prop,
+  )
+
+  lazy val congrSeqL: ProvableSig = TactixLibrary.proveBy(
+    "a{|^@|};<= b{|^@|}; -> a{|^@|};c{|^@|};<= b{|^@|};c{|^@|};".asFormula,
+    useAt(refSeq)(1, 1 :: Nil) & useAt(refRefl)(1, 1 :: 1 :: 1 :: Nil) & HilbertCalculus.boxTrue(1, 1 :: 1 :: Nil) &
+      prop,
+  )
+
+  lazy val congrSeqR: ProvableSig = TactixLibrary.proveBy(
+    "[c{|^@|};]a{|^@|};<= b{|^@|}; -> c{|^@|};a{|^@|};<= c{|^@|};b{|^@|};".asFormula,
+    useAt(refSeq)(1, 1 :: Nil) & useAt(refRefl)(1, 1 :: 0 :: Nil) & prop,
+  )
+
+  lazy val congrODEDom: ProvableSig = TactixLibrary.proveBy(
+    "[{c&p(x)}](p(x)->q(x))->{{c&p(x)}}<={{c&q(x)}}".asFormula,
+    useAt(refDomainAx)(1, 1 :: Nil) & DW(1, 1 :: Nil) & implyR(1) & id,
+  )
+
   val refEq: ProvableSig = TactixLibrary
     .proveBy("a{|^@|};<= b{|^@|}; <- a{|^@|};== b{|^@|};".asFormula, useAt(refAntiSym)(1, 0 :: Nil) & prop)
 
