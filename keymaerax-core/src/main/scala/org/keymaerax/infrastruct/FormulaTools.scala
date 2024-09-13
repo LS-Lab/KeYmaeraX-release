@@ -6,7 +6,7 @@
 package org.keymaerax.infrastruct
 
 import org.keymaerax.Logging
-import org.keymaerax.core._
+import org.keymaerax.core.{BinaryCompositeProgram, _}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.ExpressionTraversal._
 
@@ -193,7 +193,6 @@ object FormulaTools extends Logging {
    * @return
    *   -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
    */
-  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   def polarityAt(formula: Formula, pos: PosInExpr): Int =
     if (pos.pos.isEmpty) 1
     else formula match {
@@ -209,10 +208,47 @@ object FormulaTools extends Logging {
       case f: BinaryCompositeFormula if pos.head == 0 => polarityAt(f.left, pos.child)
       case f: BinaryCompositeFormula if pos.head == 1 => polarityAt(f.right, pos.child)
       case f: Modal if pos.head == 1 => polarityAt(f.child, pos.child)
-      case _: Modal if pos.head == 0 => logger.warn("Polarity within programs not yet implemented " + formula); 0
-//      case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
+      case Diamond(a, _) if pos.head == 0 => polarityAt(a, pos.child)
+      case Box(a, _) if pos.head == 0 => -polarityAt(a, pos.child)
       case f: Quantified =>
         require(pos.head == 0, "Quantified must have position head 0, but was " + pos); polarityAt(f.child, pos.child)
+      case Refinement(l, _) if pos.head == 0 => -polarityAt(l, pos.child)
+      case Refinement(_, r) if pos.head == 1 => polarityAt(r, pos.child)
+      case ProgramEquivalence(_, _) => 0
+
+      case _: AtomicFormula =>
+        throw new IllegalArgumentException(s"Position ${pos} in ${formula} does not point to a formula")
+      case _: BinaryCompositeFormula | Diamond(_, _) | Box(_, _) =>
+        throw new IllegalArgumentException(s"Position ${pos} in ${formula} does not exist")
+    }
+
+  /**
+   * Returns the polarity of the subformula at position pos in program.
+   * @param program
+   *   The program.
+   * @param pos
+   *   The position within program for which the polarity is searched.
+   * @return
+   *   -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
+   */
+  def polarityAt(program: Program, pos: PosInExpr): Int =
+    if (pos.pos.isEmpty) 1
+    else program match {
+      case Test(p) =>
+        require(pos.head == 0, "Unary operator must have position head 0, but was " + pos); polarityAt(p, pos.child)
+      case Loop(a) =>
+        require(pos.head == 0, "Unary operator must have position head 0, but was " + pos); polarityAt(a, pos.child)
+      case a: BinaryCompositeProgram if pos.head == 0 => polarityAt(a.left, pos.child)
+      case a: BinaryCompositeProgram if pos.head == 1 => polarityAt(a.right, pos.child)
+      case ODESystem(_, f) if pos.head == 1 => polarityAt(f, pos.child)
+
+      case Dual(_) => logger.warn("Polarity within games not yet implemented " + program); 0
+      case _: AtomicProgram =>
+        throw new IllegalArgumentException(s"Position ${pos} in ${program} does not point to a formula")
+      case ODESystem(_, _) if pos.head == 0 =>
+        throw new IllegalArgumentException(s"Position ${pos} in ${program} does not point to a formula")
+      case _: BinaryCompositeProgram | ODESystem(_, _) | _: DifferentialProduct =>
+        throw new IllegalArgumentException(s"Position ${pos} in ${program} does not exist")
     }
 
   /**
