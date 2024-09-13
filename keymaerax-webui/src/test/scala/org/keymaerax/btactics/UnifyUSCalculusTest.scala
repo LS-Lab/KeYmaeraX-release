@@ -442,7 +442,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     shouldReduceTo("\\forall x 0*x+1<=3".asFormula, 1, PosInExpr(0 :: 0 :: Nil), "\\forall x 1<=3".asFormula)
   }
 
-  ignore should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in withMathematica { qeTool =>
+  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in withMathematica { qeTool =>
     shouldReduceTo(
       "x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula,
       1,
