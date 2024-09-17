@@ -1041,7 +1041,7 @@ trait UnifyUSCalculus {
                 /* {{{
                  *                                         fact
                  *                                   prereq -> remainder
-                 * ----------------master   ----------------------------- US
+                 * ----------------auto     ----------------------------- US
                  * |- subst(prereq)         |- subst(prereq -> remainder)
                  * ------------------------------------------------------ CutRight
                  *         |- subst(remainder)
@@ -1116,7 +1116,7 @@ trait UnifyUSCalculus {
                   // uses specialized congruence tactic for DC, may not work with other conditional equivalences
                   (
                     provable(Cut(C(subst(prereq))), 0)
-                    /* Show C(subst(prereq)): leave open: show prereq (@todo stripped down master might show) */
+                    /* Show C(subst(prereq)): leave open: show prereq (@todo stripped down auto might show) */
                     (if (p.isSucc) HideRight(p.checkSucc.top) else HideLeft(p.checkAnte.top), 1)
                     /* Use C(subst(prereq)): result remains open */
                     (cutAtFw(subst(conclusion)).computeResult(_, p), 0) // creates subgoals: 0+2
@@ -2129,7 +2129,6 @@ trait UnifyUSCalculus {
     if (logger.isDebugEnabled) logger.debug("CMon(" + C + ")" + "(" + impl + ")")
 
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
-    @nowarn("msg=match may not be exhaustive")
     def monStep(C: Context[Formula], mon: ProvableSig): ProvableSig = {
       // @todo assert(mon.ante.head == C{left or right} && mon.succ.head == C{right or left})
       if (logger.isDebugEnabled)
@@ -2337,7 +2336,8 @@ trait UnifyUSCalculus {
               Close(AntePos(0), SuccPos(0)),
               0,
             )(CoHideRight(SuccPos(0)), 0)(CutRight(Refinement(Context(c)(bleft), Context(c)(bright)), SuccPos(0)), 0)(
-              RefinementCalculus.refBox
+              RefinementCalculus
+                .refBox
                 .provable(USubst(List(
                   SubstitutionPair(SystemConst("a"), Context(c)(bleft)),
                   SubstitutionPair(SystemConst("b"), Context(c)(bright)),
@@ -2354,19 +2354,15 @@ trait UnifyUSCalculus {
               Close(AntePos(0), SuccPos(0)),
               0,
             )(CoHideRight(SuccPos(0)), 0)(CutRight(Refinement(Context(c)(dleft), Context(c)(dright)), SuccPos(0)), 0)(
-              RefinementCalculus.refDiamond.provable(USubst(List(
-                SubstitutionPair(SystemConst("a"), Context(c)(dleft)),
-                SubstitutionPair(SystemConst("b"), Context(c)(dright)),
-                SubstitutionPair(UnitPredicational("p", AnyArg), p),
-              ))),
+              RefinementCalculus
+                .refDiamond
+                .provable(USubst(List(
+                  SubstitutionPair(SystemConst("a"), Context(c)(dleft)),
+                  SubstitutionPair(SystemConst("b"), Context(c)(dright)),
+                  SubstitutionPair(UnitPredicational("p", AnyArg), p),
+                ))),
               1,
             )(CMonPrg(Context(c))(mon), 0)
-
-          case m: Modal if symbols(m.program).contains(DotFormula) =>
-            // @todo implement good cases. For example nibble of assign on both sides. Or random. Or ....
-            throw new ProverException(
-              "No monotone context within programs " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
-            )
 
           case Forall(vars, c) => // if !StaticSemantics.freeVars(subst(c)).symbols.intersect(vars.toSet).isEmpty =>
             // @todo optimizable by using HilbertCalculus.allG?
@@ -2542,11 +2538,18 @@ trait UnifyUSCalculus {
               symbols(a).contains(DotFormula) || symbols(b).contains(DotFormula),
               "proper contexts have dots somewhere " + C,
             )
+            // @todo do as for Equiv, i.e. orient the equivalence and prove the new formula?
             throw new ProverException(
               "No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
             )
 
-          case _ => throw new ProverException(
+          case And(_, _) | Or(_, _) | Imply(_, _) | Box(_, _) | Diamond(_, _) | Refinement(_, _) =>
+            throw new TacticAssertionError(s"Context should contain only one DotFormula, but is ${C}")
+          case False | True | UnitPredicational(_, _) =>
+            throw new AssertionError(s"proper contexts have dots somewhere ${C}")
+          case _: ComparisonFormula | PredOf(_, _) =>
+            throw new TacticAssertionError("Monotonicity is not implemented for Terms. Try CQ instead.")
+          case DifferentialFormula(_) | PredicationalOf(_, _) => throw new ProverException(
               "Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
             )
         }
@@ -2595,6 +2598,7 @@ trait UnifyUSCalculus {
 
     // monPrgStep additionally returns the two programs in conclusion as they are harder to extract without warning
     // than their formula equivalent.
+    @nowarn("msg=match may not be exhaustive")
     def monPrgStep(C: Context[Program]): (ProvableSig, Program, Program) = {
       C.ctx match {
         case Test(c) =>
@@ -2607,7 +2611,8 @@ trait UnifyUSCalculus {
               EquivifyRight(SuccPos(0)),
               1,
             )(CommuteEquivRight(SuccPos(0)), 1)(
-              RefinementCalculus.refTest
+              RefinementCalculus
+                .refTest
                 .provable(USubst(List(
                   SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), rleft),
                   SubstitutionPair(PredOf(Function("q", None, Unit, Bool), Nothing), rright),
@@ -2698,7 +2703,8 @@ trait UnifyUSCalculus {
               CutRight(Box(ante, Refinement(rleft, rright)), SuccPos(0)),
               0,
             )(
-              RefinementCalculus.refUnloop
+              RefinementCalculus
+                .refUnloop
                 .provable(USubst(
                   List(SubstitutionPair(SystemConst("a"), rleft), SubstitutionPair(SystemConst("b"), rright))
                 )),
@@ -2759,6 +2765,14 @@ trait UnifyUSCalculus {
           )
         case Choice(_, _) | Compose(_, _) =>
           throw new TacticAssertionError(s"Context should contain only one DotFormula, but is ${C}")
+        case Assign(_, _) | AtomicODE(_, _) =>
+          throw new TacticAssertionError("Monotonicity is not implemented for Terms. Try CQ instead.")
+        case AssignAny(_) | ProgramConst(_, _) | SystemConst(_, _) =>
+          throw new AssertionError(s"proper contexts have dots somewhere ${C}")
+        case Dual(_) => throw new ProverException(
+            "Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + pr + ")"
+          )
+
       }
     } ensures { r => r._1.conclusion.succ.head == Refinement(r._2, r._3) }
     monPrgStep(C)._1
@@ -2782,7 +2796,7 @@ trait UnifyUSCalculus {
    * {{{
    *   prereq -> (left<->right)
    * }}}
-   * this tactic currently only uses master to prove `prereq` globally and otherwise gives up.
+   * this tactic currently only uses auto to prove `prereq` globally and otherwise gives up.
    *
    * @author
    *   Andre Platzer
@@ -2881,7 +2895,6 @@ trait UnifyUSCalculus {
          *   [[useFor()]]
          */
         @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-        @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
         def useFor[T <: Expression](
             subst: Subst,
             K: Context[T],
@@ -3166,7 +3179,7 @@ trait UnifyUSCalculus {
               /* {{{
                *                                         fact
                *                                   prereq -> remainder
-               * ----------------master   ----------------------------- US
+               * ----------------auto     ----------------------------- US
                * |- subst(prereq)         |- subst(prereq -> remainder)
                * ------------------------------------------------------ CutRight
                *         |- subst(remainder)
@@ -3177,7 +3190,8 @@ trait UnifyUSCalculus {
               // |- subst(prereq)
               val prereqFact = TactixLibrary.proveBy(
                 subst(prereq),
-                TactixLibrary.prop & done | TactixLibrary.QE & done | TactixLibrary.master() & done,
+                TactixLibrary.prop & done | TactixLibrary.QE & done | TactixLibrary
+                  .auto(TactixInit.invGenerator, None) & done,
               )
               require(
                 prereqFact.isProved,

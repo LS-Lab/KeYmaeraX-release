@@ -65,7 +65,6 @@ abstract class SMTConverter extends (Formula => String) {
   /**
    * Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula
    */
-  @nowarn("msg=match may not be exhaustive")
   def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
     val names = allSymbols.map(s => nameIdentifier(s))
@@ -74,14 +73,15 @@ abstract class SMTConverter extends (Formula => String) {
       .map({
         case x: Variable =>
           // @note this check is redundant with the check from nameIdentifier
-          require(x.sort == Real, "Can only deal with variable of type real, but not " + x.sort)
-          "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")" // @note identical to (declare-const name sort)
+          require(x.sort == Real, s"Can only deal with variable of type real, but not ${x.sort}")
+          s"(declare-fun ${nameIdentifier(x)} () ${x.sort})" // @note identical to (declare-const name sort)
         case fn @ Function(_, _, _, _, Some(_)) =>
           if (SMT_INTERPRETED_FUNCTIONS.contains(fn)) SMT_INTERPRETED_FUNCTIONS(fn)
-          else throw ConversionException("Conversion of interpreted function " + fn.prettyString + " not supported")
+          else throw ConversionException(s"Conversion of interpreted function ${fn.prettyString} not supported")
         case fn @ Function(_, _, _, _, None) =>
           require(fn.sort == Real, "Only support functions of type real, but not " + fn.sort)
-          "(declare-fun " + nameIdentifier(fn) + " (" + generateFuncParamSorts(fn.domain) + ") " + fn.sort + ")"
+          s"(declare-fun ${nameIdentifier(fn)} (${generateFuncParamSorts(fn.domain)}) ${fn.sort})"
+        case s => throw ConversionException(s"Conversion of symbol ${s} not supported")
       })
       .mkString("\n")
     val smtFormula = convertToSMT(expr)

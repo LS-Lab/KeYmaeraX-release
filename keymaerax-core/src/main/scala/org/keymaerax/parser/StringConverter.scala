@@ -123,7 +123,7 @@ class StringConverter(val s: String) {
       Name(fn.name, fn.index) ->
         Signature(Some(fn.domain), elabRepl.sort, Some(args), Right(Some(elabRepl)), UnknownLocation)
     }
-    def prgToNameSignature(n: NamedSymbol, repl: Expression): (Name, Signature) = n match {
+    def prgToNameSignature(n: NamedSymbol with Program, repl: Expression): (Name, Signature) = n match {
       case _: ProgramConst | _: SystemConst => Name(n.name, n.index) ->
           Signature(None, Trafo, None, Right(Some(repl)), UnknownLocation)
     }

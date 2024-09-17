@@ -143,7 +143,6 @@ private object DifferentialTactics extends TacticProvider with Logging {
   }
 
   /** @see [[TactixLibrary.dI]] */
-  @nowarn("msg=match may not be exhaustive")
   def diffInd(auto: Symbol = Symbol("full")): DependentPositionTactic = {
     if (!(auto == Symbol("full") || auto == Symbol("none") || auto == Symbol("diffInd") || auto == Symbol("cex")))
       throw new TacticRequirementError(
@@ -172,18 +171,16 @@ private object DifferentialTactics extends TacticProvider with Logging {
           case Box(_, post) => StaticSemantics
               .symbols(post)
               .toList
-              .filter({
-                case Function(n, i, _, _, interp) => interp.nonEmpty || defs
-                    .decls
-                    .get(Name(n, i))
-                    .exists(d =>
-                      d.interpretation.isLeft || d.interpretation.isRight && d.interpretation.toOption.get.isDefined
-                    )
-                case _ => false
-              })
-              .map({ case fn @ Function(_, _, _, _, interpreted) =>
-                if (interpreted.nonEmpty) EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
-                else expandFw(fn, None)
+              .collect({
+                case Function(_, _, _, _, interp) if interp.nonEmpty =>
+                  EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
+                case fn @ Function(n, i, _, _, _)
+                    if defs
+                      .decls
+                      .get(Name(n, i))
+                      .exists(d =>
+                        d.interpretation.isLeft || d.interpretation.isRight && d.interpretation.toOption.get.isDefined
+                      ) => expandFw(fn, None)
               })
               .reduceRightOption[BelleExpr](_ & _)
           case _ => None
