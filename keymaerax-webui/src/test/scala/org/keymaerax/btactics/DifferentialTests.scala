@@ -37,7 +37,6 @@ import scala.util.Try
  *   [[ContinuousInvariantTests]]
  */
 @SummaryTest @UsualTest @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
-@nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class DifferentialTests extends TacticTestBase {
   val randomTrials = 500
   val randomComplexity = 6
@@ -1725,8 +1724,8 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>b ==> a=5, \\forall t_ (t_>=0 -> 2*t_+x>b), c>2".asSequent
   }
 
-  it should "add time if not present and ask Mathematica if no solution provided as part of master" in withQE { _ =>
-    proveBy("x>b ==> [{x'=2}]x>b".asSequent, master()) shouldBe Symbol("proved")
+  it should "add time if not present and ask Mathematica if no solution provided as part of auto" in withQE { _ =>
+    proveBy("x>b ==> [{x'=2}]x>b".asSequent, auto(TactixInit.invGenerator, None)) shouldBe Symbol("proved")
   }
 
   it should "diffSolve add time if not present and ask Mathematica" in withQE { _ =>
