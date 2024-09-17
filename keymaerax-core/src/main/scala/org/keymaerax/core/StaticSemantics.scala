@@ -251,7 +251,11 @@ object StaticSemantics {
       // base cases
       case a: ProgramConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case a: SystemConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
+      // @note DotProgram is like a reserved ProgramConst.
+      case DotProgram => VCP(fv = allVars, bv = allVars, mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
+      // @note DotDiffProgram is like a reserved DifferentialProgramConst.
+      case DotDiffProgram => VCP(fv = allVars, bv = allVars, mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
       case Test(f) => VCP(fv = StaticSemantics(f).fv, bv = bottom, mbv = bottom)
       case AtomicODE(xp @ DifferentialSymbol(x), e) =>
@@ -396,8 +400,10 @@ object StaticSemantics {
   def signature(program: Program): immutable.Set[NamedSymbol] = program match {
     // base cases
     case ap: ProgramConst => Set(ap)
+    case DotProgram => Set(DotProgram)
     case ap: SystemConst => Set(ap)
     case ap: DifferentialProgramConst => Set(ap)
+    case DotDiffProgram => Set(DotDiffProgram)
     case Assign(x, e) => signature(e)
     case AssignAny(x) => Set.empty
     case Test(f) => signature(f)

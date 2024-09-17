@@ -22,7 +22,9 @@ import org.keymaerax.core.{
   DifferentialProduct,
   DifferentialProgram,
   DifferentialProgramConst,
+  DotDiffProgram,
   DotFormula,
+  DotProgram,
   Expression,
   False,
   Formula,
@@ -159,6 +161,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   protected def docOf(program: Program): Doc = program match {
     case a: ProgramConst => statementDoc(Doc.text(a.asString))
     case a: SystemConst => statementDoc(Doc.text(a.asString))
+    case DotProgram => statementDoc(Doc.text(DotProgram.asString))
     case Assign(x, e) => statementDoc(docOf(x) + Doc.text(ppOp(program)) + (Doc.lineBreak + docOf(e)).nested(2)).grouped
     case AssignAny(x) => statementDoc(docOf(x) + Doc.text(ppOp(program)))
     case Test(f) => statementDoc(Doc.text(ppOp(program)) + docOf(f).nested(2)).grouped
@@ -177,6 +180,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
 
   protected def docOfODE(program: DifferentialProgram): Doc = program match {
     case a: DifferentialProgramConst => Doc.text(a.asString)
+    case DotDiffProgram => Doc.text(DotDiffProgram.asString)
     case AtomicODE(xp, e) => docOf(xp) + Doc.text(ppOp(program)) + docOf(e)
     case t: DifferentialProduct =>
       assert(

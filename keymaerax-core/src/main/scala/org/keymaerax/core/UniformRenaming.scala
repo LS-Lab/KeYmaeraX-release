@@ -248,6 +248,13 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
         this.toString,
         program.toString,
       )
+    case DotProgram =>
+      if (semantic) DotProgram
+      else throw RenamingClashException(
+        "Cannot replace semantic dependencies syntactically: DotProgram " + DotProgram,
+        this.toString,
+        program.toString,
+      )
   }
 
   @nowarn("msg=match may not be exhaustive")
@@ -260,6 +267,13 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
       if (semantic) DifferentialProgramConst(c, renSpace(sp))
       else throw RenamingClashException(
         "Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + ode,
+        this.toString,
+        ode.toString,
+      )
+    case DotDiffProgram =>
+      if (semantic) DotDiffProgram
+      else throw RenamingClashException(
+        "Cannot replace semantic dependencies syntactically: DotDiffProgram " + ode,
         this.toString,
         ode.toString,
       )

@@ -980,6 +980,7 @@ case class ProgramEquivalence(left: Program, right: Program) extends ProgramComp
  *       assignment `x':=*` as [[AssignAny]]([[DifferentialSymbol]])
  *     - `a` program constant as [[ProgramConst]] written `a{|^x|}` if x taboo.
  *     - `a` system constant as [[SystemConst]] without games, written `a{|^@|}` in internal syntax.
+ *     - `_` dot as reserved program symbol [[DotProgram]] for program argument placeholders
  *     - `?P` test as [[Test]]([[Formula]])
  *   - [[BinaryCompositeProgram]] binary composite programs composed of a left and right program
  *     - `a++b` nondeterministic choice as [[Choice]]([[Program]]], [[Program]]])
@@ -1037,6 +1038,15 @@ final case class SystemConst(name: String, space: Space = AnyArg)
       case Except(taboos) => "{|^@" + taboos.mkString(",") + "|}"
     })
   insistNamingConvention()
+}
+
+/**
+ * ⎵: Placeholder for programs. Reserved program symbol _ for substitutions are unlike ordinary program symbols by
+ * convention.
+ */
+case object DotProgram extends NamedSymbol with AtomicProgram with StateDependent {
+  final val name: String = "\\_"
+  final val index: Option[Int] = None
 }
 
 /** x:=e assignment and/or differential assignment x':=e. */
@@ -1120,6 +1130,7 @@ final case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
  *   - [[AtomicDifferentialProgram]] atomic differential programs are not composed of other differential programs
  *     - `x'=e` atomic differential equation as [[AtomicODE]]([[DifferentialSymbol]],[[Term]])
  *     - `c` differential program constant as [[DifferentialProgramConst]]
+ *     - `_` dot reserved differential program symbol as [[DotDiffProgram]] for differential program placeholders
  *   - BinaryCompositeDifferentialProgram except it's the only composition for differential programs.
  *     - `c,d` differential product as [[DifferentialProduct]]([[DifferentialProgram]]], [[DifferentialProgram]]])
  * @author
@@ -1148,6 +1159,15 @@ final case class DifferentialProgramConst(name: String, space: Space = AnyArg)
     extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
   insistNamingConvention()
+}
+
+/**
+ * ⎵: Placeholder for differential programs. Reserved differential program symbol _ for substitutions are unlike
+ * ordinary differential program symbols by convention.
+ */
+case object DotDiffProgram extends NamedSymbol with AtomicDifferentialProgram with StateDependent {
+  final val name: String = "\\_"
+  final val index: Option[Int] = None
 }
 
 /** x'=e atomic differential equation where x is evolving for some time with time-derivative e. */
@@ -1242,7 +1262,8 @@ object DifferentialProduct {
     ode match {
       case p: DifferentialProduct => differentialSymbols(p.left) ++ differentialSymbols(p.right)
       case AtomicODE(xp, _) => xp :: Nil
-      case a: DifferentialProgramConst => Nil
+      case _: DifferentialProgramConst => Nil
+      case DotDiffProgram => Nil
     }
   } ensures
     (

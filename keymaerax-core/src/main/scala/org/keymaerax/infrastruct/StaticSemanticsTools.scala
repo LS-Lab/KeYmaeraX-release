@@ -213,14 +213,17 @@ object StaticSemanticsTools {
 
   private def depend(program: Program): mutable.Map[Variable, immutable.Set[Variable]] = program match {
     // can't know so just say empty even if that's wrong
-    case a: ProgramConst => mutable.Map.empty
+    case _: ProgramConst => mutable.Map.empty
     // can't know so just say empty even if that's wrong
-    case a: SystemConst => mutable.Map.empty
+    case _: SystemConst => mutable.Map.empty
+    // can't know so just say empty even if that's wrong
+    case DotProgram => mutable.Map.empty
+
     case Assign(x, e) => mutable.Map(x -> StaticSemantics.freeVars(e).symbols)
-    case a: AssignAny => mutable.Map.empty
+    case _: AssignAny => mutable.Map.empty
     // empty only if ignoring control flow dependencies
-    case Test(f) => mutable.Map.empty
-    case ODESystem(ode, h) => depend(ode)
+    case Test(_) => mutable.Map.empty
+    case ODESystem(ode, _) => depend(ode)
     // homomorphic cases
     case Choice(a, b) => merge(depend(a), depend(b))
     // @todo could improve when taking must-bounds into account and turning transitive

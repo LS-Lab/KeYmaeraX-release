@@ -235,10 +235,11 @@ abstract class UniformMatching extends BaseMatcher {
    * @inheritdoc
    */
   protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
-    case a: ProgramConst => unifier(e1, e2)
-    case a: SystemConst =>
+    case _: ProgramConst => unifier(e1, e2)
+    case _: SystemConst =>
       if (FormulaTools.dualFree(e2)) unifier(e1, e2)
       else throw new UnificationException(e1, e2, "hybrid games with duals not allowed for SystemConst")
+    case DotProgram => unifier(e1, e2)
     case Assign(x, t) => e2 match {
         case Assign(x2, t2) => unifies2(x, t, x2, t2)
         case _ => ununifiable(e1, e2)
@@ -284,7 +285,8 @@ abstract class UniformMatching extends BaseMatcher {
    */
   @nowarn("msg=match may not be exhaustive")
   protected def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstRepl] = e1 match {
-    case c: DifferentialProgramConst => unifier(e1, e2)
+    case _: DifferentialProgramConst => unifier(e1, e2)
+    case DotDiffProgram => unifier(e1, e2)
     case AtomicODE(xp, t) => e2 match {
         case AtomicODE(xp2, t2) => unifies2(xp, t, xp2, t2)
         case _ => ununifiable(e1, e2)

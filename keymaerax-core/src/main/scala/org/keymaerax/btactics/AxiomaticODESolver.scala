@@ -671,6 +671,7 @@ object AxiomaticODESolver {
   private def odeSize(e: Expression): Int = odeSize(e.asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode)
   private def odeSize(ode: DifferentialProgram): Int = ode match {
     case _: DifferentialProgramConst => 1
+    case DotDiffProgram => 1
     case _: AtomicODE => 1
     case x: DifferentialProduct => odeSize(x.left) + odeSize(x.right)
   }
