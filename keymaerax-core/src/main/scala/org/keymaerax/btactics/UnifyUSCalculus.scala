@@ -798,7 +798,7 @@ trait UnifyUSCalculus {
       // @note performance impact
       import BelleExpr.RECHECK
 
-      private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key)
+      private val (keyCtx, keyPart) = fact.conclusion.succ.head.at(key)
 
       private def checkSubst(matcher: Matcher, key: Expression, expr: Expression): Subst =
         matcher.unifiable(key, expr) match {
@@ -891,10 +891,10 @@ trait UnifyUSCalculus {
        *   merely from the context embedding contracts.
        */
       @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-      private def useAt[T <: Expression](
+      private def useAt(
           subst: Subst,
-          K: Context[T],
-          k: T,
+          K: Context[Formula],
+          k: Expression,
           p: Position,
           C: Context[Formula],
           c: Expression,
@@ -1654,7 +1654,6 @@ trait UnifyUSCalculus {
   def CMon(inEqPos: PosInExpr): InputTactic = inputanon { CMonFw(inEqPos) }
 
   /** Builtin forward implementation of CMon. */
-  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private[btactics] def CMonFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
     val sequent = provable.subgoals.head
@@ -1666,20 +1665,28 @@ trait UnifyUSCalculus {
       case Imply(l, r) =>
         if (inEqPos == HereP) provable
         else {
-          val (ctxP, p: Formula) = l.at(inEqPos)
-          val (ctxQ, q: Formula) = r.at(inEqPos)
+          val (ctxP, p) = l.at(inEqPos)
+          val (ctxQ, q) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
-            CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
-            0,
-          )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
-          else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
-            implyR(SuccPos(0)).computeResult(provable)(
-              CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
-              0,
-            )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)), 0)
-          } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
+          (p, q) match {
+            case (p: Formula, q: Formula) =>
+              if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
+                CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
+                0,
+              )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
+              else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
+                implyR(SuccPos(0)).computeResult(provable)(
+                  CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
+                  0,
+                )(
+                  inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)),
+                  0,
+                )
+              } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
+            case _ => throw new TacticRequirementError(s"Expected Formula context, but got ${ctxP}")
+          }
         }
+      case _ => throw new TacticRequirementError(s"Expected implication, but got ${sequent.succ.head}")
     }
   }
 
