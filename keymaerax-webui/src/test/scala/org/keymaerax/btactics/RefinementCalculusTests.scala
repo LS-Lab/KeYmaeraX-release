@@ -125,4 +125,26 @@ class RefinementCalculusTests extends TacticTestBase {
     val pr2 = TactixLibrary.proveBy("x:=0;?x!=0; <= ?x=0;".asFormula, useAt(timesInverse)(Position(1, List(0, 1, 0))))
     pr2.subgoals.head shouldBe " ==> x:=0;?x*(x^(-1)) = 1; <= ?x=0;".asSequent
   }
+
+  it should "transform programs in modality" in {
+    val pr = TactixLibrary
+      .proveBy("[x':=2;?(x>=0);]x > 0".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+    pr.subgoals.head shouldBe " ==> [{x'=2 & x>=0}] x > 0".asSequent
+
+    val pr2 = TactixLibrary.proveBy("<x:=*;++y:=*;>x > 0".asFormula, useAt(hideChoiceL)(Position(1, 0 :: Nil)))
+    pr2.subgoals.head shouldBe " ==> <y:=*;> x > 0".asSequent
+
+    val pr3 = TactixLibrary
+      .proveBy("[x:=*;++y:=*;]x > 0 ==> false".asSequent, useAt(hideChoiceL)(Position(-1, 0 :: Nil)))
+    pr3.subgoals.head shouldBe "[y:=*;]x > 0 ==> false".asSequent
+  }
+
+  it should "transform programs in refinement" in {
+    val pr = TactixLibrary
+      .proveBy("x':=2;?(x>=0); <= x:=*;++y:=*;".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+    pr.subgoals.head shouldBe " ==> {x'=2 & x>=0} <= x:=*;++y:=*;".asSequent
+
+    val pr2 = TactixLibrary.proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(hideChoiceL)(Position(1, 1 :: Nil)))
+    pr2.subgoals.head shouldBe " ==> x:=2; <= y:=*;".asSequent
+  }
 }

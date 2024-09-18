@@ -956,7 +956,7 @@ object UnifyUSCalculus {
         )
         // @todo generalization of DotTerm to other types should be acceptable, too
         require(
-          List((C, DotFormula), (C, DotTerm())).contains(C.ctx.at(p.inExpr)),
+          List((C, DotFormula), (C, DotTerm()), (C, DotProgram)).contains(C.ctx.at(p.inExpr)),
           "correctly split at position " + p
             .inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(
             c
@@ -1027,6 +1027,14 @@ object UnifyUSCalculus {
           case Imply(other, DotFormula) => implyStep(other)
 
           case Imply(DotFormula, other) => implyStep(other)
+
+          case Refinement(DotProgram, other) => implyStep(other)
+
+          case Refinement(other, DotProgram) => implyStep(other)
+
+          case ProgramEquivalence(DotProgram, other) => ???
+
+          case ProgramEquivalence(other, DotProgram) => ???
 
           // @note all DotTerms are equal
           case Imply(prereq, remainder) =>
@@ -1725,8 +1733,20 @@ object UnifyUSCalculus {
    *   |- C{o} -> C{k}
    * }}}
    *
+   * If o and k are programs, it reduces it to argument refinement instead.
+   * {{{
+   *   |- o <= k
+   *   ------------------------- for positive C{.}
+   *   |- C{o} -> C{k}
+   * }}}
+   * {{{
+   *   |- k <= o
+   *   ------------------------- for negative C{.}
+   *   |- C{o} -> C{k}
+   * }}}
+   *
    * @param inEqPos
-   *   the position *within* the two sides C{.} of the implication at which the context DotFormula happens.
+   *   the position *within* the two sides C{.} of the implication at which the context DotFormula/DotProgram happens.
    * @see
    *   [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see
@@ -1780,7 +1800,18 @@ object UnifyUSCalculus {
                   0,
                 )
               } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
-            case _ => throw new TacticRequirementError(s"Expected Formula context, but got ${ctxP}")
+            case (p: Program, q: Program) =>
+              if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
+                UnifyUSCalculus.CMon(ctxP)(ProvableSig.startProof(Refinement(q, p), provable.defs)),
+                0,
+              )
+              else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
+                implyR(SuccPos(0)).computeResult(provable)(
+                  UnifyUSCalculus.CMon(ctxP)(ProvableSig.startProof(Refinement(p, q), provable.defs)),
+                  0,
+                )
+              } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
+            case _ => throw new TacticRequirementError(s"Expected Formula/Program context, but got ${ctxP}")
           }
         }
       case _ => throw new TacticRequirementError(s"Expected implication, but got ${sequent.succ.head}")
@@ -2222,23 +2253,41 @@ object UnifyUSCalculus {
    */
   def CMon(C: Context[Formula]): ForwardTactic = impl => {
     import StaticSemantics.symbols
-    require(
-      impl.conclusion.ante.length == 1 && impl.conclusion.succ.length == 1,
-      "expected equivalence shape with exactly one antecedent and exactly one succedent " + impl,
-    )
+    val (dot: NamedSymbol, anteGlob, succGlob) = {
+      if (C.isFormulaContext) {
+        require(
+          impl.conclusion.ante.length == 1 && impl.conclusion.succ.length == 1,
+          "expected equivalence shape with exactly one antecedent and exactly one succedent " + impl,
+        )
+        (DotFormula, impl.conclusion.ante.head, impl.conclusion.succ.head)
+      } else if (C.isProgramContext) {
+        require(
+          impl.conclusion.ante.isEmpty && impl.conclusion.succ.length == 1 && impl
+            .conclusion
+            .succ
+            .head
+            .isInstanceOf[Refinement],
+          "expected refinement shape with exactly no antecedent and exactly one succedent " + impl,
+        )
+        impl.conclusion.succ.head.asInstanceOf[Refinement] match { case Refinement(a, b) => (DotProgram, a, b) }
+      } else {
+        throw new IllegalArgumentException(
+          s"Only Formula/Program context expected to make use of equivalences with CE ${C}"
+        )
+      }
+    }
+    // for error message
+    val dotErrorName = dot.getClass.getSimpleName
 
     // global polarity switch for all cases, except Modal and Equiv, which modify this switch if necessary
     val polarity = FormulaTools.polarityAt(
       C.ctx,
       FormulaTools
-        .posOf(C.ctx, DotFormula)
-        .getOrElse(throw new TacticAssertionError(s"Context should contain DotFormula, but is ${C.ctx}")),
+        .posOf(C.ctx, dot)
+        .getOrElse(throw new TacticAssertionError(s"Context should contain ${dotErrorName}, but is ${C.ctx}")),
     )
-    val (left, right) =
-      if (polarity < 0) (impl.conclusion.succ.head, impl.conclusion.ante.head)
-      else (impl.conclusion.ante.head, impl.conclusion.succ.head)
+    val (left, right) = if (polarity < 0) (succGlob, anteGlob) else (anteGlob, succGlob)
 
-    require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
     if (logger.isDebugEnabled) logger.debug("CMon(" + C + ")" + "(" + impl + ")")
 
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
@@ -2250,8 +2299,8 @@ object UnifyUSCalculus {
       val localPolarity = FormulaTools.polarityAt(
         C.ctx,
         FormulaTools
-          .posOf(C.ctx, DotFormula)
-          .getOrElse(throw new TacticAssertionError("Context should contain DotFormula")),
+          .posOf(C.ctx, dot)
+          .getOrElse(throw new TacticAssertionError(s"Context should contain ${dotErrorName}")),
       )
       val (ante, succ) =
         if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0))
@@ -2263,7 +2312,7 @@ object UnifyUSCalculus {
         C.ctx match {
           case DotFormula => mon
 
-          case And(e, c) if !symbols(e).contains(DotFormula) =>
+          case And(e, c) if !symbols(e).contains(dot) =>
             (ProvableSig.startProof(Sequent(ante, succ), mon.defs)(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(
               Close(AntePos(0), SuccPos(0)),
               0,
@@ -2271,7 +2320,7 @@ object UnifyUSCalculus {
             // right branch
             (CoHide2(AntePos(1), SuccPos(0)), 0))(monStep(Context(c), mon), 0)
 
-          case And(c, e) if !symbols(e).contains(DotFormula) =>
+          case And(c, e) if !symbols(e).contains(dot) =>
             (ProvableSig.startProof(Sequent(ante, succ), mon.defs)(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(
               Close(AntePos(1), SuccPos(0)),
               1,
@@ -2279,7 +2328,7 @@ object UnifyUSCalculus {
             // left branch
             (CoHide2(AntePos(0), SuccPos(0)), 0))(monStep(Context(c), mon), 0)
 
-          case Or(e, c) if !symbols(e).contains(DotFormula) =>
+          case Or(e, c) if !symbols(e).contains(dot) =>
             (ProvableSig.startProof(Sequent(ante, succ), mon.defs)(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(0)), 0)(
               Close(AntePos(0), SuccPos(0)),
               0,
@@ -2287,7 +2336,7 @@ object UnifyUSCalculus {
             // right branch
             (CoHide2(AntePos(0), SuccPos(1)), 0))(monStep(Context(c), mon), 0)
 
-          case Or(c, e) if !symbols(e).contains(DotFormula) =>
+          case Or(c, e) if !symbols(e).contains(dot) =>
             (ProvableSig.startProof(Sequent(ante, succ), mon.defs)(OrRight(SuccPos(0)), 0)(OrLeft(AntePos(0)), 0)(
               Close(AntePos(0), SuccPos(1)),
               1,
@@ -2295,7 +2344,7 @@ object UnifyUSCalculus {
             // right branch
             (CoHide2(AntePos(0), SuccPos(0)), 0))(monStep(Context(c), mon), 0)
 
-          case Imply(e, c) if !symbols(e).contains(DotFormula) =>
+          case Imply(e, c) if !symbols(e).contains(dot) =>
             if (logger.isDebugEnabled) logger.debug(
               "CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
                 "\nnext step in context " + Context(
@@ -2315,7 +2364,7 @@ object UnifyUSCalculus {
               // right branch  c{a} |- c{s}
             )(monStep(Context(c), mon), 0)
 
-          case Imply(c, e) if !symbols(e).contains(DotFormula) =>
+          case Imply(c, e) if !symbols(e).contains(dot) =>
             if (logger.isDebugEnabled) logger.debug(
               "CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
                 "\nnext step in context " + Context(
@@ -2334,7 +2383,7 @@ object UnifyUSCalculus {
               (HideRight(SuccPos(0)), 0) // @note was: (CoHide2(AntePos(0), SuccPos(1)), 0)
             )(monStep(Context(c), mon), 0)
 
-          case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
+          case Equiv(e, c) if !symbols(e).contains(dot) =>
             // @note fallback to implication
             // polarity(k)=-1, polarity(o)=+1
             // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
@@ -2342,8 +2391,8 @@ object UnifyUSCalculus {
             val newPol = FormulaTools.polarityAt(
               Imply(c, e),
               FormulaTools
-                .posOf(Imply(c, e), DotFormula)
-                .getOrElse(throw new TacticAssertionError("Context should contain DotFormula")),
+                .posOf(Imply(c, e), dot)
+                .getOrElse(throw new TacticAssertionError(s"Context should contain ${dotErrorName}")),
             )
             if (newPol < 0) {
               // polarity of k in (Context(Imply(c,e))(k) will be +1
@@ -2354,8 +2403,8 @@ object UnifyUSCalculus {
                 FormulaTools.polarityAt(
                   Imply(e, c),
                   FormulaTools
-                    .posOf(Imply(e, c), DotFormula)
-                    .getOrElse(throw new TacticAssertionError("Context should contain DotFormula")),
+                    .posOf(Imply(e, c), dot)
+                    .getOrElse(throw new TacticAssertionError(s"Context should contain ${dotErrorName}")),
                 ) < 0
               )
               // polarity of k in (Context(Imply(e,c))(k) will be +1
@@ -2368,7 +2417,7 @@ object UnifyUSCalculus {
               ); ???
             }
 
-          case Equiv(c, e) if !symbols(e).contains(DotFormula) =>
+          case Equiv(c, e) if !symbols(e).contains(dot) =>
             // @note fallback to implication
             // polarity(k)=-1, polarity(o)=+1
             // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
@@ -2376,8 +2425,8 @@ object UnifyUSCalculus {
             val newPol = FormulaTools.polarityAt(
               Imply(c, e),
               FormulaTools
-                .posOf(Imply(c, e), DotFormula)
-                .getOrElse(throw new TacticAssertionError("Context should contain DotFormula")),
+                .posOf(Imply(c, e), dot)
+                .getOrElse(throw new TacticAssertionError(s"Context should contain ${dotErrorName}")),
             )
             if (newPol > 0) {
               // polarity of k in (Context(Imply(c,e))(k) will be +1
@@ -2388,8 +2437,8 @@ object UnifyUSCalculus {
                 FormulaTools.polarityAt(
                   Imply(e, c),
                   FormulaTools
-                    .posOf(Imply(e, c), DotFormula)
-                    .getOrElse(throw new TacticAssertionError("Context should contain DotFormula")),
+                    .posOf(Imply(e, c), dot)
+                    .getOrElse(throw new TacticAssertionError(s"Context should contain ${dotErrorName}")),
                 ) > 0
               )
               // polarity of k in (Context(Imply(e,c))(k) will be +1
@@ -2403,15 +2452,13 @@ object UnifyUSCalculus {
             }
 
           case Equiv(e, c) =>
-            Predef.assert(
-              symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula),
-              "proper contexts have dots somewhere " + C,
-            )
+            Predef
+              .assert(symbols(e).contains(dot) || symbols(c).contains(dot), "proper contexts have dots somewhere " + C)
             throw new ProverException(
               "No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
             )
 
-          case Box(a, c) if !symbols(a).contains(DotFormula) =>
+          case Box(a, c) if !symbols(a).contains(dot) =>
             // @note rotate substitution into same order as current ante/succ
             val (bleft, bright) =
               if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
@@ -2426,7 +2473,7 @@ object UnifyUSCalculus {
               0,
             ))(monStep(Context(c), mon), 0)
 
-          case Diamond(a, c) if !symbols(a).contains(DotFormula) =>
+          case Diamond(a, c) if !symbols(a).contains(dot) =>
             // @note rotate substitution into same order as current ante/succ
             val (dleft, dright) =
               if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
@@ -2440,7 +2487,7 @@ object UnifyUSCalculus {
               0,
             ))(monStep(Context(c), mon), 0)
 
-          case Box(c, p) if !symbols(p).contains(DotFormula) =>
+          case Box(c, p) if !symbols(p).contains(dot) =>
             // @note rotate substitution into same order as current ante/succ
             // bleft and bright are reversed because Box flips polarities for programs
             val (bright, bleft) =
@@ -2459,7 +2506,7 @@ object UnifyUSCalculus {
               1,
             )(CMonPrg(Context(c))(mon), 0)
 
-          case Diamond(c, p) if !symbols(p).contains(DotFormula) =>
+          case Diamond(c, p) if !symbols(p).contains(dot) =>
             // @note rotate substitution into same order as current ante/succ
             val (dleft, dright) =
               if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
@@ -2605,7 +2652,7 @@ object UnifyUSCalculus {
               ProvableSig.startProof(Sequent(ante, succ), mon.defs)(NotLeft(AntePos(0)), 0)(NotRight(SuccPos(0)), 0)
             )(monStep(Context(c), mon), 0)
 
-          case Refinement(a, c) if !symbols(a).contains(DotFormula) => {
+          case Refinement(a, c) if !symbols(a).contains(dot) => {
             // @note rotate substitution into same order as current ante/succ
             val (rleft, rright) =
               if (polarity * localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left) else (left, right)
@@ -2625,7 +2672,7 @@ object UnifyUSCalculus {
             )
           }
 
-          case Refinement(c, b) if !symbols(b).contains(DotFormula) => {
+          case Refinement(c, b) if !symbols(b).contains(dot) => {
             // rright and rleft are reversed as left-hand side refinement flips polarities
             // @note rotate substitution into same order as current ante/succ
             val (rright, rleft) =
@@ -2647,17 +2694,15 @@ object UnifyUSCalculus {
           }
 
           case ProgramEquivalence(a, b) =>
-            Predef.assert(
-              symbols(a).contains(DotFormula) || symbols(b).contains(DotFormula),
-              "proper contexts have dots somewhere " + C,
-            )
+            Predef
+              .assert(symbols(a).contains(dot) || symbols(b).contains(dot), "proper contexts have dots somewhere " + C)
             // @todo do as for Equiv, i.e. orient the equivalence and prove the new formula?
             throw new ProverException(
               "No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
             )
 
           case And(_, _) | Or(_, _) | Imply(_, _) | Box(_, _) | Diamond(_, _) | Refinement(_, _) =>
-            throw new TacticAssertionError(s"Context should contain only one DotFormula, but is ${C}")
+            throw new TacticAssertionError(s"Context should contain only one ${dotErrorName}, but is ${C}")
           case False | True | UnitPredicational(_, _) =>
             throw new AssertionError(s"proper contexts have dots somewhere ${C}")
           case _: ComparisonFormula | PredOf(_, _) =>
@@ -2701,17 +2746,35 @@ object UnifyUSCalculus {
       if (C.isFormulaContext) {
         require(
           pr.conclusion.ante.length == 1 && pr.conclusion.succ.length == 1,
-          "expected equivalence shape with exactly one antecedent and exactly one succedent " + pr,
+          s"expected equivalence shape with exactly one antecedent and exactly one succedent ${pr}",
         )
         DotFormula
+      } else if (C.isProgramContext) {
+        require(
+          pr.conclusion.ante.isEmpty && pr.conclusion.succ.length == 1 && pr
+            .conclusion
+            .succ
+            .head
+            .isInstanceOf[Refinement],
+          s"expected refinement shape with exactly no antecedent and exactly one succedent ${pr}",
+        )
+        DotProgram
       } else {
-        throw new IllegalArgumentException(s"Formula context expected to make use of equivalences with CE ${C}")
+        throw new IllegalArgumentException(
+          s"Only Formula/Program context expected to make use of equivalences with CE ${C}"
+        )
       }
+    // for error message
+    val dotErrorName = dot.getClass.getSimpleName
 
     // monPrgStep additionally returns the two programs in conclusion as they are harder to extract without warning
     // than their formula equivalent.
     def monPrgStep(C: Context[Program]): (ProvableSig, Program, Program) = {
       C.ctx match {
+        case DotProgram => pr.conclusion.succ.head match {
+            case Refinement(a, b) => (pr, a, b)
+            case _ => throw new TacticAssertionError(s"expected refinement but got ${pr.conclusion.succ.head}")
+          }
         case Test(c) =>
           val ctxt = Context(Test(DotFormula))
           val rec = CMon(Context(c))(pr)
@@ -2859,10 +2922,10 @@ object UnifyUSCalculus {
         case Assign(_, _) | AtomicODE(_, _) =>
           throw new TacticInapplicableFailure("Monotonicity is not implemented for Terms. Try CQ instead.")
         case Choice(_, _) | Compose(_, _) =>
-          throw new TacticAssertionError(s"Context should contain only one DotFormula, but is ${C}")
+          throw new TacticAssertionError(s"Context should contain only one ${dotErrorName}, but is ${C}")
         case AssignAny(_) | ProgramConst(_, _) | SystemConst(_, _) =>
           throw new TacticAssertionError(s"Proper contexts have dots somewhere ${C}")
-        case Dual(_) | DotProgram | _: DifferentialProgram => throw new ProverException(
+        case Dual(_) | _: DifferentialProgram => throw new ProverException(
             "Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + pr + ")"
           )
 
