@@ -11,8 +11,8 @@ import org.keymaerax.btactics.SimplifierV3.simplify
 import org.keymaerax.btactics.TacticFactory.inputanon
 import org.keymaerax.btactics.TactixLibrary.{id, implyL, implyR, prop, useAt, DW, G}
 import org.keymaerax.btactics.macros.{CoreAxiomInfo, DerivedAxiomInfo, DisplayLevel, Tactic, Unifier}
+import org.keymaerax.core._
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.core.{Expression, Program, Refinement, Sequent, SubstitutionPair, SystemConst, USubst}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.FormulaTools.dualFree
 import org.keymaerax.infrastruct.{PosInExpr, Position}
@@ -460,6 +460,32 @@ object RefinementCalculus extends TacticProvider {
     useAt(diamond, PosInExpr(1 :: Nil))(Position(1, 1 :: 0 :: Nil)) &
       useAt(diamond, PosInExpr(1 :: Nil))(Position(1, 1 :: 1 :: Nil)) &
       useAt(converseImply, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & useAt(refBox)(Position(1, 1 :: Nil)) & prop,
+  )
+
+  @Derivation
+  val hideChoiceL: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "hideChoiceL",
+      canonicalName = "hide choice left",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "b{|^@|}; <= a{|^@|};++b{|^@|};".asFormula,
+    useAt(refChoiceR)(Position(1, Nil)) & useAt(refRefl)(Position(1, 1 :: Nil)) & prop,
+  )
+
+  @Derivation
+  val hideChoiceR: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "hideChoiceR",
+      canonicalName = "hide choice right",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "a{|^@|}; <= a{|^@|};++b{|^@|};".asFormula,
+    useAt(refChoiceR)(Position(1, Nil)) & useAt(refRefl)(Position(1, 0 :: Nil)) & prop,
   )
 
   // Congruence derived axioms
