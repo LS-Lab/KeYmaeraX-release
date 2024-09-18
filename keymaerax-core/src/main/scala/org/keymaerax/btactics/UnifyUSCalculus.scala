@@ -526,16 +526,16 @@ object UnifyUSCalculus {
    *   optional transformation augmenting or replacing the uniform substitutions after unification with additional
    *   information.
    */
-  @nowarn("msg=match may not be exhaustive")
   def useAt(lem: Lemma, key: PosInExpr, inst: Option[Subst] => Subst): BuiltInPositionTactic = lem.name match {
-    case Some(name) if ProvableInfo.existsStoredName(name) =>
-      val info = ProvableInfo.ofStoredName(name)
-      if (info.provable == lem.fact) useAt(info, key, inst)
-      else {
-        logger.info("INFO: useAt({}) has an incompatible lemma name, which may disable tactic extraction", name)
-        useAt(lem.fact, key, inst)
-      }
-    case Some(name) if !ProvableInfo.existsStoredName(name) => useAt(lem.fact, key, inst)
+    case Some(name) =>
+      if (ProvableInfo.existsStoredName(name)) {
+        val info = ProvableInfo.ofStoredName(name)
+        if (info.provable == lem.fact) useAt(info, key, inst)
+        else {
+          logger.info("INFO: useAt({}) has an incompatible lemma name, which may disable tactic extraction", name)
+          useAt(lem.fact, key, inst)
+        }
+      } else useAt(lem.fact, key, inst)
     case None =>
       logger.info("INFO: useAt of an anonymous lemma may disable tactic extraction")
       useAt(lem.fact, key, inst)
@@ -842,7 +842,7 @@ object UnifyUSCalculus {
       // @note performance impact
       import BelleExpr.RECHECK
 
-      private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key)
+      private val (keyCtx, keyPart) = fact.conclusion.succ.head.at(key)
 
       private def checkSubst(matcher: Matcher, key: Expression, expr: Expression): Subst =
         matcher.unifiable(key, expr) match {
@@ -935,10 +935,10 @@ object UnifyUSCalculus {
        *   merely from the context embedding contracts.
        */
       @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
-      private def useAt[T <: Expression](
+      private def useAt(
           subst: Subst,
-          K: Context[T],
-          k: T,
+          K: Context[Formula],
+          k: Expression,
           p: Position,
           C: Context[Formula],
           c: Expression,
@@ -1751,7 +1751,6 @@ object UnifyUSCalculus {
   )
 
   /** Builtin forward implementation of CMon. */
-  @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private[btactics] def CMonFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
     require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
     val sequent = provable.subgoals.head
@@ -1763,20 +1762,28 @@ object UnifyUSCalculus {
       case Imply(l, r) =>
         if (inEqPos == HereP) provable
         else {
-          val (ctxP, p: Formula) = l.at(inEqPos)
-          val (ctxQ, q: Formula) = r.at(inEqPos)
+          val (ctxP, p) = l.at(inEqPos)
+          val (ctxQ, q) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
-            CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
-            0,
-          )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
-          else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
-            implyR(SuccPos(0)).computeResult(provable)(
-              CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
-              0,
-            )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)), 0)
-          } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
+          (p, q) match {
+            case (p: Formula, q: Formula) =>
+              if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
+                CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
+                0,
+              )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
+              else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
+                implyR(SuccPos(0)).computeResult(provable)(
+                  CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
+                  0,
+                )(
+                  inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)),
+                  0,
+                )
+              } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
+            case _ => throw new TacticRequirementError(s"Expected Formula context, but got ${ctxP}")
+          }
         }
+      case _ => throw new TacticRequirementError(s"Expected implication, but got ${sequent.succ.head}")
     }
   }
 
@@ -2703,7 +2710,6 @@ object UnifyUSCalculus {
 
     // monPrgStep additionally returns the two programs in conclusion as they are harder to extract without warning
     // than their formula equivalent.
-    @nowarn("msg=match may not be exhaustive")
     def monPrgStep(C: Context[Program]): (ProvableSig, Program, Program) = {
       C.ctx match {
         case Test(c) =>
@@ -2850,13 +2856,13 @@ object UnifyUSCalculus {
             ante,
             succ,
           )
+        case Assign(_, _) | AtomicODE(_, _) =>
+          throw new TacticInapplicableFailure("Monotonicity is not implemented for Terms. Try CQ instead.")
         case Choice(_, _) | Compose(_, _) =>
           throw new TacticAssertionError(s"Context should contain only one DotFormula, but is ${C}")
-        case Assign(_, _) | AtomicODE(_, _) =>
-          throw new TacticAssertionError("Monotonicity is not implemented for Terms. Try CQ instead.")
         case AssignAny(_) | ProgramConst(_, _) | SystemConst(_, _) =>
-          throw new AssertionError(s"proper contexts have dots somewhere ${C}")
-        case Dual(_) | DotProgram => throw new ProverException(
+          throw new TacticAssertionError(s"Proper contexts have dots somewhere ${C}")
+        case Dual(_) | DotProgram | _: DifferentialProgram => throw new ProverException(
             "Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + pr + ")"
           )
 
