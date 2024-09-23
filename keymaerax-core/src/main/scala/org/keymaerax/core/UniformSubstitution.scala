@@ -242,6 +242,7 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
     case PredOf(p: Function, arg) if !p.interpreted && SubstitutionAdmissibility.isSubstitutableArg(arg) => p
     case FuncOf(f: Function, arg) if !f.interpreted && SubstitutionAdmissibility.isSubstitutableArg(arg) => f
     case PredicationalOf(p: Function, DotFormula) if !p.interpreted => p
+    case PredicationalOf(p: Function, DotProgram) => p
     case d: DotTerm => d
     case DotFormula => DotFormula
     case DotProgram => DotProgram

@@ -210,7 +210,7 @@ object ExpressionTraversal {
           case DotFormula => matchZero(p, f, e)
           case _: UnitPredicational => matchZero(p, f, e)
           case PredOf(a, b) => matchOne(p, PredOf.apply(a, _: Term), f, b)
-          case PredicationalOf(a, b) => matchOne(p, PredicationalOf.apply(a, _: Formula), f, b)
+          case PredicationalOf(a, b) => matchOne(p, PredicationalOf.apply(a, _: Expression), f, b)
           case Equal(a, b) => matchTwo(p, Equal.apply(_: Term, _: Term), f, a, b)
           case NotEqual(a, b) => matchTwo(p, NotEqual.apply(_: Term, _: Term), f, a, b)
           case Less(a, b) => matchTwo(p, Less.apply(_: Term, _: Term), f, a, b)

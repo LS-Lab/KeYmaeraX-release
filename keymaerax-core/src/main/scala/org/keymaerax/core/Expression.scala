@@ -802,11 +802,15 @@ final case class PredOf(func: Function, child: Term) extends AtomicFormula with 
  * @note
  *   In theory, `C{child}` is written `C(child)`.
  */
-final case class PredicationalOf(func: Function, child: Formula)
+final case class PredicationalOf(func: Function, child: Expression)
     extends AtomicFormula with ApplicationOf with StateDependent {
   // @note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected argument sort Bool: " + this)
-  insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
+  insist(
+    func.domain == child.sort,
+    "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func +
+      " to " + child,
+  )
   insist(func.interp.isEmpty, "only uninterpreted predicationals are currently supported: " + this)
 }
 

@@ -129,6 +129,10 @@ private[core] object AxiomBase extends Logging {
     val a = ProgramConst("a_")
     val x = Variable("x_", None, Real)
     val Jany = UnitPredicational("J", AnyArg)
+    // dRL congruence
+    val contextPrg = Function("ctx_", None, Trafo, Bool) // predicational symbol for program
+    val b = SystemConst("b_")
+    val c = SystemConst("c_")
     Map(
       /**
        * {{{
@@ -178,6 +182,29 @@ private[core] object AxiomBase extends Logging {
           Sequent(
             immutable.IndexedSeq(),
             immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany))),
+          ),
+        ),
+      ),
+      /**
+       * {{{
+       * Rule "CPrgE congruence".
+       * Premise b == c
+       * Conclusion ctxP_(b) <-> ctxP_(c)
+       * End.
+       * }}}
+       * {{{
+       *       b == c
+       *   ---------------- CPrgE
+       *    C{b} <-> C{c}
+       * }}}
+       */
+      (
+        "CPrgE congruence",
+        (
+          immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(ProgramEquivalence(b, c)))),
+          Sequent(
+            immutable.IndexedSeq(),
+            immutable.IndexedSeq(Equiv(PredicationalOf(contextPrg, b), PredicationalOf(contextPrg, c))),
           ),
         ),
       ),

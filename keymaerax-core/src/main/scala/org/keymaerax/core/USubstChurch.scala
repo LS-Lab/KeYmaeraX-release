@@ -335,15 +335,15 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
         // @note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubstChurch(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Formula])
       case app @ PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
-      case app @ PredicationalOf(op, fml) if matchHead(app) =>
+      case app @ PredicationalOf(op, fml:Formula) if matchHead(app) =>
         requireAdmissible(allVars, fml, formula)
         val subs =
           uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app))
-        val PredicationalOf(wp, wArg) = subs.what
+        val PredicationalOf(wp, wArg:Formula) = subs.what
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
         USubstChurch(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
-      case app @ PredicationalOf(q, fml) if !matchHead(app) =>
+      case app @ PredicationalOf(q, fml:Formula) if !matchHead(app) =>
         // @note admissibility is required for nonmatching predicationals since the arguments might be evaluated in different states.
         requireAdmissible(allVars, fml, formula)
         PredicationalOf(q, usubst(fml))

@@ -151,7 +151,7 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
     case fml: ComparisonFormula => denominators(fml.left) ++ denominators(fml.right)
     case fml: UnaryCompositeFormula => denominators(fml.child)
     case fml: PredOf => denominators(fml.child)
-    case fml: PredicationalOf => denominators(fml.child)
+    case PredicationalOf(_, f: Formula) => denominators(f)
     case fml: AtomicFormula => Seq()
     case _ => ???
   }

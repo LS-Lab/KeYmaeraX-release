@@ -710,7 +710,7 @@ object TaylorModelArith {
     case binop: BinaryCompositeFormula => subtermOf(t, binop.left) || subtermOf(t, binop.right)
     case unop: UnaryCompositeFormula => subtermOf(t, unop.child)
     case app: PredOf => subtermOf(t, app.child)
-    case app: PredicationalOf => subtermOf(t, app.child)
+    case PredicationalOf(_, f:Formula) => subtermOf(t, f)
     case m: Modal => throw new IllegalArgumentException("not expecting modal formula here")
     case q: Quantified => subtermOf(t, q.child)
     case a: AtomicFormula => false

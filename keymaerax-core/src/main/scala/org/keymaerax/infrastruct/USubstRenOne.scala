@@ -245,6 +245,16 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
 
   // implementation of uniform substitution application
 
+  /** uniform substitution on expressions */
+  private def usubst(u: SetLattice[Variable], expr: Expression): Expression = {
+    expr match {
+      case f: Formula => usubst(u, f)
+      case t: Term => usubst(u, t)
+      case p: Program => usubst(u, p)._2
+      case _: Function => ???
+    }
+  }
+
   /** uniform substitution on terms */
   private def usubst(u: SetLattice[Variable], term: Term): Term = {
     term match {

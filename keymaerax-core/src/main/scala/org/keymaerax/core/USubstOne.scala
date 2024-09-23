@@ -205,6 +205,21 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   // @see Figure 2 in Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
 
   /**
+   * uniform substitution on expressions
+   *
+   * @param u
+   *   * the set of variables that are taboo, so cannot be introduced free by the substitution into term.
+   */
+  private def usubst(u: SetLattice[Variable], expr: Expression): Expression = {
+    expr match {
+      case f: Formula => usubst(u, f)
+      case t: Term => usubst(u, t)
+      case p: Program => usubst(u, p)._2
+      case _: Function => ???
+    }
+  }
+
+  /**
    * uniform substitution on terms.
    * @param u
    *   the set of variables that are taboo, so cannot be introduced free by the substitution into term.

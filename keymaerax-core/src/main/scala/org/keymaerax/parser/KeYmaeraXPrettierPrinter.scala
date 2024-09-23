@@ -98,6 +98,15 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   protected def pwrapRightDoc(t: BinaryComposite /*Differential/Program*/, doc: Doc): Doc =
     if (skipParensRight(t)) doc else encloseText("{", doc, "}")
 
+  private def docOf(expr: Expression): Doc = {
+    expr match {
+      case f: Formula => docOf(f)
+      case t: Term => docOf(t)
+      case p: Program => docOf(p)
+      case _: Function => ???
+    }
+  }
+
   protected def docOf(term: Term): Doc = term match {
     case Differential(t @ Number(n)) if negativeBrackets =>
       if (n < 0) encloseText("((", Doc.text(n.bigDecimal.toPlainString), "))" + ppOp(term))
