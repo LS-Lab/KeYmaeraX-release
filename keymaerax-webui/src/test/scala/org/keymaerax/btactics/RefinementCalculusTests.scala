@@ -24,6 +24,8 @@ class RefinementCalculusTests extends TacticTestBase {
       refDiamond.provable,
       hideChoiceL.provable,
       hideChoiceR.provable,
+      refEq,
+      prgEqSym,
     )
     axioms.map(axiom => axiom.isProved shouldBe true)
   }

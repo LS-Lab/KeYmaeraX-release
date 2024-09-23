@@ -488,6 +488,13 @@ object RefinementCalculus extends TacticProvider {
     useAt(refChoiceR)(Position(1, Nil)) & useAt(refRefl)(Position(1, 0 :: Nil)) & prop,
   )
 
+  val refEq: ProvableSig = TactixLibrary
+    .proveBy("a{|^@|};<= b{|^@|}; <- a{|^@|};== b{|^@|};".asFormula, useAt(refAntiSym)(Position(1, 0 :: Nil)) & prop)
+
+  val prgEqSym: ProvableSig = TactixLibrary.proveBy(
+    "b{|^@|};== a{|^@|}; <- a{|^@|};== b{|^@|};".asFormula,
+    useAt(refAntiSym)(Position(1, 0 :: Nil)) & useAt(refAntiSym)(Position(1, 1 :: Nil)) & prop,
+  )
   // Congruence derived axioms
   // derived axioms used in CMonPrg (so useAt implicitely), thus given as Provables not lemmas, just in case to avoid dependencies
   // CMon seems to use lemmas just fine, so it may not be required
