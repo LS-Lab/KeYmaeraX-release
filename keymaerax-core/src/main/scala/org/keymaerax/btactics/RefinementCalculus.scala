@@ -5,16 +5,18 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, TacticInapplicableFailure}
+import org.keymaerax.bellerophon.{BuiltInTactic, DependentPositionWithAppliedInputTactic, TacticInapplicableFailure}
 import org.keymaerax.btactics.Ax._
+import org.keymaerax.btactics.SequentCalculus.commuteEquivR
 import org.keymaerax.btactics.SimplifierV3.simplify
-import org.keymaerax.btactics.TacticFactory.inputanon
-import org.keymaerax.btactics.TactixLibrary.{id, implyL, implyR, prop, useAt, DW, G}
+import org.keymaerax.btactics.TacticFactory.{anon, inputanon}
+import org.keymaerax.btactics.TactixLibrary.{equivifyR, id, implyL, implyR, prop, useAt, DW, G}
 import org.keymaerax.btactics.macros.{CoreAxiomInfo, DerivedAxiomInfo, DisplayLevel, Tactic, Unifier}
 import org.keymaerax.core._
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
+import org.keymaerax.infrastruct.Augmentors.{FormulaAugmentor, SequentAugmentor}
 import org.keymaerax.infrastruct.FormulaTools.dualFree
+import org.keymaerax.infrastruct.PosInExpr.HereP
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
@@ -534,4 +536,54 @@ object RefinementCalculus extends TacticProvider {
       implyL(Position(-1)) < (DW(2) & G(2) & prop, simplify(Position(1, 1 :: Nil)) & id),
   )
 
+  private[btactics] def CPrgEimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
+    require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
+
+    val sequent = provable.subgoals.head
+    require(
+      sequent.ante.isEmpty && sequent.succ.length == 1,
+      "Expected empty antecedent and single succedent formula, but got " + sequent,
+    )
+    sequent.succ.head match {
+      case Imply(l, r) =>
+        if (inEqPos == HereP) equivifyR(1).computeResult(provable)
+        else {
+          val (ctxP, a: Program) = l.at(inEqPos)
+          val (ctxQ, b: Program) = r.at(inEqPos)
+          // @note Could skip the construction of ctxQ but it's part of the .at construction anyways.
+          require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
+          Predef.assert(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
+          Predef.assert(ctxP.isProgramContext, "Program context expected for CPrgE")
+          provable(equivifyR(1), 0)(UnifyUSCalculus.CE(ctxP)(ProvableSig.startPlainProof(ProgramEquivalence(a, b))), 0)
+        }
+      case fml => throw new TacticInapplicableFailure("Expected implication, but got " + fml)
+    }
+  }
+
+  private[btactics] def CPrgErevimpFw(inEqPos: PosInExpr): BuiltInTactic = anon { (provable: ProvableSig) =>
+    require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
+
+    val sequent = provable.subgoals.head
+    require(
+      sequent.ante.isEmpty && sequent.succ.length == 1,
+      "Expected empty antecedent and single succedent formula, but got " + sequent,
+    )
+    sequent.succ.head match {
+      case Imply(l, r) =>
+        if (inEqPos == HereP) commuteEquivR(1).computeResult(equivifyR(1).computeResult(provable))
+        else {
+          val (ctxP, a: Program) = l.at(inEqPos)
+          val (ctxQ, b: Program) = r.at(inEqPos)
+          // @note Could skip the construction of ctxQ but it's part of the .at construction anyways.
+          require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
+          Predef.assert(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
+          Predef.assert(ctxP.isProgramContext, "Program context expected for CPrgE")
+          provable(equivifyR(1), 0)(commuteEquivR(1), 0)(
+            UnifyUSCalculus.CE(ctxP)(ProvableSig.startPlainProof(ProgramEquivalence(b, a))),
+            0,
+          )
+        }
+      case fml => throw new TacticInapplicableFailure("Expected implication, but got " + fml)
+    }
+  }
 }

@@ -5,7 +5,7 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.btactics.Ax.timesInverse
+import org.keymaerax.btactics.Ax.{notGreaterEqual, timesInverse}
 import org.keymaerax.btactics.Derive.useAt
 import org.keymaerax.btactics.RefinementCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
@@ -98,6 +98,17 @@ class RefinementCalculusTests extends TacticTestBase {
     pr2.subgoals.head shouldBe " ==> x:=0;?x*(x^(-1)) = 1; <= ?x=0;".asSequent
   }
 
+  it should "transform equivalent formulas in refinements" in {
+    val pr = TactixLibrary.proveBy(
+      "?x=0; <= x:=0;?x < 1;".asFormula,
+      useAt(notGreaterEqual, PosInExpr(1 :: Nil))(Position(1, List(1, 1, 0))),
+    )
+    pr.subgoals.head shouldBe " ==> ?x=0; <= x:=0;?!(x>= 1);".asSequent
+    val pr2 = TactixLibrary
+      .proveBy("x:=0;?!(x>= 1); <= ?x=0;".asFormula, useAt(notGreaterEqual)(Position(1, List(0, 1, 0))))
+    pr2.subgoals.head shouldBe " ==> x:=0;?x < 1; <= ?x=0;".asSequent
+  }
+
   it should "transform programs in modality" in {
     val pr = TactixLibrary
       .proveBy("[x':=2;?(x>=0);]x > 0".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
@@ -111,6 +122,16 @@ class RefinementCalculusTests extends TacticTestBase {
     pr3.subgoals.head shouldBe "[y:=*;]x > 0 ==> false".asSequent
   }
 
+  it should "transform equivalent programs in modality" in {
+    val pr = TactixLibrary
+      .proveBy("[x:=2;?true;]x > 0".asFormula, useAt(refSeqIdR, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+    pr.subgoals.head shouldBe " ==> [x:=2;] x > 0".asSequent
+
+    val pr2 = TactixLibrary
+      .proveBy("[x:=2;]x > 0".asFormula, useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 0 :: Nil)))
+    pr2.subgoals.head shouldBe " ==> [x:=2;?true;] x > 0".asSequent
+  }
+
   it should "transform programs in refinement" in {
     val pr = TactixLibrary
       .proveBy("x':=2;?(x>=0); <= x:=*;++y:=*;".asFormula, useAt(refDX, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
@@ -118,5 +139,15 @@ class RefinementCalculusTests extends TacticTestBase {
 
     val pr2 = TactixLibrary.proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(hideChoiceL)(Position(1, 1 :: Nil)))
     pr2.subgoals.head shouldBe " ==> x:=2; <= y:=*;".asSequent
+  }
+
+  it should "transform equivalent programs in refinement" in {
+    val pr = TactixLibrary
+      .proveBy("x:=2;?true; <= x:=*;++y:=*;".asFormula, useAt(refSeqIdR, PosInExpr(0 :: Nil))(Position(1, 0 :: Nil)))
+    pr.subgoals.head shouldBe " ==> x:=2; <= x:=*;++y:=*;".asSequent
+
+    val pr2 = TactixLibrary
+      .proveBy("x:=2; <= x:=*;++y:=*;".asFormula, useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 0 :: Nil)))
+    pr2.subgoals.head shouldBe " ==> x:=2;?true; <= x:=*;++y:=*;".asSequent
   }
 }

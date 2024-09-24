@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, _}
 import org.keymaerax.btactics.DebuggingTactics._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.PropositionalTactics._
+import org.keymaerax.btactics.RefinementCalculus.{CPrgEimpFw, CPrgErevimpFw}
 import org.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
@@ -938,6 +939,8 @@ trait UnifyUSCalculus {
               if (leftKey == p.isAnte) CEimpFw(p.inExpr).result _ else CErevimpFw(p.inExpr).result _
             else if (other.kind == TermKind)
               if (leftKey == p.isAnte) CQimpFw(p.inExpr).result _ else CQrevimpFw(p.inExpr).result _
+            else if (other.kind == ProgramKind)
+              if (leftKey == p.isAnte) CPrgEimpFw(p.inExpr).result _ else CPrgErevimpFw(p.inExpr).result _
             else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other),
             1,
           )(subst.toForward(fact), 1))
@@ -988,9 +991,9 @@ trait UnifyUSCalculus {
 
           case Refinement(other, DotProgram) => implyStep(other)
 
-          case ProgramEquivalence(DotProgram, other) => ???
+          case ProgramEquivalence(DotProgram, other) => equivStep(leftKey = true, other, fact)
 
-          case ProgramEquivalence(other, DotProgram) => ???
+          case ProgramEquivalence(other, DotProgram) => equivStep(leftKey = false, other, fact)
 
           // @note all DotTerms are equal
           case Imply(prereq, remainder) =>
@@ -2075,12 +2078,17 @@ trait UnifyUSCalculus {
   def useFor(axiom: ProvableInfo, inst: Subst => Subst): ForwardPositionTactic = useForImpl(axiom, inst)
 
   /**
-   * CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C. Uses CE or
-   * CQ as needed.
+   * CE(C) will wrap any equivalence `left<->right`, `left == right` or equality `left=right` fact it gets within
+   * context C. Uses CE, CPrgE or CQ as needed.
    * {{{
    *       p(x) <-> q(x)
    *   --------------------- CE
    *    C{p(x)} <-> C{q(x)}
+   * }}}
+   * {{{
+   *       b(x) == c(x)
+   *   --------------------- CPrgE
+   *    C{b(x)} <-> C{c(x)}
    * }}}
    * {{{
    *       f(x) = g(x)
@@ -2117,6 +2125,14 @@ trait UnifyUSCalculus {
           SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm()), C.ctx) ::
             SubstitutionPair(UnitFunctional("f_", AnyArg, Real), left) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), right) ::
+            Nil
+        )))
+      case ProgramEquivalence(left, right) =>
+        require(C.isProgramContext, "Program context expected to make use of equivalences with CE " + C)
+        equiv(ProvableSig.rules("CPrgE congruence")(USubst(
+          SubstitutionPair(PredicationalOf(Function("ctx_", None, Trafo, Bool), DotProgram), C.ctx) ::
+            SubstitutionPair(SystemConst("b_"), left) ::
+            SubstitutionPair(SystemConst("c_"), right) ::
             Nil
         )))
       case _ => throw new TacticInapplicableFailure("expected equivalence or equality fact " + equiv.conclusion)
