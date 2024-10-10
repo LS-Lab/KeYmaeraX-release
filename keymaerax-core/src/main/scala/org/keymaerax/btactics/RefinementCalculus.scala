@@ -5,19 +5,21 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.{BuiltInTactic, DependentPositionWithAppliedInputTactic, TacticInapplicableFailure}
+import org.keymaerax.bellerophon.{BuiltInRightTactic, BuiltInTactic, DependentPositionWithAppliedInputTactic, OnAll, TacticInapplicableFailure}
 import org.keymaerax.btactics.Ax._
 import org.keymaerax.btactics.SequentCalculus.commuteEquivR
 import org.keymaerax.btactics.SimplifierV3.simplify
-import org.keymaerax.btactics.TacticFactory.{anon, inputanon}
-import org.keymaerax.btactics.TactixLibrary.{equivifyR, id, implyL, implyR, prop, useAt, DW, G}
+import org.keymaerax.btactics.TacticFactory.{anon, inputanon, inputanonP}
+import org.keymaerax.btactics.TactixLibrary.{DW, G, andR, equivifyR, id, implyL, implyR, orR, prop, useAt}
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{CoreAxiomInfo, DerivedAxiomInfo, DisplayLevel, Tactic, Unifier}
+import org.keymaerax.core.StaticSemantics.symbols
 import org.keymaerax.core._
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.infrastruct.Augmentors.{FormulaAugmentor, SequentAugmentor}
+import org.keymaerax.infrastruct.Augmentors.{FormulaAugmentor, ProgramAugmentor, SequentAugmentor}
 import org.keymaerax.infrastruct.FormulaTools.dualFree
 import org.keymaerax.infrastruct.PosInExpr.HereP
-import org.keymaerax.infrastruct.{PosInExpr, Position}
+import org.keymaerax.infrastruct.{Context, PosInExpr, Position, SuccPosition}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
 
@@ -462,6 +464,44 @@ object RefinementCalculus extends TacticProvider {
     useAt(diamond, PosInExpr(1 :: Nil))(Position(1, 1 :: 0 :: Nil)) &
       useAt(diamond, PosInExpr(1 :: Nil))(Position(1, 1 :: 1 :: Nil)) &
       useAt(converseImply, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & useAt(refBox)(Position(1, 1 :: Nil)) & prop,
+  )
+
+  @Derivation
+  val testSeq: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "testSeq",
+      canonicalName = "test sequence",
+      displayName = Some("Test Sequence"),
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?p();?q(); == ?p()&q();".asFormula,
+    useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+      useAt(refSeqIdL, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & useAt(refSeq)(1) &
+        useAt(refTest)(Position(1, 0 :: Nil)) & useAt(refTest)(Position(1, 1 :: 1 :: Nil)) &
+        useAt(testb)(Position(1, 1 :: Nil)) & prop,
+      useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 0 :: Nil)) & useAt(refSeq)(1) &
+        useAt(refTest)(Position(1, 0 :: Nil)) & useAt(refTest)(Position(1, 1 :: 1 :: Nil)) &
+        useAt(testb)(Position(1, 1 :: Nil)) & prop,
+    ),
+  )
+
+  @Derivation
+  val testChoice: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "testChoice",
+      canonicalName = "test choice",
+      displayName = Some("Test Choice"),
+      displayLevel = DisplayLevel.Menu,
+      key = "0",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?p();++?q(); == ?p()|q();".asFormula,
+    useAt(refAntiSym)(1) & andR(1) & Idioms.<(
+      useAt(refChoiceL)(1) & andR(1) & OnAll(useAt(refTest)(1) & prop),
+      useAt(refChoiceR)(1) & orR(1) & useAt(refTest)(1) & useAt(refTest)(2) & prop,
+    ),
   )
 
   @Derivation
