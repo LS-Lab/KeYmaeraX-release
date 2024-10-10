@@ -35,6 +35,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refAntiSym",
     canonicalName = "refinement antisymmetry",
     displayName = Some("Refinement Antisymmetry"),
+    displayConclusion = "__a == b__ <-> (a <= b ∧ b <= a)",
     displayLevel = DisplayLevel.Menu,
     key = "0",
     unifier = Unifier.SurjectiveLinear,
@@ -54,6 +55,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refTest",
     canonicalName = "refinement test",
     displayName = Some("Refinement Test"),
+    displayConclusion = "__?p <= ?q__ <-> (p -> q)",
     displayLevel = DisplayLevel.Menu,
     key = "0",
     unifier = Unifier.SurjectiveLinear,
@@ -64,7 +66,7 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "refinement assign",
     displayName = Some("Refinement Assign"),
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     unifier = Unifier.Full,
   )
   @Derivation
@@ -73,7 +75,7 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "refinement stutter",
     displayName = Some("Refinement Stutter"),
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -81,6 +83,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refChoiceL",
     canonicalName = "refinement choice left",
     displayName = Some("Refinement Choice Left"),
+    displayConclusion = "__a ∪ b <= c__ <-> (a <= c ∧ b <= c)",
     displayLevel = DisplayLevel.Menu,
     key = "0",
     unifier = Unifier.SurjectiveLinear,
@@ -90,6 +93,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refChoiceR",
     canonicalName = "refinement choice right",
     displayName = Some("Refinement Choice Right"),
+    displayConclusion = "__a <= b ∪ c__ <- (a <= b ∨ a <= c)",
     displayLevel = DisplayLevel.Menu,
     key = "1",
     unifier = Unifier.SurjectiveLinear,
@@ -100,6 +104,7 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "refinement sequence",
     displayName = Some("Refinement Sequence"),
     displayLevel = DisplayLevel.Menu,
+    displayConclusion = "__a;b <= c;d__ <- a <= c ∧ [a](b <= d)",
     key = "1",
     unifier = Unifier.SurjectiveLinear,
   )
@@ -108,6 +113,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refLoopL",
     canonicalName = "refinement loop left",
     displayName = Some("Refinement Loop Left"),
+    displayConclusion = "__{a*};b <= b__ <- [a*](a;b <= b)",
     displayLevel = DisplayLevel.Menu,
     key = "1",
     unifier = Unifier.Surjective,
@@ -117,6 +123,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refLoopR",
     canonicalName = "refinement loop right",
     displayName = Some("Refinement Loop Right"),
+    displayConclusion = "__a;{b*} <= a__ <- a;b <= a",
     displayLevel = DisplayLevel.Menu,
     key = "1",
     unifier = Unifier.Surjective,
@@ -127,7 +134,8 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "refinement test det",
     displayName = Some("Refinement Test Det"),
     displayLevel = DisplayLevel.Menu,
-    key = "0",
+    displayConclusion = "?p;a <= ?p;b <-> __[?p](a <= b)__",
+    key = "1",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -135,8 +143,9 @@ object RefinementCalculus extends TacticProvider {
     name = "refAssignDet",
     canonicalName = "refinement assign det",
     displayName = Some("Refinement Assignment Det"),
+    displayConclusion = "x:=f;a <= x:=f;b <-> __[x:=f;](a <= b)__",
     displayLevel = DisplayLevel.Menu,
-    key = "0",
+    key = "1",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -162,6 +171,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refUnloop",
     canonicalName = "refinement unloop",
     displayName = Some("Refinement unloop"),
+    displayConclusion = "__a* <= b*__ <- [a*](a <= b)",
     displayLevel = DisplayLevel.Menu,
     key = "1",
     unifier = Unifier.SurjectiveLinear,
@@ -173,6 +183,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refOde",
     canonicalName = "refinement ode",
     displayLevel = DisplayLevel.Menu,
+    displayConclusion = "__{x' = f(x) & p(x)} <= {x' = g(x) & q(x)}__ <-> [{x' = f(x) & p(x)}](f(x) = g(x) ∧ q(x))",
     key = "0",
     unifier = Unifier.SurjectiveLinear,
   )
@@ -181,6 +192,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refOdes",
     canonicalName = "refinement ode (system)",
     displayName = Some("Refinement ODE"),
+    displayConclusion = "__{x' = F,c & P} <= {x' = G,c & Q}__ <-> [{x' = F,c & P}](F = G ∧ Q)",
     displayLevel = DisplayLevel.Menu,
     key = "0",
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
@@ -191,8 +203,9 @@ object RefinementCalculus extends TacticProvider {
     name = "refOdeIdemp",
     canonicalName = "ode idempotent",
     displayName = Some("Refinement ODE idempotent"),
+    displayConclusion = "__{x' = f(x) & p(x)};{x' = f(x) & p(x)}__ <= {x' = f(x) & p(x)}",
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
     unifier = Unifier.Surjective,
   )
@@ -201,8 +214,9 @@ object RefinementCalculus extends TacticProvider {
     name = "refDE",
     canonicalName = "refinement DE",
     displayName = Some("Refinement DE"),
+    displayConclusion = "__{x' = F,c & P}__ == {x' = F,c & P};x':=F",
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
     unifier = Unifier.Surjective,
   )
@@ -212,7 +226,8 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "refinement DW",
     displayName = Some("Refinement DW"),
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    displayConclusion = "__{c & P}__ == ?P;{c & P};?P",
+    key = "0",
     // Technically not surjective as ODE invariant prevents US to substitute differentials in ODE
     unifier = Unifier.Surjective,
   )
@@ -221,6 +236,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refDX",
     canonicalName = "refinement DX",
     displayName = Some("Refinement DX"),
+    displayConclusion = "x':=f(x);?p(x) <= {x' = f(x) & p(x)}",
     displayLevel = DisplayLevel.Menu,
     key = "",
     unifier = Unifier.Full,
@@ -242,8 +258,9 @@ object RefinementCalculus extends TacticProvider {
     name = "refChoiceId",
     canonicalName = "choice identity",
     displayName = Some("Choice Identity"),
+    displayConclusion = "__a ∪ ?⊥__ == a",
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -252,7 +269,7 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "choice idempotent",
     displayName = Some("Choice Idempotent"),
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -261,7 +278,7 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "choice commute",
     displayName = Some("Choice Commutativity"),
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -270,7 +287,7 @@ object RefinementCalculus extends TacticProvider {
     canonicalName = "choice associative",
     displayName = Some("Choice Associativity"),
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "1",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -278,8 +295,9 @@ object RefinementCalculus extends TacticProvider {
     name = "refSeqIdL",
     canonicalName = "sequence identity left",
     displayName = Some("Sequence Identity Left"),
+    displayConclusion = "__?⊤;a__ == a",
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -287,8 +305,9 @@ object RefinementCalculus extends TacticProvider {
     name = "refSeqIdR",
     canonicalName = "sequence identity right",
     displayName = Some("Sequence Identity Right"),
+    displayConclusion = "__a;?⊤__ == a",
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "0",
     unifier = Unifier.Surjective,
   )
   @Derivation
@@ -296,6 +315,7 @@ object RefinementCalculus extends TacticProvider {
     name = "refSeqAssoc",
     canonicalName = "sequence associative",
     displayName = Some("Sequence Associativity"),
+    displayConclusion = "a;{b;c} == {a;b};c",
     displayLevel = DisplayLevel.Menu,
     key = "",
     unifier = Unifier.Surjective,
@@ -305,8 +325,9 @@ object RefinementCalculus extends TacticProvider {
     name = "refDistrL",
     canonicalName = "distribute left",
     displayName = Some("Distributivity Left"),
+    displayConclusion = "a;b ∪ a;c == __a;{b ∪ c}__",
     displayLevel = DisplayLevel.Menu,
-    key = "",
+    key = "1",
     unifier = Unifier.Surjective,
   )
   @Derivation
