@@ -1,5 +1,7 @@
 # KeYmaera X Theorem Prover for Hybrid Systems
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13379612.svg)](https://doi.org/10.5281/zenodo.13379612)
+
 Self-driving cars, autonomous robots, modern airplanes, or robotic surgery:
 we increasingly entrust our lives to computers and therefore should strive
 for nothing but the highest safety standards - mathematical correctness proof.
@@ -87,7 +89,7 @@ KeYmaera X implements the uniform substitution calculus for differential dynamic
 in order to enable soundness assurance by way of a small trusted LCF-style kernel
 while still being amenable to automatic theorem proving.
 
-https://www.ls.cs.cmu.edu/publications.html
+https://lfcps.org/pub/index.html
 
 1. André Platzer.
   [A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
