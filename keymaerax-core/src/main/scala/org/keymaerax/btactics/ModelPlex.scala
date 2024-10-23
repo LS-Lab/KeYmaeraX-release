@@ -71,7 +71,6 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   override def apply(
       formula: Formula,
       kind: ModelPlexKind.Value,
-      checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
       unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty,
   ): Formula = {
     val vars = StaticSemantics
@@ -81,7 +80,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       .map((x: NamedSymbol) => x.asInstanceOf[Variable])
       .toList
     val sortedVars = vars.sortWith((x, y) => x < y)
-    apply(sortedVars, kind, checkProvable)(formula)
+    apply(sortedVars, kind)(formula)
   }
 
   /**
@@ -89,14 +88,8 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    *
    * @param kind
    *   The kind of monitor, either 'ctrl or 'model.
-   * @param checkProvable
-   *   true to check the Provable proof certificates (recommended).
    */
-  override def apply(
-      vars: List[Variable],
-      kind: ModelPlexKind.Value,
-      checkProvable: Option[ProvableSig => Unit],
-  ): Formula => Formula = formula => {
+  override def apply(vars: List[Variable], kind: ModelPlexKind.Value): Formula => Formula = formula => {
     val ModelPlexConjecture(_, mxInputFml, assumptions) =
       createMonitorSpecificationConjecture(formula, vars, ListMap.empty)
     val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
@@ -124,15 +117,9 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
     assert(result.conclusion == mxInputSequent, "Proof was a proof of the ModelPlex specification")
     // @todo conjunction with phi|_cnst when monitor should also check the conditions on constants
     val mxOutputProofTree = result.subgoals.head.succ.head
-    checkProvable match {
-      case Some(report) =>
-        report(result)
-        logger.info("ModelPlex Proof certificate: Produced")
-        mxOutputProofTree
-      case None =>
-        logger.info("ModelPlex Proof certificate: Skipped")
-        mxOutputProofTree
-    }
+
+    mxOutputProofTree
+
   }
 
   @Tactic(name = "mxSynthesize", displayNameLong = Some("ModelPlex Monitor Synthesis"))
@@ -380,10 +367,9 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
   def createMonitorCorrectnessConjecture(
       vars: List[Variable],
       kind: ModelPlexKind.Value,
-      checkProvable: Option[ProvableSig => Unit],
       unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
   ): (Formula => Formula) = formula => {
-    val monitor = apply(vars, kind, checkProvable)(formula)
+    val monitor = apply(vars, kind)(formula)
     val ModelPlexConjecture(_, monitorConjecture, assumptions) =
       createMonitorSpecificationConjecture(formula, vars, unobservable)
     Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
@@ -663,8 +649,6 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
    *   The fallback controller to embed in the sandbox, `ctrl` by default.
    * @param kind
    *   The kind of monitor to derive (controller or model monitor).
-   * @param checkProvable
-   *   Whether or not to check the ModelPlex provable.
    * @return
    *   The sandbox formula with a tactic to prove it, and a list of lemmas used in the proof.
    */
@@ -673,7 +657,6 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       tactic: BelleExpr,
       fallback: Option[Program],
       kind: ModelPlexKind.Value,
-      checkProvable: Option[(ProvableSig => Unit)],
       synthesizeProofs: Boolean,
       defs: Declaration,
       postVar: Variable => Variable = NAMED_POST_VAR,
@@ -732,7 +715,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       .map(replace(_, consts))
       .reduceRightOption(And)
       .getOrElse(True)
-    val monitor = replace(apply(vars, kind, checkProvable)(expandedModel), consts)
+    val monitor = replace(apply(vars, kind)(expandedModel), consts)
     val senseVars: List[Variable] = StaticSemantics
       .boundVars(ode)
       .toSet

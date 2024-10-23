@@ -163,7 +163,6 @@ object KeymaeraxWebui {
         inputEntry.tactics.head._3,
         Some(fallbackProgram),
         kind = ModelPlexKind.Ctrl,
-        checkProvable = None,
         synthesizeProofs = false,
         defs = inputEntry.defs,
       )(inputModel)

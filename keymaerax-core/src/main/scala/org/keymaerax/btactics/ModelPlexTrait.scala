@@ -52,16 +52,9 @@ trait ModelPlexTrait extends ((List[Variable], ModelPlexKind.Value) => (Formula 
   def apply(
       formula: Formula,
       kind: ModelPlexKind.Value,
-      checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
       unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty,
   ): Formula
-  def apply(vars: List[Variable], kind: ModelPlexKind.Value): Formula => Formula =
-    apply(vars, kind, checkProvable = Some(_ => ()))
-  def apply(
-      vars: List[Variable],
-      kind: ModelPlexKind.Value,
-      checkProvable: Option[ProvableSig => Unit],
-  ): Formula => Formula
+  def apply(vars: List[Variable], kind: ModelPlexKind.Value): Formula => Formula
   def createMonitorSpecificationConjecture(
       fml: Formula,
       vars: List[Variable],

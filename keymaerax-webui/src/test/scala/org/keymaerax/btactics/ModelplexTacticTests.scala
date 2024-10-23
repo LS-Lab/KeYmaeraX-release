@@ -79,7 +79,7 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> xpost=1".asSequent
 
     val monitorCorrectnessConjecture = ModelPlex
-      .createMonitorCorrectnessConjecture(List(Variable("x")), ModelPlexKind.Ctrl, None, ListMap.empty)(model)
+      .createMonitorCorrectnessConjecture(List(Variable("x")), ModelPlexKind.Ctrl, ListMap.empty)(model)
     println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
     proveBy(monitorCorrectnessConjecture, implyR(1) * 2 & ModelPlex.controllerMonitorByChase(1) & autoClose) shouldBe
       Symbol("proved")
@@ -1018,7 +1018,6 @@ class ModelplexTacticTests extends TacticTestBase {
         entry.tactics.head._3,
         Some(fallback),
         ModelPlexKind.Ctrl,
-        None,
         synthesizeProofs = false,
         defs = entry.defs,
       )(entry.model.asInstanceOf[Formula])
