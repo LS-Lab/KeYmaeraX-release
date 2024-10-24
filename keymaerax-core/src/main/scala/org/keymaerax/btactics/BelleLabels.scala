@@ -58,8 +58,8 @@ object BelleLabels {
   val cutUse: BelleLabel = BelleTopLevelLabel("Use")
   val cutShow: BelleLabel = BelleTopLevelLabel("Show")
 
-  val mrShow: BelleLabel = BelleTopLevelLabel("Show [a]Q")
-  val mrUse: BelleLabel = BelleTopLevelLabel("Use Q->P")
+  val mrShow: BelleLabel = BelleTopLevelLabel("Show Q->P")
+  val mrUse: BelleLabel = BelleTopLevelLabel("Use [a]Q")
 
   // lemmas
   def lemmaUnproved(name: String): BelleLabel = BelleTopLevelLabel("Lemma " + name)
