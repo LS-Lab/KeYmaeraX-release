@@ -535,17 +535,6 @@ object TermProvable {
     .map(x => (x._1, TermProvable(ElidingProvable.rules.apply(x._1), RuleTerm(x._1), Declaration(Map.empty))))
 
   def startProof(goal: Sequent, defs: Declaration): ProvableSig = {
-    val sym = StaticSemantics.signature(goal)
-    if (
-      sym.exists({
-        case _: UnitFunctional => true
-        case _ => false
-      })
-    ) {
-      val 2 = 1 + 1
-      ???
-    }
-
     TermProvable(ElidingProvable.startProof(goal, defs), StartProof(goal), defs)
   }
 
@@ -554,16 +543,6 @@ object TermProvable {
   private def fml2Seq(f: Formula): Sequent = Sequent(IndexedSeq(), IndexedSeq(f))
 
   def startProof(goal: Formula, defs: Declaration): ProvableSig = {
-    val sym = StaticSemantics.signature(goal)
-    if (
-      sym.exists({
-        case _: UnitFunctional => true
-        case _ => false
-      })
-    ) {
-      // println("Goal needs exemption: " + goal)
-
-    }
     TermProvable(ElidingProvable.startProof(goal, defs), StartProof(fml2Seq(goal)), defs)
   }
 
@@ -711,19 +690,7 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm, defs: Declaration)
   lazy val rules: immutable.Map[String, ProvableSig] = TermProvable.rules
 
   /** @inheritdoc */
-  def startProof(goal: Sequent): ProvableSig = {
-    val sym = StaticSemantics.signature(goal)
-    if (
-      sym.exists({
-        case _: UnitFunctional => true
-        case _ => false
-      })
-    ) {
-      val 2 = 1 + 1
-      ???
-    }
-    TermProvable.startProof(goal, defs)
-  }
+  def startProof(goal: Sequent): ProvableSig = { TermProvable.startProof(goal, defs) }
 
   /** @inheritdoc */
   def startProof(goal: Formula): ProvableSig = startProof(Sequent(IndexedSeq(), IndexedSeq(goal)))
