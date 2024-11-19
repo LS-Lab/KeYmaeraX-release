@@ -1166,7 +1166,7 @@ sealed trait RightRule extends PositionRule {
  *    G |- p, D
  * }}}
  */
-case class HideRight(pos: SuccPos) extends RightRule {
+final case class HideRight(pos: SuccPos) extends RightRule {
   val name: String = "HideRight"
 
   /** weakening right = hide right */
@@ -1183,7 +1183,7 @@ case class HideRight(pos: SuccPos) extends RightRule {
  *  p, G |- D
  * }}}
  */
-case class HideLeft(pos: AntePos) extends LeftRule {
+final case class HideLeft(pos: AntePos) extends LeftRule {
   val name: String = "HideLeft"
 
   /** weakening left = hide left */
@@ -1200,7 +1200,7 @@ case class HideLeft(pos: AntePos) extends LeftRule {
  * G |- p, q, D
  * }}}
  */
-case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends Rule {
+final case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends Rule {
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(
@@ -1218,7 +1218,7 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends Rule {
  * p, q, G |- D
  * }}}
  */
-case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
+final case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
   val name: String = "ExchangeLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(
@@ -1242,7 +1242,7 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
  *   p, G |- p, D
  * }}}
  */
-case class Close(assume: AntePos, pos: SuccPos) extends Rule {
+final case class Close(assume: AntePos, pos: SuccPos) extends Rule {
   val name: String = "Close"
 
   /**
@@ -1268,7 +1268,7 @@ case class Close(assume: AntePos, pos: SuccPos) extends Rule {
  *   G |- true, D
  * }}}
  */
-case class CloseTrue(pos: SuccPos) extends RightRule {
+final case class CloseTrue(pos: SuccPos) extends RightRule {
   val name: String = "CloseTrue"
 
   /**
@@ -1290,7 +1290,7 @@ case class CloseTrue(pos: SuccPos) extends RightRule {
  *   false, G |- D
  * }}}
  */
-case class CloseFalse(pos: AntePos) extends LeftRule {
+final case class CloseFalse(pos: AntePos) extends LeftRule {
   val name: String = "CloseFalse"
 
   /**
@@ -1316,7 +1316,7 @@ case class CloseFalse(pos: AntePos) extends LeftRule {
  * @note
  *   c will be added at the end on the subgoals
  */
-case class Cut(c: Formula) extends Rule {
+final case class Cut(c: Formula) extends Rule {
   val name: String = "cut"
 
   /** cut in the given formula c */
@@ -1350,7 +1350,7 @@ case class Cut(c: Formula) extends Rule {
  *   G |- !p, D
  * }}}
  */
-case class NotRight(pos: SuccPos) extends RightRule {
+final case class NotRight(pos: SuccPos) extends RightRule {
   val name: String = "Not Right"
 
   /** !R Not right */
@@ -1368,7 +1368,7 @@ case class NotRight(pos: SuccPos) extends RightRule {
  *  !p, G |- D
  * }}}
  */
-case class NotLeft(pos: AntePos) extends LeftRule {
+final case class NotLeft(pos: AntePos) extends LeftRule {
   val name: String = "Not Left"
 
   /** !L Not left */
@@ -1386,7 +1386,7 @@ case class NotLeft(pos: AntePos) extends LeftRule {
  *   G |- p&q, D
  * }}}
  */
-case class AndRight(pos: SuccPos) extends RightRule {
+final case class AndRight(pos: SuccPos) extends RightRule {
   val name: String = "And Right"
 
   /** &R And right */
@@ -1404,7 +1404,7 @@ case class AndRight(pos: SuccPos) extends RightRule {
  *   p&q, G |- D
  * }}}
  */
-case class AndLeft(pos: AntePos) extends LeftRule {
+final case class AndLeft(pos: AntePos) extends LeftRule {
   val name: String = "And Left"
 
   /** &L And left */
@@ -1422,7 +1422,7 @@ case class AndLeft(pos: AntePos) extends LeftRule {
  *   G |- p|q, D
  * }}}
  */
-case class OrRight(pos: SuccPos) extends RightRule {
+final case class OrRight(pos: SuccPos) extends RightRule {
   val name: String = "Or Right"
 
   /** |R Or right */
@@ -1440,7 +1440,7 @@ case class OrRight(pos: SuccPos) extends RightRule {
  *   p|q, G |- D
  * }}}
  */
-case class OrLeft(pos: AntePos) extends LeftRule {
+final case class OrLeft(pos: AntePos) extends LeftRule {
   val name: String = "Or Left"
 
   /** |L Or left */
@@ -1458,7 +1458,7 @@ case class OrLeft(pos: AntePos) extends LeftRule {
  *   G |- p->q, D
  * }}}
  */
-case class ImplyRight(pos: SuccPos) extends RightRule {
+final case class ImplyRight(pos: SuccPos) extends RightRule {
   val name: String = "Imply Right"
 
   /** ->R Imply right */
@@ -1476,7 +1476,7 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
  *   p->q, G |- D
  * }}}
  */
-case class ImplyLeft(pos: AntePos) extends LeftRule {
+final case class ImplyLeft(pos: AntePos) extends LeftRule {
   val name: String = "Imply Left"
 
   /** ->L Imply left */
@@ -1494,7 +1494,7 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
  *   G |- p<->q, D
  * }}}
  */
-case class EquivRight(pos: SuccPos) extends RightRule {
+final case class EquivRight(pos: SuccPos) extends RightRule {
   val name: String = "Equiv Right"
 
   /** <->R Equiv right */
@@ -1517,7 +1517,7 @@ case class EquivRight(pos: SuccPos) extends RightRule {
  * @note
  *   Positions remain stable when decomposed this way around.
  */
-case class EquivLeft(pos: AntePos) extends LeftRule {
+final case class EquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "Equiv Left"
 
   /** <->L Equiv left */
@@ -1731,7 +1731,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
  * @see
  *   SkolemClashException
  */
-case class Skolemize(pos: SeqPos) extends PositionRule {
+final case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
 
   /**
@@ -1784,7 +1784,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
  *
  * @derived
  */
-case class CoHideRight(pos: SuccPos) extends RightRule {
+final case class CoHideRight(pos: SuccPos) extends RightRule {
   val name: String = "CoHideRight"
 
   /** co-weakening right = co-hide right (all but indicated position) */
@@ -1807,7 +1807,7 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
  *   Not used, just contained for symmetry reasons
  * @derived
  */
-case class CoHideLeft(pos: AntePos) extends LeftRule {
+final case class CoHideLeft(pos: AntePos) extends LeftRule {
   val name: String = "CoHideLeft"
 
   /** co-weakening left = co-hide left (all but indicated position) */
@@ -1826,7 +1826,7 @@ case class CoHideLeft(pos: AntePos) extends LeftRule {
  *
  * @derived
  */
-case class CoHide2(pos1: AntePos, pos2: SuccPos) extends Rule {
+final case class CoHide2(pos1: AntePos, pos2: SuccPos) extends Rule {
   val name: String = "CoHide2"
 
   /** co-weakening = co-hide all but the indicated positions */
@@ -1848,7 +1848,7 @@ case class CoHide2(pos1: AntePos, pos2: SuccPos) extends Rule {
  * @derived(cut(c->p)
  *   & <(ImplyLeft & <(CloseId, HideRight), HideRight))
  */
-case class CutRight(c: Formula, pos: SuccPos) extends Rule {
+final case class CutRight(c: Formula, pos: SuccPos) extends Rule {
   val name: String = "cut Right"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
@@ -1871,7 +1871,7 @@ case class CutRight(c: Formula, pos: SuccPos) extends Rule {
  * @derived(cut(p->c)
  *   & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
  */
-case class CutLeft(c: Formula, pos: AntePos) extends Rule {
+final case class CutLeft(c: Formula, pos: AntePos) extends Rule {
   val name: String = "cut Left"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
@@ -1890,7 +1890,7 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
  *
  * @derived
  */
-case class CommuteEquivRight(pos: SuccPos) extends RightRule {
+final case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   val name: String = "CommuteEquivRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p, q) = s(pos)
@@ -1910,7 +1910,7 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
  * @note
  *   Not used, just contained for symmetry reasons
  */
-case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
+final case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "CommuteEquivLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p, q) = s(pos)
@@ -1928,7 +1928,7 @@ case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
  */
 // ->2<-> Equivify Right: Equivalencify Implication Right
 //@derived(cut(a<->b) & prop...)
-case class EquivifyRight(pos: SuccPos) extends RightRule {
+final case class EquivifyRight(pos: SuccPos) extends RightRule {
   val name: String = "EquivifyRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(a, b) = s(pos)
