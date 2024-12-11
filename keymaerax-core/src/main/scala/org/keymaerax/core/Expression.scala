@@ -795,19 +795,29 @@ final case class PredOf(func: Function, child: Term) extends AtomicFormula with 
 }
 
 /**
- * Predicational or quantifier symbol applied to argument formula child, written `C{child}`.
+ * Predicational or quantifier symbol applied to argument expression child, written `C{child}`.
  *
- * Predicationals are similar to predicate symbol applications, except that they accept a formula as an argument rather
- * than a term. Also, their truth-value may depend on the entire truth table of `child` at any state.
+ * Predicationals are similar to predicate symbol applications, except that they accept any expression as an argument
+ * rather than a term. Also, their truth-value may depend on the semantics (truth table/value/relation) of `child` at
+ * any state.
  * @note
- *   In theory, `C{child}` is written `C(child)`.
+ *   In theory, `C{child}` is written `C(child)` and only allows `child` to be a formula.
  */
-final case class PredicationalOf(func: Function, child: Formula)
+final case class PredicationalOf(func: Function, child: Expression)
     extends AtomicFormula with ApplicationOf with StateDependent {
   // @note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected argument sort Bool: " + this)
-  insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
-  insist(func.interp.isEmpty, "only uninterpreted predicationals are currently supported: " + this)
+  insist(
+    func.domain == child.sort,
+    "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func +
+      " to " + child,
+  )
+  insist(!func.interpreted, "only uninterpreted predicationals are currently supported: " + this)
+  // Predicational only supports FormulaKind, ProgramKind, and (single) TermKind
+  insist(
+    child.kind == FormulaKind || child.kind == ProgramKind || (child.kind == TermKind && child.sort == Real),
+    "predicationals cannot be applied to formulas, terms or programs:" + this,
+  )
 }
 
 /**

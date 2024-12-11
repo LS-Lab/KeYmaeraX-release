@@ -176,14 +176,14 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
     // @note semantic state-dependent symbols have no free variables.
     case what: StateDependent => what match {
         // unit functionals are like Predicationals
+        // unit predicationals are nullary Predicationals
         // predicationals are not function nor predicate symbols
         // DotFormula is a nullary Predicational
-        // unit predicationals are nullary Predicationals
         // program constants are always admissible, since their meaning doesn't depend on state
         // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
-        case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) | DotProgram | DotDiffProgram =>
-          bottom
+        case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) |
+            PredicationalOf(_, DotProgram) | PredicationalOf(_, _: DotTerm) | DotFormula | ProgramConst(_, _) |
+            SystemConst(_, _) | DifferentialProgramConst(_, _) | DotProgram | DotDiffProgram => bottom
         case PredicationalOf(_, _) => throw SubstitutionClashException(
             toString,
             "<none>",
@@ -221,6 +221,8 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
         case FuncOf(_, d: DotTerm) => StaticSemantics.signature(repl) - d
         case PredOf(_, d: DotTerm) => StaticSemantics.signature(repl) - d
         case PredicationalOf(_, DotFormula) => StaticSemantics.signature(repl) - DotFormula
+        case PredicationalOf(_, DotProgram) => StaticSemantics.signature(repl) - DotProgram
+        case PredicationalOf(_, d: DotTerm) => StaticSemantics.signature(repl) - d
         case _ => StaticSemantics.signature(repl)
       }
     case _ => StaticSemantics.signature(repl)
@@ -241,7 +243,10 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
     case a: DifferentialProgramConst => a
     case PredOf(p: Function, arg) if !p.interpreted && SubstitutionAdmissibility.isSubstitutableArg(arg) => p
     case FuncOf(f: Function, arg) if !f.interpreted && SubstitutionAdmissibility.isSubstitutableArg(arg) => f
+    // redundant `!p.interpreted` by PredicationalOf insist
     case PredicationalOf(p: Function, DotFormula) if !p.interpreted => p
+    case PredicationalOf(p: Function, DotProgram) if !p.interpreted => p
+    case PredicationalOf(p: Function, _: DotTerm) if !p.interpreted => p
     case d: DotTerm => d
     case DotFormula => DotFormula
     case DotProgram => DotProgram

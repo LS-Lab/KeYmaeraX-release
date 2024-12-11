@@ -564,6 +564,12 @@ object Context {
   // @note used only for contracts and performance comparison
 
   /** @see [[StaticSemanticsTools.boundAt()]] */
+  private def split(expr: Expression, pos: PosInExpr): (Expression, Expression) = expr match {
+    case t: Term => split(t, pos)
+    case f: Formula => split(f, pos)
+    case a: Program => split(a, pos)
+    case _: Function => ???
+  }
   private def split(term: Term, pos: PosInExpr): (Term, Expression) =
     if (pos == HereP) (DotTerm(term.sort), term)
     else

@@ -245,6 +245,16 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
 
   // implementation of uniform substitution application
 
+  /** uniform substitution on expressions */
+  private def usubst(u: SetLattice[Variable], expr: Expression): Expression = {
+    expr match {
+      case f: Formula => usubst(u, f)
+      case t: Term => usubst(u, t)
+      case p: Program => usubst(u, p)._2
+      case _: Function => ???
+    }
+  }
+
   /** uniform substitution on terms */
   private def usubst(u: SetLattice[Variable], term: Term): Term = {
     term match {
@@ -296,16 +306,15 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
           case None => PredOf(p, usubst(u, theta))
         }
       // unofficial
-      case app @ PredicationalOf(p, fml) => matchHeads.get(p) match {
+      case app @ PredicationalOf(p, expr) => matchHeads.get(p) match {
           case Some(subs) =>
             val PredicationalOf(wp, wArg) = subs.what
             // assert(wp == p, "match only if same head")
-            // assert(wArg == DotFormula)
-            USubstRenOne(wArg -> usubst(allVars, fml) :: Nil).usubst(bottom[Variable], subs.repl.asInstanceOf[Formula])
+            USubstRenOne(wArg -> usubst(allVars, expr) :: Nil).usubst(bottom[Variable], subs.repl.asInstanceOf[Formula])
           // unofficial
           case None =>
             // @note admissibility is required for nonmatching predicationals since the arguments might be evaluated in different states.
-            PredicationalOf(p, usubst(allVars, fml))
+            PredicationalOf(p, usubst(allVars, expr))
         }
       case DotFormula =>
         subsDefs.getOrElse(DotFormula, URenSubstitutionPair(DotFormula, DotFormula)).repl.asInstanceOf[Formula]

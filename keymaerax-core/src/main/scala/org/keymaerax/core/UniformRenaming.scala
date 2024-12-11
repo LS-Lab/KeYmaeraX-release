@@ -197,7 +197,7 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
     case Box(p, g) => Box(rename(p), rename(g))
     case Diamond(p, g) => Diamond(rename(p), rename(g))
 
-    case PredicationalOf(c, fml) => throw RenamingClashException(
+    case PredicationalOf(_, _) => throw RenamingClashException(
         "Cannot replace semantic dependencies syntactically: Predicational " + formula,
         this.toString,
         formula.toString,

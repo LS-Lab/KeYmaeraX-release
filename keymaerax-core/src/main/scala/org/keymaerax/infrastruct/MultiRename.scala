@@ -176,7 +176,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
 
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta) => PredOf(p, rename(theta))
-    case PredicationalOf(c, fml) =>
+    case PredicationalOf(_, _) =>
       if (semantic) formula
       else throw new RenamingClashException(
         "Cannot replace semantic dependencies syntactically: Predicational " + formula,

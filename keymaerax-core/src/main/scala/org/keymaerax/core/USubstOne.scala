@@ -205,6 +205,21 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   // @see Figure 2 in Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
 
   /**
+   * uniform substitution on expressions
+   *
+   * @param u
+   *   * the set of variables that are taboo, so cannot be introduced free by the substitution into term.
+   */
+  private def usubst(u: SetLattice[Variable], expr: Expression): Expression = {
+    expr match {
+      case f: Formula => usubst(u, f)
+      case t: Term => usubst(u, t)
+      case p: Program => usubst(u, p)._2
+      case _: Function => ???
+    }
+  }
+
+  /**
    * uniform substitution on terms.
    * @param u
    *   the set of variables that are taboo, so cannot be introduced free by the substitution into term.
@@ -271,18 +286,16 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
           case None => PredOf(p, usubst(u, theta))
         }
       // unofficial
-      case app @ PredicationalOf(p, fml) =>
+      case app @ PredicationalOf(p, expr) =>
         subsDefs.find(sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app)) match {
           case Some(subs) =>
-            // @note val PredicationalOf(_, DotFormula) = subs.what is easier to read even if possibly a little slower
             val PredicationalOf(wp, wArg) = subs.what
             // redundant: assert(wp == p, "match only if same head")
-            // redundant: assert(wArg == DotFormula)
-            USubstOne(SubstitutionPair(wArg, usubst(allVars, fml)) :: Nil)
+            USubstOne(SubstitutionPair(wArg, usubst(allVars, expr)) :: Nil)
               .usubst(bottom[Variable], subs.repl.asInstanceOf[Formula])
           case None =>
             // @note admissibility is required for nonmatching predicationals since the arguments might be evaluated in different states.
-            PredicationalOf(p, usubst(allVars, fml))
+            PredicationalOf(p, usubst(allVars, expr))
         }
       case DotFormula => subsDefs.find(_.what == DotFormula) match {
           case Some(subs) => subs.repl.asInstanceOf[Formula]

@@ -129,6 +129,12 @@ private[core] object AxiomBase extends Logging {
     val a = ProgramConst("a_")
     val x = Variable("x_", None, Real)
     val Jany = UnitPredicational("J", AnyArg)
+    // Term congruence
+    val contextTrm = Function("ctxT_", None, Real, Bool)
+    // dRL congruence
+    val contextPrg = Function("ctxP_", None, Trafo, Bool) // predicational symbol for program
+    val b = SystemConst("b_")
+    val c = SystemConst("c_")
     Map(
       /**
        * {{{
@@ -178,6 +184,54 @@ private[core] object AxiomBase extends Logging {
           Sequent(
             immutable.IndexedSeq(),
             immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany))),
+          ),
+        ),
+      ),
+      /**
+       * {{{
+       * Rule "CTrmE congruence".
+       * Premise f_(||) = g_(||)
+       * Conclusion ctxT_(f_(||)) <-> ctxT_(g_(||))
+       * End.
+       * }}}
+       * {{{
+       *        f(x) = g(x)
+       *   --------------------- CTrmE
+       *    C{f(x)} <-> C{g(x)}
+       * }}}
+       * @note
+       *   Stronger than CQ
+       */
+      (
+        "CTrmE congruence",
+        (
+          immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
+          Sequent(
+            immutable.IndexedSeq(),
+            immutable.IndexedSeq(Equiv(PredicationalOf(contextTrm, fany), PredicationalOf(contextTrm, gany))),
+          ),
+        ),
+      ),
+      /**
+       * {{{
+       * Rule "CPrgE congruence".
+       * Premise b == c
+       * Conclusion ctxP_(b) <-> ctxP_(c)
+       * End.
+       * }}}
+       * {{{
+       *       b == c
+       *   ---------------- CPrgE
+       *    C{b} <-> C{c}
+       * }}}
+       */
+      (
+        "CPrgE congruence",
+        (
+          immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(ProgramEquivalence(b, c)))),
+          Sequent(
+            immutable.IndexedSeq(),
+            immutable.IndexedSeq(Equiv(PredicationalOf(contextPrg, b), PredicationalOf(contextPrg, c))),
           ),
         ),
       ),

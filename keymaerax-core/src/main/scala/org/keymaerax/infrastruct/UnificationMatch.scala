@@ -532,8 +532,8 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
         case _ => unifyApplicationOf(PredOf.apply, f, t, e2)
       }
     case PredicationalOf(f: Function, DotFormula) => unifier(e1, e2)
-    case PredicationalOf(c, fml) => e2 match {
-        case PredicationalOf(g, fml2) if c == g => unify(fml, fml2)
+    case PredicationalOf(c, ex1) => e2 match {
+        case PredicationalOf(g, ex2) if c == g => unify(ex1, ex2)
         // otherwise DotFormula abstraction of all occurrences of the argument
         case _ => // @todo List(SubstRepl(PredicationalOf(c,DotFormula), SubstitutionHelper.replaceFree(e2)(fml,DotFormula)))
           throw new UnsupportedOperationException("Not implemented for PredicationalOf matching: " + e1 + " for " + e2)
