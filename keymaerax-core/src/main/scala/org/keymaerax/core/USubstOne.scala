@@ -348,6 +348,10 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
           case Some(subs) => (u ++ subs.boundVars, subs.repl.asInstanceOf[Program])
           case None => (StaticSemantics.spaceVars(a.space), a)
         }
+      case DotProgram => subsDefs.find(_.what == DotProgram) match {
+          case Some(subs) => (u ++ subs.boundVars, subs.repl.asInstanceOf[Program])
+          case None => (allVars, DotProgram)
+        }
       case Assign(x, e) => (u + x, Assign(x, usubst(u, e)))
       case a @ AssignAny(x) => (u + x, a)
       case Test(f) => (u, Test(usubst(u, f)))
@@ -368,6 +372,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case dp: AtomicODE => throw MalformedProgramException(dp)
       case dp: DifferentialProgramConst => throw MalformedProgramException(dp)
       case dp: DifferentialProduct => throw MalformedProgramException(dp)
+      case DotDiffProgram => throw MalformedProgramException(DotDiffProgram)
     }
   }
 
@@ -387,6 +392,10 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
           // @note Space compliance already checked in SubstitutionPair construction.
           case Some(subs) => subs.repl.asInstanceOf[DifferentialProgram]
           case None => c
+        }
+      case DotDiffProgram => subsDefs.find(_.what == DotDiffProgram) match {
+          case Some(subs) => subs.repl.asInstanceOf[DifferentialProgram]
+          case None => DotDiffProgram
         }
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(v, a), usubstODE(v, b))
@@ -451,9 +460,17 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
           case Some(subs) => subs.boundVars
           case None => StaticSemantics.spaceVars(a.space)
         }
+      case DotProgram => subsDefs.find(_.what == DotProgram) match {
+          case Some(subs) => subs.boundVars
+          case None => allVars
+        }
       case c: DifferentialProgramConst => subsDefs.find(_.what == c) match {
           case Some(subs) => subs.boundVars
           case None => StaticSemantics.spaceVars(c.space)
+        }
+      case DotDiffProgram => subsDefs.find(_.what == DotDiffProgram) match {
+          case Some(subs) => subs.boundVars
+          case None => allVars
         }
       case Assign(x, e) => SetLattice(x)
       case Test(f) => bottom

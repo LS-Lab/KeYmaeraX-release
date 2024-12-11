@@ -454,6 +454,7 @@ object FormulaTools extends Logging {
   def dualFree(program: Program): Boolean = program match {
     case _: ProgramConst => false
     case _: SystemConst => true
+    case DotProgram => false
     case Assign(_, _) => true
     case AssignAny(_) => true
     case Test(_) => true /* even if f contains duals, since they're different nested games) */

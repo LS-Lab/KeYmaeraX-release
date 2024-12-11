@@ -2690,7 +2690,6 @@ object UnifyUSCalculus {
    *   [[UnifyUSCalculus.CMon(Context)]]
    */
   def CMonPrg(C: Context[Program]): ForwardTactic = pr => {
-    import Context.DotProgram
     val dot: NamedSymbol =
       if (C.isFormulaContext) {
         require(
@@ -2857,7 +2856,7 @@ object UnifyUSCalculus {
           throw new TacticAssertionError("Monotonicity is not implemented for Terms. Try CQ instead.")
         case AssignAny(_) | ProgramConst(_, _) | SystemConst(_, _) =>
           throw new AssertionError(s"proper contexts have dots somewhere ${C}")
-        case Dual(_) => throw new ProverException(
+        case Dual(_) | DotProgram => throw new ProverException(
             "Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + pr + ")"
           )
 

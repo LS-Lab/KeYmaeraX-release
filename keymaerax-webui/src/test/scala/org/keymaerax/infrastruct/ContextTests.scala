@@ -5,7 +5,7 @@
 
 package org.keymaerax.infrastruct
 
-import org.keymaerax.core.{Choice, DotFormula, DotTerm, PrettyPrinter, Test, True}
+import org.keymaerax.core.{Choice, DotFormula, DotProgram, DotTerm, PrettyPrinter, Test, True}
 import org.keymaerax.parser.KeYmaeraXPrettyPrinter
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.tagobjects.TodoTest
@@ -70,7 +70,6 @@ class ContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
     val aux2 = ctx2(f)
     aux2 shouldBe f
 
-    import Context.DotProgram
     val ctx3 = Context(DotProgram)
     val p = "?true;".asProgram
     val aux3 = ctx3(p)
@@ -90,7 +89,6 @@ class ContextTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Non Context[Formula]" should "not fail when applied (without bounding variables)" in {
-    import Context.DotProgram
     Context("x + .".asTerm)("0".asTerm) shouldBe "x + 0".asTerm
     Context(Choice(Test(True), DotProgram))("x:=2;".asProgram) shouldBe "?true;++x:=2;".asProgram
   }

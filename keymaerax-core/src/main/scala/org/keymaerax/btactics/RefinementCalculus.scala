@@ -638,7 +638,8 @@ object RefinementCalculus {
             case (AtomicODE(xp, t), AtomicODE(xp2, t2)) if xp == xp2 => (Equal(t, t2), true)
             case (DifferentialProduct(c1, d1), DifferentialProduct(c2, d2)) =>
               (And(odesToFml(c1, c2)._1, odesToFml(d1, d2)._1), false)
-            case (_: DifferentialProgramConst, _) | (_, _: DifferentialProgramConst) =>
+            case (_: DifferentialProgramConst, _) | (DotDiffProgram, _) | (_, _: DifferentialProgramConst) |
+                (_, DotDiffProgram) =>
               throw new TacticInapplicableFailure(s"Expected explicit ODEs, but got: $c and $d")
             case (_: DifferentialProduct, _) | (_, _: DifferentialProduct) =>
               throw new TacticInapplicableFailure(s"ODEs do not have compatible shape: $c and $d")

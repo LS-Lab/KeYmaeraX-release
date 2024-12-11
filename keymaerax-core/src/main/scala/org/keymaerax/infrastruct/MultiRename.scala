@@ -245,6 +245,13 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
         this.toString,
         program.toString,
       )
+    case DotProgram =>
+      if (semantic) DotProgram
+      else throw RenamingClashException(
+        "Cannot replace semantic dependencies syntactically: DotProgram " + DotProgram,
+        this.toString,
+        program.toString,
+      )
     case Assign(x, e) => Assign(renVar(x), rename(e))
     case AssignAny(x) => AssignAny(renVar(x))
     case Test(f) => Test(rename(f))
@@ -266,6 +273,13 @@ final case class MultiRename(rens: immutable.Seq[(Variable, Variable)], semantic
       if (semantic) DifferentialProgramConst(c, renSpace(sp))
       else throw RenamingClashException(
         "Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + ode,
+        this.toString,
+        ode.toString,
+      )
+    case DotDiffProgram =>
+      if (semantic) DotDiffProgram
+      else throw RenamingClashException(
+        "Cannot replace semantic dependencies syntactically: DotDiffProgram " + ode,
         this.toString,
         ode.toString,
       )

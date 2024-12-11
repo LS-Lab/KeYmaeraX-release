@@ -63,6 +63,8 @@ object TacticHelper {
             case c: ProgramConst => max(c, maxIdx)
             case c: SystemConst => max(c, maxIdx)
             case c: DifferentialProgramConst => max(c, maxIdx)
+            case DotProgram => max(DotProgram, maxIdx)
+            case DotDiffProgram => max(DotDiffProgram, maxIdx)
             case _ => maxIdx
           }
           Left(None)

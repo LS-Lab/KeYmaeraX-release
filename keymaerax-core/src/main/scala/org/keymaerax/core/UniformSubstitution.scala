@@ -65,6 +65,7 @@ object SubstitutionAdmissibility {
  *   - [[PredicationalOf]](p:[[Function]], [[DotFormula]])
  *   - [[DotTerm]]
  *   - [[DotFormula]]
+ *   - [[DotProgram]] or [[DotDiffProgram]]
  * @param repl
  *   the expression to be used in place of `what`.
  * @requires
@@ -139,21 +140,23 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
   /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game. */
   private def dualFree(program: Program): Boolean = program match {
     // ProgramConst could be replaced by a hybrid game
-    case a: ProgramConst => false
+    case _: ProgramConst => false
     // SystemConst can only be replaced by a hybrid program, never a hybrid game
-    case a: SystemConst => true
-    case Assign(x, e) => true
-    case AssignAny(x) => true
-    case Test(f) => true /* even if f contains duals, since they're different nested games) */
-    case ODESystem(a, h) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
+    case _: SystemConst => true
+    case DotProgram => false
+    case Assign(_, _) => true
+    case AssignAny(_) => true
+    case Test(_) => true /* even if f contains duals, since they're different nested games) */
+    case ODESystem(a, _) => true /*|| dualFreeODE(a)*/ /* @note Optimized assuming no differential games */
     case Choice(a, b) => dualFree(a) && dualFree(b)
     case Compose(a, b) => dualFree(a) && dualFree(b)
     case Loop(a) => dualFree(a)
-    case Dual(a) => false
+    case Dual(_) => false
     // improper/internal cases
     case _: AtomicODE => true
     case _: DifferentialProduct => true
     case _: DifferentialProgramConst => true
+    case DotDiffProgram => true
   }
 
   /**
@@ -179,7 +182,8 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
         // program constants are always admissible, since their meaning doesn't depend on state
         // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
         case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
+            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) | DotProgram | DotDiffProgram =>
+          bottom
         case PredicationalOf(_, _) => throw SubstitutionClashException(
             toString,
             "<none>",
@@ -240,6 +244,8 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
     case PredicationalOf(p: Function, DotFormula) if !p.interpreted => p
     case d: DotTerm => d
     case DotFormula => DotFormula
+    case DotProgram => DotProgram
+    case DotDiffProgram => DotDiffProgram
     case Nothing =>
       assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else");
       Nothing // it makes no sense to substitute Nothing

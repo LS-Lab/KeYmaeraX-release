@@ -50,7 +50,8 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
         // program constants are always admissible, since their meaning doesn't depend on state
         // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
         case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
+            ProgramConst(_, _) | SystemConst(_, _) | DotProgram | DifferentialProgramConst(_, _) | DotDiffProgram =>
+          bottom
         case PredicationalOf(_, _) => throw SubstitutionClashException(
             toString,
             "<none>",
@@ -371,6 +372,9 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case a: SystemConst =>
         val r = subsDefs.getOrElse(a, URenSubstitutionPair(a, a)).repl.asInstanceOf[Program]
         (u ++ boundVars(r), r)
+      case DotProgram =>
+        val r = subsDefs.getOrElse(DotProgram, URenSubstitutionPair(DotProgram, DotProgram)).repl.asInstanceOf[Program]
+        (u ++ boundVars(r), r)
       case Assign(x, e) => val rx = renVar(x); (u + rx, Assign(rx, usubst(u, e)))
       case AssignAny(x) => val rx = renVar(x); (u + rx, AssignAny(rx))
       case Test(f) => (u, Test(usubst(u, f)))
@@ -402,6 +406,10 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case c: DifferentialProgramConst =>
         subsDefs.getOrElse(c, URenSubstitutionPair(c, c)).repl.asInstanceOf[DifferentialProgram]
       // @todo case cp@DifferentialProgramConst(c,sp) => subsDefs.getOrElse(cp, URenSubstitutionPair(cp,DifferentialProgramConst(c,renSpace(sp)))).repl.asInstanceOf[DifferentialProgram]
+      case DotDiffProgram => subsDefs
+          .getOrElse(DotDiffProgram, URenSubstitutionPair(DotDiffProgram, DotDiffProgram))
+          .repl
+          .asInstanceOf[DifferentialProgram]
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(v, a), usubstODE(v, b))
     }

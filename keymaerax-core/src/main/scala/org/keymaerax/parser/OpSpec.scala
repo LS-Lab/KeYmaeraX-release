@@ -348,7 +348,9 @@ object OpSpec {
 
   val sProgramConst = UnitOpSpec(none, 0, name => ProgramConst(name))
   val sSystemConst = UnitOpSpec(none, 0, name => SystemConst(name))
+  val sDotProgram = UnitOpSpec(none, 0, DotProgram)
   val sDifferentialProgramConst = UnitOpSpec(none, 0, name => DifferentialProgramConst(name))
+  val sDotDiffProgram = UnitOpSpec(none, 0, DotDiffProgram)
   val sAssign = lBinaryOpSpec[Program](
     ASSIGN,
     200,
@@ -482,7 +484,9 @@ object OpSpec {
     case _: Refinement => sRefinement
     case _: ProgramEquivalence => sProgramEquivalence
     // programs
+    case DotProgram => sDotProgram
     case p: ProgramConst => sProgramConst
+    case DotDiffProgram => sDotDiffProgram
     case p: DifferentialProgramConst => sDifferentialProgramConst
     case p: Assign => sAssign
     // case p: DiffAssign   => sDiffAssign

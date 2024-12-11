@@ -200,6 +200,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case a: ProgramConst => statement(a.asString)
     case a: SystemConst =>
       if (a.name == ReservedSymbols.exerciseS.name) statement("__________") else statement(a.toString)
+    case DotProgram => statement(DotProgram.asString)
     case Assign(x, e) => statement(pp(x) + op(program).opcode + pp(e))
     case AssignAny(x) => statement(pp(x) + op(program).opcode)
     case Test(f) => statement(op(program).opcode + "(" + pp(f) + ")")
@@ -219,6 +220,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
 
   private def ppODE(program: DifferentialProgram): String = program match {
     case a: DifferentialProgramConst => if (a.name == ReservedSymbols.exerciseD.name) "__________" else a.asString
+    case DotDiffProgram => DotDiffProgram.asString
     case AtomicODE(xp, e) => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
       assert(
@@ -396,6 +398,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     program match {
       case a: ProgramConst => statement(a.asString)
       case a: SystemConst => statement(a.toString)
+      case DotProgram => statement(DotProgram.asString)
       case Assign(x, e) => statement(pp(q ++ 0, x) + ppOp(program) + pp(q ++ 1, e))
       case AssignAny(x) => statement(pp(q ++ 0, x) + ppOp(program))
       case Test(f) => statement(ppOp(program) + pp(q ++ 0, f))
@@ -416,6 +419,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     q,
     program match {
       case a: DifferentialProgramConst => a.asString
+      case DotDiffProgram => DotDiffProgram.asString
       case AtomicODE(xp, e) => pp(q ++ 0, xp) + ppOp(program) + pp(q ++ 1, e)
       case t: DifferentialProduct =>
         assert(
