@@ -165,6 +165,14 @@ object RefinementCalculus extends TacticProvider {
   val refOde: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refOde",
     canonicalName = "refinement ode",
+    displayLevel = DisplayLevel.Menu,
+    key = "0",
+    unifier = Unifier.SurjectiveLinear,
+  )
+  @Derivation
+  val refOdes: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refOdes",
+    canonicalName = "refinement ode (system)",
     displayName = Some("Refinement ODE"),
     displayLevel = DisplayLevel.Menu,
     key = "0",
