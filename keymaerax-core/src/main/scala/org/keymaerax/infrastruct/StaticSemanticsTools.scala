@@ -84,8 +84,11 @@ object StaticSemanticsTools {
       case e: BinaryCompositeFormula if pos.head == 1 => bindingVars(e) ++ boundAt(e.right, pos.child)
       // @note predicationals will bind everything anyhow so no need to descend
       case e: PredicationalOf => bindingVars(e)
+      case e: ProgramComparison if pos.head == 0 => boundAt(e.left, pos.child)
+      case e: ProgramComparison if pos.head == 1 => boundAt(e.right, pos.child)
       // @note term children won't bind anything anyhow so no need to descend
-      case e: AtomicFormula => bindingVars(e)
+      case e: ComparisonFormula => bindingVars(e)
+      case e: PredOf => bindingVars(e)
       case _ =>
         throw new IllegalArgumentException("boundAt position " + pos + " of formula " + formula + " may not be defined")
     }
