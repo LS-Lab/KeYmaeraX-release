@@ -7,8 +7,8 @@
 # https://hub.docker.com/r/wolframresearch/wolframengine
 # https://docs.docker.com/engine/reference/builder/#from
 #
-# Digest from version 13.3.0
-FROM wolframresearch/wolframengine@sha256:3ff9460b7c53a66f4eb5528e066a40293f3ad935c85f12353ad3dc9fe121c127
+# Digest from version 14.1.0
+FROM wolframresearch/wolframengine@sha256:e2958b13d3ec7aa0a5dcd7d32f8638b7a42ddf7b183bc2e6d63fab2180243cd3
 
 # The Wolfram Engine docker image appears to switch to a different user.
 # However, we need to be root to write to /github/workspace/.
