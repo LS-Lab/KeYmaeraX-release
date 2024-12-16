@@ -1,3 +1,6 @@
 [submodule "KeYmaeraX-projects"]
 	path = keymaerax-webui/src/main/resources/keymaerax-projects
 	url = https://github.com/LS-Lab/KeYmaeraX-projects.git
+[submodule "setup-sbt"]
+	path = .github/actions/setup-sbt
+	url = https://github.com/sbt/setup-sbt.git
