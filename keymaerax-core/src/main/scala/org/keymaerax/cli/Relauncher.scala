@@ -7,22 +7,37 @@ package org.keymaerax.cli
 
 import org.keymaerax.info.FullName
 
+import java.lang.management.ManagementFactory
+import java.nio.file.Path
 import scala.sys.process.Process
 
 object Relauncher {
   private val ExtraJvmArgs = Seq("-Xss20M")
 
-  private case class LaunchCommand(jvmCmd: String, jvmArgs: Seq[String], cliArgs: Seq[String])
+  private case class LaunchCommand(jvmCmd: String, allArgs: Seq[String])
 
   private def getLaunchCommand(cliArgs: Seq[String]): Option[LaunchCommand] = {
+    import scala.jdk.CollectionConverters._
     import scala.jdk.OptionConverters._
 
     val info = ProcessHandle.current().info()
     val jvmCmd = info.command().toScala.getOrElse(return None)
-    val allArgs = info.arguments().toScala.getOrElse(return None)
-    val jvmArgs = if (allArgs.endsWith(cliArgs)) allArgs.dropRight(cliArgs.length) else return None
 
-    Some(LaunchCommand(jvmCmd = jvmCmd, jvmArgs = jvmArgs.toSeq, cliArgs = cliArgs))
+    val allArgs = info
+      .arguments()
+      .toScala
+      .map(_.toSeq)
+      .getOrElse {
+        // We're probably on Windows: https://bugs.openjdk.org/browse/JDK-8176725
+        // Let's try piecing together our arguments from multiple sources.
+        // https://stackoverflow.com/a/2541745
+        // https://stackoverflow.com/a/320595 (though there's no need to round-trip through File)
+        val jvmArgs = ManagementFactory.getRuntimeMXBean.getInputArguments.asScala.toSeq
+        val jarPath = Path.of(this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI).toString
+        jvmArgs ++ Seq("-jar", jarPath) ++ cliArgs
+      }
+
+    Some(LaunchCommand(jvmCmd = jvmCmd, allArgs = allArgs))
   }
 
   /**
@@ -41,7 +56,7 @@ object Relauncher {
     }
 
     val relaunchCmd = launchCmd.jvmCmd
-    val relaunchArgs = ExtraJvmArgs ++ launchCmd.jvmArgs ++ launchCmd.cliArgs :+ Options.LaunchFlag
+    val relaunchArgs = ExtraJvmArgs ++ launchCmd.allArgs :+ Options.LaunchFlag
     val exitValue = Process(relaunchCmd, relaunchArgs).run(connectInput = true).exitValue()
     sys.exit(exitValue)
   }
