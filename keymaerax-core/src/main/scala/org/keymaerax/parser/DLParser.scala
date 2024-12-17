@@ -629,9 +629,10 @@ class DLParser extends Parser {
   })
 
   /** Regular predicationals C{} */
-  def predicational[$: P]: P[PredicationalOf] = P(ident ~~ "{" ~ !"|" ~/ formula ~ "}").map({ case (s, idx, f) =>
-    PredicationalOf(Function(s, idx, Bool, Bool), f)
-  })
+  // term uses squared bracket to prevent ambiguity with formula (PredOf/TermOf)
+  def predicational[$: P]: P[PredicationalOf] =
+    P(ident ~~ ("{" ~ !"|" ~/ (formula | program) ~ "}" | "[" ~/ term(false) ~ "]"))
+      .map({ case (s, idx, expr) => PredicationalOf(Function(s, idx, expr.sort, Bool), expr) })
 
   /** Parses a program comparison */
   @nowarn("msg=match may not be exhaustive")

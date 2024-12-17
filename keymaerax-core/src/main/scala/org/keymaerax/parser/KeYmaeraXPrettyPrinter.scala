@@ -150,6 +150,15 @@ object FullPrettyPrinter extends BasePrettyPrinter {
    */
   private val LEXSPACE: String = " "
 
+  private def pp(expr: Expression): String = {
+    expr match {
+      case f: Formula => pp(f)
+      case t: Term => pp(t)
+      case p: Program => pp(p)
+      case _: Function => ???
+    }
+  }
+
   private def pp(term: Term): String = term match {
     case Nothing => op(term).opcode
     // @note DotTerm does not have an OpSpec img because it has concrete names (similar to variables)
@@ -180,6 +189,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   private def pp(formula: Formula): String = formula match {
     case True | False | DotFormula => op(formula).opcode
     case PredOf(p, c) => p.asString + "(" + pp(c) + ")"
+    case PredicationalOf(p, c: Term) => p.asString + "[" + pp(c) + "]"
     case PredicationalOf(p, c) => p.asString + "{" + pp(c) + "}"
     case f: ComparisonFormula => "(" + pp(f.left) + ")" + LEXSPACE + op(formula).opcode + LEXSPACE + "(" + pp(f.right) +
         ")"
@@ -302,6 +312,14 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case _ => throw new AssertionError("no parenthetical expression " + expr)
   }
 
+  private def pp(q: PosInExpr, expr: Expression): String = {
+    expr match {
+      case f: Formula => pp(q, f)
+      case t: Term => pp(q, t)
+      case p: Program => pp(q, p)
+      case _: Function => ???
+    }
+  }
   // @todo could add contract that TermAugmentor(original)(q) == term
   protected def pp(q: PosInExpr, term: Term): String = emit(
     q,

@@ -80,6 +80,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case _: Program => encloseText("{", doc, "}")
     case _: PredOf => encloseText("(", doc, ")")
     case _: Pair => encloseText("(", doc, ")")
+    case PredicationalOf(_, _: Term) => encloseText("[", doc, "]")
     case _: PredicationalOf => encloseText("{", doc, "}")
     case _ => throw new AssertionError("no parenthetical expression " + expr)
   }
@@ -97,6 +98,15 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     if (skipParensLeft(t)) doc else encloseText("{", doc, "}")
   protected def pwrapRightDoc(t: BinaryComposite /*Differential/Program*/, doc: Doc): Doc =
     if (skipParensRight(t)) doc else encloseText("{", doc, "}")
+
+  private def docOf(expr: Expression): Doc = {
+    expr match {
+      case f: Formula => docOf(f)
+      case t: Term => docOf(t)
+      case p: Program => docOf(p)
+      case _: Function => ???
+    }
+  }
 
   protected def docOf(term: Term): Doc = term match {
     case Differential(t @ Number(n)) if negativeBrackets =>
@@ -135,6 +145,8 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case True | False | DotFormula => Doc.text(ppOp(formula))
     case PredOf(p, c: Pair) => (Doc.text(p.asString) + Doc.lineBreak + docOf(c)).grouped
     case PredOf(p, c) => (Doc.text(p.asString) + Doc.lineBreak + encloseText("(", docOf(c), ")").nested(2)).grouped
+    case PredicationalOf(p, c: Term) =>
+      (Doc.text(p.asString) + Doc.lineBreak + encloseText("[", docOf(c), "]").nested(2)).grouped
     case PredicationalOf(p, c) =>
       (Doc.text(p.asString) + Doc.lineBreak + encloseText("{", docOf(c), "}").nested(2)).grouped
     case f: ComparisonFormula => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line +

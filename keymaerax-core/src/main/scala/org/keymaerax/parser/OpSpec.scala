@@ -279,13 +279,9 @@ object OpSpec {
     untermfml,
     (name, e: Expression) => PredOf(func(name, None, e.sort, Bool), e.asInstanceOf[Term]),
   )
-  val sPredicationalOf = UnaryOpSpec(
-    none,
-    0,
-    PrefixFormat,
-    unfml,
-    (name, e: Formula) => PredicationalOf(func(name, None, e.sort, Bool), e.asInstanceOf[Formula]),
-  )
+  // Last two arguments are only used by KeYmaeraXParser which only accepts formula as argument
+  val sPredicationalOf =
+    UnaryOpSpec(none, 0, PrefixFormat, unfml, (name, e: Formula) => PredicationalOf(func(name, None, e.sort, Bool), e))
   val sUnitPredicational = UnitOpSpec(none, 0, name => UnitPredicational(name, AnyArg))
   val sDifferentialFormula = UnaryOpSpec[Formula](PRIME, 80, PostfixFormat, unfml, DifferentialFormula.apply _)
   val sEqual = lBinaryOpSpec(EQ, 90, AtomicBinaryFormat, bintermfml, Equal.apply _)
