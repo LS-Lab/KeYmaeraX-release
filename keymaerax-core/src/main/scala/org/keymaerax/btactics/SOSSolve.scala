@@ -272,7 +272,8 @@ object SOSSolve {
     case fml: Quantified => naturalExponentCheck(fml.child)
     case fml: Modal => naturalExponentCheck(fml.child)
     case fml: PredOf => naturalExponentCheck(fml.child)
-    case fml: PredicationalOf => naturalExponentCheck(fml.child)
+    case PredicationalOf(_, f: Formula) => naturalExponentCheck(f)
+    case PredicationalOf(_, t: Term) => naturalExponentCheck(t)
     case fml: AtomicFormula => None
     case _ => ???
   }

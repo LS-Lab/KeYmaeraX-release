@@ -1285,7 +1285,8 @@ object IntervalArithmeticV2 {
     case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)
     case fml: UnaryCompositeFormula => terms_of(fml.child)
     case fml: PredOf => List(fml.child)
-    case fml: PredicationalOf => terms_of(fml.child)
+    case PredicationalOf(_, f: Formula) => terms_of(f)
+    case PredicationalOf(_, t: Term) => List(t)
     case fml: ComparisonFormula => List(fml.left, fml.right)
     case _ => List()
   }
