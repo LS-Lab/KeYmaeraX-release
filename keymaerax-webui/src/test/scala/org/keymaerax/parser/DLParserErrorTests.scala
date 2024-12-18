@@ -135,11 +135,11 @@ class DLParserErrorTests
     }
     val e = the[ParseException] thrownBy ArchiveParser.parse(input)
     e.expect shouldBe
-      """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")"""
+      """("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | programComparison | ident | "(")"""
     e.found shouldBe "\"}]x>=0\""
     // todo: maybe provide verbose suggestions here somehow??
     e.hint shouldBe
-      """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")"""
+      """Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-" | "?" | "if" | "{")"""
   }
 
   it should "give correct error location for disallowed identifier" in {

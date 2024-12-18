@@ -28,7 +28,9 @@ class AxiomFileParserTest extends AnyFlatSpec with Matchers with PrivateMethodTe
     // even AxiomBase is private[core], so get Class by Java reflection
     val clazz = Class.forName("org.keymaerax.core.AxiomBase$")
     val axiomFile = clazz.getField("MODULE$").get(()) invokePrivate loadAxiomString()
-    val axioms = KeYmaeraXAxiomParser(axiomFile)
+    // Removing new dRL axioms before running old parser
+    val axiomFileStripped = axiomFile.split("""/\*\* REFINEMENT AXIOMS \*/""").head
+    val axioms = KeYmaeraXAxiomParser(axiomFileStripped)
     axioms.size shouldNot be <= 0
     // check for a sample
     axioms should contain("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
@@ -48,8 +50,10 @@ class AxiomFileParserTest extends AnyFlatSpec with Matchers with PrivateMethodTe
     // even AxiomBase is private[core], so get Class by Java reflection
     val clazz = Class.forName("org.keymaerax.core.AxiomBase$")
     val axiomFile = clazz.getField("MODULE$").get(()) invokePrivate loadAxiomString()
-    val axioms1 = KeYmaeraXAxiomParser(axiomFile)
-    val axioms2 = DLAxiomParser(axiomFile)
+    // Removing new dRL axioms before running old parser
+    val axiomFileStripped = axiomFile.split("""/\*\* REFINEMENT AXIOMS \*/""").head
+    val axioms1 = KeYmaeraXAxiomParser(axiomFileStripped)
+    val axioms2 = DLAxiomParser(axiomFileStripped)
     axioms1 shouldBe axioms2
   }
 }

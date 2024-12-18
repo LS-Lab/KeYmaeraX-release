@@ -407,10 +407,10 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
           |Found:    {sys} at 1:15 to 1:17
           |Expected: [{sys}]
           |      or: <{sys}>""".stripMargin or have message
-        """1:14 Error parsing formula at 1:1
-          |Found:    "{sys} B1 &" at 1:14
-          |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")
-          |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")"""
+        """1:20 Error parsing programComparator at 1:20
+          |Found:    "B1 & B2" at 1:20
+          |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | "<=" | "==")
+          |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | "<=" | "==")"""
           .stripMargin)
 
     // @note {sys} is an ODESystem with differential program constant sys and doesn't require ;
@@ -421,8 +421,8 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
           |Expected: ;""".stripMargin or have message
         """1:9 Error parsing fullExpression at 1:1
           |Found:    "B1" at 1:9
-          |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | end-of-input)
-          |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | end-of-input)"""
+          |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | end-of-input | "<=" | "==")
+          |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | end-of-input | "<=" | "==")"""
           .stripMargin)
 
     the[ParseException] thrownBy Parser("(A1 -> {sys} B1) & (A2 -> {sys} B2)") should
@@ -436,10 +436,10 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
           |Found:    & at 1:18
           |Expected: """.stripMargin or have message
         // better, but still not pointing to the missing ; after sys
-        """1:8 Error parsing formula at 1:2
-          |Found:    "{sys} B1) " at 1:8
-          |Expected: ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | predicational | "⎵" | "__________" | comparison | ident | "(")
-          |Hint: Try ("true" | "false" | "\\forall" | "\\exists" | "∀" | "∃" | "[" | "<" | "!" | [a-zA-Z] | "⎵" | "__________" | "(" | [0-9] | "." | "•" | "-")"""
+        """1:14 Error parsing programComparator at 1:14
+          |Found:    "B1) & (A2 " at 1:14
+          |Expected: ("@invariant" | "@variant" | "^@" | ";" | systemSymbol | programSymbol | variable ~ ":=" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | "<=" | "==")
+          |Hint: Try ("@invariant" | "@variant" | "^@" | ";" | "?" | "if" | "{" | "__________" | "++" | "∪" | "--" | "∩" | "<=" | "==")"""
           .stripMargin)
 
     the[ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should
