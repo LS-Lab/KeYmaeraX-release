@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{
   BelleExpr,
+  BuiltInTactic,
   DependentPositionTactic,
   DependentPositionWithAppliedInputTactic,
   TacticAssertionError,
@@ -15,8 +16,8 @@ import org.keymaerax.bellerophon.{
 import org.keymaerax.btactics.Ax.*
 import org.keymaerax.btactics.AxiomaticODESolver.ofAtoms
 import org.keymaerax.btactics.HilbertCalculus.{diamondd, DW}
-import org.keymaerax.btactics.SequentCalculus.{andL, andR, id, implyR}
-import org.keymaerax.btactics.TacticFactory.TacticForNameFactory
+import org.keymaerax.btactics.SequentCalculus.{andL, andR, commuteEquivR, equivifyR, id, implyR}
+import org.keymaerax.btactics.TacticFactory.{anon, TacticForNameFactory}
 import org.keymaerax.btactics.TactixLibrary.prop
 import org.keymaerax.btactics.UnifyUSCalculus.useAt
 import org.keymaerax.btactics.helpers.DifferentialHelper.atomicOdes
@@ -34,8 +35,9 @@ import org.keymaerax.btactics.macros.{
 }
 import org.keymaerax.core.*
 import org.keymaerax.core.btactics.annotations.Derivation
-import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
+import org.keymaerax.infrastruct.Augmentors.{FormulaAugmentor, SequentAugmentor}
 import org.keymaerax.infrastruct.FormulaTools.dualFree
+import org.keymaerax.infrastruct.PosInExpr.HereP
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
@@ -485,7 +487,7 @@ object RefinementCalculus {
   )
 
   lazy val congrODEDom: ProvableSig = TactixLibrary.proveBy(
-    "[{c&p(x)}](p(x)->q(x))->{{c&p(x)}}<={{c&q(x)}}".asFormula,
+    "[{c&p(||)}](p(||)->q(||))->{{c&p(||)}}<={{c&q(||)}}".asFormula,
     useAt(refDomainAx)(1, 1 :: Nil) & DW(1, 1 :: Nil) & implyR(1) & id,
   )
 
@@ -719,4 +721,32 @@ object RefinementCalculus {
     displayConclusion = "Γ |- {x'=f(x) & p(x)} == {x'=g(x) & p(x)}, Δ",
     constructor = TacticConstructor0.create()(() => refOde),
   )
+
+  private[btactics] def CPrgEimpFw(inEqPos: PosInExpr, reverse: Boolean): BuiltInTactic =
+    anon { (provable: ProvableSig) =>
+      require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
+
+      val sequent = provable.subgoals.head
+      require(
+        sequent.ante.isEmpty && sequent.succ.length == 1,
+        "Expected empty antecedent and single succedent formula, but got " + sequent,
+      )
+      sequent.succ.head match {
+        case Imply(l, r) =>
+          val provableEquiv = if (reverse) provable(equivifyR(1), 0)(commuteEquivR(1), 0) else provable(equivifyR(1), 0)
+          if (inEqPos == HereP) { provableEquiv }
+          else {
+            val (ctxP, a: Program) = l.at(inEqPos)
+            val (ctxQ, b: Program) = r.at(inEqPos)
+            // @note Could skip the construction of ctxQ but it's part of the .at construction anyway.
+            require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
+            Predef
+              .assert(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
+            Predef.assert(ctxP.isProgramContext, "Program context expected for CPrgE")
+            val finalEquiv = if (reverse) ProgramEquivalence(b, a) else ProgramEquivalence(a, b)
+            provableEquiv(UnifyUSCalculus.CE(ctxP)(ProvableSig.startPlainProof(finalEquiv)), 0)
+          }
+        case fml => throw new TacticInapplicableFailure("Expected implication, but got " + fml)
+      }
+    }
 }

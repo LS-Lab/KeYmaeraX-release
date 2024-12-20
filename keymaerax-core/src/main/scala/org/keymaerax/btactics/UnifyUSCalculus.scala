@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, *}
 import org.keymaerax.btactics.DebuggingTactics.*
 import org.keymaerax.btactics.Idioms.*
 import org.keymaerax.btactics.PropositionalTactics.*
+import org.keymaerax.btactics.RefinementCalculus.CPrgEimpFw
 import org.keymaerax.btactics.SequentCalculus.{andLi as _, implyRi as _, *}
 import org.keymaerax.btactics.TacticFactory.*
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
@@ -982,6 +983,9 @@ object UnifyUSCalculus {
               if (leftKey == p.isAnte) CEimpFw(p.inExpr).result _ else CErevimpFw(p.inExpr).result _
             else if (other.kind == TermKind)
               if (leftKey == p.isAnte) CQimpFw(p.inExpr).result _ else CQrevimpFw(p.inExpr).result _
+            else if (other.kind == ProgramKind)
+              if (leftKey == p.isAnte) CPrgEimpFw(p.inExpr, reverse = false).result _
+              else CPrgEimpFw(p.inExpr, reverse = true).result _
             else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other),
             1,
           )(subst.toForward(fact), 1))
@@ -1032,9 +1036,9 @@ object UnifyUSCalculus {
 
           case Refinement(other, DotProgram) => implyStep(other)
 
-          case ProgramEquivalence(DotProgram, other) => ???
+          case ProgramEquivalence(DotProgram, other) => equivStep(leftKey = true, other, fact)
 
-          case ProgramEquivalence(other, DotProgram) => ???
+          case ProgramEquivalence(other, DotProgram) => equivStep(leftKey = false, other, fact)
 
           // @note all DotTerms are equal
           case Imply(prereq, remainder) =>
@@ -2181,12 +2185,17 @@ object UnifyUSCalculus {
   def useFor(axiom: ProvableInfo, inst: Subst => Subst): ForwardPositionTactic = useForImpl(axiom, inst)
 
   /**
-   * CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C. Uses CE or
-   * CQ as needed.
+   * CE(C) will wrap any equivalence `left<->right`, `left == right` or equality `left=right` fact it gets within
+   * context C. Uses CE, CPrgE or CQ as needed.
    * {{{
    *       p(x) <-> q(x)
    *   --------------------- CE
    *    C{p(x)} <-> C{q(x)}
+   * }}}
+   * {{{
+   *       b(x) == c(x)
+   *   --------------------- CPrgE
+   *    C{b(x)} <-> C{c(x)}
    * }}}
    * {{{
    *       f(x) = g(x)
@@ -2223,6 +2232,14 @@ object UnifyUSCalculus {
           SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm()), C.ctx) ::
             SubstitutionPair(UnitFunctional("f_", AnyArg, Real), left) ::
             SubstitutionPair(UnitFunctional("g_", AnyArg, Real), right) ::
+            Nil
+        )))
+      case ProgramEquivalence(left, right) =>
+        require(C.isProgramContext, "Program context expected to make use of equivalences with CE " + C)
+        equiv(ProvableSig.rules("CPrgE congruence")(USubst(
+          SubstitutionPair(PredicationalOf(Function("ctxP_", None, Trafo, Bool), DotProgram), C.ctx) ::
+            SubstitutionPair(SystemConst("b_"), left) ::
+            SubstitutionPair(SystemConst("c_"), right) ::
             Nil
         )))
       case _ => throw new TacticInapplicableFailure("expected equivalence or equality fact " + equiv.conclusion)
@@ -2928,7 +2945,6 @@ object UnifyUSCalculus {
         case Dual(_) | _: DifferentialProgram => throw new ProverException(
             "Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + pr + ")"
           )
-
       }
     } ensures { r => r._1.conclusion.succ.head == Refinement(r._2, r._3) }
     monPrgStep(C)._1
