@@ -76,7 +76,7 @@ object StaticSemantics {
    * @note
    *   The core does not uses bv.
    */
-  sealed case class VCF(fv: SetLattice[Variable], bv: SetLattice[Variable]) {
+  final case class VCF(fv: SetLattice[Variable], bv: SetLattice[Variable]) {
 
     /** union of two variable categorizer structures for formulas */
     def ++(other: VCF): VCF = VCF(fv ++ other.fv, bv ++ other.bv)
@@ -92,7 +92,7 @@ object StaticSemantics {
    * @param mbv
    *   Must-bound names (definitely written on all paths).
    */
-  sealed case class VCP(fv: SetLattice[Variable], bv: SetLattice[Variable], mbv: SetLattice[Variable])
+  final case class VCP(fv: SetLattice[Variable], bv: SetLattice[Variable], mbv: SetLattice[Variable])
 
   /** Compute the static semantics of term t, i.e., the set of its free variables. */
   def apply(t: Term): SetLattice[Variable] = freeVars(t)
