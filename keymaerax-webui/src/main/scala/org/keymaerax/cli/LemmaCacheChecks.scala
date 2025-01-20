@@ -6,89 +6,69 @@
 package org.keymaerax.cli
 
 import org.keymaerax.Configuration
-import org.keymaerax.core.Ensures
 import org.keymaerax.info.{Version, VersionNumber}
 
-import java.io.{File, FileWriter}
+import java.io.IOException
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{FileVisitResult, Files, NoSuchFileException, Path, SimpleFileVisitor}
+import scala.util.Try
 
 object LemmaCacheChecks {
+  private def versionFile(cacheDir: Path): Path = cacheDir.resolve("VERSION")
 
-  /** Clears the cache if the cache was created by a previous version of KeYmaera X */
+  /** Clear the cache if it was created by a different version of KeYmaera X. */
   def clearCacheIfDeprecated(): Unit = {
-    val cacheLocation = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
-    val cacheDirectory = new File(cacheLocation)
-    val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
+    val cacheDir = Path.of(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
 
-    if (!cacheDirectory.exists()) {
-      if (!cacheDirectory.mkdirs()) {
-        throw new Exception(
-          s"Could not create the directory ${cacheDirectory.getAbsolutePath}. Please check your file system permissions."
-        )
-      }
-    }
+    // If we can't read the version, just erase the cache.
+    val version = Try {
+      val versionStr = Files.readString(versionFile(cacheDir))
+      VersionNumber.parse(versionStr.trim)
+    }.toOption
 
-    if (!cacheVersionFile.exists()) {
-      if (!cacheVersionFile.createNewFile()) throw new Exception(
-        s"Could not create the file ${cacheVersionFile.getAbsolutePath}. Please check your file system permissions."
-      )
-      clearCache(new File(cacheLocation))
-    } else {
-      val source = scala.io.Source.fromFile(cacheVersionFile)
-      val cacheVersion = source.mkString.replace("\n", "")
-      source.reader().close() // Ensure that the associated reader is closed so that we can delete the file if need to.
-      try {
-        if (VersionNumber.parse(cacheVersion) != Version) {
-          assert(
-            cacheVersionFile.delete(),
-            s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath}",
-          )
-          clearCache(cacheDirectory)
-        }
-      } catch {
-        case _: NumberFormatException =>
-          println("WARNING: Could not parse the cache version file, cache contained: " + cacheVersion)
-          cacheVersionFile.delete()
-          clearCache(cacheDirectory)
-      }
-    }
+    if (version.contains(Version)) return
+
+    clearCache(cacheDir)
   }
 
-  /** Clears the cache and creates a new cache/VERSION file */
-  private def clearCache(dir: File): Unit = {
+  /** Create an empty cache with current version file at the path, removing any existing cache in the process. */
+  private def clearCache(cacheDir: Path): Unit = {
     println("Clearing your cache because of an update.")
-    if (dir.exists()) {
-      if (!deleteDirectory(dir)) throw new Exception(s"Could not delete cache directory ${dir.getAbsolutePath}")
-    }
-    assert(!dir.exists(), s"Cache directory ${dir.getAbsolutePath} should not exist after being deleted.")
-    if (!dir.mkdirs()) throw new Exception(
-      s"Could not reinitialize cache because cache directory ${dir.getAbsolutePath} could not be created."
-    )
 
-    val versionFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
-    if (!versionFile.exists()) {
-      if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+    createDirectory(cacheDir.getParent)
+    deleteDirectory(cacheDir)
+    createDirectory(cacheDir)
+
+    try Files.writeString(versionFile(cacheDir), Version.toString)
+    catch {
+      case e: Exception => throw new Exception(s"Failed to create version file in ${cacheDir.toAbsolutePath}: $e")
     }
-    assert(versionFile.exists())
-    val fw = new FileWriter(versionFile)
-    fw.write(Version.toString)
-    fw.flush()
-    fw.close()
   }
 
-  /** Deletes the directory or file (recursively). Corresponds to rm -r */
-  private def deleteDirectory(f: File): Boolean = {
-    if (!f.isDirectory) {
-      if (!f.delete()) {
-        println(s"WARNING: could not delete ${f.getAbsolutePath}")
-        false
-      } else true
-    } else if (f.list().isEmpty) {
-      val result = f.delete()
-      assert(result, s"Could not delete file ${f.getName} in: ${f.getAbsolutePath}")
-      result
-    } else {
-      val recSuccess = f.listFiles().forall(deleteDirectory)
-      if (recSuccess) f.delete() else false
+  /** Create a directory and all its parents. */
+  private def createDirectory(dir: Path) = {
+    try Files.createDirectories(dir)
+    catch { case e: Exception => throw new Exception(s"Failed to create directory ${dir.toAbsolutePath}: $e") }
+  }
+
+  /** Recursively delete a directory. */
+  private def deleteDirectory(dir: Path) = {
+    try Files.walkFileTree(
+        dir,
+        new SimpleFileVisitor[Path] {
+          override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+            Files.deleteIfExists(file)
+            FileVisitResult.CONTINUE
+          }
+          override def postVisitDirectory(dir: Path, exc: IOException): FileVisitResult = {
+            Files.deleteIfExists(dir)
+            FileVisitResult.CONTINUE
+          }
+        },
+      )
+    catch {
+      case _: NoSuchFileException => // Nothing to do, the directory does not exist
+      case e: Exception => throw new Exception(s"Failed to delete directory ${dir.toAbsolutePath}: $e")
     }
-  } ensures (r => !r || !f.exists())
+  }
 }
