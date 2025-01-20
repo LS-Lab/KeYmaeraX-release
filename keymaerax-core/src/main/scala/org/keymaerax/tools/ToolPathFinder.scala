@@ -37,12 +37,16 @@ object ToolPathFinder {
     import scala.jdk.StreamConverters._
     Try(Os.Type match {
       case OsType.Windows =>
-        val base = Paths.get("C:\\Program Files\\Wolfram Research\\Mathematica")
-        sortPathsByTrailingVersion(Files.list(base).toScala(Seq))
+        val bases = Seq(
+          Path.of("C:\\Program Files\\Wolfram Research\\Wolfram"),
+          Path.of("C:\\Program Files\\Wolfram Research\\Mathematica"),
+        )
+        sortPathsByTrailingVersion(bases.flatMap(Files.list(_).toScala(Seq)))
       case OsType.Linux =>
-        val base = Paths.get("/usr/local/Wolfram/Mathematica")
-        sortPathsByTrailingVersion(Files.list(base).toScala(Seq))
-      case OsType.MacOs => Paths.get("/Applications/Mathematica.app/Contents") :: Nil
+        val bases = Seq(Path.of("/usr/local/Wolfram/Wolfram"), Path.of("/usr/local/Wolfram/Mathematica"))
+        sortPathsByTrailingVersion(bases.flatMap(Files.list(_).toScala(Seq)))
+      case OsType.MacOs =>
+        Seq(Path.of("/Applications/Wolfram.app/Contents"), Path.of("/Applications/Mathematica.app/Contents"))
       case OsType.Unknown => Nil
     }).getOrElse(Nil)
   }
