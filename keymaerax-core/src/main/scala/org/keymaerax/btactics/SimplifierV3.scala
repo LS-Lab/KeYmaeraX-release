@@ -1142,7 +1142,7 @@ object SimplifierV3 extends TacticProvider {
         .map(seq => {
           val indices = if (pos.isAnte) seq.succ.indices else seq.succ.indices.diff(List(pos.index0))
           indices
-            .map(SuccPos)
+            .map(SuccPos(_))
             .reverse
             .foldLeft(pr)({ case (p, i) =>
               val subst = USubst(List(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), seq(i))))

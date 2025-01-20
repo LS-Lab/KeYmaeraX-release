@@ -718,7 +718,7 @@ private object EqualityTactics extends TacticProvider {
   val expandAll: BuiltInTactic = anon { (provable: ProvableSig) =>
     ProofRuleTactics.requireOneSubgoal(provable, "expandAll")
     val s = provable.subgoals.head
-    val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
+    val allTopPos = s.ante.indices.map(AntePos(_)) ++ s.succ.indices.map(SuccPos(_))
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(
         p,

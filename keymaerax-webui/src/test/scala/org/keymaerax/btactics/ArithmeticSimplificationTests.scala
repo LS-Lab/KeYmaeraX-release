@@ -5,19 +5,18 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.{BelleTopLevelLabel, OnAll, SaturateTactic}
-import org.keymaerax.parser.StringConverter._
+import org.keymaerax.bellerophon.{OnAll, SaturateTactic}
+import org.keymaerax.btactics.ArithmeticSimplification._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, SignAnalysis}
 import org.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import org.keymaerax.btactics.{TacticTestBase, TactixLibrary}
-import org.keymaerax.btactics.ArithmeticSimplification._
 import org.keymaerax.core._
+import org.keymaerax.parser.StringConverter._
+import org.scalatest.LoneElement._
+import org.scalatest.prop.TableDrivenPropertyChecks._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
-import org.scalatest.LoneElement._
-import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /** @author Nathan Fulton */
 class ArithmeticSimplificationTests extends TacticTestBase {
@@ -278,7 +277,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   "Bound computation" should "compute wanted bounds from succedent" in {
     val s = "A>=0, -B<0, v^2<=2*B*(m-x) ==> x+5<=m, v^2<=2*B*(m-x)".asSequent
     val signs = SignAnalysis.computeSigns(s)
-    SignAnalysis.bounds(s.succ, signs, SuccPos) shouldBe Map(
+    SignAnalysis.bounds(s.succ, signs, SuccPos(_)) shouldBe Map(
       SeqPos(1) -> Map(
         "x".asVariable -> Map(Bound.Upper -> Set()),
         "m".asVariable -> Map(Bound.Lower -> Set()),
@@ -305,7 +304,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       OnAll(SaturateTactic(exhaustiveEqL2R(hide = true)(Symbol("L"))))
     val s = proveBy(fml, tactic)
     val signs = SignAnalysis.computeSigns(s.subgoals.head)
-    val bounds = SignAnalysis.bounds(s.subgoals.head.succ, signs, SuccPos)
+    val bounds = SignAnalysis.bounds(s.subgoals.head.succ, signs, SuccPos(_))
     bounds(SeqPos(1).asInstanceOf[SuccPos]) should contain theSameElementsAs Map(
       "x".asVariable -> Map(Bound.Lower -> Set()),
       "xo".asVariable -> Map(Bound.Upper -> Set()),

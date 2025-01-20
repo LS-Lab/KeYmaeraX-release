@@ -55,12 +55,17 @@ sealed trait SeqPos {
  * @param index
  *   the position 0-indexed in antecedent.
  */
-case class AntePos private[keymaerax] (private[core] val index: Int) extends SeqPos {
+final case class AntePos private[keymaerax] (private[core] val index: Int) extends SeqPos {
   val isAnte: Boolean = true
   val isSucc: Boolean = !isAnte
 
   /** The position 0-indexed in antecedent. */
   private[keymaerax] val getIndex: Int = index
+}
+
+object AntePos {
+  // The visibility of a case class constructor does not affect its apply method.
+  private[keymaerax] def apply(index: Int): AntePos = new AntePos(index)
 }
 
 /**
@@ -69,12 +74,17 @@ case class AntePos private[keymaerax] (private[core] val index: Int) extends Seq
  * @param index
  *   the position 0-indexed in succedent.
  */
-case class SuccPos private[keymaerax] (private[core] val index: Int) extends SeqPos {
+final case class SuccPos private[keymaerax] (private[core] val index: Int) extends SeqPos {
   val isAnte: Boolean = false
   val isSucc: Boolean = !isAnte
 
   /** The position 0-indexed in succedent. */
   private[keymaerax] val getIndex: Int = index
+}
+
+object SuccPos {
+  // The visibility of a case class constructor does not affect its apply method.
+  private[keymaerax] def apply(index: Int): SuccPos = new SuccPos(index)
 }
 
 object SeqPos {

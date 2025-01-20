@@ -138,8 +138,8 @@ object SignAnalysis {
   /** Computes a list of candidates for hiding, based on bounds. */
   def boundHideCandidates(s: Sequent): List[SeqPos] = {
     val signs = computeSigns(s)
-    val anteBounds = bounds(s.ante, Map(), AntePos)
-    val succBounds = bounds(s.succ, signs, SuccPos)
+    val anteBounds = bounds(s.ante, Map(), AntePos(_))
+    val succBounds = bounds(s.succ, signs, SuccPos(_))
     val protect = succBounds.values.flatMap(_.values.flatMap(_.values.flatten)).toSet
     anteBounds
       .filter { case (pos, _) => !protect.contains(pos) }
@@ -155,7 +155,7 @@ object SignAnalysis {
   def signHideCandidates(s: Sequent): List[SeqPos] = {
     // hide everything that is consistent, hoping for a contradiction in the remaining inconsistent positions
     val consistentPos = computeSigns(s).filter(_._2.keySet.size <= 1).flatMap(_._2.values.flatten).toSet.toList
-    s.ante.indices.map(AntePos).filter(consistentPos.contains).toList ++ s.succ.indices.map(SuccPos)
+    s.ante.indices.map(AntePos(_)).filter(consistentPos.contains).toList ++ s.succ.indices.map(SuccPos(_))
   }
 
   /** Computes whether the bounds that we have are consistent with what we want. */
