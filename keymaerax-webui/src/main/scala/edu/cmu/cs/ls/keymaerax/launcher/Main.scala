@@ -146,7 +146,7 @@ object Main {
           clearCache(cacheDirectory)
         }
       } catch {
-        case _: NumberFormatException =>
+        case _: IllegalArgumentException =>
           println("WARNING: Could not parse the cache version file, cache contained: " + cacheVersion)
           cacheVersionFile.delete()
           clearCache(cacheDirectory)
