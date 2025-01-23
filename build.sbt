@@ -50,13 +50,13 @@ lazy val core = project
 
     libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.8",
     libraryDependencies += "com.github.scopt" %% "scopt" % "4.1.0",
-    libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.0",
-    libraryDependencies += "io.github.classgraph" % "classgraph" % "4.8.174",
+    libraryDependencies += "com.lihaoyi" %% "fastparse" % "3.1.1",
+    libraryDependencies += "io.github.classgraph" % "classgraph" % "4.8.179",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
-    libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.10.1",
-    libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.14.0",
+    libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.11.0",
+    libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.17.0",
     libraryDependencies += "org.reflections" % "reflections" % "0.10.2",
-    libraryDependencies += "org.typelevel" %% "paiges-core" % "0.4.3",
+    libraryDependencies += "org.typelevel" %% "paiges-core" % "0.4.4",
     libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
 
     // Logging
@@ -71,9 +71,9 @@ lazy val core = project
     // https://github.com/jokade/slogging?tab=readme-ov-file#getting-started
     // https://www.baeldung.com/slf4j-with-log4j2-logback#Log4j2
     libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.2",
-    libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.23.1",
-    libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.23.1",
-    libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j2-impl" % "2.23.1",
+    libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.24.3",
+    libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.24.3",
+    libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j2-impl" % "2.24.3",
 
     // A published version of scala-smtlib that works with Scala 2.13
     // https://github.com/regb/scala-smtlib/issues/46#issuecomment-955691728
@@ -121,16 +121,16 @@ lazy val webui = project
     mainClass := Some("org.keymaerax.cli.KeymaeraxWebui"),
 
     /// sqlite driver
-    libraryDependencies += "com.typesafe.slick" %% "slick" % "3.5.1",
-    libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "3.5.1",
-    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.45.3.0",
+    libraryDependencies += "com.typesafe.slick" %% "slick" % "3.5.2",
+    libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "3.5.2",
+    libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.48.0.0",
 
     // Akka
     libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.5.3",
     libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.5.3",
     libraryDependencies += "com.typesafe.akka" %% "akka-http-xml" % "10.5.3",
-    libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.8.5",
-    libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.8.5",
+    libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.8.8",
+    libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.8.8",
     libraryDependencies += "io.spray" %% "spray-json" % "1.3.6",
 
     Compile / run / mainClass := mainClass.value,
@@ -146,8 +146,8 @@ lazy val webui = project
     // Testing //
     /////////////
 
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.18" % Test,
-    libraryDependencies += "org.scalamock" %% "scalamock" % "5.2.0" % Test,
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+    libraryDependencies += "org.scalamock" %% "scalamock" % "6.1.1" % Test,
 
     // For generating HTML scalatest reports using the `-h <directory>` flag
     // See "Using Reporters" in https://www.scalatest.org/user_guide/using_scalatest_with_sbt
