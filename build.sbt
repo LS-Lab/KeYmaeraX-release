@@ -3,7 +3,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.util.Properties
 
-ThisBuild / scalaVersion := "2.13.13"
+ThisBuild / scalaVersion := "2.13.16"
 ThisBuild / version := "5.1.1"
 
 ThisBuild / scalacOptions ++= Seq(
