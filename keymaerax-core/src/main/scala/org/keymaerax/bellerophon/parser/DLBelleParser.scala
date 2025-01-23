@@ -295,7 +295,7 @@ class DLBelleParser(
 
   def branchTac[$: P]: P[BelleExpr] = P(
     "<" ~/ "(" ~
-      (eitherTac.rep(min = 2, sep = ","./).map(BranchTactic) |
+      (eitherTac.rep(min = 2, sep = ","./).map(BranchTactic(_)) |
         (string.map(BelleLabel.fromString).map(_.head) ~ ":" ~ eitherTac).rep(min = 2, sep = ","./).map(CaseTactic)) ~
       ")"
   )("<(tactic,tactic,...)", implicitly)

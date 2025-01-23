@@ -167,15 +167,17 @@ sealed trait NamedBelleExpr extends BelleExpr {
 
 /** `left ; right` sequential composition executes `right` on the output of `left`, failing if either fail. */
 object SeqTactic {
-  def apply(t1: BelleExpr, t2: BelleExpr): BelleExpr = (t1, t2) match {
-    case (SeqTactic(s1), SeqTactic(s2)) => SeqTactic(s1 ++ s2)
-    case (SeqTactic(s1), _) => SeqTactic(s1 :+ t2)
-    case (_, SeqTactic(s2)) => SeqTactic(t1 +: s2)
-    case _ => SeqTactic(Seq(t1, t2))
-  }
   def apply(seq: Seq[BelleExpr]): BelleExpr = {
     if (seq.size > 1) new SeqTactic(seq) else seq.headOption.getOrElse(TactixLibrary.nil)
   }
+
+  // Workaround to emulate apply(exprs: BelleExpr*)
+  def apply(): BelleExpr = TactixLibrary.nil
+  def apply(expr1: BelleExpr): BelleExpr = expr1
+  def apply(expr1: BelleExpr, exprs: BelleExpr*): BelleExpr = apply((expr1 +: exprs).flatMap {
+    case SeqTactic(seq) => seq
+    case tactic => Seq(tactic)
+  })
 }
 case class SeqTactic(seq: Seq[BelleExpr]) extends BelleExpr {
   assert(seq.size > 1, "Sequential composition needs at least 2 elements")
@@ -229,6 +231,9 @@ case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr {
  */
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr {
   override def prettyString: String = "<( " + children.map(_.prettyString).mkString(", ") + " )"
+}
+object BranchTactic {
+  def apply(exprs: BelleExpr*): BelleExpr = BranchTactic(exprs)
 }
 
 /**
