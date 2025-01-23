@@ -21,7 +21,7 @@ jobs:
           cache: sbt
 
       - name: Set up sbt
-        uses: ./.github/actions/setup-sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Cache JLink.jar
         id: cache-jlink-jar
