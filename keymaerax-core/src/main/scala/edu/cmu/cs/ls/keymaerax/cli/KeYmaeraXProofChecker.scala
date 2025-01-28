@@ -137,11 +137,6 @@ object KeYmaeraXProofChecker {
             case None => None
           }
 
-          lemma match {
-            case Some(l) => LemmaDBFactory.lemmaDB.add(l)
-            case None => // nothing to do
-          }
-
           pw match {
             case Some(w) =>
               assert(lemma.isDefined, "Lemma undefined even though writer is present")
