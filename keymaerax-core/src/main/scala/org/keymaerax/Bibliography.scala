@@ -51,6 +51,14 @@ object Bibliography {
   object JarPlatzer17
 
   /**
+   * André Platzer and Yong Kiam Tan.
+   * [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
+   * In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
+   * Science, LICS'18, pp. 819-828. ACM 2018.
+   */
+  object LicsPlatzerT18
+
+  /**
    * André Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
    * Springer, Cham, 2018. 659 pages. ISBN 978-3-319-63587-3.
    */

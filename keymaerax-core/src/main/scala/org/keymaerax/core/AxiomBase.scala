@@ -15,10 +15,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
  * @see
- *   Andre Platzer and Yong Kiam Tan.
- *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
- *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
- *   Science, LICS'18, ACM 2018.
+ *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
  *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
@@ -56,10 +53,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
  * @see
- *   Andre Platzer and Yong Kiam Tan.
- *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
- *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
- *   Science, LICS'18, ACM 2018.
+ *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
  *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint

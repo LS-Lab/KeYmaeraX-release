@@ -41,11 +41,9 @@ import scala.collection.mutable.ListBuffer
  * Implements ODE tactics based on the differential equation axiomatization.
  *
  * Created by yongkiat on 05/14/18.
+ *
  * @see
- *   Andre Platzer and Yong Kiam Tan.
- *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
- *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
- *   Science, LICS'18, ACM 2018.
+ *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
  */
 
 object ODEInvariance {
@@ -412,15 +410,13 @@ object ODEInvariance {
    * (f possibly involving max,min and abs)
    *
    * TODO: Add Q* to the antecedents in the second premise
+   *
    * @return
    *   closes the subgoal if P is indeed invariant, This should only fail if either:
    *   1. P fails to normalize to f>=0 form (it isn't closed)
    *   1. it is not invariant
    * @see
-   *   Andre Platzer and Yong Kiam Tan.
-   *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
-   *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
-   *   Science, LICS'18, ACM 2018.
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
    */
   // was "sAIc"
   def sAIclosed: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
@@ -651,10 +647,7 @@ object ODEInvariance {
    *   whether to skip over closed invariants (this should be used if the outer tactic already tried sAIclosedPlus,
    *   which is much faster than this one anyway) The option only applies if doReorder = true
    * @see
-   *   Andre Platzer and Yong Kiam Tan.
-   *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
-   *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
-   *   Science, LICS'18, ACM 2018.
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
    */
   // was "sAIR1"
   def sAIRankOne(doReorder: Boolean = true, skipClosed: Boolean = true): DependentPositionTactic =
@@ -1037,10 +1030,7 @@ object ODEInvariance {
    * @return
    *   tactic implementing vdbx as described above
    * @see
-   *   Andre Platzer and Yong Kiam Tan.
-   *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
-   *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
-   *   Science, LICS'18, ACM 2018.
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
    * @note
    *   uses Dconstify and handles other constification internally instead of an external wrapper
    */
@@ -1896,6 +1886,7 @@ object ODEInvariance {
    *   1. It does not characterize local progress for domain constraint Q
    *   1. For polynomials p>=0 in the normalized form that are NOT rank 1, this tactic currently requires checks the
    *      progress formula (p*>0) up to a given bound, rather than p*>=0
+   *
    * @param bound
    *   (default 1): the bound on higher Lie derivatives to check for strict inequality, i.e. for p>=0, this is generated
    *   p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...p'^bound > 0 ...)) (i.e. the bound-th Lie derivative is required to be
@@ -1904,10 +1895,7 @@ object ODEInvariance {
    *   closes the subgoal if P is indeed invariant, fails if P fails to normalize to f>=0 form, or if one of tactic
    *   limitations is met
    * @see
-   *   Andre Platzer and Yong Kiam Tan.
-   *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
-   *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
-   *   Science, LICS'18, ACM 2018.
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
    */
   // was "sAIc"
   def sAIclosedPlus(bound: Int = 1): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
@@ -2313,10 +2301,7 @@ object ODEInvariance {
    * @return
    *   closes the subgoal if P is indeed invariant,
    * @see
-   *   Andre Platzer and Yong Kiam Tan.
-   *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
-   *   In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
-   *   Science, LICS'18, ACM 2018.
+   *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
    */
   def sAI: DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
