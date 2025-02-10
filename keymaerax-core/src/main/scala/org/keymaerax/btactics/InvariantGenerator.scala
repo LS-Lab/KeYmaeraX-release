@@ -155,15 +155,13 @@ class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[
 
 /**
  * Invariant generators and differential invariant generators.
+ *
  * @author
  *   Andre Platzer
  * @see
  *   [[TactixLibrary.invSupplier]]
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]].
- *   In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August
- *   13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
+ *   [[org.keymaerax.Bibliography.ItpPlatzer12]]
  * @see
  *   Andre Platzer and Edmund M. Clarke.
  *   [[https://doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]].
@@ -433,11 +431,9 @@ object InvariantGenerator extends Logging {
 
   /**
    * Inverse Characteristic Method differential invariant generator.
+   *
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]].
-   *   In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012,
-   *   August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
+   *   [[org.keymaerax.Bibliography.ItpPlatzer12]]
    */
   @nowarn("msg=match may not be exhaustive")
   val inverseCharacteristicDifferentialInvariantGenerator: InvariantGenerator = (sequent, pos, defs) => {

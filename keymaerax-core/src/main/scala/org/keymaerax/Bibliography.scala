@@ -33,6 +33,14 @@ object Bibliography {
   object IcfemPlatzerQ09Tr
 
   /**
+   * André Platzer.
+   * [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]].
+   * In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August
+   * 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pp. 28-48. Springer, 2012.
+   */
+  object ItpPlatzer12
+
+  /**
    * André Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in
    * Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pp. 13-24. IEEE 2012.
    */
