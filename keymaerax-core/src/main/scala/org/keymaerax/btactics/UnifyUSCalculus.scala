@@ -3036,8 +3036,7 @@ object UnifyUSCalculus {
    * }}}
    *
    * @see
-   *   "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages
-   *   143-189, 2008. Lemma 7"
+   *   Lemma 7 in [[org.keymaerax.Bibliography.JarPlatzer08]]
    */
   private def inverseImplyR: ForwardTactic = pr => {
     val pos = SuccPos(0)

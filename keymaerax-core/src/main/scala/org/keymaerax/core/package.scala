@@ -151,7 +151,7 @@ import scala.collection.immutable
  * All proof rules for differential dynamic logic, including the uniform substitution and bound variable renaming rules
  * as well as efficient propositional sequent proof rules and Skolemization [[org.keymaerax.core.Skolemize]] are all of
  * type [[org.keymaerax.core.Rule]], which are the only proof rules that can ever be applied to a proof. See
- * [[https://doi.org/10.1007/s10817-008-9103-8 sequent calculus]]
+ * [[org.keymaerax.Bibliography.JarPlatzer08 sequent calculus]].
  *
  * ==Additional Capabilities==
  * ===Stored Provable Mechanism===
@@ -197,8 +197,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
- *   of Automated Reasoning, 41(2), pages 143-189, 2008.
+ *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  * @see
  *   [[org.keymaerax.core.Provable]]
  * @see

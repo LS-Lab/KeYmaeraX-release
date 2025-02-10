@@ -42,8 +42,7 @@ import scala.annotation.nowarn
  * @author
  *   Stefan Mitsch
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
- *   of Automated Reasoning, 41(2), pages 143-189, 2008.
+ *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  * @see
  *   [[org.keymaerax.Bibliography.Platzer18]]
  * @see

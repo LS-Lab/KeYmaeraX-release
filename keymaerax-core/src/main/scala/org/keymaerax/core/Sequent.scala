@@ -120,8 +120,7 @@ object SeqPos {
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
- *   of Automated Reasoning, 41(2), pages 143-189, 2008.
+ *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  */
 final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.IndexedSeq[Formula]) {
 

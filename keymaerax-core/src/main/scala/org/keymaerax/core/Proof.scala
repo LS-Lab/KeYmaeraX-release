@@ -25,8 +25,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
- *   of Automated Reasoning, 41(2), pages 143-189, 2008.
+ *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  * @note
  *   Code Review: 2020-02-17
  */

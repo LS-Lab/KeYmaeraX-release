@@ -13,6 +13,12 @@ package org.keymaerax
 object Bibliography {
 
   /**
+   * André Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
+   * of Automated Reasoning 41(2), pp. 143-189, 2008.
+   */
+  object JarPlatzer08
+
+  /**
    * André Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in
    * Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pp. 13-24. IEEE 2012.
    */

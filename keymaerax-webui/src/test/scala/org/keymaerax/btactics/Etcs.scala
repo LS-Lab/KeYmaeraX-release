@@ -23,8 +23,7 @@ import scala.language.postfixOps
  * @see
  *   "Andre Platzer, Jan-David Quesel. European Train Control System: A case study in formal verification. ICFEM, 2009"
  * @see
- *   "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages
- *   143-189, 2008."
+ *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  * @author
  *   Stefan Mitsch
  */
