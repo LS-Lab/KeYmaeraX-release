@@ -40,8 +40,7 @@ import scala.collection.mutable.ListBuffer
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
- *   Springer, 2018.
+ *   [[org.keymaerax.Bibliography.Platzer18]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In

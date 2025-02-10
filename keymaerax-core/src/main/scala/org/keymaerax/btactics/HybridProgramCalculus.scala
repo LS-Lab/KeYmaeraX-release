@@ -15,15 +15,14 @@ import org.keymaerax.infrastruct.Position
 /**
  * Hybrid Program Calculus for differential dynamic logic. Basic axioms for hybrid programs are in [[HilbertCalculus]].
  *
- * Provides the elementary derived proof rules for hybrid programs from Figure 7.4 and Figure 12.9 in: Andre Platzer.
- * [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+ * Provides the elementary derived proof rules for hybrid programs from Figure 7.4 and Figure 12.9 in
+ * [[org.keymaerax.Bibliography.Platzer18]].
  * @author
  *   Andre Platzer
  * @author
  *   Stefan Mitsch
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
- *   Springer, 2018.
+ *   [[org.keymaerax.Bibliography.Platzer18]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see

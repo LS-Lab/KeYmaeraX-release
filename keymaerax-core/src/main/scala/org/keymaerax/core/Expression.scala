@@ -188,8 +188,7 @@ final case class Except(taboos: immutable.Seq[Variable]) extends Space {
  *   Germany, Proceedings, LNCS. Springer, 2015.
  *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
- *   Springer, 2018.
+ *   [[org.keymaerax.Bibliography.Platzer18]]
  * @see
  *   [[org.keymaerax.parser.KeYmaeraXParser.apply]]
  * @see

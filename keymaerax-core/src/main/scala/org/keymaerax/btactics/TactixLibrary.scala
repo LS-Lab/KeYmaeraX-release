@@ -89,8 +89,7 @@ import scala.util.Try
  *   Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin,
  *   Germany, Proceedings, LNCS. Springer, 2015.
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
- *   Springer, 2018.
+ *   [[org.keymaerax.Bibliography.Platzer18]]
  * @see
  *   [[Ax]]
  * @see

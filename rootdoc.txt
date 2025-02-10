@@ -80,8 +80,6 @@ Full references on KeYmaera X are provided at [[http://keymaeraX.org/]]. The mai
 
 1. [[org.keymaerax.Bibliography.JarPlatzer17]]
 1. [[org.keymaerax.Bibliography.CadeFultonMQVP15]]
+1. [[org.keymaerax.Bibliography.Platzer18]]
 
-3. André Platzer.
-[[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
-Springer, 2018.
 [[http://video.lfcps.org/ Videos]]

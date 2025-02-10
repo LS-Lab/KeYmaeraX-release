@@ -1160,8 +1160,7 @@ object Ax extends Logging {
    *   Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log.
    *   17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
    * @see
-   *   Lemma 7.2 and Corollary 16.1 of Andre Platzer.
-   *   [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+   *   Lemma 7.2 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
    */
   @Derivation
   lazy val indrule: DerivedRuleInfo = derivedRuleSequent(
@@ -1203,8 +1202,7 @@ object Ax extends Logging {
    *   Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log.
    *   17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
    * @see
-   *   Lemma 16.11 and Corollary 16.1 of Andre Platzer.
-   *   [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+   *   Lemma 16.11 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
    * @see
    *   [[FPrule]]
    */
@@ -3563,7 +3561,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Lemma 7.6 of textbook
+   *   Lemma 7.6 in [[org.keymaerax.Bibliography.Platzer18]]
    * @Derived
    */
   @Derivation
@@ -3612,7 +3610,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Lemma 7.5 in textbook
+   *   Lemma 7.5 in [[org.keymaerax.Bibliography.Platzer18]]
    * @Derived
    *   for programs
    */
@@ -3640,7 +3638,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Lemma 7.5 in textbook
+   *   Lemma 7.5 in [[org.keymaerax.Bibliography.Platzer18]]
    * @Derived
    *   for programs
    */
@@ -3666,7 +3664,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Figure 7.8 in textbook
+   *   Figure 7.8 in [[org.keymaerax.Bibliography.Platzer18]]
    * @Derived
    *   for programs
    */
@@ -3698,7 +3696,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   Section 7.7.4 in textbook
+   *   Section 7.7.4 in [[org.keymaerax.Bibliography.Platzer18]]
    * @Derived
    *   for programs
    */

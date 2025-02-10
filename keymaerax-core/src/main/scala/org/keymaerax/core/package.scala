@@ -198,8 +198,7 @@ import scala.collection.immutable
  *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
  *   Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
- *   Springer, 2018.
+ *   [[org.keymaerax.Bibliography.Platzer18]]
  * @see
  *   [[org.keymaerax.Bibliography.CadeFultonMQVP15]]
  * @see
