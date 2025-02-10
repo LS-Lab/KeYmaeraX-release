@@ -21,6 +21,13 @@ object Bibliography {
   object CadeFultonMQVP15
 
   /**
+   * Stefan Mitsch and André Platzer.
+   * [[https://doi.org/10.1007/s10703-016-0241-z ModelPlex: Verified runtime validation of verified cyber-physical system models]].
+   * Formal Methods in System Design 49(1), pp. 33-74. 2016. Special issue for selected papers from RV'14.
+   */
+  object FmsdMitschP16
+
+  /**
    * Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer.
    * [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]]. In
    * Mauricio Ayala-Rincón and César A. Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017,

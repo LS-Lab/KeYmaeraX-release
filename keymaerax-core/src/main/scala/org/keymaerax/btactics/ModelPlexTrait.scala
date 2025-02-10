@@ -30,9 +30,7 @@ case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumpti
  * @author
  *   Andre Platzer
  * @see
- *   Stefan Mitsch and André Platzer.
- *   [[https://doi.org/10.1007/s10703-016-0241-z ModelPlex: Verified runtime validation of verified cyber-physical system models]].
- *   Formal Methods in System Design, 42 pp. 2016. Special issue for selected papers from RV'14.
+ *   [[org.keymaerax.Bibliography.FmsdMitschP16]]
  * @see
  *   Stefan Mitsch and André Platzer.
  *   [[https://doi.org/10.1007/978-3-319-11164-3_17 ModelPlex: Verified runtime validation of verified cyber-physical system models]].
