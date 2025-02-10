@@ -7150,7 +7150,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
+   *   [[org.keymaerax.Bibliography.CadePlatzerQR09Tr]]
    */
   // @note disabled since not provable with Z3; intended to replace QE with core implementation
 //  lazy val notEqualElim = derivedAxiom("!= elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()!=g_()) <-> \\exists z_ ((f_()-g_())*z_=1)".asFormula)),
@@ -7165,7 +7165,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
+   *   [[org.keymaerax.Bibliography.CadePlatzerQR09Tr]]
    */
   // @note disabled since not provable with Z3; intended to replace QE with core implementation
 //  lazy val greaterEqualElim = derivedAxiom(">= elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()>=g_()) <-> \\exists z_ (f_()-g_()=z_^2)".asFormula)),
@@ -7180,7 +7180,7 @@ object Ax extends Logging {
    * End.
    * }}}
    * @see
-   *   André Platzer, Jan-David Quesel, and Philipp Rümmer. Real world verification. CADE 2009.
+   *   [[org.keymaerax.Bibliography.CadePlatzerQR09Tr]]
    */
   // @note disabled since not provable with Z3; intended to replace QE with core implementation
 //  lazy val greaterElim = derivedAxiom("> elimination", Sequent(IndexedSeq(), IndexedSeq("(f_()>g_()) <-> \\exists z_ ((f_()-g_())*z_^2=1)".asFormula)),

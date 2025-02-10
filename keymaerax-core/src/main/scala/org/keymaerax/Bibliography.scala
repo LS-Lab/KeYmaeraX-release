@@ -19,6 +19,13 @@ object Bibliography {
   object JarPlatzer08
 
   /**
+   * André Platzer, Jan-David Quesel and Philipp Rümmer.
+   * [[https://logic.kastel.kit.edu/ap/pub/rwv-TR.pdf Real World Verification]]. Reports of SFB/TR 14 AVACS 52, 2009.
+   * ISSN: 1860-9821, www.avacs.org.
+   */
+  object CadePlatzerQR09Tr
+
+  /**
    * André Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in
    * Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pp. 13-24. IEEE 2012.
    */
