@@ -5,12 +5,11 @@
 
 /**
  * Differential Dynamic Logic prover Microkernel.
+ *
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
  *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
@@ -30,7 +29,7 @@ import scala.collection.immutable
  *
  * =KeYmaera X Kernel=
  *
- * The KeYmaera X Kernel implements [[https://doi.org/10.1007/s10817-016-9385-1 Differential Dynamic Logic]] and defines
+ * The KeYmaera X Kernel implements [[org.keymaerax.Bibliography.JarPlatzer17 Differential Dynamic Logic]] and defines
  *
  *   - Syntax of
  * [[http://lfcps.org/logic/dL.html differential dynamic logic]]:
@@ -115,14 +114,14 @@ import scala.collection.immutable
  *   1. [[org.keymaerax.core.DifferentialProgram differential programs]] are of type
  *      [[org.keymaerax.core.DifferentialProgram]] of kind [[org.keymaerax.core.DifferentialProgramKind]]
  *
- * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
+ * See [[org.keymaerax.Bibliography.JarPlatzer17]] Section 2.1
  *
  * ===Static Semantics===
  * The static semantics of differential dynamic logic is captured in [[org.keymaerax.core.StaticSemantics]] in terms of
  * the [[org.keymaerax.core.StaticSemantics.freeVars(org.keymaerax.core.Expression) free variables]] and
  * [[org.keymaerax.core.StaticSemantics.boundVars(org.keymaerax.core.Expression) bound variables]] that expressions have
  * as well as their [[org.keymaerax.core.StaticSemantics.signature(org.keymaerax.core.Expression) signatures]] (set of
- * occurring symbols). See [[https://doi.org/10.1007/s10817-016-9385-1 Section 2.4]]
+ * occurring symbols). See [[org.keymaerax.Bibliography.JarPlatzer17]] Section 2.4
  *
  * ==Theorem Prover==
  * The KeYmaera X Prover Kernel provides [[org.keymaerax.core.USubst uniform substitutions]],
@@ -135,20 +134,21 @@ import scala.collection.immutable
  * [[org.keymaerax.core.Provable.axioms]] and [[org.keymaerax.core.Provable.rules]] respectively. All available axioms
  * are listed in [[org.keymaerax.core.Provable.axioms]], all available axiomatic rules are listed in
  * [[org.keymaerax.core.Provable.rules]] which both ultimately come from the file [[org.keymaerax.core.AxiomBase]]. See
- * [[https://doi.org/10.1007/s10817-016-9385-1 Sections 4 and 5.0]] Additional axioms are available as derived axioms
- * and lemmas in [[org.keymaerax.btactics.Ax]].
+ * [[org.keymaerax.Bibliography.JarPlatzer17]] Sections 4 and 5.0. Additional axioms are available as derived axioms and
+ * lemmas in [[org.keymaerax.btactics.Ax]].
  *
  * ===Uniform Substitutions===
  * [[org.keymaerax.core.USubst Uniform substitutions]] uniformly replace all occurrences of a given predicate p(.) by a
  * formula in (.) and likewise for function symbols f(.) and program constants. Uniform substitutions and their
  * application mechanism for differential dynamic logic are implemented in [[org.keymaerax.core.USubst]]. See
- * [[https://doi.org/10.1007/s10817-016-9385-1 Section 3]] and
- * [[https://doi.org/10.1007/978-3-030-29436-6_25 one-pass Section 3]]
+ * [[org.keymaerax.Bibliography.JarPlatzer17]] Section 3 and
+ * [[https://doi.org/10.1007/978-3-030-29436-6_25 one-pass Section
+ * 3]]
  *
  * [[org.keymaerax.core.USubst Uniform substitutions]] can be used on proof certificates with the
  * [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubst):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]],
  * including uniform substitution instances of axioms or axiomatic rules. See
- * [[https://doi.org/10.1007/s10817-016-9385-1 Section 3]]
+ * [[org.keymaerax.Bibliography.JarPlatzer17]] Section 3.
  *
  * ===Sequent Proof Rules===
  * All proof rules for differential dynamic logic, including the uniform substitution and bound variable renaming rules
@@ -180,9 +180,7 @@ import scala.collection.immutable
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
  *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume

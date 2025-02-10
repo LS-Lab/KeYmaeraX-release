@@ -104,9 +104,7 @@ import scala.util.Try
  * @see
  *   [[AxIndex]]
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. arXiv:1601.06183
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -3445,9 +3443,7 @@ object UnifyUSCalculus {
    * from @[[org.keymaerax.btactics.macros.Axiom]] declarations.
    *
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. arXiv:1601.06183
+   *   [[org.keymaerax.Bibliography.JarPlatzer17]]
    */
   private[keymaerax] def matcherFor(pi: ProvableInfo): Matcher = pi match {
     case ifo: AxiomInfo => ifo.unifier match {

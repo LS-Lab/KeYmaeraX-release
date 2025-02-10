@@ -5,14 +5,13 @@
 
 /**
  * Uniform Substitution for KeYmaera X
+ *
  * @author
  *   Andre Platzer
  * @author
  *   smitsch
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -74,9 +73,7 @@ object SubstitutionAdmissibility {
  * @see
  *   [[USubstChurch]]
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
  *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume
@@ -160,12 +157,11 @@ final case class SubstitutionPair(what: Expression, repl: Expression) {
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments). That is the
    * (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments
    * in what.
+   *
    * @return
    *   essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
    * @see
-   *   Definition 19 in Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+   *   Definition 19 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   [[StaticSemantics.freeVars(f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.SetLattice[edu\.cmu\.cs\.ls\.keymaerax\.core\.Variable]*]]
    */

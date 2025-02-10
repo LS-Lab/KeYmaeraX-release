@@ -5,12 +5,11 @@
 
 /**
  * Differential Dynamic Logic expression data structures.
+ *
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -176,13 +175,12 @@ final case class Except(taboos: immutable.Seq[Variable]) extends Space {
  *   1. [[Function function symbols]] are degenerate expressions that are syntactically incomplete, since not yet
  *      applied to arguments via [[FuncOf]] to form a term or via [[PredOf]] or [[PredicationalOf]] to form a formula.
  *
- * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
+ * See [[org.keymaerax.Bibliography.JarPlatzer17]] Section 2.1.
+ *
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -647,10 +645,9 @@ final case class Power(left: Term, right: Term) extends RBinaryCompositeTerm {
 
 /**
  * `(child)'` differential of the term `child`.
+ *
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  */
 final case class Differential(child: Term) extends RUnaryCompositeTerm {
   override def reapply: Term => Differential = copy

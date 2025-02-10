@@ -30,18 +30,15 @@ import scala.collection.mutable.ListBuffer
 /**
  * Hilbert Calculus for differential dynamic logic.
  *
- * Provides the axioms and axiomatic proof rules from Figure 2 and Figure 3 in: Andre Platzer.
- * [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- * Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ * Provides the axioms and axiomatic proof rules from Figure 2 and Figure 3 in
+ * [[org.keymaerax.Bibliography.JarPlatzer17]].
  *
  * @author
  *   Andre Platzer
  * @author
  *   Stefan Mitsch
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
  *   Springer, 2018.
@@ -719,10 +716,9 @@ object HilbertCalculus {
  *
  * There is rarely a reason to use these separate axioms, since [[HilbertCalculus.derive]] already uses the appropriate
  * differential axiom as needed.
+ *
  * @see
- *   Figure 3 in Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   Figure 3 in [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   [[HilbertCalculus.derive]]
  */

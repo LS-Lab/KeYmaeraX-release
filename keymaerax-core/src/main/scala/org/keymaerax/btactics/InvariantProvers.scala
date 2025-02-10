@@ -37,9 +37,7 @@ object InvariantProvers {
    * @see
    *   [[loopauto]]
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Example 32.
+   *   Example 32 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    */
   @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
   def loopSR(gen: InvariantGenerator): DependentPositionTactic =

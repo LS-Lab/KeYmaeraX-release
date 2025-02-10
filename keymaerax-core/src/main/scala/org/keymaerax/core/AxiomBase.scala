@@ -5,14 +5,13 @@
 
 /**
  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X. resulting from differential dynamic logic.
+ *
  * @note
  *   Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer and Yong Kiam Tan.
  *   [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
@@ -50,12 +49,11 @@ import scala.collection.immutable._
 import org.keymaerax.parser.DLAxiomParser
 
 /**
- * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic
+ * The database of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic
  * axiomatizations.
+ *
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer and Yong Kiam Tan.
  *   [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
@@ -92,14 +90,13 @@ private[core] object AxiomBase extends Logging {
 
   /**
    * KeYmaera X Axiomatic Proof Rules.
+   *
    * @note
    *   Soundness-critical: Only return locally sound proof rules.
    * @return
    *   immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+   *   [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
    *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
@@ -142,10 +139,9 @@ private[core] object AxiomBase extends Logging {
        *   --------------------- CQ
        *    c(f(x)) <-> c(g(x))
        * }}}
+       *
        * @see
-       *   Figure 2 of Andre Platzer.
-       *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-       *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+       *   Figure 2 in [[org.keymaerax.Bibliography.JarPlatzer17]]
        */
       (
         "CQ equation congruence",
@@ -166,10 +162,9 @@ private[core] object AxiomBase extends Logging {
        *   --------------------- CE
        *    C{p(x)} <-> C{q(x)}
        * }}}
+       *
        * @see
-       *   Figure 2 of Andre Platzer.
-       *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-       *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+       *   Figure 2 in [[org.keymaerax.Bibliography.JarPlatzer17]]
        */
       (
         "CE congruence",
@@ -322,7 +317,7 @@ private[core] object AxiomBase extends Logging {
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
     /** HYBRID PROGRAM MODALITY AXIOMS */
-    // @see Figure 2 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    // @see Figure 2 in [[org.keymaerax.Bibliography.JarPlatzer17]]
     insist(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
     insist(axs("[:=] assign") == Equiv(Box(Assign(x, f0), PredOf(p, x)), PredOf(p, f0)), "[:=] assign")
     insist(
@@ -342,7 +337,7 @@ private[core] object AxiomBase extends Logging {
     insist(axs("VK vacuous") == Imply(Box(a, True), Imply(p0, Box(a, p0))), "VK vacuous")
 
     /** DIFFERENTIAL EQUATION AXIOMS */
-    // @see Figure 3 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    // @see Figure 3 in [[org.keymaerax.Bibliography.JarPlatzer17]]
     insist(axs("DW base") == Box(ODESystem(ode, qany), qany), "DW base")
     insist(
       axs("DMP differential modus ponens") == Imply(
@@ -521,7 +516,6 @@ private[core] object AxiomBase extends Logging {
    *
    * @note
    *   Soundness-critical: Only adopt valid formulas as axioms.
-   *
    * @author
    *   Nathan Fulton
    * @author
@@ -535,9 +529,7 @@ private[core] object AxiomBase extends Logging {
    * @author
    *   Fabian Immler
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+   *   [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   Andre Platzer and Yong Kiam Tan.
    *   [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66,

@@ -5,12 +5,11 @@
 
 /**
  * The static semantics of differential dynamic logic.
+ *
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -29,6 +28,7 @@ import scala.collection.immutable
 /**
  * The static semantics of differential dynamic logic. This object defines the static semantics of differential dynamic
  * logic in terms of the free variables and bound variables that expressions have as well as their signatures.
+ *
  * @author
  *   Andre Platzer
  * @author
@@ -36,9 +36,7 @@ import scala.collection.immutable
  * @note
  *   soundness-critical
  * @see
- *   Section 2.3 in Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   Section 2.3 in [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In

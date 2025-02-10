@@ -5,12 +5,11 @@
 
 /**
  * Differential Dynamic Logic pretty-printer for concrete KeYmaera X notation.
+ *
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @note
  *   Code Review 2020-02-14
  */
@@ -26,14 +25,13 @@ import org.keymaerax.core._
  * {{{
  *     PrettyPrinter: Expression => String
  * }}}
+ *
  * @author
  *   Andre Platzer
  * @see
  *   [[org.keymaerax.core.PrettyPrinter]]
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  */
 trait PrettyPrinter extends (Expression => String) {
 

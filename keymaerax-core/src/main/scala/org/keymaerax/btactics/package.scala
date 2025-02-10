@@ -290,9 +290,7 @@ package org.keymaerax
  * @todo
  *   Expand descriptions
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   [[org.keymaerax.btactics.TactixLibrary]]
  * @see

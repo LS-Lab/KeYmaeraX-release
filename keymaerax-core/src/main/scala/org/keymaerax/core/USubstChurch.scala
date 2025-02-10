@@ -5,14 +5,13 @@
 
 /**
  * Uniform Substitution for KeYmaera X
+ *
  * @author
  *   Andre Platzer
  * @author
  *   smitsch
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -56,9 +55,7 @@ import scala.collection.immutable
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -275,7 +272,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     .exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
   // implementation of uniform substitution application
-  // @see Figure 1 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  // @see Figure 1 in [[org.keymaerax.Bibliography.JarPlatzer17]]
 
   /** uniform substitution on terms */
   @nowarn("msg=match may not be exhaustive")
@@ -486,14 +483,13 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   /**
    * check whether this substitution is U-admissible for an expression with the given occurrences of
    * functions/predicates symbols.
+   *
    * @param U
    *   taboo list of variables
    * @param occurrences
    *   the function and predicate symbols occurring in the expression of interest.
    * @see
-   *   Definition 19 in Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+   *   Definition 19 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   arXiv:1503.01981 Definition 12.
    */
@@ -506,6 +502,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   /**
    * Compute the set of all symbols for which this substitution clashes because it is not U-admissible for the given
    * expression.
+   *
    * @param U
    *   taboo list of variables
    * @param e
@@ -513,9 +510,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * @return
    *   FV(restrict this to occurrences) /\ U
    * @see
-   *   Definition 19 in Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+   *   Definition 19 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   arXiv:1503.01981 Definition 12.
    * @note
@@ -528,6 +523,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   /**
    * Compute the set of all symbols for which this substitution clashes because it is not U-admissible for an expression
    * with the given occurrences of functions/predicates symbols.
+   *
    * @param U
    *   taboo list of variables
    * @param occurrences
@@ -535,9 +531,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
    * @return
    *   FV(restrict this to occurrences) /\ U
    * @see
-   *   Definition 19 in Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+   *   Definition 19 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   arXiv:1503.01981 Definition 12.
    */
@@ -547,10 +541,9 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
 
   /**
    * Projects / restricts a substitution to only those that affect the symbols listed in occurrences.
+   *
    * @see
-   *   Definition 19 in Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+   *   Definition 19 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   arXiv:1503.01981 Definition 12.
    */

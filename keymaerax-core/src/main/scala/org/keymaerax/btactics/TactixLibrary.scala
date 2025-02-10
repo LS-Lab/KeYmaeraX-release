@@ -82,9 +82,7 @@ import scala.util.Try
  * @author
  *   Stefan Mitsch
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -715,12 +713,11 @@ object TactixLibrary {
   /**
    * loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
    * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
+   *
    * @see
    *   [[loopauto]]
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Example 32.
+   *   Example 32 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    */
   def loopSR(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopSR(gen)
 
@@ -728,14 +725,13 @@ object TactixLibrary {
    * loopPostMaster: search-and-rescue style automatic loop induction based on successive generator gen. Uses
    * [[SearchAndRescueAgain]] to avoid repetitive proving. Present implementation needs differential equations to occur
    * somewhere within the loop.
+   *
    * @author
    *   Andre Platzer
    * @author
    *   Stefan Mitsch
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Example 32.
+   *   Example 32 in [[org.keymaerax.Bibliography.JarPlatzer17]]
    */
   def loopPostMaster(gen: InvariantGenerator): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
 

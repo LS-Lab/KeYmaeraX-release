@@ -5,6 +5,7 @@
 
 /**
  * Sequent prover, proof rules, and axioms of KeYmaera X.
+ *
  * @note
  *   Soundness-critical: Only provide sound proof rule application mechanisms.
  * @author
@@ -17,9 +18,7 @@
  *   Andre Platzer and Yong Kiam Tan.
  *   [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -86,9 +85,7 @@ import scala.collection.immutable
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
- *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
  *   [[org.keymaerax.core.Provable.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  * @see
@@ -381,9 +378,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @author
    *   Andre Platzer
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
+   *   Theorem 26+27." in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @note
    *   soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise
    *   implementation would be more complicated).
@@ -391,8 +386,8 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   final def apply(subst: USubst): Provable =
     try {
       // @note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
-      // @note case subst.freeVars.isEmpty is covered by Theorem 27 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017
-      // @note case isProved is covered by Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26 and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
+      // @note case subst.freeVars.isEmpty is covered by Theorem 27 in [[org.keymaerax.Bibliography.JarPlatzer17]]
+      // @note case isProved is covered by [[org.keymaerax.Bibliography.JarPlatzer17]] Theorem 26 and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
       // @note special blessing for "CQ equation congruence" is covered by Brandon Bohrer [[https://github.com/LS-Lab/Isabelle-dL/blob/master/Proof_Checker.thy]]
       if (usubstChurch) {
         insist(
@@ -427,9 +422,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @author
    *   Andre Platzer
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
-   *   Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
+   *   Theorem 26+27." in [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
    *   Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
    *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume

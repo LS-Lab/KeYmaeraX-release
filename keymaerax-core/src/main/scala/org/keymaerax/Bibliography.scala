@@ -10,4 +10,12 @@ package org.keymaerax
  *
  * The papers are sorted by year, then alphabetically by the object name.
  */
-object Bibliography {}
+object Bibliography {
+
+  /**
+   * André Platzer.
+   * [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
+   * Journal of Automated Reasoning 59(2), pp. 219-265, 2017.
+   */
+  object JarPlatzer17
+}
