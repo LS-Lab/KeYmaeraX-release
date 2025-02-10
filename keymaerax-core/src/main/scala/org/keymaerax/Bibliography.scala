@@ -20,6 +20,14 @@ object Bibliography {
 
   /**
    * André Platzer, Jan-David Quesel and Philipp Rümmer.
+   * [[https://doi.org/10.1007/978-3-642-02959-2_35 Real world verification]]. In Renate A. Schmidt, editor,
+   * International Conference on Automated Deduction, CADE-22, Montreal, Canada, Proceedings, volume 5663 of LNCS, pp.
+   * 485-501. Springer, 2009.
+   */
+  object CadePlatzerQR09
+
+  /**
+   * André Platzer, Jan-David Quesel and Philipp Rümmer.
    * [[https://logic.kastel.kit.edu/ap/pub/rwv-TR.pdf Real World Verification]]. Reports of SFB/TR 14 AVACS 52, 2009.
    * ISSN: 1860-9821, www.avacs.org.
    */

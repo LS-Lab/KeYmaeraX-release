@@ -1937,10 +1937,9 @@ object TactixLibrary {
    * G_FOLR, p=0 |- q<=0, r<0, D_FOLR
    * }}}
    * @see
-   *   Andre Platzer, Jan-David Quesel and Philipp Rummer.
-   *   [[https://doi.org/10.1007/978-3-642-02959-2_35 Real world verification]]. CADE-22.
+   *   [[org.keymaerax.Bibliography.CadePlatzerQR09]]
    * @see
-   *   [[QE()]]
+   *   [[QE]]
    * @example
    *   `x >= 1 -> x > 1 | x =1` proves by SOS automatically
    */
