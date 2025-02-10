@@ -23,8 +23,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
- *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @note
  *   Code Review: 2020-02-17
  */
@@ -55,8 +54,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
- *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @author
  *   Andre Platzer
  * @author
@@ -84,8 +82,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
-   *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
-   *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+   *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
    * @author
    *   Andre Platzer
    */
@@ -222,9 +219,7 @@ private[core] object AxiomBase extends Logging {
        *     \exists x J(x) |- <a{|x|}*>\exists x (x<=0 & J(x))
        * }}}
        * @see
-       *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
-       *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE
-       *   2012
+       *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
        * @see
        *   Section 17.4 in [[org.keymaerax.Bibliography.Platzer18]]
        */

@@ -19,6 +19,12 @@ object Bibliography {
   object LicsPlatzer12a
 
   /**
+   * André Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
+   * Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pp. 541-550. IEEE 2012.
+   */
+  object LicsPlatzer12b
+
+  /**
    * Stefan Mitsch and André Platzer.
    * [[https://doi.org/10.1007/978-3-319-11164-3_17 ModelPlex: Verified runtime validation of verified cyber-physical system models]].
    * In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014,

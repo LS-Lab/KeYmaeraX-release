@@ -23,8 +23,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
- *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+ *   [[org.keymaerax.Bibliography.LicsPlatzer12b]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
  *   of Automated Reasoning, 41(2), pages 143-189, 2008.
