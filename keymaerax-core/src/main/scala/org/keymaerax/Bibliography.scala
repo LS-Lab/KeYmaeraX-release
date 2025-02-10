@@ -55,4 +55,10 @@ object Bibliography {
    * Springer, Cham, 2018. 659 pages. ISBN 978-3-319-63587-3.
    */
   object Platzer18
+
+  /**
+   * André Platzer and Yong Kiam Tan.
+   * [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM 67(1), 6:1-6:66, 2020.
+   */
+  object JacmPlatzerT20
 }

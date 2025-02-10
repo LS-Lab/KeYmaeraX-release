@@ -186,8 +186,7 @@ import scala.collection.immutable
  *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume
  *   11716 of LNCS, pp. 425-441. Springer, 2019.
  * @see
- *   Andre Platzer and Yong Kiam Tan.
- *   [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
+ *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In

@@ -5660,7 +5660,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG).
    * @see
-   *   André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   [[DBXgtOpen]]
    */
@@ -5771,7 +5771,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   [[DBXgt]]
    */
@@ -5886,7 +5886,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   [[DBXgt]]
    */
@@ -5996,7 +5996,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   [[DBXge]]
    */
@@ -6049,7 +6049,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   [[DBXgt]]
    */
@@ -6096,7 +6096,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   [[DBXgt]]
    */
@@ -6144,7 +6144,7 @@ object Ax extends Logging {
    *   For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see
    *   DG)
    * @see
-   *   André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   [[DBXgt]]
    */

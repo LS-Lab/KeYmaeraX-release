@@ -943,10 +943,9 @@ object TactixLibrary {
    * ----------------------------
    * G |- [x'=f(x)&Q]P, D
    * }}}
+   *
    * @see
-   *   Andre Platzer and Yong Kiam Tan.
-   *   [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66,
-   *   2020.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   André Platzer and Yong Kiam Tan.
    *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
@@ -972,10 +971,9 @@ object TactixLibrary {
    * ----------------------------
    * G |- [x'=f(x)&Q]P
    * }}}
+   *
    * @see
-   *   Andre Platzer and Yong Kiam Tan.
-   *   [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66,
-   *   2020.
+   *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
    *   André Platzer and Yong Kiam Tan.
    *   [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
