@@ -26,6 +26,13 @@ object Bibliography {
   object CadePlatzerQR09Tr
 
   /**
+   * André Platzer and Jan-David Quesel.
+   * [[https://logic.kastel.kit.edu/ap/pub/ETCS-TR.pdf European Train Control System: A Case Study in Formal Verification]].
+   * Reports of SFB/TR 14 AVACS 54, 2009. ISSN: 1860-9821, www.avacs.org.
+   */
+  object IcfemPlatzerQ09Tr
+
+  /**
    * André Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in
    * Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pp. 13-24. IEEE 2012.
    */

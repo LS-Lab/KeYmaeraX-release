@@ -20,8 +20,9 @@ import scala.language.postfixOps
 
 /**
  * ETCS test cases. Essentials of European Train Control System (ETCS).
+ *
  * @see
- *   "Andre Platzer, Jan-David Quesel. European Train Control System: A case study in formal verification. ICFEM, 2009"
+ *   [[org.keymaerax.Bibliography.IcfemPlatzerQ09Tr]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer08]]
  * @author
