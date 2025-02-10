@@ -4900,9 +4900,7 @@ object Ax extends Logging {
    * }}}
    *
    * @see
-   *   footnote 3 in "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and
-   *   Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings,
-   *   volume 9195 of LNCS, pages 467-481. Springer, 2015. arXiv 1503.01981, 2015."
+   *   footnote 3 in [[org.keymaerax.Bibliography.CadePlatzer15]]
    */
   @Derivation
   lazy val DW: DerivedAxiomInfo = derivedAxiom(

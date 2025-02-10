@@ -106,10 +106,7 @@ import scala.util.Try
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
- *   Andre Platzer.
- *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
- *   Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin,
- *   Germany, Proceedings, LNCS. Springer, 2015.
+ *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @Tactic
  *   completed
  */
@@ -1536,11 +1533,7 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CEat(Provable)]]
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].
-   *   In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin,
-   *   Germany, Proceedings, LNCS. Springer, 2015.
-   *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    */
   def CE(inEqPos: PosInExpr): InputTactic = "CECongruence".byWithInputs(List(inEqPos), CEFw(inEqPos))
 
@@ -1597,11 +1590,7 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CE(Context)]]
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].
-   *   In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin,
-   *   Germany, Proceedings, LNCS. Springer, 2015.
-   *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    */
   def CEimp(inEqPos: PosInExpr): InputTactic = "CEimp".byWithInputs(List(inEqPos), CEimpFw(inEqPos))
 
@@ -1658,11 +1647,7 @@ object UnifyUSCalculus {
    * @see
    *   [[UnifyUSCalculus.CE(Context)]]
    * @see
-   *   Andre Platzer.
-   *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].
-   *   In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin,
-   *   Germany, Proceedings, LNCS. Springer, 2015.
-   *   [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981]]
+   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    */
   def CErevimp(inEqPos: PosInExpr): InputTactic = "CErevimp".byWithInputs(List(inEqPos), CErevimpFw(inEqPos))
 

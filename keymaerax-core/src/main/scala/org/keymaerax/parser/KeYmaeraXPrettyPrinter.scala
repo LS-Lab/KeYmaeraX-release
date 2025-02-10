@@ -9,7 +9,7 @@
  * @author
  *   Andre Platzer
  * @see
- *   "Andre Platzer. A uniform substitution calculus for differential dynamic logic. arXiv 1503.01981, 2015."
+ *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @note
  *   Code Review 2016-08-02
  */

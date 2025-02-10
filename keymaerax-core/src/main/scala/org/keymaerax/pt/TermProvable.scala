@@ -257,9 +257,7 @@ sealed trait ProvableSig {
    * }}}
    *
    * @see
-   *   "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart
-   *   Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings,
-   *   LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    */
   val axioms: Map[String, ProvableSig]
 
@@ -272,9 +270,7 @@ sealed trait ProvableSig {
    * }}}
    *
    * @see
-   *   "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart
-   *   Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings,
-   *   LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    * @see
    *   [[Provable.apply(USubst)]]
    */
@@ -347,9 +343,7 @@ object ProvableSig {
    * }}}
    *
    * @see
-   *   "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart
-   *   Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings,
-   *   LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    */
   def axioms: immutable.Map[String, ProvableSig] = {
     if (PROOF_TERMS_ENABLED) TermProvable.axioms else ElidingProvable.axioms
@@ -364,9 +358,7 @@ object ProvableSig {
    * }}}
    *
    * @see
-   *   "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart
-   *   Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings,
-   *   LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+   *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    * @see
    *   [[Provable.apply(USubst)]]
    */
