@@ -17,7 +17,7 @@ import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 
 /**
- * Differential Saturation (Fig 6.3, Logical Analysis of Hybrid Systems)
+ * Differential Saturation (Fig 6.3, [[org.keymaerax.Bibliography.Platzer10]])
  *
  * Considers a sequent of the form `Gamma |- [ODE & Q]p`. All of Gamma, Q and p are assumed to be FOL_R only. Does NOT
  * construct proofs along the way.
