@@ -26,6 +26,13 @@ object Bibliography {
   object CadePlatzerQR09Tr
 
   /**
+   * André Platzer and Edmund M. Clarke.
+   * [[https://doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]].
+   * Formal Methods in System Design 35(1), pp. 98-120, 2009. Special issue for selected papers from CAV'08.
+   */
+  object FmsdPlatzerC09
+
+  /**
    * André Platzer and Jan-David Quesel.
    * [[https://logic.kastel.kit.edu/ap/pub/ETCS-TR.pdf European Train Control System: A Case Study in Formal Verification]].
    * Reports of SFB/TR 14 AVACS 54, 2009. ISSN: 1860-9821, www.avacs.org.

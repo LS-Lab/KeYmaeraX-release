@@ -163,9 +163,7 @@ class ConfigurableGenerator(var products: Map[Expression, Seq[Invariant]] = Map[
  * @see
  *   [[org.keymaerax.Bibliography.ItpPlatzer12]]
  * @see
- *   Andre Platzer and Edmund M. Clarke.
- *   [[https://doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]].
- *   Formal Methods in System Design, 35(1), pp. 98-120, 2009
+ *   [[org.keymaerax.Bibliography.FmsdPlatzerC09]]
  */
 object InvariantGenerator extends Logging {
 
