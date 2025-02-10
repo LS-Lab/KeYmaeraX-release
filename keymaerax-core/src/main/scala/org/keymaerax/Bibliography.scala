@@ -83,6 +83,12 @@ object Bibliography {
   object JarPlatzer17
 
   /**
+   * André Platzer. [[https://doi.org/10.1145/3091123 Differential hybrid games]]. ACM Trans. Comput. Log. 18(3), pp.
+   * 19:1-19:44, 2017.
+   */
+  object ToclPlatzer17
+
+  /**
    * André Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
    * In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
    * Conference, IJCAR 2018, Oxford, UK, Proceedings, volume 10900 of LNCS, pp. 211-227. Springer 2018.

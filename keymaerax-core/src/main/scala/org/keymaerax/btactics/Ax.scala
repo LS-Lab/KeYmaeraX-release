@@ -1589,7 +1589,7 @@ object Ax extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
-   *   "André Platzer. Differential Hybrid Games."
+   *   [[org.keymaerax.Bibliography.ToclPlatzer17]]
    * @note
    *   Notation changed to p instead of p_ just for the sake of the derivation.
    */
@@ -1630,7 +1630,7 @@ object Ax extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
-   *   "André Platzer. Differential Hybrid Games."
+   *   [[org.keymaerax.Bibliography.ToclPlatzer17]]
    * @note
    *   Renamed form of boxMonotone.
    */
