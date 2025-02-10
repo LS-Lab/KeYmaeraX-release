@@ -2241,8 +2241,7 @@ object ODEInvariance {
    * }}}
    *
    * @see
-   *   Andrew Sogokon, Khalil Ghorbal, Paul B. Jackson and André Platzer.
-   *   [[https://doi.org/10.1007/978-3-662-49122-5_13]].
+   *   [[org.keymaerax.Bibliography.VmcaiSogokonGJP16]]
    * @param p
    *   the DDC polynomial
    * @return

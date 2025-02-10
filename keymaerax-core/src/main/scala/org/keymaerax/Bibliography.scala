@@ -120,6 +120,15 @@ object Bibliography {
   object FmsdMitschP16
 
   /**
+   * Andrew Sogokon, Khalil Ghorbal, Paul B. Jackson and André Platzer.
+   * [[https://doi.org/10.1007/978-3-662-49122-5_13 A method for invariant generation for polynomial continuous systems]].
+   * In Barbara Jobstmann and K. Rustan M. Leino, editors, Verification, Model Checking, and Abstract Interpretation -
+   * 17th International Conference, VMCAI 2016, St. Petersburg, Florida, USA, January 17-19, 2016, Proceedings, volume
+   * 9583 of LNCS, pp. 268-288. Springer, 2016.
+   */
+  object VmcaiSogokonGJP16
+
+  /**
    * Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer.
    * [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]]. In
    * Mauricio Ayala-Rincón and César A. Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017,
