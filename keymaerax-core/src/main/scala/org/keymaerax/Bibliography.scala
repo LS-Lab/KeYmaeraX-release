@@ -139,6 +139,13 @@ object Bibliography {
   object Platzer18
 
   /**
+   * Andreas Müller, Stefan Mitsch, Werner Retschitzegger, Wieland Schwinger and André Platzer.
+   * [[https://doi.org/10.1007/s10009-018-0502-9 Tactical contract composition for hybrid system component verification]].
+   * STTT 20(6), pp. 615-643, 2018.
+   */
+  object StttMullerMRSP18
+
+  /**
    * André Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
    * Fontaine, editor, International Conference on Automated Deduction, CADE-27, Natal, Brazil, Proceedings, volume
    * 11716 of LNCS, pp. 425-441. Springer, 2019.
