@@ -197,9 +197,7 @@ import org.keymaerax.core.CoreException
  *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
  *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see
- *   Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical
- *   theorem prover for hybrid systems. In Amy P. Felty and Aart Middeldorp, editors, International Conference on
- *   Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+ *   [[org.keymaerax.Bibliography.CadeFultonMQVP15]]
  * @see
  *   [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
  * @see

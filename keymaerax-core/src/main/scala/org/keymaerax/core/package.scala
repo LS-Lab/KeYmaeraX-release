@@ -49,7 +49,7 @@ import scala.collection.immutable
  *
  * ==Usage Overview==
  * The KeYmaera X Kernel package provides the ''soundness-critical core of
- * [[https://doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X]]''. It provides ways of constructing proofs that, by
+ * [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X]]''. It provides ways of constructing proofs that, by
  * construction, can only be constructed using the proof rules that the KeYmaera X Kernel provides. The
  * [[org.keymaerax.btactics proof tactics]] that KeYmaera X provides give you a more powerful and flexible and easier
  * way of constructing and searching for proofs, but they internally reduce to what is shown here.
@@ -201,9 +201,7 @@ import scala.collection.immutable
  *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
  *   Springer, 2018.
  * @see
- *   Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical
- *   theorem prover for hybrid systems. In Amy P. Felty and Aart Middeldorp, editors, International Conference on
- *   Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+ *   [[org.keymaerax.Bibliography.CadeFultonMQVP15]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
  *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
