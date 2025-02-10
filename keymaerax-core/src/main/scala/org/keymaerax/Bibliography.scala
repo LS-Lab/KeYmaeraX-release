@@ -65,6 +65,13 @@ object Bibliography {
   object Platzer18
 
   /**
+   * André Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
+   * Fontaine, editor, International Conference on Automated Deduction, CADE-27, Natal, Brazil, Proceedings, volume
+   * 11716 of LNCS, pp. 425-441. Springer, 2019.
+   */
+  object CadePlatzer19
+
+  /**
    * André Platzer and Yong Kiam Tan.
    * [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM 67(1), 6:1-6:66, 2020.
    */

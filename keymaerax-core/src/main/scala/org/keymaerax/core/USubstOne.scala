@@ -5,12 +5,11 @@
 
 /**
  * Uniform Substitution for KeYmaera X
+ *
  * @author
  *   Andre Platzer
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
- *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume
- *   11716 of LNCS, pp. 425-441. Springer, 2019.
+ *   [[org.keymaerax.Bibliography.CadePlatzer19]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @note
@@ -41,9 +40,7 @@ import scala.collection.immutable
  *   Andre Platzer Created by aplatzer on 2019-2-12.
  * @since 4.7
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
- *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume
- *   11716 of LNCS, pp. 425-441. Springer, 2019.
+ *   [[org.keymaerax.Bibliography.CadePlatzer19]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstOne):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  * @see
@@ -200,7 +197,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   def ++(other: USubstOne): USubstOne = USubstOne((this.subsDefs ++ other.subsDefs).distinct)
 
   // implementation of uniform substitution application
-  // @see Figure 2 in Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+  // @see Figure 2 in [[org.keymaerax.Bibliography.Platzer19]]
 
   /**
    * uniform substitution on terms.

@@ -141,9 +141,8 @@ import scala.collection.immutable
  * [[org.keymaerax.core.USubst Uniform substitutions]] uniformly replace all occurrences of a given predicate p(.) by a
  * formula in (.) and likewise for function symbols f(.) and program constants. Uniform substitutions and their
  * application mechanism for differential dynamic logic are implemented in [[org.keymaerax.core.USubst]]. See
- * [[org.keymaerax.Bibliography.JarPlatzer17]] Section 3 and
- * [[https://doi.org/10.1007/978-3-030-29436-6_25 one-pass Section
- * 3]]
+ * [[org.keymaerax.Bibliography.JarPlatzer17]] Section 3 and [[org.keymaerax.Bibliography.CadePlatzer19]] one-pass
+ * Section 3.
  *
  * [[org.keymaerax.core.USubst Uniform substitutions]] can be used on proof certificates with the
  * [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubst):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]],
@@ -182,9 +181,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
- *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume
- *   11716 of LNCS, pp. 425-441. Springer, 2019.
+ *   [[org.keymaerax.Bibliography.CadePlatzer19]]
  * @see
  *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
  * @see

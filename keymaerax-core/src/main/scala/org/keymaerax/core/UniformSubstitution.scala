@@ -75,9 +75,7 @@ object SubstitutionAdmissibility {
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal
- *   Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume
- *   11716 of LNCS, pp. 425-441. Springer, 2019.
+ *   [[org.keymaerax.Bibliography.CadePlatzer19]]
  */
 final case class SubstitutionPair(what: Expression, repl: Expression) {
   insist(
