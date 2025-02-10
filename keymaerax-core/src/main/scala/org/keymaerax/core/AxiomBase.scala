@@ -17,9 +17,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
- *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
- *   Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
+ *   [[org.keymaerax.Bibliography.CadePlatzer18]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -55,9 +53,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.LicsPlatzerT18]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
- *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
- *   Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
+ *   [[org.keymaerax.Bibliography.CadePlatzer18]]
  * @see
  *   Andre Platzer.
  *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In
@@ -90,9 +86,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.JarPlatzer17]]
    * @see
-   *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
-   *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
-   *   Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
+   *   [[org.keymaerax.Bibliography.CadePlatzer18]]
    * @see
    *   Andre Platzer.
    *   [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].
@@ -523,9 +517,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.JacmPlatzerT20]]
    * @see
-   *   Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
-   *   In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
-   *   Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
+   *   [[org.keymaerax.Bibliography.CadePlatzer18]]
    * @see
    *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
    *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]

@@ -51,6 +51,13 @@ object Bibliography {
   object JarPlatzer17
 
   /**
+   * André Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]].
+   * In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint
+   * Conference, IJCAR 2018, Oxford, UK, Proceedings, volume 10900 of LNCS, pp. 211-227. Springer 2018.
+   */
+  object CadePlatzer18
+
+  /**
    * André Platzer and Yong Kiam Tan.
    * [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]].
    * In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer
