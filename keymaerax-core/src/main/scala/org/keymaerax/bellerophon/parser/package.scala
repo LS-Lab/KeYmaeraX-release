@@ -43,10 +43,7 @@ package org.keymaerax.bellerophon
  * @author
  *   Stefan Mitsch
  * @see
- *   Nathan Fulton, Stefan Mitsch, Brandon Bohrer and Andre Platzer.
- *   [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]]. In
- *   Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017,
- *   volume 10499 of LNCS. Springer, 2017.
+ *   [[org.keymaerax.Bibliography.ItpFultonMBP17]]
  * @see
  *   [[org.keymaerax.bellerophon.parser.BelleParser]]
  */

@@ -78,10 +78,7 @@ object BelleExpr {
  * @todo
  *   Consolidate the members of BelleExpr and finalize an abstract syntax.
  * @see
- *   Table 1 of
- *   [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus]].
- *   In Mauricio Ayala-Rincón and César A. Muñoz, editors, Interactive Theorem Proving, International Conference, ITP
- *   2017, volume 10499 of LNCS, pp. 207-224. Springer, 2017.
+ *   Table 1 of [[org.keymaerax.Bibliography.ItpFultonMBP17]]
  * @author
  *   Nathan Fulton
  * @author

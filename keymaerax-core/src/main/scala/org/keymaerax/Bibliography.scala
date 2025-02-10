@@ -21,6 +21,14 @@ object Bibliography {
   object CadeFultonMQVP15
 
   /**
+   * Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer.
+   * [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]]. In
+   * Mauricio Ayala-Rincón and César A. Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017,
+   * volume 10499 of LNCS, pp. 207-224. Springer, 2017.
+   */
+  object ItpFultonMBP17
+
+  /**
    * André Platzer.
    * [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
    * Journal of Automated Reasoning 59(2), pp. 219-265, 2017.
