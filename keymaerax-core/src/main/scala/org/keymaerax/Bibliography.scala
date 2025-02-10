@@ -83,6 +83,14 @@ object Bibliography {
   object RvMitschP14
 
   /**
+   * Khalil Ghorbal, Andrew Sogokon, and André Platzer.
+   * [[https://doi.org/10.1007/978-3-319-10936-7_10 Invariance of conjunctions of polynomial equalities for algebraic differential equations]].
+   * In Markus Müller-Olm and Helmut Seidl, editors, 21st International Static Analysis Symposium, SAS 2014, volume 8723
+   * of LNCS, pp. 151-167. Springer, 2014.
+   */
+  object SasGhorbalSP14
+
+  /**
    * Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer.
    * [[https://doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]].
    * In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE-25, Berlin,

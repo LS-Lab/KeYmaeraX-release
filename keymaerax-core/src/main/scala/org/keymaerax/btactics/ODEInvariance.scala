@@ -1191,8 +1191,7 @@ object ODEInvariance {
    * This proof rule is complete for open semialgebraic domain constraints Q This requires a top-level postcondition
    * which rearranges to be a conjunction of equalities
    * @see
-   *   Khalil Ghorbal, Andrew Sogokon, and André Platzer.
-   *   [[https://doi.org/10.1007/978-3-319-10936-7_10 Invariance of conjunctions of polynomial equalities for algebraic differential equations]].
+   *   [[org.keymaerax.Bibliography.SasGhorbalSP14]]
    */
   val dRI: DependentPositionTactic = "dRI".by { (pos: Position, seq: Sequent) =>
     if (!(pos.isTopLevel && pos.isSucc)) throw new IllFormedTacticApplicationException(
