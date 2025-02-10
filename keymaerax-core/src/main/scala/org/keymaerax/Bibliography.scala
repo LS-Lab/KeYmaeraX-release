@@ -13,6 +13,14 @@ package org.keymaerax
 object Bibliography {
 
   /**
+   * Stefan Mitsch and André Platzer.
+   * [[https://doi.org/10.1007/978-3-319-11164-3_17 ModelPlex: Verified runtime validation of verified cyber-physical system models]].
+   * In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014,
+   * Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pp. 199-214. Springer, 2014.
+   */
+  object RvMitschP14
+
+  /**
    * Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer.
    * [[https://doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]].
    * In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE-25, Berlin,
