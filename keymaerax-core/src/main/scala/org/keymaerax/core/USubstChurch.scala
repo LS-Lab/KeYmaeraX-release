@@ -17,8 +17,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
- *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @note
  *   Code Review: 2020-02-17
  */
@@ -56,8 +55,7 @@ import scala.collection.immutable
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer18]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
- *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
  *   [[org.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstChurch):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
  * @see

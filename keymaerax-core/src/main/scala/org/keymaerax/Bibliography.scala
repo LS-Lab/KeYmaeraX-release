@@ -37,6 +37,12 @@ object Bibliography {
   object CadePlatzer15
 
   /**
+   * André Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), pp.
+   * 1:1-1:52, 2015.
+   */
+  object ToclPlatzer15
+
+  /**
    * Stefan Mitsch and André Platzer.
    * [[https://doi.org/10.1007/s10703-016-0241-z ModelPlex: Verified runtime validation of verified cyber-physical system models]].
    * Formal Methods in System Design 49(1), pp. 33-74. 2016. Special issue for selected papers from RV'14.

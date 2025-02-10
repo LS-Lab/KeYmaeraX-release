@@ -190,8 +190,7 @@ import org.keymaerax.core.CoreException
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
- *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
  *   [[org.keymaerax.Bibliography.CadeFultonMQVP15]]
  * @see

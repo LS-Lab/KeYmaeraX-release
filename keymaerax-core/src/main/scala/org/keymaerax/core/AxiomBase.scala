@@ -21,8 +21,7 @@
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
- *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
  *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
@@ -54,8 +53,7 @@ import org.keymaerax.parser.DLAxiomParser
  * @see
  *   [[org.keymaerax.Bibliography.CadePlatzer15]]
  * @see
- *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
- *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
  * @see
  *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
  *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
@@ -84,8 +82,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer15]]
    * @see
-   *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
-   *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
    *   Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE
    *   Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
@@ -161,8 +158,7 @@ private[core] object AxiomBase extends Logging {
        * End.
        * }}}
        * @see
-       *   Figure 5 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput.
-       *   Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+       *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
        */
       (
         "<> monotone",
@@ -182,7 +178,7 @@ private[core] object AxiomBase extends Logging {
 //        * }}}
 //        * Interderives with FP fixpoint rule.
 //        * FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to set contraction.
-//        * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+//        * @see Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
 //        * @see Lemma 7.2 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
 //        */
 //      ("ind induction",
@@ -203,8 +199,7 @@ private[core] object AxiomBase extends Logging {
        * induction rule. FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to
        * set contraction.
        * @see
-       *   Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput.
-       *   Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+       *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
        * @see
        *   Lemma 16.11 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
        */
@@ -510,8 +505,7 @@ private[core] object AxiomBase extends Logging {
    * @see
    *   [[org.keymaerax.Bibliography.CadePlatzer18]]
    * @see
-   *   Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015.
-   *   [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    */
   private[this] def loadAxiomString(): String = """
 Axiom "<> diamond"

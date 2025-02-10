@@ -1157,8 +1157,7 @@ object Ax extends Logging {
    * Interderives with FP fixpoint rule.
    *
    * @see
-   *   Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log.
-   *   17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+   *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
    *   Lemma 7.2 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
    */
@@ -1199,8 +1198,7 @@ object Ax extends Logging {
    * premise, needing list to set contraction.
    *
    * @see
-   *   Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log.
-   *   17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+   *   Lemma 4.1 in [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
    *   Lemma 16.11 and Corollary 16.1 in [[org.keymaerax.Bibliography.Platzer18]]
    * @see
@@ -1589,7 +1587,7 @@ object Ax extends Logging {
    * @derived
    *   useAt(diamond) & by("<> monotone")
    * @see
-   *   "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
    *   "André Platzer. Differential Hybrid Games."
    * @note
@@ -1630,7 +1628,7 @@ object Ax extends Logging {
    * @derived
    *   useAt(boxMonotone) with p and q swapped
    * @see
-   *   "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+   *   [[org.keymaerax.Bibliography.ToclPlatzer15]]
    * @see
    *   "André Platzer. Differential Hybrid Games."
    * @note
