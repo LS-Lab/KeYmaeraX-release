@@ -7,6 +7,8 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{BuiltInRightTactic, BuiltInTactic, DependentPositionWithAppliedInputTactic, OnAll, TacticInapplicableFailure}
 import org.keymaerax.btactics.Ax._
+import org.keymaerax.btactics.DLBySubst.discreteGhost
+import org.keymaerax.btactics.Derive.CMon
 import org.keymaerax.btactics.SequentCalculus.commuteEquivR
 import org.keymaerax.btactics.SimplifierV3.simplify
 import org.keymaerax.btactics.TacticFactory.{anon, inputanon}
@@ -646,6 +648,25 @@ object RefinementCalculus extends TacticProvider {
       case fml => throw new TacticInapplicableFailure("Expected implication, but got " + fml)
     }
   }
+
+  @Derivation
+  val skipRandom: DerivedAxiomInfo = derivedFormula(
+    DerivedAxiomInfo.create(
+      name = "skipRandom",
+      canonicalName = "skip random",
+      displayName = Some("Skip Random"),
+      displayConclusion = "?⊤ <= __x:=*__",
+      displayLevel = DisplayLevel.Menu,
+      key = "1",
+      unifier = Unifier.SurjectiveLinear,
+    ),
+    "?true; <= x:=*;".asFormula,
+    refTrans("x:=x;".asProgram)(Position(1)) & andR(1) & Idioms.<(
+      useAt(refStutter)(Position(1, 1 :: Nil)) & useAt(refRefl)(Position(1)),
+      discreteGhost(Variable("x"), None)(Position(1)) & useAt(refAssign)(Position(1, 0 :: Nil)) &
+        useAt(refSeqIdR, PosInExpr(1 :: Nil))(Position(1, 1 :: Nil)) & CMon(Position(1, 0 :: 1 :: 0 :: Nil)) & prop,
+    ),
+  )
 
   @Tactic(name = "focus", displayPremises = "C'(a<=b)", displayConclusion = "C{a}<=C{b}")
   def focus: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
