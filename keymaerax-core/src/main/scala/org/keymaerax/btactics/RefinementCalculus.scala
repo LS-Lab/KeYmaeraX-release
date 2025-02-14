@@ -5,14 +5,20 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.bellerophon.{BuiltInRightTactic, BuiltInTactic, DependentPositionWithAppliedInputTactic, OnAll, TacticInapplicableFailure}
+import org.keymaerax.bellerophon.{
+  BuiltInRightTactic,
+  BuiltInTactic,
+  DependentPositionWithAppliedInputTactic,
+  OnAll,
+  TacticInapplicableFailure,
+}
 import org.keymaerax.btactics.Ax._
 import org.keymaerax.btactics.DLBySubst.discreteGhost
 import org.keymaerax.btactics.Derive.CMon
 import org.keymaerax.btactics.SequentCalculus.commuteEquivR
 import org.keymaerax.btactics.SimplifierV3.simplify
 import org.keymaerax.btactics.TacticFactory.{anon, inputanon}
-import org.keymaerax.btactics.TactixLibrary.{DW, G, andR, equivifyR, id, implyL, implyR, orR, prop, useAt}
+import org.keymaerax.btactics.TactixLibrary.{andR, equivifyR, id, implyL, implyR, orR, prop, useAt, DW, G}
 import org.keymaerax.btactics.macros.{CoreAxiomInfo, DerivedAxiomInfo, DisplayLevel, Tactic, Unifier}
 import org.keymaerax.core.StaticSemantics.symbols
 import org.keymaerax.core._
@@ -439,6 +445,16 @@ object RefinementCalculus extends TacticProvider {
     name = "refAnyTest",
     canonicalName = "nondet assign test",
     displayName = Some("AssignAny Test Commutativity"),
+    displayLevel = DisplayLevel.Menu,
+    key = "",
+    unifier = Unifier.Full,
+  )
+
+  @Derivation
+  val refAnyGen: CoreAxiomInfo = CoreAxiomInfo.create(
+    name = "refAnyGen",
+    canonicalName = "nondet commute gen",
+    displayName = Some("AssignAny Gen Commutativity"),
     displayLevel = DisplayLevel.Menu,
     key = "",
     unifier = Unifier.Full,
