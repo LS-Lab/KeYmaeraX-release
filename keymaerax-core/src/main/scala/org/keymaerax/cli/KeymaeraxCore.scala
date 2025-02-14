@@ -56,6 +56,7 @@ object KeymaeraxCore {
 
     initializeConfig(options)
     runCommand(options)
+    exit(0)
   }
 
   /** Set up values in the global config based on command-line options. */

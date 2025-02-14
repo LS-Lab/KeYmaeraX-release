@@ -96,7 +96,7 @@ object KeymaeraxWebui {
       LoadingDialogFactory().addToStatus(10, Some("Checking port..."))
       PortChecks.ensureWebuiPortCanBeBoundOrExit()
       org.keymaerax.hydra.NonSSLBoot.run(options)
-    case _ => org.keymaerax.cli.KeymaeraxCore.runCommand(options)
+    case _ => org.keymaerax.cli.KeymaeraxCore.runCommand(options); KeymaeraxCore.exit(0)
   }
 
   private def makeVariables(varNames: Seq[String]): Seq[BaseVariable] = {

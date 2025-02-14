@@ -24,8 +24,10 @@ import org.keymaerax.infrastruct.{Context, PosInExpr, Position, SuccPosition}
 import org.keymaerax.parser.StringConverter.StringToStringConverter
 import org.keymaerax.pt.ProvableSig
 
+import scala.annotation.nowarn
 import scala.reflect.runtime.universe
 
+@nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
 object RefinementCalculus extends TacticProvider {
   override def getInfo: (Class[_], universe.Type) =
     (RefinementCalculus.getClass, universe.typeOf[RefinementCalculus.type])

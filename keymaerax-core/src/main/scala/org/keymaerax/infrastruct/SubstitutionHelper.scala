@@ -168,6 +168,11 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
     case Box(p, g) => val USR(q, v, sp) = usubst(o, u, p); Box(sp, usubst(q, v, g))
     case Diamond(p, g) => val USR(q, v, sp) = usubst(o, u, p); Diamond(sp, usubst(q, v, g))
 
+    case Refinement(p, q) =>
+      val USR(_, _, rp) = usubst(o, u, p); val USR(_, _, rq) = usubst(o, u, q); Refinement(rp, rq)
+    case ProgramEquivalence(p, q) =>
+      val USR(_, _, rp) = usubst(o, u, p); val USR(_, _, rq) = usubst(o, u, q); ProgramEquivalence(rp, rq)
+
     // uniform substitution base cases
     case PredOf(fn, theta) => PredOf(fn, usubst(o, u, theta))
     case DifferentialFormula(g) => DifferentialFormula(usubst(o, u, g))
