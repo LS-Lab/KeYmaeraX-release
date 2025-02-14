@@ -1684,43 +1684,48 @@ trait UnifyUSCalculus {
       sequent.ante.isEmpty && sequent.succ.length == 1,
       "Expected empty antecedent and single succedent formula, but got " + sequent,
     )
-    sequent.succ.head match {
-      case Imply(l, r) =>
-        if (inEqPos == HereP) provable
-        else {
+    if (inEqPos == HereP) provable
+    else {
+      val (processedProvable, p, q, polarity, tactic) = sequent.succ.head match {
+        case Imply(l, r) =>
           val (ctxP, p) = l.at(inEqPos)
           val (ctxQ, q) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          (p, q) match {
-            case (p: Formula, q: Formula) =>
-              if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
-                CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
-                0,
-              )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
-              else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
-                implyR(SuccPos(0)).computeResult(provable)(
-                  CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)),
-                  0,
-                )(
-                  inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)),
-                  0,
-                )
-              } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
-            case (p: Program, q: Program) =>
-              if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)).computeResult(provable)(
-                UnifyUSCalculus.CMon(ctxP)(ProvableSig.startProof(Refinement(q, p), provable.defs)),
-                0,
-              )
-              else if (FormulaTools.polarityAt(l, inEqPos) > 0) {
-                implyR(SuccPos(0)).computeResult(provable)(
-                  UnifyUSCalculus.CMon(ctxP)(ProvableSig.startProof(Refinement(p, q), provable.defs)),
-                  0,
-                )
-              } else { throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}") }
-            case _ => throw new TacticRequirementError(s"Expected Formula/Program context, but got ${ctxP}")
+          (implyR(SuccPos(0)).computeResult(provable), p, q, FormulaTools.polarityAt(l, inEqPos), CMon(ctxP))
+        case Refinement(l, r) =>
+          val (ctxP, p) = l.at(inEqPos)
+          val (ctxQ, q) = r.at(inEqPos)
+          require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
+          (provable, p, q, FormulaTools.polarityAt(l, inEqPos), CMonPrg(ctxP))
+        case _ => throw new TacticRequirementError(s"Expected implication or refinement, but got ${sequent.succ.head}")
+      }
+      (p, q) match {
+        case (p: Formula, q: Formula) =>
+          if (polarity < 0) processedProvable(
+            tactic(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p)), provable.defs)),
+            0,
+          )(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))), provable.defs)), 0)
+          else if (polarity > 0) {
+            processedProvable(tactic(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q)), provable.defs)), 0)(
+              inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))), provable.defs)),
+              0,
+            )
+          } else {
+            val ctxP = sequent.succ.head.at(PosInExpr(List(0)) ++ inEqPos)._1
+            throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}")
           }
-        }
-      case _ => throw new TacticRequirementError(s"Expected implication, but got ${sequent.succ.head}")
+        case (p: Program, q: Program) =>
+          if (polarity < 0) processedProvable(tactic(ProvableSig.startProof(Refinement(q, p), provable.defs)), 0)
+          else if (polarity > 0) {
+            processedProvable(tactic(ProvableSig.startProof(Refinement(p, q), provable.defs)), 0)
+          } else {
+            val ctxP = sequent.succ.head.at(PosInExpr(List(0)) ++ inEqPos)._1
+            throw new TacticAssertionError(s"Context ${ctxP} is not monotone in ${provable}")
+          }
+        case _ =>
+          val ctxP = sequent.succ.head.at(PosInExpr(List(0)) ++ inEqPos)._1
+          throw new TacticRequirementError(s"Expected Formula/Program context, but got ${ctxP}")
+      }
     }
   }
 

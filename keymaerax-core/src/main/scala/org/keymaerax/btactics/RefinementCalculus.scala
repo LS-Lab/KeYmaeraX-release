@@ -9,9 +9,8 @@ import org.keymaerax.bellerophon.{BuiltInRightTactic, BuiltInTactic, DependentPo
 import org.keymaerax.btactics.Ax._
 import org.keymaerax.btactics.SequentCalculus.commuteEquivR
 import org.keymaerax.btactics.SimplifierV3.simplify
-import org.keymaerax.btactics.TacticFactory.{anon, inputanon, inputanonP}
+import org.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import org.keymaerax.btactics.TactixLibrary.{DW, G, andR, equivifyR, id, implyL, implyR, orR, prop, useAt}
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{CoreAxiomInfo, DerivedAxiomInfo, DisplayLevel, Tactic, Unifier}
 import org.keymaerax.core.StaticSemantics.symbols
 import org.keymaerax.core._
@@ -647,4 +646,53 @@ object RefinementCalculus extends TacticProvider {
       case fml => throw new TacticInapplicableFailure("Expected implication, but got " + fml)
     }
   }
+
+  @Tactic(name = "focus", displayPremises = "C'(a<=b)", displayConclusion = "C{a}<=C{b}")
+  def focus: BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
+    require(provable.subgoals.size == 1, "Sole subgoal expected, but got " + provable.prettyString)
+    val sequent = provable.subgoals.head
+    val inEqPos = pos.inExpr.child
+    sequent(pos.top) match {
+      case Refinement(a, b) =>
+        val (ctxA, e) = a.at(inEqPos)
+        val (ctxB, _) = b.at(inEqPos)
+        val dot = e match {
+          case _: Formula => DotFormula
+          case _: Program => DotProgram
+        }
+        require(ctxA == ctxB, "Same context expected, but got " + ctxA + " and " + ctxB)
+        Predef.assert(ctxA.ctx == ctxB.ctx, "Same context formula expected, but got " + ctxA.ctx + " and " + ctxB.ctx)
+        provable(focusFW(ctxA, pos.topLevel, dot), 0)
+    }
+  }
+
+  private[btactics] def focusFW(ctx: Context[Program], pos: Position, dot: NamedSymbol): BuiltInTactic =
+    anon { (provable: ProvableSig) =>
+      ctx.ctx match {
+        case DotProgram => provable
+        case Test(_) => provable(useAt(refTest)(pos), 0)
+        case Choice(c, a) if !symbols(a).contains(dot) =>
+          provable(useAt(congrChoiceL, PosInExpr(1 :: Nil))(pos), 0)(focusFW(Context(c), pos, dot), 0)
+        case Choice(a, c) if !symbols(a).contains(dot) =>
+          provable(useAt(congrChoiceR, PosInExpr(1 :: Nil))(pos), 0)(focusFW(Context(c), pos, dot), 0)
+        case Compose(c, a) if !symbols(a).contains(dot) =>
+          provable(useAt(congrSeqL, PosInExpr(1 :: Nil))(pos), 0)(focusFW(Context(c), pos, dot), 0)
+        case Compose(a, c) if !symbols(a).contains(dot) =>
+          provable(useAt(congrSeqR, PosInExpr(1 :: Nil))(pos), 0)(
+            focusFW(Context(c), pos ++ PosInExpr(1 :: Nil), dot),
+            0,
+          )
+        case Loop(c) => provable(useAt(refUnloop, PosInExpr(1 :: Nil))(pos), 0)(
+            focusFW(Context(c), pos ++ PosInExpr(1 :: Nil), dot),
+            0,
+          )
+        case ODESystem(ode, _) if !symbols(ode).contains(dot) =>
+          val tactic = ode match {
+            case DifferentialProduct(_, _) => congrODEDoms
+            case _ => congrODEDom
+          }
+          provable(useAt(tactic, PosInExpr(1 :: Nil))(pos), 0)
+      }
+    }
+
 }
