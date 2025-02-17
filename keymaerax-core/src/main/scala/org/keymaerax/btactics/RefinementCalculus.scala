@@ -351,8 +351,8 @@ object RefinementCalculus extends TacticProvider {
   @Derivation
   val refAnnihL: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refAnnihL",
-    canonicalName = "annihilation left",
-    displayName = Some("Annihilation Left"),
+    canonicalName = "annihile left",
+    displayName = Some("Annihile Left"),
     displayLevel = DisplayLevel.Menu,
     key = "",
     unifier = Unifier.Surjective,
@@ -360,8 +360,8 @@ object RefinementCalculus extends TacticProvider {
   @Derivation
   val refAnnihR: CoreAxiomInfo = CoreAxiomInfo.create(
     name = "refAnnihR",
-    canonicalName = "annihilation right",
-    displayName = Some("Annihilation Right"),
+    canonicalName = "annihile right",
+    displayName = Some("Annihile Right"),
     displayLevel = DisplayLevel.Menu,
     key = "",
     unifier = Unifier.Surjective,
