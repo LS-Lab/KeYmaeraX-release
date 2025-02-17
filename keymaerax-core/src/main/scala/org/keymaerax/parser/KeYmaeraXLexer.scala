@@ -25,6 +25,15 @@ object ProblemFileMode extends LexerMode
 object LemmaFileMode extends LexerMode
 object StoredProvableMode extends LexerMode
 
+/** Tokens are terminals occurring at a given location in the input. */
+private[parser] case class Token(tok: Terminal, loc: Location = UnknownLocation) {
+  override def toString: String = tok.toString
+
+  /** Human-readable description followed by internal info */
+  def description: String = tok.description
+}
+private[parser] object UnknownToken extends Token(PSEUDO, UnknownLocation)
+
 /**
  * Lexer for KeYmaera X turns string into list of tokens.
  *

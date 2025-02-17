@@ -20,19 +20,19 @@ import org.scalatest.matchers.should.Matchers
  *
  * @author Brandon Bohrer
  */
-class KeYmaeraXRandomParserTests
+class RandomParserTestsInstance
     extends RandomParserTests(
       {
         Configuration.setConfiguration(FileConfiguration)
-        if (false) KeYmaeraXParser.formulaParser else GlobalState.parser.formulaParser
+        GlobalState.parser.formulaParser
       },
       new RandomFormula(),
     )
-class KeYmaeraXDeterministicParserTests
+class RandomParserTestsInstanceDeterministic
     extends RandomParserTests(
       {
         Configuration.setConfiguration(FileConfiguration)
-        if (false) KeYmaeraXParser.formulaParser else GlobalState.parser.formulaParser
+        GlobalState.parser.formulaParser
       },
       new RandomFormula(seed = 0),
     )

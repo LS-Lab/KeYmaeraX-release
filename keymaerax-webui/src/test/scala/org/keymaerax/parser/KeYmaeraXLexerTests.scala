@@ -9,11 +9,7 @@ import org.keymaerax.tagobjects.TodoTest
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-/**
- * These are white space processing tests and location munging tests. All tests that don't care about white space or
- * location munging and that produce a parsable stream should be added to PrelexedParserTests instead. Created by
- * nfulton on 6/10/15.
- */
+/** These are white space processing tests and location munging tests. Created by nfulton on 6/10/15. */
 class KeYmaeraXLexerTests extends AnyFlatSpec with Matchers {
   "Lexer" should "Handle spaces correctly" in {
     val input = "   ("

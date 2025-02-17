@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
  *   }}}
  *   Then use it as if its methods were part of the data structures
  *   {{{
- *   val parser = KeYmaeraXParser
+ *   val parser = new DLParser
  *   val f = parser("x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1")
  *   // will obtain the x>=1 part
  *   val someSub = f.sub(PosInExpr(1::1::Nil))

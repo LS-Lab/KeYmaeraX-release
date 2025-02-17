@@ -44,10 +44,7 @@ class USubstPerformanceTests extends AnyFlatSpec with Matchers with BeforeAndAft
   val yellAtClash = false
 
   /** Test setup */
-  override def beforeEach(): Unit = {
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-    // KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => None)
-  }
+  override def beforeEach(): Unit = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
 
   /* Test teardown */
   override def afterEach(): Unit = { PrettyPrinter.setPrinter(e => e.getClass.getName) }

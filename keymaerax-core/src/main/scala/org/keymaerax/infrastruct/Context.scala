@@ -19,7 +19,7 @@ import scala.collection.immutable._
  * @example
  *   Split a formula at a position into subformula and its context
  *   {{{
- *   val parser = KeYmaeraXParser
+ *   val parser = new DLParser
  *   val f = parser("x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1")
  *   // split f into context ctx and subformula g such that f is ctx{g}
  *   val (ctx,g) = Context.at(f, PosInExpr(1::1::Nil))
@@ -678,7 +678,7 @@ object Context {
  *   Split a formula at a position into subformula and its context, then instantiate this context with other
  *   subformulas:
  *   {{{
- *   val parser = KeYmaeraXParser
+ *   val parser = new DLParser
  *   val f = parser("x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1")
  *   // split f into context ctx and subformula g such that f is ctx{g}
  *   val (ctx,g) = Context.at(f, PosInExpr(1::1::Nil))

@@ -22,9 +22,9 @@ import scala.collection.immutable._
  * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of
  * KeYmaera X.
  * @example
- *   Parsing formulas from strings is straightforward using [[org.keymaerax.parser.KeYmaeraXParser.apply]]:
+ *   Parsing formulas from strings is straightforward using [[DLParser.apply]]:
  *   {{{
- *   val parser = DLParser
+ *   val parser = new DLParser
  *   val fml0 = parser("x!=5")
  *   val fml1 = parser("x>0 -> [x:=x+1;]x>1")
  *   val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
@@ -36,7 +36,6 @@ import scala.collection.immutable._
  *   val term1 = parser.termParser("x^2+2*x+1")
  *   }}}
  * @author Andre Platzer
- * @see [[KeYmaeraXParser]]
  */
 object DLParser {
   assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
@@ -106,9 +105,9 @@ object DLParser {
  * KeYmaera X.
  *
  * @example
- *   Parsing formulas from strings is straightforward using [[org.keymaerax.parser.KeYmaeraXParser.apply]]:
+ *   Parsing formulas from strings is straightforward using [[DLParser.apply]]:
  *   {{{
- *   val parser = DLParser
+ *   val parser = new DLParser
  *   val fml0 = parser("x!=5")
  *   val fml1 = parser("x>0 -> [x:=x+1;]x>1")
  *   val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
@@ -120,7 +119,6 @@ object DLParser {
  *   val term1 = parser.termParser("x^2+2*x+1")
  *   }}}
  * @author Andre Platzer
- * @see [[KeYmaeraXParser]]
  * @see [[org.keymaerax.parser]]
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]

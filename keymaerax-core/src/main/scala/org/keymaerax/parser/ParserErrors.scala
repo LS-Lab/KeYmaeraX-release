@@ -6,12 +6,8 @@
 package org.keymaerax.parser
 
 import org.keymaerax.Configuration
-import org.keymaerax.core.Expression
-import org.keymaerax.core.ProverException
+import org.keymaerax.core.{Expression, ProverException}
 import org.keymaerax.parser.KeYmaeraXLexer.TokenStream
-import org.keymaerax.parser.KeYmaeraXParser.ParseState
-
-import scala.collection.immutable.StringOps
 
 import scala.collection.immutable.StringOps
 
@@ -76,41 +72,6 @@ case class ParseException(
 }
 
 object ParseException {
-//  def apply(msg: String, loc: Location, found: Token, expect: String/**/, after: ParseState, state: ParseState,
-//            cause: Throwable = null, hint: String = ""): ParseException =
-//    new ParseException(msg, loc, found=found + "", expect=expect, after=after + "", state=state + "", cause, hint)
-
-  def apply(msg: String, state: ParseState /*, cause: Throwable = null*/ ): ParseException =
-    new ParseException(msg, state.location, state.la.description, "", state.topString, state.toString /*, cause*/ )
-
-  def apply(msg: String, state: ParseState, expect: List[Expected] /*, cause: Throwable = null*/ ): ParseException =
-    new ParseException(
-      msg,
-      state.location,
-      state.la.description,
-      expect.mkString("\n      or: "),
-      state.topString,
-      state.toString, /*, cause*/
-    )
-
-  def apply(msg: String, state: ParseState, found: Token, expect: String): ParseException = new ParseException(
-    msg,
-    found.loc,
-    found = found.description,
-    expect = expect,
-    after = state.topString,
-    state = state.toString,
-  )
-
-  def apply(msg: String, state: ParseState, found: String, expect: String): ParseException = new ParseException(
-    msg,
-    state.location,
-    found = found,
-    expect = expect,
-    after = state.topString,
-    state = state.toString,
-  )
-
   def apply(msg: String, loc: Location, found: String, expect: String): ParseException =
     new ParseException(msg, loc, found = found, expect = expect, after = "<unknown>", state = "<unknown>")
 
@@ -120,21 +81,12 @@ object ParseException {
   def apply(msg: String, loc: Location, found: String, expect: String, after: String, hint: String): ParseException =
     new ParseException(msg, loc, found = found, expect = expect, after = after, state = "<unknown>", hint = hint)
 
-  def apply(msg: String, state: ParseState, expect: String): ParseException = new ParseException(
-    msg,
-    state.location,
-    found = state.la.description,
-    expect = expect,
-    after = state.topString,
-    state = state.toString,
-  )
-
   def apply(msg: String, after: Expression): ParseException = new ParseException(
     msg,
     UnknownLocation,
     "<unknown>",
     "<unknown>",
-    after = KeYmaeraXParser.printer.stringify(after),
+    after = KeYmaeraXPrettyPrinter.stringify(after),
     "",
   )
 
@@ -149,62 +101,6 @@ object ParseException {
 
   def apply(msg: String, cause: Throwable): ParseException =
     new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "", "", cause)
-
-  /** Imbalanced parentheses parse errors */
-  def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException =
-    imbalancedError(msg, unmatched, expect = "", state = state)
-
-  /**
-   * Imbalanced parentheses parse errors: opening `unmatched` expects closing `expect` at the latest at location of
-   * current parse state (location is unmatched)
-   */
-  def imbalancedError(
-      msg: String,
-      unmatched: Token,
-      expect: String,
-      state: ParseState,
-      hint: String = "",
-  ): ParseException =
-    if (state.la.tok == EOF) new ParseException(
-      msg,
-      unmatched.loc,
-      found = unmatched.description,
-      expect = expect,
-      after = state.topString,
-      state = state.toString,
-      null,
-      hint = hint,
-    )
-    else new ParseException(
-      msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location,
-      unmatched.loc -- state.location,
-      found = state.la.toString,
-      expect = expect,
-      after = state.topString,
-      state.toString,
-      hint = hint, /*, cause*/
-    )
-
-  /**
-   * Imbalanced parentheses parse errors needed here: opening `unmatched` expects closing `expect` exactly at the
-   * location of current parse state (location is state.location)
-   */
-  def imbalancedErrorHere(
-      msg: String,
-      unmatched: Token,
-      expect: String,
-      state: ParseState,
-      hint: String = "",
-  ): ParseException = new ParseException(
-    msg + "\nunmatched: " + unmatched.description + " at " + unmatched.loc + "--" + state.location,
-    if (false) unmatched.loc -- state.location else state.location,
-    found = state.la.toString,
-    expect = expect,
-    after = state.topString,
-    state.toString,
-    null,
-    hint = hint,
-  )
 
   /** Type parse errors */
   private def typeException(
@@ -246,13 +142,6 @@ object ParseException {
       loc: Location,
       hint: String = "",
   ): ParseException = typeException(msg, loc, declaredType, expectedType, hint = hint)
-
-  def duplicateSymbolError(n: String, i: Option[Int], loc: Location, other: Location): ParseException = ParseException(
-    "Duplicate symbol '" + (n + i.map("_" + _).getOrElse("")) + "': already defined at " + other,
-    loc,
-    n + i.map("_" + _).getOrElse(""),
-    "<unique name>",
-  )
 }
 
 object LexException {

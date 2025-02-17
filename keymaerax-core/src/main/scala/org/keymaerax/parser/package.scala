@@ -22,12 +22,11 @@ import org.keymaerax.core.CoreException
  * ==Usage Overview==
  *
  * The default pretty-printer for the concrete syntax in KeYmaera X is in
- * [[org.keymaerax.parser.KeYmaeraXPrettyPrinter]]. The corresponding parser for the concrete syntax in
- * [[org.keymaerax.parser.KeYmaeraXParser]]. Also see
- * [[http://keymaeraX.org/doc/dL-grammar.md Grammar of KeYmaera X Syntax]]
+ * [[org.keymaerax.parser.KeYmaeraXPrettyPrinter]]. The corresponding parser for the concrete syntax is
+ * [[org.keymaerax.parser.DLParser]]. Also see [[http://keymaeraX.org/doc/dL-grammar.md Grammar of KeYmaera X Syntax]]
  *
  * {{{
- * val parser = KeYmaeraXParser
+ * val parser = new DLParser
  * val pp = KeYmaeraXPrettyPrinter
  * val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
  * val parse = parser(input)
@@ -71,13 +70,16 @@ import org.keymaerax.core.CoreException
  * ===Parsing Differential Dynamic Logic===
  *
  * [[org.keymaerax.parser.Parser]] defines the interface for all differential dynamic logic parsers in KeYmaera X.
- * {{{Parser: String => Expression}}} [[org.keymaerax.parser.KeYmaeraXParser]] implements the parser for the concrete
- * syntax of differential dynamic logic used in KeYmaera X. A parser is a function from input strings to differential
- * dynamic logic [[org.keymaerax.core.Expression expressions]].
- *
- * Parsing formulas from strings is straightforward using [[org.keymaerax.parser.KeYmaeraXParser.apply]]:
  * {{{
- * val parser = KeYmaeraXParser
+ *   Parser: String => Expression
+ * }}}
+ * [[org.keymaerax.parser.DLParser]] implements the parser for the concrete syntax of differential dynamic logic used in
+ * KeYmaera X. A parser is a function from input strings to differential dynamic logic
+ * [[org.keymaerax.core.Expression expressions]].
+ *
+ * Parsing formulas from strings is straightforward using [[DLParser.apply]]:
+ * {{{
+ * val parser = new DLParser
  * val fml0 = parser("x!=5")
  * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
  * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
@@ -86,7 +88,7 @@ import org.keymaerax.core.CoreException
  * The parser parses any dL expression, so will also accept terms or programs from strings, which will lead to
  * appropriate types:
  * {{{
- * val parser = KeYmaeraXParser
+ * val parser = new DLParser
  * // formulas
  * val fml0 = parser("x!=5")
  * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
@@ -102,10 +104,10 @@ import org.keymaerax.core.CoreException
  * }}}
  *
  * ===Parsing Only Formulas of Differential Dynamic Logic===
- * The parser that only parses formulas is obtained via [[org.keymaerax.parser.KeYmaeraXParser.formulaParser]]
+ * The parser that only parses formulas is obtained via [[org.keymaerax.parser.DLParser.formulaParser]]
  * {{{
  * // the formula parser only accepts formulas
- * val parser = KeYmaeraXParser.formulaParser
+ * val parser = (new DLParser).formulaParser
  * // formulas
  * val fml0 = parser("x!=5")
  * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
@@ -116,8 +118,8 @@ import org.keymaerax.core.CoreException
  * try { parser("x:=1;") } catch {case e: ParseException => println("Rejected")}
  * }}}
  *
- * Similarly, a parser that only parses terms is obtained via [[org.keymaerax.parser.KeYmaeraXParser.termParser]] and a
- * parser that only parses programs is obtained via [[org.keymaerax.parser.KeYmaeraXParser.programParser]]
+ * Similarly, a parser that only parses terms is obtained via [[org.keymaerax.parser.DLParser.termParser]] and a parser
+ * that only parses programs is obtained via [[org.keymaerax.parser.DLParser.programParser]]
  *
  * ===Parsing Pretty-Printed Strings===
  *
@@ -126,8 +128,8 @@ import org.keymaerax.core.CoreException
  * {{{
  *   parse(print(e)) == e
  * }}}
- * [[org.keymaerax.parser.KeYmaeraXParser]] and [[[[org.keymaerax.parser.KeYmaeraXPrettyPrinter]] are inverses in this
- * sense. The converse `print(parse(s)) == s` is not quite the case, because there can be minor spacing and superfluous
+ * [[org.keymaerax.parser.DLParser]] and [[[[org.keymaerax.parser.KeYmaeraXPrettyPrinter]] are inverses in this sense.
+ * The converse `print(parse(s)) == s` is not quite the case, because there can be minor spacing and superfluous
  * parentheses differences. The following slightly weaker form still holds:
  * {{{
  *   parse(print(parse(s))) == parse(s)
@@ -136,7 +138,7 @@ import org.keymaerax.core.CoreException
  * Parsing the pretty-print of an expression with compatible printers and parsers always gives the original expression
  * back:
  * {{{
- *   val parser = KeYmaeraXParser
+ *   val parser = new DLParser
  *   val pp = KeYmaeraXPrettyPrinter
  *   val fml = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
  *   // something like "true -> [x:=1;]x>=0" modulo spacing
@@ -149,7 +151,7 @@ import org.keymaerax.core.CoreException
  *
  * It can be quite helpful to print an expression that has been parsed to check how it got parsed:
  * {{{
- *   val parser = KeYmaeraXParser
+ *   val parser = new DLParser
  *   val pp = KeYmaeraXPrettyPrinter
  *   val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
  *   val parse = parser(input)
@@ -164,7 +166,7 @@ import org.keymaerax.core.CoreException
  * braces. That is, it only prints them when necessary to disambiguate. For storage purposes and disambiguation it can
  * be better to use fully parenthesized printouts, which is what [[org.keymaerax.parser.FullPrettyPrinter]] achieves:
  * {{{
- *   val parser = KeYmaeraXParser
+ *   val parser = new DLParser
  *   val pp = FullPrettyPrinter
  *   val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
  *   val parse = parser(input)
@@ -178,7 +180,7 @@ import org.keymaerax.core.CoreException
  * ===Pretty-Printing Sequents===
  * Sequents can be pretty-printed using the default pretty printer via [[org.keymaerax.core.Sequent.prettyString]]
  * {{{
- *   val parser = KeYmaeraXParser
+ *   val parser = new DLParser
  *   val sequent = Sequent(IndexedSeq(parse("x<22"), parse("x>0")), IndexedSeq(parse("[x:=x+1;]x<23")))
  *   println("Printed:  " + sequent.prettyString)
  * }}}
@@ -191,7 +193,7 @@ import org.keymaerax.core.CoreException
  * @see
  *   [[org.keymaerax.Bibliography.CadeFultonMQVP15 KeYmaera X: An aXiomatic tactical theorem prover for hybrid systems]]
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
- * @see [[org.keymaerax.parser.KeYmaeraXParser]]
+ * @see [[org.keymaerax.parser.DLParser]]
  * @see [[org.keymaerax.parser.KeYmaeraXPrettyPrinter]]
  */
 package object parser {
