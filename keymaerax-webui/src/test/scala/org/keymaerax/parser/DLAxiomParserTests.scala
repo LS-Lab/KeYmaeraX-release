@@ -11,7 +11,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 /** Created by nfulton on 6/12/15. */
-class KeYmaeraXAxiomParserTests extends AnyFlatSpec with Matchers {
+class DLAxiomParserTests extends AnyFlatSpec with Matchers {
   "Axiom parser" should "parse a formula inside an axiom box" in {
     val input =
       """
@@ -23,7 +23,7 @@ class KeYmaeraXAxiomParserTests extends AnyFlatSpec with Matchers {
         | x=x
         |End.
       """.stripMargin
-    val axioms = KeYmaeraXAxiomParser(input)
+    val axioms = DLAxiomParser(input)
     axioms.head._1 should be("This is an axiom")
     axioms.head._2 should be(Equal(Number(1), Number(1)))
     axioms(1)._1 should be("This is another = axiom")
@@ -41,7 +41,7 @@ class KeYmaeraXAxiomParserTests extends AnyFlatSpec with Matchers {
       """Axiom /*\\foralli */ "all instantiate"
         |  (\forall x p(x)) -> p(t())
         |End.""".stripMargin
-    val axioms = KeYmaeraXAxiomParser(input)
+    val axioms = DLAxiomParser(input)
     axioms.length shouldBe 1
     axioms.head._1 shouldBe "all instantiate"
 

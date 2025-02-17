@@ -890,7 +890,7 @@ class ParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach with
         .fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positiveALP/" + testFile))
         .mkString
       try {
-        KeYmaeraXAxiomParser(src) // test fails on exception.
+        DLAxiomParser(src) // test fails on exception.
       } catch { case ex: Exception => fail("Unable to parse " + testFile, ex) }
     }
   }
