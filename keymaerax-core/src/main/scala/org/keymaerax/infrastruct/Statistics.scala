@@ -103,8 +103,8 @@ object Statistics {
     case e: BinaryCompositeFormula => 1 + length(e.left) + length(e.right)
     case e: ComparisonFormula => 1 + length(e.left) + length(e.right)
     case e: PredOf => 1 + length(e.child)
-    case PredicationalOf(_, f:Formula) => 1 + length(f)
-    case PredicationalOf(_, p:Program) => 1 + length(p)
+    case PredicationalOf(_, f: Formula) => 1 + length(f)
+    case PredicationalOf(_, p: Program) => 1 + length(p)
     case e: Quantified => 1 + length(e.child)
     case e: Modal => 1 + length(e.program) + length(e.child)
     case _: AtomicFormula => 1

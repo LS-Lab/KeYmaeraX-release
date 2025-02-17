@@ -313,9 +313,9 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
 
   private def pp(q: PosInExpr, expr: Expression): String = {
     expr match {
-      case f: Formula => pp(q,f)
-      case t: Term => pp(q,t)
-      case p: Program => pp(q,p)
+      case f: Formula => pp(q, f)
+      case t: Term => pp(q, t)
+      case p: Program => pp(q, p)
       case _: Function => ???
     }
   }

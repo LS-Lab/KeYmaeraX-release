@@ -1270,7 +1270,7 @@ object IntervalArithmeticV2 extends TacticProvider {
     case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)
     case fml: UnaryCompositeFormula => terms_of(fml.child)
     case fml: PredOf => List(fml.child)
-    case PredicationalOf(_, f:Formula) => terms_of(f)
+    case PredicationalOf(_, f: Formula) => terms_of(f)
     case fml: ComparisonFormula => List(fml.left, fml.right)
     case _ => List()
   }

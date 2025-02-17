@@ -597,7 +597,7 @@ object Context {
         formula match {
           // base cases
           case PredOf(p, t) if pos.head == 0 => val sp = split(t, pos.child); (PredOf(p, sp._1), sp._2)
-          case PredicationalOf(c, t:Formula) if pos.head == 0 =>
+          case PredicationalOf(c, t: Formula) if pos.head == 0 =>
             val sp = split(t, pos.child); (PredicationalOf(c, sp._1), sp._2)
           // pseudo-homomorphic cases
           case Equal(f, g) if pos.head == 0 => val sp = split(f, pos.child); (Equal(sp._1, g), sp._2)
