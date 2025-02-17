@@ -30,7 +30,6 @@ import scala.util.Try
  * }}}
  *
  * @author Andre Platzer
- * @see [[TokenParser]]
  * @see
  *   [[org.keymaerax.Bibliography.JarPlatzer17 A complete uniform substitution calculus for differential dynamic logic]]
  */
