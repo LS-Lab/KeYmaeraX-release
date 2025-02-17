@@ -212,7 +212,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
 
   override val sequentParser: String => Sequent = SequentParser.parseSequent
 
-  override val storedInferenceParser: String => List[Sequent] = KeYmaeraXStoredProvableParser
+  override val storedInferenceParser: String => List[Sequent] = ???
 
   lazy val strictParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = false)
   lazy val laxParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = true)
