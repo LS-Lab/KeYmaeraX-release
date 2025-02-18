@@ -204,7 +204,7 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("x-y+z", "(x-y)+z"),
     ("x+y-z", "(x+y)-z"),
     ("x-y-z", "(x-y)-z"),
-    // ("x++y", unparseable),  //@todo if statementSemicolon
+    ("x++y", unparseable),
     ("x*y+z", "(x*y)+z"),
     ("x*y-z", "(x*y)-z"),
     ("x+y*z", "x+(y*z)"),

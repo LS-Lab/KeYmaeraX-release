@@ -135,19 +135,11 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
   }
 
   it should "parse x:=y+1;++z:=0;" in {
-    assume(OpSpec.statementSemicolon)
     parser("x:=y+1;++z:=0;") shouldBe
       Choice(Assign(Variable("x"), Plus(Variable("y"), Number(1))), Assign(Variable("z"), Number(0)))
   }
 
-  it should "parse x:=y+1;z:=0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("x:=y+1;z:=0") shouldBe
-      Compose(Assign(Variable("x"), Plus(Variable("y"), Number(1))), Assign(Variable("z"), Number(0)))
-  }
-
   it should "parse x:=y+1;z:=0;" in {
-    assume(OpSpec.statementSemicolon)
     parser("x:=y+1;z:=0;") shouldBe
       Compose(Assign(Variable("x"), Plus(Variable("y"), Number(1))), Assign(Variable("z"), Number(0)))
   }
@@ -164,20 +156,12 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
     parser("(x-y)'+z") shouldBe Plus(Differential(Minus(Variable("x"), Variable("y"))), Variable("z"))
   }
 
-  it should "parse [x:=y+1]x>=0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("[x:=y+1]x>=0") shouldBe
-      Box(Assign(Variable("x"), Plus(Variable("y"), Number(1))), GreaterEqual(Variable("x"), Number(0)))
-  }
-
   it should "parse [x:=y+1;]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[x:=y+1;]x>=0") shouldBe
       Box(Assign(Variable("x"), Plus(Variable("y"), Number(1))), GreaterEqual(Variable("x"), Number(0)))
   }
 
   it should "parse [{x'=y+1}]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[{x'=y+1}]x>=0") shouldBe Box(
       ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Plus(Variable("y"), Number(1))), True),
       GreaterEqual(Variable("x"), Number(0)),
@@ -185,7 +169,6 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
   }
 
   it should "parse [{x'=y+1,y'=5}]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[{x'=y+1,y'=5}]x>=0") shouldBe Box(
       ODESystem(
         DifferentialProduct(
@@ -199,7 +182,6 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
   }
 
   it should "parse [{x'=1&x>2}]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[{x'=1&x>2}]x>=0") shouldBe Box(
       ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(1)), Greater(Variable("x"), Number(2))),
       GreaterEqual(Variable("x"), Number(0)),
@@ -207,7 +189,6 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
   }
 
   it should "parse [{x'=y+1&x>0}]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[{x'=y+1&x>0}]x>=0") shouldBe Box(
       ODESystem(
         AtomicODE(DifferentialSymbol(Variable("x")), Plus(Variable("y"), Number(1))),
@@ -218,7 +199,6 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
   }
 
   it should "parse [{x'=y+1,y'=5&x>y}]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[{x'=y+1,y'=5&x>y}]x>=0") shouldBe Box(
       ODESystem(
         DifferentialProduct(
@@ -231,85 +211,40 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
     )
   }
 
-  it should "parse [a]x>=0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("[a]x>=0") shouldBe Box(ProgramConst("a"), GreaterEqual(Variable("x"), Number(0)))
-  }
-
   it should "parse [a;]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[a;]x>=0") shouldBe Box(ProgramConst("a"), GreaterEqual(Variable("x"), Number(0)))
   }
 
-  it should "parse <a>x>0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("<a>x>0") shouldBe Diamond(ProgramConst("a"), Greater(Variable("x"), Number(0)))
-  }
-
   it should "parse <a;>x>0" in {
-    assume(OpSpec.statementSemicolon)
     parser("<a;>x>0") shouldBe Diamond(ProgramConst("a"), Greater(Variable("x"), Number(0)))
   }
 
-  it should "parse [a;b]x>=0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("[a;b]x>=0") shouldBe
-      Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
-  }
-
   it should "parse [a;b;]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[a;b;]x>=0") shouldBe
       Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
   }
 
-  it should "parse <a;b>x>0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("<a;b>x>0") shouldBe
-      Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
-  }
-
-  it should "parse [a;]p(x)" in {
-    assume(OpSpec.statementSemicolon)
-    parser("[a;]p(x)") shouldBe Box(ProgramConst("a"), PredOf(p, Variable("x")))
-  }
+  it should "parse [a;]p(x)" in { parser("[a;]p(x)") shouldBe Box(ProgramConst("a"), PredOf(p, Variable("x"))) }
 
   it should "parse [a;b;]p(x)" in {
-    assume(OpSpec.statementSemicolon)
     parser("[a;b;]p(x)") shouldBe Box(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
   }
 
   it should "parse <a;b;>p(x)" in {
-    assume(OpSpec.statementSemicolon)
     parser("<a;b;>p(x)") shouldBe Diamond(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
   }
 
   it should "parse <a;b;>x>0" in {
-    assume(OpSpec.statementSemicolon)
     parser("<a;b;>x>0") shouldBe
       Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
   }
 
-  it should "parse [a++b]x>=0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("[a++b]x>=0") shouldBe
-      Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
-  }
-
   it should "parse [a;++b;]x>=0" in {
-    assume(OpSpec.statementSemicolon)
     parser("[a;++b;]x>=0") shouldBe
       Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
   }
 
-  it should "parse <a++b>x>0" in {
-    assume(!OpSpec.statementSemicolon)
-    parser("<a++b>x>0") shouldBe
-      Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
-  }
-
   it should "parse <a;++b;>x>0" in {
-    assume(OpSpec.statementSemicolon)
     parser("<a;++b;>x>0") shouldBe
       Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
   }

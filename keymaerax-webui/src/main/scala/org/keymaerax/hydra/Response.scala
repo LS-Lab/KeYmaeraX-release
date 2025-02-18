@@ -387,10 +387,8 @@ object Helpers {
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp) :: op(t, fp, "topop") ::
         printJson(q ++ 1, t.right, fp) :: Nil
     case c: DifferentialProgramConst => print(exprPrinter(c), fp) :: Nil
-    case c: ProgramConst =>
-      print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp) :: Nil
-    case c: SystemConst =>
-      print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp) :: Nil
+    case c: ProgramConst => print(c.asString + ";", fp) :: Nil
+    case c: SystemConst => print(c.asString + ";", fp) :: Nil
   }
 
   @nowarn("msg=match may not be exhaustive")
@@ -415,10 +413,8 @@ object Helpers {
     case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp) :: op(expr, fp) :: printJson(q ++ 1, e, fp) :: Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp) :: op(t, fp) :: printJson(q ++ 1, t.right, fp) :: Nil
     case c: DifferentialProgramConst => print(exprPrinter(c), fp) :: Nil
-    case c: ProgramConst =>
-      print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp) :: Nil
-    case c: SystemConst =>
-      print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp) :: Nil
+    case c: ProgramConst => print(c.asString + ";", fp) :: Nil
+    case c: SystemConst => print(c.asString + ";", fp) :: Nil
   }
 
   /** Only first node's sequent is printed. */

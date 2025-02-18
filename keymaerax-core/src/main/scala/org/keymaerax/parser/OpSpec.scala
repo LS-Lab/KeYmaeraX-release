@@ -191,12 +191,6 @@ object TernaryOpSpec {
  */
 object OpSpec {
 
-  /**
-   * Whether to terminate atomic statements with a semicolon instead of separating sequential compositions by a
-   * semicolon.
-   */
-  val statementSemicolon = true
-
   /** Whether to accept negative numbers as negative numbers as opposed to unary negation applied to a number. */
   val negativeNumber = false // @note parses -1 to (-1), but also -2^4 to (-2)^4 when true!
 

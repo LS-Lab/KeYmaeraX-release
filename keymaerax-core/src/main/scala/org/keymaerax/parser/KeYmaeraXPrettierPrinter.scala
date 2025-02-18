@@ -149,7 +149,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   }
 
   /** Statement with closing ; */
-  protected def statementDoc(s: Doc): Doc = if (OpSpec.statementSemicolon) s + Doc.text(";") else s
+  protected def statementDoc(s: Doc): Doc = s + Doc.text(";")
 
   protected def docOf(program: Program): Doc = program match {
     case a: ProgramConst => statementDoc(Doc.text(a.asString))

@@ -38,7 +38,6 @@ import scala.collection.immutable._
  * @author Andre Platzer
  */
 object DLParser {
-  assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
   assert(
     !OpSpec.negativeNumber,
     "This parser accepts negative number literals although it does not give precedence to them",

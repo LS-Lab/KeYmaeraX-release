@@ -124,7 +124,7 @@ trait BasePrettyPrinter extends PrettyPrinter {
  */
 object FullPrettyPrinter extends BasePrettyPrinter {
 
-  import OpSpec.{op, statementSemicolon}
+  import OpSpec.op
 
   val parser: Parser = GlobalState.parser
   val fullPrinter: (Expression => String) = this
@@ -199,8 +199,8 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case ode: DifferentialProgram => "{" + ppODE(ode) + "}"
     // @note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeProgram => "{" + pp(t.child) + "}" + op(program).opcode
-//    case t: Compose if OpSpec.statementSemicolon =>
-//      //@note in statementSemicolon mode, suppress opcode of Compose since already after each statement
+//    case t: Compose =>
+//      // Suppress opcode of Compose since it's already after each statement
 //      "{" + pp(t.left) + "}" + /*op(t).opcode + */ "{" + pp(t.right) + "}"
     // @note all binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeProgram => "{" + pp(t.left) + "}" + op(t).opcode + "{" + pp(t.right) + "}"
@@ -218,7 +218,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   }
 
   /** Formatting the atomic statement s */
-  protected def statement(s: String): String = if (statementSemicolon) s + ";" else s
+  protected def statement(s: String): String = s + ";"
 
 }
 
@@ -244,7 +244,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
  */
 class KeYmaeraXPrinter extends BasePrettyPrinter {
 
-  import OpSpec.{op, statementSemicolon}
+  import OpSpec.op
 
   val parser: Parser = GlobalState.parser
   val fullPrinter: (Expression => String) = FullPrettyPrinter
@@ -268,8 +268,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
 
   /** Pretty-print the operator of a term */
   protected def ppOp(expr: Expression): String = expr match {
-    // @note in statementSemicolon mode, suppress opcode of Compose since already after each statement
-    case _: Compose if OpSpec.statementSemicolon => ""
+    // Suppress opcode of Compose since it's already after each statement
+    case _: Compose => ""
     case _ => op(expr).opcode
   }
 
@@ -438,7 +438,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   protected def emit(q: PosInExpr, s: String): String = s
 
   /** Formatting the atomic statement s */
-  protected def statement(s: String): String = if (statementSemicolon) s + ";" else s
+  protected def statement(s: String): String = s + ";"
 
 }
 
