@@ -50,12 +50,6 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     }
   }
 
-  /**
-   * `true` has unary negation `-` bind weakly like binary subtraction. `false` has unary negation `-` bind strong just
-   * shy of power `^`.
-   */
-  private val weakNeg: Boolean = Parser.weakNeg
-
   /** A special swearing string indicating that the other string cannot be parsed. */
   private val unparseable: String = "@#%@*!!!"
 
@@ -64,8 +58,8 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     // ("x*-y/z", "x*(-(y/z))"),
     ("-x+y", "(-x)+y"),
     ("-x-y", "(-x)-y"),
-    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
-    ("-x/y", if (!weakNeg) "(-x)/y" else "-(x/y)"),
+    ("-x*y", "-(x*y)"),
+    ("-x/y", "-(x/y)"),
     ("-x^y", "-(x^y)"),
     ("x+-y", "x+(-y)"),
     ("x--y", "x-(-y)"),
@@ -73,12 +67,12 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("x/-y", "x/(-y)"),
     ("x^-y", "x^(-y)"),
     ("x*-y+z", "(x*(-y))+z"),
-    ("x*-y*z", if (!weakNeg) "(x*(-y))*z" else "x*(-(y*z))"),
-    ("x*-y*-z*2", if (!weakNeg) "((x*(-y))*(-z))*2" else "x*(-(y*(-z*2)))"),
+    ("x*-y*z", "x*(-(y*z))"),
+    ("x*-y*-z*2", "x*(-(y*(-z*2)))"),
     ("x*(-y)*(-z)*2", "((x*(-y))*(-z))*2"),
-    ("x*(-y)*-z*2", if (!weakNeg) "((x*(-y))*(-z))*2" else "(x*(-y))*(-(z*2))"),
-    ("x*-y*(-z)*2", if (!weakNeg) "((x*(-y))*(-z))*2" else "x*(-((y*(-z))*2))"),
-    ("x*-y/z", if (!weakNeg) "(x*(-y))/z" else "x*(-(y/z))"),
+    ("x*(-y)*-z*2", "(x*(-y))*(-(z*2))"),
+    ("x*-y*(-z)*2", "x*(-((y*(-z))*2))"),
+    ("x*-y/z", "x*(-(y/z))"),
     ("x-y", "(x)-(y)"),
     ("x+-y", "x+(-y)"),
     ("x^-y/z", "(x^(-y))/z"),
@@ -103,8 +97,8 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     // unary meets binary left
     ("-x+y", "(-x)+y"),
     ("-x-y", "(-x)-y"),
-    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
-    ("-x/y", if (!weakNeg) "(-x)/y" else "-(x/y)"),
+    ("-x*y", "-(x*y)"),
+    ("-x/y", "-(x/y)"),
     ("-x^y", "-(x^y)"),
     ("-(2^4)", "-(2^4)"),
     ("- 2^4", "-(2^4)"),
@@ -235,16 +229,16 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("x- -y-z", "(x-(-y))-z"),
     ("x+y- -z", "(x+y)-(-z)"),
     ("x-y- -z", "(x-y)-(-z)"),
-    ("-x*y+z", if (!weakNeg) "((-x)*y)+z" else "(-(x*y))+z"),
+    ("-x*y+z", "(-(x*y))+z"),
     ("x*-y-z", "(x*(-y))-z"),
     ("x+y*-z", "x+(y*(-z))"),
     ("x-y*-z", "x-(y*(-z))"),
-    ("-x/y+z", if (!weakNeg) "((-x)/y)+z" else "(-(x/y))+z"),
+    ("-x/y+z", "(-(x/y))+z"),
     ("x/-y-z", "(x/(-y))-z"),
     ("-x+y/z", "(-x)+(y/z)"),
     ("x-y/-z", "x-(y/(-z))"),
-    ("-x*y*z", if (!weakNeg) "((-x)*y)*z" else "-((x*y)*z)"),
-    ("x*-y/z", if (!weakNeg) "(x*(-y))/z" else "x*(-(y/z))"), // subtle  (x*(-y))/z
+    ("-x*y*z", "-((x*y)*z)"),
+    ("x*-y/z", "x*(-(y/z))"), // subtle  (x*(-y))/z
     ("x/y/-z", "(x/y)/(-z)"),
     ("x/y*-z", "(x/y)*(-z)"),
     ("x/-y*z", "(x/-y)*z"),
@@ -264,8 +258,8 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("x-y- -z", "(x-y)-(-z)"),
     ("x- -y- -z", "(x-(-y))-(-z)"),
     ("-x- -y- -z", "((-x)-(-y))-(-z)"),
-    ("x*-y*z", if (!weakNeg) "(x*(-y))*z" else "x*(-(y*z))"), // subtle (x*(-y))*z
-    ("-x*y*z", if (!weakNeg) "((-x)*y)*z" else "-((x*y)*z)"), // subtle ((-x)*y)*z
+    ("x*-y*z", "x*(-(y*z))"), // subtle (x*(-y))*z
+    ("-x*y*z", "-((x*y)*z)"), // subtle ((-x)*y)*z
     ("x*y*-z", "(x*y)*(-z)"),
 
     // primes
@@ -278,7 +272,7 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("x'*y*z", "(x'*y)*z"),
     ("x*y'*z", "(x*(y'))*z"),
     ("x*y*z'", "(x*y)*(z')"),
-    ("x/-y/z", if (!weakNeg) "(x/(-y))/z" else "x/(-(y/z))"), // subtle "(x/(-y))/z"
+    ("x/-y/z", "x/(-(y/z))"), // subtle "(x/(-y))/z"
     ("x^-y^z", "x^(-(y^z))"),
     ("-x'", "-(x')"),
     ("2'", unparseable),
@@ -300,16 +294,16 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("y-x^2", "y-(x^2)"),
     ("y*x^2", "y*(x^2)"),
     ("y/x^2", "y/(x^2)"),
-    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
-    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
+    ("-x*y", "-(x*y)"),
+    ("-x*y", "-(x*y)"),
 //    ("-3*y", "(-3)*y"), //@note subtle "-(3*y)"),
 //    ("-5*(y-z)", "(-5)*(y-z)"), // subtle "-(5*(y-z))"),
     ("-2-3", "(-(2))-(3)"),
 //    ("-2*-3", "(-2)*(-3)"),  // subtle "-(2*(-(3)))"),
     ("-2^-3", "-(2^(-(3)))"), // subtle NOT "(-2)^(-3)"
     ("(-8)", "(-8)"),
-    ("-2*a", if (weakNeg) "-(2*a)" else "(- 2)*a"), // subtle -(2*a)"),
-    ("-0*a", if (weakNeg) "-(0*a)" else "(- 0)*a"), // subtle "-(0*a)"),
+    ("-2*a", "-(2*a)"), // subtle -(2*a)"),
+    ("-0*a", "-(0*a)"), // subtle "-(0*a)"),
     ("a-3*b", "a-(3*b)"),
     ("-2-3*b", "-(2)-(3*b)"),
 //    ("-2+-3*b", "(-2)+((-3)*b)"),
@@ -343,9 +337,9 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("- 2", "-(2)"),
     ("(- 2)", "-(2)"),
     ("-3+x", "(-(3))+x"),
-    ("-2*x", if (weakNeg) "-(2*x)" else "(- 2)*x"),
-    ("-1*x", if (weakNeg) "-(1*x)" else "(- 1)*x"),
-    ("-10*x", if (weakNeg) "-(10*x)" else "(- 10)*x"),
+    ("-2*x", "-(2*x)"),
+    ("-1*x", "-(1*x)"),
+    ("-10*x", "-(10*x)"),
     ("0-2*x", "0-(2*x)"),
     ("5'", unparseable),
     ("-5'", unparseable),
@@ -588,9 +582,9 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("-(5*x)<=0", "-(5*x)<=0"),
     ("m_0<=1", "(m_0)<=1"),
 //    ("-0*m/a<=0*(tl-to)", "(((-0)*(m))/(a))<=0*(tl-to)"), // subtle "-(((0)*(min_0))/(a))<=0*(tl-to)"),
-    ("-o*m/a<=0*(tl-to)", if (weakNeg) "-((o*m)/(a))<=0*(tl-to)" else "(((-o)*m)/(a))<=0*(tl-to)"),
-    ("-o*m_0/a<=0*(tl-to)", if (weakNeg) "-((o*(m_0))/(a))<=0*(tl-to)" else "((-o)*m_0)/a<=0*(tl-to)"),
-    ("-o*min_0/a<=0*(tl-to)", if (weakNeg) "-((o*(min_0))/(a))<=0*(tl-to)" else "((-o)*min_0)/a<=0*(tl-to)"),
+    ("-o*m/a<=0*(tl-to)", "-((o*m)/(a))<=0*(tl-to)"),
+    ("-o*m_0/a<=0*(tl-to)", "-((o*(m_0))/(a))<=0*(tl-to)"),
+    ("-o*min_0/a<=0*(tl-to)", "-((o*(min_0))/(a))<=0*(tl-to)"),
     ("-(0*min_0/a)<=0*(tl-to)", "-((0*(min_0))/(a))<=0*(tl-to)"),
     ("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;} ]x>=1", unparseable),
     ("x + y*z + 3*(x+y)  >=  3+x+7", "((x+(y*z))+(3*(x+y)))>=((3+x)+7)"),
@@ -698,10 +692,7 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("z3>=((-63))'", "z3>=((-63))'"),
     (
       "((18)'!=58-z2'&[z2':=(-57);]1>=(-86)<->(\\forall z2 1/1>=z3<->1<=1*1-z3'))<->-(26)'*z1>0",
-      if (weakNeg)
-        "((18)'!=58-(z2')&[z2':=(-57);](1>=(-86))<->((\\forall z2 ((1/1)>=z3))<->(1<=(1*1)-(z3'))))<->(-(((26)')*z1))>0"
-      else
-        "((18)'!=58-(z2')&[z2':=(-57);](1>=(-86))<->((\\forall z2 ((1/1)>=z3))<->(1<=(1*1)-(z3'))))<->(-((26)'))*z1>0",
+      "((18)'!=58-(z2')&[z2':=(-57);](1>=(-86))<->((\\forall z2 ((1/1)>=z3))<->(1<=(1*1)-(z3'))))<->(-(((26)')*z1))>0",
     ),
     ("[x:=*;]x^2>=0", "[x := * ;] x^2>=0"), // issue #171 space within random assignments
     ("[x:=*;]x^2>=0", "[x:= * ;] x^2>=0"),

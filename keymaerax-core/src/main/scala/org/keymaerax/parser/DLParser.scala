@@ -366,13 +366,6 @@ class DLParser extends Parser {
     case Right(t) => t
   }
 
-  private def assocSign(t: Either[Term, Term]): Term = t match {
-    case Left(t) => t
-    case Right(Neg(Times(l, r))) if !Parser.weakNeg => Times(Neg(l), r)
-    case Right(Neg(Divide(l, r))) if !Parser.weakNeg => Divide(Neg(l), r)
-    case Right(t) => t
-  }
-
   /**
    * Parse a term.
    *
@@ -388,23 +381,22 @@ class DLParser extends Parser {
    */
   @nowarn("msg=match may not be exhaustive")
   def term[$: P](doAmbigCuts: Boolean): P[Term] = P(
-    (if (Parser.weakNeg) signed(summand(doAmbigCuts)) else summand(doAmbigCuts).map(t => Left(t))) ~
+    signed(summand(doAmbigCuts)) ~
       // Note: on weakNeg, the summand is signed, rather than the first multiplicand
       // in `summand`, because -5*6 is parsed as -(5*6),
       // otherwise (on !weakNeg), the multiplicand is signed because then -x*y is parsed as (-x)*y
       (("+" | "-" ~ !">").!./ ~ signed(summand(doAmbigCuts))).rep
   ).map { case (left, sums) =>
-    sums.foldLeft(assocSign(left)) {
-      case (m1, ("+", m2)) => Plus(m1, assocSign(m2))
-      case (m1, ("-", m2)) => Minus(m1, assocSign(m2))
+    sums.foldLeft(getEither(left)) {
+      case (m1, ("+", m2)) => Plus(m1, getEither(m2))
+      case (m1, ("-", m2)) => Minus(m1, getEither(m2))
     }
   }
 
   @nowarn("msg=Exhaustivity analysis reached max recursion depth") @nowarn("msg=match may not be exhaustive")
   private def mulDiv(left: Term, rest: Seq[(String, Either[Term, Term])]): Term = (left, rest) match {
     case (l, Nil) => l
-    case (l, (op, Right(n @ Neg(c))) +: r) if Parser.weakNeg =>
-      op match {
+    case (l, (op, Right(n @ Neg(c))) +: r) => op match {
         case "*" => Times(l, Neg(mulDiv(c, r)))
         case "/" => r match {
             case Nil => Divide(left, n)
@@ -420,10 +412,8 @@ class DLParser extends Parser {
 
   def summand[$: P](doAmbigCuts: Boolean): P[Term] =
     // Lookahead is to avoid /* */ comments
-    ((if (Parser.weakNeg) multiplicand(doAmbigCuts).map(t => Left(t)) else signed(multiplicand(doAmbigCuts))) ~
-      (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep).map { case (left, rest) =>
-      mulDiv(getEither(left), rest)
-    }
+    (multiplicand(doAmbigCuts).map(t => Left(t)) ~ (("*" | "/" ~~ !"*").!./ ~ signed(multiplicand(doAmbigCuts))).rep)
+      .map { case (left, rest) => mulDiv(getEither(left), rest) }
 
   def multiplicand[$: P](doAmbigCuts: Boolean): P[Term] =
     (baseTerm(doAmbigCuts) ~ ("^"./ ~ signed(multiplicand(doAmbigCuts))).rep).map { case (left, pows) =>

@@ -92,27 +92,17 @@ class DLParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "not weak-negate parenthesized negations" in {
-    if (Parser.weakNeg) {
-      parser("-x*y") shouldBe Neg(Times(Variable("x"), Variable("y")))
-      parser("(-x)*y") shouldBe Times(Neg(Variable("x")), Variable("y"))
-      // nested once
-      parser("x*-y*z") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Variable("z"))))
-      parser("x*(-y)*z") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Variable("z"))
-      // nested
-      parser("x*-y*-z*2") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Neg(Times(Variable("z"), Number(2))))))
-      parser("x*(-y)*(-z)*2") shouldBe
-        Times(Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Variable("z"))), Number(2))
-      parser("x*(-y)*-z*2") shouldBe
-        Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Times(Variable("z"), Number(2))))
-      parser("x*-y*(-z)*2") shouldBe
-        Times(Variable("x"), Neg(Times(Times(Variable("y"), Neg(Variable("z"))), Number(2))))
-    } else {
-      parser("-x*y") shouldBe parser("(-x)*y")
-      parser("-x*y*z") shouldBe parser("(-x)*y")
-      parser("(-(x*y))*z") shouldBe Times(Neg(Times(Variable("x"), Variable("y"))), Variable("z"))
-      parser("x*(-y)*z") shouldBe parser("x*-y*z")
-      parser("x*(-y)*z") shouldBe Times(Variable("x"), Times(Neg(Variable("y")), Variable("z")))
-    }
+    parser("-x*y") shouldBe Neg(Times(Variable("x"), Variable("y")))
+    parser("(-x)*y") shouldBe Times(Neg(Variable("x")), Variable("y"))
+    // nested once
+    parser("x*-y*z") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Variable("z"))))
+    parser("x*(-y)*z") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Variable("z"))
+    // nested
+    parser("x*-y*-z*2") shouldBe Times(Variable("x"), Neg(Times(Variable("y"), Neg(Times(Variable("z"), Number(2))))))
+    parser("x*(-y)*(-z)*2") shouldBe
+      Times(Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Variable("z"))), Number(2))
+    parser("x*(-y)*-z*2") shouldBe Times(Times(Variable("x"), Neg(Variable("y"))), Neg(Times(Variable("z"), Number(2))))
+    parser("x*-y*(-z)*2") shouldBe Times(Variable("x"), Neg(Times(Times(Variable("y"), Neg(Variable("z"))), Number(2))))
   }
 
   it should "parse number differentials" in {

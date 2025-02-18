@@ -103,12 +103,6 @@ trait Parser extends (String => Expression) {
 
 object Parser extends (String => Expression) {
 
-  /**
-   * `true` has unary negation `-` bind weakly like binary subtraction. `false` has unary negation `-` bind strong just
-   * shy of power `^`.
-   */
-  val weakNeg: Boolean = OpSpec.weakNeg
-
   /** Parses `input`. */
   override def apply(input: String): Expression = GlobalState.parser(input)
 

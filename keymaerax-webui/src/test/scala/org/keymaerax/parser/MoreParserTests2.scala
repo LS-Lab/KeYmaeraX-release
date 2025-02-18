@@ -461,7 +461,7 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
     val B = Variable("B", None)
     val v0 = Variable("v", Some(0))
     val parsed = parser("-(1)*(v_0+-B*t_3--B/2*t_3)+-t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))")
-    if (Parser.weakNeg) parsed shouldBe Plus(
+    parsed shouldBe Plus(
       Neg(Times(Number(1), Minus(Plus(v0, Neg(Times(B, t3))), Neg(Times(Divide(B, Number(2)), t3))))),
       Neg(Times(
         t3,
@@ -477,45 +477,19 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
         ),
       )),
     )
-    else parsed shouldBe Plus(
-      Times(Neg(Number(1)), Minus(Plus(v0, Times(Neg(B), t3)), Times(Divide(Neg(B), Number(2)), t3))),
-      Times(
-        Neg(t3),
-        Minus(
-          Neg(B),
-          Plus(
-            Times(
-              Divide(Minus(Times(Number(0), Number(2)), Times(Neg(B), Number(0))), Power(Number(2), Number(2))),
-              t3,
-            ),
-            Times(Divide(Neg(B), Number(2)), Number(1)),
-          ),
-        ),
-      ),
-    )
   }
 
   it should "parse a term from an ODE solution (2)" in {
     val t3 = Variable("t", Some(3))
     val B = Variable("B", None)
     val parsed = parser("t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))")
-    if (Parser.weakNeg) parsed shouldBe Times(
+    parsed shouldBe Times(
       t3,
       Minus(
         Neg(B),
         Plus(
           Times(Divide(Minus(Times(Number(0), Number(2)), Neg(Times(B, Number(0)))), Power(Number(2), Number(2))), t3),
           Neg(Times(Divide(B, Number(2)), Number(1))),
-        ),
-      ),
-    )
-    else parsed shouldBe Times(
-      t3,
-      Minus(
-        Neg(B),
-        Plus(
-          Times(Divide(Minus(Times(Number(0), Number(2)), Times(Neg(B), Number(0))), Power(Number(2), Number(2))), t3),
-          Times(Divide(Neg(B), Number(2)), Number(1)),
         ),
       ),
     )
@@ -529,7 +503,7 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
     val parsed = parser(
       "\\forall V \\forall dx_0 \\forall B \\forall dy_0 \\forall dx \\forall v \\forall yo_0 \\forall x_0 \\forall y_0 \\forall v_0 \\forall r \\forall xo_0 \\forall dy \\forall A \\forall t_3 (v_0+-B*t_3)*dx_0-0 <= 1*(v_0+-B*t_3--B/2*t_3) + t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))"
     )
-    if (Parser.weakNeg) parsed shouldBe Forall(
+    parsed shouldBe Forall(
       Seq(Variable("V")),
       Forall(
         Seq(Variable("dx", Some(0))),
@@ -579,76 +553,6 @@ class MoreParserTests2 extends AnyFlatSpec with Matchers with BeforeAndAfterEach
                                               t3,
                                             ),
                                             Neg(Times(Divide(B, Number(2)), Number(1))),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    )
-    else parsed shouldBe Forall(
-      Seq(Variable("V")),
-      Forall(
-        Seq(Variable("dx", Some(0))),
-        Forall(
-          Seq(Variable("B")),
-          Forall(
-            Seq(Variable("dy", Some(0))),
-            Forall(
-              Seq(Variable("dx")),
-              Forall(
-                Seq(Variable("v")),
-                Forall(
-                  Seq(Variable("yo", Some(0))),
-                  Forall(
-                    Seq(Variable("x", Some(0))),
-                    Forall(
-                      Seq(Variable("y", Some(0))),
-                      Forall(
-                        Seq(Variable("v", Some(0))),
-                        Forall(
-                          Seq(Variable("r")),
-                          Forall(
-                            Seq(Variable("xo", Some(0))),
-                            Forall(
-                              Seq(Variable("dy")),
-                              Forall(
-                                Seq(Variable("A")),
-                                Forall(
-                                  Seq(Variable("t", Some(3))),
-                                  LessEqual(
-                                    Minus(Times(Plus(v0, Times(Neg(B), t3)), dx0), Number(0)),
-                                    Plus(
-                                      Times(
-                                        Number(1),
-                                        Minus(Plus(v0, Times(Neg(B), t3)), Times(Divide(Neg(B), Number(2)), t3)),
-                                      ),
-                                      Times(
-                                        t3,
-                                        Minus(
-                                          Neg(B),
-                                          Plus(
-                                            Times(
-                                              Divide(
-                                                Minus(Times(Number(0), Number(2)), Times(Neg(B), Number(0))),
-                                                Power(Number(2), Number(2)),
-                                              ),
-                                              t3,
-                                            ),
-                                            Times(Divide(Neg(B), Number(2)), Number(1)),
                                           ),
                                         ),
                                       ),
