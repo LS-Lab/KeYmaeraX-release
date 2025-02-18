@@ -109,12 +109,6 @@ object Parser extends (String => Expression) {
    */
   val weakNeg: Boolean = OpSpec.weakNeg
 
-  /**
-   * `true` when negative numbers are picked out specially, e.g. `-2*x` is `(-2)*x`. `false` when negative numbers are
-   * handled like unary `-`.
-   */
-  val numNeg: Boolean = OpSpec.negativeNumber
-
   /** Parses `input`. */
   override def apply(input: String): Expression = GlobalState.parser(input)
 

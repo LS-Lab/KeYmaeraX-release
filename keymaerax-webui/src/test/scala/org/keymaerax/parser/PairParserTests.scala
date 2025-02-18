@@ -56,12 +56,6 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
    */
   private val weakNeg: Boolean = Parser.weakNeg
 
-  /**
-   * `true` when negative numbers are picked out specially, e.g. `-2*x` is `(-2)*x`. `false` when negative numbers are
-   * handled like unary `-`.
-   */
-  private val numNeg: Boolean = Parser.numNeg
-
   /** A special swearing string indicating that the other string cannot be parsed. */
   private val unparseable: String = "@#%@*!!!"
 
@@ -310,20 +304,14 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
 //    ("-3*y", "(-3)*y"), //@note subtle "-(3*y)"),
 //    ("-5*(y-z)", "(-5)*(y-z)"), // subtle "-(5*(y-z))"),
-    ("-2-3", if (numNeg) "(-2)-(3)" else "(-(2))-(3)"),
+    ("-2-3", "(-(2))-(3)"),
 //    ("-2*-3", "(-2)*(-3)"),  // subtle "-(2*(-(3)))"),
-    ("-2^-3", if (numNeg) "-(2^(-3))" else "-(2^(-(3)))"), // subtle NOT "(-2)^(-3)"
+    ("-2^-3", "-(2^(-(3)))"), // subtle NOT "(-2)^(-3)"
     ("(-8)", "(-8)"),
-    (
-      "-2*a",
-      if (weakNeg && numNeg) unparseable else if (numNeg) "(-2)*a" else if (weakNeg) "-(2*a)" else "(- 2)*a",
-    ), // subtle -(2*a)"),
-    (
-      "-0*a",
-      if (weakNeg && numNeg) unparseable else if (numNeg) "(-0)*a" else if (weakNeg) "-(0*a)" else "(- 0)*a",
-    ), // subtle "-(0*a)"),
+    ("-2*a", if (weakNeg) "-(2*a)" else "(- 2)*a"), // subtle -(2*a)"),
+    ("-0*a", if (weakNeg) "-(0*a)" else "(- 0)*a"), // subtle "-(0*a)"),
     ("a-3*b", "a-(3*b)"),
-    ("-2-3*b", if (numNeg) "(-2)-(3*b)" else "-(2)-(3*b)"),
+    ("-2-3*b", "-(2)-(3*b)"),
 //    ("-2+-3*b", "(-2)+((-3)*b)"),
     ("-(5*x)", "-(5*x)"),
     ("-(5+x)", "-(5+x)"),
@@ -354,20 +342,20 @@ class PairParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     ("(-2)", "(-2)"),
     ("- 2", "-(2)"),
     ("(- 2)", "-(2)"),
-    ("-3+x", if (!numNeg) "(-(3))+x" else "(-3)+x"),
-    ("-2*x", if (weakNeg && !numNeg) "-(2*x)" else if (!weakNeg && !numNeg) "(- 2)*x" else "(-2)*x"),
-    ("-1*x", if (weakNeg && !numNeg) "-(1*x)" else if (!weakNeg && !numNeg) "(- 1)*x" else "(-1)*x"),
-    ("-10*x", if (weakNeg && !numNeg) "-(10*x)" else if (!weakNeg && !numNeg) "(- 10)*x" else "(-10)*x"),
+    ("-3+x", "(-(3))+x"),
+    ("-2*x", if (weakNeg) "-(2*x)" else "(- 2)*x"),
+    ("-1*x", if (weakNeg) "-(1*x)" else "(- 1)*x"),
+    ("-10*x", if (weakNeg) "-(10*x)" else "(- 10)*x"),
     ("0-2*x", "0-(2*x)"),
     ("5'", unparseable),
     ("-5'", unparseable),
-    ("2/-3", if (weakNeg || !numNeg) "2/(-(3))" else "2/(-3)"),
-    ("2/-3*4", if (weakNeg || !numNeg) "(2/(-(3)))*4" else "(2/(-3))*4)"),
-    ("abs(-3)", if (!numNeg) "abs(-(3))" else "abs((-3))"),
+    ("2/-3", "2/(-(3))"),
+    ("2/-3*4", "(2/(-(3)))*4"),
+    ("abs(-3)", "abs(-(3))"),
     ("001", "1"),
     ("000001", "1"),
     ("00", "0"),
-    ("-0", if (numNeg) "0" else "-(0)"),
+    ("-0", "-(0)"),
     ("(-0)", "0"),
     ("m_0", "m_0"),
     // ("m_00", "m_0"),   // @subtle...

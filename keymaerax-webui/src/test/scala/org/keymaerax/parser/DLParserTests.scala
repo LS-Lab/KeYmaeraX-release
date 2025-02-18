@@ -63,23 +63,18 @@ class DLParserTests extends AnyFlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "parse numbers" in {
-    parser("-1") shouldBe (if (Parser.numNeg) Number(-1) else Neg(Number(1)))
+    parser("-1") shouldBe Neg(Number(1))
     parser("(-1)") shouldBe Number(-1)
     parser("(- 1)") shouldBe Neg(Number(1))
     parser("(-1)*10") shouldBe Times(Number(-1), Number(10))
-    parser("-1*10") shouldBe (if (Parser.numNeg) Times(Number(-1), Number(10)) else Neg(Times(Number(1), Number(10))))
-    parser("-1*x") shouldBe
-      (if (Parser.numNeg) Times(Number(-1), Variable("x")) else Neg(Times(Number(1), Variable("x"))))
+    parser("-1*10") shouldBe Neg(Times(Number(1), Number(10)))
+    parser("-1*x") shouldBe Neg(Times(Number(1), Variable("x")))
   }
 
-  it should "parse sums" in {
-    parser("-2-3") shouldBe (if (Parser.numNeg) Minus(Number(-2), Number(3)) else Minus(Neg(Number(2)), Number(3)))
-  }
+  it should "parse sums" in { parser("-2-3") shouldBe Minus(Neg(Number(2)), Number(3)) }
 
   it should "parse divisions with negations correctly" in {
-    parser("2/-3*4") shouldBe
-      (if (Parser.numNeg) Times(Divide(Number(2), Number(-3)), Number(4))
-       else Times(Divide(Number(2), Neg(Number(3))), Number(4)))
+    parser("2/-3*4") shouldBe Times(Divide(Number(2), Neg(Number(3))), Number(4))
     parser("2/-x*y") shouldBe Times(Divide(Number(2), Neg(Variable("x"))), Variable("y"))
   }
 
