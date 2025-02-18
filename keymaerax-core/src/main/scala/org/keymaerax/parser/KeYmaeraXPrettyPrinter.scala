@@ -257,9 +257,6 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case f: Function => f.asString
   }
 
-  /** True if negative numbers should get extra parentheses */
-  private[parser] val negativeBrackets = !OpSpec.negativeNumber
-
   /**
    * @note The extra space disambiguates `x<-7` as in `x < (-7)` from `x REVIMPLY 7` as well as `x<-(x^2)` from `x
    *   REVIMPLY ...`
@@ -302,14 +299,12 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
       case x: Variable => x.asString
       // disambiguate (-2)' versus (-(2))' versus ((-2))'
       // @note duplicates Differential(Number) to avoid accidental side-effect of changing Differential/Number when overriding pp
-      case Differential(Number(n)) if negativeBrackets =>
+      case Differential(Number(n)) =>
         if (n < 0) "((" + n.bigDecimal.toPlainString + "))" + ppOp(term)
         else "(" + n.bigDecimal.toPlainString + ")" + ppOp(term)
       case Differential(t) => "(" + pp(q ++ 0, t) + ")" + ppOp(term)
       // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
-      case Number(n) =>
-        if (negativeBrackets) { if (n < 0) "(" + n.bigDecimal.toPlainString + ")" else n.bigDecimal.toPlainString }
-        else n.bigDecimal.toPlainString
+      case Number(n) => if (n < 0) "(" + n.bigDecimal.toPlainString + ")" else n.bigDecimal.toPlainString
       case FuncOf(f, c) =>
         if (f.domain.isInstanceOf[Tuple]) f.asString + pp(q ++ 0, c) else f.asString + "(" + pp(q ++ 0, c) + ")"
       // special notation
@@ -331,10 +326,6 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
         wrap(flattened.zipWithIndex.map({ case (p, i) => pp(q ++ posInExprs(i), p) }).mkString(ppOp(term)), term)
       case UnitFunctional(name, space, sort) =>
         if (name == ReservedSymbols.exerciseF.name) "__________" else name + "(" + space + ")"
-      // special case when negative numbers are enabled: force to disambiguate between -5 as in the number (-5) as opposed to -(5).
-      case t @ Neg(n: Number) if !negativeBrackets => ppOp(t) + "(" + pp(q ++ 0, n) + ")"
-      // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
-      case t @ Neg(n: Number) if !negativeBrackets => ppOp(t) + " " + wrapChild(t, pp(q ++ 0, n))
       case t @ Neg(x) if !OpSpec.weakNeg => ppOp(t) + "(" + pp(q ++ 0, x) + ")"
       // @note all remaining unary operators are prefix, see [[OpSpec]]
       case t: UnaryCompositeTerm => ppOp(t) + wrapChild(t, pp(q ++ 0, t.child))
@@ -342,7 +333,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
       case t: BinaryCompositeTerm =>
         // special case forcing space between unary negation and numbers when negative brackets are enabled to disambiguate (- 1)^2 from (-1)^2
         def printSub(i: Int, t: Term): String = t match {
-          case Neg(n: Number) if negativeBrackets => ppOp(t) + " " + pp(q ++ i, n)
+          case Neg(n: Number) => ppOp(t) + " " + pp(q ++ i, n)
           case _ => pp(q ++ i, t)
         }
         wrapLeft(t, printSub(0, t.left)) + ppOp(t) + wrapRight(t, printSub(1, t.right))

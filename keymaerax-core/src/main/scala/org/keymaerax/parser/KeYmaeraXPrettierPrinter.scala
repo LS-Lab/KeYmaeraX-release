@@ -94,7 +94,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     if (skipParensRight(t)) doc else encloseText("{", doc, "}")
 
   protected def docOf(term: Term): Doc = term match {
-    case Differential(t @ Number(n)) if negativeBrackets =>
+    case Differential(t @ Number(n)) =>
       if (n < 0) encloseText("((", Doc.text(n.bigDecimal.toPlainString), "))" + ppOp(term))
       else encloseText("(", docOf(t), ")" + ppOp(term))
     case Differential(t) => encloseText("(", docOf(t), ")" + ppOp(term))
@@ -115,10 +115,6 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
           .grouped,
         term,
       )
-    case t @ Neg(n: Number) if !negativeBrackets => Doc.text(ppOp(t) + "(" + pp(HereP, n) + ")")
-    case t: Neg if !negativeBrackets =>
-      val c = pp(HereP, t.child)
-      Doc.text(ppOp(t) + (if (c.charAt(0).isDigit) " " else "")) + wrapChildDoc(t, docOf(t.child)).grouped
     case t: UnaryCompositeTerm => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
     case t @ Power(base, exp) => (wrapLeftDoc(t, docOf(base)) + Doc.text(ppOp(t)) + wrapRightDoc(t, docOf(exp))).grouped
     case t: BinaryCompositeTerm => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line +
