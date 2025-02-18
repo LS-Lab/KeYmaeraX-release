@@ -191,12 +191,6 @@ object TernaryOpSpec {
  */
 object OpSpec {
 
-  /**
-   * `true` has unary negation `-` bind weakly like binary subtraction. `false` has unary negation `-` bind strong just
-   * shy of power `^`.
-   */
-  val weakNeg: Boolean = true
-
   /** no notation */
   private val none = PSEUDO
 

@@ -326,7 +326,6 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
         wrap(flattened.zipWithIndex.map({ case (p, i) => pp(q ++ posInExprs(i), p) }).mkString(ppOp(term)), term)
       case UnitFunctional(name, space, sort) =>
         if (name == ReservedSymbols.exerciseF.name) "__________" else name + "(" + space + ")"
-      case t @ Neg(x) if !OpSpec.weakNeg => ppOp(t) + "(" + pp(q ++ 0, x) + ")"
       // @note all remaining unary operators are prefix, see [[OpSpec]]
       case t: UnaryCompositeTerm => ppOp(t) + wrapChild(t, pp(q ++ 0, t.child))
       // @note all binary operators are infix, see [[OpSpec]]
@@ -509,7 +508,7 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
 
   /** @inheritdoc */
-  override protecteddef skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
+  override protected def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
 
   @tailrec
   private def leftMostLeaf(t: Expression): Option[Expression] = t match {
