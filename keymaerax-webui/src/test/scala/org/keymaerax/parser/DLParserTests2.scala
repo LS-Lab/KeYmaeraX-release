@@ -56,59 +56,60 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
 
   behavior of "DLParser"
 
-  it should "parse x+y*z" in { parser("x+y*z") shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z"))) }
-
-  it should "parse x*y+z" in { parser("x*y+z") shouldBe Plus(Times(Variable("x"), Variable("y")), Variable("z")) }
-
-  it should "parse (x*y)+z" in { parser("(x*y)+z") shouldBe Plus(Times(Variable("x"), Variable("y")), Variable("z")) }
-
-  it should "parse x*(y+z)" in { parser("x*(y+z)") shouldBe Times(Variable("x"), Plus(Variable("y"), Variable("z"))) }
-
-  it should "parse -x" in { parser("-x") shouldBe Neg(Variable("x")) }
-
-  it should "parse x+y-z" in { parser("x+y-z") shouldBe Minus(Plus(Variable("x"), Variable("y")), Variable("z")) }
-
-  it should "parse x-y" in { parser("x-y") shouldBe Minus(Variable("x"), Variable("y")) }
-
-  it should "parse x+-y" in { parser("x+-y") shouldBe Plus(Variable("x"), Neg(Variable("y"))) }
-
-  it should "parse -x+y" in { parser("-x+y") shouldBe Plus(Neg(Variable("x")), Variable("y")) }
-
-  it should "parse 2*-y" in { parser("2*-y") shouldBe Times(Number(2), Neg(Variable("y"))) }
-
-  ignore should "could parse -2*y" in {
-    parser("-2*y") shouldBe (Times(Neg(Number(2)), Variable("y")), Times(Number(-2), Variable("y")))
+  it should "parse addition and multiplication" in {
+    parser("x+y*z") shouldBe Plus(Variable("x"), Times(Variable("y"), Variable("z")))
+    parser("x*y+z") shouldBe Plus(Times(Variable("x"), Variable("y")), Variable("z"))
+    parser("(x*y)+z") shouldBe Plus(Times(Variable("x"), Variable("y")), Variable("z"))
+    parser("x*(y+z)") shouldBe Times(Variable("x"), Plus(Variable("y"), Variable("z")))
   }
 
-  ignore should "could lexed parse -2*y" in { parser("-2*y") shouldBe Times(Number(-2), Variable("y")) }
-
-  // @todo the name of this test doesn't indicate what it's actually testing.
-  // @todo disabling for now.
-  ignore should "parse -(2)*y" in {
-    parser("-(2)*y") shouldBe (Times(Number(-2), Variable("y")), Times(Neg(Number(2)), Variable("y")))
+  it should "parse subtraction" in {
+    parser("x-y") shouldBe Minus(Variable("x"), Variable("y"))
+    parser("x+y-z") shouldBe Minus(Plus(Variable("x"), Variable("y")), Variable("z"))
+    parser("x-y+z") shouldBe Plus(Minus(Variable("x"), Variable("y")), Variable("z"))
+    parser("x-y-z") shouldBe Minus(Minus(Variable("x"), Variable("y")), Variable("z"))
+    parser("x-(y+z)") shouldBe Minus(Variable("x"), Plus(Variable("y"), Variable("z")))
+    parser("x-(y-z)") shouldBe Minus(Variable("x"), Minus(Variable("y"), Variable("z")))
   }
 
-  it should "parse x*-y" in { parser("x*-y") shouldBe Times(Variable("x"), Neg(Variable("y"))) }
+  it should "parse negation" in {
+    parser("-x") shouldBe Neg(Variable("x"))
 
-  it should "parse x/-y" in { parser("x/-y") shouldBe Divide(Variable("x"), Neg(Variable("y"))) }
+    parser("2*-y") shouldBe Times(Number(2), Neg(Variable("y")))
+    parser("-2*y") shouldBe Neg(Times(Number(2), Variable("y")))
+    parser("-(2)*y") shouldBe Neg(Times(Number(2), Variable("y")))
+    parser("(-2)*y") shouldBe Times(Number(-2), Variable("y"))
 
-  it should "parse x^-y" in { parser("x^-y") shouldBe Power(Variable("x"), Neg(Variable("y"))) }
+    parser("x+-y") shouldBe Plus(Variable("x"), Neg(Variable("y")))
+    parser("x--y") shouldBe Minus(Variable("x"), Neg(Variable("y")))
+    parser("x*-y") shouldBe Times(Variable("x"), Neg(Variable("y")))
+    parser("x/-y") shouldBe Divide(Variable("x"), Neg(Variable("y")))
+    parser("x^-y") shouldBe Power(Variable("x"), Neg(Variable("y")))
 
-  it should "parse x-y+z" in { parser("x-y+z") shouldBe Plus(Minus(Variable("x"), Variable("y")), Variable("z")) }
-
-  ignore should "parse x-(y+z)" in {
-    parser("x-(y+z)") shouldBe Minus(Variable("x"), Minus(Variable("y"), Variable("z")))
+    parser("-x+y") shouldBe Plus(Neg(Variable("x")), Variable("y"))
+    parser("-x-y") shouldBe Minus(Neg(Variable("x")), Variable("y"))
+    parser("-x*y") shouldBe Neg(Times(Variable("x"), Variable("y")))
+    parser("-x/y") shouldBe Neg(Divide(Variable("x"), Variable("y")))
+    parser("-x^y") shouldBe Neg(Power(Variable("x"), Variable("y")))
   }
 
-  it should "parse x-y*z+a*b" in {
+  it should "parse negative number literals" in {
+    parser("-2") shouldBe Neg(Number(2))
+    parser("-(2)") shouldBe Neg(Number(2))
+    parser("(-2)") shouldBe Number(-2)
+    parser("(- 2)") shouldBe Neg(Number(2))
+    parser("(-(2))") shouldBe Neg(Number(2))
+  }
+
+  it should "parse terms" in {
+    parser("f()>0") shouldBe Greater(f0, Number(0))
+
     parser("x-y*z+a*b") shouldBe
       Plus(Minus(Variable("x"), Times(Variable("y"), Variable("z"))), Times(Variable("a"), Variable("b")))
-  }
 
-  ignore should "parse x-y+z*a/b^c" in {
     parser("x-y+z*a/b^c") shouldBe Plus(
       Minus(Variable("x"), Variable("y")),
-      Times(Variable("z"), Divide(Variable("a"), Power(Variable("b"), Variable("c")))),
+      Divide(Times(Variable("z"), Variable("a")), Power(Variable("b"), Variable("c"))),
     )
   }
 
@@ -643,11 +644,6 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
       And(Equal(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"), Number(2)))
   }
 
-  it should "parse a program when trying to parse x'=5&x>2 as a program" in {
-    parser.programParser("x'=5&x>2") shouldBe
-      ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"), Number(2)))
-  }
-
   ignore should "perhaps always parse x'=5,y'=7&x>2 as a program" in {
     parser.programParser("x'=5,y'=7&x>2") shouldBe ODESystem(
       DifferentialProduct(
@@ -715,26 +711,56 @@ class DLParserTests2 extends AnyFlatSpec with Matchers with PrivateMethodTester 
     parser("p(x,y)->f(x,y)>g(x)") shouldBe Imply(PredOf(p2, Pair(x, y)), Greater(FuncOf(f2, Pair(x, y)), FuncOf(g, x)))
   }
 
-  it should "refuse to parse type mess p(x,y)->f(x,y)>p(x)" in {
-    a[ParseException] should be thrownBy parser("p(x,y)->f(x,y)>p(x)")
+  it should "parse type mess p(x,y)->f(x,y)>p(x)" in {
+    parser("p(x,y)->f(x,y)>p(x)") shouldBe Imply(
+      PredOf(Function("p", None, Tuple(Real, Real), Bool), Pair(x, y)),
+      Greater(
+        FuncOf(Function("f", None, Tuple(Real, Real), Real), Pair(x, y)),
+        FuncOf(Function("p", None, Real, Real), x),
+      ),
+    )
   }
 
-  it should "refuse to parse type mess p(x,y)->!p(x)" in {
-    a[ParseException] should be thrownBy parser("p(x,y)->!p(x)")
+  it should "parse type mess p(x,y)->!p(x)" in {
+    parser("p(x,y)->!p(x)") shouldBe Imply(
+      PredOf(Function("p", None, Tuple(Real, Real), Bool, None), Pair(x, y)),
+      Not(PredOf(Function("p", None, Real, Bool), x)),
+    )
   }
 
-  it should "refuse to parse type mess p()->!p(x)" in { a[ParseException] should be thrownBy parser("p()->!p(x)") }
-
-  it should "refuse to parse type mess p() -> [x:=p();]true" in {
-    a[ParseException] should be thrownBy parser("p() -> [x:=p();]true")
+  it should "parse type mess p()->!p(x)" in {
+    parser("p()->!p(x)") shouldBe Imply(p0, Not(PredOf(Function("p", None, Real, Bool), x)))
   }
 
-  it should "refuse to parse type mess p() -> [{x'=p()}]true" in {
-    a[ParseException] should be thrownBy parser("p() -> [{x'=p()}]true")
+  it should "parse type mess p() -> [x:=p();]true" in {
+    parser("p() -> [x:=p();]true") shouldBe
+      Imply(p0, Box(Assign(x, FuncOf(Function("p", None, Unit, Real), Nothing)), True))
   }
 
-  it should "refuse to parse type mess x() -> [x:=x(x);]x()>x(x,x())" in {
-    a[ParseException] should be thrownBy parser("x() -> [x:=x(x);]x()>x(x,x())")
+  it should "parse type mess p() -> [{x'=p()}]true" in {
+    parser("p() -> [{x'=p()}]true") shouldBe Imply(
+      p0,
+      Box(
+        ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), FuncOf(Function("p", None, Unit, Real), Nothing)), True),
+        True,
+      ),
+    )
+  }
+
+  it should "parse type mess x() -> [x:=x(x);]x()>x(x,x())" in {
+    parser("x() -> [x:=x(x);]x()>x(x,x())") shouldBe Imply(
+      PredOf(Function("x", None, Unit, Bool), Nothing),
+      Box(
+        Assign(x, FuncOf(Function("x", None, Real, Real), x)),
+        Greater(
+          FuncOf(Function("x", None, Unit, Real), Nothing),
+          FuncOf(
+            Function("x", None, Tuple(Real, Real), Real),
+            Pair(x, FuncOf(Function("x", None, Unit, Real), Nothing)),
+          ),
+        ),
+      ),
+    )
   }
 
   "Annotation parser" should "parse x>0 -> [{x:=x+1;}*@invariant(x>0)]x>0" in {
