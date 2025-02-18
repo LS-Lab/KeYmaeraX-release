@@ -509,10 +509,7 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
 
   /** @inheritdoc */
-  override protected def skipParens(t: UnaryComposite): Boolean =
-    if (OpSpec.negativeNumber && t.isInstanceOf[Term]) op(t.child) <= op(t) &&
-    !leftMostLeaf(t.child).exists(_.isInstanceOf[Number])
-    else op(t.child) <= op(t)
+  override protecteddef skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
 
   @tailrec
   private def leftMostLeaf(t: Expression): Option[Expression] = t match {

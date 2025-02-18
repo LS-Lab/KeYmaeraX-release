@@ -218,10 +218,7 @@ object Helpers {
   // @see [[KeYmaeraXPrecedencePrinter]]
   private def skipParens(expr: Modal): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
   private def skipParens(expr: Quantified): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
-  private def skipParens(expr: UnaryComposite): Boolean =
-    if (OpSpec.negativeNumber && expr.isInstanceOf[Term]) OpSpec.op(expr.child) <= OpSpec.op(expr) &&
-    !leftMostLeaf(expr.child).exists(_.isInstanceOf[Number])
-    else OpSpec.op(expr.child) <= OpSpec.op(expr)
+  private def skipParens(expr: UnaryComposite): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
   private def skipParensLeft(expr: BinaryComposite): Boolean = OpSpec.op(expr.left) < OpSpec.op(expr) ||
     OpSpec.op(expr.left) <= OpSpec.op(expr) &&
     OpSpec.op(expr).assoc == LeftAssociative && OpSpec.op(expr.left).assoc == LeftAssociative

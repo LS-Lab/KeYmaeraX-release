@@ -38,10 +38,6 @@ import scala.collection.immutable._
  * @author Andre Platzer
  */
 object DLParser {
-  assert(
-    !OpSpec.negativeNumber,
-    "This parser accepts negative number literals although it does not give precedence to them",
-  )
 
   /** Converts Parsed.Failure to corresponding ParseException to throw. */
   private[keymaerax] def parseException(f: Parsed.Failure): ParseException = {
