@@ -10,6 +10,7 @@ import org.keymaerax.core.{Expression, ProverException}
 import org.keymaerax.parser.KeYmaeraXLexer.TokenStream
 
 import scala.collection.immutable.StringOps
+import scala.util.Try
 
 /**
  * Indicates a parse error at the given location, with the context information state.
@@ -29,6 +30,8 @@ case class ParseException(
       s"${loc.begin} $msg\nFound:    $found at $loc\nExpected: $expect" + (if (hint == "") "" else "\nHint: " + hint),
       cause,
     ) {
+
+  private lazy val debug = Try(Configuration(Configuration.Keys.DEBUG) == "true").getOrElse(false)
 
   /**
    * Add the input context information to this exception, returning the resulting exception to be thrown.
@@ -58,17 +61,14 @@ case class ParseException(
           }
       }
     inContext(
-      s"$loc\n$lineInfo\ninput:  \n$input" +
-        (if (Configuration(Configuration.Keys.DEBUG) == "true") "\ntokens: " + tokenStream.getOrElse("<unknown>")
-         else "")
+      s"$loc\n$lineInfo\ninput:  \n$input" + (if (debug) "\ntokens: " + tokenStream.getOrElse("<unknown>") else "")
     ).asInstanceOf[ParseException]
   }
 
   /** Get more details on the error message in addition to [[getContext]]. */
   def getDetails: String = "After:   " + after + "\nin " + state
 
-  override def toString: String = super.getMessage + getContext +
-    (if (Configuration(Configuration.Keys.DEBUG) == "true") "\n" + getDetails else "")
+  override def toString: String = super.getMessage + getContext + (if (debug) "\n" + getDetails else "")
 }
 
 object ParseException {
