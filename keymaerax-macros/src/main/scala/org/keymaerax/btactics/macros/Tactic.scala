@@ -336,7 +336,7 @@ object TacticMacro {
     case class SequentArg(sequentName: ValDef) extends PosArgs
     case class NoPos(provableName: Option[ValDef]) extends PosArgs
 
-    val positionArgs = {
+    val positionArgs: PosArgs = {
       val params = body match {
         case body: Body.FuncLambda => body.params.toList
         case _ => Nil
@@ -414,6 +414,19 @@ object TacticMacro {
       c.abort(c.enclosingPosition, "@Tactic detected tactic with inputs but the return type is no input tactic type")
     }
 
+    // Quick check that the manually declared input args match the definitionArgs.
+    if (inputs.nonEmpty && inputs.length != definitionArgs.length) {
+      c.abort(c.enclosingPosition, s"Tactic has ${inputs.length} inputs but ${definitionArgs.length} definition args")
+      for (((input, defined), i) <- inputs.zip(definitionArgs).zipWithIndex) {
+        if (input.sort != defined.sort) {
+          c.abort(
+            c.enclosingPosition,
+            s"Argument ${i + 1}: Input sort (${input.sort}) does not match defined sort (${defined.sort})",
+          )
+        }
+      }
+    }
+
     // A GeneratorArg, if it exists, must be the first argument. No other argument may be a GeneratorArg.
     if (definitionArgs.drop(1).exists(_.isInstanceOf[GeneratorArg])) {
       c.abort(c.enclosingPosition, "Generator argument to tactic must be the first argument")
@@ -442,7 +455,7 @@ object TacticMacro {
       }
     }
 
-    def getBaseTerm(): Tree = {
+    def getBaseTerm: Tree = {
       // if no "anon" function present, then tactic is a simple forwarding expression like val e: BelleExpr = <tac>
       val hasInputs = definitionArgs.nonEmpty || KNOWN_TACTIC_TYPES_WITH_INPUT.contains(returnType)
 
@@ -507,7 +520,7 @@ object TacticMacro {
     }
 
     val baseType = definition.returnType
-    val baseTerm = getBaseTerm()
+    val baseTerm = getBaseTerm
 
     def argInfoToValDef(info: ArgInfo): ValDef = ValDef(Modifiers(), TermName(info.name), typeName(info), EmptyTree)
 
