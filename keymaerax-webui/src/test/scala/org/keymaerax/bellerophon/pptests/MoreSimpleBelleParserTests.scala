@@ -29,14 +29,14 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   "The Bellerophon Tactics Parser" should "parse nil; nil" in withTactics {
     val result = parser("nil; nil").asInstanceOf[SeqTactic]
     parser("nil & nil") shouldBe result
-    val expected = SeqTactic(TactixLibrary.nil, TactixLibrary.nil).asInstanceOf[SeqTactic]
+    val expected = SeqTactic(UnifyUSCalculus.nil, UnifyUSCalculus.nil).asInstanceOf[SeqTactic]
     result.seq should contain theSameElementsInOrderAs expected.seq
   }
 
   it should "parse nil; <(nil, nil, nil)" in withTactics {
     val result = parser("nil; <(nil, nil, nil)").asInstanceOf[SeqTactic]
     val expected =
-      SeqTactic(TactixLibrary.nil, BranchTactic(Seq(TactixLibrary.nil, TactixLibrary.nil, TactixLibrary.nil)))
+      SeqTactic(UnifyUSCalculus.nil, BranchTactic(Seq(UnifyUSCalculus.nil, UnifyUSCalculus.nil, UnifyUSCalculus.nil)))
         .asInstanceOf[SeqTactic]
     result.seq.head shouldBe expected.seq.head
     result
@@ -70,7 +70,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "parse either" in withTactics {
     val EitherTactic(alts) = parser("nil | implyR(1)")
-    alts should contain theSameElementsInOrderAs List(TactixLibrary.nil, TactixLibrary.implyR(1))
+    alts should contain theSameElementsInOrderAs List(UnifyUSCalculus.nil, TactixLibrary.implyR(1))
   }
 
   it should "parse *" in withTactics {

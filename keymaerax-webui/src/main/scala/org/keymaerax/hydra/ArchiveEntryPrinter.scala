@@ -6,7 +6,7 @@
 package org.keymaerax.hydra
 
 import org.keymaerax.GlobalState
-import org.keymaerax.btactics.TactixLibrary
+import org.keymaerax.btactics.UnifyUSCalculus
 import org.keymaerax.parser.{KeYmaeraXArchivePrinter, ParseException, ParsedArchiveEntry, PrettierPrintFormatProvider}
 
 import scala.annotation.nowarn
@@ -52,7 +52,9 @@ object ArchiveEntryPrinter {
       entryName: String,
       tactics: List[(String, String)],
   ): ParsedArchiveEntry = {
-    entry
-      .copy(name = entryName, tactics = tactics.map(e => (e._1, RequestHelper.tacticString(e._2), TactixLibrary.skip)))
+    entry.copy(
+      name = entryName,
+      tactics = tactics.map(e => (e._1, RequestHelper.tacticString(e._2), UnifyUSCalculus.skip)),
+    )
   }
 }

@@ -229,10 +229,10 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             )
             case Some(_: Box) =>
               import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-              provable(US(Ax.monbaxiom.provable), 0)
+              provable(UnifyUSCalculus.US(Ax.monbaxiom.provable), 0)
             case Some(_: Diamond) =>
               import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
-              provable(US(Ax.mondrule.provable), 0)
+              provable(UnifyUSCalculus.US(Ax.mondrule.provable), 0)
             case Some(_: Forall) => provable(
                 FOQuantifierTactics.allSkolemize(SuccPos(0)) andThen
                   FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)),
@@ -299,7 +299,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             cut(p) <
               (
                 modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop) & SaturateTactic(hideL(Symbol("L"), p)),
-                useAt(mpLemma, PosInExpr(1 :: Nil))(Symbol("Rlast")) & PropositionalTactics.prop & done,
+                UnifyUSCalculus.useAt(mpLemma, PosInExpr(1 :: Nil))(Symbol("Rlast")) & PropositionalTactics.prop & done,
               )
           } else throw new TacticInapplicableFailure("Failed to prove assumptions")
         }
@@ -810,7 +810,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             pr._1,
             Ax.doubleNegation,
             RenUSubst(List((px, p))),
-            List(CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1))))),
+            List(UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1))))),
           )
         case And(p, q) =>
           val pr = negationNormalForm(Not(p))
@@ -821,8 +821,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Ax.notAnd,
             RenUSubst(List((px, p), (qx, q))),
             List(
-              CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
-              CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
+              UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+              UnifyUSCalculus.CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
             ),
           )
         case Or(p, q) =>
@@ -834,8 +834,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Ax.notOr,
             RenUSubst(List((px, p), (qx, q))),
             List(
-              CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
-              CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
+              UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+              UnifyUSCalculus.CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
             ),
           )
         case Imply(p, q) =>
@@ -847,8 +847,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Ax.notImply,
             RenUSubst(List((px, p), (qx, q))),
             List(
-              CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
-              CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
+              UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+              UnifyUSCalculus.CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
             ),
           )
         case Equiv(p, q) =>
@@ -862,10 +862,10 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Ax.notEquiv,
             RenUSubst(List((px, p), (qx, q))),
             List(
-              CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))),
-              CEat(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))),
-              CEat(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))),
-              CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1)))),
+              UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))),
+              UnifyUSCalculus.CEat(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))),
+              UnifyUSCalculus.CEat(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))),
+              UnifyUSCalculus.CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1)))),
             ),
           )
         case Forall(vs, p) =>
@@ -875,7 +875,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Exists(vs, pr._1),
             Ax.notAll,
             RenUSubst(List((px, p), (xx, vs.head))),
-            List(CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
+            List(UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
           )
         case Exists(vs, p) =>
           val pr = negationNormalForm(Not(p))
@@ -884,7 +884,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Forall(vs, pr._1),
             Ax.notExists,
             RenUSubst(List((px, p), (xx, vs.head))),
-            List(CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
+            List(UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
           )
         case Box(prg, p) =>
           val pr = negationNormalForm(Not(p))
@@ -893,7 +893,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Diamond(prg, pr._1),
             Ax.notBox,
             RenUSubst(List((px, p), (ax, prg))),
-            List(CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))),
+            List(UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))),
           )
         case Diamond(prg, p) =>
           val pr = negationNormalForm(Not(p))
@@ -902,7 +902,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             Box(prg, pr._1),
             Ax.notDiamond,
             RenUSubst(List((px, p), (ax, prg))),
-            List(CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))),
+            List(UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1))))),
           )
         case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
       }
@@ -915,8 +915,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
         Ax.implyExpand,
         RenUSubst(List((px, p), (qx, q))),
         List(
-          CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
-          CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
+          UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+          UnifyUSCalculus.CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
         ),
       )
     case Equiv(p, q) =>
@@ -930,10 +930,10 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
         Ax.equivExpandAnd,
         RenUSubst(List((px, p), (qx, q))),
         List(
-          CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))),
-          CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))),
-          CEat(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))),
-          CEat(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1)))),
+          UnifyUSCalculus.CEat(pr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 0)))),
+          UnifyUSCalculus.CEat(qr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0, 1)))),
+          UnifyUSCalculus.CEat(npr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 0)))),
+          UnifyUSCalculus.CEat(nqr._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1, 1)))),
         ),
       )
     case f: BinaryCompositeFormula =>
@@ -945,8 +945,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
         Ax.equivReflexive,
         RenUSubst(List((px, f))),
         List(
-          CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
-          CEat(br._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
+          UnifyUSCalculus.CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0)))),
+          UnifyUSCalculus.CEat(br._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 1)))),
         ),
       )
     case f: Quantified =>
@@ -956,7 +956,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
         f.reapply(f.vars, ar._1),
         Ax.equivReflexive,
         RenUSubst(List((px, f))),
-        List(CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
+        List(UnifyUSCalculus.CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
       )
     case f: Modal =>
       val ar = negationNormalForm(f.child)
@@ -965,7 +965,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
         f.reapply(f.program, ar._1),
         Ax.equivReflexive,
         RenUSubst(List((px, f))),
-        List(CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
+        List(UnifyUSCalculus.CEat(ar._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1, 0))))),
       )
     case _ => throw new IllegalArgumentException("negationNormalForm of formula " + fml + " not implemented")
   }
@@ -1085,7 +1085,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
     p.subgoals.head.sub(pos) match {
       case Some(f: Formula) =>
         val (_, rmp) = rightAssociate(f)
-        CEat(rmp, PosInExpr(List(0)))(pos).computeResult(p)
+        UnifyUSCalculus.CEat(rmp, PosInExpr(List(0)))(pos).computeResult(p)
       case f => throw new TacticInapplicableFailure(
           "Expected a formula at position " + pos.prettyString + ", but got " + f.map(_.prettyString)
         )
@@ -1101,7 +1101,8 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
           .foldRight(pr)({ case ((pi, i), po) =>
             val Equiv(lp, rp) = pi.conclusion.succ.head
             val subPos = if (i < subProofs.size - 1) PosInExpr(List.fill(i)(1) :+ 0) else PosInExpr(List.fill(i)(1))
-            if (lp != rp) timed(CEat(pi, key)(pos ++ subPos).computeResult(po), "Applying subproof") else po
+            if (lp != rp) timed(UnifyUSCalculus.CEat(pi, key)(pos ++ subPos).computeResult(po), "Applying subproof")
+            else po
           }),
         "Applying subproofs",
       )
@@ -1215,9 +1216,10 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
                     .foldRight(p)({ case (j, pi) =>
                       val fml = pi.subgoals(i)(SuccPos(j))
                       pi(
-                        CEat(Ax.doubleNegation.provable(USubst(List(SubstitutionPair(px, fml)))), PosInExpr(List(1)))(
-                          SuccPos(j)
-                        ),
+                        UnifyUSCalculus.CEat(
+                          Ax.doubleNegation.provable(USubst(List(SubstitutionPair(px, fml)))),
+                          PosInExpr(List(1)),
+                        )(SuccPos(j)),
                         i,
                       )(NotRight(SuccPos(j)), i)
                     })(SimplifierV3.simplify(AntePos(0)), i)(CloseFalse(AntePos(0)), i)
@@ -1238,13 +1240,16 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
             ProvableSig.startPlainProof(Equiv(cOrO, dAndO))(EquivRight(SuccPos(0)), 0)(AndLeft(AntePos(0)), 1)(
               AndRight(SuccPos(0)),
               1,
-            )(Close(AntePos(1), SuccPos(0)), 2)(CEat(orDistAndRevProof, PosInExpr(List(1)))(SuccPos(0)), 1)(
-              Close(AntePos(0), SuccPos(0)),
+            )(Close(AntePos(1), SuccPos(0)), 2)(
+              UnifyUSCalculus.CEat(orDistAndRevProof, PosInExpr(List(1)))(SuccPos(0)),
               1,
-            )(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(Close(AntePos(1), SuccPos(0)), 1)(
-              CEat(orDistAndRevProof, PosInExpr(List(1)))(AntePos(0)),
+            )(Close(AntePos(0), SuccPos(0)), 1)(AndLeft(AntePos(0)), 0)(AndRight(SuccPos(0)), 0)(
+              Close(AntePos(1), SuccPos(0)),
+              1,
+            )(UnifyUSCalculus.CEat(orDistAndRevProof, PosInExpr(List(1)))(AntePos(0)), 0)(
+              Close(AntePos(0), SuccPos(0)),
               0,
-            )(Close(AntePos(0), SuccPos(0)), 0),
+            ),
             "combineProof",
           )
           assert(combineProof.isProved)
@@ -1260,9 +1265,9 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
 
           val resultProof = timed(
             ProvableSig.startPlainProof(Equiv(fml, result))(
-              CEat(mixOProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))),
+              UnifyUSCalculus.CEat(mixOProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))),
               0,
-            )(CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)(
+            )(UnifyUSCalculus.CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)(
               applyTacticAbbrv(propAnd, propAnd, innerDisjuncts.flatten),
               0,
             ),
@@ -1284,7 +1289,7 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
 
           val resultProof = timed(
             ProvableSig.startPlainProof(Equiv(fml, result))(
-              CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))),
+              UnifyUSCalculus.CEat(combineProof, PosInExpr(List(0)))(SuccPosition.base0(0, PosInExpr(List(1)))),
               0,
             )(applyTacticAbbrv(propAnd, propAnd, disjuncts), 0),
             "resultProof (2)",
@@ -1323,9 +1328,9 @@ private[keymaerax] object PropositionalTactics extends TacticProvider with Loggi
     assert(d._2.isProved, "Expected proved orDistAnd proof, but got open goals")
     val r = rightAssociate(d._1)
     val rproof = (ProvableSig.startPlainProof(Equiv(fml, r._1))(
-      CEat(r._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))),
+      UnifyUSCalculus.CEat(r._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))),
       0,
-    )(CEat(d._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)(nnf._2, 0))
+    )(UnifyUSCalculus.CEat(d._2, PosInExpr(List(1)))(SuccPosition.base0(0, PosInExpr(List(1)))), 0)(nnf._2, 0))
     assert(rproof.isProved, "Expected proved disjunctive normal form proof, but got open goals")
     (r._1, rproof)
   }

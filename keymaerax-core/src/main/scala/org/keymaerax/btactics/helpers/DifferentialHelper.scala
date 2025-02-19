@@ -435,7 +435,7 @@ object DifferentialHelper {
         Box(ODESystem(ode, True), fml),
         TactixLibrary.dI(Symbol("diffInd"))(1) <
           (
-            TactixLibrary.skip,
+            UnifyUSCalculus.skip,
             TactixLibrary.Dassignb(1) *
               (StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol])),
           ),

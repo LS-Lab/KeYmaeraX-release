@@ -5,7 +5,7 @@
 
 package org.keymaerax.bellerophon
 
-import org.keymaerax.btactics.TactixLibrary
+import org.keymaerax.btactics.{TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.core.{Ensures, FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.infrastruct.{ProvableHelper, RestrictedBiDiUnificationMatch, UnificationTools}
@@ -48,7 +48,7 @@ trait Interpreter {
 
   /** Names of nil tactics. */
   protected lazy val nilNames =
-    List(TactixLibrary.nil.prettyString, TactixLibrary.todo.prettyString, TactixLibrary.skip.prettyString)
+    List(UnifyUSCalculus.nil.prettyString, UnifyUSCalculus.todo.prettyString, UnifyUSCalculus.skip.prettyString)
 
   /** Compares provables ignoring labels. */
   protected def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {

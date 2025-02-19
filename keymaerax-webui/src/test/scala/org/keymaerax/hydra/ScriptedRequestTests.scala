@@ -16,6 +16,7 @@ import org.keymaerax.btactics.{
   InvariantGenerator,
   TacticTestBase,
   TactixLibrary,
+  UnifyUSCalculus,
 }
 import org.keymaerax.core.{Expression, Formula, Real}
 import org.keymaerax.hydra.requests.models.{GetModelListRequest, ListExamplesRequest, UploadArchiveRequest}
@@ -370,7 +371,7 @@ class ScriptedRequestTests extends TacticTestBase {
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
       val tacticRunner = runTactic(db, t, proofId) _
 
-      tacticRunner("()", andR(1) < (skip, prop)) should have(
+      tacticRunner("()", andR(1) < (UnifyUSCalculus.skip, prop)) should have(
         Symbol("proofId")(proofId.toString),
         Symbol("parent")(DbProofTree(db.db, proofId.toString).root),
         Symbol("progress")(true),
@@ -452,9 +453,9 @@ class ScriptedRequestTests extends TacticTestBase {
         ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil), Declaration(Map()))
       val tacticRunner = runTactic(db, t, proofId) _
 
-      tacticRunner("()", nil)
+      tacticRunner("()", UnifyUSCalculus.nil)
       tacticRunner("(1,0)", andR(1))
-      tacticRunner("(2,1)", skip)
+      tacticRunner("(2,1)", UnifyUSCalculus.skip)
       tacticRunner("(3,0)", prop)
       inside(
         new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose = true).getResultingResponse(t)

@@ -9,6 +9,7 @@ import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
@@ -1479,7 +1480,7 @@ object Ax extends Logging {
     cutR("ctx_(g_(||)) = ctx_(g_(||))".asFormula)(SuccPos(0)) < (
       byUS(equalReflexive),
       equivifyR(1) &
-        HilbertCalculus.CQ(PosInExpr(0 :: 0 :: Nil)) &
+        UnifyUSCalculus.CQ(PosInExpr(0 :: 0 :: Nil)) &
         useAt(equalCommute)(1)
     ),
   )

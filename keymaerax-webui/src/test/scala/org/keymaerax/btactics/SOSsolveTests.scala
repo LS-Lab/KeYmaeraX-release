@@ -112,7 +112,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     val ex = the[RatFormError] thrownBy proveBy(ratFormPrv, SOSSolve.elimRatForms(false))
     ex.getMessage should include("try to cut in '2*b > 0' or '2*b < 0'")
 
-    val prv = proveBy(ratFormPrv, cut("2*b>0".asFormula) & Idioms.<(skip, QE))
+    val prv = proveBy(ratFormPrv, cut("2*b>0".asFormula) & Idioms.<(UnifyUSCalculus.skip, QE))
     val prv2 = proveBy(prv, SOSSolve.elimRatForms(false))
     prv2.subgoals.loneElement shouldBe "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0, 2*b>0 ==> ".asSequent
 

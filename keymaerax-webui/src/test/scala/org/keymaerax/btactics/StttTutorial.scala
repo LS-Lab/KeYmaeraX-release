@@ -10,6 +10,7 @@ import org.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import org.keymaerax.btactics.ArithmeticSimplification._
 import org.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import org.keymaerax.core._
 import org.keymaerax.parser.ArchiveParser

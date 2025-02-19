@@ -20,7 +20,7 @@ import org.keymaerax.bellerophon.{
   Using,
 }
 import org.keymaerax.btactics.TactixLibrary.andL
-import org.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary}
+import org.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import org.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
@@ -214,34 +214,34 @@ class DLBelleParserTests
     val dot = DotTerm(Real, Some(0))
     // @todo re-enable dots without index when explicitly phrased (.)?
     parse("""US("J(.) ~> .>=0")""") shouldBe
-      TactixLibrary
+      UnifyUSCalculus
         .USX(List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
     parse("""US("J(x) ~> x>=0")""") shouldBe
-      TactixLibrary
+      UnifyUSCalculus
         .USX(List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
     parse("""US("(J(.) ~> .>=0)")""") shouldBe
-      TactixLibrary
+      UnifyUSCalculus
         .USX(List(SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0)))))
     parse("""US("f(.) ~> 2+.")""") shouldBe
-      TactixLibrary.USX(List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))))
+      UnifyUSCalculus.USX(List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))))
     parse("""US("f(y) ~> 2+y")""") shouldBe
-      TactixLibrary.USX(List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))))
-    parse("""US("pow(x,y) ~> x^y")""") shouldBe TactixLibrary.USX(List(SubstitutionPair(
+      UnifyUSCalculus.USX(List(SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot))))
+    parse("""US("pow(x,y) ~> x^y")""") shouldBe UnifyUSCalculus.USX(List(SubstitutionPair(
       FuncOf(Function("pow", None, Tuple(Real, Real), Real), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
       Power(DotTerm(Real, Some(0)), DotTerm(Real, Some(1))),
     )))
-    parse("""US("J(x,v) ~> x+v^2/(2*b())>=0")""") shouldBe TactixLibrary.USX(List(SubstitutionPair(
+    parse("""US("J(x,v) ~> x+v^2/(2*b())>=0")""") shouldBe UnifyUSCalculus.USX(List(SubstitutionPair(
       PredOf(Function("J", None, Tuple(Real, Real), Bool), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
       "._0 + ._1^2/(2*b())>=0".asFormula,
     )))
     parse(
       """US("J(x,v) ~> x+v^2/(2*b)>=0")""",
       Declaration(Map(Name("b") -> Signature(Some(Unit), Real, None, Right(None), UnknownLocation))),
-    ) shouldBe TactixLibrary.USX(List(SubstitutionPair(
+    ) shouldBe UnifyUSCalculus.USX(List(SubstitutionPair(
       PredOf(Function("J", None, Tuple(Real, Real), Bool), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
       "._0 + ._1^2/(2*b())>=0".asFormula,
     )))
-    parse("""US("(J(.) ~> .>=0)::(f(.) ~> 2+.)::nil")""") shouldBe TactixLibrary.USX(List(
+    parse("""US("(J(.) ~> .>=0)::(f(.) ~> 2+.)::nil")""") shouldBe UnifyUSCalculus.USX(List(
       SubstitutionPair(PredOf(Function("J", None, Real, Bool), dot), GreaterEqual(dot, Number(0))),
       SubstitutionPair(FuncOf(Function("f", None, Real, Real), dot), Plus(Number(2), dot)),
     ))
@@ -271,7 +271,7 @@ class DLBelleParserTests
   it should "parse two-position tactics" in { parse("closeId(-1, 1)") shouldBe TactixLibrary.closeId(-1, 1) }
 
   it should "parse PosInExpr arguments" in {
-    parse("""CMonCongruence(".1")""") shouldBe TactixLibrary.CMon(PosInExpr(1 :: Nil))
+    parse("""CMonCongruence(".1")""") shouldBe UnifyUSCalculus.CMon(PosInExpr(1 :: Nil))
   }
 
   it should "parse tactic definitions" in {

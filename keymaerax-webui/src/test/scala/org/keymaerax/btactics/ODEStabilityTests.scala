@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.btactics.ODEStability._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._

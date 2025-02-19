@@ -13,6 +13,7 @@ import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.SimplifierV3._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros.{AxiomInfo, DisplayLevel, Tactic}
@@ -71,7 +72,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
         } else {
           import ProofRuleTactics.contextualize
           if (isODESystem(sequent, pos)) {
-            if (HilbertCalculus.INTERNAL) TactixLibrary.useAt(Ax.DEs)(pos) * getODEDim(sequent, pos)
+            if (HilbertCalculus.INTERNAL) UnifyUSCalculus.useAt(Ax.DEs)(pos) * getODEDim(sequent, pos)
             else contextualize(DESystemStep_NoSemRen, predictor)(pos) * getODEDim(sequent, pos)
             // @todo unification fails
             // TactixLibrary.useAt(DerivedAxioms.DEsys)(pos)*getODEDim(provable.subgoals.head, pos)
@@ -114,8 +115,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
             /* use */ skip,
             // @todo conditional commuting (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) instead?
             /* show */ cohide(Symbol("Rlast")) & equivifyR(1) & commuteEquivR(1) &
-              TactixLibrary
-                .US(subst, TactixLibrary.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable))
+              UnifyUSCalculus
+                .US(subst, UnifyUSCalculus.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable))
           )
         // TactixLibrary.US(subst, "DE differential effect (system)"))
         case Some(e) =>
@@ -822,7 +823,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
                 )
               )
               DG(ghost)(pos) & DW(pos ++ PosInExpr(0 :: Nil)) & trafo(pos ++ PosInExpr(0 :: 1 :: Nil)) &
-                ifThenElse(
+                TactixLibrary.ifThenElse(
                   _.subgoals.size == 1,
                   useAt(Ax.DW, PosInExpr(1 :: Nil))(pos ++ PosInExpr(0 :: Nil)),
                   DebuggingTactics.error(
@@ -861,15 +862,15 @@ private object DifferentialTactics extends TacticProvider with Logging {
     s.sub(pos) match {
       case Some(f @ Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
         // Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
-        TactixLibrary.cutAt(Forall(y_DE.xp.x :: Nil, f))(pos) < (
-          HilbertCalculus.useExpansionAt(Ax.DGi)(pos),
+        UnifyUSCalculus.cutAt(Forall(y_DE.xp.x :: Nil, f))(pos) < (
+          UnifyUSCalculus.useExpansionAt(Ax.DGi)(pos),
           (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR(Symbol("Rlast"))) &
-            HilbertCalculus.useAt(Ax.alle)(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
-            TactixLibrary.useAt(Ax.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
+            UnifyUSCalculus.useAt(Ax.alle)(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
+            UnifyUSCalculus.useAt(Ax.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
         )
       case Some(Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
         // @note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
-        val subst = (_: Option[TactixLibrary.Subst]) =>
+        val subst = (_: Option[UnifyUSCalculus.Subst]) =>
           RenUSubst(
             ("y_".asTerm, y_DE.xp.x) ::
               ("b(|y_|)".asTerm, y_DE.e) ::
@@ -880,11 +881,11 @@ private object DifferentialTactics extends TacticProvider with Logging {
           )
 
         // Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then rewrite.
-        HilbertCalculus.useAt(Ax.commaCommute, PosInExpr(1 :: Nil))(pos) &
-          TactixLibrary.cutAt(Exists(y_DE.xp.x :: Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) < (
-            HilbertCalculus.useAt(Ax.DGC, PosInExpr(1 :: Nil), subst)(pos),
+        UnifyUSCalculus.useAt(Ax.commaCommute, PosInExpr(1 :: Nil))(pos) &
+          UnifyUSCalculus.cutAt(Exists(y_DE.xp.x :: Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) < (
+            UnifyUSCalculus.useAt(Ax.DGC, PosInExpr(1 :: Nil), subst)(pos),
             (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR(Symbol("Rlast"))) &
-              TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
+              UnifyUSCalculus.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
               TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.id
           )
       case Some(e) =>

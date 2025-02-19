@@ -359,12 +359,12 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       tactic switch
         (
           ("x_0-xo_0>=0&abs__0=x_0-xo_0//x-xo>=0&abs_=x-xo".asLabel, ArithmeticSpeculativeSimplification.speculativeQE),
-          ("x_0-xo_0 < 0&abs__0=-(x_0-xo_0)//x-xo>=0&abs_=x-xo".asLabel, skip),
+          ("x_0-xo_0 < 0&abs__0=-(x_0-xo_0)//x-xo>=0&abs_=x-xo".asLabel, UnifyUSCalculus.skip),
           (
             "x_0-xo_0 < 0&abs__0=-(x_0-xo_0)//x-xo < 0&abs_=-(x-xo)".asLabel,
             ArithmeticSpeculativeSimplification.speculativeQE,
           ),
-          ("x_0-xo_0>=0&abs__0=x_0-xo_0//x-xo < 0&abs_=-(x-xo)".asLabel, skip),
+          ("x_0-xo_0>=0&abs__0=x_0-xo_0//x-xo < 0&abs_=-(x-xo)".asLabel, UnifyUSCalculus.skip),
         ),
     )
     s.subgoals should have size 2

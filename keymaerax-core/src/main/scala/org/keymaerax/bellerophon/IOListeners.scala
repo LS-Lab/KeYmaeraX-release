@@ -6,7 +6,7 @@
 package org.keymaerax.bellerophon
 
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics.TactixLibrary
+import org.keymaerax.btactics.{TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.btactics.helpers.QELogger
 import org.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
 import org.keymaerax.infrastruct.Augmentors._
@@ -101,7 +101,7 @@ object IOListeners {
   class PrintProgressListener(t: BelleExpr, stepInto: List[String] = Nil, printer: PrintStream = Console.out)
       extends IOListener() {
     private lazy val nilNames =
-      List(TactixLibrary.nil.prettyString, TactixLibrary.todo.prettyString, TactixLibrary.skip.prettyString)
+      List(UnifyUSCalculus.nil.prettyString, UnifyUSCalculus.todo.prettyString, UnifyUSCalculus.skip.prettyString)
     private var executionStack = (t -> 0) :: Nil // branch index =0 except for BranchTactic
     private var start = System.currentTimeMillis()
 

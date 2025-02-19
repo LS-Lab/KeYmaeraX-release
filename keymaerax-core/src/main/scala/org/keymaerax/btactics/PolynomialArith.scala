@@ -11,6 +11,7 @@ import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.core.{Variable, _}
 import org.keymaerax.infrastruct.Augmentors._

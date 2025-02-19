@@ -12,6 +12,7 @@ import org.keymaerax.btactics.PropositionalTactics.implyRi
 import org.keymaerax.btactics.SimplifierV3.ineqNormalize
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros.{DisplayLevel, ProvableInfo, Tactic}

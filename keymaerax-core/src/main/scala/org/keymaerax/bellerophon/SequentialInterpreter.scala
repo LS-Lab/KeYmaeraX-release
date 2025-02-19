@@ -6,7 +6,7 @@
 package org.keymaerax.bellerophon
 
 import org.keymaerax.Logging
-import org.keymaerax.btactics.{Ax, TacticFactory, TactixLibrary}
+import org.keymaerax.btactics.{Ax, TacticFactory, TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
@@ -752,7 +752,7 @@ abstract class BelleBaseInterpreter(
               }
             )
             .reduceRightOption[BelleExpr](_ & _)
-            .getOrElse(TactixLibrary.skip)
+            .getOrElse(UnifyUSCalculus.skip)
 
           def selfAssignFor(p: ProvableSig, substs: Seq[SubstitutionPair]): ProvableSig = substs
             .foldRight(p)({ case (s, pr) =>
@@ -760,11 +760,11 @@ abstract class BelleBaseInterpreter(
                   case PredOf(Function(fn, Some(i), _, _, _), arg) =>
                     if (fn == "p_") {
                       List
-                        .fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(AntePos(i)))
+                        .fill(StaticSemantics.symbols(arg).size)(UnifyUSCalculus.useFor(Ax.selfassignb)(AntePos(i)))
                         .foldRight(pr)({ case (t, p) => t(p) })
                     } else if (fn == "q_") {
                       List
-                        .fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(SuccPos(i)))
+                        .fill(StaticSemantics.symbols(arg).size)(UnifyUSCalculus.useFor(Ax.selfassignb)(SuccPos(i)))
                         .foldRight(pr)({ case (t, p) => t(p) })
                     } else throw new BelleCriticalException(
                       "Implementation error in Using: expected abbreviated p_ or q_"

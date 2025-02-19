@@ -89,7 +89,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   // region Atomic tactics with arguments
 
   "Atomic / Argument Parser" should "parse a built-in tactic" in {
-    tacticParser("nil") shouldBe (round trip TactixLibrary.nil)
+    tacticParser("nil") shouldBe (round trip UnifyUSCalculus.nil)
   }
 
   it should "accept id as well as closeId" in {
@@ -153,26 +153,26 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "correctly parenthesize postconditions with a searchy formula sub-position locator in new notation" in {
-    tacticParser("trueAnd('L==\"[x:=2;](#true&x>1#)\")") shouldBe (round trip TactixLibrary
+    tacticParser("trueAnd('L==\"[x:=2;](#true&x>1#)\")") shouldBe (round trip UnifyUSCalculus
       .useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))))
-    tacticParser("trueAnd('L==\"[x:=2;]#(true&x>1)#\")") shouldBe (round trip TactixLibrary
+    tacticParser("trueAnd('L==\"[x:=2;]#(true&x>1)#\")") shouldBe (round trip UnifyUSCalculus
       .useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))))
     // @note allow more concise notation with # forming parentheses
-    tacticParser("trueAnd('L==\"[x:=2;]#true&x>1#\")") shouldBe (round trip TactixLibrary
+    tacticParser("trueAnd('L==\"[x:=2;]#true&x>1#\")") shouldBe (round trip UnifyUSCalculus
       .useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: Nil))))
-    tacticParser("trueAnd('L==\"(true&x>1)&[x:=2;]#true&x>1#\")") shouldBe (round trip TactixLibrary
+    tacticParser("trueAnd('L==\"(true&x>1)&[x:=2;]#true&x>1#\")") shouldBe (round trip UnifyUSCalculus
       .useAt(Ax.trueAnd)(Find.FindLPlain("(true&x>1)&[x:=2;](true&x>1)".asFormula, PosInExpr(1 :: 1 :: Nil))))
   }
 
   it should "correctly parenthesize programs with a searchy formula sub-position locator in new notation" in {
-    tacticParser("chase('L==\"[{#x:=1; ++ x:=2;#};ode;]x>1\")") shouldBe (round trip TactixLibrary
+    tacticParser("chase('L==\"[{#x:=1; ++ x:=2;#};ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
       .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))))
-    tacticParser("chase('L==\"[#{x:=1; ++ x:=2;}#;ode;]x>1\")") shouldBe (round trip TactixLibrary
+    tacticParser("chase('L==\"[#{x:=1; ++ x:=2;}#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
       .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))))
     // @note allow more concise notation with # forming braces
-    tacticParser("chase('L==\"[#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip TactixLibrary
+    tacticParser("chase('L==\"[#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
       .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 0 :: Nil))))
-    tacticParser("chase('L==\"[{x:=1; ++ x:=2;};#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip TactixLibrary
+    tacticParser("chase('L==\"[{x:=1; ++ x:=2;};#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip UnifyUSCalculus
       .chase(Find.FindLPlain("[{x:=1; ++ x:=2;};{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0 :: 1 :: 0 :: Nil))))
   }
 
@@ -302,7 +302,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   it should "parse compositions of things that parse to partials" in {
     val tactic = tacticParser("nil; nil").asInstanceOf[SeqTactic]
     tactic shouldBe (round trip tactic)
-    tactic.seq should contain theSameElementsInOrderAs List(nil, nil)
+    tactic.seq should contain theSameElementsInOrderAs List(UnifyUSCalculus.nil, UnifyUSCalculus.nil)
   }
 
   it should "print anonymous tactics empty and reparse without them" in {
@@ -704,7 +704,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   it should "parse let as part of a larger tactic" in {
     val tactic = tacticParser("implyR(1) ; let (\"a()=a\") in (nil) ; id")
     tactic shouldBe (round trip TactixLibrary
-      .implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.nil) & TactixLibrary.id))
+      .implyR(1) & (Let("a()".asTerm, "a".asTerm, UnifyUSCalculus.nil) & TactixLibrary.id))
   }
 
   "def tactic parser" should "parse a simple example" in {
@@ -893,7 +893,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
           )
       ),
     )
-    tactic shouldBe TactixLibrary.USX(
+    tactic shouldBe UnifyUSCalculus.USX(
       SubstitutionPair(
         PredOf(Function("f", None, Real, Bool), DotTerm(Real, Some(0))),
         PredOf(Function("g", None, Real, Bool), DotTerm(Real, Some(0))),
@@ -965,12 +965,12 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "parse substitution arguments" in {
-    tacticParser("US(\"init(x) ~> x=0\")") shouldBe (round trip TactixLibrary
+    tacticParser("US(\"init(x) ~> x=0\")") shouldBe (round trip UnifyUSCalculus
       .USX(SubstitutionPair("init(._0)".asFormula, "._0=0".asFormula) :: Nil))
   }
 
   it should "parse list substitution arguments" in {
-    tacticParser("US(\"init(x) ~> x=0 :: a;~>{x'=v,t'=1&true} :: nil\")") shouldBe (round trip TactixLibrary.USX(
+    tacticParser("US(\"init(x) ~> x=0 :: a;~>{x'=v,t'=1&true} :: nil\")") shouldBe (round trip UnifyUSCalculus.USX(
       SubstitutionPair("init(._0)".asFormula, "._0=0".asFormula) :: SubstitutionPair(
         "a;".asProgram,
         "{x'=v,t'=1}".asProgram,

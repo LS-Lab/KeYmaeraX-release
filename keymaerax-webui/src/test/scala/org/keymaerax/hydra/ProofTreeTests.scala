@@ -13,6 +13,7 @@ import org.keymaerax.bellerophon.{
   TacticInapplicableFailure,
 }
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.btactics.{BelleLabels, Idioms, TacticTestBase}
 import org.keymaerax.core.Sequent

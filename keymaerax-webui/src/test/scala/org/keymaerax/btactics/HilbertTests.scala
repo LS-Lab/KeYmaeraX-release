@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.ProvableInfo
 import org.keymaerax.core._
 import org.keymaerax.infrastruct._
@@ -31,10 +32,6 @@ import scala.collection.immutable._
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.TactixLibrary.master")
 class HilbertTests extends TacticTestBase {
   import Derive._
-
-  object TestLib extends UnifyUSCalculus
-
-  import TestLib.{useAt, useFor, CEat, CMon}
 
   val randomTrials = 50
   val randomComplexity = 3

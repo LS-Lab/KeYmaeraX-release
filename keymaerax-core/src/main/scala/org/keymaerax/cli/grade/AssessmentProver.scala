@@ -19,6 +19,7 @@ import org.keymaerax.bellerophon.{
   TacticInapplicableFailure,
 }
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.{
   Ax,
   ConfigurableGenerator,

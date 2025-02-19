@@ -159,7 +159,7 @@ class ApproximatorTests extends TacticTestBase {
 
     println(fact.prettyString)
 
-    val result = proveBy("[{x'=v,v'=a&1=1}](false)".asFormula, TactixLibrary.CEat(fact)(1))
+    val result = proveBy("[{x'=v,v'=a&1=1}](false)".asFormula, UnifyUSCalculus.CEat(fact)(1))
     println(result)
     result.subgoals.length shouldBe 1
   })
@@ -178,7 +178,7 @@ class ApproximatorTests extends TacticTestBase {
       f,
       TactixLibrary.dC(cut)(Position(1, 1 :: Nil)) <
         (
-          TactixLibrary.nil,
+          UnifyUSCalculus.nil,
           TactixLibrary.dI()(Position(1, 1 :: Nil)) & (TactixLibrary.QE | (TactixLibrary.G(1) & TactixLibrary.QE)),
         ),
     ))

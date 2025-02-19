@@ -87,7 +87,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
           .model
           .exhaustiveSubst(USubst(entry.defs.substs.filter(_.what.isInstanceOf[SystemConst])))
           .asInstanceOf[Formula],
-        skip,
+        UnifyUSCalculus.skip,
       )
 
     val stateVars = StaticSemantics
@@ -134,7 +134,7 @@ class PartialObservableModelplexTests extends TacticTestBase {
         .filter({ case SubstitutionPair(what, _) => StaticSemantics.symbols(what).intersect(expand).nonEmpty })
     )
 
-    val qfProof = (synthResult(subst)(useAt(stepwiseQEProof)(SuccPos(0)).computeResult _, 0)(
+    val qfProof = (synthResult(subst)(UnifyUSCalculus.useAt(stepwiseQEProof)(SuccPos(0)).computeResult _, 0)(
       PropositionalTactics.rightAssociate(SuccPos(0)).computeResult _,
       0,
     )(SimplifierV3.simplify(SuccPos(0)).computeResult _, 0))

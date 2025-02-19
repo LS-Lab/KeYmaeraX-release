@@ -39,7 +39,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Selection sort" should "achieve intended permutation" in withMathematica { _ =>
     val ode = "{w' = 2,  x' = 0, y' = 3, z' = 1}".asDifferentialProgram
     val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
-    val e = selectionSort(True, True, ode, goal, Position(1, 0 :: Nil)) & HilbertCalculus.byUS(Ax.equivReflexive)
+    val e = selectionSort(True, True, ode, goal, Position(1, 0 :: Nil)) & UnifyUSCalculus.byUS(Ax.equivReflexive)
     val fml = "[{w' = 2,  x' = 0, y' = 3, z' = 1}]true <-> [{x' = 0, z' = 1, w' = 2, y' = 3}]true".asFormula
     proveBy(fml, e) shouldBe Symbol("proved")
   }
@@ -559,7 +559,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "DS& differential equation solution" should "be careful in postcondition" taggedAs AdvocatusTest in withMathematica {
     _ =>
       // @note t_ introduced with assumption t_>=0 by axiom DS& differential equation solution
-      a[InapplicableUnificationKeyFailure] should be thrownBy proveBy("[{x'=1}]t_>=0".asFormula, useAt(Ax.DS)(1))
+      a[InapplicableUnificationKeyFailure] should be thrownBy
+        proveBy("[{x'=1}]t_>=0".asFormula, UnifyUSCalculus.useAt(Ax.DS)(1))
   }
 
   // @todo this proof is broken by the second DS quantifying over the same t_

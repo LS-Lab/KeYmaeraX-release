@@ -11,6 +11,7 @@ import org.keymaerax.btactics.BelleLabels._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core.{Sequent, _}
@@ -55,7 +56,7 @@ private object DLBySubst extends TacticProvider {
           (ru: RenUSubst) =>
             cut(ru.substitution.usubst("[a_;]true".asFormula)) <
               (
-                ru.getRenamingTactic & TactixLibrary.by(
+                ru.getRenamingTactic & UnifyUSCalculus.by(
                   Ax.monb2,
                   ru.substitution.usubst ++ USubst(SubstitutionPair(UnitPredicational("q_", AnyArg), True) :: Nil),
                 ) & hideL(-1, True),
@@ -69,7 +70,7 @@ private object DLBySubst extends TacticProvider {
         (ru: RenUSubst) => {
           Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel")
           // ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
-          TactixLibrary.by(Ax.Goedel, ru.usubst)
+          UnifyUSCalculus.by(Ax.Goedel, ru.usubst)
         },
       ) :: Nil
     )
@@ -635,10 +636,11 @@ private object DLBySubst extends TacticProvider {
                         andR(pos) <
                           (
                             label(replaceTxWith(initCase)),
-                            (andR(pos) <
-                              (expandInit & SaturateTactic(andL(Symbol("L"))) & closeIdWith(pos), TactixLibrary.nil)) *
-                              constAntes.size &
-                              (andR(pos) < (notR(pos) & closeIdWith(Symbol("Llast")), TactixLibrary.nil)) *
+                            (
+                              andR(pos) <
+                                (expandInit & SaturateTactic(andL(Symbol("L"))) & closeIdWith(pos), UnifyUSCalculus.nil)
+                            ) * constAntes.size &
+                              (andR(pos) < (notR(pos) & closeIdWith(Symbol("Llast")), UnifyUSCalculus.nil)) *
                               (constSuccs.size - 1) & notR(pos) & SaturateTactic(andL(Symbol("L"))) & close & done,
                           ),
                         cohide(pos) & G & implyR(1) & boxAnd(1) &

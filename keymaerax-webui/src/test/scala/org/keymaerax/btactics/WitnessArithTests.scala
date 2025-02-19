@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon.OnAll
 import org.keymaerax.btactics.PolynomialArithV2._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.SlowTest

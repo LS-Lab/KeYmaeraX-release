@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction

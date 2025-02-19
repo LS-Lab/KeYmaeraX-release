@@ -5,25 +5,24 @@
 
 package org.keymaerax.btactics
 
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.bellerophon.{StringInputTactic, _}
-import org.keymaerax.infrastruct.Augmentors._
-import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.core._
-import org.keymaerax.parser.StringConverter._
-import org.keymaerax.pt._
-import org.keymaerax.btactics.helpers._
-import org.keymaerax.parser.{InterpretedSymbols, KeYmaeraXPrettierPrinter}
-import cc.redberry.rings
+import cc.redberry.rings.scaladsl.syntax._
+import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Ax.boxTrueAxiom
-import org.keymaerax.{core, Logging}
+import org.keymaerax.btactics.TacticFactory._
+import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
+import org.keymaerax.btactics.helpers._
+import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct._
+import org.keymaerax.parser.StringConverter._
+import org.keymaerax.parser.{InterpretedSymbols, KeYmaeraXPrettierPrinter}
+import org.keymaerax.pt._
 import org.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
-import rings.scaladsl._
-import syntax._
+import org.keymaerax.{core, Logging}
 
 import scala.collection.immutable._
-import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 object TaylorModelTactics extends Logging {
 
@@ -672,7 +671,7 @@ object TaylorModelTactics extends Logging {
           useAt(
             Ax.timeStep,
             PosInExpr(1 :: Nil),
-            (substo: Option[TactixLibrary.Subst]) =>
+            (substo: Option[UnifyUSCalculus.Subst]) =>
               substo.getOrElse(RenUSubst(Nil)) ++ RenUSubst((timestep, Plus(time0, timestep)) :: Nil),
           )(1) &
           useAt(Ax.commaCommute)(1, 1 :: Nil) *

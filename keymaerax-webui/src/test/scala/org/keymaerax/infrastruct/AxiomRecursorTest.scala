@@ -55,7 +55,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
 
     if (axiom.display.level != DisplayLevel.Internal) {
       // useAt(axiom) should result in all recursors being well-defined
-      val pr = TactixLibrary.proveBy(instance, TactixLibrary.useAt(axiom)(1))
+      val pr = TactixLibrary.proveBy(instance, UnifyUSCalculus.useAt(axiom)(1))
       for (pos <- axiom.recursor) { pr.subgoals.head.succ(0).sub(pos) shouldBe Symbol("defined") }
     }
     true

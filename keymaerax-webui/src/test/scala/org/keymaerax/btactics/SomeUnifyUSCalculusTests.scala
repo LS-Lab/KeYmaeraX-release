@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._
@@ -76,7 +77,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
       IndexedSeq[Formula](),
       IndexedSeq[Formula]("<{t'=1}>\\forall x x^2>=0<->\\forall x <{t'=1,x'=1&true}>\\forall x x^2>=0".asFormula),
     )
-    val tac = HilbertCalculus.US(pv)
+    val tac = UnifyUSCalculus.US(pv)
     // raises exception "unification computed an incorrect unifier", should not raise exception but instead prove the axiom instance
     val res = proveBy(sequent, tac)
     res shouldBe Symbol("proved")
@@ -95,7 +96,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
         "<{kyxtime'=1&true}>\\forall x x^2>=0<->\\forall x <{kyxtime'=1,x'=1&true}>\\forall x x^2>=0".asFormula
       ),
     )
-    val tac = HilbertCalculus.US(pv)
+    val tac = UnifyUSCalculus.US(pv)
     // raises exception "unification computed an incorrect unifier", should not raise exception but instead prove the axiom instance
     val res = proveBy(sequent, tac)
     res shouldBe Symbol("proved")
@@ -142,11 +143,11 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
 
       // Succedent rewrite
       (
-        HilbertCalculus invokePrivate useAt(impl, PosInExpr(1 :: Nil))
+        UnifyUSCalculus invokePrivate useAt(impl, PosInExpr(1 :: Nil))
       )(2) & // F_() is matched and strengthened to F_()^2 using F^2=0 -> F =0
         // Antecedent rewrite
         (
-          HilbertCalculus invokePrivate useAt(impl2, PosInExpr(0 :: Nil))
+          UnifyUSCalculus invokePrivate useAt(impl2, PosInExpr(0 :: Nil))
         )(-2) & // F_() is matched and weakened to F_()^2 using F=0 -> F^2=0
         // Same as above, except now just giving it straight to CEat under a context
         // Default behavior: equivalences and equalities L <-> R are rewritten R to L

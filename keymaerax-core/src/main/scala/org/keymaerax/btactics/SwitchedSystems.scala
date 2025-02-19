@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas.remember
 import org.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core.{Variable, _}

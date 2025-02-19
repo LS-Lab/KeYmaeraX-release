@@ -7,7 +7,7 @@ package org.keymaerax.bellerophon.pptests
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.core.{AtomicODE, DifferentialSymbol, ODESystem, True}
 import org.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import org.keymaerax.parser.ArchiveParser
@@ -36,7 +36,7 @@ class BelleParserRoundtripTests extends TacticTestBase {
   // @note this test case points out something that's kind-of a problem with our current setup -- print(parse(x)) != x even if parse(print(x)) = x.
   // In order to get the actually correct behavior we would need DerivedAxiomInfo to be a bidirectional map and then we would need to always prefer that map's
   // names over the actual tactic that was created at the end of the day.
-  "Parser and printer roundtrip" should "atomics" in withTactics { roundTrip(TactixLibrary.nil, "nil") }
+  "Parser and printer roundtrip" should "atomics" in withTactics { roundTrip(UnifyUSCalculus.nil, "nil") }
 
   it should "position tactics with fixed positions" in withTactics { roundTrip(TactixLibrary.andR(1), "andR(1)") }
 
@@ -46,11 +46,11 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "combinators" in withTactics {
-    roundTrip(TactixLibrary.nil & TactixLibrary.nil, "nil ; nil")
-    roundTrip(TactixLibrary.nil | TactixLibrary.nil, "nil | nil")
-    roundTrip(OnAll(TactixLibrary.nil), "doall(nil)")
-    roundTrip(TactixLibrary.nil * 2, "nil*2")
-    roundTrip(TactixLibrary.nil, "nil")
+    roundTrip(UnifyUSCalculus.nil & UnifyUSCalculus.nil, "nil ; nil")
+    roundTrip(UnifyUSCalculus.nil | UnifyUSCalculus.nil, "nil | nil")
+    roundTrip(OnAll(UnifyUSCalculus.nil), "doall(nil)")
+    roundTrip(UnifyUSCalculus.nil * 2, "nil*2")
+    roundTrip(UnifyUSCalculus.nil, "nil")
   }
 
   it should "input tactic transform" in withTactics {

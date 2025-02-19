@@ -10,6 +10,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.FOQuantifierTactics.universalGen
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, Position}
 import org.keymaerax.parser.StringConverter._

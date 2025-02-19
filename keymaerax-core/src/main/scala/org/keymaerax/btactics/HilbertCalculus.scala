@@ -80,8 +80,9 @@ object HilbertCalculus extends TacticProvider with HilbertCalculus {
  * @Tactic
  *   completed
  */
-trait HilbertCalculus extends UnifyUSCalculus {
+trait HilbertCalculus {
   import TacticFactory._
+  import UnifyUSCalculus._
 
   /**
    * True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on
@@ -186,7 +187,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     displayNameAscii = Some("<.>"),
     displayConclusion = "__&langle;a&rangle;P__ ↔ &not;[a]&not;P",
   )
-  lazy val diamondd: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))
+  lazy val diamondd: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))
 
   /**
    * assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation. Box assignment by substitution
@@ -277,7 +278,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     displayNameAscii = Some("[.]"),
     displayConclusion = "__[a]P__ ↔ &not;&langle;a&rangle;&not;P",
   )
-  lazy val boxd: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.box, PosInExpr(1 :: Nil))
+  lazy val boxd: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.box, PosInExpr(1 :: Nil))
 
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   @Tactic(
@@ -310,13 +311,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** duald: `<^d^>` handle dual game `⟨{a}^d^⟩p(x)` by `!⟨a⟩!p(x)` */
   lazy val duald: BuiltInPositionTactic = useAt(Ax.duald)
 
-  lazy val assigndDual: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.assignDual2)
+  lazy val assigndDual: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.assignDual2)
   @Tactic(
     name = "assignbDual",
     displayName = Some("[:=]D"),
     displayConclusion = "&langle;x:=f();&rangle;P ↔ __[x:=f();]P__",
   )
-  lazy val assignbDual: BuiltInPositionTactic = HilbertCalculus.useAt(Ax.assignDual2, PosInExpr(1 :: Nil))
+  lazy val assignbDual: BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.assignDual2, PosInExpr(1 :: Nil))
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
@@ -668,8 +669,9 @@ object Derive extends TacticProvider with Derive {
  * @see
  *   [[HilbertCalculus.derive]]
  */
-trait Derive extends UnifyUSCalculus {
+trait Derive {
   import TacticFactory._
+  import UnifyUSCalculus._
 
   /**
    * True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on

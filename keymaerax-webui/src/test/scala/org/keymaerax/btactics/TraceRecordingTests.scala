@@ -40,7 +40,6 @@ class TraceRecordingTests extends TacticTestBase {
     constructGlobalProvable = true,
   )
   override val theInterpreter: ExhaustiveSequentialInterpreter = ExhaustiveSequentialInterpreter(Seq(listener))
-  object TestLib extends UnifyUSCalculus
 
   override def beforeEach() = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
 
@@ -55,7 +54,7 @@ class TraceRecordingTests extends TacticTestBase {
     val t1 = System.nanoTime()
     proveBy(
       Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
-      TestLib.useAt(Ax.composeb, PosInExpr(1 :: Nil))(SuccPos(0)),
+      UnifyUSCalculus.useAt(Ax.composeb, PosInExpr(1 :: Nil))(SuccPos(0)),
     ).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
     val t2 = System.nanoTime()
     println("My time: " + (t2 - t1) / 1000000000.0)

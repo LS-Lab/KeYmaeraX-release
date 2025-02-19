@@ -14,6 +14,7 @@ import org.keymaerax.btactics.PolynomialArithV2.{
 }
 import org.keymaerax.btactics.TacticFactory.*
 import org.keymaerax.btactics.TactixLibrary.*
+import org.keymaerax.btactics.UnifyUSCalculus.*
 import org.keymaerax.btactics.macros.*
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.*
 import org.keymaerax.core.*

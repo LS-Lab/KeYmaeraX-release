@@ -68,7 +68,7 @@ class EqualityTests extends TacticTestBase {
   it should "rewrite x*y=0 to 0*y=0 using 0=x" in withQE { _ =>
     val result = proveBy(
       "0=x ==> x*y=0".asSequent,
-      TactixLibrary.useAt(Ax.equalCommute)(-1) & eqL2R(-1)(1) & TactixLibrary.useAt(Ax.equalCommute)(-1),
+      UnifyUSCalculus.useAt(Ax.equalCommute)(-1) & eqL2R(-1)(1) & UnifyUSCalculus.useAt(Ax.equalCommute)(-1),
     )
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
   }

@@ -168,11 +168,11 @@ sealed trait NamedBelleExpr extends BelleExpr {
 /** `left ; right` sequential composition executes `right` on the output of `left`, failing if either fail. */
 object SeqTactic {
   def apply(seq: Seq[BelleExpr]): BelleExpr = {
-    if (seq.size > 1) new SeqTactic(seq) else seq.headOption.getOrElse(TactixLibrary.nil)
+    if (seq.size > 1) new SeqTactic(seq) else seq.headOption.getOrElse(UnifyUSCalculus.nil)
   }
 
   // Workaround to emulate apply(exprs: BelleExpr*)
-  def apply(): BelleExpr = TactixLibrary.nil
+  def apply(): BelleExpr = UnifyUSCalculus.nil
   def apply(expr1: BelleExpr): BelleExpr = expr1
   def apply(expr1: BelleExpr, exprs: BelleExpr*): BelleExpr = apply((expr1 +: exprs).flatMap {
     case SeqTactic(seq) => seq
@@ -193,7 +193,7 @@ object EitherTactic {
     case _ => EitherTactic(Seq(t1, t2))
   }
   def apply(alts: Seq[BelleExpr]): BelleExpr = {
-    if (alts.size > 1) new EitherTactic(alts) else alts.headOption.getOrElse(TactixLibrary.nil)
+    if (alts.size > 1) new EitherTactic(alts) else alts.headOption.getOrElse(UnifyUSCalculus.nil)
   }
 }
 case class EitherTactic(alts: Seq[BelleExpr]) extends BelleExpr {

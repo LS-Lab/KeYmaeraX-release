@@ -11,6 +11,7 @@ import org.keymaerax.bellerophon.parser.BelleParser
 import org.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import org.keymaerax.btactics.TacticHelper.timed
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.cli.KeymaeraxWebui
 import org.keymaerax.codegen._
 import org.keymaerax.core._

@@ -10,6 +10,7 @@ import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.Ax.boxTrueAxiom
 import org.keymaerax.btactics.TacticFactory.inputanon
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros._
 import org.keymaerax.core._

@@ -11,6 +11,7 @@ import org.keymaerax.btactics.Idioms.mapSubpositions
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TacticHelper.timed
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.btactics.macros.{AxiomInfo, Tactic}
@@ -147,7 +148,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
         optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions, unobservable, simplifier)(1)
       ),
       classOf[Throwable],
-      (_: Throwable) => TactixLibrary.skip,
+      (_: Throwable) => UnifyUSCalculus.skip,
     )
   }
 

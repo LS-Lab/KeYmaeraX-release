@@ -35,28 +35,12 @@ import scala.util.Try
  * automatically applying axioms and axiomatic rules by matching inputs against them by unification according to the
  * axiom's [[AxIndex]].
  *
- * @author
- *   Andre Platzer
- * @see
- *   [[UnifyUSCalculus]]
- */
-object UnifyUSCalculus extends TacticProvider with UnifyUSCalculus {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (UnifyUSCalculus.getClass, universe.typeOf[UnifyUSCalculus.type])
-}
-
-/**
- * Automatic unification-based Uniform Substitution Calculus with indexing. Provides a tactic framework for
- * automatically applying axioms and axiomatic rules by matching inputs against them by unification according to the
- * axiom's [[AxIndex]].
- *
  * This central collection of unification-based algorithms for focused proof strategies is the basis for using axioms
  * and axiomatic proof rules in flexible ways. It is also central for deciding upon their succession in proof
  * strategies, e.g., which steps to take next.
  *
  * The most important algorithms are:
- *   - [[UnifyUSCalculus.useAt()]] makes use of a (derived) axiom or axiomatic rule in any position and logically
+ *   - [[UnifyUSCalculus.useAt]] makes use of a (derived) axiom or axiomatic rule in any position and logically
  *     transforms the goal to prove what is required for the transformation.
  *   - [[UnifyUSCalculus.chase]] chains together a sequence of canonical useAt inferences to make a formula disappear
  *     (chase it away) as far as possible.
@@ -65,7 +49,7 @@ object UnifyUSCalculus extends TacticProvider with UnifyUSCalculus {
  * [[AxiomInfo.theKey]]. Which resulting subexpressions to consider next during a `chase` is determined by the recursors
  * in the [[AxiomInfo.theRecursor]]. What unifier is used for the default key is, in turn, determined by
  * [[AxiomInfo.unifier]]. Which (derived) axiom is the canonical one to decompose a given expression is determined by
- * [[AxIndex.axiomsFor()]] Default keys and default recursors and default axiom indices can be overwritten by specifing
+ * [[AxIndex.axiomsFor]] Default keys and default recursors and default axiom indices can be overwritten by specifing
  * extra arguments. This can be useful for noncanonical useAts or chases.
  *
  * The combination of the UnifyUSCalculus algorithms make it possible to implement a tactic for using an axiom as
@@ -112,7 +96,7 @@ object UnifyUSCalculus extends TacticProvider with UnifyUSCalculus {
  * @Tactic
  *   completed
  */
-trait UnifyUSCalculus {
+object UnifyUSCalculus extends TacticProvider {
   private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
   /** Whether to use a liberal context via replaceAt instead of proper Context substitutions */
   private val LIBERAL = Context.GUARDED
@@ -360,7 +344,7 @@ trait UnifyUSCalculus {
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
   def byUSX(P: String, S: Option[Formula]): InputTactic = inputanon { (_seq: Sequent) =>
     S match {
-      case None => TactixLibrary.byUS(AxiomInfo(P), us => us)
+      case None => UnifyUSCalculus.byUS(AxiomInfo(P), us => us)
       case Some(substFml: Formula) =>
         val subst = RenUSubst(
           FormulaTools
@@ -373,7 +357,7 @@ trait UnifyUSCalculus {
                 )
             })
         )
-        TactixLibrary.byUS(AxiomInfo(P), (_: UnificationMatch.Subst) => subst)
+        UnifyUSCalculus.byUS(AxiomInfo(P), (_: UnificationMatch.Subst) => subst)
     }
   }
 
@@ -399,10 +383,10 @@ trait UnifyUSCalculus {
       val info = AxiomInfo(axiom)
       TryCatch(
         keyPos match {
-          case None => TactixLibrary.useAt(info)(pos) // @note serializes as codeName
+          case None => UnifyUSCalculus.useAt(info)(pos) // @note serializes as codeName
           case Some(k) =>
-            if (k != info.key) TactixLibrary.useAt(info.provable, k)(pos)
-            else TactixLibrary.useAt(info)(pos) // @note serializes as codeName
+            if (k != info.key) UnifyUSCalculus.useAt(info.provable, k)(pos)
+            else UnifyUSCalculus.useAt(info)(pos) // @note serializes as codeName
         },
         classOf[InapplicableUnificationKeyFailure],
         (ex: InapplicableUnificationKeyFailure) => {
@@ -1705,15 +1689,15 @@ trait UnifyUSCalculus {
     // require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
     (provable(CoHideRight(pos.top), 0)(CMonFw(PosInExpr(pos.inExpr.pos.tail)).result _, 0))
   }
-//  def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
-//    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-//      override def computeExpr(sequent: Sequent): BelleExpr = {
-//        require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
-//        require(pos.isSucc, "Expected CMon in succedent, but got position " + pos.prettyString)
-//        cohideR(pos.top) & CMon(PosInExpr(pos.inExpr.pos.tail))
-//      }
-//    }
-//  }
+  //  def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
+  //    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+  //      override def computeExpr(sequent: Sequent): BelleExpr = {
+  //        require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+  //        require(pos.isSucc, "Expected CMon in succedent, but got position " + pos.prettyString)
+  //        cohideR(pos.top) & CMon(PosInExpr(pos.inExpr.pos.tail))
+  //      }
+  //    }
+  //  }
 
   /**
    * CEat(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for
@@ -2478,11 +2462,11 @@ trait UnifyUSCalculus {
             )
         }
         // @todo ensures is not correct yet (needs to keep track of when to switch polarity)
-//        ) ensures(r => {true || r.conclusion ==
-//        (if (C.ctx == DotFormula && polarity < 0) Sequent(IndexedSeq(right), IndexedSeq(left))
-//        else if (C.ctx == DotFormula && polarity >= 0) Sequent(IndexedSeq(left), IndexedSeq(right))
-//        else if (polarity >= 0) Sequent(IndexedSeq(C(right)), IndexedSeq(C(left)))
-//        else Sequent(IndexedSeq(C(left)), IndexedSeq(C(right))))}, "Expected conclusion " + "\nin CMon.monStep(" + C + ",\nwhich is " + (if (polarity < 0) C(right) + "/" + C(left) else C(left) + "/" + C(right)) + ",\non " + mon + ")"
+        //        ) ensures(r => {true || r.conclusion ==
+        //        (if (C.ctx == DotFormula && polarity < 0) Sequent(IndexedSeq(right), IndexedSeq(left))
+        //        else if (C.ctx == DotFormula && polarity >= 0) Sequent(IndexedSeq(left), IndexedSeq(right))
+        //        else if (polarity >= 0) Sequent(IndexedSeq(C(right)), IndexedSeq(C(left)))
+        //        else Sequent(IndexedSeq(C(left)), IndexedSeq(C(right))))}, "Expected conclusion " + "\nin CMon.monStep(" + C + ",\nwhich is " + (if (polarity < 0) C(right) + "/" + C(left) else C(left) + "/" + C(right)) + ",\non " + mon + ")"
       ) ensures (
         r =>
           !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
@@ -3358,4 +3342,6 @@ trait UnifyUSCalculus {
     case _ => defaultMatcher
   }
 
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (UnifyUSCalculus.getClass, universe.typeOf[UnifyUSCalculus.type])
 }

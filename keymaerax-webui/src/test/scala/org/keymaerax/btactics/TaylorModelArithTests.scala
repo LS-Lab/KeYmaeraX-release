@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.Configuration
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.SlowTest

@@ -8,7 +8,8 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
 import org.keymaerax.btactics.TacticFactory._
-import org.keymaerax.btactics.TactixLibrary.{exhaustiveEqL2R, uniformRename, useAt}
+import org.keymaerax.btactics.TactixLibrary.exhaustiveEqL2R
+import org.keymaerax.btactics.UnifyUSCalculus.{uniformRename, useAt}
 import org.keymaerax.btactics.macros.{DisplayLevel, Tactic, TacticInfo}
 import org.keymaerax.core
 import org.keymaerax.core._
@@ -1091,7 +1092,7 @@ trait SequentCalculus {
         (
           existsL(Symbol("Llast")) & anteRewrite & succRewrite & exhaustiveEqL2R(hide = true)(Symbol("Llast")) &
             uniformRename(Variable(what.name, Some(what.index.map(_ + 1).getOrElse(0))), what),
-          cohide(Symbol("Rlast")) & existsR(to)(1) & TactixLibrary.byUS(Ax.equalReflexive),
+          cohide(Symbol("Rlast")) & existsR(to)(1) & UnifyUSCalculus.byUS(Ax.equalReflexive),
         )
     } else {
       cut(Equal(what, to)) < (anteRewrite & succRewrite & exhaustiveEqL2R(hide = true)(Symbol("Llast")), Idioms.nil)

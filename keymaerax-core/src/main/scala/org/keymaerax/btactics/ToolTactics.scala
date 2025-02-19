@@ -12,6 +12,7 @@ import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.Tactic
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._

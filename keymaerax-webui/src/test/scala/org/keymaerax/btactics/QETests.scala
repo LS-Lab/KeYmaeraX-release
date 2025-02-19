@@ -498,12 +498,12 @@ class QETests extends TacticTestBase {
   "Prepare QE" should "prepare but not perform a QE call" in withMathematica { _ =>
     proveBy(
       "x>=2 ==> y>=1 -> x^2*y>=4 & \\forall z (z>0 -> x/z > 0)".asSequent,
-      ToolTactics.prepareQE(List.empty, skip),
+      ToolTactics.prepareQE(List.empty, UnifyUSCalculus.skip),
     ).subgoals.loneElement shouldBe
       "==> \\forall y \\forall x (x>=2 & y>=1 -> x^2*y>=4 & \\forall z (z>0 -> x/z > 0))".asSequent
     proveBy(
       "x>=2 ==> y>=1 -> x^2*y>=4 | \\forall z (z>0 -> x/z > 0)".asSequent,
-      ToolTactics.prepareQE(List.empty, skip),
+      ToolTactics.prepareQE(List.empty, UnifyUSCalculus.skip),
     ).subgoals.loneElement shouldBe
       "==> \\forall z \\forall y \\forall x (x>=2 & y>=1 & z>0 -> x^2*y>=4 | x/z > 0)".asSequent
   }

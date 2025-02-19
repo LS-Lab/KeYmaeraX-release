@@ -10,6 +10,7 @@ import org.keymaerax.btactics.ArithmeticSimplification._
 import org.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{Position, SuccPosition}

@@ -8,7 +8,7 @@ package org.keymaerax.infrastruct
 import org.keymaerax.core._
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.bellerophon.BelleExpr
-import org.keymaerax.btactics.{Idioms, TactixLibrary}
+import org.keymaerax.btactics.{Idioms, TactixLibrary, UnifyUSCalculus}
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -303,7 +303,7 @@ final class FastUSubstAboveURen(private[infrastruct] val subsDefsInput: immutabl
     t &
       // @note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
       // @note permutations would help simplify matters here since they are their own inverse.
-      TactixLibrary.uniformRename(sp._2, sp._1)
+      UnifyUSCalculus.uniformRename(sp._2, sp._1)
   )
   override lazy val substitution: RenUSubst = reapply(subsDefs.map(sp => (sp.what, sp.repl)))
 
@@ -448,7 +448,7 @@ abstract class RenUSubstBase(private[infrastruct] val subsDefsInput: immutable.S
     t &
       // @note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
       // @note permutations would help simplify matters here since they are their own inverse.
-      TactixLibrary.uniformRename(sp._2, sp._1)
+      UnifyUSCalculus.uniformRename(sp._2, sp._1)
   )
 
   /**

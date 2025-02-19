@@ -350,7 +350,7 @@ object Idioms {
   lazy val todo: BuiltInTactic = nil
 
   /** Optional tactic */
-  def ?(t: BelleExpr): BelleExpr = t | TactixLibrary.nil
+  def ?(t: BelleExpr): BelleExpr = t | UnifyUSCalculus.nil
   def opt(t: ProvableSig => ProvableSig): ProvableSig => ProvableSig = (pr: ProvableSig) =>
     try { t(pr) }
     catch { case _: BelleProofSearchControl => pr }
@@ -442,7 +442,7 @@ object Idioms {
       if (provable.subgoals.size > 1)
         throw new BelleAbort("Too many subgoals", "RememberAs requires exactly 1 subgoal, but got " + provable.subgoals)
       val tactic =
-        if (lookupRememberedLemmas && lemmaDB.contains(lemmaName)) TactixLibrary.by(lemmaDB.get(lemmaName).get)
+        if (lookupRememberedLemmas && lemmaDB.contains(lemmaName)) UnifyUSCalculus.by(lemmaDB.get(lemmaName).get)
         else t & rememberAs(lemmaName)
       provable(TactixLibrary.proveBy(provable.subgoals.head, tactic), 0)
     }

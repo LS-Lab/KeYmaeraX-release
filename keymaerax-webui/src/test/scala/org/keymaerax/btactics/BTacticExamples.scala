@@ -65,23 +65,22 @@ class BTacticExamples extends TacticTestBase {
   }
 
   "Proof by Pointing" should "prove <v:=2*v+1;>q(v) <-> q(2*v+1)" in withTactics {
-    import TactixLibrary._
     import Ax._
     // Proof by pointing of  |- <v:=2*v+1;>v!=0 <-> 2*v+1!=0
     val proof = TactixLibrary.proveBy(
       Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula)),
       // use "<> diamond" axiom backwards at the indicated position on
       // |- __<v:=2*v+1;>q(v)__ <-> q(2*v+1)
-      useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
+      UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
         // use "[:=] assign" axiom forward at the indicated position on
         // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
-        useAt(Ax.assignbAxiom)(1, 0 :: 0 :: Nil) &
+        UnifyUSCalculus.useAt(Ax.assignbAxiom)(1, 0 :: 0 :: Nil) &
         // use double negation at the indicated position on
         // |- __!!q(2*v+1)__ <-> q(2*v+1)
-        useAt(doubleNegation)(1, 0 :: Nil) &
+        UnifyUSCalculus.useAt(doubleNegation)(1, 0 :: Nil) &
         // close by (an instance of) reflexivity |- p() <-> p()
         // |- q(2*v+1) <-> q(2*v+1)
-        byUS(equivReflexive),
+        UnifyUSCalculus.byUS(equivReflexive),
     )
     proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula))
@@ -94,16 +93,16 @@ class BTacticExamples extends TacticTestBase {
       Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
       // use "<> diamond" axiom backwards at the indicated position on
       // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
-      useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
+      UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
         // use "[++] choice" axiom forward at the indicated position on
         // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
-        useAt(Ax.choiceb)(1, 0 :: 0 :: Nil) &
+        UnifyUSCalculus.useAt(Ax.choiceb)(1, 0 :: 0 :: Nil) &
         // use "<> diamond" axiom forward at the indicated position on
         // |- !([a;]!p(x) & [b;]!p(x))  <->  __<a;>p(x)__ | <b;>p(x)
-        useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) &
+        UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 1 :: 0 :: Nil) &
         // use "<> diamond" axiom forward at the indicated position on
         // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __<b;>p(x)__
-        useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 1 :: 1 :: Nil) &
+        UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 1 :: 1 :: Nil) &
         // use propositional logic to show
         // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
         prop,
@@ -119,7 +118,7 @@ class BTacticExamples extends TacticTestBase {
       Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
       // use "<> diamond" axiom backwards at the indicated position on
       // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
-      useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
+      UnifyUSCalculus.useAt(Ax.diamond, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
         // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
         // step "[++] choice" axiom forward at the indicated position
         stepAt(1, 0 :: 0 :: Nil) &
@@ -133,7 +132,7 @@ class BTacticExamples extends TacticTestBase {
         // step "<> diamond" forward at the indicated position
         stepAt(1, 0 :: 1 :: Nil) &
         // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
-        byUS(Ax.equivReflexive),
+        UnifyUSCalculus.byUS(Ax.equivReflexive),
     )
     proof shouldBe Symbol("proved")
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
@@ -144,7 +143,7 @@ class BTacticExamples extends TacticTestBase {
     // |- x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y
     val proof = TactixLibrary.proveBy(
       "x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula,
-      CEat(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE))(1, 1 :: 0 :: 1 :: 1 :: Nil) &
+      UnifyUSCalculus.CEat(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE))(1, 1 :: 0 :: 1 :: 1 :: Nil) &
         // |- x*(x+1)>=0 -> [y:=0;x:=x*(x+1);]x>=y by CE/CQ using x*(x+1)=x^2+x
         // step uses top-level operator [;]
         stepAt(1, 1 :: Nil) &
@@ -166,9 +165,9 @@ class BTacticExamples extends TacticTestBase {
     // |- x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)
     val proof = TactixLibrary.proveBy(
       "x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula,
-      CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE))(1, 1 :: 0 :: 1 :: Nil) &
+      UnifyUSCalculus.CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE))(1, 1 :: 0 :: 1 :: Nil) &
         // |- x^2<4 -> [{x'=9*x^2-x&(-2<x&<2)}](-2<x&x<2) by CE using -2<x&x<2<->x^2<4
-        useAt(Ax.DWbase)(1, 1 :: Nil) &
+        UnifyUSCalculus.useAt(Ax.DWbase)(1, 1 :: Nil) &
         // |- x^2<4 -> true by DW
         prop,
     )
@@ -184,31 +183,29 @@ class BTacticExamples extends TacticTestBase {
       // |- x<5 & __x^2<4__ -> [{x' = 5*x & __x^2<4__}](__x^2<4__ & x>=1)
       val proof = TactixLibrary.proveBy(
         "x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula,
-        CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C)(1),
+        UnifyUSCalculus.CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C)(1),
       )
       // |- x<5 & (__-2<x&x<2__) -> [{x' = 5*x & __-2<x&x<2__}]((__-2<x&x<2__) & x>=1) by CE
       proof.subgoals.loneElement shouldBe "==> x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asSequent
     }
 
   "Proof by Chase" should "chase the prime away in [{x'=22}](2*x+x*y>=5)'" in withQE { _ =>
-    import TactixLibrary._
     val proof = TactixLibrary.proveBy(
       "[{x'=22}](2*x+x*y>=5)'".asFormula,
       // chase the differential prime away in the postcondition
-      chase(1, 1 :: Nil),
+      UnifyUSCalculus.chase(1, 1 :: Nil),
       // |- [{x'=22}]2*x'+(x'*y+x*y')>=0
     )
     proof.subgoals.loneElement shouldBe "==> [{x'=22}]2*x'+(x'*y+x*y')>=0".asSequent
   }
 
   it should "prove [{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0" in withQE { _ =>
-    import TactixLibrary._
     val proof = TactixLibrary.proveBy(
       "[{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula,
       // chase the differential prime away in the left postcondition
-      chase(1, 0 :: 1 :: Nil) &
+      UnifyUSCalculus.chase(1, 0 :: 1 :: Nil) &
         // |- [{x'=22}]2*x'+(x'*y+x*y')>=0 <-> [{x'=22}]2*x'+(x'*y+x*y')>=0
-        byUS(Ax.equivReflexive),
+        UnifyUSCalculus.byUS(Ax.equivReflexive),
     )
     proof shouldBe Symbol("proved")
     proof.proved shouldBe "==> [{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0".asSequent
@@ -220,7 +217,7 @@ class BTacticExamples extends TacticTestBase {
     val proof = TactixLibrary.proveBy(
       "==> [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asSequent,
       // chase the box in the succedent away
-      chase(1, Nil) &
+      UnifyUSCalculus.chase(1, Nil) &
         // |- (x>0->2*(x+1)>=1)&(x=0->1>=1)
         QE,
     )

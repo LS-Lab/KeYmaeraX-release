@@ -10,6 +10,7 @@ import org.keymaerax.btactics.DebuggingTactics.print
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.SimplifierV2._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.keymaerax.core.{Assign, Variable, _}
 import org.keymaerax.infrastruct._

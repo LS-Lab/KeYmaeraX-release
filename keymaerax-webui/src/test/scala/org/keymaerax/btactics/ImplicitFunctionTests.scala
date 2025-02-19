@@ -9,6 +9,7 @@ import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import org.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
@@ -18,7 +19,6 @@ import org.keymaerax.parser.{
   InterpretedSymbols,
   KeYmaeraXArchivePrinter,
   KeYmaeraXPrettyPrinter,
-  Parser,
   PrettierPrintFormatProvider,
 }
 import org.keymaerax.tagobjects.TodoTest

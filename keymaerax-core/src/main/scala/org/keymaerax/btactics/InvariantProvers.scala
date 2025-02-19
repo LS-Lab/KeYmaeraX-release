@@ -27,6 +27,7 @@ import scala.util.control.Breaks._
  */
 object InvariantProvers {
   import TactixLibrary._
+  import UnifyUSCalculus._
 
   private val logger = LoggerFactory.getLogger(getClass) // @note instead of "with Logging" to avoid cyclic dependencies
 
@@ -131,7 +132,7 @@ object InvariantProvers {
 
           // completes ODE invariant proofs and arithmetic
           val finishOff: BelleExpr = OnAll(
-            ifThenElse(
+            TactixLibrary.ifThenElse(
               DifferentialTactics.isODE,
               DifferentialTactics.mathematicaODE(pos) |
                 // augment loop invariant to local ODE invariant if possible

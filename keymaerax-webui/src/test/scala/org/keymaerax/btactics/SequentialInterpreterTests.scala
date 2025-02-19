@@ -10,6 +10,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.DebuggingTactics.error
 import org.keymaerax.btactics.TacticFactory.anon
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import org.keymaerax.parser.ArchiveParser

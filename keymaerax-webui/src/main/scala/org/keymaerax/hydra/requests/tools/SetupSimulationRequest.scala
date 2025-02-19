@@ -6,7 +6,7 @@
 package org.keymaerax.hydra.requests.tools
 
 import org.keymaerax.btactics.helpers.DifferentialHelper
-import org.keymaerax.btactics.{Ax, AxIndex, TacticHelper, TactixLibrary, ToolProvider}
+import org.keymaerax.btactics.{Ax, AxIndex, TacticHelper, TactixLibrary, ToolProvider, UnifyUSCalculus}
 import org.keymaerax.core.{
   And,
   Assign,
@@ -86,7 +86,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
   private def transform(simSpec: Diamond): Formula = {
     val stateRelation = TactixLibrary.proveBy(
       simSpec,
-      TactixLibrary.chase(
+      UnifyUSCalculus.chase(
         3,
         3,
         (e: Expression) =>

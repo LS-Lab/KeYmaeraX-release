@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -242,8 +243,8 @@ object Simplifier {
       case Some((pos, t2, e)) =>
         val (ctx, t1: Term) = fml.at(pos)
         val eqProof = TactixLibrary.proveBy(Equal(t1, t2), e)
-        HilbertCalculus.useAt(HilbertCalculus.CE(ctx)(eqProof), PosInExpr(0 :: Nil))(where)
-      case None => TactixLibrary.nil
+        UnifyUSCalculus.useAt(UnifyUSCalculus.CE(ctx)(eqProof), PosInExpr(0 :: Nil))(where)
+      case None => UnifyUSCalculus.nil
     }
   }
 
@@ -251,7 +252,7 @@ object Simplifier {
   def simpOnce(simps: List[Simplification] = defaultSimps): DependentPositionTactic = anon((pos, sequent) =>
     sequent.sub(pos) match {
       case Some(fml: Formula) => makeCE(fml, simp(simps, fml), pos)
-      case None => TactixLibrary.nil
+      case None => UnifyUSCalculus.nil
     }
   )
 

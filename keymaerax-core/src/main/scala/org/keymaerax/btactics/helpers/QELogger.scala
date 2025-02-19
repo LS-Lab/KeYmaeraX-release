@@ -5,17 +5,17 @@
 
 package org.keymaerax.btactics.helpers
 
-import java.io.FileWriter
-import org.keymaerax.{Configuration, FileConfiguration, Logging}
 import org.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
-import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.infrastruct.Augmentors._
+import org.keymaerax.btactics.UnifyUSCalculus
 import org.keymaerax.core._
+import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.parser.KeYmaeraXPrettyPrinter
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.pt.ProvableSig
 import org.keymaerax.tools.qe.DefaultSMTConverter
+import org.keymaerax.{Configuration, FileConfiguration, Logging}
 
+import java.io.FileWriter
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
@@ -176,7 +176,7 @@ object QELogger extends Logging {
   private var logTactic: Option[BelleExpr] = None
 
   def getLogTactic: BelleExpr = {
-    if (logTactic.isEmpty) logTactic = Some(nil)
+    if (logTactic.isEmpty) logTactic = Some(UnifyUSCalculus.nil)
     logTactic.get
   }
 
@@ -184,7 +184,7 @@ object QELogger extends Logging {
   // e.g. the ODE solver
   def enableLogging(loglevel: LogConfig = defaultConf): Unit = { logTactic = Some(measureRecordQE(loglevel)) }
 
-  def disableLogging(): Unit = { logTactic = Some(nil) }
+  def disableLogging(): Unit = { logTactic = Some(UnifyUSCalculus.nil) }
 
   /**
    * Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath`, filtering out duplicate

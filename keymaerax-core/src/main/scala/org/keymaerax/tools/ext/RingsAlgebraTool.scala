@@ -11,7 +11,7 @@ import cc.redberry.rings.scaladsl.syntax._
 import org.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic}
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith, SequentCalculus}
+import org.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith, SequentCalculus, UnifyUSCalculus}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
 import org.keymaerax.infrastruct.{PosInExpr, Position}
@@ -302,7 +302,7 @@ class RingsLibrary(terms: Iterable[Term]) {
           normalizeLessEquals(qeTac)(pos ++ PosInExpr(1 :: Nil))
       case Some(LessEqual(a, b)) => {
         val d = fromRing(toRing(b) - toRing(a))
-        useAt(normalizeLemma)(pos) & SequentCalculus.cut(Equal(Minus(b, a), d)) &
+        UnifyUSCalculus.useAt(normalizeLemma)(pos) & SequentCalculus.cut(Equal(Minus(b, a), d)) &
           Idioms
             .<(eqL2R(-seq.ante.length - 1)(pos) & hideL(-seq.ante.length - 1), cohideR(Symbol("Rlast")) & qeTac & done)
       }

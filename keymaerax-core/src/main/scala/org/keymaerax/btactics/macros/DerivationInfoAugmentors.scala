@@ -19,7 +19,7 @@ object DerivationInfoAugmentors {
     @nowarn("msg=match may not be exhaustive")
     def belleExpr: Any = di match {
       // useAt will just ask a ProvableInfo for its provable
-      case pi: ProvableInfo => HilbertCalculus.useAt(pi)
+      case pi: ProvableInfo => UnifyUSCalculus.useAt(pi)
       case ti: TacticInfo => ti.theExpr(())
     }
   }

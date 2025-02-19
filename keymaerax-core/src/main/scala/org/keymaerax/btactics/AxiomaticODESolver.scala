@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper._
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors._
@@ -220,7 +221,8 @@ object AxiomaticODESolver {
       val simpSol =
         postCondSimplifier(pos ++ (if (q == True) PosInExpr(0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 1 :: Nil)))
       val simpEvolDom =
-        if (q == True) TactixLibrary.skip // evolution domain constraint is trivial, so simplification is not necessary.
+        if (q == True)
+          UnifyUSCalculus.skip // evolution domain constraint is trivial, so simplification is not necessary.
         else if (instEnd) simplifier(pos ++ PosInExpr(0 :: Nil))
         else simplifier(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 1 :: Nil))
 
@@ -245,7 +247,7 @@ object AxiomaticODESolver {
       // @todo preserve consts when solving in context (requires closing const as last step of DI in context - let fails otherwise)
       val simpConsts: DependentPositionTactic = anon((pp: Position, ss: Sequent) =>
         if (consts != True && pos.isTopLevel) ss.sub(pp) match {
-          case Some(False) => TactixLibrary.skip
+          case Some(False) => UnifyUSCalculus.skip
           case Some(_) =>
             val constsPos =
               if (q == True) PosInExpr(0 :: 1 :: 0 :: 0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 0 :: 0 :: 1 :: 1 :: Nil)
@@ -271,7 +273,7 @@ object AxiomaticODESolver {
               "Position " + pp + " does not point to a valid position in sequent " + ss.prettyString
             )
         }
-        else TactixLibrary.skip
+        else UnifyUSCalculus.skip
       )
 
       val cutConsts = consts != True && pos.isTopLevel && polarity >= 0
@@ -285,7 +287,7 @@ object AxiomaticODESolver {
           DifferentialTactics.diffCut(consts)(pos),
           BranchTactic(skip, V(Symbol("Rlast")) & prop & DebuggingTactics.done("Expected to prove constants invariant")),
         )
-        else TactixLibrary.skip,
+        else UnifyUSCalculus.skip,
         DebuggingTactics.debug("AFTER preserving consts", ODE_DEBUGGER),
         addTimeVar(pos),
         DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER),
@@ -297,7 +299,7 @@ object AxiomaticODESolver {
         simplifyEvolutionDomain(osize)(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)),
         DebuggingTactics.debug("AFTER simplifying evolution domain constraint", ODE_DEBUGGER),
         if (polarity > 0) HilbertCalculus.DW(odePosAfterInitialVals)
-        else if (polarity < 0) HilbertCalculus.useAt(Ax.DWeakenAnd, PosInExpr(0 :: Nil))(odePosAfterInitialVals)
+        else if (polarity < 0) UnifyUSCalculus.useAt(Ax.DWeakenAnd, PosInExpr(0 :: Nil))(odePosAfterInitialVals)
         else throw new TacticInapplicableFailure("Unable to DW: unknown ODE polarity."),
         DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER),
         simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1 :: Nil)),
@@ -312,7 +314,7 @@ object AxiomaticODESolver {
         DebuggingTactics
           .assert((s, p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals),
         DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER),
-        HilbertCalculus.useAt(Ax.DS)(odePosAfterInitialVals),
+        UnifyUSCalculus.useAt(Ax.DS)(odePosAfterInitialVals),
         DebuggingTactics.debug("AFTER DS&", ODE_DEBUGGER),
         HilbertCalculus.assignb(timeAssignmentPos) | HilbertCalculus.assignd(timeAssignmentPos) | Idioms.nil,
         DebuggingTactics.debug("AFTER box assignment on time", ODE_DEBUGGER),
@@ -321,16 +323,16 @@ object AxiomaticODESolver {
         simpConsts(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 1 :: Nil)),
         DebuggingTactics.debug("AFTER simplifying consts", ODE_DEBUGGER),
         if (q == True && consts == True) SeqTactic(
-          TactixLibrary.useAt(Ax.implyTrue)(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)),
-          TactixLibrary.useAt(Ax.allV)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)),
-          TactixLibrary.useAt(Ax.trueImply)(pos ++ PosInExpr(0 :: 1 :: Nil)) |
-            TactixLibrary.useAt(Ax.trueAnd)(pos ++ PosInExpr(0 :: 1 :: Nil)),
+          UnifyUSCalculus.useAt(Ax.implyTrue)(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)),
+          UnifyUSCalculus.useAt(Ax.allV)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)),
+          UnifyUSCalculus.useAt(Ax.trueImply)(pos ++ PosInExpr(0 :: 1 :: Nil)) |
+            UnifyUSCalculus.useAt(Ax.trueAnd)(pos ++ PosInExpr(0 :: 1 :: Nil)),
         )
         else if (instEnd && q != True) SeqTactic(
           TactixLibrary.allL(DURATION)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)),
-          TactixLibrary.useAt(Ax.flipLessEqual)(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil)),
+          UnifyUSCalculus.useAt(Ax.flipLessEqual)(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil)),
         )
-        else TactixLibrary.skip,
+        else UnifyUSCalculus.skip,
         DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER),
         simpSol,
         simpEvolDom,
@@ -497,7 +499,7 @@ object AxiomaticODESolver {
       pos: Position,
   ): BelleExpr = {
     val insts = goal
-      .foldLeft((ode, TactixLibrary.nil, Nil: List[Provable]))({ case ((ode, e, insts), v) =>
+      .foldLeft((ode, UnifyUSCalculus.nil, Nil: List[Provable]))({ case ((ode, e, insts), v) =>
         val (l1, l2, l3) = splitODEAt(ode, v)
         // Already at end - no commuting necessary
         if (l3.isEmpty) {
@@ -519,8 +521,8 @@ object AxiomaticODESolver {
       ._3
     // The above gives us a chain of equivalences on ODES: piece the chain together.
     insts
-      .map(pr => HilbertCalculus.useAt(ElidingProvable(pr, Declaration(Map.empty)), PosInExpr(0 :: Nil))(pos))
-      .foldLeft[BelleExpr](TactixLibrary.nil)((acc, e) => e & acc)
+      .map(pr => UnifyUSCalculus.useAt(ElidingProvable(pr, Declaration(Map.empty)), PosInExpr(0 :: Nil))(pos))
+      .foldLeft[BelleExpr](UnifyUSCalculus.nil)((acc, e) => e & acc)
   }
 
   /* Produces a tactic that permutes ODE into canonical ordering or a tacatic that errors if ode contains cycles */
@@ -696,7 +698,7 @@ object AxiomaticODESolver {
           )
       }
 
-      TactixLibrary.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0) :: Nil))(withInitialsPos)
+      UnifyUSCalculus.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0) :: Nil))(withInitialsPos)
     })
 
   /**
@@ -747,7 +749,7 @@ object AxiomaticODESolver {
 
     // was domSimplifyStep
     val step = anon((pp: Position, ss: Sequent) => {
-      val subst = (_: Option[TactixLibrary.Subst]) =>
+      val subst = (_: Option[UnifyUSCalculus.Subst]) =>
         ss.sub(pp) match {
           case Some(And(p, Equal(x, f))) => RenUSubst(
               ("x_".asVariable, x) :: ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
@@ -760,7 +762,7 @@ object AxiomaticODESolver {
               "Position " + pp + " does not point to a valid position in sequent " + ss.prettyString
             )
         }
-      TactixLibrary.useAt(simplFact, PosInExpr(1 :: Nil), subst)(pp)
+      UnifyUSCalculus.useAt(simplFact, PosInExpr(1 :: Nil), subst)(pp)
     })
 
     (0 until odeSize).map(List.fill(_)(0)).map(i => step(pos ++ PosInExpr(i))).reduceRight[BelleExpr](_ & _)
@@ -801,7 +803,7 @@ object AxiomaticODESolver {
         val (xx, subst, rewrite) = ss.sub(pp) match {
           case Some(Imply(And(q, Equal(x: Variable, f)), p)) => (
               x,
-              (_: Option[TactixLibrary.Subst]) =>
+              (_: Option[UnifyUSCalculus.Subst]) =>
                 RenUSubst(
                   ("x_".asVariable, x) :: ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
                     ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) ::
@@ -811,7 +813,7 @@ object AxiomaticODESolver {
             )
           case Some(And(And(q, Equal(x: Variable, f)), p)) => (
               x,
-              (_: Option[TactixLibrary.Subst]) =>
+              (_: Option[UnifyUSCalculus.Subst]) =>
                 RenUSubst(
                   ("x_".asVariable, x) :: ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
                     ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) ::
@@ -827,11 +829,11 @@ object AxiomaticODESolver {
 
         SeqTactic(
           DLBySubst.stutter(xx)(pp ++ PosInExpr(1 :: Nil)),
-          TactixLibrary.useAt(rewrite, if (polarity >= 0) PosInExpr(1 :: Nil) else PosInExpr(0 :: Nil), subst)(pp),
+          UnifyUSCalculus.useAt(rewrite, if (polarity >= 0) PosInExpr(1 :: Nil) else PosInExpr(0 :: Nil), subst)(pp),
           TactixLibrary.assignb(pp ++ PosInExpr(1 :: Nil)),
         )
       })(pos) * odeSize,
-      if (polarity > 0) TactixLibrary.useAt(rewrite3, PosInExpr(1 :: Nil))(pos) else TactixLibrary.skip,
+      if (polarity > 0) UnifyUSCalculus.useAt(rewrite3, PosInExpr(1 :: Nil))(pos) else UnifyUSCalculus.skip,
       postCondSimplifier(pos),
       // @note do not simplify dependent formulas in postcondition, since diamond solver relies on duplicated formulas
     )
@@ -885,7 +887,7 @@ object AxiomaticODESolver {
         )
     }
 
-    TactixLibrary.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0) :: Nil))(withInitialsPos)
+    UnifyUSCalculus.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0) :: Nil))(withInitialsPos)
   })
 
   // endregion

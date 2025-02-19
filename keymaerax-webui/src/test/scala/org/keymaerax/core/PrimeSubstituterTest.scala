@@ -131,8 +131,9 @@ class PrimeSubstituterTest extends TacticTestBase {
         TactixLibrary.cut("true".asFormula) < (TactixLibrary.implyRi, prop) &
           TactixLibrary.cut("[{x'=1&true}]x'=1".asFormula) <
           (
-            TactixLibrary.implyRi & byUS(Ax.DX),
-            TactixLibrary.cohide(2) & DE(1) & chase(1, 1 :: Nil) & V(1) & byUS(Ax.equalReflexive),
+            TactixLibrary.implyRi & UnifyUSCalculus.byUS(Ax.DX),
+            TactixLibrary.cohide(2) & DE(1) & UnifyUSCalculus.chase(1, 1 :: Nil) & V(1) &
+              UnifyUSCalculus.byUS(Ax.equalReflexive),
           ),
       )
       result should not be Symbol("proved")

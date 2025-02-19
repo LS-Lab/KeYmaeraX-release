@@ -142,7 +142,7 @@ private object ProofRuleTactics extends TacticProvider with Logging {
       (brenR, 0)
       // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
       (Close(AntePos(0), SuccPos(0)), 0))
-      TactixLibrary.CEat(side)(pos).computeResult(pr)
+      UnifyUSCalculus.CEat(side)(pos).computeResult(pr)
     }
   }
 
@@ -219,7 +219,7 @@ private object ProofRuleTactics extends TacticProvider with Logging {
             ),
         )
         logger.debug("contextualize.side " + side)
-        TactixLibrary.CEat(side)(pos)
+        UnifyUSCalculus.CEat(side)(pos)
       }
     )
 

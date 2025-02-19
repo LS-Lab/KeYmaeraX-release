@@ -20,14 +20,14 @@ class ProofRuleTests extends TacticTestBase {
 
   "Axiomatic" should "support axiomatic rules" in withQE { _ =>
     val result =
-      proveBy("[a_;]p_(||) ==> [a_;]q_(||)".asSequent, TactixLibrary.by(ProvableInfo("[] monotone"), USubst(Nil)))
+      proveBy("[a_;]p_(||) ==> [a_;]q_(||)".asSequent, UnifyUSCalculus.by(ProvableInfo("[] monotone"), USubst(Nil)))
     result.subgoals.loneElement shouldBe "p_(||) ==> q_(||)".asSequent
   }
 
   it should "use the provided substitution for axiomatic rules" in withQE { _ =>
     val result = proveBy(
       "[?x>5;]x>2 ==> [?x>5;]x>0".asSequent,
-      TactixLibrary.by(
+      UnifyUSCalculus.by(
         ProvableInfo("[] monotone"),
         USubst(
           SubstitutionPair(ProgramConst("a_"), Test("x>5".asFormula)) ::
@@ -42,7 +42,7 @@ class ProofRuleTests extends TacticTestBase {
   it should "support axioms" in withTactics {
     val result = proveBy(
       "==> \\forall x_ x_>0 -> z>0".asSequent,
-      TactixLibrary.by(
+      UnifyUSCalculus.by(
         Ax.allInst,
         USubst(
           SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
@@ -59,7 +59,7 @@ class ProofRuleTests extends TacticTestBase {
 
     val result = proveBy(
       "==> (!\\forall x_ x_>0) <-> (\\exists x_ !x_>0)".asSequent,
-      TactixLibrary.by(
+      UnifyUSCalculus.by(
         Ax.notAll, // (!\forall x (p(||))) <-> \exists x (!p(||))
         theSubst,
       ),

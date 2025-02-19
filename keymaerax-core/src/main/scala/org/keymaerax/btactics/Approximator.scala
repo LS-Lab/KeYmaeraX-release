@@ -120,7 +120,7 @@ object Approximator extends TacticProvider with Logging {
           .filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms))
           .map(cut => {
             TactixLibrary.dC(cut)(pos) <
-              (nil, DebuggingTactics.debug("Trying to prove this by dI or by ODE", DEBUG) & proofOfCut)
+              (UnifyUSCalculus.nil, DebuggingTactics.debug("Trying to prove this by dI or by ODE", DEBUG) & proofOfCut)
           })
       }
 
@@ -162,7 +162,7 @@ object Approximator extends TacticProvider with Logging {
 
       // Prove that (c,s) is a circle.
       val isOnCircle = TactixLibrary.dC(radiusIsConst)(pos) <
-        (nil, TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed")) &
+        (UnifyUSCalculus.nil, TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed")) &
         DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
 
       val cuts = interleave(cosCuts, sinCuts)
@@ -180,7 +180,7 @@ object Approximator extends TacticProvider with Logging {
           DebuggingTactics.debug("Cutting " + cut.prettyString) &
             TactixLibrary.dC(cut)(pos) <
             (
-              nil,
+              UnifyUSCalculus.nil,
               // dW&QE handles the base case, dI handles all others.
               DebuggingTactics.debug("Trying to prove next bound: ", DEBUG) &
                 (TactixLibrary.dI()(pos) | (TactixLibrary.dW(pos) & QE)) &
@@ -271,7 +271,7 @@ object Approximator extends TacticProvider with Logging {
 
   /** Does a CEat with extendEvDomAndProve. */
   def extendEvDomAndProve(f: Formula, cut: Formula, cutProof: BelleExpr): BuiltInPositionTactic = {
-    TactixLibrary
+    UnifyUSCalculus
       .CEat(dcInCtx(f, cut, cutProof)) // @todo this doesn't work because initial conditions are missing. Need a useAt
   }
 

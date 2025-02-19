@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.Idioms.{mapSubpositions, opt}
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
+import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
 import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
