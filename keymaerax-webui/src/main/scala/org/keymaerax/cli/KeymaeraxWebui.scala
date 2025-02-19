@@ -76,11 +76,6 @@ object KeymaeraxWebui {
         fallback = cmd.fallback,
         args = options.args,
       )
-    case cmd: Command.Repl =>
-      KeymaeraxCore.initializeProver(
-        KeymaeraxCore.combineToolConfigs(options.toToolConfig, KeymaeraxCore.toolConfigFromFile(ToolName.Z3))
-      )
-      repl(model = cmd.model, tactic = cmd.tactic, scaladefs = cmd.scaladefs)
     // TODO Turn this into separate webui-only command (maybe named "convertTactics")
     case cmd: Command.ConvertTactics =>
       if (cmd.out.isEmpty) options.printUsageAndExitWithError()
@@ -260,40 +255,6 @@ object KeymaeraxWebui {
     )
     pw.write(output)
     pw.close()
-  }
-
-  def repl(model: String, tactic: Option[String], scaladefs: Option[String]): Unit = {
-    val modelFileNameDotKyx = model
-    val tacticFileNameDotKyt = tactic
-    val scaladefsFilename = scaladefs
-    assert(
-      modelFileNameDotKyx.endsWith(".kyx"),
-      "\n[Error] Wrong model file name " + modelFileNameDotKyx +
-        " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt",
-    )
-    tacticFileNameDotKyt.foreach(name =>
-      assert(
-        name.endsWith(".kyt"),
-        "\n[Error] Wrong tactic file name " + name + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt",
-      )
-    )
-    val modelInput = {
-      val source = scala.io.Source.fromFile(modelFileNameDotKyx, org.keymaerax.core.ENCODING)
-      try source.mkString
-      finally source.close()
-    }
-    val tacticInput = tacticFileNameDotKyt.map(path => {
-      val source = scala.io.Source.fromFile(path, org.keymaerax.core.ENCODING)
-      try source.mkString
-      finally source.close()
-    })
-    val defsInput = scaladefsFilename.map(path => {
-      val source = scala.io.Source.fromFile(path, org.keymaerax.core.ENCODING)
-      try source.mkString
-      finally source.close()
-    })
-    val inputFormula: Formula = ArchiveParser.parseAsFormula(modelInput)
-    new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
 
   /**

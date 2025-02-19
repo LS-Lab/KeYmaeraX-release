@@ -69,7 +69,6 @@ object Command {
       monitor: Option[ModelPlexKind.Value] = None,
       fallback: Option[String] = None,
   ) extends Command
-  case class Repl(model: String = null, tactic: Option[String] = None, scaladefs: Option[String] = None) extends Command
   case object Ui extends Command
 }
 
@@ -466,17 +465,6 @@ object Options {
                  |""".stripMargin
             )),
           opt[String]("fallback").action((x, o) => o.updateCommand[Command.Modelplex](_.copy(fallback = Some(x)))),
-        ),
-      note(""),
-      cmd("repl")
-        .action((_, o) => o.copy(command = Some(Command.Repl())))
-        .text(wrapWide("Prove a model interactively from a command line REPL."))
-        .children(
-          arg[String]("<model>").action((x, o) => o.updateCommand[Command.Repl](_.copy(model = x))),
-          arg[String]("<tactic>").optional().action((x, o) => o.updateCommand[Command.Repl](_.copy(tactic = Some(x)))),
-          arg[String]("<scaladefs>")
-            .optional()
-            .action((x, o) => o.updateCommand[Command.Repl](_.copy(scaladefs = Some(x)))),
         ),
       note(""),
       cmd("ui").action((_, o) => o.copy(command = Some(Command.Ui))).text(wrapWide("Start web user interface.")),
