@@ -9,6 +9,7 @@ import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.btactics.{
   ArithmeticSimplification,
+  HybridProgramCalculus,
   SequentCalculus,
   TacticTestBase,
   TactixLibrary,
@@ -64,7 +65,7 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic generalizeb" in withTactics {
-    roundTrip(TactixLibrary.generalize("x>0".asFormula)(1), """MR("x>0", 1)""")
+    roundTrip(HybridProgramCalculus.generalize("x>0".asFormula)(1), """MR("x>0", 1)""")
   }
 
   it should "input tactic diffCut" in withTactics {
@@ -95,7 +96,7 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic loop" in withTactics {
-    roundTrip(TactixLibrary.loop("x>0".asFormula)(1), """loop("x>0", 1)""")
+    roundTrip(HybridProgramCalculus.loop("x>0".asFormula)(1), """loop("x>0", 1)""")
   }
 
   it should "input tactic boundRename" in withTactics {

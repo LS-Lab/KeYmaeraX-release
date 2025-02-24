@@ -364,7 +364,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "work with loop labels" in withMathematica { _ =>
-    val tactic = implyR(1) & loop("x>1".asFormula)(1)
+    val tactic = implyR(1) & HybridProgramCalculus.loop("x>1".asFormula)(1)
     val v = BelleProvable.plain(ProvableSig.startPlainProof("x>2 -> [{x:=x+1;}*]x>0".asFormula))
     inside(theInterpreter.apply(tactic, v)) { case BelleProvable(p, Some(l)) =>
       p.subgoals should have size 3
@@ -436,7 +436,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy(
       "x>=0 -> [{x:=x+1; ++ x:=x+2;}*]x>0".asFormula,
       implyR(1) &
-        loop("x>=0".asFormula)(1) < (
+        HybridProgramCalculus.loop("x>=0".asFormula)(1) < (
           QE,
           QE,
           choiceb(1) & andR(1) < (
@@ -457,7 +457,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   "Case combinator" should "match tactics with labels" in withMathematica { _ =>
     val ts = List(BelleLabels.initCase -> nil, BelleLabels.useCase -> id, BelleLabels.indStep -> assignb(1))
       .permutations
-      .map(t => implyR(1) & loop("x>1".asFormula)(1) & CaseTactic(t))
+      .map(t => implyR(1) & HybridProgramCalculus.loop("x>1".asFormula)(1) & CaseTactic(t))
     val v = BelleProvable.plain(ProvableSig.startPlainProof("x>2 -> [{x:=x+1;}*]x>1".asFormula))
     for (t <- ts) {
       inside(theInterpreter.apply(t, v)) { case BelleProvable(p, _) =>
@@ -471,7 +471,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       .permutations
       .map(t =>
         implyR(1) & andR(1) /* creates labels that become parents of loop labels */ < (
-          loop("x>1".asFormula)(1) & CaseTactic(t), id
+          HybridProgramCalculus.loop("x>1".asFormula)(1) & CaseTactic(t), id
         )
       )
     val v = BelleProvable.plain(ProvableSig.startPlainProof("x>2 -> [{x:=x+1;}*]x>1 & x>2".asFormula))
@@ -493,7 +493,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     ).permutations
       .map(t =>
         prop & unfoldProgramNormalize /* create labels that become parents of loop labels */ &
-          onAll(loop("x>=1".asFormula)(1)) & CaseTactic(t)
+          onAll(HybridProgramCalculus.loop("x>=1".asFormula)(1)) & CaseTactic(t)
       )
     val v = BelleProvable.plain(ProvableSig.startPlainProof("x>2 -> [x:=1;++x:=x-1;][{x:=x+1;}*]x>=1 & x>2".asFormula))
     for (t <- ts) {
@@ -580,8 +580,10 @@ class SequentialInterpreterTests extends TacticTestBase {
       import TacticFactory._
 
       val tactic = anon((pos: Position, seq: Sequent) => {
-        ChooseSome(() => ("x>0".asFormula :: Nil).iterator, (inv: Formula) => loop(inv)(pos)) & Idioms
-          .<(close, close, master())
+        ChooseSome(
+          () => ("x>0".asFormula :: Nil).iterator,
+          (inv: Formula) => HybridProgramCalculus.loop(inv)(pos),
+        ) & Idioms.<(close, close, master())
       })
 
       db.proveBy(modelContent, tactic(1)) shouldBe Symbol("proved")

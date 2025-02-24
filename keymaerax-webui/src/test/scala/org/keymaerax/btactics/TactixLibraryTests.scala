@@ -56,7 +56,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove x>=5 -> [{{x'=2}}*]x>=5 by loop invariants" in withMathematica { _ =>
     proveBy(
       "x>=5 -> [{{x'=2}}*]x>=5".asFormula,
-      implyR(1) & loop("x>=5".asFormula)(1) < (QE, QE, solve(1) & OnAll(QE)),
+      implyR(1) & HybridProgramCalculus.loop("x>=5".asFormula)(1) < (QE, QE, solve(1) & OnAll(QE)),
     ) shouldBe Symbol("proved")
   }
 
@@ -96,7 +96,7 @@ class TactixLibraryTests extends TacticTestBase {
       "x>=5 -> [{{x'=2}}*]x>=5".asFormula,
       implyR(1) & ChooseSome(
         () => ("x>=5".asFormula :: Nil).iterator,
-        (inv: Formula) => loop(inv)(1) < (QE & done, QE & done, solve(1) & OnAll(QE & done)),
+        (inv: Formula) => HybridProgramCalculus.loop(inv)(1) < (QE & done, QE & done, solve(1) & OnAll(QE & done)),
       ),
     ) shouldBe Symbol("proved")
   }
@@ -104,15 +104,17 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { _ =>
     proveBy(
       "x>=5 -> [{{x'=2}}*]x>=5".asFormula,
-      implyR(1) &
-        ChooseSome(someList, (inv: Formula) => loop(inv)(1) < (QE & done, QE & done, solve(1) & OnAll(QE & done))),
+      implyR(1) & ChooseSome(
+        someList,
+        (inv: Formula) => HybridProgramCalculus.loop(inv)(1) < (QE & done, QE & done, solve(1) & OnAll(QE & done)),
+      ),
     ) shouldBe Symbol("proved")
   }
 
   it should "generate and auto prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { _ =>
     proveBy(
       "x>=5 ==> [{{x'=2}}*]x>=5".asSequent,
-      ChooseSome(someList, (inv: Formula) => loop(inv)(1) & autoClose),
+      ChooseSome(someList, (inv: Formula) => HybridProgramCalculus.loop(inv)(1) & autoClose),
     ) shouldBe Symbol("proved")
   }
 
@@ -315,7 +317,8 @@ class TactixLibraryTests extends TacticTestBase {
       fml,
       implyR(1) & SearchAndRescueAgain(
         jj :: Nil,
-        loop(USubst(Seq(SubstitutionPair(".".asTerm, "x".asTerm)))(jj))(1) < (nil, nil, assignb(1)),
+        HybridProgramCalculus.loop(USubst(Seq(SubstitutionPair(".".asTerm, "x".asTerm)))(jj))(1) <
+          (nil, nil, assignb(1)),
         feedOneAfterTheOther(invs),
         OnAll(auto(TactixLibrary.invGenerator, None)) & done,
       ),
@@ -333,7 +336,7 @@ class TactixLibraryTests extends TacticTestBase {
       fml,
       implyR(1) & SearchAndRescueAgain(
         jj :: Nil,
-        loop(USubst(Seq(SubstitutionPair(".".asTerm, "x".asTerm)))(jj))(1) < (nil, nil, step(1)),
+        HybridProgramCalculus.loop(USubst(Seq(SubstitutionPair(".".asTerm, "x".asTerm)))(jj))(1) < (nil, nil, step(1)),
         feedOneAfterTheOther(invs),
         OnAll(auto(TactixLibrary.invGenerator, None)) & done,
       ),
@@ -351,7 +354,7 @@ class TactixLibraryTests extends TacticTestBase {
       fml,
       implyR(1) & SearchAndRescueAgain(
         jj :: Nil,
-        loop(USubst(Seq(SubstitutionPair(".".asTerm, "x".asTerm)))(jj))(1) < (nil, nil, chase(1)),
+        HybridProgramCalculus.loop(USubst(Seq(SubstitutionPair(".".asTerm, "x".asTerm)))(jj))(1) < (nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(auto(TactixLibrary.invGenerator, None)) & done,
       ),

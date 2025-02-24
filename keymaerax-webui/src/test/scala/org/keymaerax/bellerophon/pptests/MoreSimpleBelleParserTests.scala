@@ -95,7 +95,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse j(x) as a term or a formula depending on ArgInfo." in withTactics {
-    parser("""loop("j(x)",1)""") shouldBe TactixLibrary.loop("j(x)".asFormula)(1)
+    parser("""loop("j(x)",1)""") shouldBe HybridProgramCalculus.loop("j(x)".asFormula)(1)
     parser("""allL("j(x)",1)""") shouldBe SequentCalculus.allL("j(x)".asTerm)(1)
   }
 

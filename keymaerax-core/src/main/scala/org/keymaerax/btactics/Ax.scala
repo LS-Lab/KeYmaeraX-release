@@ -3680,7 +3680,7 @@ object Ax extends Logging {
     "[{b_{|^@|};}*]q_(||) ==> q_(||) & [{b_{|^@|};}*][b_{|^@|};]q_(||)".asSequent,
     andR(1) < (
       useAt(iterateb)(-1) & andL(-1) & close(-1, 1),
-      generalize("[{b_{|^@|};}*]q_(||)".asFormula)(1) < (
+      HybridProgramCalculus.generalize("[{b_{|^@|};}*]q_(||)".asFormula)(1) < (
         useAt(IIinduction, PosInExpr(1 :: 1 :: Nil))(1) < (
           close(-1, 1),
           G(1) & useAt(iterateb)(1, 0 :: Nil) & prop
@@ -5550,7 +5550,7 @@ object Ax extends Logging {
           useAt(DWd)(-2) & useAt(diamond, PosInExpr(1 :: Nil))(1) & useAt(diamond, PosInExpr(1 :: Nil))(-2) & notR(
             1
           ) & notL(-2) &
-            generalize("(!p_(|t_|)=0)".asFormula)(1) & Idioms
+            HybridProgramCalculus.generalize("(!p_(|t_|)=0)".asFormula)(1) & Idioms
               .<(id, useAt(equalExpand)(-1, 0 :: Nil) & useAt(flipGreaterEqual)(1, 0 :: 0 :: 1 :: Nil) & prop & done),
           id,
         ),
@@ -5558,10 +5558,10 @@ object Ax extends Logging {
           useAt(RIclosedgeq, PosInExpr(0 :: Nil))(1) & prop & HilbertCalculus.composeb(1) &
           dC("!p_(|t_|)=0".asFormula)(1) & Idioms.<(
             useAt(DW)(1) &
-              TactixLibrary.generalize("true".asFormula)(1) & Idioms
+              HybridProgramCalculus.generalize("true".asFormula)(1) & Idioms
                 .<(cohideR(1) & useAt(boxTrueAxiom)(1), nil) /* TODO: Goedel? */ &
               implyR(1) &
-              TactixLibrary.generalize("t_=0".asFormula)(1) & Idioms
+              HybridProgramCalculus.generalize("t_=0".asFormula)(1) & Idioms
                 .<(cohideR(1) & assignb(1) & byUS(equalReflexive), nil) /* TODO: assignb? */ &
               implyR(1) &
               dR("p_(|t_|)>0".asFormula)(1) & Idioms.<(
@@ -5573,7 +5573,7 @@ object Ax extends Logging {
                       done
                   ),
                 useAt(DW)(1) &
-                  TactixLibrary.generalize("true".asFormula)(1) & Idioms
+                  HybridProgramCalculus.generalize("true".asFormula)(1) & Idioms
                     .<(cohideR(1) & useAt(boxTrueAxiom)(1), nil) /* TODO: Goedel? */ &
                   useAt(greaterEqual)(1, 1 :: Nil) &
                   prop &
@@ -5585,10 +5585,10 @@ object Ax extends Logging {
       dR("q_(|t_|)".asFormula)(-2) & Idioms.<(
         useAt(diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
           useAt(diamond, PosInExpr(1 :: Nil))(-2) & notL(-2) &
-          TactixLibrary.generalize("!p_(|t_|)<=0".asFormula)(1) & Idioms
+          HybridProgramCalculus.generalize("!p_(|t_|)<=0".asFormula)(1) & Idioms
             .<(id, useAt(lessEqual)(-1, 0 :: Nil) & prop & done),
         useAt(DW)(1) &
-          TactixLibrary.generalize("true".asFormula)(1) & Idioms
+          HybridProgramCalculus.generalize("true".asFormula)(1) & Idioms
             .<(cohideR(1) & useAt(boxTrueAxiom)(1), prop & done), /* TODO: Goedel? */
       ),
     ),
@@ -5613,13 +5613,13 @@ object Ax extends Logging {
       equivR(1) & OnAll(SaturateTactic(alphaRule)) < (
         useAt(leaveWithinClosed, PosInExpr(1 :: 0 :: Nil))(1) < (
           useAt(diamond, PosInExpr(1 :: Nil))(1) & useAt(diamond, PosInExpr(1 :: Nil))(-2) & SaturateTactic(alphaRule) &
-            HilbertCalculus
-              .DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) < (id, useAt(greaterEqual)(1, 0 :: 1 :: Nil) & propClose),
+            HilbertCalculus.DW(1) & HybridProgramCalculus
+              .generalize("!p_(|t_|)=0".asFormula)(1) < (id, useAt(greaterEqual)(1, 0 :: 1 :: Nil) & propClose),
           id
         ),
         useAt(leaveWithinClosed, PosInExpr(1 :: 0 :: Nil))(-2) < (
           useAt(diamond, PosInExpr(1 :: Nil))(1) & useAt(diamond, PosInExpr(1 :: Nil))(-2) & SaturateTactic(alphaRule) &
-            generalize("!!p_(|t_|)>0".asFormula)(1) < (
+            HybridProgramCalculus.generalize("!!p_(|t_|)>0".asFormula)(1) < (
               id, useAt(gtzImpNez)(-1, 0 :: 0 :: Nil) & useAt(notNotEqual)(-1, 0 :: Nil) & id
             ),
           id
@@ -6213,7 +6213,7 @@ object Ax extends Logging {
   lazy val timeCond: DerivedAxiomInfo = derivedFormula(
     DerivedAxiomInfo.create(name = "timeCond", canonicalName = "timeCond"),
     "[{x_'=1, c{|x_|} & q(||)}](!x_ <= h() -> [{x_'=1, c{|x_|} & q(||)}](!x_ <= h()))".asFormula,
-    generalize(True)(1) & Idioms.<(
+    HybridProgramCalculus.generalize(True)(1) & Idioms.<(
       useAt(boxTrueAxiom)(1),
       implyR(1) & useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(-2) &
         useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(1, 1 :: Nil),
@@ -6222,7 +6222,7 @@ object Ax extends Logging {
         id,
         derive(1, 1 :: Nil) &
           cohideR(1) & useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
-          generalize(True)(1) & Idioms
+          HybridProgramCalculus.generalize(True)(1) & Idioms
             .<(cohideR(1) & useAt(boxTrueAxiom)(1), useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero)),
       ),
   )
@@ -6252,13 +6252,13 @@ object Ax extends Logging {
                           id,
                           hideL(-1) & HilbertCalculus.DC("x_>=h()".asFormula)(1) &
                             Idioms.<(
-                              useAt(DW)(1) & generalize(True)(1) & Idioms
+                              useAt(DW)(1) & HybridProgramCalculus.generalize(True)(1) & Idioms
                                 .<(cohideR(1) & useAt(boxTrueAxiom)(1), prop & done),
                               useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(
                                 hideL(-2) & useAt(Ax.equalExpand, PosInExpr(0 :: Nil))(-1) & andL(-1) &
                                   useAt(Ax.flipLessEqual, PosInExpr(0 :: Nil))(-2) & id & done,
                                 useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
-                                  generalize(True)(1) &
+                                  HybridProgramCalculus.generalize(True)(1) &
                                   Idioms.<(
                                     cohideR(1) & useAt(boxTrueAxiom)(1),
                                     derive(1, 1 :: Nil) & useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero),

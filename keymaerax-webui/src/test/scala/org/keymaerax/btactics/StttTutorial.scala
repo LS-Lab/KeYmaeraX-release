@@ -326,7 +326,7 @@ class StttTutorial extends TacticTestBase {
       val plant = print("plant") & composeb(Symbol("R")) & assignb(Symbol("R")) & solveEnd(Symbol("R"))
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)(Symbol("R")) <
+        HybridProgramCalculus.loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)(Symbol("R")) <
         (
           print("Base Case") & andR(Symbol("R")) & OnAll(id),
           print("Use Case") & QE,
@@ -370,7 +370,7 @@ class StttTutorial extends TacticTestBase {
         .fileContent
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)(Symbol("R")) <
+        HybridProgramCalculus.loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)(Symbol("R")) <
         (
           printIndexed("Base case") & andR(Symbol("R")) & OnAll(id),
           printIndexed("Use case") & QE,
@@ -472,9 +472,9 @@ class StttTutorial extends TacticTestBase {
           dW(Symbol("R"))
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        loop("v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2".asFormula)(
-          Symbol("R")
-        ) <
+        HybridProgramCalculus.loop(
+          "v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2".asFormula
+        )(Symbol("R")) <
         (
           print("Base case") & SaturateTactic(andR(Symbol("R")) < (id, skip)) & id,
           print("Use case") & QE,
@@ -512,7 +512,8 @@ class StttTutorial extends TacticTestBase {
         hideL(Symbol("L"), "c<=ep()".asFormula) & hideL(Symbol("L"), "r!=0".asFormula)
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(Symbol("R")) <
+        HybridProgramCalculus
+          .loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(Symbol("R")) <
         (
           print("Base case") & speculativeQE, // @todo speculativeQE with Z3 fails but QE works
           print("Use case") & speculativeQE,
@@ -553,7 +554,8 @@ class StttTutorial extends TacticTestBase {
         hideL(Symbol("L"), "c<=ep()".asFormula) & hideL(Symbol("L"), "r!=0".asFormula)
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(Symbol("R")) <
+        HybridProgramCalculus
+          .loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)(Symbol("R")) <
         (
           print("Base case") & speculativeQE,
           print("Use case") & speculativeQE,

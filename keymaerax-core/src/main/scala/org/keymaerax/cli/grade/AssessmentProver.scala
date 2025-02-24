@@ -27,6 +27,7 @@ import org.keymaerax.btactics.{
   DebuggingTactics,
   FixedGenerator,
   HilbertCalculus,
+  HybridProgramCalculus,
   Invariant,
   InvariantHint,
   PolynomialArithV2,
@@ -1382,7 +1383,7 @@ object AssessmentProver {
   /** Checks `inv` for being a loop invariant for `question` of the shape `P->[{a;}*]Q` or `[{a;}*]P`. */
   def loopCheck(question: Formula, inv: Formula): ProvableSig = {
     def loopCheckTactic(inv: Formula): BelleExpr = {
-      loop(inv)(1) <
+      HybridProgramCalculus.loop(inv)(1) <
         (
           autoImpl(loop(FixedGenerator(List.empty)), ODE, keepQEFalse = true) &
             DebuggingTactics.done("Precondition does not imply invariant"),

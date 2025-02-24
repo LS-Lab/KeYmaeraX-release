@@ -893,7 +893,7 @@ class SwitchedSystemsTests extends TacticTestBase {
                     (
                       id,
                       composeb(1) & hideL(-1) & hideL(-1) &
-                        generalize(invariant)(1) <
+                        HybridProgramCalculus.generalize(invariant)(1) <
                         (
                           chase(1) & hideL(-3) & QE,
                           andL(-1) & hideL(Symbol("Llast")) &

@@ -105,7 +105,8 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "diffWeaken before loopy" in withMathematica { _ =>
-    val result = proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula, dW(1) & loop("x>0".asFormula)(1) & master())
+    val result =
+      proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula, dW(1) & HybridProgramCalculus.loop("x>0".asFormula)(1) & master())
     result shouldBe Symbol("proved")
   }
 

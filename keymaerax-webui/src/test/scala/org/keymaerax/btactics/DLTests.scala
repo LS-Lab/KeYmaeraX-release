@@ -391,43 +391,56 @@ class DLTests extends TacticTestBase {
   "generalize" should "introduce intermediate condition" in withTactics {
     val result = proveBy(
       "[x:=2;][y:=x;]y>1".asFormula,
-      generalize("x>1".asFormula)(1),
+      HybridProgramCalculus.generalize("x>1".asFormula)(1),
       _.value should contain theSameElementsAs List(BelleLabels.mrShow, BelleLabels.mrUse),
     )
     result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
   }
 
   it should "work at any succedent position" in withTactics {
-    val result = proveBy("==> a=3, [x:=2;][y:=x;]y>1, b=4".asSequent, generalize("x>1".asFormula)(2))
+    val result =
+      proveBy("==> a=3, [x:=2;][y:=x;]y>1, b=4".asSequent, HybridProgramCalculus.generalize("x>1".asFormula)(2))
     result.subgoals shouldBe "==> a=3, [x:=2;]x>1, b=4".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
   }
 
   it should "introduce intermediate condition in context" in withTactics {
-    val result = proveBy("a=2 -> [z:=3;][x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1, 1 :: 1 :: Nil))
+    val result = proveBy(
+      "a=2 -> [z:=3;][x:=2;][y:=x;]y>1".asFormula,
+      HybridProgramCalculus.generalize("x>1".asFormula)(1, 1 :: 1 :: Nil),
+    )
     result.subgoals shouldBe "==> a=2 -> [z:=3;][x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
   }
 
   it should "preserve a const fact" in withMathematica { _ =>
-    val result = proveBy("A>1&x>5 -> [x:=A;][y:=A*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
+    val result = proveBy(
+      "A>1&x>5 -> [x:=A;][y:=A*x;]y>1".asFormula,
+      implyR(1) & HybridProgramCalculus.generalize("x>1".asFormula)(1),
+    )
     result.subgoals shouldBe "A>1&x>5 ==> [x:=A;]x>1".asSequent :: "A>1, x>1 ==> [y:=A*x;]y>1".asSequent :: Nil
   }
 
   it should "preserve a quantified const fact" in withMathematica { _ =>
     val result = proveBy(
       "\\forall x (x^2+2>=A)&A>1&x>5 -> [x:=A;][y:=A*x;]y>1".asFormula,
-      implyR(1) & generalize("x>1".asFormula)(1),
+      implyR(1) & HybridProgramCalculus.generalize("x>1".asFormula)(1),
     )
     result.subgoals shouldBe "\\forall x (x^2+2>=A)&A>1&x>5 ==> [x:=A;]x>1"
       .asSequent :: "\\forall x (x^2+2>=A)&A>1, x>1 ==> [y:=A*x;]y>1".asSequent :: Nil
   }
 
   it should "preserve function facts" in withMathematica { _ =>
-    val result = proveBy("A()>1&x>5 -> [x:=A();][y:=A()*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
+    val result = proveBy(
+      "A()>1&x>5 -> [x:=A();][y:=A()*x;]y>1".asFormula,
+      implyR(1) & HybridProgramCalculus.generalize("x>1".asFormula)(1),
+    )
     result.subgoals shouldBe "A()>1&x>5 ==> [x:=A();]x>1".asSequent :: "A()>1, x>1 ==> [y:=A()*x;]y>1".asSequent :: Nil
   }
 
   it should "preserve multiple facts" in withMathematica { _ =>
-    val result = proveBy("A>1&A>2&x>5&A>3 -> [x:=A;][y:=A*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
+    val result = proveBy(
+      "A>1&A>2&x>5&A>3 -> [x:=A;][y:=A*x;]y>1".asFormula,
+      implyR(1) & HybridProgramCalculus.generalize("x>1".asFormula)(1),
+    )
     result.subgoals shouldBe "A>1&A>2&x>5&A>3 ==> [x:=A;]x>1".asSequent :: "A>1&A>2&A>3, x>1 ==> [y:=A*x;]y>1"
       .asSequent :: Nil
   }
@@ -435,7 +448,7 @@ class DLTests extends TacticTestBase {
   it should "preserve const facts in context" in withMathematica { _ =>
     val result = proveBy(
       "A>1&x>5 -> [z:=3;][{z'=A}][x:=A;][y:=A*x;]y>1".asFormula,
-      implyR(1) & generalize("x>1".asFormula)(1, 1 :: 1 :: Nil),
+      implyR(1) & HybridProgramCalculus.generalize("x>1".asFormula)(1, 1 :: 1 :: Nil),
     )
     // @todo cleanup in context
     result.subgoals shouldBe "A>1&x>5 ==> [z:=3;][{z'=A}](A>1&[x:=A;]x>1)".asSequent :: "A>1, x>1 ==> [y:=A*x;]y>1"
@@ -443,7 +456,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce ghosts for initial values old(.)" in withMathematica { _ =>
-    val result = proveBy("x>=0 ==> [x:=x+1;]x>0".asSequent, generalize("x>old(x)".asFormula)(1))
+    val result = proveBy("x>=0 ==> [x:=x+1;]x>0".asSequent, HybridProgramCalculus.generalize("x>old(x)".asFormula)(1))
     result.subgoals shouldBe "x_0>=0, x_0=x ==> [x:=x_0+1;]x>x_0".asSequent :: "x_0>=0, x>x_0 ==> x>0".asSequent :: Nil
   }
 
@@ -473,7 +486,7 @@ class DLTests extends TacticTestBase {
   }
 
   "I" should "work on a simple example" in withTactics {
-    val result = proveBy("x>2 ==> [{x:=x+1;}*]x>0".asSequent, loop("x>1".asFormula)(1))
+    val result = proveBy("x>2 ==> [{x:=x+1;}*]x>0".asSequent, HybridProgramCalculus.loop("x>1".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -485,7 +498,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "keep constants around" in withTactics {
-    proveBy("x>2, y>0 ==> [{x:=x+y;}*]x>0".asSequent, loop("x>1".asFormula)(1)).subgoals should
+    proveBy("x>2, y>0 ==> [{x:=x+y;}*]x>0".asSequent, HybridProgramCalculus.loop("x>1".asFormula)(1)).subgoals should
       contain theSameElementsInOrderAs List(
         /* init */ "x>2, y>0 ==> x>1".asSequent,
         /* use case */ "x>1, y>0 ==> x>0".asSequent,
@@ -554,7 +567,11 @@ class DLTests extends TacticTestBase {
       ),
       Name("a") -> Signature(Some(Unit), Trafo, None, Right(Some("x:=x+y;".asProgram)), UnknownLocation),
     ))
-    val result = proveBy("initial(x,y) ==> [{a{|^@|};}*]post(x)".asSequent, loop("loopinv(x)".asFormula)(1), defs)
+    val result = proveBy(
+      "initial(x,y) ==> [{a{|^@|};}*]post(x)".asSequent,
+      HybridProgramCalculus.loop("loopinv(x)".asFormula)(1),
+      defs,
+    )
     // sequential interpreter does not yet support keeping all abbreviations when combining provables in branchtactic
     result.subgoals should contain theSameElementsInOrderAs List(
       /* init */ "x>2&y>0 ==> loopinv(x)".asSequent,
@@ -570,7 +587,8 @@ class DLTests extends TacticTestBase {
   }
 
   it should "wipe all formulas mentioning bound variables from the context" in withTactics {
-    proveBy("x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, y<4".asSequent, loop("x*y>5".asFormula)(1)).subgoals should
+    proveBy("x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, y<4".asSequent, HybridProgramCalculus.loop("x*y>5".asFormula)(1))
+      .subgoals should
       contain theSameElementsInOrderAs List(
         /* init */ "x>0, y>1, z>7 ==> x*y>5, x<3, y<4".asSequent,
         /* use case */ "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent,
@@ -579,7 +597,10 @@ class DLTests extends TacticTestBase {
   }
 
   it should "do the same with a slightly more complicated formula" in withTactics {
-    val result = proveBy("x>0, y>1, z>7 ==> [{x:=2; ++ y:=z;}*]x>2, x<3, y<4".asSequent, loop("x*y>5".asFormula)(1))
+    val result = proveBy(
+      "x>0, y>1, z>7 ==> [{x:=2; ++ y:=z;}*]x>2, x<3, y<4".asSequent,
+      HybridProgramCalculus.loop("x*y>5".asFormula)(1),
+    )
 
     result.subgoals should have size 3
     // init
@@ -591,7 +612,8 @@ class DLTests extends TacticTestBase {
   }
 
   it should "apply alpha rule to extract subformulas before wiping from the context" in withTactics {
-    val result = proveBy("x>0&y>1&z>7 ==> x<3, [{x:=2;}*]x>2, x>5|y<4".asSequent, loop("x*y>5".asFormula)(2))
+    val result =
+      proveBy("x>0&y>1&z>7 ==> x<3, [{x:=2;}*]x>2, x>5|y<4".asSequent, HybridProgramCalculus.loop("x*y>5".asFormula)(2))
 
     result.subgoals should have size 3
     // init
@@ -603,7 +625,10 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not remove duplicated formulas" in withTactics {
-    val result = proveBy("x>0, x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, x<3, y<4".asSequent, loop("x*y>5".asFormula)(1))
+    val result = proveBy(
+      "x>0, x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, x<3, y<4".asSequent,
+      HybridProgramCalculus.loop("x*y>5".asFormula)(1),
+    )
 
     result.subgoals should have size 3
     // init
@@ -788,7 +813,8 @@ class DLTests extends TacticTestBase {
 
   "Loop" should "work with abstract invariant" in withTactics {
     val fml = "x>0 -> [{x:=x+1;}*]x>0".asFormula
-    val tactic = implyR(Symbol("R")) & loop("J(x)".asFormula)(Symbol("R")) < (skip, skip, assignb(Symbol("R")))
+    val tactic = implyR(Symbol("R")) & HybridProgramCalculus
+      .loop("J(x)".asFormula)(Symbol("R")) < (skip, skip, assignb(Symbol("R")))
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3
@@ -820,7 +846,7 @@ class DLTests extends TacticTestBase {
       // @note regression test for bug where listeners were not notified correctly because of exception in close
       val model = """ArchiveEntry "Test" ProgramVariables Real x; End. Problem x>0 -> [{x:=x+1;}*]x>0 End. End."""
       val fml = ArchiveParser.parseAsFormula(model)
-      val tactic = implyR(Symbol("R")) & loop("x>0".asFormula)(Symbol("R"))
+      val tactic = implyR(Symbol("R")) & HybridProgramCalculus.loop("x>0".asFormula)(Symbol("R"))
 
       val proofId = db.createProof(model)
       val interpreter = registerInterpreter(SpoonFeedingInterpreter(
@@ -846,7 +872,8 @@ class DLTests extends TacticTestBase {
 
   it should "work with multi-variate abstract invariant" in withTactics {
     val fml = "x>1 & y < -1 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
-    val tactic = implyR(Symbol("R")) & loop("J(x,y)".asFormula)(Symbol("R")) < (skip, skip, normalize)
+    val tactic = implyR(Symbol("R")) & HybridProgramCalculus
+      .loop("J(x,y)".asFormula)(Symbol("R")) < (skip, skip, normalize)
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3
@@ -890,7 +917,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "not fail on program constants" in withTactics {
-    val result = proveBy("A>0 ==> C<1, [{a_;}*]x>0".asSequent, loop("x>1".asFormula)(2))
+    val result = proveBy("A>0 ==> C<1, [{a_;}*]x>0".asSequent, HybridProgramCalculus.loop("x>1".asFormula)(2))
 
     result.subgoals should have size 3
     // init
@@ -902,7 +929,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce discrete ghosts on old(.) notation" in withTactics {
-    val result = proveBy("x>=0 ==> [{x:=x+1;}*]x>=0".asSequent, loop("x>=old(x)".asFormula)(1))
+    val result = proveBy("x>=0 ==> [{x:=x+1;}*]x>=0".asSequent, HybridProgramCalculus.loop("x>=old(x)".asFormula)(1))
     result.subgoals should have size 3
     // init
     result.subgoals(0) shouldBe "x_0>=0, x_0=x ==> x>=x_0".asSequent
@@ -913,7 +940,10 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce discrete ghosts on old(.) notation and constant keep context" in withTactics {
-    val result = proveBy("x>=0, A>0, !B>0 ==> C>1, [{x:=x+1;}*]x>=0, D>2".asSequent, loop("x>=old(x)".asFormula)(2))
+    val result = proveBy(
+      "x>=0, A>0, !B>0 ==> C>1, [{x:=x+1;}*]x>=0, D>2".asSequent,
+      HybridProgramCalculus.loop("x>=old(x)".asFormula)(2),
+    )
     result.subgoals should have size 3
     // init
     result.subgoals(0) shouldBe "x_0>=0, A>0, x_0=x ==> C>1, D>2, B>0, x>=x_0".asSequent
@@ -925,7 +955,7 @@ class DLTests extends TacticTestBase {
 
   it should "keep constant assumptions even when hidden inside non-expanded assumptions/loop invariant" in withTactics {
     val defs = "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: inv(x) ~> x/b()>=0 :: nil".asDeclaration
-    proveByS("init(x) ==> [{x:=x+1;}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs)
+    proveByS("init(x) ==> [{x:=x+1;}*]post(x)".asSequent, HybridProgramCalculus.loop("inv(x)".asFormula)(1), defs)
       .subgoals should contain theSameElementsAs List(
       "b()>0&x/b()>=1 ==> inv(x)".asSequent,
       "inv(x), b()>0 ==> post(x)".asSequent,
@@ -947,7 +977,7 @@ class DLTests extends TacticTestBase {
     val defs =
       "init(x) ~> bounds() & x/b()>=1 :: bounds() ~> b()>0 :: post(x) ~> x/b()>=-1 :: inv(x) ~> x/b()>=0 :: nil"
         .asDeclaration
-    proveByS("init(x) ==> [{x:=x+1;}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs)
+    proveByS("init(x) ==> [{x:=x+1;}*]post(x)".asSequent, HybridProgramCalculus.loop("inv(x)".asFormula)(1), defs)
       .subgoals should contain theSameElementsAs List(
       "b()>0&x/b()>=1 ==> inv(x)".asSequent,
       "inv(x), b()>0 ==> post(x)".asSequent,
@@ -957,8 +987,11 @@ class DLTests extends TacticTestBase {
 
   it should "keep constant assumptions even when non-expanded program" in withTactics {
     val defs = "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: prg{|^@|}; ~> x:=x+1; :: nil".asDeclaration
-    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, loop("x/b()>=old(x)/b()".asFormula)(1), defs)
-      .subgoals should contain theSameElementsAs List(
+    proveByS(
+      "init(x) ==> [{prg{|^@|};}*]post(x)".asSequent,
+      HybridProgramCalculus.loop("x/b()>=old(x)/b()".asFormula)(1),
+      defs,
+    ).subgoals should contain theSameElementsAs List(
       "b()>0&x_0/b()>=1, x_0=x ==> x/b()>=x_0/b()".asSequent,
       "x/b()>=x_0/b(), b()>0, x_0/b()>=1 ==> post(x)".asSequent,
       "x/b()>=x_0/b(), b()>0, x_0/b()>=1 ==> [x:=x+1;]x/b()>=x_0/b()".asSequent,
@@ -969,7 +1002,7 @@ class DLTests extends TacticTestBase {
     val defs =
       "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: inv(x) ~> x/b()>=old(x)/b() :: prg{|^@|}; ~> x:=x+1; :: nil"
         .asDeclaration
-    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs)
+    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, HybridProgramCalculus.loop("inv(x)".asFormula)(1), defs)
       .subgoals should contain theSameElementsAs List(
       "b()>0&x_0/b()>=1, x_0=x ==> x/b()>=x_0/b()".asSequent,
       "x/b()>=x_0/b(), b()>0, x_0/b()>=1 ==> post(x)".asSequent,
@@ -981,7 +1014,7 @@ class DLTests extends TacticTestBase {
     val defs =
       "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: inv(x) ~> p(x) & q(x) :: p(x) ~> x/b()>=old(x)/b() :: q(x) ~> x>=0 :: prg{|^@|}; ~> x:=x+1; :: nil"
         .asDeclaration
-    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs)
+    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, HybridProgramCalculus.loop("inv(x)".asFormula)(1), defs)
       .subgoals should contain theSameElementsAs List(
       "b()>0&x_0/b()>=1, x_0=x ==> x/b()>=x_0/b() & q(x)".asSequent,
       "x/b()>=x_0/b() & q(x), b()>0, x_0/b()>=1 ==> post(x)".asSequent,
@@ -991,8 +1024,11 @@ class DLTests extends TacticTestBase {
 
   it should "not expand unnecessarily" in withTactics {
     val defs = "init(x) ~> x>=1 :: prg{|^@|}; ~> x:=x+1; :: inv(x) ~> x>=0 :: post(x) ~> x>=-1 :: nil".asDeclaration
-    proveByS("init(x) ==> [{prg{|^@|};}*@invariant(inv(x))]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs)
-      .subgoals should contain theSameElementsAs List(
+    proveByS(
+      "init(x) ==> [{prg{|^@|};}*@invariant(inv(x))]post(x)".asSequent,
+      HybridProgramCalculus.loop("inv(x)".asFormula)(1),
+      defs,
+    ).subgoals should contain theSameElementsAs List(
       "init(x) ==> inv(x)".asSequent,
       "inv(x) ==> [prg{|^@|};]inv(x)".asSequent,
       "inv(x) ==> post(x)".asSequent,
@@ -1005,7 +1041,8 @@ class DLTests extends TacticTestBase {
       "motion{|^@|}; ~> { x' = -y } :: " +
       "nil").asDeclaration
     val s = "init(x,y) ==> [{motion{|^@|};}*]x>0".asSequent
-    proveByS(s, loop("inv(x,y)".asFormula)(1), defs).subgoals should contain theSameElementsAs List(
+    proveByS(s, HybridProgramCalculus.loop("inv(x,y)".asFormula)(1), defs)
+      .subgoals should contain theSameElementsAs List(
       "x>=a()&y>=0&a()>0 ==> inv(x,y)".asSequent,
       "inv(x,y), y>=0, a()>0 ==> [{x'=-y}]inv(x,y)".asSequent,
       "inv(x,y), y>=0, a()>0 ==> x>0".asSequent,
@@ -1016,7 +1053,7 @@ class DLTests extends TacticTestBase {
     val defs = "init(x) ~> x>=y() :: prg{|^@|}; ~> x:=x+1; :: inv(x) ~> x>=0 :: post(x) ~> x>=-1 :: nil".asDeclaration
     proveByS(
       "init(x), y()>=1 ==> [{prg{|^@|};}*@invariant(inv(x))]post(x)".asSequent,
-      loop("inv(x)".asFormula)(1),
+      HybridProgramCalculus.loop("inv(x)".asFormula)(1),
       defs,
     ).subgoals should contain theSameElementsAs List(
       "x>=y(), y()>=1 ==> inv(x)".asSequent,
@@ -1061,29 +1098,32 @@ class DLTests extends TacticTestBase {
   }
 
   "Discrete ghost" should "introduce assignment to fresh variable" in withTactics {
-    val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable)(1))
+    val result = proveBy("y>0".asFormula, HybridProgramCalculus.discreteGhost("y".asVariable)(1))
     result.subgoals.loneElement shouldBe "y_0=y ==> y_0>0".asSequent
   }
 
   it should "introduce assignment to fresh variable in antecedent" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("y>0".asFormula), IndexedSeq()), discreteGhost("y".asVariable)(-1))
+    val result = proveBy(
+      Sequent(IndexedSeq("y>0".asFormula), IndexedSeq()),
+      HybridProgramCalculus.discreteGhost("y".asVariable)(-1),
+    )
     result.subgoals.loneElement shouldBe "y_0=y, y_0>0 ==> ".asSequent
   }
 
   it should "assign term t to fresh variable" in withTactics {
-    val result = proveBy("y+1>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
+    val result = proveBy("y+1>0".asFormula, HybridProgramCalculus.discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
     result.subgoals.loneElement shouldBe "z=y+1 ==> z>0".asSequent
   }
 
   it should "allow arbitrary terms t when a ghost name is specified" in withTactics {
-    val result = proveBy("y>0".asFormula, discreteGhost("x+5".asTerm, Some("z".asVariable))(1))
+    val result = proveBy("y>0".asFormula, HybridProgramCalculus.discreteGhost("x+5".asTerm, Some("z".asVariable))(1))
     result.subgoals.loneElement shouldBe "z=x+5 ==> y>0".asSequent
   }
 
   it should "use same variable if asked to do so" in withTactics {
     proveBy("y>0".asFormula, DLBySubst.stutter("y".asVariable)(1)).subgoals.loneElement shouldBe "==> [y:=y;]y>0"
       .asSequent
-    proveBy("y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1))
+    proveBy("y>0".asFormula, HybridProgramCalculus.discreteGhost("y".asVariable, Some("y".asVariable))(1))
       .subgoals
       .loneElement shouldBe "==> [y:=y;]y>0".asSequent
   }
@@ -1091,17 +1131,18 @@ class DLTests extends TacticTestBase {
   it should "not accept variables present in f" in withTactics {
     a[BelleThrowable] should be thrownBy proveBy(
       "y>z+1".asFormula,
-      discreteGhost("y".asVariable, Some("z".asVariable))(1),
+      HybridProgramCalculus.discreteGhost("y".asVariable, Some("z".asVariable))(1),
     )
   }
 
   it should "work on assignments" in withTactics {
-    val result = proveBy("[y:=2;]y>0".asFormula, discreteGhost("y".asVariable)(1))
+    val result = proveBy("[y:=2;]y>0".asFormula, HybridProgramCalculus.discreteGhost("y".asVariable)(1))
     result.subgoals.loneElement shouldBe "y_0=y ==> [y:=2;]y>0".asSequent
   }
 
   it should "introduce ghosts in the middle of formulas" in withTactics {
-    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable)(1, 1 :: Nil))
+    val result =
+      proveBy("[x:=1;][y:=2;]y>0".asFormula, HybridProgramCalculus.discreteGhost("y".asVariable)(1, 1 :: Nil))
     result.subgoals.loneElement shouldBe "==> [x:=1;]\\forall y_0 (y_0=y -> [y:=2;]y>0)".asSequent
   }
 
@@ -1109,15 +1150,17 @@ class DLTests extends TacticTestBase {
     proveBy("[x:=1;][y:=2;]y>0".asFormula, DLBySubst.stutter("y".asVariable)(1, 1 :: Nil))
       .subgoals
       .loneElement shouldBe "==> [x:=1;][y:=y;][y:=2;]y>0".asSequent
-    proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1, 1 :: Nil))
-      .subgoals
-      .loneElement shouldBe "==> [x:=1;][y:=y;][y:=2;]y>0".asSequent
+    proveBy(
+      "[x:=1;][y:=2;]y>0".asFormula,
+      HybridProgramCalculus.discreteGhost("y".asVariable, Some("y".asVariable))(1, 1 :: Nil),
+    ).subgoals.loneElement shouldBe "==> [x:=1;][y:=y;][y:=2;]y>0".asSequent
   }
 
   it should "introduce self-assignment ghosts in the middle of formulas when bound" in withTactics {
-    proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1 :: Nil))
-      .subgoals
-      .loneElement shouldBe "==> [x:=x+1;][x:=x;][{x'=2}]x>0".asSequent
+    proveBy(
+      "[x:=x+1;][{x'=2}]x>0".asFormula,
+      HybridProgramCalculus.discreteGhost("x".asVariable, Some("x".asVariable))(1, 1 :: Nil),
+    ).subgoals.loneElement shouldBe "==> [x:=x+1;][x:=x;][{x'=2}]x>0".asSequent
   }
 //
 //  ignore should "introduce ghosts in modality predicates" in {
@@ -1128,43 +1171,48 @@ class DLTests extends TacticTestBase {
 //  }
 
   it should "work on loops" in withTactics {
-    val result = proveBy("[{y:=y+1;}*]y>0".asFormula, discreteGhost("y".asVariable)(1))
+    val result = proveBy("[{y:=y+1;}*]y>0".asFormula, HybridProgramCalculus.discreteGhost("y".asVariable)(1))
     result.subgoals.loneElement shouldBe "y_0=y ==> [{y:=y+1;}*]y>0".asSequent
   }
 
   it should "work on ODEs" in withTactics {
-    val result = proveBy("[{y'=1}]y>0".asFormula, discreteGhost("y".asVariable)(1))
+    val result = proveBy("[{y'=1}]y>0".asFormula, HybridProgramCalculus.discreteGhost("y".asVariable)(1))
     result.subgoals.loneElement shouldBe "y_0=y ==> [{y'=1}]y>0".asSequent
   }
 
   it should "work on ODEs mentioning the ghost in the evolution domain" in withTactics {
-    val result = proveBy("[{y'=1 & y+1>0}]y>0".asFormula, discreteGhost("y+1".asTerm)(1))
+    val result = proveBy("[{y'=1 & y+1>0}]y>0".asFormula, HybridProgramCalculus.discreteGhost("y+1".asTerm)(1))
     result.subgoals.loneElement shouldBe "ghost=y+1 ==> [{y'=1 & y+1>0}]y>0".asSequent
   }
 
   it should "not propagate arbitrary terms into ODEs" in withTactics {
-    val result = proveBy("[{y'=1}]y>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
+    val result =
+      proveBy("[{y'=1}]y>0".asFormula, HybridProgramCalculus.discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
     result.subgoals.loneElement shouldBe "z=y+1 ==> [{y'=1}]y>0".asSequent
   }
 
   it should "abbreviate terms in a formula" in withTactics {
-    val result = proveBy("[x:=5+0;]x>0".asFormula, discreteGhost("0".asTerm, Some("z".asVariable))(1))
+    val result =
+      proveBy("[x:=5+0;]x>0".asFormula, HybridProgramCalculus.discreteGhost("0".asTerm, Some("z".asVariable))(1))
     result.subgoals.loneElement shouldBe "z=0 ==> [x:=5+z;]x>z".asSequent
   }
 
   it should "introduce anonymous ghosts for terms" in withTactics {
-    val result = proveBy("x>0".asFormula, discreteGhost("y+v/1".asTerm)(1))
+    val result = proveBy("x>0".asFormula, HybridProgramCalculus.discreteGhost("y+v/1".asTerm)(1))
     result.subgoals.loneElement shouldBe "ghost=y+v/1 ==> x>0".asSequent
   }
 
   it should "not clash with preexisting variables when introducing anonymous ghosts" in withTactics {
-    val result = proveBy("ghost>0 ==> x>0".asSequent, discreteGhost("y+v/1".asTerm)(1))
+    val result = proveBy("ghost>0 ==> x>0".asSequent, HybridProgramCalculus.discreteGhost("y+v/1".asTerm)(1))
     result.subgoals.loneElement shouldBe "ghost>0, ghost_0=y+v/1 ==> x>0".asSequent
   }
 
   it should "FEATURE_REQUEST: keep positions stable" taggedAs TodoTest in withTactics {
     // @todo last step (implyR) in assignEquality step used in discreteGhost changes position
-    val result = proveBy("a=1 ==> b=2, [x:=5+0;]x>0, c=3".asSequent, discreteGhost("0".asTerm, Some("z".asVariable))(2))
+    val result = proveBy(
+      "a=1 ==> b=2, [x:=5+0;]x>0, c=3".asSequent,
+      HybridProgramCalculus.discreteGhost("0".asTerm, Some("z".asVariable))(2),
+    )
     result.subgoals.loneElement shouldBe "a=1, z=0 ==> b=2, [x:=5+z;]x>z, c=3".asSequent
   }
 
@@ -1182,10 +1230,10 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce differential symbol ghosts" in withTactics {
-    proveBy("==> y=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1))
+    proveBy("==> y=1".asSequent, HybridProgramCalculus.discreteGhost("1".asTerm, Some("x'".asVariable))(1))
       .subgoals
       .loneElement shouldBe "==> [x':=1;]y=x'".asSequent
-    proveBy("==> x=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1))
+    proveBy("==> x=1".asSequent, HybridProgramCalculus.discreteGhost("1".asTerm, Some("x'".asVariable))(1))
       .subgoals
       .loneElement shouldBe "==> [x':=1;]x=x'".asSequent
   }

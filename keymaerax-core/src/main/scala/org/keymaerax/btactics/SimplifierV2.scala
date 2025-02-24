@@ -1085,7 +1085,7 @@ object SimplifierV2 {
 
         val seq = proveBy(
           Sequent(IndexedSeq(f), IndexedSeq(tar)),
-          loop(f)(1) <
+          HybridProgramCalculus.loop(f)(1) <
             (
               close,
               useAt(Ax.iterateb)(-1) & andL(-1) & close,

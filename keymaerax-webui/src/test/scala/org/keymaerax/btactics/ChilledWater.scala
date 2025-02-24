@@ -123,7 +123,7 @@ class ChilledWater extends TacticTestBase {
                 |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
     val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") &
-      loop(inv)(1) &
+      HybridProgramCalculus.loop(inv)(1) &
       printIndexed("After loop") <
       (
         QE & done,
@@ -205,7 +205,7 @@ class ChilledWater extends TacticTestBase {
       ) & OnAll(ODE(Symbol("R"))) & done
 
     val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") &
-      loop(inv)(1) &
+      HybridProgramCalculus.loop(inv)(1) &
       printIndexed("After loop") <
       (
         QE & done,
@@ -245,7 +245,7 @@ class ChilledWater extends TacticTestBase {
                 |    (v=1 -> Tw=a()))""".stripMargin.asFormula
 
     val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & printIndexed("implyR then andL") &
-      loop(inv)(1) &
+      HybridProgramCalculus.loop(inv)(1) &
       printIndexed("After loop") <
       (
         QE & done,

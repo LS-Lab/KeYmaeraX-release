@@ -7,7 +7,7 @@ package org.keymaerax.bellerophon.pptests
 
 import org.keymaerax.bellerophon.{ReflectiveExpressionBuilder, SaturateTactic}
 import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import org.keymaerax.btactics.{FixedGenerator, SequentCalculus, TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{FixedGenerator, HybridProgramCalculus, SequentCalculus, TacticTestBase, TactixLibrary}
 import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.parser.StringConverter._
 import org.keymaerax.tags.UsualTest
@@ -65,7 +65,7 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   }
 
   "Applied position with input tactics" should "print input and position" in withTactics {
-    val tactic = TactixLibrary.loop("x>0".asFormula)(1)
+    val tactic = HybridProgramCalculus.loop("x>0".asFormula)(1)
     BellePrettyPrinter(tactic) shouldBe "loop(\"x>0\", 1)"
     roundTrip("loop(\"x>0\", 1)")
   }

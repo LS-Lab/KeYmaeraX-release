@@ -52,9 +52,9 @@ import scala.util.Try
  *   - [[UnifyUSCalculus]]: Automatic unification-based Uniform Substitution Calculus with indexing.
  *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
  *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
+ *   - [[HybridProgramCalculus]]: Hybrid program derived proof rules for differential dynamic logic.
  *
  * The tactic library also includes important proof calculus subcollections:
- *   - [[HybridProgramCalculus]]: Hybrid program derived proof rules for differential dynamic logic.
  *   - [[DifferentialEquationCalculus]]: Differential equation proof rules for differential dynamic logic.
  *
  * @author
@@ -84,7 +84,7 @@ import scala.util.Try
  */
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
-object TactixLibrary extends TacticProvider with DifferentialEquationCalculus with HybridProgramCalculus {
+object TactixLibrary extends TacticProvider with DifferentialEquationCalculus {
 
   /** @inheritdoc */
   override def getInfo: (Class[_], universe.Type) = (TactixLibrary.getClass, universe.typeOf[TactixLibrary.type])
@@ -486,7 +486,7 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus wi
                     logger.warn("ChooseSome: error listing options " + err, err)
                     List[Formula]().iterator
                 },
-              (inv: Formula) => loop(inv)(pos) & onAll(explore(gen)),
+              (inv: Formula) => HybridProgramCalculus.loop(inv)(pos) & onAll(explore(gen)),
             )
           case (_, Some(Box(Loop(_), _))) =>
             throw new IllegalArgumentException("Explore requires a configurable generator.")
@@ -570,7 +570,7 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus wi
    */
   def loop(gen: InvariantGenerator): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = loop(nextOrElse(
+      override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = HybridProgramCalculus.loop(nextOrElse(
         gen.generate(sequent, pos, defs).map(_.formula).iterator,
         throw new BelleNoProgress(
           "Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos
@@ -609,7 +609,8 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus wi
                       logger.warn("ChooseSome: error listing options " + err, err)
                       List[Formula]().iterator
                   },
-                (inv: Formula) => loop(inv)(pos) & onAll(auto(gen, keepQEFalse = None) & done) & done,
+                (inv: Formula) =>
+                  HybridProgramCalculus.loop(inv)(pos) & onAll(auto(gen, keepQEFalse = None) & done) & done,
               )
             case _ =>
               logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
@@ -623,7 +624,8 @@ object TactixLibrary extends TacticProvider with DifferentialEquationCalculus wi
                       List[Formula]().iterator
                   },
                 (inv: Formula) =>
-                  DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(auto(gen, keepQEFalse = None) & done) & done,
+                  DLBySubst.cexLoop(inv)(pos) & HybridProgramCalculus.loop(inv)(pos) &
+                    onAll(auto(gen, keepQEFalse = None) & done) & done,
               )
           }
         case _ => throw new TacticInapplicableFailure("Loopauto is applicable to nondeterministic repetition only")

@@ -1062,7 +1062,7 @@ private object ToolTactics extends TacticProvider {
 
     lazy val step = seq(pos.top) match {
       case Box(ODESystem(_, _), _) => diffInvariant(ensuredFormula)(pos.top) & dW(pos.top)
-      case Box(Loop(_), _) => loop(ensuredFormula)(pos.top) & Idioms.<(master(), skip, master())
+      case Box(Loop(_), _) => HybridProgramCalculus.loop(ensuredFormula)(pos.top) & Idioms.<(master(), skip, master())
       case Box(Test(_), _) => HilbertCalculus.testb(pos.top) & implyR(pos.top)
       case Box(_, _) => TactixLibrary.step(pos.top)
       case Forall(v, _) if pos.isAnte => allL(v.head)(pos.top)

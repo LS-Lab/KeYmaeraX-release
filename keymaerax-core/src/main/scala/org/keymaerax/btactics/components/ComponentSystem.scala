@@ -540,7 +540,7 @@ object ComponentSystem extends TacticProvider {
                    SeqTactic(
                      DebuggingTactics.print("Strengthen"), /* todo: hide all non-const factcs */
                      hideL(-1) /* End todo */,
-                     generalize(c2inv)(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
+                     HybridProgramCalculus.generalize(c2inv)(1, 1 :: 1 :: 1 :: 1 :: 1 :: Nil),
                      BranchTactic(
                        SeqTactic(
                          DebuggingTactics.print("Close by C2 induction step"),
@@ -922,7 +922,7 @@ object ComponentSystem extends TacticProvider {
         }
         SeqTactic(
           implyR(1),
-          loop(And(inv1, And(inv2, zeta)))(1),
+          HybridProgramCalculus.loop(And(inv1, And(inv2, zeta)))(1),
           DebuggingTactics.print("Loop"),
           BranchTactic(
             SeqTactic(

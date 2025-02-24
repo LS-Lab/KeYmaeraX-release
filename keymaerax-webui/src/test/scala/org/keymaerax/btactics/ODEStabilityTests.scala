@@ -876,7 +876,7 @@ class ODEStabilityTests extends TacticTestBase {
                         implyL(-11) <
                         (
                           hideR(1) & prop,
-                          generalize("theta*theta+w*w < tau*tau".asFormula)(1) <
+                          HybridProgramCalculus.generalize("theta*theta+w*w < tau*tau".asFormula)(1) <
                             (
                               hideL(-5) & hideL(-3) &
                                 ODEInvariance.dCClosure(1) <

@@ -60,7 +60,7 @@ object InvariantProvers {
             .formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.what.prettyString).mkString(",") + ")")
           SearchAndRescueAgain(
             jj :: Nil,
-            loop(subst(jj))(pos) <
+            HybridProgramCalculus.loop(subst(jj))(pos) <
               (
                 nil,
                 nil,
@@ -251,7 +251,7 @@ object InvariantProvers {
 
           SearchAndRescueAgain(
             jjl :: jja :: Nil,
-            loop(subst(jj))(pos) <
+            HybridProgramCalculus.loop(subst(jj))(pos) <
               (
                 nil,
                 nil,

@@ -64,7 +64,8 @@ class Robix extends TacticTestBase {
       ) &
       printIndexed("After replaceTransform") & speculativeQE & print("Proved acc arithmetic")
 
-    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) < (
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & HybridProgramCalculus
+      .loop(invariant)(Symbol("R")) < (
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") < (
@@ -106,7 +107,8 @@ class Robix extends TacticTestBase {
     val dw: BelleExpr =
       SaturateTactic(andL(Symbol("L"))) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
-    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) < (
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & HybridProgramCalculus
+      .loop(invariant)(Symbol("R")) < (
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") &
@@ -286,7 +288,8 @@ class Robix extends TacticTestBase {
     )
     accArithYLemma shouldBe Symbol("proved")
 
-    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) < (
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & HybridProgramCalculus
+      .loop(invariant)(Symbol("R")) < (
       /* base case */ QE & print("Base case done"),
       /* use case */ QE & print("Use case done"),
       /* induction step */ chase(1) & allR(1) * 2 & implyR(1) & andR(1) < (
@@ -473,7 +476,8 @@ class Robix extends TacticTestBase {
         "abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))".asFormula,
       ) & speculativeQE & printIndexed("After transform") & print("Proved acc arithmetic")
 
-    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) < (
+    val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & HybridProgramCalculus
+      .loop(invariant)(Symbol("R")) < (
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") < (
@@ -524,7 +528,8 @@ class Robix extends TacticTestBase {
           "abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))".asFormula,
         ) & speculativeQE & print("Proved acc arithmetic")
 
-      val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & loop(invariant)(Symbol("R")) < (
+      val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) & HybridProgramCalculus
+        .loop(invariant)(Symbol("R")) < (
         /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
         /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
         /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") < (
@@ -600,7 +605,8 @@ class Robix extends TacticTestBase {
 
     val allImplyTactic = SaturateTactic(SaturateTactic(allR(Symbol("R"))) & implyR(Symbol("R")))
 
-    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop(invariant)(Symbol("R")) < (
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & HybridProgramCalculus
+      .loop(invariant)(Symbol("R")) < (
       /* base case */ QE & print("Base case done"),
       /* use case */ QE & print("Use case done"),
       /* step */ SaturateTactic(andL(Symbol("L"))) & chase(Symbol("R")) & allR(Symbol("R")) * 2 & implyR(
@@ -894,7 +900,8 @@ class Robix extends TacticTestBase {
           .asFormula,
       ) & prop & onAll(print("QE") & speculativeQE) & print("Proved acc arithmetic")
 
-    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop(invariant)(Symbol("R")) < (
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & HybridProgramCalculus
+      .loop(invariant)(Symbol("R")) < (
       /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
       /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
       /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") < (
@@ -930,7 +937,8 @@ class Robix extends TacticTestBase {
         .stripMargin
         .asFormula
 
-    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & loop(invariant)(1) & Idioms.<(
+    val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) & HybridProgramCalculus
+      .loop(invariant)(1) & Idioms.<(
       print("Base case") & QE & done,
       print("Use case") & QE & done,
       print("Induction step") & unfoldProgramNormalize & onAll(ODE(Symbol("R")) & done),

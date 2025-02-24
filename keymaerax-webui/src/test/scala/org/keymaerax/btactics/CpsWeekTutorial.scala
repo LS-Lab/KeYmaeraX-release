@@ -36,8 +36,8 @@ class CpsWeekTutorial extends TacticTestBase {
   "Example 0" should "prove with abstract invariant J(x)" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/00_robosimple.kyx"))
     val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-      loop("J(v)".asFormula)(Symbol("R")) < (skip, skip, print("Step") & normalize & OnAll(solve(Symbol("R")))) &
-      US(USubst(
+      HybridProgramCalculus.loop("J(v)".asFormula)(Symbol("R")) <
+      (skip, skip, print("Step") & normalize & OnAll(solve(Symbol("R")))) & US(USubst(
         SubstitutionPair(
           "J(v)".asFormula.replaceFree("v".asTerm, DotTerm()),
           "v<=10".asFormula.replaceFree("v".asTerm, DotTerm()),
@@ -50,7 +50,7 @@ class CpsWeekTutorial extends TacticTestBase {
   "Example 1" should "have 4 open goals for abstract invariant J(x,v)" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
     val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-      loop("J(x,v)".asFormula)(Symbol("R")) <
+      HybridProgramCalculus.loop("J(x,v)".asFormula)(Symbol("R")) <
       (print("Base case"), print("Use case"), print("Step") & normalize & OnAll(solve(Symbol("R"))))
     val result = proveBy(s, tactic)
     result.subgoals should have size 4
@@ -81,7 +81,7 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "prove with a manually written searchy tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
     val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-      loop("v^2<=2*b()*(m()-x)".asFormula)(Symbol("R")) <
+      HybridProgramCalculus.loop("v^2<=2*b()*(m()-x)".asFormula)(Symbol("R")) <
       (print("Base case") & id, print("Use case") & QE, print("Step") & normalize & solve(Symbol("R")) & QE)
     proveBy(s, tactic) shouldBe Symbol("proved")
   }
@@ -238,7 +238,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { _ =>
     def tactic(j: Formula) = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-      loop(j)(Symbol("R")) <
+      HybridProgramCalculus.loop(j)(Symbol("R")) <
       (print("Base case") & id, print("Use case") & QE, print("Step") & normalize & OnAll(solve(Symbol("R")) & QE))
 
     val simple = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
@@ -294,7 +294,8 @@ class CpsWeekTutorial extends TacticTestBase {
         hideR(Symbol("R"), s"2*b()*abs(m$x-$x)>v^2".asFormula)
 
       val tactic = implyR(Symbol("R")) & SaturateTactic(andL(Symbol("L"))) &
-        loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)(Symbol("R")) <
+        HybridProgramCalculus
+          .loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)(Symbol("R")) <
         (
           print("Base case") & QE,
           print("Use case") & QE,

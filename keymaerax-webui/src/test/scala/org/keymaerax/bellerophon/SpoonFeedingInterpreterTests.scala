@@ -13,6 +13,7 @@ import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.{
   DebuggingTactics,
   DifferentialEquationCalculus,
+  HybridProgramCalculus,
   Idioms,
   SimplifierV3,
   TacticTestBase,
@@ -200,7 +201,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
       val interpreter = createInterpreter(proofId, db.db)
 
-      val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
+      val tactic = implyR(1) & HybridProgramCalculus.loop("x>0".asFormula)(1)
       interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
       val tree = DbProofTree(db.db, proofId.toString)
       tree.tactic shouldBe tacticParser("""pending("implyR(1)") ; pending("loop(\"x>0\", 1)") ; todo""")
@@ -214,7 +215,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
       val interpreter = createInterpreter(proofId, db.db)
 
-      val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
+      val tactic = implyR(1) & HybridProgramCalculus.loop("x>0".asFormula)(1)
       interpreter(tactic, BelleProvable.plain(ProvableSig.startPlainProof(ArchiveParser.parseAsFormula(modelContent))))
       val tree = DbProofTree(db.db, proofId.toString)
       tree.tactic shouldBe tacticParser("""implyR('R=="x>0->x>0"); pending("loop(\"x>0\", 1)") ; todo""")
@@ -868,7 +869,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         recordInternal = true,
       ))
       interpreter(
-        implyR(1) & loop("x>=0".asFormula)(1),
+        implyR(1) & HybridProgramCalculus.loop("x>=0".asFormula)(1),
         BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)),
       )
 
@@ -936,7 +937,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         recordInternal = true,
       ))
       interpreter(
-        implyR(1) & loop("x>=0".asFormula)(1),
+        implyR(1) & HybridProgramCalculus.loop("x>=0".asFormula)(1),
         BelleProvable.plain(ProvableSig.startPlainProof(problem.asFormula)),
       )
 

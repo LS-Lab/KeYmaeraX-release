@@ -14,6 +14,7 @@ import org.keymaerax.btactics.{
   ConfigurableGenerator,
   FixedGenerator,
   HilbertCalculus,
+  HybridProgramCalculus,
   Invariant,
   InvariantGenerator,
   TacticTestBase,
@@ -256,7 +257,7 @@ class ScriptedRequestTests extends TacticTestBase {
       val tacticRunner = runTactic(db, t, proofId) _
 
       tacticRunner("()", implyR(1))
-      tacticRunner("(1,0)", loop("x>=1".asFormula)(1))
+      tacticRunner("(1,0)", HybridProgramCalculus.loop("x>=1".asFormula)(1))
       inside(new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponse(t)) {
         case AgendaAwesomeResponse(_, _, root, l1 :: l2 :: l3 :: Nil, _, _, _, _) =>
           root should have(Symbol("goal")(Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))

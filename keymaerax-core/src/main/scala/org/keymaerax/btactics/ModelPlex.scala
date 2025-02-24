@@ -1016,7 +1016,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
       .foldLeft[BelleExpr](tactic)((tactic, c) => let(c._1, c._2, tactic))
 
     DebuggingTactics.print("Proving sandbox safety") &
-      chase(1) & SaturateTactic((allR(1) | implyR(1))) & loop(inv)(1) < (
+      chase(1) & SaturateTactic((allR(1) | implyR(1))) & HybridProgramCalculus.loop(inv)(1) < (
         DebuggingTactics.print("Proving base case") & constify(useLemma(name + "_0", Some(prop))) & DebuggingTactics
           .done("Base case"),
         DebuggingTactics.print("Proving use case") & constify(useLemma(name + "_1", Some(prop))) & DebuggingTactics
@@ -1025,7 +1025,7 @@ object ModelPlex extends TacticProvider with ModelPlexTrait with Logging {
           DebuggingTactics.print("Executing external control") &
           composeb(1) & (composeb(1) & randomb(1) & allR(1)) * (numCtrlVars - 1) & randomb(1) & allR(1) &
           DebuggingTactics.print("Splitting actuation/fallback from plant") &
-          composeb(1) & generalize(inv)(1) < (
+          composeb(1) & HybridProgramCalculus.generalize(inv)(1) < (
             DebuggingTactics.print("Proving controllers") & choiceb(1) & andR(1) < (
               DebuggingTactics.print("Proving external control actuation") &
                 composeb(1) & testb(1) &

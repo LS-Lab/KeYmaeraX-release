@@ -655,7 +655,7 @@ object SwitchedSystems extends TacticProvider {
 
     // Continuation
     val conttac = ss match {
-      case StateDependent(odes) => loop(inv)(pos) < (
+      case StateDependent(odes) => HybridProgramCalculus.loop(inv)(pos) < (
           prop,
           prop,
           implyRi & implyR(1) & andL(Symbol("Llast")) &
@@ -665,7 +665,7 @@ object SwitchedSystems extends TacticProvider {
         )
       case _ => composeb(pos) &
           abstractionb(pos) & SaturateTactic(allR(pos)) &
-          loop(inv)(pos) < (
+          HybridProgramCalculus.loop(inv)(pos) < (
             prop,
             prop,
             implyRi & implyR(1) & andL(Symbol("Llast")) &
@@ -876,7 +876,7 @@ object SwitchedSystems extends TacticProvider {
 
     // Continuation
     val conttac = ss match {
-      case StateDependent(odes) => loop(inv)(pos) < (
+      case StateDependent(odes) => HybridProgramCalculus.loop(inv)(pos) < (
           cutR(Equal(tVar, Number(0)))(pos) < (
             id,
             implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT
@@ -897,7 +897,7 @@ object SwitchedSystems extends TacticProvider {
         )
       case _ => composeb(pos) &
           abstractionb(pos) & SaturateTactic(allR(pos)) &
-          loop(inv)(pos) < (
+          HybridProgramCalculus.loop(inv)(pos) < (
             cutR(Equal(tVar, Number(0)))(pos) < (
               id,
               implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) & closeT
@@ -1135,7 +1135,7 @@ object SwitchedSystems extends TacticProvider {
         // However, can tweak proof to bypass this requirement
         val invPre = (ss.odes zip lyaps).map(odel => And(odel._1.constraint, Less(odel._2, w)))
         val inv = And(invPre.reduceRight(Or.apply), Less(normsq, epssq))
-        loop(inv)(pos) < (
+        HybridProgramCalculus.loop(inv)(pos) < (
           andR(pos) < (
             ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3.simplify(pos) &
               // assumes domains cover entire space, if not, the loop invariant mut split
@@ -1158,16 +1158,16 @@ object SwitchedSystems extends TacticProvider {
           .map(namel => Imply(Equal(u, mkMode(namel._1._1)), Less(namel._2, w)))
           .reduceRight(And.apply)
 
-        composeb(pos) & generalize(invMode)(pos) < (
+        composeb(pos) & HybridProgramCalculus.generalize(invMode)(pos) < (
           // note: generalize throws away context, so pos is now 1
           unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
-          loop(inv)(1) < (
+          HybridProgramCalculus.loop(inv)(1) < (
             andR(1) < (
               ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3.simplify(1) &
                 ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE, prop
             ),
             prop,
-            composeb(1) & generalize(gen)(1) < (
+            composeb(1) & HybridProgramCalculus.generalize(gen)(1) < (
               SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification
                 .hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
               (lyaps zip wis)
@@ -1470,12 +1470,12 @@ object SwitchedSystems extends TacticProvider {
         .map((mode, body) => Imply(Equal(ss.u, mkMode(mode._1)), And(body, GreaterEqual(ss.timer, Number(0)))))
         .reduceRight(And.apply)
 
-      composeb(pos) & composeb(pos) & generalize(invMode)(pos) < (
+      composeb(pos) & composeb(pos) & HybridProgramCalculus.generalize(invMode)(pos) < (
         // note: generalize throws away context, so pos is now 1
         unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
         assignb(1) & // timer :=0
           DebuggingTactics.debug("loop: " + inv, debugTactic) &
-          loop(inv)(1) < (
+          HybridProgramCalculus.loop(inv)(1) < (
             exhaustiveEqL2R(-2) & andR(1) < (
               ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3
                 .fullSimplify & // fullSimplify needed for unstable modes
@@ -1483,7 +1483,7 @@ object SwitchedSystems extends TacticProvider {
               andR(1) < (cohideR(1) & Idioms.?(QE & done), prop)
             ),
             prop,
-            composeb(1) & generalize(gen)(1) < (
+            composeb(1) & HybridProgramCalculus.generalize(gen)(1) < (
               SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification
                 .hideFactsAbout(wis) & unfoldProgramNormalize &
                 OnAll(Idioms.?(QE & done)),
@@ -1811,7 +1811,7 @@ object SwitchedSystems extends TacticProvider {
         // However, can tweak proof to bypass this requirement
         val inv = invPre.reduceRight(Or.apply)
 
-        loop(inv)(pos) < (
+        HybridProgramCalculus.loop(inv)(pos) < (
           cutR(Equal(tVar, Number(0)))(pos) < (
             id,
             implyR(pos) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(pos) &
@@ -1883,10 +1883,10 @@ object SwitchedSystems extends TacticProvider {
           )
           .reduceRight(And.apply)
 
-        composeb(pos) & generalize(invMode)(pos) < (
+        composeb(pos) & HybridProgramCalculus.generalize(invMode)(pos) < (
           unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
           // note: generalize throws away context, so pos is now 1
-          loop(inv)(1) < (
+          HybridProgramCalculus.loop(inv)(1) < (
             cutR(Equal(tVar, Number(0)))(pos) < (
               id,
               implyR(1) & exhaustiveEqL2R(Symbol("Llast")) & SimplifierV3.simplify(1) & closeT
@@ -1905,7 +1905,7 @@ object SwitchedSystems extends TacticProvider {
                 )
                 .reduceRight((p1, p2) => orL(-1) < (p1, p2)),
             ArithmeticSimplification.hideFactsAbout(TVar :: eps :: uis) &
-              composeb(1) & generalize(gen)(1) < (
+              composeb(1) & HybridProgramCalculus.generalize(gen)(1) < (
                 ArithmeticSimplification.hideFactsAbout(kis) & unfoldProgramNormalize & OnAll(QE),
                 kis
                   .lazyZip(lyaps)
@@ -2241,12 +2241,12 @@ object SwitchedSystems extends TacticProvider {
         )
         .reduceRight(And.apply)
 
-      composeb(pos) & composeb(pos) & generalize(invMode)(pos) < (
+      composeb(pos) & composeb(pos) & HybridProgramCalculus.generalize(invMode)(pos) < (
         // note: generalize throws away context, so pos is now 1
         unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
         andL(Symbol("Llast")) & assignb(1) & // timer :=0
           DebuggingTactics.debug("loop: " + inv, debugTactic) &
-          loop(inv)(1) < (
+          HybridProgramCalculus.loop(inv)(1) < (
             exhaustiveEqL2R(-2) & exhaustiveEqL2R(-3) &
               andR(1) < (
                 ArithmeticSimplification.hideFactsAbout(eps :: wis) & SimplifierV3
@@ -2268,7 +2268,7 @@ object SwitchedSystems extends TacticProvider {
                 )
                 .reduceRight((p1, p2) => orL(Symbol("Llast")) < (p1, p2)),
             ArithmeticSimplification.hideFactsAbout(TVar :: eps :: uis) &
-              composeb(1) & generalize(gen)(1) < (
+              composeb(1) & HybridProgramCalculus.generalize(gen)(1) < (
                 SaturateTactic(andL(Symbol("L"))) & ArithmeticSimplification
                   .hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
                 invLess
@@ -2733,7 +2733,7 @@ object SwitchedSystems extends TacticProvider {
 
     // The relevant tactic for a switched system
     val inv = And(Less(lyap, w), Less(normsq, epssq))
-    val looptac = loop(inv)(pos) < (
+    val looptac = HybridProgramCalculus.loop(inv)(pos) < (
       prop,
       prop,
       implyRi & implyR(pos) & andL(Symbol("Llast")) & chase(pos) &

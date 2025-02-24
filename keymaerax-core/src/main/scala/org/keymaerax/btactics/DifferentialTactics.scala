@@ -1083,7 +1083,10 @@ private object DifferentialTactics extends TacticProvider with Logging {
             .patch(pos.index0, Nil, 1)
             .flatMap(StaticSemantics.symbols)
           val storePrimedVars = primedVars.filter(symbols.contains)
-          storePrimedVars.map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
+          storePrimedVars
+            .map(HybridProgramCalculus.discreteGhost(_)(pos))
+            .reduceOption[BelleExpr](_ & _)
+            .getOrElse(skip) &
             (exhaustiveEqR2L(Symbol("Llast")) & hideL(Symbol("Llast"))) * storePrimedVars.size
         })
 
@@ -1666,8 +1669,8 @@ private object DifferentialTactics extends TacticProvider with Logging {
 
     cut(caseDistinction) < (
       orL(Symbol("Llast")) < (
-        generalize(openSetConstructor(lhs, rhs))(1) < (skip, QE & done),
-        generalize(Equal(lhs, rhs))(1) < (skip, QE & done)
+        HybridProgramCalculus.generalize(openSetConstructor(lhs, rhs))(1) < (skip, QE & done),
+        HybridProgramCalculus.generalize(Equal(lhs, rhs))(1) < (skip, QE & done)
       ),
       (hide(pos.topLevel) & QE & done) | // @todo write a hideNonArithmetic tactic.
         DebuggingTactics.error(s"splitWeakInequality failed because $caseDistinction does not hold initially.")
@@ -2610,7 +2613,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
       cutR(if (cutInterior) interior else closure)(pos) < (
         skip & label(BelleLabels.cutShow),
         // Turn postcondition into interior
-        implyR(pos) & generalize(interior)(pos) < (
+        implyR(pos) & HybridProgramCalculus.generalize(interior)(pos) < (
           // @todo check always with doIfElse or use TryCatch exception?
           maxminGt & Idioms
             .doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
@@ -2786,7 +2789,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
             prop &
             done,
         ) &
-        TactixLibrary.generalize(nonneg(p(vars)))(1) & Idioms
+        HybridProgramCalculus.generalize(nonneg(p(vars)))(1) & Idioms
           .<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)(Symbol("Llast")) & prop & done) &
         // @todo always check with doIfElse or TryCatch instead?
         Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(SuccPos(0))).contains("t_".asVariable)))(
@@ -2795,7 +2798,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
             Idioms.<(FOQuantifierTactics.allLs(vars)(Symbol("Llast")) & prop & done, skip) &
             composeb(1) &
             DW(1) &
-            TactixLibrary.generalize(pos(q(vars)))(1) &
+            HybridProgramCalculus.generalize(pos(q(vars)))(1) &
             Idioms.<(
               id,
               implyR(1) &
@@ -2811,7 +2814,7 @@ private object DifferentialTactics extends TacticProvider with Logging {
                         useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) &
                           andR(1) & Idioms.<(id, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & id),
                         andL(Symbol("L")) &
-                          TactixLibrary.generalize(P(vars))(1) & Idioms
+                          HybridProgramCalculus.generalize(P(vars))(1) & Idioms
                             .<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)(Symbol("Llast")) & prop & done) &
                           DI(1) & implyR(1) & andR(1) & Idioms.<(
                             FOQuantifierTactics.allLs(vars)(-7) & prop & done,

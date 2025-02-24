@@ -199,7 +199,7 @@ object ODELiveness extends TacticProvider {
         useAt(dgbU)(1, 0 :: Nil) &
         useAt(dgbU)(1, 1 :: Nil) &
         useAt(vdg, PosInExpr(1 :: Nil))(1) &
-        generalize(inv)(1) < (
+        HybridProgramCalculus.generalize(inv)(1) < (
           implyRi & useAt(dbx, PosInExpr(1 :: Nil))(1) &
             useAt(Ax.Dminus)(1, 1 :: 0 :: Nil) &
             implyRi &
@@ -1213,7 +1213,7 @@ object ODELiveness extends TacticProvider {
       }
 
       starter & timetac &
-        discreteGhost(p, Some(oldp))(pos) &
+        HybridProgramCalculus.discreteGhost(p, Some(oldp))(pos) &
         useAt(axren, PosInExpr(1 :: Nil))(pos) &
         (if (manual) skip
          else andR(pos) < (
@@ -1651,7 +1651,9 @@ object ODELiveness extends TacticProvider {
       // should coeff be baked in or not?
       val coeff = TacticHelper.freshNamedSymbol("coeff".asVariable, seq)
       val coefflist = bnds.indices.map(i => Variable(coeff.name + i))
-      val coefftac = (bnds zip coefflist).map(bc => discreteGhost(bc._1, Some(bc._2))(pos): BelleExpr).reduce(_ & _)
+      val coefftac = (bnds zip coefflist)
+        .map(bc => HybridProgramCalculus.discreteGhost(bc._1, Some(bc._2))(pos): BelleExpr)
+        .reduce(_ & _)
 
       val series = coefflist
         .tail

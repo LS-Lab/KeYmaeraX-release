@@ -2156,7 +2156,7 @@ object ODEInvariance extends TacticProvider {
     // Introduce the initial values x0
     val storeInitialVals = x
       .zip(oldx)
-      .map(v => discreteGhost(v._1, Some(v._2))(Symbol("Rlast")))
+      .map(v => HybridProgramCalculus.discreteGhost(v._1, Some(v._2))(Symbol("Rlast")))
       .reduceOption[BelleExpr](_ & _)
       .getOrElse(skip)
 

@@ -11,16 +11,7 @@ import org.keymaerax.btactics.macros.{DisplayLevel, Tactic}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Position
 
-/**
- * Hybrid Program Calculus for differential dynamic logic.
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @see
- *   [[HilbertCalculus]]
- */
-object HybridProgramCalculus extends HybridProgramCalculus
+import scala.reflect.runtime.universe
 
 /**
  * Hybrid Program Calculus for differential dynamic logic. Basic axioms for hybrid programs are in [[HilbertCalculus]].
@@ -55,7 +46,11 @@ object HybridProgramCalculus extends HybridProgramCalculus
  * @Tactic
  *   complete
  */
-trait HybridProgramCalculus {
+object HybridProgramCalculus extends TacticProvider {
+
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) =
+    (HybridProgramCalculus.getClass, universe.typeOf[HybridProgramCalculus.type])
 
   /**
    * ***************************************************************** Hybrid Program Proof Rules

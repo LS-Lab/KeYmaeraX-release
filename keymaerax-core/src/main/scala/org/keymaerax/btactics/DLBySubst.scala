@@ -1135,7 +1135,7 @@ private object DLBySubst extends TacticProvider {
           }
           .getOrElse(throw new TacticInapplicableFailure("boxElim without matching assumption in the antecedent"))
         val fml2 = b.asInstanceOf[Box].child
-        TactixLibrary.generalize(fml2)(pos) & Idioms.<(id, skip)
+        HybridProgramCalculus.generalize(fml2)(pos) & Idioms.<(id, skip)
       case Some(e) => throw new TacticInapplicableFailure("boxElim not on Box but on " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException(
           "Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString

@@ -470,7 +470,7 @@ class Compbased extends TacticTestBase {
       print("Proved acc arithmetic")
 
     val tactic = implyR(Symbol("_")) & SaturateTactic(andL(Symbol("_"))) &
-      loop(invariant)(Symbol("R")) <
+      HybridProgramCalculus.loop(invariant)(Symbol("R")) <
       (
         /* base case */ print("Base case...") & simpQE & print("Base case done"),
         /* use case */ print("Use case...") & simpQE & print("Use case done"),

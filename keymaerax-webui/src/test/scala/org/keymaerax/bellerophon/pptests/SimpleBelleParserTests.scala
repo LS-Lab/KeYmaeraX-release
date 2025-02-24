@@ -218,16 +218,16 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "Parse a loop tactic and print it back out" in {
-    tacticParser("loop(\"1=1\", 1)") shouldBe (round trip TactixLibrary.loop("1=1".asFormula)(1))
+    tacticParser("loop(\"1=1\", 1)") shouldBe (round trip HybridProgramCalculus.loop("1=1".asFormula)(1))
   }
 
   it should "parse a tactic with optional argument specified" in {
-    val t = TactixLibrary.discreteGhost("5".asTerm, Some("x".asVariable))(1)
+    val t = HybridProgramCalculus.discreteGhost("5".asTerm, Some("x".asVariable))(1)
     tacticParser("discreteGhost(\"5\", \"x\", 1)") shouldBe (round trip t)
   }
 
   it should "parse a tactic without optional argument specified" in {
-    val t = TactixLibrary.discreteGhost("5".asTerm, None)(1)
+    val t = HybridProgramCalculus.discreteGhost("5".asTerm, None)(1)
     tacticParser("discreteGhost(\"5\", 1)") shouldBe (round trip t)
   }
 
@@ -425,7 +425,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     val result @ SeqTactic(loop +: CaseTactic(children) +: Nil) =
       tacticParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
     result shouldBe (round trip result)
-    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    loop shouldBe HybridProgramCalculus.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
       BelleLabels.initCase -> andL(-1),
       BelleLabels.indStep -> andL(-2),
@@ -460,7 +460,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
       "loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))"
     )
     result shouldBe (round trip result)
-    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    loop shouldBe HybridProgramCalculus.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
       BelleLabels.initCase -> (andL(-1) & orL(-1)),
       BelleLabels.indStep -> (orL(-2) < (andL(-2), orR(2))),
@@ -473,7 +473,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
       "loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))"
     )
     result shouldBe (round trip result)
-    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    loop shouldBe HybridProgramCalculus.loop("x>=0".asFormula)(1)
     children should contain theSameElementsAs List(
       BelleLabels.initCase -> andL(-1),
       BelleLabels.indStep -> orL(-2).switch("LHS".asLabel -> andL(-2), "RHS".asLabel -> orR(2)),
