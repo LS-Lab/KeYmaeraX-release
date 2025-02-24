@@ -24,7 +24,7 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val timeHorizon = "t<=9".asFormula
 
     val f = Imply(initially, Box(ODESystem(system, timeHorizon), Not(forbidden)))
-    val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
+    val t = SequentCalculus.implyR(1) & TactixLibrary.ODE(1)
 
     proveBy(f, t) shouldBe Symbol("proved")
   }
@@ -36,7 +36,7 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val forbidden = "x > 1 | z > 0".asFormula
 
     val f = Imply(initially, Box(ODESystem(system, constraint), Not(forbidden)))
-    val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
+    val t = SequentCalculus.implyR(1) & TactixLibrary.ODE(1)
 
     proveBy(f, t) shouldBe Symbol("proved")
   }
@@ -48,7 +48,7 @@ class Arch2016InvariantBenchmarks extends TacticTestBase {
     val forbidden = "1 + x < 0 | y < 0".asFormula // `+x >= 0 & y>0
 
     val f = Imply(initially, Box(ODESystem(system, timeHorizon), Not(forbidden)))
-    val t = TactixLibrary.implyR(1) & TactixLibrary.ODE(1)
+    val t = SequentCalculus.implyR(1) & TactixLibrary.ODE(1)
 
     proveBy(f, t) shouldBe Symbol("proved")
   }

@@ -16,6 +16,7 @@ import org.keymaerax.btactics.SOSSolve.{
   SOSSolveNoSOS,
   SOSWelldefinedDivisionFailure,
 }
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.helpers.QELogger
 import org.keymaerax.core._

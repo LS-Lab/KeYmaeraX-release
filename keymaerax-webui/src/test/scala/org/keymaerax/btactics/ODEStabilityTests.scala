@@ -6,6 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.btactics.ODEStability._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.helpers.DifferentialHelper

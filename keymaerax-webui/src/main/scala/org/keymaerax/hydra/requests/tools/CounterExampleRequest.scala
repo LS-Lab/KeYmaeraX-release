@@ -7,7 +7,7 @@ package org.keymaerax.hydra.requests.tools
 
 import org.keymaerax.bellerophon.SaturateTactic
 import org.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode}
-import org.keymaerax.btactics.{TactixLibrary, ToolProvider}
+import org.keymaerax.btactics.{SequentCalculus, TactixLibrary, ToolProvider}
 import org.keymaerax.core.{
   And,
   Bool,
@@ -141,7 +141,7 @@ class CounterExampleRequest(
               val skolemized = TactixLibrary.proveBy(
                 sequent,
                 SaturateTactic(
-                  TactixLibrary.alphaRule | TactixLibrary.allR(Symbol("R")) | TactixLibrary.existsL(Symbol("L"))
+                  TactixLibrary.alphaRule | SequentCalculus.allR(Symbol("R")) | SequentCalculus.existsL(Symbol("L"))
                 ),
               )
               val fml = skolemized.subgoals.map(_.toFormula).reduceRight(And.apply)

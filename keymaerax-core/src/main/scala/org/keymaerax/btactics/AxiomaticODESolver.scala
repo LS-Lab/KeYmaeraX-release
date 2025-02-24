@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.AnonymousLemmas._
 import org.keymaerax.btactics.HilbertCalculus._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
@@ -330,7 +331,7 @@ object AxiomaticODESolver {
             UnifyUSCalculus.useAt(Ax.trueAnd)(pos ++ PosInExpr(0 :: 1 :: Nil)),
         )
         else if (instEnd && q != True) SeqTactic(
-          TactixLibrary.allL(DURATION)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)),
+          SequentCalculus.allL(DURATION)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)),
           UnifyUSCalculus.useAt(Ax.flipLessEqual)(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil)),
         )
         else UnifyUSCalculus.skip,
@@ -665,12 +666,12 @@ object AxiomaticODESolver {
           TactixLibrary.proveBy(
             Imply(ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), And(e, cut))), fml),
             SeqTactic(
-              TactixLibrary.implyR(1),
+              SequentCalculus.implyR(1),
               TactixLibrary.dC(cut)(if (polarity > 0) 1 else -1, odePos),
               BranchTactic(
-                TactixLibrary.close,
+                SequentCalculus.close,
                 SeqTactic(
-                  TactixLibrary.cohideR(Symbol("Rlast")),
+                  SequentCalculus.cohideR(Symbol("Rlast")),
                   DebuggingTactics.debug("Normalizing", ODE_DEBUGGER),
                   HilbertCalculus.assignb(1) * contextSize,
                   DebuggingTactics.debug("diffInd", ODE_DEBUGGER),
@@ -731,17 +732,17 @@ object AxiomaticODESolver {
     lazy val simplFact = remember(
       "p_(f(x_)) & x_=f(x_) <-> p_(x_) & x_=f(x_)".asFormula,
       SeqTactic(
-        TactixLibrary.equivR(1),
+        SequentCalculus.equivR(1),
         BranchTactic(
           SeqTactic(
-            TactixLibrary.andL(-1),
-            TactixLibrary.andR(1),
-            BranchTactic(TactixLibrary.eqL2R(-2)(1) & TactixLibrary.id, TactixLibrary.id),
+            SequentCalculus.andL(-1),
+            SequentCalculus.andR(1),
+            BranchTactic(TactixLibrary.eqL2R(-2)(1) & SequentCalculus.id, SequentCalculus.id),
           ),
           SeqTactic(
-            TactixLibrary.andL(-1),
-            TactixLibrary.andR(1),
-            BranchTactic(TactixLibrary.eqR2L(-2)(1) & TactixLibrary.id, TactixLibrary.id),
+            SequentCalculus.andL(-1),
+            SequentCalculus.andR(1),
+            BranchTactic(TactixLibrary.eqR2L(-2)(1) & SequentCalculus.id, SequentCalculus.id),
           ),
         ),
       ),
@@ -776,8 +777,8 @@ object AxiomaticODESolver {
     lazy val rewrite1 = remember(
       "(q_(f(x_)) -> p_(f(x_))) -> (q_(x_) & x_=f(x_) -> p_(x_))".asFormula,
       SeqTactic(
-        TactixLibrary.implyR(1) * 2,
-        TactixLibrary.andL(-2),
+        SequentCalculus.implyR(1) * 2,
+        SequentCalculus.andL(-2),
         TactixLibrary.eqL2R(-3)(1),
         TactixLibrary.eqL2R(-3)(-2),
         TactixLibrary.prop,
@@ -788,10 +789,10 @@ object AxiomaticODESolver {
     lazy val rewrite2 = remember(
       "(q_(x_) & x_=f(x_)) & p_(x_) -> q_(f(x_)) & p_(f(x_))".asFormula,
       SeqTactic(
-        TactixLibrary.implyR(1),
-        TactixLibrary.andL(-1) * 2,
-        TactixLibrary.andR(1),
-        OnAll(TactixLibrary.eqR2L(-3)(1) & TactixLibrary.id),
+        SequentCalculus.implyR(1),
+        SequentCalculus.andL(-1) * 2,
+        SequentCalculus.andR(1),
+        OnAll(TactixLibrary.eqR2L(-3)(1) & SequentCalculus.id),
       ),
       namespace,
     )
@@ -865,12 +866,12 @@ object AxiomaticODESolver {
         TactixLibrary.proveBy(
           Imply(fml, ctx(modal.replaceAt(PosInExpr(0 :: 1 :: Nil), e))),
           SeqTactic(
-            TactixLibrary.implyR(1),
+            SequentCalculus.implyR(1),
             TactixLibrary.dC(soln)(if (polarity > 0) -1 else 1, odePos),
             BranchTactic(
-              TactixLibrary.close,
+              SequentCalculus.close,
               SeqTactic(
-                TactixLibrary.cohideR(Symbol("Rlast")),
+                SequentCalculus.cohideR(Symbol("Rlast")),
                 DebuggingTactics.debug("Normalizing", ODE_DEBUGGER),
                 HilbertCalculus.assignb(1) * (odeSize + 1),
                 DebuggingTactics.debug("diffInd", ODE_DEBUGGER),

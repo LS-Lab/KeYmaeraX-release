@@ -17,29 +17,29 @@ import org.scalatest.LoneElement._
 class LocateTests extends TacticTestBase {
 
   "'L" should "locate the sole applicable formula in antecedent" in withTactics {
-    proveBy("x>0 & y>0 ==>".asSequent, TactixLibrary.andL(Symbol("L"))).subgoals.loneElement shouldBe
+    proveBy("x>0 & y>0 ==>".asSequent, SequentCalculus.andL(Symbol("L"))).subgoals.loneElement shouldBe
       "x>0, y>0 ==>".asSequent
   }
 
   it should "locate the first applicable formula in antecedent" in withTactics {
-    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Symbol("L"))).subgoals.loneElement shouldBe
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, SequentCalculus.andL(Symbol("L"))).subgoals.loneElement shouldBe
       "a=2, b=3 & c=4, x>0, y>0 ==>".asSequent
   }
 
   it should "locate the first applicable formula after start in antecedent" in withTactics {
-    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Find.FindLAfter(None, AntePosition(3))))
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, SequentCalculus.andL(Find.FindLAfter(None, AntePosition(3))))
       .subgoals
       .loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }
 
   it should "locate the first applicable formula of a specific shape" in withTactics {
-    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Find.FindLPlain("b=3 & c=4".asFormula)))
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, SequentCalculus.andL(Find.FindLPlain("b=3 & c=4".asFormula)))
       .subgoals
       .loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }
 
   it should "throw an exception if no applicable position can be found" in withTactics {
-    val e = intercept[BelleThrowable] { proveBy("a=2, x>0 | y>0 ==>".asSequent, TactixLibrary.andL(Symbol("L"))) }
+    val e = intercept[BelleThrowable] { proveBy("a=2, x>0 | y>0 ==>".asSequent, SequentCalculus.andL(Symbol("L"))) }
     e.getMessage should
       include("Not found: locator 'L\nof position tactic andL('L)\ndoes not match anywhere in antecedent")
   }
@@ -50,7 +50,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "find formulas by shape" in withTactics {
-    proveBy("a=2&b=3, x>0 & y>0 ==>".asSequent, TactixLibrary.andL(Symbol("L"), "x>0 & y>0".asFormula))
+    proveBy("a=2&b=3, x>0 & y>0 ==>".asSequent, SequentCalculus.andL(Symbol("L"), "x>0 & y>0".asFormula))
       .subgoals
       .loneElement shouldBe "a=2&b=3, x>0, y>0 ==>".asSequent
   }
@@ -61,17 +61,17 @@ class LocateTests extends TacticTestBase {
   }
 
   "'R" should "locate the sole applicable formula in succedent" in withTactics {
-    proveBy("==> x>0 | y>0".asSequent, TactixLibrary.orR(Symbol("R"))).subgoals.loneElement shouldBe
+    proveBy("==> x>0 | y>0".asSequent, SequentCalculus.orR(Symbol("R"))).subgoals.loneElement shouldBe
       "==> x>0, y>0".asSequent
   }
 
   it should "locate the first applicable formula in antecedent" in withTactics {
-    proveBy("==> a=2, x>0 | y>0, b=3 | c=4".asSequent, TactixLibrary.orR(Symbol("R"))).subgoals.loneElement shouldBe
+    proveBy("==> a=2, x>0 | y>0, b=3 | c=4".asSequent, SequentCalculus.orR(Symbol("R"))).subgoals.loneElement shouldBe
       "==> a=2, b=3 | c=4, x>0, y>0".asSequent
   }
 
   it should "throw an exception if no applicable position can be found" in withTactics {
-    val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, TactixLibrary.orR(Symbol("R"))) }
+    val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, SequentCalculus.orR(Symbol("R"))) }
     e.getMessage should
       include("Not found: locator 'R\nof position tactic orR('R)\ndoes not match anywhere in succedent")
   }
@@ -82,7 +82,7 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "find formulas by shape" in withTactics {
-    proveBy("==> a=2|b=3, x>0 | y>0".asSequent, TactixLibrary.orR(Symbol("R"), "x>0 | y>0".asFormula))
+    proveBy("==> a=2|b=3, x>0 | y>0".asSequent, SequentCalculus.orR(Symbol("R"), "x>0 | y>0".asFormula))
       .subgoals
       .loneElement shouldBe "==> a=2|b=3, x>0, y>0".asSequent
   }
@@ -93,23 +93,23 @@ class LocateTests extends TacticTestBase {
   }
 
   "'_" should "locate the sole applicable formula in sequent" in withTactics {
-    proveBy("==> x>0 | y>0".asSequent, TactixLibrary.orR(Symbol("_"))).subgoals.loneElement shouldBe
+    proveBy("==> x>0 | y>0".asSequent, SequentCalculus.orR(Symbol("_"))).subgoals.loneElement shouldBe
       "==> x>0, y>0".asSequent
   }
 
   it should "locate the first applicable formula" in withTactics {
-    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Symbol("_"))).subgoals.loneElement shouldBe
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, SequentCalculus.andL(Symbol("_"))).subgoals.loneElement shouldBe
       "a=2, b=3 & c=4, x>0, y>0 ==>".asSequent
   }
 
   it should "throw an exception if no applicable position can be found" in withTactics {
-    val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, TactixLibrary.orR(Symbol("_"))) }
+    val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, SequentCalculus.orR(Symbol("_"))) }
     e.getMessage should
       include("Not found: locator 'R\nof position tactic orR('R)\ndoes not match anywhere in succedent")
   }
 
   "'Llast" should "apply on last formula in antecedent" in withTactics {
-    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Symbol("Llast")))
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, SequentCalculus.andL(Symbol("Llast")))
       .subgoals
       .loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }

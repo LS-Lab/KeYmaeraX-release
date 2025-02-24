@@ -6,6 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.btactics.HilbertCalculus._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.SwitchedSystems._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._

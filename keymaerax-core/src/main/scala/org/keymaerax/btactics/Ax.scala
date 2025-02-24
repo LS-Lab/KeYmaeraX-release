@@ -9,6 +9,7 @@ import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import org.keymaerax.btactics.HilbertCalculus._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.DerivationInfoAugmentors._
@@ -1506,7 +1507,7 @@ object Ax extends Logging {
       displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
     ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
-    TactixLibrary.equivifyR(1) & by(CQrule),
+    SequentCalculus.equivifyR(1) & by(CQrule),
   )
 
   /**
@@ -1529,7 +1530,7 @@ object Ax extends Logging {
       displayConclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
     ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
-    TactixLibrary.equivifyR(1) & by(CQrule) & TactixLibrary.commuteEqual(1),
+    SequentCalculus.equivifyR(1) & by(CQrule) & SequentCalculus.commuteEqual(1),
   )
 
   /**
@@ -1552,7 +1553,7 @@ object Ax extends Logging {
       displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
     ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
-    TactixLibrary.equivifyR(1) & by(CErule),
+    SequentCalculus.equivifyR(1) & by(CErule),
   )
 
   /**
@@ -1575,7 +1576,7 @@ object Ax extends Logging {
       displayConclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
     ),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
-    TactixLibrary.equivifyR(1) & by(CErule) & TactixLibrary.commuteEquivR(1),
+    SequentCalculus.equivifyR(1) & by(CErule) & SequentCalculus.commuteEquivR(1),
   )
 
   /**

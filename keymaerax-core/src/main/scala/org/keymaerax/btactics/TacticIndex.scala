@@ -88,47 +88,47 @@ class DefaultTacticIndex extends TacticIndex {
   def tacticRecursors(tactic: BelleExpr): TacticRecursors = tactic match {
     // @note IMPORTANT: add only tactics with tactic annotations here! otherwise, will match with whatever based on the name ANON
     // @note expected formulas are used to fall back to search
-    case TactixLibrary.notL => (s: Sequent, p: Position) =>
+    case SequentCalculus.notL => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(Fixed(SuccPosition.base0(s.succ.length), child(s(p.checkTop)))))
         else Right(one(child(s, p)))
-    case TactixLibrary.andL => (s: Sequent, p: Position) =>
+    case SequentCalculus.andL => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(
           Fixed(AntePosition.base0(s.ante.length), right(s(p.checkTop))) ::
             Fixed(AntePosition.base0(s.ante.length - 1), left(s(p.checkTop))) :: Nil
         ))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
-    case TactixLibrary.orL => (s: Sequent, p: Position) =>
+    case SequentCalculus.orL => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(two(Fixed(p, left(s(p.checkTop))), Fixed(p, right(s(p.checkTop)))))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
-    case TactixLibrary.implyL => (s: Sequent, p: Position) =>
+    case SequentCalculus.implyL => (s: Sequent, p: Position) =>
         if (p.isTopLevel)
           Left(two(Fixed(SuccPosition.base0(s.succ.length), left(s(p.checkTop))), Fixed(p, right(s(p.checkTop)))))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
-    case TactixLibrary.equivL => (s: Sequent, p: Position) =>
+    case SequentCalculus.equivL => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(two(
           Fixed(p, Some(And(left(s(p.checkTop)).get, right(s(p.checkTop)).get))),
           Fixed(p, Some(And(Not(left(s(p.checkTop)).get), Not(right(s(p.checkTop)).get)))),
         ))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
-    case TactixLibrary.notR => (s: Sequent, p: Position) =>
+    case SequentCalculus.notR => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(Fixed(AntePosition.base0(s.ante.length), child(s(p.checkTop)))))
         else Right(one(child(s, p)))
-    case TactixLibrary.implyR => (s: Sequent, p: Position) =>
+    case SequentCalculus.implyR => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(
           Fixed(AntePosition.base0(s.ante.length), left(s(p.checkTop))) ::
             Fixed(SuccPosition.base0(s.succ.length - 1), right(s(p.checkTop))) :: Nil
         ))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
-    case TactixLibrary.orR => (s: Sequent, p: Position) =>
+    case SequentCalculus.orR => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(
           Fixed(SuccPosition.base0(s.succ.length), right(s(p.checkTop))) ::
             Fixed(SuccPosition.base0(s.succ.length - 1), left(s(p.checkTop))) :: Nil
         ))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
-    case TactixLibrary.andR => (s: Sequent, p: Position) =>
+    case SequentCalculus.andR => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(two(Fixed(p, left(s(p.checkTop))), Fixed(p, right(s(p.checkTop)))))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
-    case TactixLibrary.equivR => (s: Sequent, p: Position) =>
+    case SequentCalculus.equivR => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(two(
           Fixed(AntePosition.base0(s.ante.length), left(s(p.checkTop))) ::
             Fixed(SuccPosition.base0(s.succ.length - 1), right(s(p.checkTop))) :: Nil,
@@ -137,7 +137,7 @@ class DefaultTacticIndex extends TacticIndex {
         ))
         else Right(one(left(s, p) :: right(s, p) :: Nil))
     case TactixLibrary.step => (_: Sequent, p: Position) => Left(one(Fixed(p)))
-    case TactixLibrary.allR => (s: Sequent, p: Position) =>
+    case SequentCalculus.allR => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(Fixed(p, child(s(p.checkTop))))) else Right(one(child(s, p)))
     case TacticIndex.allLStutter | TacticIndex.allLStutterPrime => (s: Sequent, p: Position) => {
         val (childPos, c) = (
@@ -151,7 +151,7 @@ class DefaultTacticIndex extends TacticIndex {
         )
         Left(one(new Fixed(p ++ childPos, c)))
       }
-    case TactixLibrary.existsL => (s: Sequent, p: Position) =>
+    case SequentCalculus.existsL => (s: Sequent, p: Position) =>
         if (p.isTopLevel) Left(one(new Fixed(p, child(s(p.checkTop))))) else Right(one(child(s, p)))
     case TacticIndex.existsRStutter | TacticIndex.existsRStutterPrime => (s: Sequent, p: Position) => {
         val (childPos, c) = (
@@ -223,24 +223,24 @@ class DefaultTacticIndex extends TacticIndex {
         (TactixLibrary.step :: Nil, TactixLibrary.step :: Nil)
       case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve :: Nil, TactixLibrary.solve :: Nil)
       case Forall(xs, _) =>
-        if (xs.forall(_.isInstanceOf[BaseVariable])) (TacticIndex.allLStutter :: Nil, TactixLibrary.allR :: Nil)
+        if (xs.forall(_.isInstanceOf[BaseVariable])) (TacticIndex.allLStutter :: Nil, SequentCalculus.allR :: Nil)
         else if (xs.forall(_.isInstanceOf[DifferentialSymbol]))
-          (TacticIndex.allLStutterPrime :: Nil, TactixLibrary.allR :: Nil)
+          (TacticIndex.allLStutterPrime :: Nil, SequentCalculus.allR :: Nil)
         else throw new IllFormedTacticApplicationException(
           "Mixed base variable + differential symbol quantification not supported, but got " + expr.prettyString
         )
       case Exists(xs, _) =>
-        if (xs.forall(_.isInstanceOf[BaseVariable])) (TactixLibrary.existsL :: Nil, TacticIndex.existsRStutter :: Nil)
+        if (xs.forall(_.isInstanceOf[BaseVariable])) (SequentCalculus.existsL :: Nil, TacticIndex.existsRStutter :: Nil)
         else if (xs.forall(_.isInstanceOf[DifferentialSymbol]))
-          (TactixLibrary.existsL :: Nil, TacticIndex.existsRStutterPrime :: Nil)
+          (SequentCalculus.existsL :: Nil, TacticIndex.existsRStutterPrime :: Nil)
         else throw new IllFormedTacticApplicationException(
           "Mixed base variable + differential symbol quantification not supported, but got " + expr.prettyString
         )
-      case Not(_) => (TactixLibrary.notL :: Nil, TactixLibrary.notR :: Nil)
-      case And(_, _) => (TactixLibrary.andL :: Nil, TactixLibrary.andR :: Nil)
-      case Or(_, _) => (TactixLibrary.orL :: Nil, TactixLibrary.orR :: Nil)
-      case Imply(_, _) => (PropositionalTactics.autoMP :: TactixLibrary.implyL :: Nil, TactixLibrary.implyR :: Nil)
-      case Equiv(_, _) => (TactixLibrary.equivL :: Nil, TactixLibrary.equivR :: Nil)
+      case Not(_) => (SequentCalculus.notL :: Nil, SequentCalculus.notR :: Nil)
+      case And(_, _) => (SequentCalculus.andL :: Nil, SequentCalculus.andR :: Nil)
+      case Or(_, _) => (SequentCalculus.orL :: Nil, SequentCalculus.orR :: Nil)
+      case Imply(_, _) => (PropositionalTactics.autoMP :: SequentCalculus.implyL :: Nil, SequentCalculus.implyR :: Nil)
+      case Equiv(_, _) => (SequentCalculus.equivL :: Nil, SequentCalculus.equivR :: Nil)
       case True => (Nil, ProofRuleTactics.closeTrue :: Nil)
       case False => (ProofRuleTactics.closeFalse :: Nil, Nil)
       case _ => (Nil, Nil)

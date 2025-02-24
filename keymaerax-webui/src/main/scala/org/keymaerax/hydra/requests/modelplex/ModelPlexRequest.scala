@@ -7,7 +7,7 @@ package org.keymaerax.hydra.requests.modelplex
 
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
 import org.keymaerax.bellerophon.{BelleExpr, TacticAssertionError, TacticInapplicableFailure}
-import org.keymaerax.btactics.{DebuggingTactics, ModelPlex, ModelPlexConjecture, TactixLibrary}
+import org.keymaerax.btactics.{DebuggingTactics, ModelPlex, ModelPlexConjecture, SequentCalculus, TactixLibrary}
 import org.keymaerax.codegen.{
   CControllerGenerator,
   CGenerator,
@@ -220,7 +220,7 @@ class ModelPlexRequest(
     createMonitorCondition(modelFml, vars, ListMap.empty) match {
       case Left((modelplexConjecture, monitorFml, synthesizeTactic)) => conditionKind match {
           case "dL" =>
-            val monitorProof = TactixLibrary.implyR(1) & synthesizeTactic & TactixLibrary.prop &
+            val monitorProof = SequentCalculus.implyR(1) & synthesizeTactic & TactixLibrary.prop &
               DebuggingTactics.done("Monitor proof")
             val mxProof = TactixLibrary.proveBy(Imply(monitorFml, modelplexConjecture), monitorProof)
             val entry = ParsedArchiveEntry(

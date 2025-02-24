@@ -169,7 +169,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config(ToolName.Mathematica)) {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen(requestedInvs))
     })
-    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe Symbol("proved")
+    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, SequentCalculus.implyR(1) & ODE(1)) shouldBe Symbol("proved")
     requestedInvs shouldBe Symbol("empty")
   }
 
@@ -924,7 +924,8 @@ class NonlinearExamplesTester(
               val checkStart = System.currentTimeMillis()
               // val proof = proveBy(seq, TactixLibrary.master())
               try {
-                val proof = failAfter(Span(timeout, Seconds)) { proveBy(expandedModel, implyR(1) & ODE(1)) }
+                val proof =
+                  failAfter(Span(timeout, Seconds)) { proveBy(expandedModel, SequentCalculus.implyR(1) & ODE(1)) }
                 val checkEnd = System.currentTimeMillis()
                 println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
 

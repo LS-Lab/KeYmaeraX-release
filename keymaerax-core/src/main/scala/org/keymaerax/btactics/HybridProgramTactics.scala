@@ -47,7 +47,7 @@ private object HybridProgramTactics extends TacticProvider {
   private def decomposeChoices(ctrl: Program, pos: Position): BelleExpr = ctrl match {
     case Compose(l, r) => HilbertCalculus.composeb(pos) & decomposeChoices(l, pos)
     case Choice(l, r) => {
-      HilbertCalculus.choiceb(pos) & TactixLibrary.andR(1) < (decomposeChoices(l, pos), decomposeChoices(r, pos))
+      HilbertCalculus.choiceb(pos) & SequentCalculus.andR(1) < (decomposeChoices(l, pos), decomposeChoices(r, pos))
     }
   }
 

@@ -255,7 +255,7 @@ object InvariantProvers {
               (
                 nil,
                 nil,
-                cut(jja) <
+                SequentCalculus.cut(jja) <
                   (
                     /* use jja() |- */
                     chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(
@@ -272,7 +272,7 @@ object InvariantProvers {
                       ) & ?(QE)
                     ),
                     /* show |- jja() is postponed since only provable when eventually jja()~>True instantiated */
-                    cohide(Symbol("Rlast"), jja),
+                    SequentCalculus.cohide(Symbol("Rlast"), jja),
                   ),
               ),
             generateOnTheFly(pos),

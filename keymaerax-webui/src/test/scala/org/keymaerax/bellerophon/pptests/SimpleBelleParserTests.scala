@@ -7,6 +7,7 @@ package org.keymaerax.bellerophon.pptests
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics._
 import org.keymaerax.core._
@@ -93,12 +94,12 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   }
 
   it should "accept id as well as closeId" in {
-    tacticParser("closeId(-1, 1)") shouldBe (round trip TactixLibrary.closeId(-1, 1))
-    tacticParser("id") shouldBe (round trip TactixLibrary.id)
+    tacticParser("closeId(-1, 1)") shouldBe (round trip SequentCalculus.closeId(-1, 1))
+    tacticParser("id") shouldBe (round trip SequentCalculus.id)
   }
 
   it should "parse a built-in tactic with arguments" in {
-    tacticParser("cut(\"1=1\")") shouldBe (round trip TactixLibrary.cut("1=1".asFormula))
+    tacticParser("cut(\"1=1\")") shouldBe (round trip SequentCalculus.cut("1=1".asFormula))
   }
 
   it should "parse a built-in argument with an absolute top-level position" in {
@@ -555,27 +556,27 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   "doall combinator parser" should "parse doall(closeId)" in {
     val tactic = tacticParser("doall(id)")
-    tactic shouldBe (round trip OnAll(TactixLibrary.id))
+    tactic shouldBe (round trip OnAll(SequentCalculus.id))
   }
 
   it should "parse combined tactics with parameters doall(closeId | closeTrue | andL(1))" in {
     val tactic = tacticParser("doall(id | closeT | andL(1))")
-    tactic shouldBe (round trip OnAll(TactixLibrary.id | (TactixLibrary.closeT | TactixLibrary.andL(1))))
+    tactic shouldBe (round trip OnAll(SequentCalculus.id | (SequentCalculus.closeT | SequentCalculus.andL(1))))
   }
 
   "Optional combinator" should "parse ?(closeId)" in {
     val tactic = tacticParser("?(id)")
-    tactic shouldBe (round trip Idioms.?(TactixLibrary.id))
+    tactic shouldBe (round trip Idioms.?(SequentCalculus.id))
   }
 
   it should "bind stronger than seq. combinator" in {
     val tactic = tacticParser("andR(1) & ?(id)")
-    tactic shouldBe (round trip SeqTactic(Seq(andR(1), Idioms.?(TactixLibrary.id))))
+    tactic shouldBe (round trip SeqTactic(Seq(andR(1), Idioms.?(SequentCalculus.id))))
   }
 
   it should "bind stronger than alt. combinator" in {
     val tactic = tacticParser("andR(1) | ?(id)")
-    tactic shouldBe (round trip EitherTactic(Seq(andR(1), Idioms.?(TactixLibrary.id))))
+    tactic shouldBe (round trip EitherTactic(Seq(andR(1), Idioms.?(SequentCalculus.id))))
   }
 
   it should "bind weaker than saturation" in {
@@ -587,7 +588,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
   it should "work in the beginning of a branch" in {
     val tactic = tacticParser("andR(1) & <(?(id), ?(orR(1)))")
     tactic shouldBe (round trip andR(1) & Idioms
-      .<(Idioms.?(TactixLibrary.id.asInstanceOf[BelleExpr]), Idioms.?(TactixLibrary.orR(1))))
+      .<(Idioms.?(SequentCalculus.id.asInstanceOf[BelleExpr]), Idioms.?(SequentCalculus.orR(1))))
   }
 
   // endregion
@@ -640,10 +641,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse with expected precedence" in {
     tacticParser("andL(-1) & (andR(1) partial)") shouldBe (round trip SeqTactic(
-      Seq(TactixLibrary.andL(-1), PartialTactic(andR(1)))
+      Seq(SequentCalculus.andL(-1), PartialTactic(andR(1)))
     ))
     tacticParser("andL(-1) & andR(1) partial") shouldBe (round trip PartialTactic(
-      SeqTactic(Seq(TactixLibrary.andL(-1), andR(1)))
+      SeqTactic(Seq(SequentCalculus.andL(-1), andR(1)))
     ))
   }
 
@@ -653,7 +654,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   "done tactic parser" should "parse closeId & done" in {
     val tactic = tacticParser("id & done")
-    tactic shouldBe (round trip TactixLibrary.id & TactixLibrary.done)
+    tactic shouldBe (round trip SequentCalculus.id & TactixLibrary.done)
   }
 
   it should "parse done" in {
@@ -678,7 +679,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse in a branch" in {
     val tactic = tacticParser("andR(1) & <(id & done, done)")
-    tactic shouldBe (round trip andR(1) & Idioms.<(TactixLibrary.id & TactixLibrary.done, TactixLibrary.done))
+    tactic shouldBe (round trip andR(1) & Idioms.<(SequentCalculus.id & TactixLibrary.done, TactixLibrary.done))
   }
 
   // endregion
@@ -703,8 +704,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
 
   it should "parse let as part of a larger tactic" in {
     val tactic = tacticParser("implyR(1) ; let (\"a()=a\") in (nil) ; id")
-    tactic shouldBe (round trip TactixLibrary
-      .implyR(1) & (Let("a()".asTerm, "a".asTerm, UnifyUSCalculus.nil) & TactixLibrary.id))
+    tactic shouldBe (round trip SequentCalculus
+      .implyR(1) & (Let("a()".asTerm, "a".asTerm, UnifyUSCalculus.nil) & SequentCalculus.id))
   }
 
   "def tactic parser" should "parse a simple example" in {
@@ -730,14 +731,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
     val tactic = tacticParser("tactic t as (assignb('R)) ; tactic s as (implyR(1))")
     tactic shouldBe (round trip DefTactic("t", HilbertCalculus.assignb(Symbol("R"))) & DefTactic(
       "s",
-      TactixLibrary.implyR(1),
+      SequentCalculus.implyR(1),
     ))
   }
 
   it should "parse a simple example with application" in {
     val tactic = tacticParser("tactic t as (assignb('R)) ; implyR(1) ; t")
     val tDef = DefTactic("t", HilbertCalculus.assignb(Symbol("R")))
-    tactic shouldBe (round trip tDef & (TactixLibrary.implyR(1) & ApplyDefTactic(tDef)))
+    tactic shouldBe (round trip tDef & (SequentCalculus.implyR(1) & ApplyDefTactic(tDef)))
   }
 
   it should "parse with multiple application" in {
@@ -777,7 +778,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
       "implyR(1) ; expand(\"f()\")",
       Declaration(Map((Name("f", None), Signature(Some(Unit), Real, None, Right(Some("3*2".asExpr)), UnknownLocation)))),
     ) shouldBe
-      TactixLibrary.implyR(1) & expand("f()")
+      SequentCalculus.implyR(1) & expand("f()")
   }
 
   it should "elaborate variables to functions" in {
@@ -792,7 +793,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
             (Name("g", None), Signature(Some(Unit), Real, None, Right(Some("3*2".asExpr)), UnknownLocation)),
           )
       ),
-    ) shouldBe TactixLibrary.implyR(1) & expand("f")
+    ) shouldBe SequentCalculus.implyR(1) & expand("f")
   }
 
   it should "elaborate variables to functions in tactic arguments" in {
@@ -806,7 +807,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
         )
     )
     tacticParser("hideL('L==\"f=g\")", defs) shouldBe
-      TactixLibrary.hideL(Find.FindLDef("f()=g()".asFormula, PosInExpr.HereP, defs ++ TacticReservedSymbols.asDecl))
+      SequentCalculus.hideL(Find.FindLDef("f()=g()".asFormula, PosInExpr.HereP, defs ++ TacticReservedSymbols.asDecl))
   }
 
   it should "elaborate variables to functions per declarations" in {
@@ -822,7 +823,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
           )
       ),
     )
-    tactic shouldBe TactixLibrary.implyR(1) & expand("f")
+    tactic shouldBe SequentCalculus.implyR(1) & expand("f")
   }
 
   it should "elaborate functions to predicates per declarations" in {
@@ -838,7 +839,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
           )
       ),
     )
-    tactic shouldBe TactixLibrary.implyR(1) & expand("f")
+    tactic shouldBe SequentCalculus.implyR(1) & expand("f")
   }
 
   it should "elaborate programconsts to systemconsts" in {
@@ -851,7 +852,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
           (Name("a", None), Signature(Some(Unit), Trafo, None, Right(Some("x:=x+1;".asExpr)), UnknownLocation)),
         )
     )
-    tacticParser("implyR(1) ; cut(\"[a;]p\")", defs) shouldBe TactixLibrary.implyR(1) & cut("[a{|^@|};]p()".asFormula)
+    tacticParser("implyR(1) ; cut(\"[a;]p\")", defs) shouldBe SequentCalculus.implyR(1) & cut("[a{|^@|};]p()".asFormula)
   }
 
   it should "not collide with expandAll" in { BellePrettyPrinter(tacticParser("expandAll")) shouldBe "expandAll" }
@@ -988,7 +989,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics = Some("z3
       Map(Name("p", None) -> Signature(Some(Real), Bool, Some(List((Name("x"), Real))), Right(None), UnknownLocation))
     )
     tacticParser("hideL(1==\"p(x)\")", defs) shouldBe (
-      round trip (TactixLibrary.hideL(Fixed(1, Nil, Some("p(x)".asFormula))), defs)
+      round trip (SequentCalculus.hideL(Fixed(1, Nil, Some("p(x)".asFormula))), defs)
     )
   }
 

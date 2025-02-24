@@ -206,16 +206,16 @@ private object ProofRuleTactics extends TacticProvider with Logging {
         val side: ProvableSig = TactixLibrary.proveBy(
           Equiv(mod, fml),
           // |- mod <-> fml
-          equivR(1) <
+          SequentCalculus.equivR(1) <
             (
               // left branch  mod |- fml
               tactic(1) &
                 // mod |- mod
-                close(-1, 1),
+                SequentCalculus.close(-1, 1),
               // right branch  fml |- mod
               tactic(-1) &
                 // mod |- mod
-                close(-1, 1),
+                SequentCalculus.close(-1, 1),
             ),
         )
         logger.debug("contextualize.side " + side)

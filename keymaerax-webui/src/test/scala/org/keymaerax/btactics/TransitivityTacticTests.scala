@@ -10,7 +10,7 @@ import org.keymaerax.parser.StringConverter._
 
 /** @author Nathan Fulton */
 class TransitivityTacticTests extends TacticTestBase {
-  private lazy val setupTactic = TactixLibrary.implyR(1) & SaturateTactic(TactixLibrary.andL(Symbol("L")))
+  private lazy val setupTactic = SequentCalculus.implyR(1) & SaturateTactic(SequentCalculus.andL(Symbol("L")))
 
   "Search function" should "Find result" in withMathematica { _ =>
     val f = "a>=b & b >= c -> a >= c".asFormula

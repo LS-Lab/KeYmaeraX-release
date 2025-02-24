@@ -35,7 +35,7 @@ class BTacticExamples extends TacticTestBase {
   }
 
   "Explicit Proof" should "prove !!p() <-> p()" in withTactics {
-    import TactixLibrary._
+    import SequentCalculus._
     // Explicit proof tactic for |- !!p() <-> p()
     val proof = TactixLibrary.proveBy(
       "==> !!p() <-> p()".asSequent,
@@ -46,7 +46,7 @@ class BTacticExamples extends TacticTestBase {
   }
 
   it should "prove !!p() <-> p() with modern index" in withTactics {
-    import TactixLibrary._
+    import SequentCalculus._
     // Explicit proof tactic for |- !!p() <-> p()
     val proof = TactixLibrary
       .proveBy("==> !!p() <-> p()".asSequent, equivR(1) < ((notL(-1) & notR(2) & id), (notR(1) & notL(-2) & id)))

@@ -7,6 +7,7 @@ package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import org.keymaerax.btactics.ArithmeticSimplification._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, SignAnalysis}
 import org.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification

@@ -6,6 +6,7 @@
 package org.keymaerax.btactics
 
 import org.keymaerax.bellerophon._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TacticHelper.timed
 import org.keymaerax.btactics.TactixLibrary._

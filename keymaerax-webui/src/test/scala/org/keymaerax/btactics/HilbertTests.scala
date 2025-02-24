@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.HilbertCalculus._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.macros.ProvableInfo

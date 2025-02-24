@@ -1857,7 +1857,7 @@ case class TwoThreeTreePolynomialRing(
       case Some(Equal(t1, t2)) => PolynomialArithV2.reportBelleThrowables { equate(t1, t2) } match {
           case None =>
             throw new TacticInapplicableFailure("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
-          case Some(prv) => cohideR(pos) & by(prv)
+          case Some(prv) => SequentCalculus.cohideR(pos) & by(prv)
         }
       case Some(e) =>
         throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)

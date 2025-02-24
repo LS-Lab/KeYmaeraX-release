@@ -48,11 +48,11 @@ class SimplifierV3Tests extends TacticTestBase {
   }
 
   it should "simplify propositional" in withTactics {
-    proveBy("!p(), !q(), r()&p() | r()&q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe
+    proveBy("!p(), !q(), r()&p() | r()&q() ==>".asSequent, SimplifierV3.fullSimplify & SequentCalculus.closeF) shouldBe
       Symbol("proved")
-    proveBy("r()&p() | r()&q(), !p(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe
+    proveBy("r()&p() | r()&q(), !p(), !q() ==>".asSequent, SimplifierV3.fullSimplify & SequentCalculus.closeF) shouldBe
       Symbol("proved")
-    proveBy("!p(), r()&p() | r()&q(), !q() ==>".asSequent, SimplifierV3.fullSimplify & TactixLibrary.closeF) shouldBe
+    proveBy("!p(), r()&p() | r()&q(), !q() ==>".asSequent, SimplifierV3.fullSimplify & SequentCalculus.closeF) shouldBe
       Symbol("proved")
   }
 
@@ -158,7 +158,7 @@ class SimplifierV3Tests extends TacticTestBase {
     val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula, TactixLibrary.QE)
     val fml = "\\exists y (y = 0 -> y-x = 0)".asFormula
     val ctxt = IndexedSeq("x=0".asFormula)
-    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), SimplifierV3.simpTac(List(custom1))(1) & TactixLibrary.close)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), SimplifierV3.simpTac(List(custom1))(1) & SequentCalculus.close)
     result shouldBe Symbol("proved")
   }
 

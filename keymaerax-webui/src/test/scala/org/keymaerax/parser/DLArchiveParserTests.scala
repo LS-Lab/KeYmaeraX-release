@@ -9,7 +9,7 @@ import org.keymaerax.GlobalState
 import org.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import org.keymaerax.bellerophon.{ApplyDefTactic, DefTactic, Find, OnAll, ReflectiveExpressionBuilder, Using}
 import org.keymaerax.btactics.TactixLibrary._
-import org.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{FixedGenerator, SequentCalculus, TacticTestBase, TactixLibrary}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.PosInExpr
 import org.keymaerax.parser.ParseExceptionMatchers._
@@ -2326,7 +2326,7 @@ class DLArchiveParserTests extends TacticTestBase {
         |""".stripMargin
     }
     val entry = ArchiveParser(input).head
-    entry.tactics.head._3 shouldBe implyR(Find.FindRDef(
+    entry.tactics.head._3 shouldBe SequentCalculus.implyR(Find.FindRDef(
       Imply(
         GreaterEqual(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1)),
         GreaterEqual(Number(1), Number(1)),

@@ -8,6 +8,7 @@ package org.keymaerax.btactics
 import org.keymaerax.bellerophon.SaturateTactic
 import org.keymaerax.btactics.Idioms.?
 import org.keymaerax.btactics.ODEInvariance._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.core._
 import org.keymaerax.lemma.LemmaDBFactory

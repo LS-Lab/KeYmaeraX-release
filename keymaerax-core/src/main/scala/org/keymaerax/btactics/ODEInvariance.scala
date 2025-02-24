@@ -11,6 +11,7 @@ import org.keymaerax.btactics.DifferentialTactics._
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms._
 import org.keymaerax.btactics.ODELiveness.vDG
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.SimplifierV3._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._

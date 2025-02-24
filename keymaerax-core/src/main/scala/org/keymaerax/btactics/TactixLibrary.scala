@@ -51,9 +51,9 @@ import scala.util.Try
  * Other big tactic libraries are:
  *   - [[UnifyUSCalculus]]: Automatic unification-based Uniform Substitution Calculus with indexing.
  *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
+ *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
  *
  * The tactic library also includes important proof calculus subcollections:
- *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
  *   - [[HybridProgramCalculus]]: Hybrid program derived proof rules for differential dynamic logic.
  *   - [[DifferentialEquationCalculus]]: Differential equation proof rules for differential dynamic logic.
  *
@@ -84,8 +84,7 @@ import scala.util.Try
  */
 @nowarn("msg=match may not be exhaustive") @nowarn("cat=deprecation&origin=org.keymaerax.btactics.UnifyUSCalculus.by")
 @nowarn("cat=deprecation&origin=org.keymaerax.bellerophon.DependentTwoPositionTactic")
-object TactixLibrary
-    extends TacticProvider with SequentCalculus with DifferentialEquationCalculus with HybridProgramCalculus {
+object TactixLibrary extends TacticProvider with DifferentialEquationCalculus with HybridProgramCalculus {
 
   /** @inheritdoc */
   override def getInfo: (Class[_], universe.Type) = (TactixLibrary.getClass, universe.typeOf[TactixLibrary.type])
@@ -187,8 +186,8 @@ object TactixLibrary
     }
 
     SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(
-      doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | id | DLBySubst.safeabstractionb(Symbol("R")) |
-        PropositionalTactics.autoMP(Symbol("L")) | UnifyUSCalculus.nil
+      doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | SequentCalculus.id |
+        DLBySubst.safeabstractionb(Symbol("R")) | PropositionalTactics.autoMP(Symbol("L")) | UnifyUSCalculus.nil
     )))
   }
 
@@ -217,8 +216,8 @@ object TactixLibrary
     }
 
     SaturateTactic(OnAll(Idioms.doIf(!_.isProved)(
-      doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | id | DLBySubst.safeabstractionb(Symbol("R")) |
-        UnifyUSCalculus.nil
+      doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | SequentCalculus.id |
+        DLBySubst.safeabstractionb(Symbol("R")) | UnifyUSCalculus.nil
     )))
   }
 
@@ -294,13 +293,13 @@ object TactixLibrary
       case (_: Exists, _) => None
       case (_: Diamond, _) => None
       case (_: Box, _) => None
-      case (_: Not, true) => Some(notLInfo)
-      case (_: Not, false) => Some(notRInfo)
+      case (_: Not, true) => Some(SequentCalculus.notLInfo)
+      case (_: Not, false) => Some(SequentCalculus.notRInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
     SaturateTactic(OnAll(
-      SaturateTactic(Idioms.doIf(!_.isProved)(id | alphaRule)) &
+      SaturateTactic(Idioms.doIf(!_.isProved)(SequentCalculus.id | alphaRule)) &
         (doStep(index)(Symbol("R")) | doStep(index)(Symbol("L")) | UnifyUSCalculus.nil)
     ))
   }
@@ -386,7 +385,7 @@ object TactixLibrary
         if (seq.isFOL) {
           UnifyUSCalculus.skip /* master continues */
         } else {
-          SaturateTactic(close | alphaRule | loop(Symbol("R")) /* loopauto recurses into master */ ) &
+          SaturateTactic(SequentCalculus.close | alphaRule | loop(Symbol("R")) /* loopauto recurses into master */ ) &
             // @note loopauto should have closed all goals; but continue for programs without loop
             Idioms.doIf(!_.isProved)( /* loop-free: decompose and handle ODE in context before splitting */
               SaturateTactic(composeChase(Symbol("R"))) &
@@ -410,7 +409,7 @@ object TactixLibrary
         }
       })
 
-      val autoStep = id | SaturateTactic(onAll(doStep(index)(Symbol("R")))) |
+      val autoStep = SequentCalculus.id | SaturateTactic(onAll(doStep(index)(Symbol("R")))) |
         SaturateTactic(onAll(doStep(index)(Symbol("L")))) | Idioms.doIf(_.subgoals.exists(!_.isFOL))(
           loop(Symbol("R")) | expandAllDefs(Nil) & odeR(Symbol("R")) | solve(Symbol("R")) | solve(Symbol("L")) |
             DLBySubst.safeabstractionb(Symbol("R")) | odeInContext(odeR)(Symbol("R")) |
@@ -418,7 +417,8 @@ object TactixLibrary
         ) | PropositionalTactics.autoMP(Symbol("L")) | UnifyUSCalculus.nil
 
       onAll(decomposeToODE) & onAll(Idioms.doIf(!_.isProved)(
-        close | SaturateTactic(onAll(Idioms.doIf(!_.isProved)(autoStep))) & Idioms.doIf(!_.isProved)(onAll(
+        SequentCalculus
+          .close | SaturateTactic(onAll(Idioms.doIf(!_.isProved)(autoStep))) & Idioms.doIf(!_.isProved)(onAll(
           propClose |
             // @note apply equalities inside | to undo in case branches do not close
             expandAllDefs(Nil) &
@@ -556,7 +556,7 @@ object TactixLibrary
           require(pos.isTopLevel, "with abstraction only at top-level")
           sequent(pos.checkTop) match {
             case _: Box => t(pos) & abstractionb(pos) &
-                (if (pos.isSucc) SaturateTactic(allR(pos)) else UnifyUSCalculus.skip)
+                (if (pos.isSucc) SaturateTactic(SequentCalculus.allR(pos)) else UnifyUSCalculus.skip)
             case _: Diamond if pos.isAnte => ???
           }
         }
@@ -791,7 +791,7 @@ object TactixLibrary
                 val dwSmart = proveBy(dwSmartBase, smartHide & ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil))
                 val dwPropBase = proveBy(
                   dwSmartBase,
-                  SaturateTactic(orL(Symbol("L")) | andR(Symbol("R"))) &
+                  SaturateTactic(SequentCalculus.orL(Symbol("L")) | SequentCalculus.andR(Symbol("R"))) &
                     OnAll(smartHide & ToolTactics.prepareQE(Nil, UnifyUSCalculus.nil)),
                 )
 
@@ -1151,7 +1151,7 @@ object TactixLibrary
             Idioms
               .doIfFw(
                 _.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty)
-              )(hideL(pos).computeResult)
+              )(SequentCalculus.hideL(pos).computeResult)
               .result _,
             0,
           ))
@@ -1187,7 +1187,7 @@ object TactixLibrary
             Idioms
               .doIfFw(
                 _.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty)
-              )(hideL(pos, fml).computeResult)
+              )(SequentCalculus.hideL(pos, fml).computeResult)
               .result _,
             0,
           ))
@@ -1593,7 +1593,7 @@ object TactixLibrary
     if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
       val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
       useLemma(lemma, adapt)
-    } else label(BelleLabels.lemmaUnproved(lemmaName))
+    } else SequentCalculus.label(BelleLabels.lemmaUnproved(lemmaName))
   }
 
   /**
@@ -1654,14 +1654,15 @@ object TactixLibrary
           catch { case _: UnificationException => None }
       }
     val byLemma = subst.map(UnifyUSCalculus.by(lemma, _)).getOrElse(UnifyUSCalculus.by(lemma))
-    def cutLemma(t: BelleExpr) = cut(subst.map(_(conclusion)).getOrElse(conclusion)) <
+    def cutLemma(t: BelleExpr) = SequentCalculus.cut(subst.map(_(conclusion)).getOrElse(conclusion)) <
       (
-        t & Idioms.doIf(!_.isProved)(label("Lemma available as assumption")),
-        cohideR(Symbol("Rlast")) &
-          (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) &
-             andL(Symbol("Llast")) * (lemma.fact.conclusion.ante.size - 1)
+        t & Idioms.doIf(!_.isProved)(SequentCalculus.label("Lemma available as assumption")),
+        SequentCalculus.cohideR(Symbol("Rlast")) &
+          (if (lemma.fact.conclusion.ante.nonEmpty) SequentCalculus.implyR(1) &
+             SequentCalculus.andL(Symbol("Llast")) * (lemma.fact.conclusion.ante.size - 1)
            else /* sanitized toFormula returns conclusion */ UnifyUSCalculus.skip) &
-          (if (lemma.fact.conclusion.succ.nonEmpty) orR(Symbol("Rlast")) * (lemma.fact.conclusion.succ.size - 1)
+          (if (lemma.fact.conclusion.succ.nonEmpty) SequentCalculus.orR(Symbol("Rlast")) *
+             (lemma.fact.conclusion.succ.size - 1)
            else /* sanitized toFormula returns conclusion */ UnifyUSCalculus.skip) & byLemma,
       )
 
@@ -1711,20 +1712,20 @@ object TactixLibrary
     // prefer simplification over left-right-swaps
     case (Not(Box(_, Not(_))), _) => Some(Ax.diamond)
     case (Not(Diamond(_, Not(_))), _) => Some(Ax.box)
-    case (_: Not, true) => Some(notLInfo)
-    case (_: Not, false) => Some(notRInfo)
-    case (_: And, true) => Some(andLInfo)
-    case (_: And, false) => Some(andRInfo)
-    case (_: Or, true) => Some(orLInfo)
-    case (_: Or, false) => Some(orRInfo)
-    case (_: Imply, true) => Some( /* PropositionalTactics.autoMPInfo :: */ implyLInfo)
-    case (_: Imply, false) => Some(implyRInfo)
-    case (_: Equiv, true) => Some(equivLInfo)
-    case (_: Equiv, false) => Some(equivRInfo)
-    case (_: Forall, true) => Some(allLInfo)
-    case (_: Forall, false) => Some(allRInfo)
-    case (_: Exists, true) => Some(existsLInfo)
-    case (_: Exists, false) => Some(existsRInfo)
+    case (_: Not, true) => Some(SequentCalculus.notLInfo)
+    case (_: Not, false) => Some(SequentCalculus.notRInfo)
+    case (_: And, true) => Some(SequentCalculus.andLInfo)
+    case (_: And, false) => Some(SequentCalculus.andRInfo)
+    case (_: Or, true) => Some(SequentCalculus.orLInfo)
+    case (_: Or, false) => Some(SequentCalculus.orRInfo)
+    case (_: Imply, true) => Some( /* PropositionalTactics.autoMPInfo :: */ SequentCalculus.implyLInfo)
+    case (_: Imply, false) => Some(SequentCalculus.implyRInfo)
+    case (_: Equiv, true) => Some(SequentCalculus.equivLInfo)
+    case (_: Equiv, false) => Some(SequentCalculus.equivRInfo)
+    case (_: Forall, true) => Some(SequentCalculus.allLInfo)
+    case (_: Forall, false) => Some(SequentCalculus.allRInfo)
+    case (_: Exists, true) => Some(SequentCalculus.existsLInfo)
+    case (_: Exists, false) => Some(SequentCalculus.existsRInfo)
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 

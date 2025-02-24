@@ -27,21 +27,6 @@ import scala.reflect.runtime.universe
  * @author
  *   Stefan Mitsch
  * @see
- *   [[SequentCalculus]]
- */
-object SequentCalculus extends TacticProvider with SequentCalculus {
-
-  /** @inheritdoc */
-  override def getInfo: (Class[_], universe.Type) = (SequentCalculus.getClass, universe.typeOf[SequentCalculus.type])
-}
-
-/**
- * Sequent Calculus for propositional and first-order logic.
- * @author
- *   Andre Platzer
- * @author
- *   Stefan Mitsch
- * @see
  *   Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal
  *   of Automated Reasoning, 41(2), pages 143-189, 2008.
  * @see
@@ -57,7 +42,10 @@ object SequentCalculus extends TacticProvider with SequentCalculus {
 @nowarn("msg=match may not be exhaustive")
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeTrue")
 @nowarn("cat=deprecation&origin=org.keymaerax.btactics.ProofRuleTactics.closeFalse")
-trait SequentCalculus {
+object SequentCalculus extends TacticProvider {
+
+  /** @inheritdoc */
+  override def getInfo: (Class[_], universe.Type) = (SequentCalculus.getClass, universe.typeOf[SequentCalculus.type])
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics

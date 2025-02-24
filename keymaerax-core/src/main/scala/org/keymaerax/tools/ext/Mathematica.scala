@@ -8,7 +8,7 @@ package org.keymaerax.tools.ext
 
 import org.keymaerax.Configuration
 import org.keymaerax.bellerophon.BelleCEX
-import org.keymaerax.btactics.{InvGenTool, PropositionalTactics, TactixLibrary}
+import org.keymaerax.btactics.{InvGenTool, PropositionalTactics, SequentCalculus}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import org.keymaerax.lemma.Lemma
@@ -319,8 +319,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     case _: Imply =>
       val propSubgoals = ProvableSig.startPlainProof(fml)(PropositionalTactics.prop, 0).subgoals
       val expandedSubgoals = ProvableSig
-        .startPlainProof(fml)(TactixLibrary.expandAll andThen PropositionalTactics.prop, 0)(
-          TactixLibrary.applyEqualities
+        .startPlainProof(fml)(SequentCalculus.expandAll andThen PropositionalTactics.prop, 0)(
+          SequentCalculus.applyEqualities
         )
         .subgoals
       if (propSubgoals.size > 1) {

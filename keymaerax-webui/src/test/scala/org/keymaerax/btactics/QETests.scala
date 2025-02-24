@@ -117,10 +117,10 @@ class QETests extends TacticTestBase {
   it should "not have soundness bug with decimal representations " in withMathematica { tool =>
     val pr = proveBy(
       "false".asFormula,
-      cut("1-3 * 0.33333333333333 = 0".asFormula) <
+      SequentCalculus.cut("1-3 * 0.33333333333333 = 0".asFormula) <
         (
           ToolTactics.fullQE(tool),
-          cut("3 * 0.33333333333333 = 1 ".asFormula) <
+          SequentCalculus.cut("3 * 0.33333333333333 = 1 ".asFormula) <
             (eqL2R(-1)(2) & ToolTactics.fullQE(tool), ToolTactics.fullQE(tool)),
         ),
     )

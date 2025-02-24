@@ -9,6 +9,7 @@ import org.keymaerax.Logging
 import org.keymaerax.bellerophon._
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms.mapSubpositions
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TacticHelper.timed
 import org.keymaerax.btactics.TactixLibrary._

@@ -7,7 +7,13 @@ package org.keymaerax.bellerophon.pptests
 
 import org.keymaerax.bellerophon._
 import org.keymaerax.bellerophon.parser.BellePrettyPrinter
-import org.keymaerax.btactics.{ArithmeticSimplification, TacticTestBase, TactixLibrary, UnifyUSCalculus}
+import org.keymaerax.btactics.{
+  ArithmeticSimplification,
+  SequentCalculus,
+  TacticTestBase,
+  TactixLibrary,
+  UnifyUSCalculus,
+}
 import org.keymaerax.core.{AtomicODE, DifferentialSymbol, ODESystem, True}
 import org.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import org.keymaerax.parser.ArchiveParser
@@ -38,11 +44,11 @@ class BelleParserRoundtripTests extends TacticTestBase {
   // names over the actual tactic that was created at the end of the day.
   "Parser and printer roundtrip" should "atomics" in withTactics { roundTrip(UnifyUSCalculus.nil, "nil") }
 
-  it should "position tactics with fixed positions" in withTactics { roundTrip(TactixLibrary.andR(1), "andR(1)") }
+  it should "position tactics with fixed positions" in withTactics { roundTrip(SequentCalculus.andR(1), "andR(1)") }
 
   it should "position tactics with locators" in withTactics {
-    roundTrip(TactixLibrary.andL(Symbol("L")), "andL('L)")
-    roundTrip(TactixLibrary.andR(Symbol("R")), "andR('R)")
+    roundTrip(SequentCalculus.andL(Symbol("L")), "andL('L)")
+    roundTrip(SequentCalculus.andR(Symbol("R")), "andR('R)")
   }
 
   it should "combinators" in withTactics {
@@ -82,10 +88,10 @@ class BelleParserRoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic cut, cutL, cutR" in withTactics {
-    roundTrip(TactixLibrary.cut("x>0".asFormula), """cut("x>0")""")
-    roundTrip(TactixLibrary.cutL("x>0".asFormula)(AntePosition(1).checkTop), """cutL("x>0", -1)""")
-    roundTrip(TactixLibrary.cutR("x>0".asFormula)(SuccPosition(1).checkTop), """cutR("x>0", 1)""")
-    roundTrip(TactixLibrary.cutLR("x>0".asFormula)(SuccPosition(1).checkTop), """cutLR("x>0", 1)""")
+    roundTrip(SequentCalculus.cut("x>0".asFormula), """cut("x>0")""")
+    roundTrip(SequentCalculus.cutL("x>0".asFormula)(AntePosition(1).checkTop), """cutL("x>0", -1)""")
+    roundTrip(SequentCalculus.cutR("x>0".asFormula)(SuccPosition(1).checkTop), """cutR("x>0", 1)""")
+    roundTrip(SequentCalculus.cutLR("x>0".asFormula)(SuccPosition(1).checkTop), """cutLR("x>0", 1)""")
   }
 
   it should "input tactic loop" in withTactics {
@@ -111,7 +117,7 @@ class BelleParserRoundtripTests extends TacticTestBase {
     roundTrip(TactixLibrary.diffInvariant("x^2=1".asFormula)(1), """diffInvariant("x^2=1", 1)""")
   }
 
-  it should "two-position tactic cohide2" in withTactics { roundTrip(TactixLibrary.cohide2(-1, 1), "coHide2(-1, 1)") }
+  it should "two-position tactic cohide2" in withTactics { roundTrip(SequentCalculus.cohide2(-1, 1), "coHide2(-1, 1)") }
 
   it should "two-position tactic equivRewriting" in withTactics {
     // @todo test with BelleExpr data structure, but PropositionalTactics is private

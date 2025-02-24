@@ -61,21 +61,21 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse partials and built-ins" in withTactics {
-    inside(parser("partial(implyR(1))")) { case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1) }
+    inside(parser("partial(implyR(1))")) { case PartialTactic(t, _) => t shouldBe SequentCalculus.implyR(1) }
   }
 
   it should "parse post-fix partials and built-ins" in withTactics {
-    inside(parser("implyR(1) partial")) { case PartialTactic(t, _) => t shouldBe TactixLibrary.implyR(1) }
+    inside(parser("implyR(1) partial")) { case PartialTactic(t, _) => t shouldBe SequentCalculus.implyR(1) }
   }
 
   it should "parse either" in withTactics {
     val EitherTactic(alts) = parser("nil | implyR(1)")
-    alts should contain theSameElementsInOrderAs List(UnifyUSCalculus.nil, TactixLibrary.implyR(1))
+    alts should contain theSameElementsInOrderAs List(UnifyUSCalculus.nil, SequentCalculus.implyR(1))
   }
 
   it should "parse *" in withTactics {
     inside(parser("implyR(1)*")) {
-      case SaturateTactic(t) => t shouldBe TactixLibrary.implyR(1)
+      case SaturateTactic(t) => t shouldBe SequentCalculus.implyR(1)
       case r => fail("Unexpected tactic kind " + r.getClass)
     }
   }
@@ -83,8 +83,8 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   it should "parse positional tactics" in withTactics {
     inside(parser("implyR(1)")) { case t @ AppliedPositionTactic(pt, loc) =>
       loc shouldBe Fixed(1)
-      pt shouldBe TactixLibrary.implyR
-      t shouldBe TactixLibrary.implyR(1)
+      pt shouldBe SequentCalculus.implyR
+      t shouldBe SequentCalculus.implyR(1)
     }
   }
 
@@ -96,20 +96,20 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "parse j(x) as a term or a formula depending on ArgInfo." in withTactics {
     parser("""loop("j(x)",1)""") shouldBe TactixLibrary.loop("j(x)".asFormula)(1)
-    parser("""allL("j(x)",1)""") shouldBe TactixLibrary.allL("j(x)".asTerm)(1)
+    parser("""allL("j(x)",1)""") shouldBe SequentCalculus.allL("j(x)".asTerm)(1)
   }
 
   it should "parse exact matching search" in withTactics {
-    parser("""implyR('R=="x>0->x>=0")""") shouldBe TactixLibrary.implyR(Symbol("R"), "x>0->x>=0".asFormula)
-    parser("""andL('L=="x>0&x>=0")""") shouldBe TactixLibrary.andL(Symbol("L"), "x>0&x>=0".asFormula)
+    parser("""implyR('R=="x>0->x>=0")""") shouldBe SequentCalculus.implyR(Symbol("R"), "x>0->x>=0".asFormula)
+    parser("""andL('L=="x>0&x>=0")""") shouldBe SequentCalculus.andL(Symbol("L"), "x>0&x>=0".asFormula)
     parser("""absExp('L=="#abs(x*y)#=2")""") shouldBe
       TactixLibrary
         .abs(Find.FindL(0, Some("abs(x*y)=2".asFormula), PosInExpr(0 :: Nil), exact = true, BuiltinSymbols.all))
   }
 
   it should "parse unifiable matching search" in withTactics {
-    parser("""implyR('R~="x>0->x>=0")""") shouldBe TactixLibrary.implyR(Symbol("Rlike"), "x>0->x>=0".asFormula)
-    parser("""andL('L~="x>0&x>=0")""") shouldBe TactixLibrary.andL(Symbol("Llike"), "x>0&x>=0".asFormula)
+    parser("""implyR('R~="x>0->x>=0")""") shouldBe SequentCalculus.implyR(Symbol("Rlike"), "x>0->x>=0".asFormula)
+    parser("""andL('L~="x>0&x>=0")""") shouldBe SequentCalculus.andL(Symbol("Llike"), "x>0&x>=0".asFormula)
     parser("""absExp('L~="#abs(x)#=3")""") shouldBe
       TactixLibrary
         .abs(Find.FindL(0, Some("abs(x)=3".asFormula), PosInExpr(0 :: Nil), exact = false, BuiltinSymbols.all))
@@ -148,16 +148,16 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "bind strong" in withTactics {
     parser(""" implyR(1); id using "x>=0" """) shouldBe
-      TactixLibrary.implyR(1) & Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+      SequentCalculus.implyR(1) & Using("x>=0".asFormula :: Nil, SequentCalculus.id)
     parser(""" (implyR(1); id) using "x>=0" """) shouldBe
-      Using("x>=0".asFormula :: Nil, TactixLibrary.implyR(1) & TactixLibrary.id)
+      Using("x>=0".asFormula :: Nil, SequentCalculus.implyR(1) & SequentCalculus.id)
     parser(""" implyR(1) | id using "x>=0" """) shouldBe
-      TactixLibrary.implyR(1) | Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+      SequentCalculus.implyR(1) | Using("x>=0".asFormula :: Nil, SequentCalculus.id)
   }
 
   it should "parse empty lists" in withTactics {
-    parser(""" id using "nil" """) shouldBe Using(Nil, TactixLibrary.id)
-    BellePrettyPrinter(Using(Nil, TactixLibrary.id)) shouldBe """id using "nil""""
+    parser(""" id using "nil" """) shouldBe Using(Nil, SequentCalculus.id)
+    BellePrettyPrinter(Using(Nil, SequentCalculus.id)) shouldBe """id using "nil""""
   }
 
   it should "pretty print binding strong" in withTactics {

@@ -18,6 +18,7 @@ import org.keymaerax.bellerophon.{
   SeqTactic,
   TacticInapplicableFailure,
 }
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.TactixLibrary._
 import org.keymaerax.btactics.UnifyUSCalculus._
 import org.keymaerax.btactics.{

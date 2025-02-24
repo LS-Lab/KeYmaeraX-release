@@ -19,8 +19,7 @@ import org.keymaerax.bellerophon.{
   SeqTactic,
   Using,
 }
-import org.keymaerax.btactics.TactixLibrary.andL
-import org.keymaerax.btactics.{DebuggingTactics, TactixInit, TactixLibrary, UnifyUSCalculus}
+import org.keymaerax.btactics.{DebuggingTactics, SequentCalculus, TactixInit, TactixLibrary, UnifyUSCalculus}
 import org.keymaerax.core._
 import org.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import org.keymaerax.parser.ParseExceptionMatchers.{mention, pointAt}
@@ -69,14 +68,14 @@ class DLBelleParserTests
     parse(raw"""QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"""".stripMargin) shouldBe
       Using(List("x^2+y^2=init".asFormula, "init=0".asFormula, "x=0&y=0".asFormula), TactixLibrary.QE)
     parse(raw"""implyR(1); QE using "x^2+y^2=init :: init=0 :: x=0&y=0 :: nil"""".stripMargin) shouldBe SeqTactic(List(
-      TactixLibrary.implyR(1),
+      SequentCalculus.implyR(1),
       Using(List("x^2+y^2=init".asFormula, "init=0".asFormula, "x=0&y=0".asFormula), TactixLibrary.QE),
     ))
   }
 
   it should "parse implications correctly" in {
     parse("""implyR('R=="assumptions(x,y,v,xo,yo)->true")""") shouldBe
-      TactixLibrary.implyR(Find.FindRPlain("assumptions(x,y,v,xo,yo)->true".asFormula))
+      SequentCalculus.implyR(Find.FindRPlain("assumptions(x,y,v,xo,yo)->true".asFormula))
   }
 
   it should "parse useLemma" in {
@@ -204,10 +203,10 @@ class DLBelleParserTests
   }
 
   it should "parse suffix partial" in {
-    parse("""implyR(1) partial""") shouldBe PartialTactic(TactixLibrary.implyR(1))
+    parse("""implyR(1) partial""") shouldBe PartialTactic(SequentCalculus.implyR(1))
     parse("""QE using "x>=0::nil" partial""") shouldBe PartialTactic(Using(List("x>=0".asFormula), TactixLibrary.QE))
     parse("""implyR(1); andL(-1) partial""") shouldBe
-      PartialTactic(SeqTactic(List(TactixLibrary.implyR(1), TactixLibrary.andL(-1))))
+      PartialTactic(SeqTactic(List(SequentCalculus.implyR(1), SequentCalculus.andL(-1))))
   }
 
   it should "parse substitutions" in {
@@ -264,18 +263,19 @@ class DLBelleParserTests
 
   it should "parse strings" in { parse("""print("Test")""") shouldBe DebuggingTactics.printX("Test") }
 
-  it should "parse 0-position tactics" in { parse("id") shouldBe TactixLibrary.id }
+  it should "parse 0-position tactics" in { parse("id") shouldBe SequentCalculus.id }
 
-  it should "parse 1-position tactics" in { parse("implyR(1)") shouldBe TactixLibrary.implyR(1) }
+  it should "parse 1-position tactics" in { parse("implyR(1)") shouldBe SequentCalculus.implyR(1) }
 
-  it should "parse two-position tactics" in { parse("closeId(-1, 1)") shouldBe TactixLibrary.closeId(-1, 1) }
+  it should "parse two-position tactics" in { parse("closeId(-1, 1)") shouldBe SequentCalculus.closeId(-1, 1) }
 
   it should "parse PosInExpr arguments" in {
     parse("""CMonCongruence(".1")""") shouldBe UnifyUSCalculus.CMon(PosInExpr(1 :: Nil))
   }
 
   it should "parse tactic definitions" in {
-    parse("tactic andLStar as ( andL('L)* )") shouldBe DefTactic("andLStar", SaturateTactic(andL(Find.FindLFirst)))
+    parse("tactic andLStar as ( andL('L)* )") shouldBe
+      DefTactic("andLStar", SaturateTactic(SequentCalculus.andL(Find.FindLFirst)))
   }
 
   it should "elaborate tactic reserved symbols" in {

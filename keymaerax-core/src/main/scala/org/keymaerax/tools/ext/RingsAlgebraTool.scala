@@ -302,9 +302,10 @@ class RingsLibrary(terms: Iterable[Term]) {
           normalizeLessEquals(qeTac)(pos ++ PosInExpr(1 :: Nil))
       case Some(LessEqual(a, b)) => {
         val d = fromRing(toRing(b) - toRing(a))
-        UnifyUSCalculus.useAt(normalizeLemma)(pos) & SequentCalculus.cut(Equal(Minus(b, a), d)) &
-          Idioms
-            .<(eqL2R(-seq.ante.length - 1)(pos) & hideL(-seq.ante.length - 1), cohideR(Symbol("Rlast")) & qeTac & done)
+        UnifyUSCalculus.useAt(normalizeLemma)(pos) & SequentCalculus.cut(Equal(Minus(b, a), d)) & Idioms.<(
+          eqL2R(-seq.ante.length - 1)(pos) & SequentCalculus.hideL(-seq.ante.length - 1),
+          SequentCalculus.cohideR(Symbol("Rlast")) & qeTac & done,
+        )
       }
     }
   }

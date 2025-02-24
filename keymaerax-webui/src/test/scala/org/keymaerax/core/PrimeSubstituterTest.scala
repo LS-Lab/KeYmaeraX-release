@@ -128,11 +128,11 @@ class PrimeSubstituterTest extends TacticTestBase {
 
       val result = proveBy(
         Sequent(ante, succ),
-        TactixLibrary.cut("true".asFormula) < (TactixLibrary.implyRi, prop) &
-          TactixLibrary.cut("[{x'=1&true}]x'=1".asFormula) <
+        SequentCalculus.cut("true".asFormula) < (SequentCalculus.implyRi, prop) &
+          SequentCalculus.cut("[{x'=1&true}]x'=1".asFormula) <
           (
-            TactixLibrary.implyRi & UnifyUSCalculus.byUS(Ax.DX),
-            TactixLibrary.cohide(2) & HilbertCalculus.DE(1) & UnifyUSCalculus.chase(1, 1 :: Nil) &
+            SequentCalculus.implyRi & UnifyUSCalculus.byUS(Ax.DX),
+            SequentCalculus.cohide(2) & HilbertCalculus.DE(1) & UnifyUSCalculus.chase(1, 1 :: Nil) &
               HilbertCalculus.V(1) & UnifyUSCalculus.byUS(Ax.equalReflexive),
           ),
       )

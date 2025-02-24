@@ -48,24 +48,25 @@ object Transitivity extends TacticProvider {
 
     DebuggingTactics
       .debug(s"[closeTransitive] formulas: ${transitiveInequalities.map(_.prettyString).reduce(_ + "," + _)}", true)
-    TactixLibrary.cut(transitivityLemma(transitiveInequalities)) <
+    SequentCalculus.cut(transitivityLemma(transitiveInequalities)) <
       (
         instantiations(transitiveInequalities)
           .map(variableAndTerm => {
-            val instantiateTactic: BelleExpr = TactixLibrary
+            val instantiateTactic: BelleExpr = SequentCalculus
               .allL(variableAndTerm._1, variableAndTerm._2)(Symbol("Llast"))
             instantiateTactic
           })
-          .reduce(_ & _) & TactixLibrary.implyL(Symbol("Llast")) < (closeIds(transitiveInequalities), TactixLibrary.id),
-        TactixLibrary.cohideR(Symbol("Rlast")) & TactixLibrary.QE,
+          .reduce(_ & _) &
+          SequentCalculus.implyL(Symbol("Llast")) < (closeIds(transitiveInequalities), SequentCalculus.id),
+        SequentCalculus.cohideR(Symbol("Rlast")) & TactixLibrary.QE,
       )
 
   })
 
   @nowarn("msg=match may not be exhaustive")
   def closeIds(formulas: List[Formula]): BelleExpr = formulas match {
-    case e :: Nil => TactixLibrary.id
-    case e :: es => TactixLibrary.andR(Symbol("Rlast")) < (closeIds(es), TactixLibrary.id)
+    case e :: Nil => SequentCalculus.id
+    case e :: es => SequentCalculus.andR(Symbol("Rlast")) < (closeIds(es), SequentCalculus.id)
   }
 
   /**

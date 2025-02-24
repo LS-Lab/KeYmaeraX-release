@@ -11,6 +11,7 @@ import org.keymaerax.btactics.ArithmeticSimplification.smartHide
 import org.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
 import org.keymaerax.btactics.HilbertCalculus._
 import org.keymaerax.btactics.Idioms._
+import org.keymaerax.btactics.SequentCalculus._
 import org.keymaerax.btactics.SimplifierV3._
 import org.keymaerax.btactics.TacticFactory._
 import org.keymaerax.btactics.TactixLibrary._
@@ -865,9 +866,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
         // Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
         UnifyUSCalculus.cutAt(Forall(y_DE.xp.x :: Nil, f))(pos) < (
           UnifyUSCalculus.useExpansionAt(Ax.DGi)(pos),
-          (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR(Symbol("Rlast"))) &
+          (if (pos.isSucc) SequentCalculus.cohideR(pos.top) else SequentCalculus.cohideR(Symbol("Rlast"))) &
             UnifyUSCalculus.useAt(Ax.alle)(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
-            UnifyUSCalculus.useAt(Ax.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
+            UnifyUSCalculus.useAt(Ax.implySelf)(1) & SequentCalculus.closeT & DebuggingTactics.done
         )
       case Some(Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
         // @note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
@@ -885,9 +886,9 @@ private object DifferentialTactics extends TacticProvider with Logging {
         UnifyUSCalculus.useAt(Ax.commaCommute, PosInExpr(1 :: Nil))(pos) &
           UnifyUSCalculus.cutAt(Exists(y_DE.xp.x :: Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) < (
             UnifyUSCalculus.useAt(Ax.DGC, PosInExpr(1 :: Nil), subst)(pos),
-            (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR(Symbol("Rlast"))) &
-              UnifyUSCalculus.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
-              TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.id
+            (if (pos.isSucc) SequentCalculus.cohideR(pos.top) else SequentCalculus.cohideR(Symbol("Rlast"))) &
+              UnifyUSCalculus.CMon(pos.inExpr) & SequentCalculus.implyR(1) &
+              SequentCalculus.existsR(y_DE.xp.x)(1) & SequentCalculus.id
           )
       case Some(e) =>
         if (polarity == 0)

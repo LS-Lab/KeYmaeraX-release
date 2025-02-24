@@ -82,8 +82,10 @@ class ModelplexTacticTests extends TacticTestBase {
     val monitorCorrectnessConjecture = ModelPlex
       .createMonitorCorrectnessConjecture(List(Variable("x")), ModelPlexKind.Ctrl, ListMap.empty)(model)
     println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
-    proveBy(monitorCorrectnessConjecture, implyR(1) * 2 & ModelPlex.controllerMonitorByChase(1) & autoClose) shouldBe
-      Symbol("proved")
+    proveBy(
+      monitorCorrectnessConjecture,
+      SequentCalculus.implyR(1) * 2 & ModelPlex.controllerMonitorByChase(1) & autoClose,
+    ) shouldBe Symbol("proved")
   }
 
   it should "chase away a loop by updateCalculus implicationally" in withTactics {

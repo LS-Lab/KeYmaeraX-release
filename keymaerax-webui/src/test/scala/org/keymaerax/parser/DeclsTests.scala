@@ -6,7 +6,7 @@
 package org.keymaerax.parser
 
 import org.keymaerax.GlobalState
-import org.keymaerax.btactics.{TacticTestBase, TactixLibrary}
+import org.keymaerax.btactics.{SequentCalculus, TacticTestBase}
 import org.keymaerax.core._
 import org.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
@@ -53,7 +53,7 @@ class DeclsTests extends TacticTestBase {
     val parsed = ArchiveParser.parse(input, parseTactics = true).loneElement
 
     parsed.model shouldBe "!(A() | !A()) -> !!(A() | !A())".asFormula
-    parsed.tactics.head._3 shouldBe TactixLibrary.implyR(1)
+    parsed.tactics.head._3 shouldBe SequentCalculus.implyR(1)
   }
 
   "function domain" should "parse correctly" in {
